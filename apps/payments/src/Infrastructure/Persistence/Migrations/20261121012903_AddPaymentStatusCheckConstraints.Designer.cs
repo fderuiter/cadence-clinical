@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(PaymentsDbContext))]
-    [Migration("20261120201312_AddSelfServiceIdempotencyKeys")]
-    partial class AddSelfServiceIdempotencyKeys
+    [Migration("20261121012903_AddPaymentStatusCheckConstraints")]
+    partial class AddPaymentStatusCheckConstraints
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -470,10 +470,6 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("IdempotencyKey")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
                     b.Property<string>("ReferenceNumber")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -507,9 +503,6 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("SubjectId");
 
                     b.HasIndex("WalletId");
-
-                    b.HasIndex("WalletId", "IdempotencyKey")
-                        .IsUnique();
 
                     b.ToTable("payments_participant_disbursements", null, t =>
                         {
@@ -547,10 +540,6 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
 
                     b.Property<decimal>("GrossAmount")
                         .HasColumnType("numeric(18,4)");
-
-                    b.Property<string>("IdempotencyKey")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("MerchantName")
                         .IsRequired()
@@ -627,9 +616,6 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("SubjectId");
 
                     b.HasIndex("WalletId");
-
-                    b.HasIndex("WalletId", "IdempotencyKey")
-                        .IsUnique();
 
                     b.ToTable("payments_participant_expense_claims", null, t =>
                         {

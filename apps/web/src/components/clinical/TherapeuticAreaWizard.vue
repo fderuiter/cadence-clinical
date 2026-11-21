@@ -732,8 +732,8 @@ function synthesizeProtocol() {
 <style scoped>
 .therapeutic-area-wizard {
   padding: 24px;
-  background-color: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
 
@@ -743,19 +743,19 @@ function synthesizeProtocol() {
   align-items: flex-start;
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--semantic-color-surface-header);
 }
 
 .storage-warning-banner {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #fffbeb;
-  border: 1px solid #fde68a;
+  background-color: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
   border-radius: 6px;
   padding: 12px 16px;
   margin-bottom: 20px;
-  color: #92400e;
+  color: var(--semantic-color-warning-dark);
   font-size: 0.875rem;
 }
 
@@ -780,9 +780,9 @@ function synthesizeProtocol() {
 }
 
 .btn-retry-save {
-  background-color: #fef3c7;
-  border: 1px solid #f59e0b;
-  color: #78350f;
+  background-color: var(--semantic-color-warning-bg-badge);
+  border: 1px solid var(--semantic-color-warning-border-strong);
+  color: var(--semantic-color-warning-dark);
   font-weight: 600;
   padding: 4px 10px;
   border-radius: 4px;
@@ -792,13 +792,13 @@ function synthesizeProtocol() {
 }
 
 .btn-retry-save:hover {
-  background-color: #fde68a;
+  background-color: var(--semantic-color-warning-bg-badge);
 }
 
 .btn-dismiss-warning {
   background: none;
   border: none;
-  color: #92400e;
+  color: var(--semantic-color-warning-dark);
   font-weight: 600;
   cursor: pointer;
   padding: 4px 8px;
@@ -807,19 +807,19 @@ function synthesizeProtocol() {
 }
 
 .btn-dismiss-warning:hover {
-  color: #78350f;
+  color: var(--semantic-color-warning-dark);
 }
 
 .header-title-box h3 {
   margin: 0 0 4px 0;
   font-weight: 700;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
   font-size: 1.25rem;
 }
 
 .header-title-box p {
   margin: 0;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.875rem;
 }
 
@@ -829,8 +829,8 @@ function synthesizeProtocol() {
 }
 
 .badge-usdm {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: var(--semantic-color-info-light);
+  color: var(--semantic-color-info);
   padding: 4px 10px;
   border-radius: 4px;
   font-weight: 600;
@@ -838,8 +838,8 @@ function synthesizeProtocol() {
 }
 
 .badge-gxp {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
   padding: 4px 10px;
   border-radius: 4px;
   font-weight: 600;
@@ -849,7 +849,7 @@ function synthesizeProtocol() {
 .section-subtitle {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   margin: 0 0 16px 0;
 }
 
@@ -861,8 +861,8 @@ function synthesizeProtocol() {
 }
 
 .ta-card {
-  background-color: #f8fafc;
-  border: 2px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border: 2px solid var(--semantic-color-border);
   border-radius: 8px;
   padding: 16px;
   cursor: pointer;
@@ -872,13 +872,13 @@ function synthesizeProtocol() {
 }
 
 .ta-card:hover {
-  border-color: #94a3b8;
+  border-color: var(--semantic-color-border-control);
   transform: translateY(-2px);
 }
 
 .ta-card.selected {
-  border-color: #2563eb;
-  background-color: #eff6ff;
+  border-color: var(--semantic-color-interactive-primary);
+  background-color: var(--semantic-color-info-bg);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
 }
 
@@ -894,8 +894,8 @@ function synthesizeProtocol() {
 }
 
 .badge-category {
-  background-color: #e2e8f0;
-  color: #334155;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   font-size: 0.7rem;
   padding: 2px 8px;
   border-radius: 4px;
@@ -906,12 +906,12 @@ function synthesizeProtocol() {
   margin: 0 0 8px 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .ta-desc {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin: 0 0 12px 0;
   line-height: 1.4;
   flex: 1;
@@ -924,9 +924,9 @@ function synthesizeProtocol() {
 }
 
 .meta-tag {
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #475569;
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.7rem;
   padding: 2px 6px;
   border-radius: 4px;
@@ -934,7 +934,7 @@ function synthesizeProtocol() {
 }
 
 .ta-customization-section {
-  border-top: 1px dashed #cbd5e1;
+  border-top: 1px dashed var(--semantic-color-border-control);
   padding-top: 24px;
 }
 
@@ -953,18 +953,18 @@ function synthesizeProtocol() {
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   margin-bottom: 6px;
 }
 
 .form-control {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.875rem;
-  color: #1e293b;
-  background-color: #ffffff;
+  color: var(--semantic-color-text-dark);
+  background-color: var(--semantic-color-surface);
 }
 
 .form-control-sm {
@@ -976,7 +976,7 @@ function synthesizeProtocol() {
   display: flex;
   gap: 8px;
   margin-bottom: 16px;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid var(--semantic-color-border);
   padding-bottom: 8px;
 }
 
@@ -985,7 +985,7 @@ function synthesizeProtocol() {
   border: none;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
@@ -993,13 +993,13 @@ function synthesizeProtocol() {
 }
 
 .btn-tab.active {
-  background-color: #0f172a;
-  color: #ffffff;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
 }
 
 .tab-pane-content {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 16px;
   margin-bottom: 20px;
@@ -1016,7 +1016,7 @@ function synthesizeProtocol() {
   margin: 0;
   font-size: 0.9rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .table {
@@ -1030,9 +1030,9 @@ function synthesizeProtocol() {
   padding: 8px;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid var(--semantic-color-border);
 }
 
 .table td {
@@ -1042,7 +1042,7 @@ function synthesizeProtocol() {
 
 .seq-num {
   font-weight: 700;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   text-align: center;
 }
 
@@ -1051,15 +1051,15 @@ function synthesizeProtocol() {
 }
 
 .btn-danger {
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
+  background-color: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
+  color: var(--semantic-color-error);
   cursor: pointer;
   border-radius: 4px;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: #fee2e2;
+  background-color: var(--semantic-color-error-bg);
 }
 
 .btn-danger:disabled {
@@ -1068,8 +1068,8 @@ function synthesizeProtocol() {
 }
 
 .usdm-live-summary-card {
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background-color: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border-soft);
   border-radius: 6px;
   padding: 12px 16px;
   margin-bottom: 24px;
@@ -1083,7 +1083,7 @@ function synthesizeProtocol() {
 
 .summary-pill {
   font-size: 0.8rem;
-  color: #166534;
+  color: var(--semantic-color-success-dark);
 }
 
 .summary-pill strong {
@@ -1098,9 +1098,9 @@ function synthesizeProtocol() {
 }
 
 .btn-synthesize-protocol {
-  background-color: #059669;
-  border-color: #059669;
-  color: #ffffff;
+  background-color: var(--semantic-color-success);
+  border-color: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
   font-weight: 700;
   padding: 10px 24px;
   font-size: 0.95rem;
@@ -1109,13 +1109,13 @@ function synthesizeProtocol() {
 }
 
 .btn-synthesize-protocol:hover {
-  background-color: #047857;
+  background-color: var(--semantic-color-success);
 }
 
 .btn-reset-wizard {
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #475569;
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border-control);
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
   padding: 8px 16px;
   border-radius: 6px;

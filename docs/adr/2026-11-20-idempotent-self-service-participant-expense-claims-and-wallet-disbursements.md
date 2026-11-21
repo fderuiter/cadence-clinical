@@ -52,5 +52,5 @@ Participants submitting travel or meal reimbursement receipts (`POST /api/v1/pay
 
 ## 6. Implementation & Verification
 
-- **Affected Repositories / Services:** `apps/payments` (`PaymentEntities.cs`, `PaymentConfigurations.cs`, `PaymentEndpoints.cs`, migration `20261120201312_AddSelfServiceIdempotencyKeys`), `apps/subject-portal` (`features/wallet.js`, `views/WalletView.vue`), `docs/openapi/payments_openapi.json`, and `docs/schema/payments.md`.
+- **Affected Repositories / Services:** `apps/payments` (`PaymentEntities.cs`, `PaymentConfigurations.cs`, `PaymentEndpoints.cs`, migration `20261121050828_AddSelfServiceIdempotencyKeys`), `apps/subject-portal` (`features/wallet.js`, `views/WalletView.vue`), `docs/openapi/payments_openapi.json`, and `docs/schema/payments.md`.
 - **Verification Plan:** Automated xUnit idempotency replay and wallet isolation tests in `tests/Cadence.UnitTests/Payments/ParticipantSelfServiceAndOcrTests.cs`, Vitest unit tests in `apps/subject-portal/tests/expense-ocr-autodisburse.test.js`, and Playwright E2E verification in `apps/subject-portal/tests/e2e/wallet-recovery-and-touch-targets.spec.js`.

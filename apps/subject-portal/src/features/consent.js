@@ -135,7 +135,7 @@ export function renderConsentUI() {
   clausesContainer.innerHTML = clauseSections
     .map(
       (sec) => `
-    <div class="clause-view-box" style="border: 1px solid var(--semantic-color-border); padding: 16px; border-radius: 6px; background: rgba(255,255,255,0.01);">
+    <div class="clause-view-box" style="border: 1px solid var(--semantic-color-border); padding: 16px; border-radius: 6px; background: var(--semantic-color-surface);">
       <h4 style="margin-top: 0; color: var(--semantic-color-primary); border-bottom: 1px dashed var(--semantic-color-border); padding-bottom: 6px;">${sec.title}</h4>
       <p style="margin: 0; font-size: 14px;">${sec.content}</p>
     </div>
@@ -232,9 +232,9 @@ export async function verifyBiometricLiveness(isFallback = false) {
         banner.setAttribute("aria-live", "polite");
         banner.textContent = `Liveness Verification Successful (${isFallback ? "Coordinator Fallback Mode" : "Camera Anti-Spoof Score: " + (response.anti_spoof_score * 100).toFixed(0) + "%"}). Liveness token issued for 15 minutes.`;
         banner.style.display = "block";
-        banner.style.backgroundColor = "var(--semantic-color-success-bg)";
-        banner.style.color = "var(--semantic-color-success)";
-        banner.style.border = "1px solid var(--semantic-color-success-border)";
+        banner.style.backgroundColor = "var(--semantic-color-success-bg-soft)";
+        banner.style.color = "var(--semantic-color-success-dark)";
+        banner.style.border = "1px solid var(--semantic-color-success)";
       }
     } else {
       state.livenessVerified = false;
@@ -245,9 +245,9 @@ export async function verifyBiometricLiveness(isFallback = false) {
         banner.textContent =
           "Biometric liveness verification failed. Please retry or select Study Coordinator Video Fallback.";
         banner.style.display = "block";
-        banner.style.backgroundColor = "var(--semantic-color-error-bg)";
-        banner.style.color = "var(--semantic-color-error)";
-        banner.style.border = "1px solid var(--semantic-color-error-border)";
+        banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
+        banner.style.color = "var(--semantic-color-error-text-dark)";
+        banner.style.border = "1px solid var(--semantic-color-error)";
       }
     }
 
@@ -261,9 +261,9 @@ export async function verifyBiometricLiveness(isFallback = false) {
       banner.textContent =
         "Liveness verification error: " + (err.message || err);
       banner.style.display = "block";
-      banner.style.backgroundColor = "var(--semantic-color-error-bg)";
-      banner.style.color = "var(--semantic-color-error)";
-      banner.style.border = "1px solid var(--semantic-color-error-border)";
+      banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
+      banner.style.color = "var(--semantic-color-error-text-dark)";
+      banner.style.border = "1px solid var(--semantic-color-error)";
     }
     renderConsentUI();
   }
@@ -308,9 +308,9 @@ export async function submitConsentAnswers() {
       banner.setAttribute("aria-live", "assertive");
       banner.textContent = incompleteMsg;
       banner.style.display = "block";
-      banner.style.backgroundColor = "var(--semantic-color-error-bg)";
-      banner.style.color = "var(--semantic-color-error)";
-      banner.style.border = "1px solid var(--semantic-color-error-border)";
+      banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
+      banner.style.color = "var(--semantic-color-error-text-dark)";
+      banner.style.border = "1px solid var(--semantic-color-error)";
     }
     showToast(incompleteMsg, { variant: "error" });
     return;
@@ -369,15 +369,15 @@ export async function submitConsentAnswers() {
       if (decision.canSign) {
         banner.setAttribute("role", "status");
         banner.setAttribute("aria-live", "polite");
-        banner.style.backgroundColor = "var(--semantic-color-success-bg)";
-        banner.style.color = "var(--semantic-color-success)";
-        banner.style.border = "1px solid var(--semantic-color-success-border)";
+        banner.style.backgroundColor = "var(--semantic-color-success-bg-soft)";
+        banner.style.color = "var(--semantic-color-success-dark)";
+        banner.style.border = "1px solid var(--semantic-color-success)";
       } else {
         banner.setAttribute("role", "alert");
         banner.setAttribute("aria-live", "assertive");
-        banner.style.backgroundColor = "var(--semantic-color-error-bg)";
-        banner.style.color = "var(--semantic-color-error)";
-        banner.style.border = "1px solid var(--semantic-color-error-border)";
+        banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
+        banner.style.color = "var(--semantic-color-error-text-dark)";
+        banner.style.border = "1px solid var(--semantic-color-error)";
       }
     }
 
@@ -391,9 +391,9 @@ export async function submitConsentAnswers() {
       banner.setAttribute("aria-live", "assertive");
       banner.textContent = msg;
       banner.style.display = "block";
-      banner.style.backgroundColor = "var(--semantic-color-error-bg)";
-      banner.style.color = "var(--semantic-color-error)";
-      banner.style.border = "1px solid var(--semantic-color-error-border)";
+      banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
+      banner.style.color = "var(--semantic-color-error-text-dark)";
+      banner.style.border = "1px solid var(--semantic-color-error)";
     }
     showToast(msg, { variant: "error" });
     renderConsentUI();

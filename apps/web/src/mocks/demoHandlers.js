@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { webDemoStore } from "./demoStore.js";
+import { parseDemoProtocolImportRequest } from "./demoStudyImport.js";
 
 const DEFAULT_STUDY_REF = "study:00000000-0000-0000-0000-000000000001"; // deid-ignore
 
@@ -8,6 +9,18 @@ function decodeReasonHeader(request) {
     request.headers.get("X-Change-Reason") ||
     request.headers.get("x-change-reason");
   if (!raw) return "Recorded in demo session";
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function readRequiredReasonHeader(request) {
+  const raw =
+    request.headers.get("X-Change-Reason") ||
+    request.headers.get("x-change-reason") ||
+    "";
   try {
     return decodeURIComponent(raw);
   } catch {
@@ -137,13 +150,68 @@ export function createWebDemoHandlers(store = webDemoStore) {
       )
     ),
 
-    // Kernel Protocol Versions, SoA, Proposals, Simulation, Matrix Gap Check, Activity
+    // Kernel Studies, Organizations, Protocol Templates, Protocol Versions, SoA, Proposals
+    http.get("*/api/v1/kernel/studies", () =>
+      HttpResponse.json(store.listStudies())
+    ),
+    http.post("*/api/v1/kernel/studies", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const reason = readRequiredReasonHeader(request);
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      const result = store.createStudy(body, { reason, idempotencyKey });
+      if (result.error) {
+        return HttpResponse.json(result.error.problem, {
+          status: result.error.status,
+        });
+      }
+      return HttpResponse.json(result.data, { status: 201 });
+    }),
+    http.get("*/api/v1/kernel/organizations", () =>
+      HttpResponse.json(store.listOrganizations())
+    ),
+    http.get("*/api/v1/kernel/protocol-templates", () =>
+      HttpResponse.json(store.listProtocolTemplates())
+    ),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/protocol-versions",
       ({ params }) =>
         HttpResponse.json(
           store.listProtocolVersions(
             decodeURIComponent(String(params.studyRef))
+          )
+        )
+    ),
+    http.post(
+      "*/api/v1/kernel/studies/:studyRef/protocol-imports",
+      async ({ params, request }) => {
+        const reason = readRequiredReasonHeader(request);
+        const idempotencyKey =
+          request.headers.get("Idempotency-Key") ||
+          request.headers.get("idempotency-key") ||
+          "";
+        const parsedRequest = await parseDemoProtocolImportRequest(request);
+        const result = store.importProtocolDraft(
+          decodeURIComponent(String(params.studyRef)),
+          parsedRequest,
+          { reason, idempotencyKey }
+        );
+        if (result.error) {
+          return HttpResponse.json(result.error.problem, {
+            status: result.error.status,
+          });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.get(
+      "*/api/v1/kernel/protocol-versions/:versionRef/design-summary",
+      ({ params }) =>
+        HttpResponse.json(
+          store.getProtocolDesignSummary(
+            decodeURIComponent(String(params.versionRef))
           )
         )
     ),
@@ -729,12 +797,25 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const url = new URL(request.url);
       const status = url.searchParams.get("status_filter");
       const categoryId = url.searchParams.get("category_id");
+      const q = (url.searchParams.get("q") || "").trim().toLowerCase();
       let list = [...store.state.knowledgeArticles];
       if (status && status !== "ALL") {
         list = list.filter((a) => a.status === status);
       }
       if (categoryId) {
         list = list.filter((a) => a.category_id === categoryId);
+      }
+      if (q) {
+        list = list.filter((a) => {
+          const title = String(a.title || "").toLowerCase();
+          const body = String(
+            a.body_markdown || a.body_html || ""
+          ).toLowerCase();
+          const tags = Array.isArray(a.tags)
+            ? a.tags.some((t) => String(t).toLowerCase().includes(q))
+            : false;
+          return title.includes(q) || body.includes(q) || tags;
+        });
       }
       return HttpResponse.json(list);
     }),
@@ -946,18 +1027,53 @@ export function createWebDemoHandlers(store = webDemoStore) {
         },
       ])
     ),
-    http.get("*/api/v1/tickets", () =>
-      HttpResponse.json([
-        {
-          id: "tkt-demo-01",
-          title: "Verify Site 102 IP Depot Temperature Excursion Log",
-          status: "OPEN",
-          priority: "MEDIUM",
-          site_id: "SITE-102",
-          created_at: "2026-08-04T09:30:00Z",
-        },
-      ])
-    ),
+    http.get("*/api/v1/tickets", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.listTickets({
+          status: url.searchParams.get("status") || undefined,
+          category: url.searchParams.get("category") || undefined,
+          assigned_queue: url.searchParams.get("assigned_queue") || undefined,
+          study_id: url.searchParams.get("study_id") || undefined,
+          site_id: url.searchParams.get("site_id") || undefined,
+          search: url.searchParams.get("search") || undefined,
+        })
+      );
+    }),
+    http.post("*/api/v1/tickets", async ({ request }) => {
+      const rawReason =
+        request.headers.get("X-Change-Reason") ||
+        request.headers.get("x-change-reason") ||
+        "";
+      let decodedReason;
+      try {
+        decodedReason = decodeURIComponent(rawReason);
+      } catch {
+        decodedReason = rawReason;
+      }
+      const body = await readJsonBody(request);
+      const result = store.createTicket(body, decodedReason);
+      if (result.invalid) {
+        return HttpResponse.json(result.problem, { status: 400 });
+      }
+      return HttpResponse.json(result.data, { status: 201 });
+    }),
+    http.get("*/api/v1/tickets/:ticketId", ({ params }) => {
+      const found = store.getTicket(
+        decodeURIComponent(String(params.ticketId))
+      );
+      if (!found) {
+        return HttpResponse.json(
+          {
+            title: "Ticket not found",
+            status: 404,
+            detail: `No ticket exists for ${params.ticketId}.`,
+          },
+          { status: 404 }
+        );
+      }
+      return HttpResponse.json(found);
+    }),
     http.get("*/api/v1/payments/participant/wallets", () =>
       HttpResponse.json(store.state.participantWallets)
     ),

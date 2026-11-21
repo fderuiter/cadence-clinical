@@ -1,4 +1,35 @@
-import axe from "axe-core";
+let cachedAxe = null;
+let cachedAxePromise = null;
+let axeRunQueue = Promise.resolve();
+
+function getAxe() {
+  if (cachedAxe) {
+    return Promise.resolve(cachedAxe);
+  }
+  if (!cachedAxePromise) {
+    cachedAxePromise = import("axe-core").then((mod) => {
+      cachedAxe = mod.default || mod;
+      return cachedAxe;
+    });
+  }
+  return cachedAxePromise;
+}
+
+if (typeof process !== "undefined" && process.env?.VITEST) {
+  void getAxe();
+}
+
+function runAxeSerialized(axe, element, options) {
+  const nextRun = axeRunQueue.then(
+    () => axe.run(element, options),
+    () => axe.run(element, options)
+  );
+  axeRunQueue = nextRun.then(
+    () => undefined,
+    () => undefined
+  );
+  return nextRun;
+}
 
 /**
  * Asserts that a standard DOM Element, raw HTML string, or Vue test wrapper is WCAG accessible.
@@ -83,7 +114,8 @@ export async function toBeAccessible(received, customOptions = {}) {
       wrapperToCleanup = element;
     }
 
-    const results = await axe.run(element, finalOptions);
+    const axe = await getAxe();
+    const results = await runAxeSerialized(axe, element, finalOptions);
     const pass = results.violations.length === 0;
 
     if (pass) {

@@ -353,8 +353,8 @@ const toggleEdit = () => {
   );
   max-width: 100vw;
   height: 100vh;
-  background: var(--color-surface, #ffffff);
-  border-left: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
   box-shadow: -8px 0 24px -4px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
@@ -377,8 +377,8 @@ const toggleEdit = () => {
   align-items: flex-start;
   justify-content: space-between;
   padding: 18px 24px;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
-  background: var(--color-surface-muted, #f8fafc);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
 }
 
 .ai-header-badge-row {
@@ -396,20 +396,20 @@ const toggleEdit = () => {
   margin: 0;
   font-size: var(--font-size-md, 16px);
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 
 .ai-drawer-subtitle {
   margin: 4px 0 0 0;
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted, #475569);
+  color: var(--color-text-muted);
 }
 
 .ai-drawer-close-btn {
   background: transparent;
   border: none;
   font-size: 16px;
-  color: var(--color-text-muted, #475569);
+  color: var(--color-text-muted);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
@@ -417,15 +417,15 @@ const toggleEdit = () => {
 }
 
 .ai-drawer-close-btn:hover {
-  background: #e2e8f0;
-  color: var(--color-text, #0f172a);
+  background: var(--color-border);
+  color: var(--color-text);
 }
 
 /* Provenance Banner */
 .ai-provenance-banner {
   padding: 10px 24px;
-  background: var(--color-primary-light, #e0f2fe);
-  border-bottom: 1px solid #bae6fd;
+  background: var(--color-primary-light);
+  border-bottom: 1px solid var(--semantic-color-info-border-accent);
   font-size: var(--font-size-xs, 12px);
   display: flex;
   flex-direction: column;
@@ -440,11 +440,11 @@ const toggleEdit = () => {
 
 .ai-provenance-label {
   font-weight: 600;
-  color: var(--color-primary-dark, #014d76);
+  color: var(--color-primary-dark);
 }
 
 .ai-provenance-val {
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 
 code.ai-provenance-val {
@@ -473,10 +473,10 @@ code.ai-provenance-val {
 }
 
 .ai-diff-box {
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 6px);
   overflow: hidden;
-  background: var(--color-surface, #ffffff);
+  background: var(--color-surface);
 }
 
 .ai-diff-header {
@@ -484,8 +484,8 @@ code.ai-provenance-val {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: var(--color-surface-muted, #f8fafc);
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface-muted);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .ai-diff-tag {
@@ -493,11 +493,11 @@ code.ai-provenance-val {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--color-text-muted, #475569);
+  color: var(--color-text-muted);
 }
 
 .ai-tag-ai {
-  color: var(--color-primary, #026597);
+  color: var(--color-primary);
 }
 
 .ai-edit-toggle-btn {
@@ -505,14 +505,14 @@ code.ai-provenance-val {
   border: none;
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-primary, #026597);
+  color: var(--color-primary);
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 4px;
 }
 
 .ai-edit-toggle-btn:hover {
-  background: var(--color-primary-light, #e0f2fe);
+  background: var(--color-primary-light);
 }
 
 .ai-diff-content {
@@ -525,18 +525,18 @@ code.ai-provenance-val {
   font-size: var(--font-size-xs, 12px);
   white-space: pre-wrap;
   word-break: break-word;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 
 .ai-pre-highlight {
-  background: #f0fdf4;
-  color: #166534;
+  background: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
   padding: 6px;
   border-radius: 4px;
 }
 
 .ai-diff-suggested {
-  border-color: #86efac;
+  border-color: var(--semantic-color-success-border);
 }
 
 .ai-edit-textarea {
@@ -544,7 +544,7 @@ code.ai-provenance-val {
   padding: 8px;
   font-family: var(--font-mono, monospace);
   font-size: 12px;
-  border: 1px solid var(--color-primary, #026597);
+  border: 1px solid var(--color-primary);
   border-radius: 4px;
   box-sizing: border-box;
   resize: vertical;
@@ -561,18 +561,18 @@ code.ai-provenance-val {
 .ai-reason-label {
   font-size: var(--font-size-xs, 12px);
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 
 .ai-required-star {
-  color: var(--color-error, #b91c1c);
+  color: var(--color-error);
 }
 
 .ai-reason-input {
   width: 100%;
   padding: 8px 12px;
   font-size: var(--font-size-sm, 13px);
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: var(--radius-md, 6px);
   outline: none;
   box-sizing: border-box;
@@ -580,18 +580,18 @@ code.ai-provenance-val {
 }
 
 .ai-reason-input:focus {
-  border-color: var(--color-primary, #026597);
-  box-shadow: 0 0 0 2px var(--color-primary-light, #e0f2fe);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .ai-reason-input.has-error {
-  border-color: var(--color-error, #b91c1c);
+  border-color: var(--color-error);
 }
 
 .ai-validation-error {
   margin: 0;
   font-size: 12px;
-  color: var(--color-error, #b91c1c);
+  color: var(--color-error);
 }
 
 /* Footer */
@@ -618,32 +618,32 @@ code.ai-provenance-val {
 }
 
 .btn-secondary {
-  background: var(--color-surface, #ffffff);
-  border-color: var(--color-border, #e2e8f0);
-  color: var(--color-text, #0f172a);
+  background: var(--color-surface);
+  border-color: var(--semantic-color-border-control);
+  color: var(--color-text);
 }
 
 .btn-secondary:hover {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 
 .btn-dismiss {
   background: transparent;
-  border-color: var(--color-error-bg, #fee2e2);
-  color: var(--color-error, #b91c1c);
+  border-color: var(--color-error);
+  color: var(--color-error);
 }
 
 .btn-dismiss:hover {
-  background: var(--color-error-bg, #fee2e2);
+  background: var(--color-error-bg);
 }
 
 .btn-accept {
-  background: var(--color-primary, #026597);
-  color: #ffffff;
+  background: var(--color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-accept:hover:not(:disabled) {
-  background: var(--color-primary-dark, #014d76);
+  background: var(--color-primary-dark);
 }
 
 .btn-accept:disabled {

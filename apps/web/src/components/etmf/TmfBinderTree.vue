@@ -495,8 +495,8 @@ function getUnreadBadgeCount(node) {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #ffffff;
-  border-right: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface);
+  border-right: 1px solid var(--semantic-color-border);
   padding: 16px;
   box-sizing: border-box;
 }
@@ -512,18 +512,18 @@ function getUnreadBadgeCount(node) {
   justify-content: center;
   gap: 8px;
   padding: 10px 12px;
-  background-color: #2563eb;
-  color: #ffffff;
+  background-color: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
   font-weight: 600;
   font-size: 0.85rem;
-  border: 1px solid #2563eb;
+  border: 1px solid var(--semantic-color-interactive-primary);
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
 .btn-export-full-binder:hover {
-  background-color: #1d4ed8;
+  background-color: var(--semantic-color-interactive-primary);
 }
 
 .btn-node-export {
@@ -539,7 +539,7 @@ function getUnreadBadgeCount(node) {
 
 .btn-node-export:hover {
   opacity: 1;
-  background-color: #cbd5e1;
+  background-color: var(--semantic-color-border-muted);
 }
 
 .tree-search-bar {
@@ -552,7 +552,7 @@ function getUnreadBadgeCount(node) {
 .search-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.9rem;
   outline: 2px solid transparent;
@@ -560,16 +560,16 @@ function getUnreadBadgeCount(node) {
 }
 
 .search-input:focus {
-  border-color: #3b82f6;
+  border-color: var(--semantic-color-interactive-primary);
 }
 
 .zone-filter-select {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.85rem;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   outline: 2px solid transparent;
 }
 
@@ -582,7 +582,7 @@ function getUnreadBadgeCount(node) {
 .empty-tree-message {
   padding: 16px;
   text-align: center;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-style: italic;
   font-size: 0.9rem;
 }
@@ -603,13 +603,13 @@ function getUnreadBadgeCount(node) {
 }
 
 .node-header:hover {
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
 }
 
 .toggle-icon {
   font-size: 0.7rem;
   width: 16px;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .folder-icon,
@@ -620,21 +620,21 @@ function getUnreadBadgeCount(node) {
 
 .zone-label {
   font-weight: 700;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   margin-right: 6px;
 }
 
 .section-label {
   font-weight: 600;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   margin-right: 6px;
 }
 
 .artifact-code {
   font-family: monospace;
   font-size: 0.8rem;
-  color: #2563eb;
-  background-color: #eff6ff;
+  color: var(--semantic-color-interactive-primary);
+  background-color: var(--semantic-color-info-bg);
   padding: 2px 4px;
   border-radius: 4px;
   margin-right: 8px;
@@ -648,8 +648,8 @@ function getUnreadBadgeCount(node) {
 }
 
 .unread-badge {
-  background-color: #ef4444;
-  color: #ffffff;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -662,7 +662,7 @@ function getUnreadBadgeCount(node) {
 .node-children {
   margin-left: 16px;
   padding-left: 8px;
-  border-left: 1px dashed #cbd5e1;
+  border-left: 1px dashed var(--semantic-color-border-control);
 }
 
 .artifact-node {
@@ -671,16 +671,16 @@ function getUnreadBadgeCount(node) {
 }
 
 .artifact-node:hover {
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
 }
 
 .artifact-node.is-selected {
-  background-color: #dbeafe;
-  border-left: 3px solid #2563eb;
+  background-color: var(--semantic-color-info-light);
+  border-left: 3px solid var(--semantic-color-interactive-primary);
 }
 
 .artifact-node.is-selected .node-name {
   font-weight: 600;
-  color: #1e40af;
+  color: var(--semantic-color-info);
 }
 </style>

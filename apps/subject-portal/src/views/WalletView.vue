@@ -27,7 +27,7 @@
         border-radius: 8px;
         background: var(--semantic-color-error-bg);
         border: 1px solid var(--semantic-color-error);
-        color: var(--semantic-color-error);
+        color: var(--semantic-color-error-text-dark);
         font-size: 14px;
         font-weight: 600;
       "
@@ -85,7 +85,7 @@
           border-radius: 8px;
           background: var(--semantic-color-error-bg);
           border: 1px solid var(--semantic-color-error);
-          color: var(--semantic-color-error);
+          color: var(--semantic-color-error-text-dark);
           font-size: 14px;
         "
       >
@@ -112,9 +112,9 @@
           margin-bottom: 16px;
           padding: 12px 16px;
           border-radius: 8px;
-          background: var(--semantic-color-warning-bg);
-          border: 1px solid var(--semantic-color-warning);
-          color: var(--semantic-color-warning);
+          background: var(--semantic-color-warning-bg-light);
+          border: 1px solid var(--semantic-color-warning-border-strong);
+          color: var(--semantic-color-warning-text-dark);
           font-size: 14px;
           font-weight: 600;
         "
@@ -250,7 +250,7 @@
           margin-bottom: 20px;
           padding: 14px 16px;
           border-radius: 8px;
-          background: var(--semantic-color-success-bg);
+          background: var(--semantic-color-success-bg-soft);
           border: 1px solid var(--semantic-color-success);
           color: var(--semantic-color-text);
         "
@@ -259,7 +259,7 @@
           style="
             margin: 0 0 4px 0;
             font-size: 16px;
-            color: var(--semantic-color-success);
+            color: var(--semantic-color-success-dark);
           "
         >
           ✅ Balance Payout Dispatched
@@ -365,7 +365,7 @@
           aria-label="Upload receipt image for travel reimbursement"
           aria-describedby="receipt-upload-hint"
           style="
-            border: 2px dashed var(--semantic-color-border);
+            border: 2px dashed var(--semantic-color-border-control);
             border-radius: 8px;
             padding: 20px;
             text-align: center;
@@ -454,9 +454,9 @@
             margin-top: 16px;
             padding: 12px 14px;
             border-radius: 8px;
-            background: var(--semantic-color-warning-bg);
-            border: 1px solid var(--semantic-color-warning);
-            color: var(--semantic-color-warning);
+            background: var(--semantic-color-warning-bg-light);
+            border: 1px solid var(--semantic-color-warning-border-strong);
+            color: var(--semantic-color-warning-text-dark);
             font-size: 14px;
             font-weight: 600;
           "
@@ -627,7 +627,7 @@
             style="
               padding: 16px;
               border-radius: 8px;
-              background: var(--semantic-color-success-bg);
+              background: var(--semantic-color-success-bg-soft);
               border: 1px solid var(--semantic-color-success);
               color: var(--semantic-color-text);
             "
@@ -635,7 +635,7 @@
             <h4
               style="
                 margin: 0 0 6px 0;
-                color: var(--semantic-color-success);
+                color: var(--semantic-color-success-dark);
                 font-size: 16px;
               "
             >
@@ -672,15 +672,15 @@
             style="
               padding: 16px;
               border-radius: 8px;
-              background: var(--semantic-color-warning-bg);
-              border: 1px solid var(--semantic-color-warning);
-              color: var(--semantic-color-text);
+              background: var(--semantic-color-warning-bg-light);
+              border: 1px solid var(--semantic-color-warning-border-strong);
+              color: var(--semantic-color-text-dark);
             "
           >
             <h4
               style="
                 margin: 0 0 6px 0;
-                color: var(--semantic-color-warning);
+                color: var(--semantic-color-warning-text-dark);
                 font-size: 16px;
               "
             >
@@ -887,7 +887,7 @@
                   border-radius: 6px;
                   background: var(--semantic-color-error-bg);
                   border: 1px solid var(--semantic-color-error);
-                  color: var(--semantic-color-error);
+                  color: var(--semantic-color-error-text-dark);
                   font-size: 13px;
                   font-weight: 600;
                   margin-bottom: 12px;
@@ -909,7 +909,7 @@
                     style="
                       min-height: var(--touch-target-min);
                       padding: 6px 10px;
-                      border: 1px solid var(--semantic-color-border);
+                      border: 1px solid var(--semantic-color-border-control);
                       border-radius: 6px;
                     "
                   >
@@ -932,7 +932,7 @@
                     style="
                       min-height: var(--touch-target-min);
                       padding: 6px 10px;
-                      border: 1px solid var(--semantic-color-border);
+                      border: 1px solid var(--semantic-color-border-control);
                       border-radius: 6px;
                     "
                   >

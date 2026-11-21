@@ -131,32 +131,32 @@ const ariaLabel = computed(() => {
 
 /* High Confidence (Green >= 90%) */
 .confidence-high {
-  background-color: var(--color-success-bg, #dcfce7);
-  color: var(--color-success, #15803d);
-  border-color: #86efac;
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: var(--color-success);
 }
 .confidence-high .confidence-dot {
-  background-color: var(--color-success, #15803d);
+  background-color: var(--color-success);
 }
 
 /* Medium Confidence (Amber 75-89%) */
 .confidence-medium {
-  background-color: var(--color-warning-bg, #fef9c3);
-  color: var(--color-warning, #854d0e);
-  border-color: #fde047;
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-color: var(--color-warning);
 }
 .confidence-medium .confidence-dot {
-  background-color: var(--color-warning, #854d0e);
+  background-color: var(--color-warning);
 }
 
 /* Low Confidence (Red < 75%) */
 .confidence-low {
-  background-color: var(--color-error-bg, #fee2e2);
-  color: var(--color-error, #b91c1c);
-  border-color: #fca5a5;
+  background-color: var(--color-error-bg);
+  color: var(--color-error);
+  border-color: var(--color-error);
 }
 .confidence-low .confidence-dot {
-  background-color: var(--color-error, #b91c1c);
+  background-color: var(--color-error);
 }
 
 .confidence-score {

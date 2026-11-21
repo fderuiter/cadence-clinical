@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -373,16 +374,75 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         return request;
     }
 
+    private const int PosixEnoexec = 8;
+
     /// <summary>Runs the Playwright half of the browser check (apps/web/playwright.correction-check.config.ts).</summary>
     private static async Task<(int ExitCode, string Output)> RunBrowserCheckAsync(string observationRef, string detail, CancellationToken ct)
     {
         var web = Path.Combine(RepositoryRoot(), "apps", "web");
-        var start = new ProcessStartInfo("pnpm", "exec playwright test --config playwright.correction-check.config.ts")
+        string pnpmCommand = OperatingSystem.IsWindows() ? "pnpm.cmd" : "pnpm";
+        string[] pnpmArgs = ["exec", "playwright", "test", "--config", "playwright.correction-check.config.ts"];
+        var start = CreateBrowserCheckStartInfo(web, pnpmCommand, pnpmArgs, observationRef, detail);
+
+        Process process;
+        try
         {
-            WorkingDirectory = web,
+            process = Process.Start(start)!;
+        }
+        catch (Win32Exception ex) when (!OperatingSystem.IsWindows() && ex.NativeErrorCode == PosixEnoexec)
+        {
+            string? resolved = (Environment.GetEnvironmentVariable("PATH") ?? "")
+                .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+                .Select(dir => Path.Combine(dir, pnpmCommand))
+                .FirstOrDefault(File.Exists);
+            if (resolved is null)
+            {
+                throw;
+            }
+
+            start = CreateBrowserCheckStartInfo(web, "/bin/sh", [resolved, .. pnpmArgs], observationRef, detail);
+            process = Process.Start(start)!;
+        }
+
+        using (process)
+        {
+            var stdout = process.StandardOutput.ReadToEndAsync(ct);
+            var stderr = process.StandardError.ReadToEndAsync(ct);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromMinutes(5));
+            try
+            {
+                await process.WaitForExitAsync(timeout.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                process.Kill(entireProcessTree: true);
+                throw;
+            }
+
+            return (process.ExitCode, await stdout + await stderr);
+        }
+    }
+
+    private static ProcessStartInfo CreateBrowserCheckStartInfo(
+        string workingDirectory,
+        string fileName,
+        string[] arguments,
+        string observationRef,
+        string detail)
+    {
+        var start = new ProcessStartInfo(fileName)
+        {
+            WorkingDirectory = workingDirectory,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            UseShellExecute = false,
         };
+        foreach (string arg in arguments)
+        {
+            start.ArgumentList.Add(arg);
+        }
+
         start.Environment["OBSERVATION_REF"] = observationRef;
         start.Environment["CORRECTION_DETAIL"] = detail;
         if (File.Exists(PreinstalledChromium) && Environment.GetEnvironmentVariable("PLAYWRIGHT_CHROMIUM_PATH") is null)
@@ -390,22 +450,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
             start.Environment["PLAYWRIGHT_CHROMIUM_PATH"] = PreinstalledChromium;
         }
 
-        using var process = Process.Start(start)!;
-        var stdout = process.StandardOutput.ReadToEndAsync(ct);
-        var stderr = process.StandardError.ReadToEndAsync(ct);
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromMinutes(5));
-        try
-        {
-            await process.WaitForExitAsync(timeout.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            process.Kill(entireProcessTree: true);
-            throw;
-        }
-
-        return (process.ExitCode, await stdout + await stderr);
+        return start;
     }
 
     private const string PreinstalledChromium = "/opt/pw-browsers/chromium";

@@ -128,8 +128,8 @@ const formatArmType = (type) => {
 
 <style scoped>
 .arm-visualizer {
-  background-color: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   padding: 16px;
   width: 100%;
@@ -140,7 +140,7 @@ const formatArmType = (type) => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border);
   padding-bottom: 12px;
   flex-wrap: wrap;
   gap: 12px;
@@ -150,13 +150,13 @@ const formatArmType = (type) => {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 
 .subtitle {
   margin: 4px 0 0 0;
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .summary-stats {
@@ -165,18 +165,18 @@ const formatArmType = (type) => {
 }
 
 .pill {
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border-control);
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 0.8rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .pill.highlight {
-  background-color: #ecfdf5;
-  border-color: #a7f3d0;
-  color: #065f46;
+  background-color: var(--semantic-color-success-bg-soft);
+  border-color: var(--semantic-color-success-border);
+  color: var(--semantic-color-success-dark);
 }
 
 .arms-grid {
@@ -187,8 +187,8 @@ const formatArmType = (type) => {
 }
 
 .arm-card {
-  background-color: #f8fafc;
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 16px;
 }
@@ -209,43 +209,43 @@ const formatArmType = (type) => {
 }
 
 .type-experimental {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: var(--semantic-color-info-light);
+  color: var(--semantic-color-info);
 }
 .type-active_comparator {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 .type-placebo_comparator {
-  background-color: #f1f5f9;
-  color: #475569;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 .type-sham_comparator {
-  background-color: #fce7f3;
-  color: #9d174d;
+  background-color: var(--semantic-color-pink-bg);
+  color: var(--semantic-color-pink-text);
 }
 .type-no_intervention {
-  background-color: #f3f4f6;
-  color: #6b7280;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 .sample-badge {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .arm-name {
   margin: 0 0 4px 0;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .arm-desc {
   margin: 0 0 12px 0;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   line-height: 1.4;
 }
 
@@ -284,34 +284,34 @@ const formatArmType = (type) => {
 }
 
 .epoch-screening {
-  background-color: #e0f2fe;
-  border-color: #bae6fd;
-  color: #0369a1;
+  background-color: var(--semantic-color-primary-light);
+  border-color: var(--semantic-color-info-border-accent);
+  color: var(--semantic-color-primary);
 }
 .epoch-treatment {
-  background-color: #dcfce7;
-  border-color: #bbf7d0;
-  color: #15803d;
+  background-color: var(--semantic-color-success-bg);
+  border-color: var(--semantic-color-success-border-soft);
+  color: var(--semantic-color-success);
 }
 .epoch-washout {
-  background-color: #fef3c7;
-  border-color: #fde68a;
-  color: #b45309;
+  background-color: var(--semantic-color-warning-bg-badge);
+  border-color: var(--semantic-color-warning-border);
+  color: var(--semantic-color-warning);
 }
 .epoch-follow_up {
-  background-color: #f3e8ff;
-  border-color: #e9d5ff;
-  color: #7e22ce;
+  background-color: var(--semantic-color-purple-bg);
+  border-color: var(--semantic-color-purple-border);
+  color: var(--semantic-color-purple-text);
 }
 .epoch-run_in {
-  background-color: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #475569;
+  background-color: var(--semantic-color-surface-header);
+  border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text-secondary);
 }
 
 .epoch-sequence-container {
-  background-color: #f8fafc;
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 12px 16px;
 }
@@ -320,7 +320,7 @@ const formatArmType = (type) => {
   margin: 0 0 10px 0;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .sequence-chain {
@@ -334,8 +334,8 @@ const formatArmType = (type) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #ffffff;
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   padding: 6px 10px;
   border-radius: 6px;
 }
@@ -352,39 +352,39 @@ const formatArmType = (type) => {
 }
 
 .step-screening {
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 .step-treatment {
-  background-color: #16a34a;
-  color: #ffffff;
+  background-color: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 .step-washout {
-  background-color: #d97706;
-  color: #ffffff;
+  background-color: var(--semantic-color-warning-action);
+  color: var(--semantic-color-surface);
 }
 .step-follow_up {
-  background-color: #9333ea;
-  color: #ffffff;
+  background-color: var(--semantic-color-purple-text);
+  color: var(--semantic-color-surface);
 }
 .step-run_in {
-  background-color: #64748b;
-  color: #ffffff;
+  background-color: var(--semantic-color-text-secondary);
+  color: var(--semantic-color-surface);
 }
 
 .step-name {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .step-type {
   font-size: 0.7rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .sequence-arrow {
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.9rem;
 }
 </style>

@@ -175,7 +175,7 @@ watch(
 
 .status-line {
   margin: 0;
-  color: var(--neutral-dark);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.85rem;
 }
 
@@ -193,7 +193,7 @@ watch(
   flex-direction: column;
   gap: 4px;
   padding: 10px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   font-size: 0.85rem;
 }
@@ -207,7 +207,7 @@ watch(
 
 .forms-link {
   font-weight: 600;
-  color: var(--accent, #2563eb);
+  color: var(--semantic-color-interactive-primary);
   text-decoration: underline;
 }
 
@@ -216,17 +216,17 @@ watch(
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: var(--warning-bg, #fffbeb);
-  color: var(--warning, #92400e);
+  background: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-warning-dark);
 }
 
 .forms-status[data-complete="true"] {
-  background: #f0fdf4;
-  color: #166534;
+  background: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
 }
 
 .forms-meta {
-  color: var(--neutral-dark, #475569);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.78rem;
 }
 </style>
