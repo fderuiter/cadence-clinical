@@ -99,6 +99,11 @@ export const DEMO_MANIFEST = Object.freeze({
       name: "Site investigator",
       roleUuid: "08cd0acc-fc55-8922-aeba-559c0d01395b",
       capabilities: Object.freeze([
+        "participant.screen",
+        "observation.record",
+        "observation.correct",
+        "collection.open",
+        "collection.record",
         "collection.sign",
         "execution.query.answer",
       ]),
@@ -145,7 +150,9 @@ export const DEMO_MANIFEST = Object.freeze({
         "protocol.draft",
         "protocol.revise_draft",
         "protocol.submit_for_review",
+        "protocol.approve",
         "protocol.amend",
+        "attestation.sign",
       ]),
     }),
     Object.freeze({

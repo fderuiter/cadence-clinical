@@ -521,25 +521,56 @@ public static partial class DemoManifestGeneratorService
             return [];
         }
 
-        var users = UserTupleRegex()
-            .Matches(block)
-            .Select(match =>
-            {
-                string? site = match.Groups["site"].Success ? match.Groups["site"].Value : null;
-                return (
-                    match.Groups["user"].Value,
-                    match.Groups["sub"].Value,
-                    match.Groups["role"].Value,
-                    site);
-            })
-            .ToList();
+        var constants = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var groups in StringConstRegex().Matches(kernelSource).Select(match => match.Groups))
+        {
+            constants.TryAdd(groups["name"].Value, groups["value"].Value);
+        }
 
-        if (users.Count == 0)
+        var users = new List<(string Username, string SubjectUuid, string RoleCode, string? SiteCode)>();
+        foreach (Match match in UserTupleRegex().Matches(block))
+        {
+            string? username = ResolveTupleToken(match, "user", "userConst", constants, issues);
+            string? subject = ResolveTupleToken(match, "sub", "subConst", constants, issues);
+            string? role = ResolveTupleToken(match, "role", "roleConst", constants, issues);
+            string? site = match.Groups["siteNull"].Success
+                ? null
+                : ResolveTupleToken(match, "site", "siteConst", constants, issues);
+
+            if (username is not null && subject is not null && role is not null && (match.Groups["siteNull"].Success || site is not null))
+            {
+                users.Add((username, subject, role, site));
+            }
+        }
+
+        if (users.Count == 0 && issues.Count == 0)
         {
             issues.Add($"Parsed zero users from '{KernelSeedRelativePath}'.");
         }
 
         return users;
+    }
+
+    private static string? ResolveTupleToken(
+        Match match,
+        string literalGroup,
+        string constGroup,
+        IReadOnlyDictionary<string, string> constants,
+        List<string> issues)
+    {
+        if (match.Groups[literalGroup].Success)
+        {
+            return match.Groups[literalGroup].Value;
+        }
+
+        string constName = match.Groups[constGroup].Value;
+        if (constants.TryGetValue(constName, out string? resolved))
+        {
+            return resolved;
+        }
+
+        issues.Add($"Kernel demo user tuple references unknown string constant '{constName}' in '{KernelSeedRelativePath}'.");
+        return null;
     }
 
     private static Dictionary<string, string> ParseExecutionSeed(
@@ -1116,7 +1147,12 @@ public static partial class DemoManifestGeneratorService
     private static partial Regex QuotedStringRegex();
 
     [GeneratedRegex(
-        @"\(\s*""(?<user>[^""]+)""\s*,\s*""(?<sub>[^""]+)""\s*,\s*""(?<role>[^""]+)""\s*,\s*(?:""(?<site>[^""]+)""|null)\s*\)",
+        @"\b(?:private|internal|public)\s+const\s+string\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*""(?<value>[^""]+)""\s*;",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex StringConstRegex();
+
+    [GeneratedRegex(
+        @"\(\s*(?:""(?<user>[^""]+)""|(?<userConst>[A-Za-z_][A-Za-z0-9_]*))\s*,\s*(?:""(?<sub>[^""]+)""|(?<subConst>[A-Za-z_][A-Za-z0-9_]*))\s*,\s*(?:""(?<role>[^""]+)""|(?<roleConst>[A-Za-z_][A-Za-z0-9_]*))\s*,\s*(?:""(?<site>[^""]+)""|(?<siteNull>null)|(?<siteConst>[A-Za-z_][A-Za-z0-9_]*))\s*\)",
         RegexOptions.CultureInvariant)]
     private static partial Regex UserTupleRegex();
 
