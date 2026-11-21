@@ -175,15 +175,24 @@ const routes = [
     },
   },
   {
-    // One kernel observation and its correction (ADR-2620). Opened from a link to the observation, so it never
-    // serves as a landing screen.
+    // One kernel observation, its history, and (for authorised roles) its correction (ADR-2620). Opened from a link to
+    // the observation, so it never serves as a landing screen.
     path: "/observations/:observationRef",
     name: "observation",
     component: () => import("../views/ObservationView.vue"),
     props: true,
     meta: {
       requiresAuth: true,
-      requiresRole: ["site_investigator", "crc", "data_manager"],
+      requiresRole: [
+        "site_investigator",
+        "crc",
+        "data_manager",
+        "cra",
+        "monitor",
+        "auditor",
+        "tmf_auditor",
+        "sponsor_admin",
+      ],
     },
   },
   {

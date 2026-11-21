@@ -30,6 +30,13 @@ public interface IEnrollmentDirectory
         TenantId tenant, EnrollmentId enrollment, DateTimeOffset validAt, DateTimeOffset knownAt, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Resolves a study code and a site code in a tenant to the study and its active linked study site, or null when
+    /// either does not exist or the site is not linked to the study.
+    /// </summary>
+    Task<(StudyId StudyId, StudySiteId StudySiteId)?> FindStudySiteAsync(
+        TenantId tenant, string studyCode, string siteCode, CancellationToken cancellationToken);
+
+    /// <summary>
     /// The next enrollment number in a study: one more than the highest assigned. Gap-free only when read under the
     /// study's lock by the command that assigns it.
     /// </summary>

@@ -43,6 +43,15 @@ public interface ICollectionInstanceRecords
 /// <param name="ItemCount">Total items on the form.</param>
 /// <param name="RecordedCount">Items on the form that currently hold a recorded observation.</param>
 /// <param name="CollectionTitle">The CollectionSpec's title in the governing protocol version, when present.</param>
+/// <param name="MissingRequiredCount">Required items on the form that still lack a recorded observation.</param>
+/// <param name="VerifiedCount">Recorded items whose current revision carries an active source verification assertion.</param>
+/// <param name="UnverifiedCount">Recorded items whose current revision is not source-verified.</param>
+/// <param name="Locked">Whether an active hard lock covers the form or any of its covering scopes.</param>
+/// <param name="Frozen">Whether an active data freeze covers the form or any of its covering scopes.</param>
+/// <param name="LockCount">Active locks and freezes covering the form or its values.</param>
+/// <param name="Signed">Whether at least one signature covers the form's current content hash.</param>
+/// <param name="SignatureSuperseded">Whether the form has signatures, all superseded by later value changes.</param>
+/// <param name="SignatureCount">Total signatures recorded over the form instance.</param>
 public sealed record CollectionInstanceSummary(
     CollectionInstanceId CollectionInstanceId,
     EnrollmentId EnrollmentId,
@@ -59,7 +68,16 @@ public sealed record CollectionInstanceSummary(
     bool Complete,
     int ItemCount,
     int RecordedCount,
-    string? CollectionTitle = null);
+    string? CollectionTitle = null,
+    int MissingRequiredCount = 0,
+    int VerifiedCount = 0,
+    int UnverifiedCount = 0,
+    bool Locked = false,
+    bool Frozen = false,
+    int LockCount = 0,
+    bool Signed = false,
+    bool SignatureSuperseded = false,
+    int SignatureCount = 0);
 
 /// <summary>A form instance and everything a form screen shows about it.</summary>
 /// <remarks>

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { encodeChangeReason } from "../../src/api/changeReason";
 import { apiClient } from "../../src/api/apiClient";
-import { openApiClient } from "../../src/api/client";
+import { createOpenApiClient, openApiClient } from "../../src/api/client";
 
 // The same values the .NET ChangeReasonHeader tests decode (ADR-2495, #4895).
 const EM_DASH_AND_CJK = "IRB approval — 治験審査委員会の承認";
@@ -84,5 +84,34 @@ describe("clients send an encoded reason for change (#4895)", () => {
     expect(request.headers.get("X-Change-Reason")).toBe(
       EM_DASH_AND_CJK_ENCODED
     );
+  });
+
+  it("createOpenApiClient buffers POST bodies when VITE_API_BASE_URL changes after initialization", async () => {
+    const previousBaseUrl = import.meta.env.VITE_API_BASE_URL;
+    try {
+      delete import.meta.env.VITE_API_BASE_URL;
+      const dynamicClient = createOpenApiClient();
+      await dynamicClient.GET("/api/v1/mutations");
+
+      import.meta.env.VITE_API_BASE_URL = "http://localhost:3000";
+      await dynamicClient.POST("/api/v1/mutations", {
+        body: { value: 128, unit: "mm[Hg]" },
+        changeReason: EM_DASH_AND_CJK,
+      });
+
+      const [request] = fetchSpy.mock.calls[1];
+      expect(request.url).toBe("http://localhost:3000/api/v1/mutations");
+      expect(request.method).toBe("POST");
+      expect(request.headers.get("X-Change-Reason")).toBe(
+        EM_DASH_AND_CJK_ENCODED
+      );
+      expect(await request.json()).toEqual({ value: 128, unit: "mm[Hg]" });
+    } finally {
+      if (previousBaseUrl === undefined) {
+        delete import.meta.env.VITE_API_BASE_URL;
+      } else {
+        import.meta.env.VITE_API_BASE_URL = previousBaseUrl;
+      }
+    }
   });
 });

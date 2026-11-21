@@ -147,6 +147,9 @@ export default defineConfig({
     host: "::",
     ...(IS_E2E_BUILD ? { proxy: {} } : {}),
   },
+  optimizeDeps: {
+    entries: ["index.html", "tests/browser/observation.html"],
+  },
   build: {
     outDir: "dist",
     emptyOutDir: true,
