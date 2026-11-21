@@ -65,30 +65,27 @@ public static class PreCommitOpenApiService
 
     public static List<string> GetStagedFiles(string repoRoot)
     {
-        var psi = new ProcessStartInfo("git")
+        var staged = RunGitLines(repoRoot, "diff", "--cached", "--name-only", "--diff-filter=ACMR");
+        if (staged is null || staged.Count == 0)
         {
-            Arguments = "diff --cached --name-only --diff-filter=ACMR",
-            WorkingDirectory = repoRoot,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-
-        try
-        {
-            using var process = Process.Start(psi);
-            if (process is null) return new List<string>();
-            string output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-            if (process.ExitCode != 0) return new List<string>();
-
-            return output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .ToList();
+            return [];
         }
-        catch
+
+        // During a merge commit, `git diff --cached` against HEAD lists every file brought in from MERGE_HEAD even when its
+        // staged content matches MERGE_HEAD verbatim. Keep only paths that also differ from MERGE_HEAD (conflict resolutions
+        // or manual merge edits), matching GxpSnapshotGuardService's merge handling.
+        string? mergeHead = RunGitLines(repoRoot, "rev-parse", "--verify", "-q", "MERGE_HEAD")?.FirstOrDefault();
+        if (!string.IsNullOrEmpty(mergeHead))
         {
-            return new List<string>();
+            var differsFromMergeHead = RunGitLines(repoRoot, "diff", "--cached", "--name-only", "--diff-filter=ACMR", mergeHead);
+            if (differsFromMergeHead is not null)
+            {
+                var differing = new HashSet<string>(differsFromMergeHead, StringComparer.Ordinal);
+                staged = [.. staged.Where(differing.Contains)];
+            }
         }
+
+        return staged;
     }
 
     private static bool IsCsharpFile(string file)
@@ -104,6 +101,12 @@ public static class PreCommitOpenApiService
     private static bool IsSharedOrSolutionFile(string file)
     {
         string normalized = file.Replace('\\', '/');
+
+        if (normalized.StartsWith("packages/cli/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("packages/tooling_core/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
 
         if (normalized.StartsWith("packages/", StringComparison.OrdinalIgnoreCase) ||
             normalized.StartsWith("apps/apphost/", StringComparison.OrdinalIgnoreCase) ||
@@ -161,7 +164,88 @@ public static class PreCommitOpenApiService
         };
     }
 
-    private static string FindRepoRoot()
+    public static List<string>? TryGetTrackedFiles(string repoRoot)
+    {
+        if (!Directory.Exists(Path.Combine(repoRoot, ".git")) && !File.Exists(Path.Combine(repoRoot, ".git")))
+        {
+            return null;
+        }
+
+        return RunGitLines(repoRoot, "ls-files");
+    }
+
+    public static List<string>? TryGetChangedFilesSinceBase(string repoRoot, string baseRef = "origin/main")
+    {
+        if (!Directory.Exists(Path.Combine(repoRoot, ".git")) && !File.Exists(Path.Combine(repoRoot, ".git")))
+        {
+            return null;
+        }
+
+        string? compareBase = null;
+        string? mergeHead = RunGitLines(repoRoot, "rev-parse", "--verify", "-q", "MERGE_HEAD")?.FirstOrDefault();
+        if (!string.IsNullOrEmpty(mergeHead) &&
+            RunGitLines(repoRoot, "merge-base", "--is-ancestor", baseRef, mergeHead) is not null)
+        {
+            compareBase = RunGitLines(repoRoot, "rev-parse", "--verify", "-q", baseRef)?.FirstOrDefault();
+        }
+
+        compareBase ??= RunGitLines(repoRoot, "merge-base", baseRef, "HEAD")?.FirstOrDefault();
+        if (string.IsNullOrEmpty(compareBase))
+        {
+            return null;
+        }
+
+        var changed = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (string file in RunGitLines(repoRoot, "diff", "--name-only", "--diff-filter=d", compareBase) ?? [])
+        {
+            changed.Add(file);
+        }
+
+        foreach (string file in RunGitLines(repoRoot, "diff", "--cached", "--name-only", "--diff-filter=d", compareBase) ?? [])
+        {
+            changed.Add(file);
+        }
+
+        return [.. changed];
+    }
+
+    private static List<string>? RunGitLines(string repoRoot, params string[] args)
+    {
+        var psi = new ProcessStartInfo("git")
+        {
+            WorkingDirectory = repoRoot,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        foreach (string arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        try
+        {
+            using var process = Process.Start(psi);
+            if (process is null)
+            {
+                return null;
+            }
+
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            string stdout = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            _ = stderrTask.GetAwaiter().GetResult();
+            return process.ExitCode == 0
+                ? [.. stdout.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]
+                : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    internal static string FindRepoRoot()
     {
         string current = AppContext.BaseDirectory;
         while (!string.IsNullOrEmpty(current))

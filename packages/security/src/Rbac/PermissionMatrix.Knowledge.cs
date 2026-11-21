@@ -22,5 +22,14 @@ public static partial class PermissionMatrix
         {
             Grant(role, "delegation_log", "read");
         }
+
+        // Published SOPs, categories, and contextual help are readable by every clinical, operational, and audit staff
+        // role across /studies, /ecrf, /ctms, and /ssu; study participants (subject) do not access staff SOPs.
+        foreach (string role in OperationalStaffRoles)
+        {
+            Grant(role, "knowledge", "read");
+        }
+
+        Grant(RoleNormalization.ROLE_AUDITOR_CANONICAL, "knowledge", "read");
     }
 }

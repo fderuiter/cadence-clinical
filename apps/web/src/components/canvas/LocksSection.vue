@@ -591,7 +591,7 @@ async function executeModalSign(sigToken: string, signingReason: string) {
 .study-locks-subtitle {
   margin: 4px 0 0;
   font-size: 0.85rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .study-locks-filters {
@@ -610,9 +610,9 @@ async function executeModalSign(sigToken: string, signingReason: string) {
 
 .apply-card {
   padding: 14px 16px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-muted);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
 }
 
 .apply-card h3 {
@@ -640,7 +640,7 @@ async function executeModalSign(sigToken: string, signingReason: string) {
 .release-reason-bar label {
   font-size: 0.82rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .field-group input,
@@ -648,11 +648,11 @@ async function executeModalSign(sigToken: string, signingReason: string) {
 .release-reason-bar input,
 .study-locks-filters input[type="text"] {
   padding: 6px 10px;
-  border: 1px solid #94a3b8;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
-  color: #0f172a;
-  background: #ffffff;
+  color: var(--semantic-color-text);
+  background: var(--semantic-color-surface);
 }
 
 .apply-actions {
@@ -680,14 +680,14 @@ async function executeModalSign(sigToken: string, signingReason: string) {
 .locks-table th,
 .locks-table td {
   padding: 8px 10px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--semantic-color-border);
   text-align: left;
 }
 
 .locks-table th {
   font-weight: 600;
-  color: #1e293b;
-  background: #f8fafc;
+  color: var(--semantic-color-text-dark);
+  background: var(--semantic-color-surface-muted);
 }
 
 .lock-badge {
@@ -699,46 +699,46 @@ async function executeModalSign(sigToken: string, signingReason: string) {
 }
 
 .lock-badge--frozen {
-  background: #e0f2fe;
-  color: #075985;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary-dark);
 }
 
 .lock-badge--locked {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-dark);
 }
 
 .masked-pill {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   font-size: 0.8rem;
 }
 
 .meaning-note {
-  color: #475569;
+  color: var(--semantic-color-text-muted);
   font-size: 0.8rem;
 }
 
 .status-line {
   margin: 0;
   font-size: 0.85rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .ok-banner {
   padding: 8px 12px;
   border-radius: 6px;
-  background: #ecfdf5;
-  color: #065f46;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .error-banner {
   padding: 8px 12px;
   border-radius: 6px;
-  background: #fef2f2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-dark);
 }
 </style>

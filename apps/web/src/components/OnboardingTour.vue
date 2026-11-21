@@ -31,16 +31,16 @@
       aria-labelledby="onboarding-tour-title"
       tabindex="-1"
       style="
-        background-color: white;
-        color: var(--primary);
-        border: 2px solid var(--accent);
+        background-color: var(--semantic-color-surface);
+        color: var(--semantic-color-text);
+        border: 2px solid var(--semantic-color-interactive-primary);
         border-radius: 12px;
         box-shadow:
           0 10px 25px -5px rgba(0, 0, 0, 0.15),
           0 8px 10px -6px rgba(0, 0, 0, 0.15);
         padding: 20px;
         width: 320px;
-        font-family: var(--font);
+        font-family: var(--semantic-font-family);
       "
     >
       <!-- Arrow pointing up (only on anchored steps with valid target selector) -->
@@ -56,7 +56,7 @@
           height: 0;
           border-left: 10px solid transparent;
           border-right: 10px solid transparent;
-          border-bottom: 10px solid var(--accent);
+          border-bottom: 10px solid var(--semantic-color-interactive-primary);
         "
       />
 
@@ -73,14 +73,20 @@
           id="onboarding-tour-title"
           style="
             font-weight: 700;
-            color: var(--accent);
+            color: var(--semantic-color-interactive-primary);
             margin: 0;
             font-size: 1.05rem;
           "
         >
           {{ stepTitle }}
         </h4>
-        <span style="font-size: 0.75rem; color: #64748b; font-weight: 600">
+        <span
+          style="
+            font-size: 0.75rem;
+            color: var(--semantic-color-text-secondary);
+            font-weight: 600;
+          "
+        >
           Step {{ currentStep }} of {{ totalSteps }}
         </span>
       </div>
@@ -90,15 +96,16 @@
         style="
           font-size: 0.85rem;
           line-height: 1.4;
-          color: #334155;
+          color: var(--semantic-color-text-body);
           margin-bottom: 16px;
         "
       >
         <div
           v-if="dynamicPrompt"
           style="
-            background-color: #f0fdf4;
-            border-left: 3px solid #22c55e;
+            background-color: var(--semantic-color-success-bg-soft);
+            border-left: 3px solid var(--semantic-color-success);
+            color: var(--semantic-color-text-body);
             padding: 8px 10px;
             margin-bottom: 10px;
             border-radius: 0 4px 4px 0;
@@ -128,10 +135,11 @@
             style="
               padding: 6px 12px;
               font-size: 0.75rem;
-              border: 1px solid #cbd5e1;
+              border: 1px solid var(--semantic-color-border-control);
               border-radius: 6px;
               cursor: pointer;
-              background: white;
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
             @click="onboardingStore.dismissTour()"
           >
@@ -143,10 +151,11 @@
             style="
               padding: 6px 12px;
               font-size: 0.75rem;
-              border: 1px solid #cbd5e1;
+              border: 1px solid var(--semantic-color-border-control);
               border-radius: 6px;
               cursor: pointer;
-              background: white;
+              background: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
             "
             @click="handlePrev"
           >
@@ -161,7 +170,7 @@
             style="
               padding: 6px 8px;
               font-size: 0.7rem;
-              color: #64748b;
+              color: var(--semantic-color-text-secondary);
               background: none;
               border: none;
               cursor: pointer;
@@ -178,8 +187,8 @@
             style="
               padding: 6px 14px;
               font-size: 0.75rem;
-              background-color: var(--accent);
-              color: white;
+              background-color: var(--semantic-color-interactive-primary);
+              color: var(--semantic-color-surface);
               border: none;
               border-radius: 6px;
               cursor: pointer;
@@ -195,8 +204,8 @@
             style="
               padding: 6px 14px;
               font-size: 0.75rem;
-              background-color: #22c55e;
-              color: white;
+              background-color: var(--semantic-color-success);
+              color: var(--semantic-color-surface);
               border: none;
               border-radius: 6px;
               cursor: pointer;
@@ -352,6 +361,26 @@ const popoverStyle = ref({
 });
 
 let currentRafId = null;
+let isDisposed = false;
+const pendingTimers = new Set();
+
+function cancelPendingRaf() {
+  if (currentRafId !== null) {
+    if (typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(currentRafId);
+    }
+    currentRafId = null;
+  }
+}
+
+function schedulePositionUpdate(delayMs) {
+  if (isDisposed) return;
+  const timerId = setTimeout(() => {
+    pendingTimers.delete(timerId);
+    updatePosition();
+  }, delayMs);
+  pendingTimers.add(timerId);
+}
 
 async function syncStepRoute() {
   if (!onboardingStore.isActive || onboardingStore.disabled) return;
@@ -401,12 +430,16 @@ async function syncStepRoute() {
 }
 
 const updatePosition = () => {
-  if (!onboardingStore.isActive || onboardingStore.disabled) return;
-
-  if (currentRafId !== null) {
-    cancelAnimationFrame(currentRafId);
-    currentRafId = null;
+  if (
+    isDisposed ||
+    typeof document === "undefined" ||
+    !onboardingStore.isActive ||
+    onboardingStore.disabled
+  ) {
+    return;
   }
+
+  cancelPendingRaf();
 
   const config = currentStepConfig.value;
   const selector = config?.targetSelector;
@@ -427,6 +460,10 @@ const updatePosition = () => {
   let attempts = 0;
 
   const checkAndPosition = () => {
+    if (isDisposed || typeof document === "undefined") {
+      currentRafId = null;
+      return;
+    }
     const el = document.querySelector(selector);
     if (el) {
       const rect = el.getBoundingClientRect();
@@ -443,7 +480,7 @@ const updatePosition = () => {
         return;
       }
     }
-    if (attempts < MAX_RETRIES) {
+    if (attempts < MAX_RETRIES && typeof requestAnimationFrame === "function") {
       attempts++;
       currentRafId = requestAnimationFrame(checkAndPosition);
     } else {
@@ -467,16 +504,16 @@ const handleNext = async () => {
   onboardingStore.nextStep(currentDesc);
   await syncStepRoute();
   updatePosition();
-  setTimeout(updatePosition, 50);
-  setTimeout(updatePosition, 150);
+  schedulePositionUpdate(50);
+  schedulePositionUpdate(150);
 };
 
 const handlePrev = async () => {
   onboardingStore.prevStep();
   await syncStepRoute();
   updatePosition();
-  setTimeout(updatePosition, 50);
-  setTimeout(updatePosition, 150);
+  schedulePositionUpdate(50);
+  schedulePositionUpdate(150);
 };
 
 const handleComplete = () => {
@@ -491,14 +528,14 @@ watch(currentStep, async () => {
   }
   await syncStepRoute();
   updatePosition();
-  setTimeout(updatePosition, 50);
+  schedulePositionUpdate(50);
 });
 
 watch(
   () => route?.fullPath,
   () => {
     updatePosition();
-    setTimeout(updatePosition, 50);
+    schedulePositionUpdate(50);
   }
 );
 
@@ -539,10 +576,11 @@ watch(
 );
 
 onMounted(async () => {
+  isDisposed = false;
   window.addEventListener("resize", updatePosition);
   await syncStepRoute();
   updatePosition();
-  setTimeout(updatePosition, 100);
+  schedulePositionUpdate(100);
   if (
     onboardingStore.isActive &&
     !onboardingStore.disabled &&
@@ -557,10 +595,14 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  window.removeEventListener("resize", updatePosition);
-  if (currentRafId !== null) {
-    cancelAnimationFrame(currentRafId);
-    currentRafId = null;
+  isDisposed = true;
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", updatePosition);
   }
+  for (const timerId of pendingTimers) {
+    clearTimeout(timerId);
+  }
+  pendingTimers.clear();
+  cancelPendingRaf();
 });
 </script>

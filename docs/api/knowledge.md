@@ -4,6 +4,10 @@ Generated from `docs/openapi/knowledge_openapi.json` by `pnpm cadence generate-a
 
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
+| `GET` | `/api/v1/knowledge/articles` | ListKnowledgeArticles |  |
+| `GET` | `/api/v1/knowledge/articles/{article_id}` | GetKnowledgeArticle |  |
+| `GET` | `/api/v1/knowledge/categories` | ListKnowledgeCategories |  |
+| `GET` | `/api/v1/knowledge/contextual-help` | ResolveContextualHelp |  |
 | `GET` | `/api/v1/knowledge/status` | KnowledgeStatus | Returns Knowledge base operational status. |
 | `GET` | `/api/v1/training/assignments` | ListAssignments |  |
 | `GET` | `/api/v1/training/assignments/{assignment_id}` | GetAssignmentDetail |  |

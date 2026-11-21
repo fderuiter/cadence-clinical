@@ -54,7 +54,11 @@
             <span>⚡</span> 1-Click Fast Regulatory Compilation &amp; Export
           </h3>
           <p
-            style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted)"
+            style="
+              margin: 4px 0 0 0;
+              font-size: 12px;
+              color: var(--semantic-color-text-secondary);
+            "
           >
             Instantly package and download validated CDISC ODM XML and CSV
             datasets without traversing multi-step wizard.
@@ -67,7 +71,11 @@
           style="display: flex; align-items: center; gap: 8px"
         >
           <span
-            style="font-size: 11px; font-weight: 600; color: var(--text-muted)"
+            style="
+              font-size: 11px;
+              font-weight: 600;
+              color: var(--semantic-color-text-secondary);
+            "
             >Record Scope:</span
           >
           <div
@@ -95,7 +103,7 @@
                   recordLockFilter === 'all' ? 'var(--primary)' : 'transparent',
                 color:
                   recordLockFilter === 'all'
-                    ? '#fff'
+                    ? 'var(--semantic-color-text-on-primary)'
                     : 'var(--semantic-color-text)',
               }"
               @click="recordLockFilter = 'all'"
@@ -119,7 +127,7 @@
                     : 'transparent',
                 color:
                   recordLockFilter === 'locked_only'
-                    ? '#fff'
+                    ? 'var(--semantic-color-text-on-primary)'
                     : 'var(--semantic-color-text)',
               }"
               @click="recordLockFilter = 'locked_only'"
@@ -143,7 +151,7 @@
                     : 'transparent',
                 color:
                   recordLockFilter === 'unlocked_only'
-                    ? '#fff'
+                    ? 'var(--semantic-color-text-on-primary)'
                     : 'var(--semantic-color-text)',
               }"
               @click="recordLockFilter = 'unlocked_only'"
@@ -1096,7 +1104,7 @@ function resetExport() {
 
 .wizard-icon-box {
   font-size: 2rem;
-  background: var(--surface-muted, #f1f5f9);
+  background: var(--semantic-color-surface-muted);
   padding: 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -1140,21 +1148,21 @@ function resetExport() {
 
 .step-item.active {
   border-color: var(--accent);
-  background: #f0fdf4;
+  background: var(--semantic-color-success-bg-soft);
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
 }
 
 .step-item.completed {
   border-color: var(--border);
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
 }
 
 .step-badge {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1168,7 +1176,7 @@ function resetExport() {
 }
 
 .step-item.completed .step-badge {
-  background: #10b981;
+  background: var(--semantic-color-success);
   color: white;
 }
 
@@ -1235,7 +1243,7 @@ function resetExport() {
 
 .format-card.selected {
   border-color: var(--accent);
-  background: #f0fdf4;
+  background: var(--semantic-color-success-bg-soft);
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
@@ -1252,8 +1260,8 @@ function resetExport() {
 .format-badge {
   font-size: 0.7rem;
   font-weight: 600;
-  background: #e2e8f0;
-  color: #334155;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -1278,10 +1286,10 @@ function resetExport() {
 
 .meta-tag {
   font-size: 0.7rem;
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 /* Step 2 Domains */
@@ -1316,7 +1324,7 @@ function resetExport() {
 .count-pill {
   font-size: 0.75rem;
   font-weight: normal;
-  background: #e2e8f0;
+  background: var(--semantic-color-surface-header);
   padding: 2px 8px;
   border-radius: 12px;
 }
@@ -1339,7 +1347,7 @@ function resetExport() {
 }
 
 .domain-checkbox-card.checked {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   border-color: var(--accent);
 }
 
@@ -1352,12 +1360,12 @@ function resetExport() {
 .domain-label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .domain-desc {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-top: 2px;
 }
 
@@ -1391,7 +1399,7 @@ function resetExport() {
 .form-hint {
   display: block;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-top: 4px;
 }
 
@@ -1431,7 +1439,7 @@ function resetExport() {
 
 .toggle-sub {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 /* Privacy Profiles */
@@ -1452,7 +1460,7 @@ function resetExport() {
 
 .privacy-profile-card.selected {
   border-color: var(--accent);
-  background: #f0fdf4;
+  background: var(--semantic-color-success-bg-soft);
 }
 
 .privacy-header {
@@ -1469,21 +1477,21 @@ function resetExport() {
 
 .privacy-desc {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-bottom: 12px;
 }
 
 .privacy-rules-list {
   list-style: none;
   font-size: 0.75rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .salt-config-panel {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
@@ -1494,7 +1502,7 @@ function resetExport() {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   margin-bottom: 24px;
 }
 
@@ -1517,7 +1525,7 @@ function resetExport() {
 
 .summary-label {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .summary-val {
@@ -1567,14 +1575,14 @@ function resetExport() {
 
 .progress-step {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-top: 4px;
 }
 
 .progress-bar-track {
   width: 320px;
   height: 8px;
-  background: #e2e8f0;
+  background: var(--semantic-color-surface-header);
   border-radius: 4px;
   margin: 16px auto 8px;
   overflow: hidden;
@@ -1588,7 +1596,7 @@ function resetExport() {
 
 .progress-percent-label {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .success-icon {
@@ -1598,13 +1606,13 @@ function resetExport() {
 .success-title {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #10b981;
+  color: var(--semantic-color-success);
   margin-top: 8px;
 }
 
 .success-desc {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   max-width: 480px;
   margin: 6px auto 16px;
 }

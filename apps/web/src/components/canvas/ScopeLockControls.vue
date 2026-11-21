@@ -300,9 +300,9 @@ async function executeSignedLock(sigToken: string, signingReason: string) {
 .scope-lock-controls {
   margin-top: 8px;
   padding: 10px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-muted);
   border-radius: 6px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
 }
 
 .scope-lock-row {
@@ -315,18 +315,18 @@ async function executeSignedLock(sigToken: string, signingReason: string) {
 .scope-lock-label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .scope-lock-input {
   flex: 1 1 220px;
   min-width: 180px;
   padding: 6px 10px;
-  border: 1px solid #94a3b8;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
-  color: #0f172a;
-  background: #ffffff;
+  color: var(--semantic-color-text);
+  background: var(--semantic-color-surface);
 }
 
 .scope-lock-outcome {
@@ -337,12 +337,12 @@ async function executeSignedLock(sigToken: string, signingReason: string) {
 }
 
 .scope-lock-outcome--ok {
-  background: #ecfdf5;
-  color: #065f46;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .scope-lock-outcome--error {
-  background: #fef2f2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-dark);
 }
 </style>

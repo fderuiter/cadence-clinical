@@ -115,8 +115,8 @@ onMounted(async () => {
 }
 
 .badge-gxp {
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 4px;
@@ -124,8 +124,8 @@ onMounted(async () => {
 }
 
 .badge-regulatory {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 4px;
@@ -133,9 +133,9 @@ onMounted(async () => {
 }
 
 .badge-standard {
-  background: #f8fafc;
-  color: #475569;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-secondary);
+  border: 1px solid var(--semantic-color-border);
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -144,13 +144,13 @@ onMounted(async () => {
 .view-title {
   font-size: 1.6rem;
   font-weight: 800;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
   margin: 0 0 6px 0;
 }
 
 .view-subtitle {
   font-size: 0.95rem;
-  color: var(--text-secondary, #64748b);
+  color: var(--semantic-color-text-secondary);
   margin: 0;
   max-width: 900px;
   line-height: 1.5;
@@ -166,8 +166,8 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   padding: 16px 20px;
 }
@@ -184,20 +184,20 @@ onMounted(async () => {
 .stat-value {
   font-size: 1.5rem;
   font-weight: 800;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .stat-label {
   font-size: 0.8rem;
-  color: var(--text-secondary, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .text-success {
-  color: #166534;
+  color: var(--semantic-color-success-dark);
 }
 
 .text-warning {
-  color: #b45309;
+  color: var(--semantic-color-warning);
 }
 
 .console-wrapper {

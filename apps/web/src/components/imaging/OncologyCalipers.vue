@@ -529,12 +529,12 @@ function getTimepointClass(tp) {
 .oncology-calipers-panel {
   display: flex;
   flex-direction: column;
-  background-color: #0f172a;
+  background-color: var(--semantic-color-surface-inverse);
   border-radius: var(--semantic-border-radius-md, 8px);
-  border: 1px solid var(--semantic-color-border, #334155);
+  border: 1px solid var(--semantic-color-border);
   padding: 16px;
   gap: 16px;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
   height: 100%;
   overflow-y: auto;
 }
@@ -543,19 +543,19 @@ function getTimepointClass(tp) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 1px solid var(--semantic-color-text-dark);
   padding-bottom: 10px;
 }
 
 .panel-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
 }
 
 .badge-gxp {
   background-color: rgba(56, 189, 248, 0.15);
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
   border: 1px solid rgba(56, 189, 248, 0.4);
   font-size: 0.7rem;
   font-weight: 700;
@@ -568,7 +568,7 @@ function getTimepointClass(tp) {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
   margin-bottom: 8px;
 }
 
@@ -579,9 +579,9 @@ function getTimepointClass(tp) {
 }
 
 .tool-select-btn {
-  background-color: #1e293b;
-  color: #cbd5e1;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-elevated);
+  color: var(--semantic-color-text-inverse-muted);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
   padding: 8px 10px;
   display: flex;
@@ -594,14 +594,14 @@ function getTimepointClass(tp) {
 }
 
 .tool-select-btn:hover {
-  background-color: #334155;
-  color: #ffffff;
+  background-color: var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse);
 }
 
 .tool-select-btn.active {
-  background-color: #0284c7;
-  border-color: #38bdf8;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  border-color: var(--semantic-color-accent-inverse);
+  color: var(--semantic-color-text-inverse);
   box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
 }
 
@@ -621,14 +621,14 @@ function getTimepointClass(tp) {
 .field-label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .field-input,
 .field-select {
-  background-color: #1e293b;
-  color: #f8fafc;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-elevated);
+  color: var(--semantic-color-text-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 6px 8px;
   font-size: 0.8rem;
@@ -644,7 +644,7 @@ function getTimepointClass(tp) {
 .btn-clear-all {
   background: none;
   border: none;
-  color: #ef4444;
+  color: var(--semantic-color-error);
   font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
@@ -652,10 +652,10 @@ function getTimepointClass(tp) {
 
 .empty-state {
   font-size: 0.78rem;
-  color: #64748b;
+  color: var(--semantic-color-text-inverse-muted);
   padding: 12px;
-  background-color: #0d1322;
-  border: 1px dashed #334155;
+  background-color: var(--semantic-color-surface-sunken);
+  border: 1px dashed var(--semantic-color-border-inverse);
   border-radius: 6px;
   text-align: center;
 }
@@ -663,8 +663,8 @@ function getTimepointClass(tp) {
 .annotations-table-wrapper {
   max-height: 160px;
   overflow-y: auto;
-  background-color: #0d1322;
-  border: 1px solid #1e293b;
+  background-color: var(--semantic-color-surface-sunken);
+  border: 1px solid var(--semantic-color-text-dark);
   border-radius: 6px;
 }
 
@@ -675,17 +675,17 @@ function getTimepointClass(tp) {
 }
 
 .annotations-table th {
-  background-color: #111827;
-  color: #9ca3af;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse-muted);
   text-align: left;
   padding: 6px 8px;
   font-weight: 600;
-  border-bottom: 1px solid #1f2937;
+  border-bottom: 1px solid var(--semantic-color-text-dark);
 }
 
 .annotations-table td {
   padding: 6px 8px;
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 1px solid var(--semantic-color-text-dark);
 }
 
 .timepoint-pill {
@@ -699,7 +699,7 @@ function getTimepointClass(tp) {
 
 .tp-baseline {
   background-color: rgba(56, 189, 248, 0.15);
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
   border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
@@ -707,7 +707,7 @@ function getTimepointClass(tp) {
 .tp-c4d1,
 .tp-followup {
   background-color: rgba(168, 85, 247, 0.15);
-  color: #c084fc;
+  color: var(--semantic-color-ai);
   border: 1px solid rgba(168, 85, 247, 0.3);
 }
 
@@ -720,34 +720,38 @@ function getTimepointClass(tp) {
 
 .type-pill.target {
   background-color: rgba(52, 211, 153, 0.15);
-  color: #34d399;
+  color: var(--semantic-color-emerald-inverse-text);
 }
 
 .type-pill.non_target {
   background-color: rgba(148, 163, 184, 0.15);
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .type-pill.new_lesion {
   background-color: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
+  color: var(--semantic-color-error);
 }
 
 .btn-delete-annot {
   background: none;
   border: none;
-  color: #9ca3af;
+  color: var(--semantic-color-text-inverse-muted);
   cursor: pointer;
   font-weight: bold;
 }
 
 .btn-delete-annot:hover {
-  color: #ef4444;
+  color: var(--semantic-color-error);
 }
 
 .derivation-summary-card {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  border: 1px solid #334155;
+  background: linear-gradient(
+    135deg,
+    var(--semantic-color-surface-elevated) 0%,
+    var(--semantic-color-surface-inverse) 100%
+  );
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 8px;
   padding: 12px;
 }
@@ -762,7 +766,7 @@ function getTimepointClass(tp) {
 .summary-title {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
 }
 
 .response-pill {
@@ -774,23 +778,23 @@ function getTimepointClass(tp) {
 }
 
 .resp-cr {
-  background-color: #059669;
-  color: #ffffff;
+  background-color: var(--semantic-color-success);
+  color: var(--semantic-color-text-inverse);
 }
 
 .resp-pr {
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-inverse);
 }
 
 .resp-sd {
-  background-color: #d97706;
-  color: #ffffff;
+  background-color: var(--semantic-color-warning-action);
+  color: var(--semantic-color-text-inverse);
 }
 
 .resp-pd {
-  background-color: #dc2626;
-  color: #ffffff;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-text-inverse);
 }
 
 .metrics-grid {
@@ -806,27 +810,31 @@ function getTimepointClass(tp) {
 
 .metric-label {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .metric-value {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
 }
 
 .text-success {
-  color: #34d399;
+  color: var(--semantic-color-emerald-inverse-text);
 }
 
 .text-danger {
-  color: #f87171;
+  color: var(--semantic-color-error);
 }
 
 .btn-primary-signoff {
   width: 100%;
-  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
-  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    var(--semantic-color-primary) 0%,
+    var(--semantic-color-interactive-primary) 100%
+  );
+  color: var(--semantic-color-text-inverse);
   border: none;
   border-radius: 6px;
   padding: 10px 14px;
@@ -854,8 +862,8 @@ function getTimepointClass(tp) {
 }
 
 .modal-card {
-  background-color: #0f172a;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 8px;
   width: 90%;
   max-width: 480px;
@@ -877,15 +885,15 @@ function getTimepointClass(tp) {
 .btn-close {
   background: none;
   border: none;
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
   font-size: 1.1rem;
   cursor: pointer;
 }
 
 .modal-disclaimer {
   font-size: 0.78rem;
-  color: #94a3b8;
-  background-color: #1e293b;
+  color: var(--semantic-color-text-inverse-muted);
+  background-color: var(--semantic-color-surface-elevated);
   padding: 8px 12px;
   border-radius: 4px;
   margin-bottom: 12px;
@@ -899,19 +907,19 @@ function getTimepointClass(tp) {
 }
 
 .tool-select-btn.btn-ai-segment {
-  border-color: #38bdf8;
+  border-color: var(--semantic-color-accent-inverse);
   background-color: rgba(56, 189, 248, 0.1);
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
 }
 
 .tool-select-btn.btn-ai-segment:hover {
   background-color: rgba(56, 189, 248, 0.25);
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
 }
 
 .ai-badge {
   background-color: rgba(56, 189, 248, 0.2);
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
   border: 1px solid rgba(56, 189, 248, 0.4);
   font-size: 0.68rem;
   font-weight: 700;
@@ -921,7 +929,7 @@ function getTimepointClass(tp) {
 
 .ai-edited-badge {
   background-color: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
+  color: var(--semantic-color-warning);
   border: 1px solid rgba(251, 191, 36, 0.4);
   font-size: 0.68rem;
   font-weight: 700;
@@ -931,7 +939,7 @@ function getTimepointClass(tp) {
 
 .manual-badge {
   background-color: rgba(148, 163, 184, 0.15);
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
   font-size: 0.68rem;
   padding: 2px 6px;
   border-radius: 4px;
@@ -939,9 +947,9 @@ function getTimepointClass(tp) {
 
 .diameter-input {
   width: 52px;
-  background-color: #1e293b;
-  color: #ffffff;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-elevated);
+  color: var(--semantic-color-text-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 2px 4px;
   font-size: 0.75rem;
@@ -955,7 +963,7 @@ function getTimepointClass(tp) {
 
 .btn-convert-manual {
   background-color: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
+  color: var(--semantic-color-warning);
   border: 1px solid rgba(251, 191, 36, 0.3);
   font-size: 0.68rem;
   font-weight: 600;
@@ -969,8 +977,8 @@ function getTimepointClass(tp) {
 }
 
 .btn-secondary {
-  background-color: #334155;
-  color: #f8fafc;
+  background-color: var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse);
   border: none;
   padding: 8px 14px;
   border-radius: 4px;
@@ -978,8 +986,8 @@ function getTimepointClass(tp) {
 }
 
 .btn-confirm-sign {
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-inverse);
   border: none;
   padding: 8px 14px;
   border-radius: 4px;

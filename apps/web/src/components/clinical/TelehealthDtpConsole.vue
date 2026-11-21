@@ -1042,7 +1042,7 @@ const assents = ref([
     lar_name: "Jane Connor",
     lar_relationship: "PARENT",
     cryptographic_bundle_hash:
-      "3f78a8bc819e917a94367f08d0e51703e3a98bc19e917a94367f08d0e51703e3",
+      "3f78a8bc819e917a94367f08d0e51703e3a98bc19e917a94367f08d0e51703e3", // pragma: allowlist secret
   },
 ]);
 
@@ -1363,8 +1363,8 @@ onMounted(() => {
   flex-direction: column;
   gap: 20px;
   padding: 24px;
-  background: var(--surface-bg, #f8fafc);
-  color: var(--text-main, #0f172a);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   font-family: inherit;
 }
 
@@ -1372,8 +1372,8 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg, 8px);
   padding: 20px 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -1393,50 +1393,50 @@ onMounted(() => {
 }
 
 .badge-gxp {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: var(--semantic-color-info-bg);
+  color: var(--semantic-color-interactive-primary);
+  border: 1px solid var(--semantic-color-info-border);
 }
 
 .badge-standard {
-  background: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+  background: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success);
+  border: 1px solid var(--semantic-color-success-border-soft);
 }
 
 .badge-stream {
-  background: #faf5ff;
-  color: #7e22ce;
-  border: 1px solid #e9d5ff;
+  background: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
+  border: 1px solid var(--semantic-color-purple-border);
 }
 
 .badge-subj {
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   font-weight: 600;
 }
 
 .badge-participant {
-  background: #ecfeff;
-  color: #0e7490;
+  background: var(--semantic-color-cyan-bg);
+  color: var(--semantic-color-primary);
 }
 
 .badge-zone {
-  background: #fefce8;
-  color: #854d0e;
-  border: 1px solid #fef08a;
+  background: var(--semantic-color-warning-bg-light);
+  color: var(--semantic-color-warning);
+  border: 1px solid var(--semantic-color-warning-border);
 }
 
 .console-title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--text-main, #0f172a);
+  color: var(--semantic-color-text);
   margin: 0 0 6px 0;
 }
 
 .console-subtitle {
   font-size: 13px;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   margin: 0;
   max-width: 900px;
   line-height: 1.4;
@@ -1461,31 +1461,31 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: var(--primary, #2563eb);
-  color: #ffffff;
+  background: var(--primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-primary:hover {
-  background: #1d4ed8;
+  background: var(--semantic-color-interactive-primary);
 }
 
 .btn-secondary {
-  background: var(--surface, #ffffff);
-  border-color: var(--border, #cbd5e1);
-  color: var(--text-main, #0f172a);
+  background: var(--semantic-color-surface);
+  border-color: var(--border);
+  color: var(--semantic-color-text);
 }
 
 .btn-secondary:hover {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 
 .btn-accent {
-  background: #7c3aed;
-  color: #ffffff;
+  background: var(--semantic-color-ai);
+  color: var(--semantic-color-surface);
 }
 
 .btn-accent:hover {
-  background: #6d28d9;
+  background: var(--semantic-color-ai);
 }
 
 .btn-sm {
@@ -1508,8 +1508,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 14px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
   padding: 16px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -1527,16 +1527,16 @@ onMounted(() => {
 }
 
 .bg-blue {
-  background: var(--status-info-bg, #eff6ff);
+  background: var(--semantic-color-info-bg);
 }
 .bg-green {
-  background: var(--status-success-bg, #f0fdf4);
+  background: var(--semantic-color-success-bg-soft);
 }
 .bg-purple {
-  background: var(--status-accent-bg, #faf5ff);
+  background: var(--semantic-color-purple-bg);
 }
 .bg-red {
-  background: var(--status-danger-bg, #fef2f2);
+  background: var(--semantic-color-error-bg-soft);
 }
 
 .metric-content {
@@ -1546,25 +1546,25 @@ onMounted(() => {
 
 .metric-label {
   font-size: 12px;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
 
 .metric-value {
   font-size: 22px;
   font-weight: 700;
-  color: var(--text-main, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .metric-sub {
   font-size: 11px;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .nav-tabs {
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border);
 }
 
 .tab-button {
@@ -1574,18 +1574,18 @@ onMounted(() => {
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
 }
 
 .tab-button.active {
-  color: var(--primary, #2563eb);
-  border-bottom-color: var(--primary, #2563eb);
+  color: var(--primary);
+  border-bottom-color: var(--primary);
 }
 
 .console-body {
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -1606,7 +1606,7 @@ onMounted(() => {
 
 .panel-desc {
   font-size: 12px;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   margin: 0;
 }
 
@@ -1623,21 +1623,21 @@ onMounted(() => {
 .data-table th {
   text-align: left;
   padding: 10px 12px;
-  background: #f8fafc;
-  color: var(--text-muted, #64748b);
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-secondary);
+  border-bottom: 1px solid var(--border);
   font-weight: 600;
 }
 
 .data-table td {
   padding: 12px;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
 
 .mono-badge {
   font-family: monospace;
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;
@@ -1651,28 +1651,28 @@ onMounted(() => {
 }
 
 .chip-green {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 .chip-blue {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--semantic-color-info-light);
+  color: var(--semantic-color-interactive-primary);
 }
 .chip-orange {
-  background: #ffedd5;
-  color: #c2410c;
+  background: var(--semantic-color-orange-bg);
+  color: var(--semantic-color-orange-text);
 }
 .chip-purple {
-  background: #f3e8ff;
-  color: #7e22ce;
+  background: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
 }
 .chip-red {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 .chip-gray {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 .actions-cell {
@@ -1683,14 +1683,14 @@ onMounted(() => {
 .empty-cell {
   text-align: center;
   padding: 30px;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .room-simulation-box {
   margin-top: 20px;
   padding: 16px;
-  background: #0f172a;
-  color: #f8fafc;
+  background: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
   border-radius: 8px;
 }
 
@@ -1714,7 +1714,7 @@ onMounted(() => {
 }
 
 .video-card {
-  background: #1e293b;
+  background: var(--semantic-color-surface-elevated);
   border-radius: 6px;
   position: relative;
   min-height: 220px;
@@ -1754,8 +1754,8 @@ onMounted(() => {
 }
 
 .btn-icon {
-  background: #334155;
-  color: #ffffff;
+  background: var(--semantic-color-border-inverse);
+  color: var(--semantic-color-surface);
   border: none;
   padding: 6px 10px;
   border-radius: 4px;
@@ -1767,7 +1767,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #1e293b;
+  background: var(--semantic-color-surface-elevated);
   padding: 8px 12px;
   border-radius: 4px;
 }
@@ -1775,7 +1775,7 @@ onMounted(() => {
 .token-snippet {
   font-family: monospace;
   font-size: 11px;
-  color: #38bdf8;
+  color: var(--semantic-color-primary);
   margin-left: 6px;
 }
 
@@ -1787,8 +1787,8 @@ onMounted(() => {
 
 .coview-card,
 .assent-history-card {
-  background: #f8fafc;
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 14px;
 }
@@ -1801,8 +1801,8 @@ onMounted(() => {
 }
 
 .coview-viewport {
-  background: #ffffff;
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 12px;
   max-height: 380px;
@@ -1813,13 +1813,13 @@ onMounted(() => {
   padding: 10px;
   margin-bottom: 10px;
   border-radius: 4px;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border: 1px solid transparent;
 }
 
 .clause-box.highlighted {
-  background: #fef9c3;
-  border-color: #fde047;
+  background: var(--semantic-color-warning-bg);
+  border-color: var(--semantic-color-warning-border);
 }
 
 .clause-box h5 {
@@ -1854,7 +1854,7 @@ onMounted(() => {
 }
 
 .modal-card {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border-radius: 8px;
   width: 90%;
   max-width: 580px;
@@ -1867,7 +1867,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border);
 }
 
 .modal-header h3 {
@@ -1905,13 +1905,13 @@ onMounted(() => {
 .form-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-main, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .form-control {
   padding: 8px 10px;
   font-size: 13px;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border);
   border-radius: 4px;
 }
 
@@ -1928,14 +1928,14 @@ onMounted(() => {
   align-items: center;
   padding: 40px;
   gap: 12px;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid #e2e8f0;
-  border-top-color: var(--primary, #2563eb);
+  border: 3px solid var(--semantic-color-border);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -1947,10 +1947,10 @@ onMounted(() => {
 }
 
 .text-danger {
-  color: #dc2626;
+  color: var(--semantic-color-error);
 }
 .text-success {
-  color: #16a34a;
+  color: var(--semantic-color-success);
 }
 .font-bold {
   font-weight: 700;
@@ -1962,7 +1962,7 @@ onMounted(() => {
   font-size: 11px;
 }
 .text-muted {
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 table,

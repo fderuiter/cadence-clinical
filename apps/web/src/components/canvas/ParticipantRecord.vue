@@ -286,24 +286,24 @@ async function exportCasebook() {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-muted);
   border-radius: 6px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
 }
 
 .casebook-label {
   font-size: 0.84rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .casebook-select {
   padding: 6px 10px;
-  border: 1px solid #94a3b8;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
-  color: #0f172a;
-  background: #ffffff;
+  color: var(--semantic-color-text);
+  background: var(--semantic-color-surface);
 }
 
 .casebook-outcome {
@@ -313,13 +313,13 @@ async function exportCasebook() {
 }
 
 .casebook-outcome--ok {
-  background: #ecfdf5;
-  color: #065f46;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .casebook-outcome--error {
-  background: #fef2f2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-dark);
 }
 
 h3 {
