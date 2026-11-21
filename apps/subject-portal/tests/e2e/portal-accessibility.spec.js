@@ -332,9 +332,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(syncStatusText).toHaveAttribute("role", "status");
     await expect(syncStatusText).toHaveAttribute("aria-live", "polite");
 
-    // 3. Unavailable workflow guard outside demo mode (/wallet redirects to #view-unavailable)
-    await expect(page.locator("#tab-btn-wallet")).toHaveCount(0);
-    await page.goto("wallet");
+    // 3. Unavailable workflow guard outside demo mode (/lay-summaries redirects to #view-unavailable)
+    await expect(page.locator("#tab-btn-lay-summaries")).toHaveCount(0);
+    await page.goto("lay-summaries");
     await completeInitialPinSetupIfOpen(page);
     await expect(page.locator("#view-unavailable")).toBeVisible();
     const unavailableAudit = await new AxeBuilder({ page })
@@ -525,6 +525,31 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       }
     });
 
+    await page.route(
+      "**/api/v1/payments/participant/me/wallet",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            wallet: {
+              id: "wallet-001",
+              study_id: "study_001",
+              site_id: "site_001",
+              current_balance: 50,
+              lifetime_stipends: 100,
+              lifetime_reimbursements: 25,
+              lifetime_disbursements: 75,
+              w9_status: "NOT_REQUIRED",
+              currency: "USD",
+            },
+            recent_transactions: [],
+            expense_claims: [],
+          }),
+        });
+      }
+    );
+
     await page.goto("");
     await completeInitialPinSetupIfOpen(page);
 
@@ -533,6 +558,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       { id: "btn-tab-btn-compliance", panel: "view-compliance" },
       { id: "btn-tab-btn-inbox", panel: "view-inbox" },
       { id: "btn-tab-btn-consent", panel: "view-consent" },
+      { id: "btn-tab-btn-wallet", panel: "view-wallet" },
     ];
 
     const tabLocator = page.locator('.nav-tabs [role="tab"]');
@@ -603,15 +629,16 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
         btnOpacity: btnStyle.opacity,
         badgeOpacity: badgeStyle.opacity,
         animationIterationCount: btnStyle.animationIterationCount,
-        animationDurationSec: parseFloat(btnStyle.animationDuration) || 0,
-        drawerTransitionSec: parseFloat(drawerStyle.transitionDuration) || 0,
+        pulseHalted: (parseFloat(btnStyle.animationDuration) || 0) <= 0.001,
+        drawerInstant:
+          (parseFloat(drawerStyle.transitionDuration) || 0) <= 0.001,
       };
     });
 
     expect(motionStyles.btnOpacity).toBe("1");
     expect(motionStyles.badgeOpacity).toBe("1");
     expect(motionStyles.animationIterationCount).toBe("1");
-    expect(motionStyles.animationDurationSec).toBeLessThanOrEqual(0.001);
-    expect(motionStyles.drawerTransitionSec).toBeLessThanOrEqual(0.001);
+    expect(motionStyles.pulseHalted).toBe(true);
+    expect(motionStyles.drawerInstant).toBe(true);
   });
 });

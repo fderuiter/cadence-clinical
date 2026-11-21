@@ -18,6 +18,7 @@ passing_trx='<TestRun><Results><UnitTestResult testName="Kernel.Passes" outcome=
 
 benchmark_only_trx='<TestRun><Results>
 <UnitTestResult testName="LineageBenchmarkPostgresTests.BenchmarkTenMillionEdgesTraceLatency" outcome="NotExecuted" />
+<UnitTestResult testName="Benchmark_TenMillionEdges_TraceLatency" outcome="NotExecuted" />
 </Results></TestRun>'
 
 browser_optin_trx='<TestRun><Results>

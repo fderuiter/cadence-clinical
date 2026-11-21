@@ -436,6 +436,7 @@ function defaultFormLocation(query: FormQueryResponse): RouteLocationRaw {
   if (props.studyCode) routeQuery.studyId = props.studyCode;
   const participantCode = query.subject_code || props.subjectCode;
   if (participantCode) routeQuery.subjectId = participantCode;
+  if (query.enrollment_id) routeQuery.enrollmentId = query.enrollment_id;
   routeQuery.formId = query.form_id;
   routeQuery.itemId = query.item_id;
   return { path: "/ecrf", query: routeQuery };

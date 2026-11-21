@@ -9,6 +9,7 @@ const { mockFetch } = vi.hoisted(() => {
 import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth";
 import { apiClient } from "../src/api/apiClient";
+import { createOpenApiClient, getBaseUrl } from "../src/api/client";
 import { designerService } from "../src/api/designer";
 import { etmfService } from "../src/api/etmf";
 import { interopService } from "../src/api/interop";
@@ -272,6 +273,22 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
   describe("services/api wrapper", () => {
     it("should re-export apiClient correctly as the default export", () => {
       expect(apiService).toBe(apiClient);
+    });
+  });
+
+  describe("createOpenApiClient dynamic base URL resolution", () => {
+    it("rewrites default client requests dynamically when VITE_API_BASE_URL changes after client creation", async () => {
+      const dynamicClient = createOpenApiClient();
+      if (import.meta.env) {
+        import.meta.env.VITE_API_BASE_URL = "http://localhost:3000";
+      }
+
+      mockFetch.mockResolvedValueOnce(jsonResponse({ status: "ok" }));
+      await dynamicClient.GET("/api/v1/health");
+
+      const request = await lastRequest();
+      expect(request.url).toBe("http://localhost:3000/api/v1/health");
+      expect(getBaseUrl()).toBe("http://localhost:3000");
     });
   });
 });

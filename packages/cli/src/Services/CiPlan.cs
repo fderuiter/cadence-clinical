@@ -374,11 +374,11 @@ public static class CiPlan
             new(E2eJob, "Install Node dependencies") { CoveredBy = StyleNodeInstall, Commands = [Pnpm("install", "--frozen-lockfile")] },
             new(E2eJob, "Install Playwright Browsers")
             {
-                NotRunLocally = "cadence ci does not download browsers; run 'pnpm exec playwright install chromium' once yourself",
+                NotRunLocally = "cadence ci does not download browsers; run 'pnpm --filter web exec playwright install chromium' once yourself",
             },
             new(E2eJob, "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
             new(E2eJob, "Run Subject Portal E2E Accessibility Tests") { Commands = [Pnpm("--filter", "subject-portal", "test:e2e")] },
-            new(E2eJob, "Run Web Application E2E Accessibility Tests") { Commands = [Pnpm("--filter", "web", "test:e2e")] },
+            new(E2eJob, "Run Web Application E2E Accessibility Tests") { Commands = [Pnpm("--filter", "web", "test:e2e:a11y")] },
             new(E2eJob, "Run Browser-to-Database Correction Integration Test")
             {
                 NeedsPostgres = true,

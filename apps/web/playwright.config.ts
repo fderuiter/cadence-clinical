@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  testIgnore: /web-accessibility\.spec\.ts/,
   fullyParallel: false, // run sequentially to prevent race conditions or database locks
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

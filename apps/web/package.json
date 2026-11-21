@@ -41,6 +41,7 @@
     "lint": "node ../../scripts/check_duplicate_identifiers.js && eslint .",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:a11y": "playwright test --config playwright.a11y.config.ts",
     "typecheck": "node ../../scripts/check_duplicate_identifiers.js && tsc --noEmit"
   },
   "type": "module",

@@ -71,6 +71,9 @@ describe("CrcFormRenderer.vue", () => {
       global: {
         plugins: [pinia],
         stubs: {
+          "router-link": {
+            template: '<div><slot :navigate="() => {}" /></div>',
+          },
           ClinicalFormField: {
             template:
               '<div class="clinical-form-field-stub" :data-field-id="field.id">Field: {{ field.label }}</div>',
@@ -223,5 +226,24 @@ describe("CrcFormRenderer.vue", () => {
       "Re-Consent Gate Active"
     );
     expect(wrapper.find("#reconsent-gate-modal").text()).toContain("SUBJ-102");
+  });
+
+  it("guards the /training link behind isScreenAvailable('training')", () => {
+    const nonDemoWrapper = createWrapper({
+      isTrainingGated: true,
+      missingCourses: ["GCP-101"],
+    });
+    expect(nonDemoWrapper.find("#training-gating-banner").exists()).toBe(true);
+    expect(nonDemoWrapper.find("#btn-complete-training").exists()).toBe(false);
+    nonDemoWrapper.unmount();
+
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    const demoWrapper = createWrapper({
+      isTrainingGated: true,
+      missingCourses: ["GCP-101"],
+    });
+    expect(demoWrapper.find("#training-gating-banner").exists()).toBe(true);
+    expect(demoWrapper.find("#btn-complete-training").exists()).toBe(true);
+    demoWrapper.unmount();
   });
 });
