@@ -438,6 +438,11 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
 
         string sanitizeContent = File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", "sanitize-bot-comment.yml"));
         sanitizeContent.Should().Contain("github.event.comment.user.type == 'Bot'");
+        sanitizeContent.Should().Contain("github.event.comment.user.login == 'github-actions[bot]'");
+        sanitizeContent.Should().NotContain("google-labs-jules[bot]",
+            "GITHUB_TOKEN cannot edit issue comments authored by external GitHub Apps");
+        sanitizeContent.Should().NotContain("google-labs-stitch[bot]",
+            "GITHUB_TOKEN cannot edit issue comments authored by external GitHub Apps");
         sanitizeContent.Should().NotContain("pull-requests: write");
         sanitizeContent.Should().Contain("issues: write");
     }

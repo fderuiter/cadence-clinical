@@ -10,16 +10,12 @@ permissions:
 jobs:
   sanitize-comment:
     # 1. Ensure this comment is on a Pull Request (not an issue)
-    # 2. Restrict execution to approved CI/CD bot accounts
+    # 2. Restrict execution to github-actions[bot] (GITHUB_TOKEN cannot edit comments created by other GitHub Apps)
     # 3. Ensure the comment body contains "[CI/CD Fix Attempt "
     if: >-
       github.event.issue.pull_request != null &&
       github.event.comment.user.type == 'Bot' &&
-      (
-        github.event.comment.user.login == 'github-actions[bot]' ||
-        github.event.comment.user.login == 'google-labs-jules[bot]' ||
-        github.event.comment.user.login == 'google-labs-stitch[bot]'
-      ) &&
+      github.event.comment.user.login == 'github-actions[bot]' &&
       contains(github.event.comment.body, '[CI/CD Fix Attempt ')
     runs-on: ubuntu-latest
     permissions:
@@ -30,14 +26,9 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           script: |
-            const allowedBotLogins = new Set([
-              'github-actions[bot]',
-              'google-labs-jules[bot]',
-              'google-labs-stitch[bot]',
-            ]);
             const commenter = context.payload.comment?.user;
-            if (!commenter || commenter.type !== 'Bot' || !allowedBotLogins.has(commenter.login)) {
-              console.log('Skipping comment from unapproved actor.');
+            if (!commenter || commenter.type !== 'Bot' || commenter.login !== 'github-actions[bot]') {
+              console.log('Skipping comment from actor not editable by GITHUB_TOKEN.');
               return;
             }
 
