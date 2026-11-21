@@ -231,6 +231,7 @@ public sealed class BuildDocsScriptTests : IDisposable
         int exitCode = RtmGeneratorService.GenerateRtm(
             draft: true,
             validateOnly: true,
+            reportPath: Path.Combine(_fixtureRoot, "no-trx"),
             repoRoot: repoRoot,
             honorDraftEnvironment: false,
             requireCurrentSnapshot: false,

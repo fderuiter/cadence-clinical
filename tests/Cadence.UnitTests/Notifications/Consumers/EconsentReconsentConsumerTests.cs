@@ -33,10 +33,10 @@ public class EconsentReconsentConsumerTests
         FluidTemplateRenderer.RegisterType<NotificationRenderModel>();
     }
 
-    private static ServiceProvider CreateServiceProvider(NotificationsDbContext dbContext)
+    private static ServiceProvider CreateServiceProvider(DbContextOptions<NotificationsDbContext> options)
     {
         var services = new ServiceCollection();
-        services.AddSingleton(dbContext);
+        services.AddScoped(_ => new NotificationsDbContext(options));
         services.AddFluidTemplating();
         services.AddSingleton<IEnrolledSubjectResolver, DefaultEnrolledSubjectResolver>();
         services.AddSingleton<IOptions<NotificationBrandingOptions>>(Options.Create(new NotificationBrandingOptions
@@ -47,7 +47,8 @@ public class EconsentReconsentConsumerTests
 
         services.AddMassTransitTestHarness(x =>
         {
-            x.AddConsumer<EconsentReconsentConsumer>();
+            x.AddConsumer<EconsentReconsentConsumer>()
+                .Endpoint(e => e.ConcurrentMessageLimit = 1);
         });
         return services.BuildServiceProvider();
     }
@@ -63,7 +64,7 @@ public class EconsentReconsentConsumerTests
             .Options;
         await using var dbContext = new NotificationsDbContext(options);
 
-        await using var provider = CreateServiceProvider(dbContext);
+        await using var provider = CreateServiceProvider(options);
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
 
@@ -106,7 +107,7 @@ public class EconsentReconsentConsumerTests
             .Options;
         await using var dbContext = new NotificationsDbContext(options);
 
-        await using var provider = CreateServiceProvider(dbContext);
+        await using var provider = CreateServiceProvider(options);
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
 
@@ -126,7 +127,9 @@ public class EconsentReconsentConsumerTests
         initialCount.Should().BeGreaterThan(0);
 
         // Publish duplicate message
-        await harness.Bus.Publish(message, ct);
+        var duplicateMessageId = Guid.NewGuid();
+        await harness.Bus.Publish(message, ctx => ctx.MessageId = duplicateMessageId, ct);
+        (await harness.Consumed.Any<EconsentReconsentRequired>(x => x.Context.MessageId == duplicateMessageId, ct)).Should().BeTrue();
 
         int countAfterDuplicate = await dbContext.NotificationRecords.CountAsync(r => r.RelatedEntityType == "EconsentReconsent", ct);
         countAfterDuplicate.Should().Be(initialCount);
@@ -141,7 +144,7 @@ public class EconsentReconsentConsumerTests
             .Options;
         await using var dbContext = new NotificationsDbContext(options);
 
-        await using var provider = CreateServiceProvider(dbContext);
+        await using var provider = CreateServiceProvider(options);
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
 
