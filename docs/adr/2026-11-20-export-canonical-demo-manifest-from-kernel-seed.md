@@ -70,3 +70,4 @@ However, the static public demo builds (`apps/web` and `apps/subject-portal`, AD
 - **Verification Plan:**
   - `DemoManifestGeneratorTests` and `QualityGateRegistryTests` verify RFC 9562 UUIDv8 derivation, byte-identical output, eight-persona parity, and drift failure in `Cadence.UnitTests`.
   - `apps/web/tests/demo_manifest_determinism.spec.ts` and `apps/subject-portal/tests/demo_manifest_determinism.test.js` verify identical Genesis SHA-256 hashes, fixed task schedules, repeatable PRNG sequences, synthetic persona switching, and live clock / Web Crypto preservation outside demo mode.
+  - `pnpm --filter web exec playwright test --project=accessibility`, `pnpm --filter subject-portal test:e2e`, and `BrowserCorrectionReachesTheDatabaseWithItsReason` verify demo-mode accessibility and circular Vite ESM `import.meta.env` API base URL resolution end-to-end.
