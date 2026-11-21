@@ -254,8 +254,8 @@ function resetSimulation() {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background-color: var(--semantic-color-surface-muted, #f8fafc);
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   padding: 14px;
 }
@@ -264,7 +264,7 @@ function resetSimulation() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--semantic-color-border, #e2e8f0);
+  border-bottom: 1px solid var(--semantic-color-border);
   padding-bottom: 8px;
 }
 
@@ -278,27 +278,27 @@ function resetSimulation() {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--semantic-color-text-dark, #0f172a);
+  color: var(--semantic-color-text-dark);
 }
 
 .rule-count-badge {
   font-size: 0.72rem;
   font-weight: 700;
-  background-color: var(--semantic-color-border, #cbd5e1);
-  color: var(--semantic-color-text-dark, #0f172a);
+  background-color: var(--semantic-color-border);
+  color: var(--semantic-color-text-dark);
   padding: 2px 8px;
   border-radius: 12px;
 }
 
 .rule-count-badge.has-violations {
-  background-color: var(--semantic-color-warning-bg-badge, #fef3c7);
-  color: var(--semantic-color-warning-text, #b45309);
-  border: 1px solid var(--semantic-color-warning-border, #fcd34d);
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-text);
+  border: 1px solid var(--semantic-color-warning-border);
 }
 
 .simulation-controls-card {
-  background: var(--semantic-color-surface, #ffffff);
-  border: 1px solid var(--semantic-color-border, #cbd5e1);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 10px;
 }
@@ -312,7 +312,7 @@ function resetSimulation() {
 .control-label {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--semantic-color-text-secondary, #475569);
+  color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
 }
 
@@ -325,23 +325,23 @@ function resetSimulation() {
   flex: 1;
   padding: 6px 10px;
   font-size: 0.8rem;
-  border: 1px solid var(--semantic-color-border, #cbd5e1);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
 }
 
 .btn-reset-simulation {
   padding: 6px 12px;
   font-size: 0.8rem;
   font-weight: 600;
-  background-color: var(--semantic-color-surface-muted, #f1f5f9);
-  border: 1px solid var(--semantic-color-border, #cbd5e1);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   cursor: pointer;
 }
 
 .btn-reset-simulation:hover {
-  background-color: var(--semantic-color-border, #e2e8f0);
+  background-color: var(--semantic-color-border);
 }
 
 .rules-list-container {
@@ -354,28 +354,28 @@ function resetSimulation() {
 
 .empty-rules-box {
   font-size: 0.8rem;
-  color: var(--semantic-color-text-muted, #64748b);
+  color: var(--semantic-color-text-muted);
   padding: 12px;
   text-align: center;
-  background: #ffffff;
-  border: 1px dashed var(--semantic-color-border, #cbd5e1);
+  background: var(--semantic-color-surface);
+  border: 1px dashed var(--semantic-color-border);
   border-radius: 6px;
 }
 
 .rule-card {
-  background: var(--semantic-color-surface, #ffffff);
-  border: 1px solid var(--semantic-color-border, #cbd5e1);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   overflow: hidden;
   transition: border-color 0.15s ease-in-out;
 }
 
 .rule-card.card-error {
-  border-color: var(--semantic-color-error-border, #fca5a5);
+  border-color: var(--semantic-color-error-border);
 }
 
 .rule-card.card-active {
-  border-color: var(--semantic-color-interactive-brand, #2563eb);
+  border-color: var(--semantic-color-interactive-brand);
 }
 
 .rule-card-header {
@@ -383,13 +383,13 @@ function resetSimulation() {
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background-color: var(--semantic-color-surface-subtle, #f8fafc);
+  background-color: var(--semantic-color-surface-subtle);
   cursor: pointer;
   user-select: none;
 }
 
 .rule-card-header:hover {
-  background-color: var(--semantic-color-surface-muted, #f1f5f9);
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .rule-title-group {
@@ -407,21 +407,21 @@ function resetSimulation() {
 }
 
 .rule-type-badge.skip_logic {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: var(--semantic-color-info-light);
+  color: var(--semantic-color-info);
 }
 
 .rule-type-badge.constraint,
 .rule-type-badge.cross_form_check,
 .rule-type-badge.edit_check {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 
 .rule-target-name {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--semantic-color-text-dark, #0f172a);
+  color: var(--semantic-color-text-dark);
 }
 
 .rule-status-group {
@@ -438,43 +438,43 @@ function resetSimulation() {
 }
 
 .status-pill.status-success {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 
 .status-pill.status-error {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 
 .status-pill.status-active {
-  background-color: #dbeafe;
-  color: #1d4ed8;
+  background-color: var(--semantic-color-info-light);
+  color: var(--semantic-color-interactive-primary);
 }
 
 .status-pill.status-inactive,
 .status-pill.status-neutral {
-  background-color: #f1f5f9;
-  color: #475569;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 .expand-chevron {
   font-size: 0.65rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .rule-message {
   margin: 0;
   padding: 6px 12px;
   font-size: 0.75rem;
-  color: var(--semantic-color-text-body, #334155);
-  background-color: #fff8f8;
-  border-bottom: 1px solid var(--semantic-color-border-muted, #f1f5f9);
+  color: var(--semantic-color-text-body);
+  background-color: var(--semantic-color-error-bg-soft);
+  border-bottom: 1px solid var(--semantic-color-border-muted);
 }
 
 .rule-trace-body {
   padding: 10px 12px;
-  border-top: 1px solid var(--semantic-color-border-muted, #f1f5f9);
+  border-top: 1px solid var(--semantic-color-border-muted);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -484,15 +484,15 @@ function resetSimulation() {
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--semantic-color-text-subtle, #64748b);
+  color: var(--semantic-color-text-subtle);
   letter-spacing: 0.03em;
 }
 
 .ast-tree-container {
-  background-color: #1e293b;
+  background-color: var(--semantic-color-surface-elevated);
   border-radius: 6px;
   padding: 8px;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
   font-family: monospace;
   font-size: 0.75rem;
   overflow-x: auto;
@@ -509,24 +509,24 @@ function resetSimulation() {
   align-items: center;
   gap: 4px;
   padding: 3px 8px;
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.72rem;
   font-family: monospace;
 }
 
 .dependency-item.has-value {
-  background-color: #e0f2fe;
-  border-color: #bae6fd;
+  background-color: var(--semantic-color-primary-light);
+  border-color: var(--semantic-color-info-border-accent);
 }
 
 .dep-field-id {
   font-weight: 700;
-  color: #0369a1;
+  color: var(--semantic-color-primary);
 }
 
 .dep-field-val {
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 </style>

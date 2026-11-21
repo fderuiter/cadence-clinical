@@ -144,13 +144,13 @@ const calculateSum = (columnId) => {
 .widget-label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text-primary, #1e293b);
+  color: var(--semantic-color-text);
 }
 
 .btn-add-row {
   padding: 4px 10px;
-  background-color: var(--primary, #2563eb);
-  color: #ffffff;
+  background-color: var(--primary);
+  color: var(--semantic-color-surface);
   border: none;
   border-radius: var(--radius-md, 6px);
   font-size: 0.8125rem;
@@ -160,7 +160,7 @@ const calculateSum = (columnId) => {
 
 .table-wrapper {
   overflow-x: auto;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
 }
 
@@ -171,43 +171,43 @@ const calculateSum = (columnId) => {
 }
 
 .log-table th {
-  background-color: var(--surface-subtle, #f8fafc);
+  background-color: var(--semantic-color-surface-muted);
   padding: 8px 12px;
   text-align: left;
-  border-bottom: 1px solid var(--border, #cbd5e1);
+  border-bottom: 1px solid var(--border);
   font-weight: 600;
-  color: var(--text-secondary, #475569);
+  color: var(--semantic-color-text-secondary);
 }
 
 .log-table td {
   padding: 6px 10px;
-  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .cell-input {
   width: 100%;
   padding: 4px 8px;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm, 4px);
   font-size: 0.875rem;
-  background-color: var(--surface, #ffffff);
+  background-color: var(--semantic-color-surface);
 }
 
 .cell-input:focus {
   outline: none;
-  border-color: var(--primary, #2563eb);
+  border-color: var(--primary);
 }
 
 .row-num {
   text-align: center;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.75rem;
 }
 
 .btn-delete-row {
   background: none;
   border: none;
-  color: var(--error, #ef4444);
+  color: var(--error);
   font-size: 1.125rem;
   font-weight: 700;
   cursor: pointer;
@@ -215,17 +215,17 @@ const calculateSum = (columnId) => {
 
 .empty-cell {
   text-align: center;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   padding: 16px;
 }
 
 .summary-row {
-  background-color: var(--surface-subtle, #f8fafc);
+  background-color: var(--semantic-color-surface-muted);
   font-weight: 600;
 }
 
 .aggregate-value {
-  color: var(--primary-dark, #1d4ed8);
+  color: var(--semantic-color-primary-dark);
 }
 
 table,

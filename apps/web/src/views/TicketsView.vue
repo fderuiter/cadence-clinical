@@ -904,7 +904,7 @@ const openTicketDetail = (t) => {
       file_size_bytes: 42100,
       mime_type: "text/csv",
       sha256_hash:
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
       uploaded_by: t.created_by || "cra.monitor@cadence.io",
       uploaded_at: t.created_at,
       deid_scrubbed: true,
@@ -1017,7 +1017,7 @@ const handleTicketAttachment = ({ file, reason_for_change }) => {
     file_size_bytes: file.size,
     mime_type: file.type || "application/octet-stream",
     sha256_hash:
-      "a4f891b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abc",
+      "a4f891b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abc", // pragma: allowlist secret
     uploaded_by: "active.user@cadence.io",
     uploaded_at: new Date().toISOString(),
     deid_scrubbed: true,
@@ -1100,29 +1100,29 @@ const exportAuditTrail = (format) => {
 }
 
 .badge-gxp {
-  background: #0284c7;
-  color: #ffffff;
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 .badge-regulatory {
-  background: #4f46e5;
-  color: #ffffff;
+  background: var(--semantic-color-accent);
+  color: var(--semantic-color-surface);
 }
 .badge-standard {
-  background: #475569;
-  color: #ffffff;
+  background: var(--semantic-color-text-secondary);
+  color: var(--semantic-color-surface);
 }
 
 .view-title {
   font-size: 1.6rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   margin: 0 0 6px 0;
   letter-spacing: -0.02em;
 }
 
 .view-subtitle {
   font-size: 0.875rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   max-width: 820px;
   line-height: 1.45;
   margin: 0;
@@ -1141,10 +1141,10 @@ const exportAuditTrail = (format) => {
 }
 
 .stat-card {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border-radius: 10px;
   padding: 16px 20px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -1167,23 +1167,23 @@ const exportAuditTrail = (format) => {
   align-items: center;
   justify-content: center;
   font-size: 1.3rem;
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 
 .alert-icon {
-  background: #eff6ff;
+  background: var(--semantic-color-info-bg);
 }
 .capa-icon {
-  background: #fef2f2;
+  background: var(--semantic-color-error-bg-soft);
 }
 .rbqm-icon {
-  background: #f0fdf4;
+  background: var(--semantic-color-success-bg-soft);
 }
 .qtl-icon {
-  background: #faf5ff;
+  background: var(--semantic-color-purple-bg);
 }
 .breach-icon {
-  background: #fffbeb;
+  background: var(--semantic-color-warning-bg-soft);
 }
 
 .stat-details {
@@ -1194,33 +1194,33 @@ const exportAuditTrail = (format) => {
 .stat-value {
   font-size: 1.4rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   line-height: 1.2;
 }
 
 .stat-label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-top: 2px;
 }
 
 .text-danger {
-  color: #dc2626;
+  color: var(--semantic-color-error);
 }
 .text-success {
-  color: #16a34a;
+  color: var(--semantic-color-success);
 }
 .text-warning {
-  color: #d97706;
+  color: var(--semantic-color-warning);
 }
 
 /* Filter & Controls Card */
 .controls-card {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border-radius: 8px;
   padding: 12px 18px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1232,8 +1232,8 @@ const exportAuditTrail = (format) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 6px 12px;
   flex: 1;
@@ -1259,17 +1259,17 @@ const exportAuditTrail = (format) => {
 
 .filter-select {
   padding: 6px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.82rem;
-  background: #ffffff;
-  color: #334155;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-body);
   outline: none;
 }
 
 .view-mode-toggle {
   display: flex;
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
   border-radius: 6px;
   padding: 2px;
 }
@@ -1280,14 +1280,14 @@ const exportAuditTrail = (format) => {
   background: transparent;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   border-radius: 4px;
   cursor: pointer;
 }
 
 .view-toggle-btn.active {
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -1301,9 +1301,9 @@ const exportAuditTrail = (format) => {
 }
 
 .kanban-column {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   border-radius: 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 320px);
@@ -1314,7 +1314,7 @@ const exportAuditTrail = (format) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .column-title-group {
@@ -1330,30 +1330,30 @@ const exportAuditTrail = (format) => {
 }
 
 .col-open {
-  background: #3b82f6;
+  background: var(--semantic-color-interactive-primary);
 }
 .col-progress {
-  background: #8b5cf6;
+  background: var(--semantic-color-ai);
 }
 .col-paused {
-  background: #f59e0b;
+  background: var(--semantic-color-warning-action);
 }
 .col-resolved {
-  background: #10b981;
+  background: var(--semantic-color-success);
 }
 .col-closed {
-  background: #64748b;
+  background: var(--semantic-color-text-secondary);
 }
 
 .column-title {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .column-count {
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 2px 7px;
@@ -1369,8 +1369,8 @@ const exportAuditTrail = (format) => {
 }
 
 .ticket-card {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 8px;
   padding: 12px 14px;
   cursor: pointer;
@@ -1385,7 +1385,7 @@ const exportAuditTrail = (format) => {
 
 .ticket-card:hover {
   transform: translateY(-2px);
-  border-color: #2563eb;
+  border-color: var(--semantic-color-interactive-primary);
   box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.1);
 }
 
@@ -1399,13 +1399,13 @@ const exportAuditTrail = (format) => {
   font-family: monospace;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #2563eb;
+  color: var(--semantic-color-interactive-primary);
 }
 
 .card-ticket-title {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   margin: 0;
   line-height: 1.35;
 }
@@ -1418,8 +1418,8 @@ const exportAuditTrail = (format) => {
 }
 
 .category-pill {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 600;
@@ -1433,56 +1433,56 @@ const exportAuditTrail = (format) => {
 }
 
 .sla-tag-normal {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 .sla-tag-warned {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 .sla-tag-breached {
-  background: #fee2e2;
-  color: #dc2626;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 .fill-paused {
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 .badge-sev-critical {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 .badge-sev-major {
-  background: #ffedd5;
-  color: #c2410c;
+  background: var(--semantic-color-orange-bg);
+  color: var(--semantic-color-orange-text);
 }
 .badge-sev-minor {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--semantic-color-info-light);
+  color: var(--semantic-color-interactive-primary);
 }
 .badge-paused {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 .badge-signed {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 .badge-pending-sign {
-  background: #fef9c3;
-  color: #a16207;
+  background: var(--semantic-color-warning-bg);
+  color: var(--semantic-color-warning);
 }
 .badge-closed {
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 /* TABLE VIEW */
 .table-card {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
   overflow-x: auto;
 }
 
@@ -1494,11 +1494,11 @@ const exportAuditTrail = (format) => {
 }
 
 .clinical-table th {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   padding: 10px 14px;
   font-weight: 700;
-  color: #475569;
-  border-bottom: 1px solid #cbd5e1;
+  color: var(--semantic-color-text-secondary);
+  border-bottom: 1px solid var(--semantic-color-border-control);
   text-transform: uppercase;
   font-size: 0.72rem;
   letter-spacing: 0.02em;
@@ -1506,8 +1506,8 @@ const exportAuditTrail = (format) => {
 
 .clinical-table td {
   padding: 12px 14px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #1e293b;
+  border-bottom: 1px solid var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-dark);
 }
 
 .table-row {
@@ -1516,7 +1516,7 @@ const exportAuditTrail = (format) => {
 }
 
 .table-row:hover {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
 }
 
 .font-mono {
@@ -1529,7 +1529,7 @@ const exportAuditTrail = (format) => {
 .empty-table-cell {
   text-align: center;
   padding: 36px !important;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
 }
 
 .priority-tag {
@@ -1539,16 +1539,16 @@ const exportAuditTrail = (format) => {
 }
 
 .priority-critical {
-  color: #dc2626;
+  color: var(--semantic-color-error);
 }
 .priority-high {
-  color: #ea580c;
+  color: var(--semantic-color-orange-text);
 }
 .priority-medium {
-  color: #2563eb;
+  color: var(--semantic-color-interactive-primary);
 }
 .priority-low {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .btn {
@@ -1570,21 +1570,21 @@ const exportAuditTrail = (format) => {
 }
 
 .btn-primary {
-  background: #2563eb;
-  color: #ffffff;
+  background: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
 }
 .btn-primary:hover {
-  background: #1d4ed8;
+  background: var(--semantic-color-interactive-primary);
 }
 .btn-secondary {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  color: #334155;
+  background: var(--semantic-color-surface);
+  border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text-body);
 }
 /* Bulk Action Toolbar */
 .bulk-action-bar {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
   border-radius: 8px;
   padding: 12px 18px;
   display: flex;
@@ -1603,8 +1603,8 @@ const exportAuditTrail = (format) => {
 .bulk-count-badge {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #1e40af;
-  background: #dbeafe;
+  color: var(--semantic-color-info);
+  background: var(--semantic-color-info-light);
   padding: 4px 10px;
   border-radius: 12px;
 }
@@ -1636,11 +1636,11 @@ const exportAuditTrail = (format) => {
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: #2563eb;
+  accent-color: var(--semantic-color-interactive-primary);
 }
 
 .selected-row {
-  background-color: #f0f9ff !important;
+  background-color: var(--semantic-color-info-bg-soft) !important;
 }
 
 .btn-sm {
@@ -1649,7 +1649,7 @@ const exportAuditTrail = (format) => {
 }
 
 .btn-secondary:hover {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 
 table,
