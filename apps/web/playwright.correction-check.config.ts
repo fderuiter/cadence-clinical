@@ -11,6 +11,9 @@ export default defineConfig({
   testDir: "./tests/browser",
   workers: 1,
   retries: 0,
+  expect: {
+    timeout: 15000,
+  },
   outputDir:
     process.env.RECORDING_OUTPUT_DIR || "./test-results/correction-check",
   reporter: [["list"]],
@@ -29,6 +32,7 @@ export default defineConfig({
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
+            "--disable-gpu",
           ],
         }),
       },

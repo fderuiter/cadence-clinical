@@ -41,7 +41,7 @@
     "lint": "node ../../scripts/check_duplicate_identifiers.js && eslint .",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test --project=accessibility",
-    "test:e2e:full": "playwright test --project=setup --project=chromium",
+    "test:e2e:stack": "playwright test",
     "typecheck": "node ../../scripts/check_duplicate_identifiers.js && tsc --noEmit"
   },
   "type": "module",
