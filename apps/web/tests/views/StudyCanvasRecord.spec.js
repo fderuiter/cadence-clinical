@@ -54,6 +54,7 @@ vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: {
     listProposals: vi.fn(async () => []),
     search: vi.fn(async () => []),
+    getChildren: vi.fn(async () => []),
     getCommands: vi.fn(),
     getObservation: vi.fn(),
     getZoomPath: vi.fn(async () => []),
@@ -938,5 +939,121 @@ describe("Clinical Canvas: a participant's data", () => {
         )
       ).toBeNull();
     });
+  });
+
+  it("resolves a cold deep-linked participant UUID in O(1) via getSubjectDetail without paging listSubjects, and rejects cross-study participants", async () => {
+    const deepId = "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d79";
+    vi.mocked(executionApi.getSubjectDetail).mockResolvedValueOnce({
+      id: deepId,
+      subject_id: "SUBJ-01",
+      study_id: "CAD-101",
+      site_id: "SITE-17",
+      status: "ACTIVE",
+      active_protocol_version: "3.0",
+      enrollment_index: 12,
+      treatment_group: null,
+      randomization_seed: null,
+      investigational_product_id: null,
+    });
+
+    await mountAt(
+      `/studies/CAD-101?stage=conduct&participant=participant:${deepId}`
+    );
+
+    expect(executionApi.getSubjectDetail).toHaveBeenCalledWith(deepId);
+    expect(executionApi.listSubjects).not.toHaveBeenCalled();
+    expect(wrapper.find("#participant-record-title").text()).toBe("SUBJ-01");
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe("SUBJ-01");
+
+    wrapper.unmount();
+    const crossStudyId = "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80";
+    vi.mocked(executionApi.getSubjectDetail).mockResolvedValueOnce({
+      id: crossStudyId,
+      subject_id: "SUBJ-99",
+      study_id: "OTHER-STUDY",
+      site_id: "SITE-99",
+      status: "ACTIVE",
+      active_protocol_version: "1.0",
+      enrollment_index: 1,
+      treatment_group: null,
+      randomization_seed: null,
+      investigational_product_id: null,
+    });
+
+    await mountAt(
+      `/studies/CAD-101?stage=conduct&participant=participant:${crossStudyId}`
+    );
+
+    expect(wrapper.find("#record-not-loaded").text()).toContain(
+      "isn't among those loaded for CAD-101"
+    );
+    expect(executionApi.listSubjects).not.toHaveBeenCalled();
+  });
+
+  it("filters participants by server-backed search (?q=) and study site dropdown (?site=) while preserving filters on selection", async () => {
+    vi.useFakeTimers();
+    try {
+      const siteParticipant = {
+        id: "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
+        subject_id: "SUBJ-02",
+        study_id: "CAD-101",
+        site_id: "SITE-22",
+        status: "ACTIVE",
+        active_protocol_version: "3.0",
+        enrollment_index: 2,
+      };
+      vi.mocked(executionApi.listSubjects).mockImplementation(
+        async ({ q, siteId, limit = 50, offset = 0 }) => {
+          const all = [PARTICIPANT, siteParticipant];
+          const items = all.filter(
+            (p) =>
+              (!siteId || p.site_id === siteId) &&
+              (!q || p.subject_id.toLowerCase().includes(q.toLowerCase()))
+          );
+          return { items, total: items.length, limit, offset };
+        }
+      );
+
+      await mountAt("/studies/CAD-101?stage=conduct&section=participants");
+
+      const searchInput = wrapper.find("#participants-search");
+      await searchInput.setValue("SUBJ-02");
+      vi.advanceTimersByTime(180);
+      await flushPromises();
+
+      expect(router.currentRoute.value.query).toEqual({
+        stage: "conduct",
+        section: "participants",
+        q: "SUBJ-02",
+      });
+      expect(executionApi.listSubjects).toHaveBeenLastCalledWith({
+        studyId: "CAD-101",
+        status: undefined,
+        siteId: undefined,
+        q: "SUBJ-02",
+        limit: 50,
+        offset: 0,
+      });
+
+      const siteSelect = wrapper.find("#participants-site");
+      await router.push(
+        "/studies/CAD-101?stage=conduct&section=participants&site=SITE-22&q=SUBJ-02"
+      );
+      await flushPromises();
+      expect(siteSelect.element.value).toBe("SITE-22");
+
+      await wrapper.find("#participant-SUBJ-02").trigger("click");
+      await flushPromises();
+
+      expect(router.currentRoute.value.query).toEqual({
+        stage: "conduct",
+        section: "participants",
+        site: "SITE-22",
+        q: "SUBJ-02",
+        node: `participant:${siteParticipant.id}`,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

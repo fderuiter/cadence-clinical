@@ -87,7 +87,7 @@ import { getActivePinia } from "pinia";
 import { useFocusTrap } from "ui";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
-import type { SubjectSummary } from "../../api/executionApi";
+import { executionApi, type SubjectSummary } from "../../api/executionApi";
 import type {
   PaletteTarget,
   WorkspacePaletteOption,
@@ -98,9 +98,9 @@ import { useStudyCanvasStore } from "../../stores/studyCanvas";
 /**
  * The unified global ⌘K command palette (docs/ux/CLINICAL_CANVAS.md §2.5):
  * combines kernel study search (ADR-2484, ADR-2540), opening a study by code,
- * lifecycle navigation (study home, stages, sections, loaded participants, and
- * Assist Ask when AI assistance is enabled), and authorized UX-1 workflow
- * destinations and workspace controls.
+ * lifecycle navigation (study home, stages, sections, loaded and server-searched
+ * participants, and Assist Ask when AI assistance is enabled), and authorized UX-1
+ * workflow destinations and workspace controls.
  */
 interface PaletteItem {
   key: string;
@@ -148,13 +148,40 @@ const { enabled: aiEnabled } = useAiAssistance();
 
 const kernelHits = ref<KernelSearchHit[]>([]);
 const kernelNote = ref("");
+const remoteParticipants = ref<SubjectSummary[]>([]);
 const resolvedParticipant = ref<SubjectSummary | null>(null);
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let latestSearch = 0;
 let latestParticipantLookup = 0;
 
-async function searchKernel(text: string) {
+async function searchKernel(text: string, study: string) {
   const request = ++latestSearch;
+  const activePinia = getActivePinia();
+  const canvasStore = activePinia ? useStudyCanvasStore(activePinia) : null;
+  const shouldQueryRemoteParticipants = Boolean(
+    study &&
+    typeof executionApi.listSubjects === "function" &&
+    (!canvasStore ||
+      !canvasStore.paletteLoaded ||
+      canvasStore.unfilteredLoadedCount < canvasStore.paletteTotal)
+  );
+  if (shouldQueryRemoteParticipants) {
+    void executionApi
+      .listSubjects({
+        studyId: study,
+        q: text,
+        limit: MAX_KERNEL_HITS,
+      })
+      .then((page) => {
+        if (request !== latestSearch) return;
+        remoteParticipants.value = page?.items ?? [];
+      })
+      .catch(() => {
+        if (request !== latestSearch) return;
+        remoteParticipants.value = [];
+      });
+  }
+
   try {
     const hits = await kernelApi.search({
       text,
@@ -177,12 +204,13 @@ watch([query, () => props.studyCode], ([value, study]) => {
   const lookupRequest = ++latestParticipantLookup;
   const text = value.trim();
   kernelHits.value = [];
+  remoteParticipants.value = [];
   resolvedParticipant.value = null;
   if (text.length < MIN_SEARCH_LENGTH || text.length > MAX_STUDY_CODE) {
     kernelNote.value = "";
     return;
   }
-  searchTimer = setTimeout(() => searchKernel(text), SEARCH_DELAY_MS);
+  searchTimer = setTimeout(() => searchKernel(text, study), SEARCH_DELAY_MS);
 
   const activePinia = getActivePinia();
   const canvasStore = activePinia ? useStudyCanvasStore(activePinia) : null;
@@ -210,15 +238,20 @@ onBeforeUnmount(() => {
 });
 
 const allParticipants = computed<SubjectSummary[]>(() => {
-  const extra = resolvedParticipant.value;
-  if (
-    !extra ||
-    (extra.study_id && extra.study_id !== props.studyCode) ||
-    props.participants.some((participant) => participant.id === extra.id)
-  ) {
-    return props.participants;
+  const byId = new Map<string, SubjectSummary>();
+  for (const participant of props.participants) {
+    byId.set(participant.id, participant);
   }
-  return [...props.participants, extra];
+  for (const candidate of [
+    ...remoteParticipants.value,
+    ...(resolvedParticipant.value ? [resolvedParticipant.value] : []),
+  ]) {
+    if (candidate.study_id && candidate.study_id !== props.studyCode) continue;
+    if (!byId.has(candidate.id)) {
+      byId.set(candidate.id, candidate);
+    }
+  }
+  return Array.from(byId.values());
 });
 
 // A study hit opens the study it names by its code; one without a code has nowhere to open.

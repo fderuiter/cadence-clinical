@@ -61,6 +61,17 @@ public sealed record FormStateResponse(
 /// <param name="ItemCount">Total items on the form.</param>
 /// <param name="RecordedCount">Items on the form that currently hold a recorded value.</param>
 /// <param name="CollectionTitle">The CollectionSpec's title in the governing protocol version, when present.</param>
+/// <param name="MissingRequiredCount">Required items on the form that still lack a value.</param>
+/// <param name="OpenQueryCount">Queries currently open against values on this form.</param>
+/// <param name="AnsweredQueryCount">Queries on this form answered by the site and awaiting monitor review.</param>
+/// <param name="VerifiedCount">Recorded items whose current revision holds an active source verification.</param>
+/// <param name="UnverifiedCount">Recorded items whose current revision is not source-verified.</param>
+/// <param name="Locked">Whether any hard lock covers the form or its broader scope.</param>
+/// <param name="Frozen">Whether any freeze covers the form or its broader scope.</param>
+/// <param name="LockCount">Active lock or freeze assertions covering the form.</param>
+/// <param name="Signed">Whether an attestation signs the form's current content hash.</param>
+/// <param name="SignatureSuperseded">Whether the form was signed earlier and has changed since.</param>
+/// <param name="SignatureCount">Total attestations recorded over this form.</param>
 public sealed record FormSummaryResponse(
     Guid FormId,
     Guid EnrollmentId,
@@ -77,9 +88,20 @@ public sealed record FormSummaryResponse(
     bool Complete,
     int ItemCount,
     int RecordedCount,
-    string? CollectionTitle = null)
+    string? CollectionTitle = null,
+    int MissingRequiredCount = 0,
+    int OpenQueryCount = 0,
+    int AnsweredQueryCount = 0,
+    int VerifiedCount = 0,
+    int UnverifiedCount = 0,
+    bool Locked = false,
+    bool Frozen = false,
+    int LockCount = 0,
+    bool Signed = false,
+    bool SignatureSuperseded = false,
+    int SignatureCount = 0)
 {
-    internal static FormSummaryResponse From(CollectionInstanceSummary summary) =>
+    internal static FormSummaryResponse From(CollectionInstanceSummary summary, int openQueryCount = 0, int answeredQueryCount = 0) =>
         new(
             summary.CollectionInstanceId.Value,
             summary.EnrollmentId.Value,
@@ -96,7 +118,18 @@ public sealed record FormSummaryResponse(
             summary.Complete,
             summary.ItemCount,
             summary.RecordedCount,
-            summary.CollectionTitle);
+            summary.CollectionTitle,
+            summary.MissingRequiredCount,
+            openQueryCount,
+            answeredQueryCount,
+            summary.VerifiedCount,
+            summary.UnverifiedCount,
+            summary.Locked,
+            summary.Frozen,
+            summary.LockCount,
+            summary.Signed,
+            summary.SignatureSuperseded,
+            summary.SignatureCount);
 }
 
 /// <summary>A form as a form screen shows it.</summary>

@@ -435,7 +435,7 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       expect(button.attributes("aria-disabled")).toBe("true");
       await button.trigger("click");
       expect(wrapper.find("#verb-note").text()).toContain(
-        "Protocol simulation isn't available in this workspace yet."
+        "Participant simulation isn't available in this workspace yet"
       );
       expect(wrapper.find("#verb-note").text()).not.toMatch(/#\d+/);
       expect(button.attributes("aria-describedby")).toBe("verb-note");

@@ -149,7 +149,12 @@
           </p>
           <div v-else-if="simulationError" class="inspector-empty" role="alert">
             <p class="sdv-status">Schedule check couldn't be completed.</p>
-            <SupportDetails :detail="simulationError" />
+            <details class="inspector-ref-details">
+              <summary class="inspector-ref-summary">Technical details</summary>
+              <code id="kernel-simulate-error" class="inspector-ref">{{
+                simulationError
+              }}</code>
+            </details>
           </div>
           <div v-else-if="simulationResult" class="simulation-details">
             <h4 style="margin-top: 4px; margin-bottom: 6px">
@@ -160,6 +165,7 @@
                 simulationResult.matrix_gaps &&
                 simulationResult.matrix_gaps.length
               "
+              id="kernel-simulate-gaps"
               class="gaps-list"
             >
               <div
@@ -197,6 +203,7 @@
             </p>
             <details
               v-if="simulationResult.input_hash || simulationResult.result_hash"
+              id="kernel-simulate-hashes"
               class="inspector-ref-details"
             >
               <summary class="inspector-ref-summary">
@@ -320,6 +327,15 @@
           >
             Open in data entry
           </router-link>
+          <router-link
+            v-if="handoffLocation"
+            id="inspector-handoff-standalone"
+            data-testid="inspector-ecrf-handoff"
+            class="inspector-link"
+            :to="handoffLocation"
+          >
+            Open standalone form view
+          </router-link>
         </template>
 
         <template v-else-if="genericDisplay">
@@ -420,6 +436,7 @@ import {
   type KernelNode,
   type KernelProtocolDraftSummary,
   type KernelProtocolVersion,
+  type KernelSimulationResult,
 } from "../../api/kernelApi";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import {
@@ -432,7 +449,8 @@ import AssistPanel from "../ai/AssistPanel.vue";
 
 /**
  * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): displays the selected object's
- * human-readable kind and code/title first, with the canonical NodeRef tucked inside a copyable secondary disclosure.
+ * human-readable kind and code/title first, with the canonical NodeRef tucked inside a copyable secondary disclosure,
+ * and exposes Trace, Impact, Explain, Simulate, Act, and Assist verbs for the active selection.
  */
 const props = defineProps<{
   studyCode: string;
@@ -456,6 +474,8 @@ const props = defineProps<{
   recordLocation?: RouteLocationRaw | null;
   /** Where the participant's forms workspace opens inside Clinical Canvas; absent when already open. */
   dataEntryLocation?: RouteLocationRaw | null;
+  /** Context handoff location to the standalone /ecrf view forwarding study, participant, enrollment, form, and visit. */
+  handoffLocation?: RouteLocationRaw | null;
   /** Whether to offer changing the participant's state (Execution enforces who may, #4943). */
   canManageParticipants?: boolean;
   /** A question from the palette's Ask entry: opens Assist with it (ADR-2635). */
@@ -562,6 +582,15 @@ const lineageMode = computed(() => {
     : "impact";
 });
 
+/** Simulate runs in-memory evaluation and schedule matrix gap checks on a stored protocol version. */
+const canSimulate = computed(() =>
+  Boolean(
+    !props.participant &&
+    props.protocolVersion?.ref &&
+    parseNodeRef(props.protocolVersion.ref)?.kind === "protocol_version"
+  )
+);
+
 interface Verb {
   id: "trace" | "impact" | "explain" | "simulate" | "act" | "assist";
   label: string;
@@ -591,8 +620,8 @@ const verbs = computed<Verb[]>(() => [
   {
     id: "simulate",
     label: "Simulate",
-    live: false,
-    note: "Protocol simulation isn't available in this workspace yet.",
+    live: canSimulate.value,
+    note: "Participant simulation isn't available in this workspace yet; select a protocol version to check its schedule.",
   },
   {
     id: "act",
@@ -618,9 +647,10 @@ const currentVerb = ref<VerbId>("details");
 const explained = ref<KernelCommand | null>(null);
 const shownVerb = ref<string | null>(null);
 
-const simulationResult = ref<any>(null);
+const simulationResult = ref<KernelSimulationResult | null>(null);
 const simulationLoading = ref(false);
 const simulationError = ref("");
+let simulationRequest = 0;
 const designSummary = ref<KernelProtocolDraftSummary | null>(null);
 let designSummaryReq = 0;
 
@@ -646,27 +676,34 @@ watch(
 );
 
 async function runSimulation() {
-  if (!kernelRef.value) return;
+  if (!canSimulate.value || !kernelRef.value) return;
+  const request = ++simulationRequest;
   simulationLoading.value = true;
   simulationError.value = "";
   try {
-    simulationResult.value = await kernelApi.simulate({
+    const result = await kernelApi.simulate({
       storedVersionRef: kernelRef.value,
     });
-  } catch (e: any) {
-    simulationError.value = e.message || String(e);
+    if (request !== simulationRequest) return;
+    simulationResult.value = result;
+  } catch (e: unknown) {
+    if (request !== simulationRequest) return;
+    simulationError.value = e instanceof Error ? e.message : String(e);
   } finally {
-    simulationLoading.value = false;
+    if (request === simulationRequest) {
+      simulationLoading.value = false;
+    }
   }
 }
 
 watch(currentVerb, (verb) => {
   if (
     verb === "simulate" &&
+    canSimulate.value &&
     !simulationResult.value &&
     !simulationLoading.value
   ) {
-    runSimulation();
+    void runSimulation();
   }
 });
 const shownVerbNote = computed(
@@ -686,10 +723,14 @@ function explainCommand(command: KernelCommand) {
 watch(
   () => [props.nodeRef, props.protocolVersion?.ref, props.genericNodeRef],
   () => {
+    simulationRequest++;
     shownVerb.value = null;
     currentVerb.value = "details";
     explained.value = null;
     copiedRef.value = false;
+    simulationResult.value = null;
+    simulationLoading.value = false;
+    simulationError.value = "";
   }
 );
 
