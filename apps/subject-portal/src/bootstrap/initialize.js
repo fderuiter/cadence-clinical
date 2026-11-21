@@ -140,10 +140,11 @@ export async function initializeApp() {
     await checkPendingReconsent();
   }
 
-  // Graceful Service Worker Registration (skipped when startMswWorker already registered unified sw.js?msw=1)
+  // Graceful Service Worker Registration in production builds (skipped in dev and when startMswWorker already registered unified sw.js?msw=1)
   if (
     typeof navigator !== "undefined" &&
     "serviceWorker" in navigator &&
+    import.meta.env.PROD &&
     !window.__MOCK_TEST_ENV__ &&
     !shouldEnableMsw
   ) {

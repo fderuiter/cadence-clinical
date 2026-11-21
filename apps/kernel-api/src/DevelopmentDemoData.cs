@@ -57,6 +57,7 @@ internal static class DevelopmentDemoData
         ("DEMO_DESIGNER", "Study designer", ["protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"]),
         ("DEMO_SAFETY", "Safety reviewer", ["validation_finding.investigate", "validation_finding.classify"]),
         ("DEMO_AUDITOR", "Auditor", ["validation_finding.investigate"]),
+        ("DEMO_PARTICIPANT", "Study participant", ["observation.record"]),
     ];
 
     /// <summary>
@@ -68,6 +69,7 @@ internal static class DevelopmentDemoData
         ("crc.site101", "1a4345cc-364c-4b8b-881e-93bbea528b0a", "DEMO_CRC", "SITE-101"),
         ("pi.site101", "cf64a3b4-33cc-4925-8452-75e29ca9526e", "DEMO_INVESTIGATOR", "SITE-101"),
         ("cra.monitor", "ee2cfdb6-d893-4fb4-a10f-d50830b6728a", "DEMO_MONITOR", "SITE-101"),
+        ("subj.101.001", "7b8f9e10-2c4d-4f6a-9a1b-010100100001", "DEMO_PARTICIPANT", "SITE-101"), // deid-ignore: a demo realm user's fixed subject id, not a telephone number
         ("dm.lead", "47a9d88f-73d7-4aca-9fd6-14b8e6e9284f", "DEMO_DATA_MANAGER", null),
         ("designer_demo", "d0b6257b-57fe-420b-9526-366e83c756aa", "DEMO_DESIGNER", null),
         ("designer.lead", "8808e058-a472-4f72-9970-a027eddf35bc", "DEMO_DESIGNER", null),

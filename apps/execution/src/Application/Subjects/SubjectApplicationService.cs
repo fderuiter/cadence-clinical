@@ -69,7 +69,7 @@ public sealed class SubjectApplicationService(
     IClock? clock = null,
     ILookupHasher? lookupHasher = null) : ISubjectApplicationService
 {
-    private const string ActivationAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private const string ActivationAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // pragma: allowlist secret
 
     private readonly IClock _clock = clock ?? SystemClock.Instance;
 

@@ -152,32 +152,48 @@ describe("Subject Portal OIDC subject_code, Activation Redemption, and Built SW 
     expect(AVAILABLE_SCREENS.has("view-lay-summaries")).toBe(false);
   });
 
-  it("injects hashed /subject-portal/assets/* bundle paths into dist/sw.js with zero /src/* 404 entries", () => {
-    const distDir = path.resolve(__dirname, "../dist");
-    const distSwPath = path.join(distDir, "sw.js");
-    expect(fs.existsSync(distSwPath)).toBe(true);
+  it("injects hashed /subject-portal/assets/* bundle paths into dist/sw.js with zero /src/* 404 entries", async () => {
+    const os = await import("os");
+    const { build } = await import("vite");
+    const distDir = fs.mkdtempSync(path.join(os.tmpdir(), "cadence-sw-dist-"));
 
-    const distSw = fs.readFileSync(distSwPath, "utf8");
-    const match = distSw.match(/const ASSETS = (\[[\s\S]*?\]);/);
-    expect(match).not.toBeNull();
+    try {
+      await build({
+        root: path.resolve(__dirname, ".."),
+        logLevel: "silent",
+        build: {
+          outDir: distDir,
+          emptyOutDir: true,
+        },
+      });
 
-    const assets = JSON.parse(match[1]);
-    expect(assets).toContain("/subject-portal/");
-    expect(assets).toContain("/subject-portal/index.html");
-    expect(assets).toContain("/subject-portal/manifest.json");
-    expect(
-      assets.some((entry) => entry.startsWith("/subject-portal/assets/"))
-    ).toBe(true);
-    expect(assets.some((entry) => entry.includes("/subject-portal/src/"))).toBe(
-      false
-    );
+      const distSwPath = path.join(distDir, "sw.js");
+      expect(fs.existsSync(distSwPath)).toBe(true);
 
-    // Every asset path in dist/sw.js must resolve to a real file in dist/ (zero 404s on install)
-    for (const assetUrl of assets) {
-      expect(assetUrl.startsWith("/subject-portal/")).toBe(true);
-      const rel = assetUrl.slice("/subject-portal/".length) || "index.html";
-      const fileOnDisk = path.join(distDir, rel);
-      expect(fs.existsSync(fileOnDisk)).toBe(true);
+      const distSw = fs.readFileSync(distSwPath, "utf8");
+      const match = distSw.match(/const ASSETS = (\[[\s\S]*?\]);/);
+      expect(match).not.toBeNull();
+
+      const assets = JSON.parse(match[1]);
+      expect(assets).toContain("/subject-portal/");
+      expect(assets).toContain("/subject-portal/index.html");
+      expect(assets).toContain("/subject-portal/manifest.json");
+      expect(
+        assets.some((entry) => entry.startsWith("/subject-portal/assets/"))
+      ).toBe(true);
+      expect(
+        assets.some((entry) => entry.includes("/subject-portal/src/"))
+      ).toBe(false);
+
+      // Every asset path in dist/sw.js must resolve to a real file in dist/ (zero 404s on install)
+      for (const assetUrl of assets) {
+        expect(assetUrl.startsWith("/subject-portal/")).toBe(true);
+        const rel = assetUrl.slice("/subject-portal/".length) || "index.html";
+        const fileOnDisk = path.join(distDir, rel);
+        expect(fs.existsSync(fileOnDisk)).toBe(true);
+      }
+    } finally {
+      fs.rmSync(distDir, { recursive: true, force: true });
     }
   });
 
