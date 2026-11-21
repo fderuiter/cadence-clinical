@@ -55,7 +55,7 @@ public static class ServiceTopology
         new("interop", "interop", 8004, "INTEROP_SERVICE_URL", ["interop"], Database: true, Core: false),
         new("quality", "quality", 8005, "QUALITY_SERVICE_URL", ["quality"], Database: true, Core: false),
         new("notifications", "notifications", 8006, "NOTIFICATIONS_SERVICE_URL", ["notifications"], Database: true, Core: false),
-        new("ctms", "ctms", 8007, "CTMS_SERVICE_URL", ["ctms"], Database: true, Core: false),
+        new("ctms", "ctms", 8007, "CTMS_SERVICE_URL", ["ctms"], Database: true, Core: true),
         new("safety", "safety", 8008, "SAFETY_SERVICE_URL", ["safety"], Database: true, Core: false),
         new("tickets", "tickets", 8009, "TICKETS_SERVICE_URL", ["tickets"], Database: true, Core: false),
         new("eisf", "eisf", 8010, "EISF_SERVICE_URL", ["eisf"], Database: true, Core: false),

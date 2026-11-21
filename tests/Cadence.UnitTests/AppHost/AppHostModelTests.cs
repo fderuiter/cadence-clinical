@@ -127,6 +127,7 @@ public sealed class AppHostModelTests
         // at its usual host port, where nothing listens.
         var gateway = await EnvironmentAsync(projects["gateway"]);
         gateway["EXECUTION_SERVICE_URL"].Should().BeOfType<EndpointReference>();
+        gateway["CTMS_SERVICE_URL"].Should().BeOfType<EndpointReference>();
         gateway["KERNEL_SERVICE_URL"].Should().BeOfType<EndpointReference>();
         foreach (var service in ServiceTopology.Services.Where(s => !s.Core))
         {
