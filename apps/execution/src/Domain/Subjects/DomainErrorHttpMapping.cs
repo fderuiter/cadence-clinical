@@ -47,6 +47,8 @@ public static class DomainErrorHttpMapping
     private static readonly IReadOnlyDictionary<string, int> StatusByCode = new Dictionary<string, int>
     {
         ["SUBJECT_NOT_FOUND"] = StatusCodes.Status404NotFound,
+        ["ACTIVATION_BINDING_NOT_FOUND"] = StatusCodes.Status404NotFound,
+        ["ACTIVATION_CODE_INVALID_OR_EXPIRED"] = StatusCodes.Status422UnprocessableEntity,
         ["LOCKED_FACTOR_MUTATION"] = StatusCodes.Status422UnprocessableEntity,
         ["INVALID_STATE_TRANSITION"] = StatusCodes.Status422UnprocessableEntity,
         ["RECONSENT_REQUIRED"] = StatusCodes.Status423Locked,

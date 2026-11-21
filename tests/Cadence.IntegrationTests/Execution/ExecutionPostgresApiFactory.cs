@@ -51,7 +51,7 @@ public sealed class ExecutionPostgresApiFactory : WebApplicationFactory<Cadence.
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseTestGatewaySecret().UseTestDemographicsKey().UseTestRandomizationKey();
+        builder.UseTestGatewaySecret().UseTestDemographicsKey().UseTestRandomizationKey().UseTestFieldProtectionKeys();
 
         if (_database.ConnectionString is { } connectionString)
         {

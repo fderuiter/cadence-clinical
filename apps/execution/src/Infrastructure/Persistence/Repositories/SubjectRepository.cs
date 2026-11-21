@@ -138,4 +138,46 @@ public sealed class SubjectRepository(ExecutionDbContext context)
 
     public async Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken) =>
         await Context.ClinicalSubjects.AddAsync(subject, cancellationToken).ConfigureAwait(false);
+
+    public async Task RevokePendingActivationTokensAsync(SubjectCode subjectCode, CancellationToken cancellationToken)
+    {
+        var pending = await Context.SubjectActivationTokens
+            .Where(t => t.SubjectCode == subjectCode && !t.IsRevoked && t.RedeemedAt == null)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        foreach (var token in pending)
+        {
+            token.Revoke();
+        }
+    }
+
+    public async Task AddActivationTokenAsync(SubjectActivationToken token, CancellationToken cancellationToken) =>
+        await Context.SubjectActivationTokens.AddAsync(token, cancellationToken).ConfigureAwait(false);
+
+    public async Task<SubjectActivationToken?> GetActivationTokenByHashAsync(string tokenHash, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(tokenHash))
+        {
+            return null;
+        }
+
+        return await Context.SubjectActivationTokens
+            .SingleOrDefaultAsync(t => t.TokenHash == tokenHash, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<SubjectActivationToken?> GetRedeemedActivationByPrincipalHashAsync(string principalHash, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(principalHash))
+        {
+            return null;
+        }
+
+        return await Context.SubjectActivationTokens.AsNoTracking()
+            .Where(t => t.RedeemedByPrincipalHash == principalHash && t.RedeemedAt != null && !t.IsRevoked)
+            .OrderByDescending(t => t.RedeemedAt)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

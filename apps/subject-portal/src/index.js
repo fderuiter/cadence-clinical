@@ -27,6 +27,7 @@ import {
   login,
   logout,
   portalSessionCoordinator,
+  redeemActivationCode,
   refreshPortalSessionOnUnauthorized,
 } from "./features/auth.js";
 import { renderCompliance } from "./features/compliance.js";
@@ -112,8 +113,11 @@ import { markFieldInvalid } from "./widgets/field-errors.js";
 if (typeof document !== "undefined") {
   if (import.meta.env?.MODE === "test" || document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initializeApp);
-  } else {
-    initializeApp();
+  } else if (
+    (typeof window === "undefined" || !window.__MOCK_TEST_ENV__) &&
+    document.getElementById("app")
+  ) {
+    void initializeApp();
   }
 }
 
@@ -159,6 +163,7 @@ export {
   markFieldInvalid,
   login,
   logout,
+  redeemActivationCode,
   expirePortalSession,
   portalSessionCoordinator,
   ensurePortalSessionToken,

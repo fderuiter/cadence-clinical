@@ -27,15 +27,17 @@ bool full = profile == "full";
 // Credentials are Aspire parameters, never literals: set them with `dotnet user-secrets` on this project
 // (Parameters:<name>) or as Parameters__<name> environment variables. Aspire prompts for any missing value in the
 // dashboard instead of starting with a well-known default. Only the parameters the chosen resources use are
-// declared, so a core run never asks for the MinIO or field-protection keys.
+// declared, so a core run never asks for the MinIO or field-encryption keys.
 
 // Shared service secrets (Parameters:gateway-secret must be at least 32 characters).
 var gatewaySecret = builder.AddParameter("gateway-secret", secret: true);
 var auditLogSecretKey = builder.AddParameter("audit-log-secret-key", secret: true);
 
-// Execution refuses to start without a base64 AES key of 16, 24 or 32 bytes (`openssl rand -base64 32`).
+// Execution refuses to start without a base64 AES key of 16, 24 or 32 bytes (`openssl rand -base64 32`), a 32-byte
+// randomisation allocation key, and a 32-byte lookup hash key (shared with interop in full profile, ADR-2494).
 var demographicsEncryptionKey = builder.AddParameter("demographics-encryption-key", secret: true);
 var randomizationAllocationKey = builder.AddParameter("randomization-allocation-key", secret: true);
+var fieldLookupHashKey = builder.AddParameter("field-lookup-hash-key", secret: true);
 
 // Clinical Kernel Modular Monolith: single relational database with schema partitioning (ADR-2244, ADR-2247).
 // When a cadence connection string is configured, the services use that existing PostgreSQL database and no
@@ -155,7 +157,8 @@ IResourceBuilder<ProjectResource> Service(IResourceBuilder<ProjectResource> proj
 
 var execution = Service(builder.AddProject<Projects.Cadence_Apps_Execution>("execution"))
     .WithEnvironment("DemographicsEncryption__KeyBase64", demographicsEncryptionKey)
-    .WithEnvironment("RANDOMIZATION_ALLOCATION_KEY", randomizationAllocationKey);
+    .WithEnvironment("RANDOMIZATION_ALLOCATION_KEY", randomizationAllocationKey)
+    .WithEnvironment("FIELD_LOOKUP_HASH_KEY", fieldLookupHashKey);
 // The local realm's users sign in with tenant code cadence-local (ADR-2514); the kernel host provisions that tenant on
 // start, in Development only (ADR-2542), with the demo study and the realm users' grants (ADR-2543). A project resource
 // does not inherit the AppHost's environment, so the kernel is given it, and the tenant settings only when that
@@ -172,10 +175,9 @@ if (builder.Environment.IsDevelopment())
 
 if (full)
 {
-    // Secrets at rest, per ADR-2494. Econsent and payments encrypt fields with the field encryption key, and
-    // interop hashes device-token lookups with the lookup hash key. Both are base64 of 32 random bytes.
+    // Secrets at rest, per ADR-2494. Econsent and payments encrypt fields with the field encryption key, while
+    // the lookup hash key is declared above because execution and interop both require it.
     var fieldEncryptionKey = builder.AddParameter("field-encryption-key", secret: true);
-    var fieldLookupHashKey = builder.AddParameter("field-lookup-hash-key", secret: true);
     var sceSigningKey = builder.AddParameter("sce-signing-key", secret: true);
     // Imaging signs de-identification certificates with one key and pseudonymizes DICOM UIDs with another (#5399).
     var imagingDeidSigningKey = builder.AddParameter("imaging-deid-signing-key", secret: true);
@@ -196,7 +198,9 @@ if (full)
     Service(builder.AddProject<Projects.Cadence_Apps_Etmf>("etmf"));
     Service(builder.AddProject<Projects.Cadence_Apps_Interop>("interop"))
         .WithEnvironment("FIELD_LOOKUP_HASH_KEY", fieldLookupHashKey)
-        .WithEnvironment("CADENCE_SCE_SIGNING_KEY", sceSigningKey);
+        .WithEnvironment("CADENCE_SCE_SIGNING_KEY", sceSigningKey)
+        .WithEnvironment("EXECUTION_SERVICE_URL", execution.GetEndpoint("http"))
+        .WithEnvironment("KERNEL_SERVICE_URL", kernel.GetEndpoint("http"));
     Service(builder.AddProject<Projects.Cadence_Apps_Quality>("quality"));
     Service(builder.AddProject<Projects.Cadence_Apps_Notifications>("notifications"));
     Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));

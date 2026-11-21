@@ -118,7 +118,7 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseTestGatewaySecret().UseTestDemographicsKey().UseTestRandomizationKey();
+        builder.UseTestGatewaySecret().UseTestDemographicsKey().UseTestRandomizationKey().UseTestFieldProtectionKeys();
         builder.UseTestPostgresConnectionString();
 
         builder.ConfigureServices(services =>
@@ -182,7 +182,7 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
         {
             BootstrapE2ETenantDirectory(_connectionString!);
             using var _ = scope.ServiceProvider.GetService<ITenantScope>()?.Suppress();
-            db.Database.ExecuteSqlRaw($"CREATE SCHEMA IF NOT EXISTS \"{ExecutionDbContextFactory.Schema}\"");
+            db.Database.ExecuteSqlRaw("CREATE SCHEMA IF NOT EXISTS \"edc\"");
             db.Database.Migrate();
         }
         else

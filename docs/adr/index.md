@@ -374,6 +374,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2425: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md) (2026-08-31)
 - [ADR-2640: Randomisation Allocates from Approved, Encrypted Scheme Versions](2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md) (2026-10-20)
 - [ADR-2641: Contextual SOP Specificity Resolution and Audited Support Ticket Escalation](2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md) (2026-11-20)
+- [ADR-2642: Participant ePRO Interop Endpoints and Keyed-HMAC BYOD Activation](2026-11-20-participant-epro-interop-endpoints-and-keyed-hmac-byod-activation.md) (2026-11-20)
 
 ### 5. Compliance, Audit & Governance
 

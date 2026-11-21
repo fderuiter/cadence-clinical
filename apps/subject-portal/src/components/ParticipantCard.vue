@@ -32,6 +32,48 @@
       {{ sessionStore.authError }}
     </div>
     <div
+      v-if="isAuthenticated"
+      id="participant-activation-panel"
+      class="participant-activation-panel"
+    >
+      <label for="input-activation-code" class="participant-activation-label">
+        Activation Code
+      </label>
+      <input
+        id="input-activation-code"
+        v-model="activationCodeInput"
+        type="text"
+        class="participant-activation-input"
+        autocomplete="off"
+        placeholder="CAD-XXXX-XXXX-XXXX"
+      />
+      <button
+        id="btn-redeem-activation"
+        type="button"
+        class="btn btn-secondary participant-action-btn"
+        :disabled="redeeming || !activationCodeInput.trim()"
+        @click="handleRedeemActivation"
+      >
+        {{ redeeming ? "Linking…" : "Redeem Code" }}
+      </button>
+      <div
+        v-if="activationMessage"
+        id="activation-redeem-status"
+        class="participant-activation-note"
+        role="status"
+      >
+        {{ activationMessage }}
+      </div>
+      <div
+        v-if="activationError"
+        id="activation-redeem-error"
+        class="participant-auth-error"
+        role="alert"
+      >
+        {{ activationError }}
+      </div>
+    </div>
+    <div
       v-else-if="isSessionExpired"
       id="session-expired-banner"
       class="participant-auth-error"
@@ -83,9 +125,9 @@
 <script setup>
 import { DEFAULT_DEMO_PARTICIPANT } from "demo-fixtures";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 
-import { login, logout } from "../features/auth.js";
+import { login, logout, redeemActivationCode } from "../features/auth.js";
 import {
   flushActiveQuestionnaireDraft,
   hasUnsavedQuestionnaireDrafts,
@@ -98,6 +140,10 @@ import SiteContactLinks from "./SiteContactLinks.vue";
 
 const sessionStore = useSessionStore();
 const wallet = useWalletStore();
+const activationCodeInput = ref("");
+const redeeming = ref(false);
+const activationMessage = ref("");
+const activationError = ref("");
 
 const {
   isConfirmOpen: isSignOutConfirmOpen,
@@ -173,9 +219,57 @@ function handleLogin() {
 function handleLogout() {
   return requestSignOut();
 }
+
+async function handleRedeemActivation() {
+  const code = activationCodeInput.value.trim();
+  if (!code || redeeming.value) return;
+  redeeming.value = true;
+  activationMessage.value = "";
+  activationError.value = "";
+  try {
+    const res = await redeemActivationCode(code);
+    activationCodeInput.value = "";
+    activationMessage.value = `Linked to ${res.subject_id}`;
+  } catch (err) {
+    activationError.value =
+      err instanceof Error ? err.message : "Failed to redeem activation code.";
+  } finally {
+    redeeming.value = false;
+  }
+}
 </script>
 
 <style scoped>
+.participant-activation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.participant-activation-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.participant-activation-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border-control);
+  border-radius: 6px;
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  font-size: 13px;
+}
+
+.participant-activation-note {
+  font-size: 12px;
+  color: var(--success);
+}
+
 .participant-status-expired {
   color: var(--semantic-color-error-text-dark);
   font-weight: 700;

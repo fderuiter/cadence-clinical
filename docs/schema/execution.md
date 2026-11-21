@@ -33,6 +33,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.randomization_schemes`](#edcrandomization_schemes) | `RandomizationScheme` | 24 |
 | [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 13 |
 | [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 28 |
+| [`edc.subject_activation_tokens`](#edcsubject_activation_tokens) | `SubjectActivationToken` | 14 |
 | [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 15 |
 | [`edc.synonym_rules`](#edcsynonym_rules) | `SynonymRule` | 16 |
 
@@ -921,6 +922,34 @@ Indexes:
 - `IX_staged_adverse_event_reviews_study_id_review_status`: (`study_id`, `review_status`)
 - `IX_staged_adverse_event_reviews_subject_id`: (`subject_id`)
 - `IX_staged_adverse_event_reviews_tenant_id`: (`tenant_id`)
+
+## edc.subject_activation_tokens
+
+Entity: `SubjectActivationToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `ExpiresAt` | `timestamp with time zone` | no |  |  |
+| `IsRevoked` | `boolean` | no |  |  |
+| `IssuedAt` | `timestamp with time zone` | no |  |  |
+| `IssuedBy` | `character varying(255)` | no |  |  |
+| `ReasonForChange` | `character varying(1024)` | no |  |  |
+| `RedeemedAt` | `timestamp with time zone` | yes |  |  |
+| `RedeemedByPrincipalHash` | `character varying(64)` | yes |  |  |
+| `SiteCode` | `character varying(255)` | yes |  |  |
+| `StudyCode` | `character varying(255)` | no |  |  |
+| `SubjectCode` | `character varying(255)` | no |  |  |
+| `TokenHash` | `character varying(64)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_subject_activation_tokens_RedeemedByPrincipalHash`: (`RedeemedByPrincipalHash`)
+- `IX_subject_activation_tokens_SubjectCode`: (`SubjectCode`)
+- `IX_subject_activation_tokens_TokenHash`: unique (`TokenHash`)
+- `IX_subject_activation_tokens_tenant_id`: (`tenant_id`)
 
 ## edc.subject_consents
 

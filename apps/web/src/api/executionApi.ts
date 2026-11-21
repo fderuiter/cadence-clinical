@@ -14,6 +14,8 @@ type Schemas = components["schemas"];
 export type SubjectSummary = Schemas["Execution_SubjectSummaryResponse"];
 export type SubjectList = Schemas["Execution_SubjectListResponse"];
 export type Subject = Schemas["Execution_SubjectResponse"];
+export type SubjectActivationCodeIssue =
+  Schemas["Execution_SubjectActivationCodeIssueResponse"];
 export type SubjectDetail = Schemas["Execution_SubjectDetailResponse"];
 export type ComplianceStatus = Schemas["Execution_ComplianceStatusResponse"];
 export type OperationEnvelope = Schemas["Execution_OperationEnvelopeResponse"];
@@ -105,6 +107,23 @@ export const executionApi = {
       client.PATCH("/api/v1/execution/subjects/{subjectId}/state", {
         params: { path: { subjectId } },
         body: { status: state, state: null },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
+      })
+    );
+  },
+
+  /**
+   * Issues a one-time 30-day BYOD ePRO activation code for a participant
+   * (POST /api/v1/execution/subjects/{subjectId}/activation-code). Execution stores only a keyed HMAC
+   * digest and requires an investigator or coordinator caller plus X-Change-Reason.
+   */
+  issueSubjectActivationCode(
+    subjectId: string,
+    reason: string
+  ): Promise<SubjectActivationCodeIssue> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/subjects/{subjectId}/activation-code", {
+        params: { path: { subjectId } },
         headers: { "X-Change-Reason": encodeChangeReason(reason) },
       })
     );

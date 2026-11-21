@@ -1,4 +1,8 @@
-import { DEFAULT_DEMO_PARTICIPANT, DEMO_STUDY } from "demo-fixtures";
+import {
+  DEFAULT_DEMO_PARTICIPANT,
+  DEFAULT_DEMO_SITE,
+  DEMO_STUDY,
+} from "demo-fixtures";
 import { http, HttpResponse } from "msw";
 import {
   MOCK_APPROVED_CONTENT,
@@ -33,6 +37,7 @@ export function createPortalDemoStore() {
     consentCaptured: false,
     walletBalance: 125.0,
     complianceScore: 92,
+    redeemedActivation: null,
     actionSeq: 0,
   };
 
@@ -45,6 +50,7 @@ export function createPortalDemoStore() {
     state.consentCaptured = false;
     state.walletBalance = 125.0;
     state.complianceScore = 92;
+    state.redeemedActivation = null;
     state.actionSeq = 0;
   }
 
@@ -200,6 +206,46 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
         recorded_at: demoNowIso(nextSeq()),
       })
     ),
+    http.post(
+      "*/api/v1/execution/subjects/activation-codes/redeem",
+      async ({ request }) => {
+        const body = await request.json().catch(() => ({}));
+        const code = String(body?.activation_code || "").trim();
+        if (!code) {
+          return HttpResponse.json(
+            {
+              title: "Validation failed",
+              status: 400,
+              errors: { activation_code: ["Activation code is required."] },
+            },
+            { status: 400 }
+          );
+        }
+        const seq = nextSeq();
+        const redeemedAt = demoNowIso(seq);
+        const expiresAt = new Date(
+          demoNowMs(seq) + 30 * 24 * 60 * 60 * 1000
+        ).toISOString();
+        const binding = {
+          subject_id: DEFAULT_DEMO_SUBJECT_ID || "SUBJ-101-001",
+          study_id: DEMO_STUDY?.code || "CADENCE-101",
+          site_id: DEFAULT_DEMO_SITE?.code || "SITE-101",
+          redeemed_at: redeemedAt,
+          expires_at: expiresAt,
+        };
+        store.state.redeemedActivation = binding;
+        return HttpResponse.json(binding);
+      }
+    ),
+    http.get("*/api/v1/execution/subjects/activation-codes/me", () => {
+      if (!store.state.redeemedActivation) {
+        return HttpResponse.json(
+          { title: "No redeemed activation code found.", status: 404 },
+          { status: 404 }
+        );
+      }
+      return HttpResponse.json(store.state.redeemedActivation);
+    }),
     http.post(
       "*/api/v1/econsent/reconsent/complete/:requirementId",
       ({ params }) => {
