@@ -4117,7 +4117,7 @@ export interface operations {
           "application/json": components["schemas"]["Kernel_VerifyLivenessResponse"];
         };
       };
-      /** @description Bad Request */
+      /** @description Bad Request. Kernel errors: `M.Intelligence.Biometric.LivenessRejected`. */
       400: {
         headers: {
           [name: string]: unknown;

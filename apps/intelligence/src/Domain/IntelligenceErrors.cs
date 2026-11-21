@@ -71,4 +71,8 @@ public static class IntelligenceErrors
     /// <summary>The version has no qualification in the tenant to suspend.</summary>
     public static readonly KernelError NotQualified =
         new("M.Intelligence.Qualification.NotQualified", 404, "This task configuration version has no qualification here.");
+
+    /// <summary>The video frames did not pass biometric anti-spoofing liveness verification.</summary>
+    public static readonly KernelError BiometricLivenessRejected =
+        new("M.Intelligence.Biometric.LivenessRejected", 400, "Biometric liveness verification failed anti-spoofing checks.");
 }

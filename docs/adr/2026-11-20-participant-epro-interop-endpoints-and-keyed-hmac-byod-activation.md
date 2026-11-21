@@ -51,5 +51,5 @@ Participants using the Companion Portal (`apps/subject-portal`) require live bri
 
 ## 6. Implementation & Verification
 
-- **Affected Repositories / Services:** `apps/interop`, `apps/execution`, `apps/gateway`, `packages/security`, `apps/web`, `apps/subject-portal`, and `docker/cadence-realm.json`.
-- **Verification Plan:** Verified via `EproEndpointsTests`, `SubjectActivationCodeTests`, `RouteAuthorizationTests`, `Cadence.ArchitectureTests`, `participantActivationCode.spec.ts`, `epro-interop-and-sw.test.js`, and `pnpm cadence check`.
+- **Affected Repositories / Services:** `apps/interop`, `apps/execution`, `apps/gateway`, `packages/security`, `apps/intelligence`, `apps/ctms`, `apps/payments`, `apps/web`, `apps/subject-portal`, and `docker/cadence-realm.json`.
+- **Verification Plan:** Verified via `EproEndpointsTests`, `SubjectActivationCodeTests`, `RouteAuthorizationTests`, `KernelErrorContractTests`, `MigrationUnitTests`, `ServiceSchemaPostgresTests`, `PaymentsStudySiteScopeTests`, `KernelObservationHostPostgresTests`, `Cadence.ArchitectureTests`, `participantActivationCode.spec.ts`, `epro-interop-and-sw.test.js`, and `pnpm cadence check`.

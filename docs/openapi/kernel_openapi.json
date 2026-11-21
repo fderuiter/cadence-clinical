@@ -3585,7 +3585,7 @@
             }
           },
           "400": {
-            "description": "Bad Request",
+            "description": "Bad Request. Kernel errors: \u0060M.Intelligence.Biometric.LivenessRejected\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3594,7 +3594,13 @@
               }
             }
           }
-        }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "M.Intelligence.Biometric.LivenessRejected",
+            "status": 400
+          }
+        ]
       }
     },
     "/api/v1/execution/forms": {
