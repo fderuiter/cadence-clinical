@@ -1102,8 +1102,8 @@ onUnmounted(() => {
   padding: 16px;
   border: 1px solid var(--semantic-color-error);
   border-radius: 8px;
-  background-color: var(--semantic-color-error-bg);
-  color: var(--semantic-color-error-dark);
+  background-color: var(--semantic-color-error-bg-soft);
+  color: var(--semantic-color-error-text-deep);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1119,14 +1119,14 @@ onUnmounted(() => {
   margin: 0;
   font-size: 0.92rem;
   font-weight: 700;
-  color: var(--semantic-color-error-dark);
+  color: var(--semantic-color-error-text-deep);
 }
 
 .error-alert-message {
   margin: 0;
   font-size: 0.84rem;
   line-height: 1.45;
-  color: var(--semantic-color-error-dark);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .error-alert-actions {
@@ -1135,8 +1135,8 @@ onUnmounted(() => {
 }
 
 .btn-retry {
-  border-color: var(--semantic-color-error);
-  color: var(--semantic-color-error-dark);
+  border-color: var(--semantic-color-error-dark);
+  color: var(--semantic-color-error-text-deep);
 }
 
 :deep(.clinical-drawer-footer) {

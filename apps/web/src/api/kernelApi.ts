@@ -63,6 +63,19 @@ export type StudyExportFormat = "csv" | "odm_xml" | "dataset_json";
 export type StudyExportLockFilter =
   "all" | "locked_only" | "frozen_or_locked" | "unlocked_only";
 export type CasebookExportFormat = "json" | "odm_xml" | "html";
+export type KernelStudySummary = Schemas["Kernel_KernelStudySummaryResponse"];
+export type KernelOrganizationSummary =
+  Schemas["Kernel_KernelOrganizationSummaryResponse"];
+export type KernelProtocolTemplate =
+  Schemas["Kernel_KernelProtocolTemplateResponse"];
+export type KernelProtocolDraftSummary =
+  Schemas["Kernel_KernelProtocolDraftSummaryResponse"];
+export type KernelProtocolFormSummary =
+  Schemas["Kernel_KernelProtocolFormSummaryResponse"];
+export type KernelProtocolFormItem =
+  Schemas["Kernel_KernelProtocolFormItemResponse"];
+export type KernelProtocolImportNote =
+  Schemas["Kernel_KernelProtocolImportNoteResponse"];
 export type KernelEntitlements = Schemas["Kernel_KernelEntitlementsResponse"];
 export type KernelTrialOnboardingRequest =
   Schemas["Kernel_KernelTrialOnboardingRequest"];
@@ -71,6 +84,29 @@ export type KernelTrialOnboardingResponse =
 export type KernelUpgradeSubscriptionRequest =
   Schemas["Kernel_KernelUpgradeSubscriptionRequest"];
 export type { KernelObservationValue };
+
+export interface KernelCreateStudyRequest {
+  code: string;
+  title: string;
+  phase: string;
+  sponsorRef?: string | null;
+  sponsorCode?: string | null;
+  sponsorName?: string | null;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelProtocolImportRequest {
+  studyRef: string;
+  file?: File | null;
+  content?: string | null;
+  fileName?: string | null;
+  format?: string | null;
+  templateIds?: string[];
+  replaceForms?: boolean;
+  reason: string;
+  idempotencyKey: string;
+}
 
 export const ASSERTION_LOCKED = "K.Assertion.Locked";
 export const ASSERTION_ALREADY_LOCKED = "K.Assertion.AlreadyLocked";
@@ -373,6 +409,33 @@ function unversioned(nodeRef: string): string {
   return at < 0 ? nodeRef : nodeRef.slice(0, at);
 }
 
+/** Extracts an actionable error string from RFC 9457 ProblemDetails (including validation/import `errors[]`). */
+export function describeKernelError(error: unknown): string {
+  if (error && typeof error === "object") {
+    const data = (error as { data?: unknown }).data;
+    if (data && typeof data === "object") {
+      const record = data as Record<string, unknown>;
+      const detail =
+        typeof record.detail === "string" && record.detail.trim()
+          ? record.detail.trim()
+          : "";
+      const problems = Array.isArray(record.errors)
+        ? record.errors.filter(
+            (item): item is string =>
+              typeof item === "string" && item.trim().length > 0
+          )
+        : [];
+      if (detail && problems.length > 0) {
+        const extra = problems.filter((p) => p !== detail);
+        return extra.length > 0 ? `${detail} (${extra.join("; ")})` : detail;
+      }
+      if (problems.length > 0) return problems.join("; ");
+      if (detail) return detail;
+    }
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
 export const kernelApi = {
   /** One observation with its revisions, the locks covering it, the assertions about it and its kernel audit trail (GET /api/v1/kernel/observations/{observationRef}). */
   getObservation(observationRef: string): Promise<KernelObservation> {
@@ -528,6 +591,148 @@ export const kernelApi = {
             kind: kinds && kinds.length > 0 ? kinds : undefined,
             limit,
           },
+        },
+      })
+    );
+  },
+
+  /** Visible studies in the caller's tenant, ordered by study code (GET /api/v1/kernel/studies). */
+  listStudies(): Promise<KernelStudySummary[]> {
+    return unwrapResponse(client.GET("/api/v1/kernel/studies"));
+  },
+
+  /** Registered organizations in the caller's tenant, optionally filtered by kind (GET /api/v1/kernel/organizations). */
+  listOrganizations(kind?: string): Promise<KernelOrganizationSummary[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/organizations", {
+        params: { query: { kind: kind || undefined } },
+      })
+    );
+  },
+
+  /** Registers a new study with a signed reason for change and idempotency key (POST /api/v1/kernel/studies). */
+  createStudy({
+    code,
+    title,
+    phase,
+    sponsorRef,
+    sponsorCode,
+    sponsorName,
+    reason,
+    idempotencyKey,
+  }: KernelCreateStudyRequest): Promise<KernelStudySummary> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/studies", {
+        body: {
+          study_code: code,
+          title,
+          phase,
+          sponsor_ref: sponsorRef ?? null,
+          sponsor_code: sponsorCode ?? null,
+          sponsor_name: sponsorName ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Bundled CDISC Library eCRF templates available to import into a protocol draft (GET /api/v1/kernel/protocol-templates). */
+  listProtocolTemplates(): Promise<KernelProtocolTemplate[]> {
+    return unwrapResponse(client.GET("/api/v1/kernel/protocol-templates"));
+  },
+
+  /** Viewable forms, ordered items, prompts, mandatory flags, and import notes for a protocol version (GET /api/v1/kernel/protocol-versions/{versionRef}/design-summary). */
+  getProtocolDesignSummary(
+    versionRef: string
+  ): Promise<KernelProtocolDraftSummary> {
+    return unwrapResponse(
+      client.GET(
+        "/api/v1/kernel/protocol-versions/{versionRef}/design-summary",
+        {
+          params: { path: { versionRef } },
+        }
+      )
+    );
+  },
+
+  /**
+   * Synchronously imports an ODM v1.3.2 XML file, USDM v4 JSON file, or bundled CDISC Library eCRF templates
+   * to create or revise a study's protocol draft (POST /api/v1/kernel/studies/{studyRef}/protocol-imports).
+   */
+  async importProtocolDraft({
+    studyRef,
+    file,
+    content,
+    fileName,
+    format,
+    templateIds,
+    replaceForms = false,
+    reason,
+    idempotencyKey,
+  }: KernelProtocolImportRequest): Promise<KernelProtocolDraftSummary> {
+    if (file) {
+      const baseUrl = getBaseUrl().replace(/\/+$/, "");
+      const url = `${baseUrl}/api/v1/kernel/studies/${encodeURIComponent(studyRef)}/protocol-imports`;
+      const formData = new FormData();
+      formData.append("file", file);
+      if (templateIds && templateIds.length > 0) {
+        for (const tplId of templateIds) {
+          formData.append("template_ids", tplId);
+        }
+      }
+      if (replaceForms) {
+        formData.append("replace_forms", "true");
+      }
+
+      const headers: Record<string, string> = {
+        "X-Change-Reason": encodeChangeReason(reason),
+        "Idempotency-Key": idempotencyKey,
+      };
+      const token = await getBearerToken();
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await globalThis.fetch(url, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        const tempError = new ApiError(
+          `Import failed with status ${response.status}`,
+          response.status,
+          response.statusText,
+          errData
+        );
+        throw new ApiError(
+          describeKernelError(tempError),
+          response.status,
+          response.statusText,
+          errData
+        );
+      }
+      return (await response.json()) as KernelProtocolDraftSummary;
+    }
+
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/studies/{studyRef}/protocol-imports", {
+        params: { path: { studyRef } },
+        body: {
+          content: content ?? null,
+          file_name: fileName ?? null,
+          format: format ?? null,
+          template_ids:
+            templateIds && templateIds.length > 0 ? templateIds : null,
+          replace_forms: replaceForms,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
         },
       })
     );

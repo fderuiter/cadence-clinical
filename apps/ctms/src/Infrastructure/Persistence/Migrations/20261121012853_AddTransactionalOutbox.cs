@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations;
 
 /// <inheritdoc />
-public partial class EnforceCtmsStateMachineAndOutbox : Migration
+public partial class AddTransactionalOutbox : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
@@ -35,7 +35,7 @@ public partial class EnforceCtmsStateMachineAndOutbox : Migration
         migrationBuilder.CreateIndex(
             name: "IX_transactional_outbox_CreatedAt_DispatchedAt",
             table: "transactional_outbox",
-            columns: ["CreatedAt", "DispatchedAt"]);
+            columns: new[] { "CreatedAt", "DispatchedAt" });
 
         migrationBuilder.CreateIndex(
             name: "IX_transactional_outbox_EventId",

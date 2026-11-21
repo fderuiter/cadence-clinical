@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CtmsDbContext))]
-    [Migration("20261121011011_EnforceCtmsStateMachineAndOutbox")]
-    partial class EnforceCtmsStateMachineAndOutbox
+    [Migration("20261121012853_AddTransactionalOutbox")]
+    partial class AddTransactionalOutbox
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

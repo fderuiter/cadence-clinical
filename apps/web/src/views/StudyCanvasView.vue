@@ -116,7 +116,7 @@
           id="btn-canvas-logout"
           type="button"
           class="btn btn-secondary"
-          @click="authStore.logout()"
+          @click="requestCanvasSignOut"
         >
           Sign out
         </button>
@@ -440,7 +440,7 @@
           type="text"
           autocomplete="off"
           maxlength="255"
-          placeholder="e.g. CAD-101"
+          placeholder="e.g. CADENCE-101"
         />
         <button
           id="btn-open-study"
@@ -451,9 +451,299 @@
           Open
         </button>
       </form>
-      <p class="open-study-note">
-        No service lists studies yet, so a study is opened by its code.
+      <p v-if="!hasStudyDirectoryService" class="open-study-note">
+        Enter a study code such as CADENCE-101 to open its workspace.
       </p>
+
+      <section
+        v-if="hasStudyDirectoryService"
+        id="visible-studies-section"
+        class="directory-section"
+        aria-labelledby="visible-studies-heading"
+      >
+        <div class="directory-header">
+          <h2 id="visible-studies-heading">Visible studies in your tenant</h2>
+          <span
+            id="visible-studies-status"
+            class="directory-status"
+            role="status"
+          >
+            {{ studyDirectoryStatus }}
+          </span>
+        </div>
+
+        <div
+          v-if="studyDirectoryError"
+          id="visible-studies-error"
+          class="inline-banner inline-banner-error"
+          role="alert"
+        >
+          {{ studyDirectoryError }}
+        </div>
+
+        <ul
+          v-if="visibleStudies.length > 0"
+          id="visible-studies-list"
+          class="visible-studies-list"
+        >
+          <li
+            v-for="item in visibleStudies"
+            :id="`study-item-${item.code}`"
+            :key="item.ref"
+            class="study-directory-card"
+          >
+            <div class="study-card-main">
+              <div class="study-card-top">
+                <strong class="study-card-code">{{ item.code }}</strong>
+                <span class="study-phase-badge">{{ item.phase }}</span>
+              </div>
+              <div class="study-card-title">{{ item.title }}</div>
+              <div class="study-card-sponsor">
+                Sponsor: {{ item.sponsor_name }} ({{ item.sponsor_code }})
+              </div>
+            </div>
+            <div class="study-card-actions">
+              <button
+                :id="`btn-open-study-${item.code}`"
+                type="button"
+                class="btn btn-primary"
+                @click="openStudyByCode(item.code)"
+              >
+                Open {{ item.code }}
+              </button>
+              <button
+                :id="`btn-design-study-${item.code}`"
+                type="button"
+                class="btn btn-secondary"
+                @click="openStudyDesign(item.code)"
+              >
+                Protocol drafts
+              </button>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section
+        v-if="hasCreateStudyService"
+        id="create-study-section"
+        class="directory-section"
+        aria-labelledby="create-study-heading"
+      >
+        <h2 id="create-study-heading">Create a new study</h2>
+        <p class="open-study-note">
+          Register a study with its unique code, title, clinical phase, sponsor,
+          and signed reason for change.
+        </p>
+
+        <div
+          v-if="creatingStudy"
+          id="create-study-progress"
+          class="inline-banner inline-banner-progress"
+          role="status"
+        >
+          {{
+            creatingStudyStep === "import"
+              ? "Importing protocol draft and validating forms and items…"
+              : "Registering study in your tenant…"
+          }}
+        </div>
+
+        <div
+          v-if="createStudySuccess"
+          id="create-study-success"
+          class="inline-banner inline-banner-success"
+          role="status"
+        >
+          <span>{{ createStudySuccess }}</span>
+          <button
+            v-if="lastCreatedStudyCode"
+            id="btn-open-created-study"
+            type="button"
+            class="btn btn-secondary"
+            @click="openStudyDesign(lastCreatedStudyCode)"
+          >
+            Open {{ lastCreatedStudyCode }}
+          </button>
+        </div>
+
+        <div
+          v-if="createStudyError"
+          id="create-study-error"
+          class="inline-banner inline-banner-error"
+          role="alert"
+        >
+          {{ createStudyError }}
+        </div>
+
+        <form
+          id="create-study-form"
+          class="create-study-form"
+          @submit.prevent="submitCreateStudy"
+        >
+          <div class="create-study-grid">
+            <div class="create-field">
+              <label for="create-study-code">Study code</label>
+              <input
+                id="create-study-code"
+                v-model="newStudyCode"
+                type="text"
+                autocomplete="off"
+                maxlength="64"
+                placeholder="e.g. CADENCE-101"
+                :disabled="creatingStudy"
+              />
+            </div>
+
+            <div class="create-field">
+              <label for="create-study-phase">Clinical phase</label>
+              <select
+                id="create-study-phase"
+                v-model="newStudyPhase"
+                :disabled="creatingStudy"
+              >
+                <option value="Phase 1">Phase 1</option>
+                <option value="Phase 1/2">Phase 1/2</option>
+                <option value="Phase 2">Phase 2</option>
+                <option value="Phase 2/3">Phase 2/3</option>
+                <option value="Phase 3">Phase 3</option>
+                <option value="Phase 4">Phase 4</option>
+                <option value="Observational">Observational</option>
+              </select>
+            </div>
+
+            <div class="create-field create-field-wide">
+              <label for="create-study-title">Study title</label>
+              <input
+                id="create-study-title"
+                v-model="newStudyTitle"
+                type="text"
+                autocomplete="off"
+                maxlength="500"
+                placeholder="e.g. Multicenter Cardiovascular Outcomes Study"
+                :disabled="creatingStudy"
+              />
+            </div>
+
+            <div class="create-field create-field-wide">
+              <label for="create-study-sponsor">Sponsor</label>
+              <select
+                id="create-study-sponsor"
+                v-model="selectedSponsorChoice"
+                :disabled="creatingStudy"
+              >
+                <option
+                  v-for="org in sponsorOrganizations"
+                  :key="org.ref"
+                  :value="org.ref"
+                >
+                  {{ org.name }} ({{ org.code }})
+                </option>
+                <option value="__new__">
+                  Register new sponsor organization…
+                </option>
+              </select>
+            </div>
+
+            <template v-if="selectedSponsorChoice === '__new__'">
+              <div class="create-field">
+                <label for="create-study-sponsor-name">New sponsor name</label>
+                <input
+                  id="create-study-sponsor-name"
+                  v-model="newSponsorName"
+                  type="text"
+                  autocomplete="off"
+                  maxlength="200"
+                  placeholder="e.g. Cadence Pharma"
+                  :disabled="creatingStudy"
+                />
+              </div>
+              <div class="create-field">
+                <label for="create-study-sponsor-code">
+                  Sponsor code (optional)
+                </label>
+                <input
+                  id="create-study-sponsor-code"
+                  v-model="newSponsorCode"
+                  type="text"
+                  autocomplete="off"
+                  maxlength="64"
+                  placeholder="e.g. CADENCE-PHARMA"
+                  :disabled="creatingStudy"
+                />
+              </div>
+            </template>
+
+            <div class="create-field create-field-wide">
+              <label for="create-study-file">
+                Initial protocol draft file (optional — ODM v1.3.2 XML or USDM
+                v4 JSON, up to 10 MB)
+              </label>
+              <input
+                id="create-study-file"
+                ref="createStudyFileInputRef"
+                type="file"
+                accept=".xml,.json,application/xml,text/xml,application/json"
+                class="sr-only"
+                :disabled="creatingStudy"
+                @change="onCreateStudyFileSelected"
+              />
+              <div class="create-file-row">
+                <button
+                  id="create-study-choose-file"
+                  type="button"
+                  class="btn btn-secondary"
+                  :disabled="creatingStudy"
+                  @click="openCreateStudyFilePicker"
+                >
+                  Choose ODM XML or USDM JSON file
+                </button>
+                <button
+                  v-if="newStudyImportFile"
+                  id="create-study-clear-file"
+                  type="button"
+                  class="btn btn-secondary"
+                  :disabled="creatingStudy"
+                  @click="clearCreateStudyFile"
+                >
+                  Remove file
+                </button>
+                <span
+                  v-if="newStudyImportFile"
+                  id="create-study-selected-file"
+                  class="create-file-note"
+                >
+                  {{ newStudyImportFile.name }}
+                </span>
+              </div>
+            </div>
+
+            <div class="create-field create-field-wide">
+              <label for="create-study-reason">
+                Reason for change (required)
+              </label>
+              <input
+                id="create-study-reason"
+                v-model="newStudyReason"
+                type="text"
+                autocomplete="off"
+                maxlength="500"
+                placeholder="e.g. Register new clinical study protocol workspace"
+                :disabled="creatingStudy"
+              />
+            </div>
+          </div>
+
+          <button
+            id="btn-create-study"
+            type="submit"
+            class="btn btn-primary"
+            :disabled="!canCreateStudy"
+          >
+            {{ createStudyButtonLabel }}
+          </button>
+        </form>
+      </section>
     </component>
 
     <CanvasPalette
@@ -462,6 +752,14 @@
       :participants="canvas.paletteParticipants"
       @close="paletteOpen = false"
       @go="goToPaletteTarget"
+    />
+
+    <SignOutConfirmModal
+      v-if="!inAppShell"
+      id="canvas-signout-confirm-modal"
+      v-model="isCanvasSignOutConfirmOpen"
+      @confirm="confirmCanvasSignOut"
+      @cancel="cancelCanvasSignOut"
     />
   </div>
 </template>
@@ -487,9 +785,12 @@ import {
 import type { EcrfForm } from "../api/ecrfFormsApi";
 import type { SubjectSummary } from "../api/executionApi";
 import {
+  describeKernelError,
   kernelApi,
   type KernelObservation,
+  type KernelOrganizationSummary,
   type KernelProtocolVersion,
+  type KernelStudySummary,
 } from "../api/kernelApi";
 import {
   STAGES,
@@ -512,8 +813,10 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
+import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
 import CanvasPalette from "../components/canvas/CanvasPalette.vue";
@@ -582,6 +885,267 @@ function syncTopbarHeight() {
   const measured = Math.round(el.getBoundingClientRect().height);
   if (measured > 0) {
     topbarHeight.value = measured;
+  }
+}
+
+const hasStudyDirectoryService = computed(
+  () => typeof kernelApi.listStudies === "function"
+);
+const hasCreateStudyService = computed(
+  () => typeof kernelApi.createStudy === "function"
+);
+
+const visibleStudies = ref<KernelStudySummary[]>([]);
+const studyDirectoryLoading = ref(false);
+const studyDirectoryError = ref("");
+const sponsorOrganizations = ref<KernelOrganizationSummary[]>([]);
+
+const newStudyCode = ref("");
+const newStudyTitle = ref("");
+const newStudyPhase = ref("Phase 2");
+const selectedSponsorChoice = ref("__new__");
+const newSponsorName = ref("");
+const newSponsorCode = ref("");
+const newStudyReason = ref("");
+const createStudyFileInputRef = ref<HTMLInputElement | null>(null);
+const newStudyImportFile = ref<File | null>(null);
+const createIdempotencyKey = ref("");
+const createImportIdempotencyKey = ref("");
+const pendingCreatedStudy = ref<KernelStudySummary | null>(null);
+const creatingStudy = ref(false);
+const creatingStudyStep = ref<"study" | "import">("study");
+const createStudyError = ref("");
+const createStudySuccess = ref("");
+const lastCreatedStudyCode = ref("");
+const MAX_CREATE_IMPORT_BYTES = 10 * 1024 * 1024;
+
+const createStudyButtonLabel = computed(() => {
+  if (creatingStudy.value) {
+    return newStudyImportFile.value
+      ? "Creating study & importing draft…"
+      : "Creating study…";
+  }
+  return newStudyImportFile.value
+    ? "Create study & import draft"
+    : "Create study";
+});
+
+const studyDirectoryStatus = computed(() => {
+  if (studyDirectoryLoading.value) return "Loading visible studies…";
+  if (studyDirectoryError.value) return "Could not load study directory.";
+  const count = visibleStudies.value.length;
+  if (count === 0) return "No visible studies in your tenant yet.";
+  return count === 1 ? "1 visible study" : `${count} visible studies`;
+});
+
+const canCreateStudy = computed(() => {
+  if (creatingStudy.value) return false;
+  if (!newStudyCode.value.trim() || !newStudyTitle.value.trim()) return false;
+  if (!newStudyPhase.value.trim() || !newStudyReason.value.trim()) return false;
+  if (selectedSponsorChoice.value === "__new__") {
+    return Boolean(newSponsorName.value.trim());
+  }
+  return Boolean(selectedSponsorChoice.value);
+});
+
+function nextStudyIdempotencyKey(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `study-${Math.random().toString(36).slice(2)}`;
+}
+
+watch(
+  [
+    newStudyCode,
+    newStudyTitle,
+    newStudyPhase,
+    selectedSponsorChoice,
+    newSponsorName,
+    newSponsorCode,
+  ],
+  () => {
+    createIdempotencyKey.value = "";
+    pendingCreatedStudy.value = null;
+  }
+);
+
+watch(newStudyReason, () => {
+  createIdempotencyKey.value = "";
+  createImportIdempotencyKey.value = "";
+});
+
+function openCreateStudyFilePicker() {
+  createStudyError.value = "";
+  createStudyFileInputRef.value?.click();
+}
+
+function clearCreateStudyFile() {
+  newStudyImportFile.value = null;
+  createImportIdempotencyKey.value = "";
+  if (createStudyFileInputRef.value) {
+    createStudyFileInputRef.value.value = "";
+  }
+}
+
+function onCreateStudyFileSelected(event: Event) {
+  const input = event.target as HTMLInputElement | null;
+  const picked = input?.files?.[0] ?? null;
+  createStudyError.value = "";
+  createImportIdempotencyKey.value = "";
+  if (!picked) {
+    newStudyImportFile.value = null;
+    return;
+  }
+  if (picked.size > MAX_CREATE_IMPORT_BYTES) {
+    newStudyImportFile.value = null;
+    if (input) input.value = "";
+    createStudyError.value = `File '${picked.name}' exceeds the 10 MB synchronous upload limit.`;
+    return;
+  }
+  newStudyImportFile.value = picked;
+}
+
+async function loadStudyDirectory() {
+  if (typeof kernelApi.listStudies !== "function") return;
+  studyDirectoryLoading.value = true;
+  studyDirectoryError.value = "";
+  try {
+    visibleStudies.value = await kernelApi.listStudies();
+  } catch (err) {
+    studyDirectoryError.value = describeKernelError(err);
+  } finally {
+    studyDirectoryLoading.value = false;
+  }
+
+  if (typeof kernelApi.listOrganizations === "function") {
+    try {
+      const orgs = await kernelApi.listOrganizations("Sponsor");
+      sponsorOrganizations.value = orgs;
+      if (orgs.length > 0 && selectedSponsorChoice.value === "__new__") {
+        selectedSponsorChoice.value = orgs[0].ref;
+      }
+    } catch {
+      // Custom sponsor entry remains available if organization listing fails.
+    }
+  }
+}
+
+function openStudyByCode(code: string) {
+  const clean = code.trim();
+  if (clean) router.push(studyLocation({}, clean));
+}
+
+function openStudyDesign(code: string) {
+  const clean = code.trim();
+  if (clean) {
+    router.push(
+      studyLocation({ stage: "design", section: "protocol-versions" }, clean)
+    );
+  }
+}
+
+async function submitCreateStudy() {
+  if (typeof kernelApi.createStudy !== "function") return;
+  createStudyError.value = "";
+  createStudySuccess.value = "";
+
+  if (!createIdempotencyKey.value) {
+    createIdempotencyKey.value = nextStudyIdempotencyKey();
+  }
+
+  creatingStudy.value = true;
+  creatingStudyStep.value = "study";
+  try {
+    const requestedCode = newStudyCode.value.trim();
+    let created =
+      pendingCreatedStudy.value &&
+      pendingCreatedStudy.value.code.toUpperCase() ===
+        requestedCode.toUpperCase()
+        ? pendingCreatedStudy.value
+        : null;
+
+    if (!created) {
+      const isNewSponsor = selectedSponsorChoice.value === "__new__";
+      created = await kernelApi.createStudy({
+        code: requestedCode,
+        title: newStudyTitle.value.trim(),
+        phase: newStudyPhase.value.trim(),
+        sponsorRef: isNewSponsor ? null : selectedSponsorChoice.value,
+        sponsorName: isNewSponsor ? newSponsorName.value.trim() : null,
+        sponsorCode:
+          isNewSponsor && newSponsorCode.value.trim()
+            ? newSponsorCode.value.trim()
+            : null,
+        reason: newStudyReason.value.trim(),
+        idempotencyKey: createIdempotencyKey.value,
+      });
+      pendingCreatedStudy.value = created;
+
+      const existingIdx = visibleStudies.value.findIndex(
+        (s) => s.code === created?.code
+      );
+      if (existingIdx >= 0) {
+        visibleStudies.value.splice(existingIdx, 1, created);
+      } else {
+        visibleStudies.value = [created, ...visibleStudies.value];
+      }
+    }
+
+    if (
+      newStudyImportFile.value &&
+      typeof kernelApi.importProtocolDraft === "function"
+    ) {
+      creatingStudyStep.value = "import";
+      if (!createImportIdempotencyKey.value) {
+        createImportIdempotencyKey.value = nextStudyIdempotencyKey();
+      }
+      const imported = await kernelApi.importProtocolDraft({
+        studyRef: created.ref || created.code,
+        file: newStudyImportFile.value,
+        reason: newStudyReason.value.trim(),
+        idempotencyKey: createImportIdempotencyKey.value,
+      });
+
+      newStudyCode.value = "";
+      newStudyTitle.value = "";
+      newSponsorName.value = "";
+      newSponsorCode.value = "";
+      newStudyReason.value = "";
+      clearCreateStudyFile();
+      createIdempotencyKey.value = "";
+      pendingCreatedStudy.value = null;
+
+      await router.push(
+        studyLocation(
+          {
+            stage: "design",
+            section: "protocol-versions",
+            node: imported.version?.ref || undefined,
+          },
+          created.code
+        )
+      );
+      return;
+    }
+
+    lastCreatedStudyCode.value = created.code;
+    createStudySuccess.value = `Study ${created.code} (${created.title}) registered and ready in your visible study list.`;
+    newStudyCode.value = "";
+    newStudyTitle.value = "";
+    newSponsorName.value = "";
+    newSponsorCode.value = "";
+    newStudyReason.value = "";
+    clearCreateStudyFile();
+    createIdempotencyKey.value = "";
+    pendingCreatedStudy.value = null;
+
+    await loadStudyDirectory();
+  } catch (err) {
+    createStudyError.value = describeKernelError(err);
+  } finally {
+    creatingStudy.value = false;
+    creatingStudyStep.value = "study";
   }
 }
 
@@ -1014,6 +1578,18 @@ function onFormLoaded(form: EcrfForm) {
   }
 }
 
+const {
+  isConfirmOpen: isCanvasSignOutConfirmOpen,
+  requestSignOut: requestCanvasSignOut,
+  confirmSignOut: confirmCanvasSignOut,
+  cancelSignOut: cancelCanvasSignOut,
+} = useSignOutGuard({
+  hasExternalDrafts: () => hasUserScopedDrafts(),
+  onConfirmSignOut: async () => {
+    await authStore.logout();
+  },
+});
+
 function onFormClosed() {
   formWorkspaceDirty.value = false;
   loadedForm.value = null;
@@ -1128,6 +1704,9 @@ watch(
     resolvedParticipantId.value = "";
     lineageRequest++;
     canvas.openStudy(code);
+    if (!code) {
+      loadStudyDirectory();
+    }
   },
   { immediate: true }
 );
@@ -1253,8 +1832,12 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
   return Boolean(currentFormId && nextFormId !== currentFormId);
 }
 
+function shouldSuppressUnsavedGuard(): boolean {
+  return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+}
+
 function handleBeforeUnload(event: BeforeUnloadEvent) {
-  if (formWorkspaceDirty.value) {
+  if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
     event.preventDefault();
     event.returnValue = "";
     return "";
@@ -1268,7 +1851,11 @@ function confirmDiscardUnsavedForm(): boolean {
 
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
-    if (formWorkspaceDirty.value && !confirmDiscardUnsavedForm()) {
+    if (
+      formWorkspaceDirty.value &&
+      !shouldSuppressUnsavedGuard() &&
+      !confirmDiscardUnsavedForm()
+    ) {
       return false;
     }
   });
@@ -1566,8 +2153,15 @@ onUnmounted(() => {
 }
 
 .open-study {
-  max-width: 40rem;
+  max-width: 54rem;
   padding: 32px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.open-study h1 {
+  margin: 0;
 }
 
 .open-study-form {
@@ -1585,8 +2179,180 @@ onUnmounted(() => {
   flex: 1 1 12rem;
   min-width: 0;
   padding: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
+}
+
+.directory-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--semantic-color-surface);
+}
+
+.directory-section h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.directory-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.directory-status {
+  font-size: 0.85rem;
+  color: var(--neutral-dark);
+}
+
+.visible-studies-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.study-directory-card {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--semantic-color-surface-muted);
+}
+
+.study-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.study-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.study-card-code {
+  font-size: 0.98rem;
+}
+
+.study-phase-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary-dark);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.study-card-title {
+  font-size: 0.9rem;
+}
+
+.study-card-sponsor {
+  font-size: 0.8rem;
+  color: var(--neutral-dark);
+}
+
+.study-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.inline-banner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.inline-banner-progress {
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
+}
+
+.inline-banner-success {
+  background: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border-soft);
+  color: var(--semantic-color-success-dark);
+}
+
+.inline-banner-error {
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
+  color: var(--semantic-color-error-text-dark);
+}
+
+.create-study-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.create-study-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.create-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.create-field-wide {
+  grid-column: 1 / -1;
+}
+
+.create-field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.create-field input,
+.create-field select {
+  padding: 8px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.9rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.create-file-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.create-file-note {
+  font-size: 0.85rem;
+  color: var(--neutral-dark);
 }
 
 @media (max-width: 960px) {

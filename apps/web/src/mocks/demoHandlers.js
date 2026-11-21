@@ -1,5 +1,7 @@
 import { http, HttpResponse } from "msw";
+import { isValidSemanticAction, isValidStepUpAction } from "ui";
 import { webDemoStore } from "./demoStore.js";
+import { parseDemoProtocolImportRequest } from "./demoStudyImport.js";
 
 const DEFAULT_STUDY_REF = "study:00000000-0000-0000-0000-000000000001"; // deid-ignore
 
@@ -8,6 +10,18 @@ function decodeReasonHeader(request) {
     request.headers.get("X-Change-Reason") ||
     request.headers.get("x-change-reason");
   if (!raw) return "Recorded in demo session";
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function readRequiredReasonHeader(request) {
+  const raw =
+    request.headers.get("X-Change-Reason") ||
+    request.headers.get("x-change-reason") ||
+    "";
   try {
     return decodeURIComponent(raw);
   } catch {
@@ -41,9 +55,25 @@ export function createWebDemoHandlers(store = webDemoStore) {
     ),
     http.post("*/api/v1/auth/signature-verification", async ({ request }) => {
       const body = await readJsonBody(request);
+      if (
+        !isValidStepUpAction(body?.action) ||
+        !isValidSemanticAction(body?.semantic_action)
+      ) {
+        return HttpResponse.json(
+          {
+            title: "Invalid Step-Up Signature Payload",
+            status: 400,
+            code: "INVALID_STEP_UP_PAYLOAD",
+            detail:
+              "Both '/api/v1/...' action and governed snake_case semantic_action are required.",
+          },
+          { status: 400 }
+        );
+      }
       return HttpResponse.json({
         sig_token: `demo_sig_tok_${Date.now()}`,
-        action: body?.action || "demo.sign",
+        action: body.action,
+        semantic_action: body.semantic_action,
         expires_in: 300,
       });
     }),
@@ -137,13 +167,68 @@ export function createWebDemoHandlers(store = webDemoStore) {
       )
     ),
 
-    // Kernel Protocol Versions, SoA, Proposals, Simulation, Matrix Gap Check, Activity
+    // Kernel Studies, Organizations, Protocol Templates, Protocol Versions, SoA, Proposals
+    http.get("*/api/v1/kernel/studies", () =>
+      HttpResponse.json(store.listStudies())
+    ),
+    http.post("*/api/v1/kernel/studies", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const reason = readRequiredReasonHeader(request);
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      const result = store.createStudy(body, { reason, idempotencyKey });
+      if (result.error) {
+        return HttpResponse.json(result.error.problem, {
+          status: result.error.status,
+        });
+      }
+      return HttpResponse.json(result.data, { status: 201 });
+    }),
+    http.get("*/api/v1/kernel/organizations", () =>
+      HttpResponse.json(store.listOrganizations())
+    ),
+    http.get("*/api/v1/kernel/protocol-templates", () =>
+      HttpResponse.json(store.listProtocolTemplates())
+    ),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/protocol-versions",
       ({ params }) =>
         HttpResponse.json(
           store.listProtocolVersions(
             decodeURIComponent(String(params.studyRef))
+          )
+        )
+    ),
+    http.post(
+      "*/api/v1/kernel/studies/:studyRef/protocol-imports",
+      async ({ params, request }) => {
+        const reason = readRequiredReasonHeader(request);
+        const idempotencyKey =
+          request.headers.get("Idempotency-Key") ||
+          request.headers.get("idempotency-key") ||
+          "";
+        const parsedRequest = await parseDemoProtocolImportRequest(request);
+        const result = store.importProtocolDraft(
+          decodeURIComponent(String(params.studyRef)),
+          parsedRequest,
+          { reason, idempotencyKey }
+        );
+        if (result.error) {
+          return HttpResponse.json(result.error.problem, {
+            status: result.error.status,
+          });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.get(
+      "*/api/v1/kernel/protocol-versions/:versionRef/design-summary",
+      ({ params }) =>
+        HttpResponse.json(
+          store.getProtocolDesignSummary(
+            decodeURIComponent(String(params.versionRef))
           )
         )
     ),

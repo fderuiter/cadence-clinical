@@ -372,19 +372,28 @@
     <!-- Full-Width Bottom Section: Study Designer Persona Component (demo only) -->
     <div v-if="demoBuild" style="margin-top: 24px">
       <DesignerSchemaPanel
+        v-model:import-change-reason="schema.importChangeReason"
+        v-model:selected-template-ids="schema.selectedTemplateIds"
         v-model:edit-item-value="schema.editItemValue"
         v-model:edit-item-reason="schema.editItemReason"
         v-model:reject-item-reason="schema.rejectItemReason"
         v-model:promote-change-reason="schema.promoteChangeReason"
         :store="store"
         :selected-file-name="schema.selectedFileName"
+        :available-templates="schema.availableTemplates"
+        :importing-draft="schema.importingDraft"
+        :import-success-message="schema.importSuccessMessage"
+        :import-error-message="schema.importErrorMessage"
+        :imported-draft-summary="schema.importedDraftSummary"
         :editing-item-id="schema.editingItemId"
         :rejecting-item-id="schema.rejectingItemId"
         :unreviewed-count="schema.unreviewedCount"
         :get-confidence-class="schema.getConfidenceClass"
         :get-status-class="schema.getStatusClass"
-        @trigger-file-select="schema.triggerFileSelect"
+        @register-file-input="schema.setFileInputElement"
+        @load-templates="schema.loadProtocolTemplates"
         @trigger-document-upload="schema.triggerDocumentUpload"
+        @import-selected-templates="schema.importSelectedTemplates"
         @accept-item="schema.acceptItem"
         @start-edit-item="schema.startEditItem"
         @cancel-edit-item="schema.cancelEditItem"
@@ -1024,6 +1033,10 @@ onUnmounted(() => {
   window.removeEventListener("beforeunload", handleBeforeUnload);
 });
 
+function shouldSuppressUnsavedGuard() {
+  return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+}
+
 const hasUnsavedChanges = computed(
   () => formPanelDirty.value || (demoBuild && isDirty.value)
 );
@@ -1031,7 +1044,7 @@ const hasUnsavedChanges = computed(
 // Route & Browser Navigation Guards
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
-    if (hasUnsavedChanges.value) {
+    if (hasUnsavedChanges.value && !shouldSuppressUnsavedGuard()) {
       const confirmLeave = window.confirm(
         "You have unsaved eCRF draft changes. Are you sure you want to leave?"
       );
@@ -1044,7 +1057,7 @@ if (typeof onBeforeRouteLeave === "function") {
 
 if (typeof onBeforeRouteUpdate === "function") {
   onBeforeRouteUpdate((to, from) => {
-    if (!formPanelDirty.value) return;
+    if (!formPanelDirty.value || shouldSuppressUnsavedGuard()) return;
     const nextFormId = routeQuery("formId", to);
     const currentFormId =
       loadedFormId.value ?? routeQuery("formId", from ?? route);
@@ -1060,7 +1073,7 @@ if (typeof onBeforeRouteUpdate === "function") {
 }
 
 function handleBeforeUnload(event) {
-  if (hasUnsavedChanges.value) {
+  if (hasUnsavedChanges.value && !shouldSuppressUnsavedGuard()) {
     event.preventDefault();
     event.returnValue = "";
     return "";
