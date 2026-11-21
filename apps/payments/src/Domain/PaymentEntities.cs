@@ -355,7 +355,7 @@ public class SelfBillingInvoice
     }
 
     /// <summary>
-    /// Records export to an external ERP system. Requires APPROVED or RECONCILED status.
+    /// Records export to an external ERP system. Requires APPROVED status.
     /// Blocks export if the invoice is in DRAFT, CANCELLED, or any unapproved status.
     /// </summary>
     public void ExportToErp(string erpSystem, string erpReferenceId, DateTimeOffset exportedAt)
@@ -370,8 +370,7 @@ public class SelfBillingInvoice
             throw new ArgumentException("ERP reference identifier is required.", nameof(erpReferenceId));
         }
 
-        if (!string.Equals(_status, SelfBillingInvoiceStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(_status, SelfBillingInvoiceStatus.RECONCILED.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(_status, SelfBillingInvoiceStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidStateTransitionException(
                 nameof(SelfBillingInvoice),

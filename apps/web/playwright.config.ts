@@ -12,7 +12,23 @@ const chromiumLaunchOptions = {
   ...(process.env.PLAYWRIGHT_CHROME_EXECUTABLE
     ? { executablePath: process.env.PLAYWRIGHT_CHROME_EXECUTABLE }
     : {}),
-  args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+  ],
+};
+
+const accessibilityProject = {
+  name: "accessibility",
+  testMatch: /web-accessibility\.spec\.ts/,
+  use: {
+    ...devices["Desktop Chrome"],
+    channel: "chromium",
+    baseURL: demoPreviewUrl,
+    launchOptions: chromiumLaunchOptions,
+  },
 };
 
 export default defineConfig({
@@ -36,33 +52,26 @@ export default defineConfig({
         : "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [
-    {
-      name: "setup",
-      testMatch: /auth\.setup\.ts/,
-    },
-    {
-      name: "chromium",
-      testIgnore: /web-accessibility\.spec\.ts/,
-      use: {
-        ...devices["Desktop Chrome"],
-        channel: "chromium",
-        launchOptions: chromiumLaunchOptions,
-        storageState: "playwright/.auth/user.json",
-      },
-      dependencies: ["setup"],
-    },
-    {
-      name: "accessibility",
-      testMatch: /web-accessibility\.spec\.ts/,
-      use: {
-        ...devices["Desktop Chrome"],
-        channel: "chromium",
-        baseURL: demoPreviewUrl,
-        launchOptions: chromiumLaunchOptions,
-      },
-    },
-  ],
+  projects: isAccessibilityOnly
+    ? [accessibilityProject]
+    : [
+        {
+          name: "setup",
+          testMatch: /auth\.setup\.ts/,
+        },
+        {
+          name: "chromium",
+          testIgnore: /web-accessibility\.spec\.ts/,
+          use: {
+            ...devices["Desktop Chrome"],
+            channel: "chromium",
+            launchOptions: chromiumLaunchOptions,
+            storageState: "playwright/.auth/user.json",
+          },
+          dependencies: ["setup"],
+        },
+        accessibilityProject,
+      ],
   webServer: isAccessibilityOnly
     ? [
         {
