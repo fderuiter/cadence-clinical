@@ -391,7 +391,7 @@ public static class CiPlan
             },
             new(E2eJob, "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
             new(E2eJob, "Run Subject Portal E2E Accessibility Tests") { Commands = [Pnpm("--filter", "subject-portal", "test:e2e")] },
-            new(E2eJob, "Run Web Application E2E Accessibility Tests") { Commands = [Pnpm("--filter", "web", "test:e2e")] },
+            new(E2eJob, "Run Web Application E2E Accessibility Tests") { Commands = [Pnpm("--filter", "web", "exec", "playwright", "test", "--project=accessibility")] },
             new(E2eJob, "Run Browser-to-Database Correction Integration Test")
             {
                 NeedsPostgres = true,
