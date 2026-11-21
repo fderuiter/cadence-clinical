@@ -20,6 +20,10 @@ benchmark_only_trx='<TestRun><Results>
 <UnitTestResult testName="LineageBenchmarkPostgresTests.BenchmarkTenMillionEdgesTraceLatency" outcome="NotExecuted" />
 </Results></TestRun>'
 
+benchmark_display_name_trx='<TestRun><Results>
+<UnitTestResult testName="Benchmark_TenMillionEdges_TraceLatency" outcome="NotExecuted" />
+</Results></TestRun>'
+
 browser_optin_trx='<TestRun><Results>
 <UnitTestResult testName="BrowserCorrection_ReachesTheDatabaseWithItsReason" outcome="NotExecuted" />
 </Results></TestRun>'
@@ -54,6 +58,7 @@ expect() {
 expect "fails on a skipped database test" 1 "$(new_tree skipped "$skipped_trx" "$passing_trx")"
 expect "passes when every database test executed" 0 "$(new_tree passing "$passing_trx" "$passing_trx")"
 expect "ignores the opt-in lineage benchmark" 0 "$(new_tree benchmark "$benchmark_only_trx" "$passing_trx")"
+expect "ignores the opt-in lineage benchmark DisplayName" 0 "$(new_tree benchmark_display "$benchmark_display_name_trx" "$passing_trx")"
 expect "ignores the opt-in browser correction check" 0 "$(new_tree browser_optin "$browser_optin_trx" "$passing_trx")"
 expect "fails when Cadence.E2ETests produces no TRX report" 1 "$(new_tree missing_e2e "$passing_trx" "")"
 expect "fails when Cadence.IntegrationTests produces no TRX report" 1 "$(new_tree missing_integration "" "$passing_trx")"
@@ -78,6 +83,7 @@ new_gxp_tree() {
 }
 
 gxp_integration_pass='<TestRun><TestDefinitions><UnitTest id="1"><TestMethod codeBase="/bin/Cadence.IntegrationTests.dll" className="Sample" name="Passes" /></UnitTest></TestDefinitions><Results><UnitTestResult testId="1" testName="Sample.Passes" outcome="Passed" /></Results></TestRun>'
+gxp_integration_optin_skips='<TestRun><TestDefinitions><UnitTest id="1"><TestMethod codeBase="/bin/Cadence.IntegrationTests.dll" className="Sample" name="Passes" /></UnitTest><UnitTest id="2"><TestMethod codeBase="/bin/Cadence.IntegrationTests.dll" className="Cadence.IntegrationTests.Kernel.LineageBenchmarkPostgresTests" name="BenchmarkTenMillionEdgesTraceLatency" /></UnitTest><UnitTest id="3"><TestMethod codeBase="/bin/Cadence.IntegrationTests.dll" className="Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests" name="BrowserCorrectionReachesTheDatabaseWithItsReason" /></UnitTest></TestDefinitions><Results><UnitTestResult testId="1" testName="Sample.Passes" outcome="Passed" /><UnitTestResult testId="2" testName="Benchmark_TenMillionEdges_TraceLatency" outcome="NotExecuted" /><UnitTestResult testId="3" testName="BrowserCorrection_ReachesTheDatabaseWithItsReason" outcome="NotExecuted" /></Results></TestRun>'
 gxp_integration_skip='<TestRun><TestDefinitions><UnitTest id="1"><TestMethod codeBase="/bin/Cadence.IntegrationTests.dll" className="Sample" name="SkippedDb" /></UnitTest></TestDefinitions><Results><UnitTestResult testId="1" testName="Sample.SkippedDb" outcome="NotExecuted" /></Results></TestRun>'
 gxp_e2e_pass='<TestRun><TestDefinitions><UnitTest id="2"><TestMethod codeBase="/bin/Cadence.E2ETests.dll" className="Sample" name="Flow" /></UnitTest></TestDefinitions><Results><UnitTestResult testId="2" testName="Sample.Flow" outcome="Passed" /></Results></TestRun>'
 gxp_unit_skip='<TestRun><TestDefinitions><UnitTest id="3"><TestMethod codeBase="/bin/Cadence.UnitTests.dll" className="Sample" name="UnitSkip" /></UnitTest></TestDefinitions><Results><UnitTestResult testId="3" testName="Sample.UnitSkip" outcome="NotExecuted" /></Results></TestRun>'
@@ -85,6 +91,7 @@ gxp_db_txt='fixture=kernel
 server_version=18.1'
 
 expect "TestResults/gxp passes when database TRX and *.database.txt exist (ignoring unit skips)" 0 "$(new_gxp_tree gxp_pass "$gxp_integration_pass" "$gxp_e2e_pass" "$gxp_db_txt" "$gxp_unit_skip")"
+expect "TestResults/gxp ignores opt-in benchmark and browser skips by DisplayName" 0 "$(new_gxp_tree gxp_optins "$gxp_integration_optin_skips" "$gxp_e2e_pass" "$gxp_db_txt" "$gxp_unit_skip")"
 expect "TestResults/gxp fails on a skipped database test" 1 "$(new_gxp_tree gxp_skip "$gxp_integration_skip" "$gxp_e2e_pass" "$gxp_db_txt")"
 expect "TestResults/gxp fails when *.database.txt is missing" 1 "$(new_gxp_tree gxp_no_db "$gxp_integration_pass" "$gxp_e2e_pass" "")"
 expect "TestResults/gxp fails when Cadence.E2ETests.dll TRX is missing" 1 "$(new_gxp_tree gxp_no_e2e "$gxp_integration_pass" "" "$gxp_db_txt")"

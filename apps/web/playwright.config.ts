@@ -42,13 +42,13 @@ export default defineConfig({
       testMatch: /web-accessibility\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
+        channel: "chromium",
         baseURL: "http://127.0.0.1:3001/cadence-clinical/",
         launchOptions: {
           args: [
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
-            "--disable-gpu",
           ],
         },
       },

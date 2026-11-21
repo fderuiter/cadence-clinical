@@ -403,8 +403,8 @@ export function isScreenAvailable(routeName, env) {
   const demoActive =
     env !== undefined
       ? isDemoBuild(env)
-      : import.meta.env.MODE === "demo" ||
-        import.meta.env.VITE_DEMO_MODE === "true";
+      : import.meta.env?.MODE === "demo" ||
+        import.meta.env?.VITE_DEMO_MODE === "true";
   if (demoActive) {
     return DEMO_AVAILABLE_SCREENS.has(routeName);
   }
