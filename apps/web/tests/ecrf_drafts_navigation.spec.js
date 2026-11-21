@@ -5,6 +5,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { i18n } from "../src/i18n/index.js";
 import { useEcrfDrafts } from "../src/composables/useEcrfDrafts.js";
 import EcrfView from "../src/views/EcrfView.vue";
+import EcrfFormPanel from "../src/components/ecrf/EcrfFormPanel.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 import { useClinicalStore } from "../src/stores/clinical.js";
 import { useAuthStore } from "../src/stores/auth.js";
@@ -56,6 +57,7 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
     localStorage.clear();
   });
@@ -223,7 +225,8 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
   describe("EcrfView Integration & Navigation Guards", () => {
     beforeEach(signIn);
 
-    it("restores local draft on session load if present", async () => {
+    it("restores local draft on session load if present in a demo build", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "true");
       const store = useClinicalStore();
       store.subjects = [{ id: "SUBJ-001", status: "ENROLLED" }];
       store.ecrfFields = [
@@ -258,7 +261,8 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       expect(wrapper.find("#ecrf-draft-status-banner").exists()).toBe(true);
     });
 
-    it("triggers route leave prompt when form is dirty", async () => {
+    it("triggers route leave prompt when sample form is dirty in a demo build", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "true");
       const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 
       const store = useClinicalStore();
@@ -309,7 +313,7 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       store.ecrfFields = [
         { id: "vssbp", label: "Systolic BP", type: "number" },
       ];
-      localStorage.setItem(VIEW_DRAFT_KEY, JSON.stringify({ vssbp: "120" }));
+      localStorage.setItem(VIEW_DRAFT_KEY, JSON.stringify({ vssbp: "177" }));
       return mount(EcrfView, {
         global: {
           plugins: [pinia, i18n],
@@ -346,11 +350,15 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       });
     });
 
-    it("refuses to submit the sample form outside a demo build and keeps the draft (ADR-2622)", async () => {
+    it("hides the sample form outside a demo build, ignores sample drafts, and refuses submitEcrf (ADR-2622)", async () => {
+      const store = useClinicalStore();
       const wrapper = mountSampleForm();
       await nextTick();
 
-      wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
+      expect(wrapper.findComponent(CrcFormRenderer).exists()).toBe(false);
+      expect(store.formValues.vssbp).not.toBe("177");
+
+      await wrapper.vm.submitEcrf();
       await flushPromises();
 
       expect(useToastStore().toasts[0]).toMatchObject({
@@ -360,7 +368,7 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       expect(localStorage.getItem(VIEW_DRAFT_KEY)).not.toBeNull();
     });
 
-    it("registers only beforeunload on window and cleans it up on unmount without online listeners", async () => {
+    it("registers only beforeunload on window, guards unsaved kernel form edits, and cleans up on unmount without online listeners", async () => {
       const addListenerSpy = vi.spyOn(window, "addEventListener");
       const removeListenerSpy = vi.spyOn(window, "removeEventListener");
 
@@ -370,10 +378,19 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       const addedEvents = addListenerSpy.mock.calls.map((call) => call[0]);
       expect(addedEvents).toEqual(["beforeunload"]);
 
-      // Verify beforeunload guard blocks unload while form is dirty
+      // Mark kernel form panel dirty and verify beforeunload + route leave guard
+      wrapper.findComponent(EcrfFormPanel).vm.$emit("dirty-change", true);
+      await nextTick();
+
       const unloadEvent = new Event("beforeunload", { cancelable: true });
       window.dispatchEvent(unloadEvent);
       expect(unloadEvent.defaultPrevented).toBe(true);
+
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+      expect(routeLeaveHandler()).toBe(false);
+      expect(confirmSpy).toHaveBeenCalledWith(
+        "You have unsaved eCRF draft changes. Are you sure you want to leave?"
+      );
 
       // Reconnecting online dispatches no PIN challenge
       const pinChallengeSpy = vi.fn();

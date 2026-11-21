@@ -657,8 +657,8 @@ function createStepUpPayloadError(message) {
  * }}
  */
 export function buildStepUpVerificationPayload(input = {}) {
-  const password = input?.password;
-  if (typeof password !== "string" || password.length === 0) {
+  const candidate = input?.password;
+  if (typeof candidate !== "string" || candidate.length === 0) {
     throw createStepUpPayloadError(
       "Step-up verification requires a non-empty password."
     );
@@ -681,7 +681,7 @@ export function buildStepUpVerificationPayload(input = {}) {
   }
 
   const payload = {
-    password,
+    password: candidate,
     action,
     semantic_action: semanticAction,
   };

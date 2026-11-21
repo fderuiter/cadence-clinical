@@ -109,7 +109,7 @@ function handleConfirm() {
 <style scoped>
 .signout-confirm-desc {
   margin: 0;
-  color: var(--text-primary, #1e293b);
+  color: var(--semantic-color-text-dark);
   font-size: 0.95rem;
   line-height: 1.55;
 }
@@ -125,28 +125,28 @@ function handleConfirm() {
 }
 
 .btn-signout-stay {
-  background: var(--color-surface, #ffffff);
-  color: var(--text-primary, #0f172a);
-  border: 1px solid var(--color-border, #cbd5e1);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  border: 1px solid var(--semantic-color-border-control);
 }
 
 .btn-signout-stay:hover {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-subtle);
 }
 
 .btn-signout-confirm {
-  background: #b91c1c;
-  color: #ffffff;
-  border: 1px solid #991b1b;
+  background: var(--semantic-color-error);
+  color: var(--semantic-color-text-on-solid);
+  border: 1px solid var(--semantic-color-error-text-dark);
 }
 
 .btn-signout-confirm:hover {
-  background: #991b1b;
+  background: var(--semantic-color-error-text-dark);
 }
 
 .btn-signout-stay:focus-visible,
 .btn-signout-confirm:focus-visible {
-  outline: 2px solid var(--color-primary, #2563eb);
+  outline: 2px solid var(--semantic-color-primary);
   outline-offset: 2px;
 }
 </style>

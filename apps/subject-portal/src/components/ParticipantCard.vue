@@ -176,7 +176,7 @@ function handleLogout() {
 
 <style scoped>
 .participant-status-expired {
-  color: var(--danger, #991b1b);
+  color: var(--semantic-color-error-text-dark);
   font-weight: 700;
 }
 </style>

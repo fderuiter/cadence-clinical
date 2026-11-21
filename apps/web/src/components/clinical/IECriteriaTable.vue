@@ -186,8 +186,8 @@ const addCriterion = () => {
 
 <style scoped>
 .ie-criteria-table-container {
-  background-color: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   padding: 16px;
   width: 100%;
@@ -215,23 +215,23 @@ const addCriterion = () => {
 }
 
 .stat-pill.inc {
-  background-color: #ecfdf5;
-  border-color: #a7f3d0;
-  color: #065f46;
+  background-color: var(--semantic-color-success-bg-soft);
+  border-color: var(--semantic-color-success-border);
+  color: var(--semantic-color-success-dark);
 }
 
 .stat-pill.exc {
-  background-color: #fff1f2;
-  border-color: #fecdd3;
-  color: #9f1239;
+  background-color: var(--semantic-color-error-bg-row);
+  border-color: var(--semantic-color-rose-border);
+  color: var(--semantic-color-rose-text);
 }
 
 .crit-add-panel {
   display: flex;
   align-items: flex-end;
   gap: 12px;
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border-control);
   padding: 14px;
   border-radius: var(--radius-md, 8px);
   margin-bottom: 18px;
@@ -247,22 +247,22 @@ const addCriterion = () => {
 .crit-field label {
   font-size: 0.72rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   text-transform: uppercase;
 }
 
 .crit-input,
 .crit-select {
   padding: 7px 12px;
-  border: 1px solid #94a3b8;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.88rem;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
 }
 
 .crit-table-container {
   overflow-x: auto;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
@@ -277,13 +277,13 @@ const addCriterion = () => {
 .criteria-table th,
 .criteria-table td {
   padding: 10px 12px;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
 }
 
 .criteria-table th {
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   font-weight: 700;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 
 .col-type {
@@ -313,27 +313,27 @@ const addCriterion = () => {
 }
 
 .type-badge.inclusion {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 
 .type-badge.exclusion {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 
 .logic-code {
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border);
   padding: 2px 6px;
   border-radius: 4px;
   font-family: monospace;
   font-size: 0.8rem;
-  color: #0369a1;
+  color: var(--semantic-color-primary);
 }
 
 .text-muted {
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-style: italic;
   font-size: 0.8rem;
 }
@@ -347,13 +347,13 @@ const addCriterion = () => {
 }
 
 .syntax-badge.valid {
-  background-color: #ecfdf5;
-  color: #047857;
+  background-color: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success);
 }
 
 .syntax-badge.narrative {
-  background-color: #f1f5f9;
-  color: #64748b;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 table,

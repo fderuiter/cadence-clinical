@@ -372,7 +372,7 @@ A continuous regulatory compliance engine that unifies requirement mapping under
 
 ### Unified Pre-Commit Sentinel Gate
 
-A multi-phase developer verification gate configured within `.pre-commit-config.yaml` and `.githooks/` that executes before any git commit is created. The gate enforces zero code-style drift via `dotnet format Cadence.sln --verify-no-changes`, validates Architectural Decision Record (ADR) index integrity via `dotnet cadence check adrs`, and scans for hardcoded secrets and boundary leaks across all C# and Vue assets via `dotnet cadence check --parallel`.
+A fail-closed developer verification gate configured in `.githooks/pre-commit` that delegates directly to `node scripts/run-cli.js check --pre-commit` across Linux, macOS, and Windows before any git commit is recorded. The gate enforces C# formatting and code style (`dotnet format whitespace` and `style`), Prettier and ESLint checks, GitHub Actions SHA pinning, YAML syntax, trailing-whitespace and EOF newline hygiene, Architectural Decision Record (ADR) index integrity, and secret/PHI scanning (`detect-secrets` against `.secrets.baseline`, static secret auditing, and DEID compliance).
 
 ### Dotnet Tool Manifest Policy
 

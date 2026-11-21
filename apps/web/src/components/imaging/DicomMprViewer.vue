@@ -702,9 +702,9 @@ onUnmounted(() => {
 .mpr-viewer-container {
   display: flex;
   flex-direction: column;
-  background-color: var(--semantic-color-surface-sunken, #090d16);
+  background-color: var(--semantic-color-surface-sunken);
   border-radius: var(--semantic-border-radius-md, 8px);
-  border: 1px solid var(--semantic-color-border, #334155);
+  border: 1px solid var(--semantic-color-border);
   overflow: hidden;
   height: 100%;
 }
@@ -714,8 +714,8 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 6px 12px;
-  background-color: #0b1329;
-  border-bottom: 1px solid #1e293b;
+  background-color: var(--semantic-color-surface-sunken);
+  border-bottom: 1px solid var(--semantic-color-text-dark);
 }
 
 .banner-title-group {
@@ -727,14 +727,14 @@ onUnmounted(() => {
 .viewport-name-tag {
   font-size: 0.82rem;
   font-weight: 700;
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
 }
 
 .timepoint-tag {
   font-size: 0.72rem;
   font-weight: 600;
   background-color: rgba(56, 189, 248, 0.15);
-  color: #7dd3fc;
+  color: var(--semantic-color-accent-inverse);
   border: 1px solid rgba(56, 189, 248, 0.3);
   padding: 2px 6px;
   border-radius: 4px;
@@ -752,13 +752,13 @@ onUnmounted(() => {
 
 .sync-status-badge.synced {
   background-color: rgba(52, 211, 153, 0.15);
-  color: #34d399;
+  color: var(--semantic-color-emerald-inverse-text);
   border: 1px solid rgba(52, 211, 153, 0.3);
 }
 
 .sync-status-badge.unlinked {
   background-color: rgba(251, 146, 60, 0.15);
-  color: #fb923c;
+  color: var(--semantic-color-orange-text);
   border: 1px solid rgba(251, 146, 60, 0.3);
 }
 
@@ -768,8 +768,8 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 8px 16px;
-  background-color: #0f172a;
-  border-bottom: 1px solid #1e293b;
+  background-color: var(--semantic-color-surface-inverse);
+  border-bottom: 1px solid var(--semantic-color-text-dark);
 }
 
 .toolbar-group {
@@ -781,13 +781,13 @@ onUnmounted(() => {
 .toolbar-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .toolbar-select {
-  background-color: #1e293b;
-  color: #f8fafc;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-elevated);
+  color: var(--semantic-color-text-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 0.8rem;
@@ -795,9 +795,9 @@ onUnmounted(() => {
 }
 
 .toolbar-btn {
-  background-color: #1e293b;
-  color: #cbd5e1;
-  border: 1px solid #334155;
+  background-color: var(--semantic-color-surface-elevated);
+  color: var(--semantic-color-text-inverse-muted);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 4px 10px;
   font-size: 0.8rem;
@@ -812,19 +812,19 @@ onUnmounted(() => {
 }
 
 .toolbar-btn:hover {
-  background-color: #334155;
-  color: #ffffff;
+  background-color: var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse);
 }
 
 .toolbar-btn.active {
-  background-color: #0284c7;
-  border-color: #38bdf8;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  border-color: var(--semantic-color-accent-inverse);
+  color: var(--semantic-color-text-inverse);
 }
 
 .cine-speed-label {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-inverse-muted);
   font-weight: 600;
 }
 
@@ -846,8 +846,8 @@ onUnmounted(() => {
 .viewport-card {
   display: flex;
   flex-direction: column;
-  background-color: #0d1322;
-  border: 1px solid #1e293b;
+  background-color: var(--semantic-color-surface-sunken);
+  border: 1px solid var(--semantic-color-text-dark);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -857,8 +857,8 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 6px 10px;
-  background-color: #111827;
-  border-bottom: 1px solid #1f2937;
+  background-color: var(--semantic-color-surface-inverse);
+  border-bottom: 1px solid var(--semantic-color-text-dark);
 }
 
 .plane-badge {
@@ -871,25 +871,25 @@ onUnmounted(() => {
 
 .axial-badge {
   background-color: rgba(56, 189, 248, 0.2);
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
   border: 1px solid rgba(56, 189, 248, 0.4);
 }
 
 .sagittal-badge {
   background-color: rgba(52, 211, 153, 0.2);
-  color: #34d399;
+  color: var(--semantic-color-emerald-inverse-text);
   border: 1px solid rgba(52, 211, 153, 0.4);
 }
 
 .coronal-badge {
   background-color: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
+  color: var(--semantic-color-warning);
   border: 1px solid rgba(251, 191, 36, 0.4);
 }
 
 .slice-loc-label {
   font-size: 0.72rem;
-  color: #9ca3af;
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .canvas-wrapper {
@@ -897,7 +897,7 @@ onUnmounted(() => {
   justify-content: center;
   align-items: center;
   padding: 6px;
-  background-color: #030712;
+  background-color: var(--semantic-color-surface-sunken);
   flex: 1;
 }
 
@@ -905,22 +905,22 @@ onUnmounted(() => {
   width: 100%;
   max-width: 380px;
   aspect-ratio: 1 / 1;
-  background-color: #000000;
+  background-color: var(--semantic-color-black);
   cursor: crosshair;
   border-radius: 4px;
 }
 
 .slice-slider-box {
   padding: 6px 12px;
-  background-color: #111827;
-  border-top: 1px solid #1f2937;
+  background-color: var(--semantic-color-surface-inverse);
+  border-top: 1px solid var(--semantic-color-text-dark);
   display: flex;
   align-items: center;
 }
 
 .slice-slider {
   width: 100%;
-  accent-color: #0284c7;
+  accent-color: var(--semantic-color-primary);
   cursor: pointer;
 }
 

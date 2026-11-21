@@ -36,7 +36,7 @@
           <router-link
             v-if="showDataCollectionNav"
             id="nav-data-collection"
-            to="/ecrf"
+            :to="dataCollectionPath"
             class="primary-nav-link"
             :class="{ active: isDataCollectionRoute }"
             :aria-current="isDataCollectionRoute ? 'page' : undefined"
@@ -76,7 +76,7 @@
             id="btn-open-palette"
             type="button"
             class="command-palette-trigger"
-            aria-label="Open global search and command palette (Ctrl+K or Cmd+K)"
+            title="Open global search and command palette (Ctrl+K or Cmd+K)"
             aria-keyshortcuts="Control+K Meta+K"
             @click="isCommandPaletteOpen = true"
           >
@@ -111,7 +111,7 @@
             id="btn-onboarding-checklist-trigger"
             type="button"
             class="shell-control-btn"
-            aria-label="Open workspace orientation and setup checklist"
+            title="Open workspace orientation and setup checklist"
             @click="onboardingStore.toggleDrawer()"
           >
             <span>Orientation</span>
@@ -127,7 +127,7 @@
             type="button"
             class="shell-control-btn"
             :aria-expanded="knowledgeStore.isOpen"
-            aria-label="Open contextual help and SOP guidance"
+            aria-label="Help & SOPs — Open contextual help and SOP guidance"
             @click="knowledgeStore.toggleDrawer()"
           >
             Help &amp; SOPs
@@ -206,7 +206,7 @@
         </router-link>
         <router-link
           v-if="showDataCollectionNav"
-          to="/ecrf"
+          :to="dataCollectionPath"
           class="mobile-nav-link"
           @click="isMobileMenuOpen = false"
         >
@@ -276,7 +276,9 @@ import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import {
+  buildDataCollectionPath,
   canAccessDataCollection,
+  resolveCanvasParticipantContext,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
 import OnboardingTour from "./OnboardingTour.vue";
@@ -324,6 +326,19 @@ const studiesPath = computed(() =>
     ? `/studies/${encodeURIComponent(activeStudyCode.value)}`
     : "/studies"
 );
+
+const dataCollectionPath = computed(() => {
+  const participantContext = resolveCanvasParticipantContext(
+    activeStudyCode.value,
+    route?.query,
+    canvasStore
+  );
+  return buildDataCollectionPath({
+    studyCode: activeStudyCode.value,
+    subjectCode: participantContext.subjectCode,
+    enrollmentId: participantContext.enrollmentId,
+  });
+});
 
 const showStudiesNav = computed(() => isScreenAvailable("study"));
 const showDataCollectionNav = computed(() =>
@@ -466,8 +481,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: var(--semantic-color-surface-muted, #f8fafc);
-  color: var(--primary, #0f172a);
+  background: var(--semantic-color-surface-muted);
+  color: var(--primary);
 }
 
 .skip-link {
@@ -486,8 +501,8 @@ onUnmounted(() => {
   width: auto;
   height: auto;
   padding: 8px 14px;
-  background: #0f172a;
-  color: #ffffff;
+  background: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
   border-radius: 6px;
   font-weight: 600;
   text-decoration: none;
@@ -501,8 +516,8 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 16px;
   padding: 10px 20px;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border-bottom: 1px solid var(--semantic-color-border);
   position: sticky;
   top: 0;
   z-index: 30;
@@ -520,11 +535,11 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   text-decoration: none;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .brand-mark {
-  color: #1d4ed8;
+  color: var(--semantic-color-interactive-primary);
   font-size: 1rem;
   line-height: 1;
 }
@@ -534,7 +549,7 @@ onUnmounted(() => {
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .primary-nav {
@@ -550,7 +565,7 @@ onUnmounted(() => {
   border-radius: 6px;
   font-size: 0.9rem;
   font-weight: 500;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   text-decoration: none;
   border: 1px solid transparent;
   transition:
@@ -560,14 +575,14 @@ onUnmounted(() => {
 }
 
 .primary-nav-link:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
 }
 
 .primary-nav-link.active {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1e40af;
+  background: var(--semantic-color-info-bg);
+  border-color: var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
   font-weight: 600;
 }
 
@@ -586,27 +601,27 @@ onUnmounted(() => {
   font-size: 0.78rem;
   font-weight: 700;
   text-decoration: none;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1e40af;
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
   white-space: nowrap;
 }
 
 .plan-status-badge:hover {
-  background: #dbeafe;
-  border-color: #93c5fd;
+  background: var(--semantic-color-info-light);
+  border-color: var(--semantic-color-divider-accent);
 }
 
 .plan-status-badge.is-trial {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #166534;
+  background: var(--semantic-color-success-bg);
+  border-color: var(--semantic-color-success-border);
+  color: var(--semantic-color-success-dark);
 }
 
 .plan-status-badge.is-expired {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  border-color: var(--semantic-color-error-border);
+  color: var(--semantic-color-error-dark);
 }
 
 .command-palette-trigger {
@@ -614,19 +629,19 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   padding: 6px 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  background: #f8fafc;
-  color: #334155;
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-body);
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
 }
 
 .command-palette-trigger:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-  color: #0f172a;
+  background: var(--semantic-color-surface-header);
+  border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text);
 }
 
 .palette-kbd {
@@ -634,9 +649,9 @@ onUnmounted(() => {
   font-size: 0.75rem;
   padding: 1px 5px;
   border-radius: 4px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #334155;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
+  color: var(--semantic-color-text-body);
 }
 
 .persona-switcher-wrapper {
@@ -648,15 +663,15 @@ onUnmounted(() => {
 .persona-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .persona-select {
   padding: 5px 8px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   font-size: 0.83rem;
   max-width: 220px;
 }
@@ -666,18 +681,18 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  background: #ffffff;
-  color: #1e293b;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-dark);
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
 }
 
 .shell-control-btn:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
+  background: var(--semantic-color-surface-header);
+  border-color: var(--semantic-color-border-control);
 }
 
 .setup-progress-pill {
@@ -685,8 +700,8 @@ onUnmounted(() => {
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 999px;
-  background: #eff6ff;
-  color: #1e40af;
+  background: var(--semantic-color-info-bg);
+  color: var(--semantic-color-info);
 }
 
 .user-session-controls {
@@ -694,13 +709,13 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   padding-left: 6px;
-  border-left: 1px solid #e2e8f0;
+  border-left: 1px solid var(--semantic-color-border);
 }
 
 .user-badge {
   font-size: 0.83rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .shell-main {
@@ -724,10 +739,10 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: 6px 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   font-size: 1rem;
   cursor: pointer;
 }
@@ -738,7 +753,7 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 6px;
   padding-top: 8px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--semantic-color-border);
 }
 
 .mobile-nav-drawer.is-open {
@@ -748,13 +763,13 @@ onUnmounted(() => {
 .mobile-nav-link {
   padding: 8px 12px;
   border-radius: 6px;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   text-decoration: none;
   font-weight: 500;
 }
 
 .mobile-nav-link:hover {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 
 .sr-only-status-alerts {

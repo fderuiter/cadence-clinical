@@ -230,7 +230,7 @@ describe("Subject Portal OIDC Session Resilience, Draft-Safe Logout & Part 11 Mo
       sigWrapper.query("#sign-reason-custom").getAttribute("aria-required")
     ).toBe("true");
     document.getElementById("sign-username").value = "subject.site101";
-    document.getElementById("sign-password").value = "Alphanumeric!Pass9";
+    document.getElementById("sign-password").value = "Alphanumeric!Pass9"; // pragma: allowlist secret
     document.getElementById("sign-reason-custom").value = "   ";
 
     globalThis.fetch = vi.fn();
@@ -251,7 +251,7 @@ describe("Subject Portal OIDC Session Resilience, Draft-Safe Logout & Part 11 Mo
     expect(reconsentPwd.getAttribute("autocomplete")).toBe("current-password");
 
     state.reconsentForm.username = "subject.site101";
-    state.reconsentForm.password = "Alphanumeric!Pass9";
+    state.reconsentForm.password = "Alphanumeric!Pass9"; // pragma: allowlist secret
     state.reconsentForm.reason = "Other";
     state.reconsentForm.customReason = "   ";
     await nextTick();

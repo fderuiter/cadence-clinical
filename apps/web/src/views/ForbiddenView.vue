@@ -8,22 +8,30 @@
       <div style="font-size: 4rem; color: var(--error); margin-bottom: 16px">
         🛑
       </div>
-      <h2 style="color: #1e293b; margin-bottom: 8px">403 - Access Denied</h2>
-      <p style="color: #64748b; font-size: 1.1rem; margin-bottom: 24px">
+      <h2 style="color: var(--semantic-color-text-dark); margin-bottom: 8px">
+        403 - Access Denied
+      </h2>
+      <p
+        style="
+          color: var(--semantic-color-text-secondary);
+          font-size: 1.1rem;
+          margin-bottom: 24px;
+        "
+      >
         Your security credentials do not authorize access to this specific GxP
         module.
       </p>
 
       <div
         style="
-          background-color: #f8fafc;
-          border: 1px solid #e2e8f0;
+          background-color: var(--semantic-color-surface-muted);
+          border: 1px solid var(--semantic-color-border);
           padding: 16px;
           border-radius: 8px;
           margin-bottom: 24px;
           text-align: left;
           font-size: 0.9rem;
-          color: #475569;
+          color: var(--semantic-color-text-secondary);
         "
       >
         <div style="margin-bottom: 6px">
@@ -47,9 +55,9 @@
           class="btn btn-secondary"
           style="
             padding: 10px 20px;
-            background-color: #f1f5f9;
-            border: 1px solid #cbd5e1;
-            color: #334155;
+            background-color: var(--semantic-color-surface-header);
+            border: 1px solid var(--semantic-color-border-control);
+            color: var(--semantic-color-text-body);
           "
           @click="logout"
         >

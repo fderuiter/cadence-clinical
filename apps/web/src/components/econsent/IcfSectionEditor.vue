@@ -383,9 +383,10 @@ const applyGlossaryAnnotation = () => {
     const span = document.createElement("span");
     span.className = "glossary-term";
     span.setAttribute("data-definition", glossaryDefinition.value);
-    span.style.borderBottom = "2px dashed #3b82f6";
+    span.style.borderBottom =
+      "2px dashed var(--semantic-color-interactive-primary)";
     span.style.cursor = "help";
-    span.style.backgroundColor = "#eff6ff";
+    span.style.backgroundColor = "var(--semantic-color-info-bg)";
     span.style.padding = "0 2px";
     span.innerText = selectedText.value;
 
@@ -541,18 +542,18 @@ const hidePopover = () => {
 }
 
 .toolbar-btn:hover {
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
   border-color: var(--accent);
 }
 
 .glossary-btn {
-  background-color: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1e40af;
+  background-color: var(--semantic-color-info-bg);
+  border-color: var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
 }
 
 .glossary-btn:hover {
-  background-color: #dbeafe;
+  background-color: var(--semantic-color-info-light);
 }
 
 .editor-canvas {
@@ -597,10 +598,10 @@ const hidePopover = () => {
 }
 
 .selected-text-preview {
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   padding: 8px 12px;
   border-radius: 4px;
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--semantic-color-interactive-primary);
   margin: 12px 0;
 }
 
@@ -632,7 +633,7 @@ const hidePopover = () => {
 /* Popover styles */
 .glossary-popover {
   position: absolute;
-  background-color: #1e293b;
+  background-color: var(--semantic-color-surface-elevated);
   color: white;
   padding: 8px 12px;
   border-radius: 6px;
@@ -645,10 +646,10 @@ const hidePopover = () => {
 
 .popover-title {
   font-weight: bold;
-  border-bottom: 1px solid #475569;
+  border-bottom: 1px solid var(--semantic-color-border-control);
   padding-bottom: 4px;
   margin-bottom: 4px;
-  color: #93c5fd;
+  color: var(--semantic-color-divider-accent);
   text-transform: uppercase;
   font-size: 0.7rem;
   letter-spacing: 0.05em;

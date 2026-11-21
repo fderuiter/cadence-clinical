@@ -17,8 +17,13 @@
             class="badge"
             :style="{
               backgroundColor:
-                activeSubjectVersion === '2.0.0' ? '#dbeafe' : '#f1f5f9',
-              color: activeSubjectVersion === '2.0.0' ? '#1e40af' : '#475569',
+                activeSubjectVersion === '2.0.0'
+                  ? 'var(--semantic-color-info-light)'
+                  : 'var(--semantic-color-surface-header)',
+              color:
+                activeSubjectVersion === '2.0.0'
+                  ? 'var(--semantic-color-info)'
+                  : 'var(--semantic-color-text-secondary)',
               padding: '4px 8px',
               borderRadius: '4px',
               fontWeight: 600,
@@ -127,8 +132,8 @@
         id="training-gating-banner"
         class="training-banner"
         style="
-          background-color: #fffbeb;
-          border: 2px solid #f59e0b;
+          background-color: var(--semantic-color-warning-bg-soft);
+          border: 2px solid var(--semantic-color-warning-border-strong);
           border-radius: 8px;
           padding: 16px 20px;
           margin-bottom: var(--spacing-md);
@@ -144,7 +149,7 @@
             style="
               font-size: 1.05rem;
               font-weight: 700;
-              color: #92400e;
+              color: var(--semantic-color-warning-dark);
               display: flex;
               align-items: center;
               gap: 8px;
@@ -153,18 +158,24 @@
             <span>🎓</span>
             <span>{{ $t("ecrf.form.trainingGatedTitle") }}</span>
           </div>
-          <p style="margin: 4px 0 0 0; font-size: 0.875rem; color: #78350f">
+          <p
+            style="
+              margin: 4px 0 0 0;
+              font-size: 0.875rem;
+              color: var(--semantic-color-warning-dark);
+            "
+          >
             {{ $t("ecrf.form.trainingGatedDesc") }}
           </p>
         </div>
-        <div>
+        <div v-if="trainingAvailable">
           <router-link v-slot="{ navigate }" to="/training" custom>
             <button
               id="btn-complete-training"
               type="button"
               class="btn btn-primary"
               style="
-                background-color: #d97706;
+                background-color: var(--semantic-color-warning-action);
                 color: white;
                 font-weight: bold;
                 padding: 8px 14px;
@@ -187,8 +198,8 @@
         id="reconsent-gating-banner"
         class="reconsent-banner"
         style="
-          background-color: #fef2f2;
-          border: 2px solid #ef4444;
+          background-color: var(--semantic-color-error-bg-soft);
+          border: 2px solid var(--semantic-color-error);
           border-radius: 8px;
           padding: 16px 20px;
           margin-bottom: var(--spacing-md);
@@ -204,7 +215,7 @@
             style="
               font-size: 1.05rem;
               font-weight: 700;
-              color: #991b1b;
+              color: var(--semantic-color-error-text-dark);
               display: flex;
               align-items: center;
               gap: 8px;
@@ -213,7 +224,13 @@
             <span>⚠️</span>
             <span>{{ $t("ecrf.form.reconsentGatedTitle") }}</span>
           </div>
-          <p style="margin: 4px 0 0 0; font-size: 0.875rem; color: #7f1d1d">
+          <p
+            style="
+              margin: 4px 0 0 0;
+              font-size: 0.875rem;
+              color: var(--semantic-color-error-text-deep);
+            "
+          >
             {{ $t("ecrf.form.reconsentGatedDesc") }}
           </p>
         </div>
@@ -223,7 +240,7 @@
             type="button"
             class="btn btn-primary"
             style="
-              background-color: #dc2626;
+              background-color: var(--semantic-color-error);
               color: white;
               font-weight: bold;
               padding: 8px 14px;
@@ -241,9 +258,9 @@
             type="button"
             class="btn btn-secondary"
             style="
-              background-color: #ffffff;
-              color: #991b1b;
-              border: 1px solid #f87171;
+              background-color: var(--semantic-color-surface);
+              color: var(--semantic-color-error-text-dark);
+              border: 1px solid var(--semantic-color-error);
               font-weight: bold;
               padding: 8px 14px;
               font-size: 0.85rem;
@@ -262,9 +279,9 @@
         v-if="activeEditCheckAlerts.length > 0"
         id="edit-checks-summary-bar"
         style="
-          background-color: #fffbeb;
-          border: 1px solid #fde68a;
-          border-left: 4px solid #f59e0b;
+          background-color: var(--semantic-color-warning-bg-soft);
+          border: 1px solid var(--semantic-color-warning-border);
+          border-left: 4px solid var(--semantic-color-warning-border-strong);
           border-radius: 6px;
           padding: 10px 14px;
           margin-bottom: var(--spacing-md);
@@ -281,7 +298,7 @@
             align-items: center;
             gap: 8px;
             font-size: 0.875rem;
-            color: #92400e;
+            color: var(--semantic-color-warning-dark);
             font-weight: 600;
           "
         >
@@ -290,7 +307,7 @@
             v-if="discrepancyAlertsCount > 0"
             class="badge badge-discrepancy"
             style="
-              background-color: #ef4444;
+              background-color: var(--semantic-color-error);
               color: white;
               padding: 2px 6px;
               border-radius: 4px;
@@ -307,7 +324,7 @@
             v-if="warningAlertsCount > 0"
             class="badge badge-warning"
             style="
-              background-color: #f59e0b;
+              background-color: var(--semantic-color-warning-action);
               color: white;
               padding: 2px 6px;
               border-radius: 4px;
@@ -317,7 +334,7 @@
             {{ $t("ecrf.form.warningCount", { count: warningAlertsCount }) }}
           </span>
         </div>
-        <div style="font-size: 0.8rem; color: #b45309">
+        <div style="font-size: 0.8rem; color: var(--semantic-color-warning)">
           {{ $t("ecrf.form.realtimeEvaluationActive") }}
         </div>
       </div>
@@ -328,9 +345,9 @@
         id="ecrf-draft-status-banner"
         class="draft-banner"
         style="
-          background-color: #eff6ff;
-          border: 1px solid #93c5fd;
-          border-left: 4px solid #3b82f6;
+          background-color: var(--semantic-color-info-bg);
+          border: 1px solid var(--semantic-color-divider-accent);
+          border-left: 4px solid var(--semantic-color-interactive-primary);
           border-radius: 6px;
           padding: 10px 14px;
           margin-bottom: var(--spacing-md);
@@ -347,7 +364,7 @@
             align-items: center;
             gap: 8px;
             font-size: 0.875rem;
-            color: #1e40af;
+            color: var(--semantic-color-info);
             font-weight: 600;
           "
         >
@@ -362,7 +379,7 @@
           <span
             class="badge badge-draft"
             style="
-              background-color: #3b82f6;
+              background-color: var(--semantic-color-interactive-primary);
               color: white;
               padding: 2px 6px;
               border-radius: 4px;
@@ -372,7 +389,7 @@
             Draft
           </span>
         </div>
-        <div style="font-size: 0.8rem; color: #1e3a8a">
+        <div style="font-size: 0.8rem; color: var(--semantic-color-info)">
           {{
             isDirty
               ? $t("ecrf.form.draftAutoSaving")
@@ -410,9 +427,9 @@
                   display: inline-flex;
                   align-items: center;
                   gap: 4px;
-                  background-color: #fffbeb;
-                  border: 1px solid #fde68a;
-                  color: #b45309;
+                  background-color: var(--semantic-color-warning-bg-soft);
+                  border: 1px solid var(--semantic-color-warning-border);
+                  color: var(--semantic-color-warning);
                   font-size: 0.7rem;
                   font-weight: 600;
                   padding: 2px 6px;
@@ -426,7 +443,7 @@
                   style="
                     width: 6px;
                     height: 6px;
-                    background-color: #f59e0b;
+                    background-color: var(--semantic-color-warning-action);
                     border-radius: 50%;
                   "
                 ></span>
@@ -469,13 +486,17 @@
                     borderRadius: '4px',
                     fontSize: '0.8rem',
                     backgroundColor:
-                      alert.severity === 'DISCREPANCY' ? '#fef2f2' : '#fffbeb',
+                      alert.severity === 'DISCREPANCY'
+                        ? 'var(--semantic-color-error-bg-soft)'
+                        : 'var(--semantic-color-warning-bg-soft)',
                     border:
                       alert.severity === 'DISCREPANCY'
-                        ? '1px solid #f87171'
-                        : '1px solid #fde68a',
+                        ? '1px solid var(--semantic-color-error)'
+                        : '1px solid var(--semantic-color-warning-border)',
                     color:
-                      alert.severity === 'DISCREPANCY' ? '#991b1b' : '#92400e',
+                      alert.severity === 'DISCREPANCY'
+                        ? 'var(--semantic-color-error-text-dark)'
+                        : 'var(--semantic-color-warning-dark)',
                   }"
                 >
                   <div style="display: flex; align-items: center; gap: 6px">
@@ -484,8 +505,8 @@
                       :style="{
                         backgroundColor:
                           alert.severity === 'DISCREPANCY'
-                            ? '#ef4444'
-                            : '#f59e0b',
+                            ? 'var(--semantic-color-error)'
+                            : 'var(--semantic-color-warning-action)',
                         color: 'white',
                         padding: '2px 6px',
                         borderRadius: '4px',
@@ -526,8 +547,8 @@
                   display: flex;
                   align-items: center;
                   gap: 8px;
-                  background-color: #f0fdf4;
-                  border: 1px dashed #bbf7d0;
+                  background-color: var(--semantic-color-success-bg-soft);
+                  border: 1px dashed var(--semantic-color-success-border-soft);
                   padding: 8px;
                   border-radius: 4px;
                   margin-top: -6px;
@@ -547,7 +568,7 @@
                   :for="`sdv-${field.id}`"
                   style="
                     font-size: 0.8rem;
-                    color: #166534;
+                    color: var(--semantic-color-success-dark);
                     font-weight: 600;
                     margin: 0;
                     cursor: pointer;
@@ -574,7 +595,9 @@
           id="btn-submit-ecrf"
           class="btn btn-primary"
           :style="{
-            backgroundColor: isReconsentGated ? '#dc2626' : undefined,
+            backgroundColor: isReconsentGated
+              ? 'var(--semantic-color-error)'
+              : undefined,
             opacity: isReconsentGated ? 0.9 : 1,
           }"
           @click="handleSubmitClick"
@@ -598,7 +621,12 @@
       <div class="modal" style="max-width: 520px">
         <div class="modal-header">➕ {{ $t("ecrf.enrollModal.header") }}</div>
         <div class="modal-body">
-          <p style="font-size: 0.9rem; color: var(--text-muted)">
+          <p
+            style="
+              font-size: 0.9rem;
+              color: var(--semantic-color-text-secondary);
+            "
+          >
             {{ $t("ecrf.enrollModal.desc") }}
           </p>
           <div class="form-group" style="margin-bottom: 12px">
@@ -734,7 +762,10 @@
           <button
             id="btn-confirm-enroll"
             class="btn btn-primary"
-            style="background-color: #2563eb; color: white"
+            style="
+              background-color: var(--semantic-color-interactive-primary);
+              color: white;
+            "
             :disabled="!enrollForm.subjectId.trim()"
             @click="handleEnrollSubmit"
           >
@@ -754,15 +785,31 @@
       <div class="modal" style="max-width: 520px">
         <div
           class="modal-header"
-          style="color: #991b1b; display: flex; align-items: center; gap: 8px"
+          style="
+            color: var(--semantic-color-error-text-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          "
         >
           <span>⚠️</span> {{ $t("ecrf.gateModal.header") }}
         </div>
         <div class="modal-body">
-          <p style="font-size: 0.95rem; color: #7f1d1d; font-weight: 600">
+          <p
+            style="
+              font-size: 0.95rem;
+              color: var(--semantic-color-error-text-deep);
+              font-weight: 600;
+            "
+          >
             {{ $t("ecrf.gateModal.subjectGated", { id: selectedSubjectId }) }}
           </p>
-          <p style="font-size: 0.875rem; color: var(--text-muted)">
+          <p
+            style="
+              font-size: 0.875rem;
+              color: var(--semantic-color-text-secondary);
+            "
+          >
             {{ $t("ecrf.gateModal.desc") }}
           </p>
         </div>
@@ -784,7 +831,7 @@
           <button
             type="button"
             class="btn btn-primary"
-            style="background-color: #dc2626; color: white"
+            style="background-color: var(--semantic-color-error); color: white"
             @click="
               showReconsentGateModal = false;
               $emit('open-econsent-modal');
@@ -795,7 +842,10 @@
           <button
             type="button"
             class="btn btn-secondary"
-            style="border: 1px solid #f87171; color: #991b1b"
+            style="
+              border: 1px solid var(--semantic-color-error);
+              color: var(--semantic-color-error-text-dark);
+            "
             @click="
               showReconsentGateModal = false;
               $emit('open-paper-icf-modal');
@@ -900,7 +950,10 @@
           </button>
           <button
             class="btn btn-primary"
-            style="background-color: #2563eb; color: white"
+            style="
+              background-color: var(--semantic-color-interactive-primary);
+              color: white;
+            "
             :disabled="reconsentSubmitting"
             @click="$emit('handle-complete-reconsent', 'PAPER_UPLOAD')"
           >
@@ -915,10 +968,12 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
 import { ClinicalFormField } from "ui";
+import { isScreenAvailable } from "../../router/availability.js";
 import { useClinicalStore } from "../../stores/clinical";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 
 const clinicalStore = useClinicalStore();
+const trainingAvailable = computed(() => isScreenAvailable("training"));
 
 const props = defineProps({
   store: { type: Object, required: true },

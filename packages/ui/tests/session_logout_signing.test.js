@@ -387,7 +387,7 @@ describe("Shared Part 11 step-up verification & credential helpers (signing.js)"
   it("builds valid v3 step-up payloads and rejects invalid fields", () => {
     const built = buildStepUpVerificationPayload({
       username: " pi.site101 ",
-      password: "AlphanumericPassword!42",
+      password: "AlphanumericPassword!42", // pragma: allowlist secret
       totp: " 654321 ",
       action: "/api/v1/ctms/doa/sign-off",
       semanticAction: SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF,
@@ -396,7 +396,7 @@ describe("Shared Part 11 step-up verification & credential helpers (signing.js)"
 
     expect(built).toEqual({
       username: "pi.site101",
-      password: "AlphanumericPassword!42",
+      password: "AlphanumericPassword!42", // pragma: allowlist secret
       totp: "654321",
       action: "/api/v1/ctms/doa/sign-off",
       semantic_action: "ctms.doa.sign_off",
@@ -413,7 +413,7 @@ describe("Shared Part 11 step-up verification & credential helpers (signing.js)"
 
     expect(() =>
       buildStepUpVerificationPayload({
-        password: "secret",
+        password: "secret", // pragma: allowlist secret
         action: "/ctms/doa/sign-off",
         semanticAction: "ctms.doa.sign_off",
       })
@@ -421,7 +421,7 @@ describe("Shared Part 11 step-up verification & credential helpers (signing.js)"
 
     expect(() =>
       buildStepUpVerificationPayload({
-        password: "secret",
+        password: "secret", // pragma: allowlist secret
         action: "/api/v1/ctms/doa/sign-off",
         semanticAction: "",
       })

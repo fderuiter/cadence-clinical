@@ -175,11 +175,11 @@ watch(() => props.studyCode, load, { immediate: true });
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .attention-ai {
-  border-left: 4px solid var(--semantic-color-ai, #6d28d9);
+  border-left: 4px solid var(--semantic-color-ai);
 }
 
 .attention-kind,

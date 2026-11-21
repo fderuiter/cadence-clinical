@@ -49,12 +49,12 @@
         <!-- prettier-ignore -->
         <GxpCredentialsInput
           v-model:username="usernameVal"
-          v-model:password="password"
           v-model:totp="totp"
           :password-reentry-required="needsPasswordReentry"
           data-pragma="pragma: allowlist secret"
           :disabled="busy"
-          @keyup-enter="confirm"/><!-- pragma: allowlist secret -->
+          @keyup-enter="confirm"
+          v-model:password="password"/><!-- pragma: allowlist secret -->
 
         <div class="form-group last-group">
           <label for="sig-reason">Meaning of Signing / Signing Reason</label>
@@ -459,21 +459,21 @@ defineExpose({
 }
 
 .modal {
-  background: var(--surface-bg, #ffffff);
+  background: var(--semantic-color-surface);
   border-radius: var(--radius-md, 8px);
   width: 100%;
   max-width: 450px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  color: var(--text-primary, #333333);
+  color: var(--semantic-color-text-dark);
 }
 
 .modal-header {
   padding: 16px;
-  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+  border-bottom: 1px solid var(--semantic-color-border);
   font-weight: 600;
   font-size: 16px;
-  color: #ffffff;
+  color: white;
 }
 
 .modal-body {
@@ -483,7 +483,7 @@ defineExpose({
 .modal-desc {
   margin-bottom: 16px;
   font-size: 13px;
-  color: var(--text-secondary, #334155);
+  color: var(--semantic-color-text-body);
   line-height: 1.4;
 }
 
@@ -500,17 +500,17 @@ label {
   font-weight: 500;
   margin-bottom: 4px;
   font-size: 13px;
-  color: var(--text-muted, #475569);
+  color: var(--semantic-color-text-secondary);
 }
 
 select {
   box-sizing: border-box;
   width: 100%;
   padding: 8px;
-  border: 1px solid var(--border-input, #cbd5e1);
-  border-radius: var(--radius-sm, 4px);
   font-size: 13px;
-  background: var(--surface-bg, #ffffff);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: var(--radius-sm, 4px);
 }
 
 .modal-footer {
@@ -518,8 +518,8 @@ select {
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 16px;
-  background: var(--surface-muted, #f8fafc);
-  border-top: 1px solid var(--border-subtle, #e2e8f0);
+  background: var(--semantic-color-surface-muted);
+  border-top: 1px solid var(--semantic-color-border);
 }
 
 .btn {
@@ -531,8 +531,8 @@ select {
 }
 
 .btn-cancel {
-  border: 1px solid var(--border-input, #cbd5e1);
-  background: var(--surface-bg, #ffffff);
+  border: 1px solid var(--semantic-color-border-control);
+  background: var(--semantic-color-surface);
 }
 
 .btn-primary {
@@ -554,7 +554,7 @@ button:focus {
 
 select:focus-visible,
 button:focus-visible {
-  outline: 3px solid var(--accent, #2563eb) !important;
+  outline: 3px solid var(--accent) !important;
   outline-offset: 2px !important;
 }
 

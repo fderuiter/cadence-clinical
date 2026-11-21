@@ -153,12 +153,10 @@ useFocusTrap(dialogRef, {
 }
 
 .clinical-modal-dialog {
-  background: var(--color-surface, #ffffff);
-  border-radius: 8px;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--semantic-color-border);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
@@ -184,36 +182,36 @@ useFocusTrap(dialogRef, {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .modal-title {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .modal-close-btn {
   background: transparent;
   border: none;
   font-size: 18px;
-  color: var(--color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .modal-close-btn:hover {
-  background: #f1f5f9;
-  color: var(--color-text, #0f172a);
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
 }
 
 .modal-body {
   padding: 20px;
   overflow-y: auto;
   font-size: 14px;
-  color: var(--color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .modal-footer {
@@ -221,38 +219,39 @@ useFocusTrap(dialogRef, {
   justify-content: flex-end;
   gap: 12px;
   padding: 14px 20px;
-  border-top: 1px solid var(--color-border, #e2e8f0);
-  background: var(--color-surface-muted, #f8fafc);
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 8px;
+  border-top: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface-muted);
+  border-bottom-left-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
 }
 
 .btn {
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 500;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.15s ease;
 }
 
 .btn-secondary {
-  background: var(--color-surface, #ffffff);
-  border-color: var(--color-border, #e2e8f0);
-  color: var(--color-text, #0f172a);
+  background: var(--semantic-color-surface);
+  border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text);
 }
 
 .btn-secondary:hover {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 
 .btn-primary {
-  background: var(--color-primary, #026597);
-  color: #ffffff;
+  background: var(--semantic-color-primary);
+  border-color: var(--semantic-color-primary-dark);
+  color: var(--semantic-color-surface);
 }
 
 .btn-primary:hover {
-  background: var(--color-primary-dark, #014d76);
+  background: var(--semantic-color-primary-dark);
 }
 </style>

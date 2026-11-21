@@ -236,7 +236,7 @@ export function createConditionRowHTML(
     rightOperandHTML = `
       <div class="form-group cond-right-group" style="flex: 1; min-width: 100px;">
         <label for="cond-right-type-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Right Value Type</label>
-        <select id="cond-right-type-${index}" class="cond-right-type" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border);">
+        <select id="cond-right-type-${index}" class="cond-right-type" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
           <option value="constant" ${cond.rightType === "constant" ? "selected" : ""}>Constant Value</option>
           <option value="field_ref" ${cond.rightType === "field_ref" ? "selected" : ""}>Field Reference</option>
         </select>
@@ -247,13 +247,13 @@ export function createConditionRowHTML(
           ? `
         <div class="form-group cond-right-val-group" style="flex: 1; min-width: 100px;">
           <label for="cond-right-value-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Constant Value</label>
-          <input id="cond-right-value-${index}" class="cond-right-value" data-index="${index}" type="text" placeholder="Value..." value="${cond.rightValue}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border);" />
+          <input id="cond-right-value-${index}" class="cond-right-value" data-index="${index}" type="text" placeholder="Value..." value="${cond.rightValue}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border-control);" />
         </div>
       `
           : `
         <div class="form-group cond-right-field-group" style="flex: 1; min-width: 100px;">
           <label for="cond-right-field-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Right Field</label>
-          <select id="cond-right-field-${index}" class="cond-right-field" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border);">
+          <select id="cond-right-field-${index}" class="cond-right-field" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
             <option value="">-- Select Field --</option>
             ${rightFieldOptions}
           </select>
@@ -264,12 +264,12 @@ export function createConditionRowHTML(
   }
 
   return `
-    <fieldset class="condition-row-fieldset" data-index="${index}" style="border: 1px dashed var(--semantic-color-border); border-radius: 8px; padding: 12px; background-color: var(--semantic-color-surface-muted); margin-bottom: 12px;">
+    <fieldset class="condition-row-fieldset" data-index="${index}" style="border: 1px dashed var(--semantic-color-border-control); border-radius: 8px; padding: 12px; background-color: var(--semantic-color-surface-muted); margin-bottom: 12px;">
       <legend style="font-size: 0.75rem; font-weight: bold; padding: 0 4px; color: var(--semantic-color-primary);">Condition Element #${index + 1}</legend>
       <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
         <div class="form-group" style="flex: 1; min-width: 100px;">
           <label for="cond-form-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Left Form</label>
-          <select id="cond-form-${index}" class="cond-form" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border);">
+          <select id="cond-form-${index}" class="cond-form" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
             <option value="">-- Select Form --</option>
             ${formOptions}
           </select>
@@ -277,7 +277,7 @@ export function createConditionRowHTML(
 
         <div class="form-group" style="flex: 1; min-width: 100px;">
           <label for="cond-field-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Left Field</label>
-          <select id="cond-field-${index}" class="cond-field" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border);">
+          <select id="cond-field-${index}" class="cond-field" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
             <option value="">-- Select Field --</option>
             ${fieldOptions}
           </select>
@@ -285,14 +285,14 @@ export function createConditionRowHTML(
 
         <div class="form-group" style="flex: 1; min-width: 100px;">
           <label for="cond-operator-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Operator</label>
-          <select id="cond-operator-${index}" class="cond-operator" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border);">
+          <select id="cond-operator-${index}" class="cond-operator" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
             ${operatorOptions}
           </select>
         </div>
 
         ${rightOperandHTML}
 
-        <button type="button" class="btn btn-danger remove-condition-btn" data-action="remove-condition" data-index="${index}" aria-label="Remove Condition Element #${index + 1}" style="background-color: var(--semantic-color-error); color: var(--semantic-color-text-on-solid, #ffffff); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; height: fit-content; align-self: flex-end;">Remove</button>
+        <button type="button" class="btn btn-danger remove-condition-btn" data-action="remove-condition" data-index="${index}" aria-label="Remove Condition Element #${index + 1}" style="background-color: var(--semantic-color-error); color: var(--semantic-color-text-on-solid); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; height: fit-content; align-self: flex-end;">Remove</button>
       </div>
     </fieldset>
   `.trim();
@@ -364,14 +364,14 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
           <div class="form-group">
             <label for="rule-type-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Rule Classification Type</label>
-            <select id="rule-type-select" class="rule-type-selector" style="width: 100%; padding: 8px; border: 1px solid var(--semantic-color-border); border-radius: 6px;">
+            <select id="rule-type-select" class="rule-type-selector" style="width: 100%; padding: 8px; border: 1px solid var(--semantic-color-border-control); border-radius: 6px;">
               ${typeOptions}
             </select>
           </div>
 
           <div id="target-field-wrapper" class="form-group" style="${opt.ruleType === "cross_form_check" ? "display: none;" : ""}">
             <label for="target-field-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Target Field</label>
-            <select id="target-field-select" class="target-field-selector" style="width: 100%; padding: 8px; border: 1px solid var(--semantic-color-border); border-radius: 6px;">
+            <select id="target-field-select" class="target-field-selector" style="width: 100%; padding: 8px; border: 1px solid var(--semantic-color-border-control); border-radius: 6px;">
               <option value="">-- Select Target Field --</option>
               ${targetFieldOptions}
             </select>
@@ -381,7 +381,7 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div id="skip-action-wrapper" class="form-group" style="${opt.ruleType !== "skip_logic" ? "display: none;" : ""}">
             <label for="rule-action-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Action on Target</label>
-            <select id="rule-action-select" class="rule-action-selector" style="width: 100%; padding: 8px; border: 1px solid var(--semantic-color-border); border-radius: 6px;">
+            <select id="rule-action-select" class="rule-action-selector" style="width: 100%; padding: 8px; border: 1px solid var(--semantic-color-border-control); border-radius: 6px;">
               <option value="show" ${opt.ruleAction === "show" ? "selected" : ""}>Show target field</option>
               <option value="hide" ${opt.ruleAction === "hide" ? "selected" : ""}>Hide target field</option>
             </select>
@@ -389,7 +389,7 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
 
           <div id="target-form-wrapper" class="form-group" style="${opt.ruleType !== "skip_logic" ? "display: none;" : ""}">
             <label for="target-form-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Target Form (Optional)</label>
-            <select id="target-form-select" class="target-form-selector" style="width: 100%; padding: 8px; border: 1px solid var(--semantic-color-border); border-radius: 6px;">
+            <select id="target-form-select" class="target-form-selector" style="width: 100%; padding: 8px; border: 1px solid var(--semantic-color-border-control); border-radius: 6px;">
               <option value="">-- Select Target Form --</option>
               ${targetFormOptions}
             </select>
@@ -397,7 +397,7 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
 
           <div id="query-message-wrapper" class="form-group" style="grid-column: span 2; ${opt.ruleType === "skip_logic" ? "display: none;" : ""}">
             <label for="query-message-input" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Auto-Query Discrepancy Message</label>
-            <input id="query-message-input" class="query-message-input" type="text" placeholder="e.g., Systolic BP is out of logical range" value="${opt.queryMessage}" style="width: 100%; padding: 8px; border: 1px solid var(--semantic-color-border); border-radius: 6px;" />
+            <input id="query-message-input" class="query-message-input" type="text" placeholder="e.g., Systolic BP is out of logical range" value="${opt.queryMessage}" style="width: 100%; padding: 8px; border: 1px solid var(--semantic-color-border-control); border-radius: 6px;" />
           </div>
         </div>
       </fieldset>
@@ -408,7 +408,7 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
 
         <div class="form-group" style="margin-bottom: 16px;">
           <label for="match-operator-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Match Conditions Group Operator</label>
-          <select id="match-operator-select" class="match-operator-selector" style="padding: 6px; border: 1px solid var(--semantic-color-border); border-radius: 6px; font-size: 0.85rem;">
+          <select id="match-operator-select" class="match-operator-selector" style="padding: 6px; border: 1px solid var(--semantic-color-border-control); border-radius: 6px; font-size: 0.85rem;">
             <option value="and" ${opt.matchOperator === "and" ? "selected" : ""}>All conditions must be met (AND)</option>
             <option value="or" ${opt.matchOperator === "or" ? "selected" : ""}>Any condition can be met (OR)</option>
           </select>
