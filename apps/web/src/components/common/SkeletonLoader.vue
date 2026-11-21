@@ -111,14 +111,14 @@ function getCellStyle(rowIndex, colIndex) {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
 }
 
 .skeleton-cell {
   height: 16px;
-  background: #e2e8f0;
+  background: var(--semantic-color-surface-header);
   border-radius: 4px;
 }
 
@@ -127,8 +127,8 @@ function getCellStyle(rowIndex, colIndex) {
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
@@ -152,7 +152,7 @@ function getCellStyle(rowIndex, colIndex) {
 
 .skeleton-line {
   height: 14px;
-  background: #e2e8f0;
+  background: var(--semantic-color-surface-header);
   border-radius: 4px;
 }
 
@@ -181,7 +181,7 @@ function getCellStyle(rowIndex, colIndex) {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #cbd5e1;
+  background: var(--semantic-color-border-muted);
   margin-top: 4px;
   flex-shrink: 0;
 }
@@ -192,8 +192,8 @@ function getCellStyle(rowIndex, colIndex) {
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
 }
 
@@ -206,15 +206,15 @@ function getCellStyle(rowIndex, colIndex) {
 @keyframes skeleton-pulse {
   0% {
     opacity: 0.5;
-    background-color: #e2e8f0;
+    background-color: var(--semantic-color-surface-header);
   }
   50% {
     opacity: 1;
-    background-color: #cbd5e1;
+    background-color: var(--semantic-color-border-muted);
   }
   100% {
     opacity: 0.5;
-    background-color: #e2e8f0;
+    background-color: var(--semantic-color-surface-header);
   }
 }
 </style>

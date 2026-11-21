@@ -1255,7 +1255,7 @@ function formatResolutionAction(act?: string): string {
   );
   max-width: 100vw;
   height: 100vh;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
@@ -1268,12 +1268,12 @@ function formatResolutionAction(act?: string): string {
 /* Header */
 .drawer-header {
   padding: 20px 24px;
-  background-color: #0f172a;
-  color: #f8fafc;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  border-bottom: 2px solid #1e293b;
+  border-bottom: 2px solid var(--semantic-color-text-dark);
 }
 
 .header-titles {
@@ -1298,31 +1298,31 @@ function formatResolutionAction(act?: string): string {
 }
 
 .badge-smart {
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .badge-gxp {
-  background-color: #10b981;
-  color: #ffffff;
+  background-color: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 
 .badge-provenance {
-  background-color: #6366f1;
-  color: #ffffff;
+  background-color: var(--semantic-color-accent);
+  color: var(--semantic-color-surface);
 }
 
 .drawer-title {
   font-size: 1.35rem;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--semantic-color-surface);
   margin: 0;
   line-height: 1.2;
 }
 
 .drawer-subtitle {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   margin: 0;
   max-width: 750px;
   line-height: 1.4;
@@ -1331,7 +1331,7 @@ function formatResolutionAction(act?: string): string {
 .btn-close {
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-size: 1.25rem;
   cursor: pointer;
   padding: 4px 8px;
@@ -1347,15 +1347,15 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-close:hover {
-  color: #ffffff;
-  background-color: #1e293b;
+  color: var(--semantic-color-text-inverse);
+  background-color: var(--semantic-color-surface-elevated);
 }
 
 /* Context Bar */
 .context-bar {
   padding: 10px 24px;
-  background-color: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border-bottom: 1px solid var(--semantic-color-border);
   display: flex;
   align-items: center;
   gap: 20px;
@@ -1370,12 +1370,12 @@ function formatResolutionAction(act?: string): string {
 }
 
 .context-label {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
 
 .context-value {
-  color: #0f172a;
+  color: var(--semantic-color-text);
   font-weight: 700;
 }
 
@@ -1393,13 +1393,13 @@ function formatResolutionAction(act?: string): string {
   grid-template-columns: repeat(5, 1fr);
   gap: 12px;
   padding: 16px 24px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .metric-card {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 8px 12px;
   display: flex;
@@ -1409,43 +1409,43 @@ function formatResolutionAction(act?: string): string {
 }
 
 .metric-card.metric-pending {
-  border-color: #fde68a;
-  background-color: #fffbeb;
+  border-color: var(--semantic-color-warning-border);
+  background-color: var(--semantic-color-warning-bg-soft);
 }
 
 .metric-card.metric-accepted {
-  border-color: #bbf7d0;
-  background-color: #f0fdf4;
+  border-color: var(--semantic-color-success-border-soft);
+  background-color: var(--semantic-color-success-bg-soft);
 }
 
 .metric-card.metric-rejected {
-  border-color: #fecaca;
-  background-color: #fef2f2;
+  border-color: var(--semantic-color-error-border-soft);
+  background-color: var(--semantic-color-error-bg-soft);
 }
 
 .metric-card.metric-queried {
-  border-color: #ddd6fe;
-  background-color: #f5f3ff;
+  border-color: var(--semantic-color-ai-border);
+  background-color: var(--semantic-color-ai-bg);
 }
 
 .metric-num {
   font-size: 1.25rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .metric-label {
   font-size: 0.72rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
 }
 
 /* Toolbar & Filter Tabs */
 .toolbar {
   padding: 12px 24px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface);
+  border-bottom: 1px solid var(--semantic-color-border);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1459,9 +1459,9 @@ function formatResolutionAction(act?: string): string {
 }
 
 .domain-tab {
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  color: #475569;
+  background: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border);
+  color: var(--semantic-color-text-secondary);
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -1472,14 +1472,14 @@ function formatResolutionAction(act?: string): string {
 }
 
 .domain-tab:hover {
-  background-color: #e2e8f0;
-  color: #0f172a;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
 }
 
 .domain-tab.active {
-  background-color: #0284c7;
-  border-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  border-color: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .toolbar-controls {
@@ -1498,17 +1498,17 @@ function formatResolutionAction(act?: string): string {
 .filter-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .select-input,
 .search-input {
   padding: 6px 12px;
   font-size: 0.82rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  background-color: #ffffff;
-  color: #0f172a;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   max-width: 100%;
 }
 
@@ -1522,7 +1522,7 @@ function formatResolutionAction(act?: string): string {
   flex: 1;
   overflow-y: auto;
   padding: 16px 24px;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
@@ -1533,7 +1533,7 @@ function formatResolutionAction(act?: string): string {
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   text-align: center;
 }
 
@@ -1545,8 +1545,8 @@ function formatResolutionAction(act?: string): string {
 .spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid #cbd5e1;
-  border-top-color: #0284c7;
+  border: 3px solid var(--semantic-color-border-control);
+  border-top-color: var(--semantic-color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-bottom: 12px;
@@ -1560,8 +1560,8 @@ function formatResolutionAction(act?: string): string {
 
 /* Card Architecture */
 .reconciliation-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   display: flex;
@@ -1577,26 +1577,26 @@ function formatResolutionAction(act?: string): string {
 }
 
 .reconciliation-card.status-accepted {
-  border-left: 4px solid #10b981;
+  border-left: 4px solid var(--semantic-color-success);
 }
 
 .reconciliation-card.status-rejected {
-  border-left: 4px solid #ef4444;
+  border-left: 4px solid var(--semantic-color-error);
 }
 
 .reconciliation-card.status-queried {
-  border-left: 4px solid #8b5cf6;
+  border-left: 4px solid var(--semantic-color-ai);
 }
 
 .reconciliation-card.status-pending_review {
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid var(--semantic-color-warning-border-strong);
 }
 
 /* Card Header */
 .card-header {
   padding: 12px 16px;
-  background-color: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border-bottom: 1px solid var(--semantic-color-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1609,8 +1609,8 @@ function formatResolutionAction(act?: string): string {
 }
 
 .domain-tag {
-  background-color: #e2e8f0;
-  color: #334155;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   font-weight: 700;
   font-size: 0.75rem;
   padding: 2px 6px;
@@ -1620,12 +1620,12 @@ function formatResolutionAction(act?: string): string {
 .variable-tag {
   font-weight: 700;
   font-size: 0.85rem;
-  color: #0284c7;
+  color: var(--semantic-color-primary);
 }
 
 .test-name {
   font-size: 0.82rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
 
@@ -1643,28 +1643,28 @@ function formatResolutionAction(act?: string): string {
 }
 
 .pill-new_field {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 
 .pill-exact_match {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 
 .pill-value_mismatch {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 
 .pill-unit_mismatch {
-  background-color: #fef3c7;
-  color: #b45309;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 
 .pill-date_mismatch {
-  background-color: #ffedd5;
-  color: #c2410c;
+  background-color: var(--semantic-color-orange-bg);
+  color: var(--semantic-color-orange-text);
 }
 
 .status-pill {
@@ -1675,30 +1675,30 @@ function formatResolutionAction(act?: string): string {
 }
 
 .status-pending_review {
-  background-color: #fef3c7;
-  color: #b45309;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 
 .status-accepted {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 
 .status-rejected {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 
 .status-queried {
-  background-color: #ede9fe;
-  color: #6d28d9;
+  background-color: var(--semantic-color-ai-bg);
+  color: var(--semantic-color-ai);
 }
 
 /* Split Screen Grid */
 .split-screen-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  divide-x: 1px solid #e2e8f0;
+  divide-x: 1px solid var(--semantic-color-border);
 }
 
 .split-pane {
@@ -1709,12 +1709,12 @@ function formatResolutionAction(act?: string): string {
 }
 
 .ehr-pane {
-  background-color: #ffffff;
-  border-right: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface);
+  border-right: 1px solid var(--semantic-color-border);
 }
 
 .ecrf-pane {
-  background-color: #fafafa;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .pane-header {
@@ -1726,7 +1726,7 @@ function formatResolutionAction(act?: string): string {
 .pane-title {
   font-size: 0.78rem;
   font-weight: 700;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
@@ -1737,8 +1737,8 @@ function formatResolutionAction(act?: string): string {
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
-  background-color: #f1f5f9;
-  color: #475569;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 .data-row-primary {
@@ -1751,18 +1751,18 @@ function formatResolutionAction(act?: string): string {
 .val-num {
   font-size: 1.25rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .val-unit {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .val-empty {
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
 }
 
 .provenance-metadata {
@@ -1770,7 +1770,7 @@ function formatResolutionAction(act?: string): string {
   flex-direction: column;
   gap: 4px;
   font-size: 0.75rem;
-  border-top: 1px dashed #e2e8f0;
+  border-top: 1px dashed var(--semantic-color-border);
   padding-top: 6px;
 }
 
@@ -1781,12 +1781,12 @@ function formatResolutionAction(act?: string): string {
 }
 
 .meta-row .lbl {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
 
 .meta-row .val {
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .truncate {
@@ -1803,24 +1803,24 @@ function formatResolutionAction(act?: string): string {
   align-items: center;
   justify-content: space-between;
   font-size: 0.8rem;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--semantic-color-border);
   flex-wrap: wrap;
   gap: 8px;
 }
 
 .banner-accepted {
-  background-color: #f0fdf4;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
 }
 
 .banner-rejected {
-  background-color: #fef2f2;
-  color: #991b1b;
+  background-color: var(--semantic-color-error-bg-soft);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .banner-queried {
-  background-color: #f5f3ff;
-  color: #5b21b6;
+  background-color: var(--semantic-color-ai-bg);
+  color: var(--semantic-color-ai-dark);
 }
 
 .resolved-by-tag {
@@ -1842,8 +1842,8 @@ function formatResolutionAction(act?: string): string {
 /* Card Footer & Action Buttons */
 .card-footer {
   padding: 10px 16px;
-  background-color: #f8fafc;
-  border-top: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border-top: 1px solid var(--semantic-color-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1878,51 +1878,51 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-primary {
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-secondary {
-  background-color: #e2e8f0;
-  color: #1e293b;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-dark);
 }
 
 .btn-danger {
-  background-color: #dc2626;
-  color: #ffffff;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
 }
 
 .btn-accept {
-  background-color: #10b981;
-  color: #ffffff;
+  background-color: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 
 .btn-accept:hover:not(:disabled) {
-  background-color: #059669;
+  background-color: var(--semantic-color-success);
 }
 
 .btn-reject {
-  background-color: #f59e0b;
-  color: #ffffff;
+  background-color: var(--semantic-color-warning-action);
+  color: var(--semantic-color-surface);
 }
 
 .btn-reject:hover:not(:disabled) {
-  background-color: #d97706;
+  background-color: var(--semantic-color-warning-action);
 }
 
 .btn-query {
-  background-color: #6366f1;
-  color: #ffffff;
+  background-color: var(--semantic-color-accent);
+  color: var(--semantic-color-surface);
 }
 
 .btn-query:hover:not(:disabled) {
-  background-color: #4f46e5;
+  background-color: var(--semantic-color-accent);
 }
 
 .btn-link-provenance {
   background: none;
   border: none;
-  color: #0284c7;
+  color: var(--semantic-color-primary);
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
@@ -1930,7 +1930,7 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-link-provenance:hover {
-  color: #0369a1;
+  color: var(--semantic-color-primary);
 }
 
 /* Modals */
@@ -1946,7 +1946,7 @@ function formatResolutionAction(act?: string): string {
 }
 
 .modal-card {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border-radius: 8px;
   width: 520px;
   max-width: 90vw;
@@ -1962,8 +1962,8 @@ function formatResolutionAction(act?: string): string {
 
 .modal-header {
   padding: 16px 20px;
-  background-color: #0f172a;
-  color: #ffffff;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1986,14 +1986,14 @@ function formatResolutionAction(act?: string): string {
 }
 
 .modal-instruction {
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   margin: 0;
   line-height: 1.4;
 }
 
 .field-summary {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 10px 14px;
   font-size: 0.8rem;
@@ -2008,14 +2008,14 @@ function formatResolutionAction(act?: string): string {
 
 .form-label {
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .textarea-input {
   width: 100%;
   padding: 10px 12px;
   font-size: 0.85rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-family: inherit;
   resize: vertical;
@@ -2023,8 +2023,8 @@ function formatResolutionAction(act?: string): string {
 
 .modal-footer {
   padding: 14px 20px;
-  background-color: #f8fafc;
-  border-top: 1px solid #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border-top: 1px solid var(--semantic-color-border);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -2035,10 +2035,10 @@ function formatResolutionAction(act?: string): string {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   padding: 12px 16px;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
 }
 
 .prov-stat {
@@ -2050,19 +2050,19 @@ function formatResolutionAction(act?: string): string {
 .prov-stat .lbl {
   font-size: 0.72rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
 }
 
 .prov-stat .val {
   font-size: 0.85rem;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .section-subheading {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   margin: 10px 0 6px 0;
 }
 
@@ -2072,8 +2072,8 @@ function formatResolutionAction(act?: string): string {
 }
 
 .json-code {
-  background-color: #0f172a;
-  color: #38bdf8;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-accent-inverse);
   padding: 12px;
   border-radius: 6px;
   font-size: 0.75rem;
@@ -2155,7 +2155,7 @@ function formatResolutionAction(act?: string): string {
 
   .ehr-pane {
     border-right: none;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--semantic-color-border);
   }
 
   .card-footer {
@@ -2211,8 +2211,8 @@ function formatResolutionAction(act?: string): string {
 
 .btn-outline-primary {
   background-color: transparent;
-  border: 1px solid #0284c7;
-  color: #0284c7;
+  border: 1px solid var(--semantic-color-primary);
+  color: var(--semantic-color-primary);
   border-radius: 4px;
   padding: 4px 10px;
   font-size: 0.8rem;
@@ -2222,13 +2222,13 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-outline-primary:hover {
-  background-color: #e0f2fe;
+  background-color: var(--semantic-color-primary-light);
 }
 
 .btn-outline-secondary {
   background-color: transparent;
-  border: 1px solid #64748b;
-  color: #475569;
+  border: 1px solid var(--semantic-color-border-control);
+  color: var(--semantic-color-text-secondary);
   border-radius: 4px;
   padding: 4px 10px;
   font-size: 0.8rem;
@@ -2238,7 +2238,7 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-outline-secondary:hover {
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
 }
 
 .floating-batch-bar {
@@ -2246,9 +2246,9 @@ function formatResolutionAction(act?: string): string {
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
-  background-color: #0f172a;
-  color: #f8fafc;
-  border-bottom: 2px solid #1e293b;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
+  border-bottom: 2px solid var(--semantic-color-text-dark);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   animation: slideDown 0.2s ease-out;
 }
@@ -2262,8 +2262,8 @@ function formatResolutionAction(act?: string): string {
 }
 
 .batch-count-badge {
-  background-color: #38bdf8;
-  color: #0f172a;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text);
   font-weight: 700;
   border-radius: 12px;
   padding: 2px 8px;
@@ -2277,8 +2277,8 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-success {
-  background-color: #10b981;
-  color: #ffffff;
+  background-color: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
   border: none;
   padding: 6px 14px;
   border-radius: 6px;
@@ -2288,12 +2288,12 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-success:hover:not(:disabled) {
-  background-color: #059669;
+  background-color: var(--semantic-color-success);
 }
 
 .btn-danger {
-  background-color: #ef4444;
-  color: #ffffff;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
   border: none;
   padding: 6px 14px;
   border-radius: 6px;
@@ -2303,13 +2303,13 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: #dc2626;
+  background-color: var(--semantic-color-error);
 }
 
 .btn-ghost {
   background: transparent;
-  border: 1px solid #475569;
-  color: #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
+  color: var(--semantic-color-text-secondary);
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -2318,7 +2318,7 @@ function formatResolutionAction(act?: string): string {
 
 .btn-ghost:hover {
   background-color: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  color: var(--semantic-color-surface);
 }
 
 .card-selection-check {
@@ -2331,7 +2331,7 @@ function formatResolutionAction(act?: string): string {
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #0284c7;
+  accent-color: var(--semantic-color-primary);
 }
 
 .candidate-checkbox:disabled {

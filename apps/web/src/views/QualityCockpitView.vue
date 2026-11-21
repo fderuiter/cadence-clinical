@@ -1030,8 +1030,7 @@
             <div>
               <h4>Cryptographic Merkle SHA-256 Tamper Seal</h4>
               <code class="merkle-hash">{{
-                dossierData?.cryptographic_tamper_seal ||
-                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                dossierData?.cryptographic_tamper_seal || emptySha256Seal
               }}</code>
               <p class="seal-desc">
                 This dossier represents a verified, immutable state snapshot
@@ -1191,6 +1190,8 @@ const qtlBreaches = ref([]);
 const audits = ref([]);
 const seriousBreaches = ref([]);
 const dossierData = ref(null);
+const emptySha256Seal =
+  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"; // pragma: allowlist secret
 
 // Modal states
 const isRcaModalOpen = ref(false);
@@ -1291,9 +1292,9 @@ function getNextStage(currentStatus) {
 }
 
 function getRiskColor(score) {
-  if (score >= 8) return "#ef4444";
-  if (score >= 5) return "#f59e0b";
-  return "#10b981";
+  if (score >= 8) return "var(--semantic-color-error)";
+  if (score >= 5) return "var(--semantic-color-warning-action)";
+  return "var(--semantic-color-success)";
 }
 
 function getClockClass(breach) {
@@ -1517,7 +1518,7 @@ function loadSeedData() {
   dossierData.value = {
     study_id: "STUDY-CARDIO-002",
     cryptographic_tamper_seal:
-      "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+      "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", // pragma: allowlist secret
     summary_statistics: {
       total_deviations: 2,
       total_capas: 2,
@@ -1727,7 +1728,7 @@ function downloadDossierJson() {
 .quality-tabs-bar {
   display: flex;
   gap: 8px;
-  border-bottom: 2px solid var(--border, #e2e8f0);
+  border-bottom: 2px solid var(--border);
   margin-bottom: 20px;
   overflow-x: auto;
   padding-bottom: 4px;
@@ -1739,7 +1740,7 @@ function downloadDossierJson() {
   padding: 10px 16px;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--neutral-dark, #64748b);
+  color: var(--neutral-dark);
   cursor: pointer;
   border-radius: 6px 6px 0 0;
   display: flex;
@@ -1750,14 +1751,14 @@ function downloadDossierJson() {
 }
 
 .quality-tab-btn:hover {
-  background-color: #f8fafc;
-  color: var(--primary, #0f172a);
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--primary);
 }
 
 .quality-tab-btn.active {
-  color: var(--accent, #2563eb);
-  border-bottom: 3px solid var(--accent, #2563eb);
-  background-color: #eff6ff;
+  color: var(--accent);
+  border-bottom: 3px solid var(--accent);
+  background-color: var(--semantic-color-info-bg);
 }
 
 .study-selector-box {
@@ -1768,11 +1769,11 @@ function downloadDossierJson() {
 .study-select {
   padding: 6px 12px;
   border-radius: 6px;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border);
   background-color: white;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 
 .kri-cards-grid {
@@ -1784,7 +1785,7 @@ function downloadDossierJson() {
 
 .kri-card {
   background: white;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -1802,18 +1803,18 @@ function downloadDossierJson() {
 .kri-code {
   font-weight: 700;
   font-size: 0.8rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .kri-name {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 
 .kri-desc {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .kri-thresholds {
@@ -1829,26 +1830,26 @@ function downloadDossierJson() {
   font-weight: 600;
 }
 .threshold-pill.green {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 .threshold-pill.amber {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 .threshold-pill.red {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 
 .kri-footer {
   margin-top: auto;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--semantic-color-surface-header);
   padding-top: 8px;
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .score-bar-container {
@@ -1873,15 +1874,15 @@ function downloadDossierJson() {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 .rank-1 {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 .rank-2 {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 
 .qtl-list {
@@ -1893,7 +1894,7 @@ function downloadDossierJson() {
 
 .qtl-item-card {
   background: white;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -1917,7 +1918,7 @@ function downloadDossierJson() {
   font-size: 0.85rem;
 }
 .metric-label {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-right: 4px;
 }
 .metric-value {
@@ -1934,8 +1935,8 @@ function downloadDossierJson() {
 }
 
 .kanban-column {
-  background: #f8fafc;
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -1944,8 +1945,8 @@ function downloadDossierJson() {
 
 .kanban-column-header {
   padding: 10px 12px;
-  background: #f1f5f9;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  background: var(--semantic-color-surface-header);
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1958,7 +1959,7 @@ function downloadDossierJson() {
   padding: 2px 6px;
   border-radius: 10px;
   font-size: 0.75rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
 }
 
 .kanban-column-body {
@@ -1971,7 +1972,7 @@ function downloadDossierJson() {
 
 .kanban-card {
   background: white;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px;
   display: flex;
@@ -1989,12 +1990,12 @@ function downloadDossierJson() {
 .kanban-card-title {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 
 .kanban-card-preventive {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .action-items-progress {
@@ -2005,19 +2006,19 @@ function downloadDossierJson() {
   display: flex;
   justify-content: space-between;
   font-size: 0.7rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-bottom: 2px;
 }
 
 .progress-bar-bg {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
   height: 4px;
   border-radius: 2px;
   overflow: hidden;
 }
 
 .progress-bar-fill {
-  background: var(--accent, #2563eb);
+  background: var(--accent);
   height: 100%;
 }
 
@@ -2036,7 +2037,7 @@ function downloadDossierJson() {
 
 .breach-item-card {
   background: white;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -2062,19 +2063,19 @@ function downloadDossierJson() {
   border-radius: 8px;
 }
 .clock-normal {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1d4ed8;
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-color-interactive-primary);
 }
 .clock-warning {
-  background: #fef3c7;
-  border: 1px solid #fde68a;
-  color: #b45309;
+  background: var(--semantic-color-warning-bg-badge);
+  border: 1px solid var(--semantic-color-warning-border);
+  color: var(--semantic-color-warning);
 }
 .clock-critical {
-  background: #fee2e2;
-  border: 1px solid #fca5a5;
-  color: #b91c1c;
+  background: var(--semantic-color-error-bg);
+  border: 1px solid var(--semantic-color-error-border);
+  color: var(--semantic-color-error);
   animation: pulse 2s infinite;
 }
 
@@ -2097,21 +2098,21 @@ function downloadDossierJson() {
   gap: 20px;
   margin-top: 8px;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .authority-tag {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 700;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   margin-left: 4px;
 }
 
 .breach-footer {
   margin-top: 14px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--semantic-color-surface-header);
   padding-top: 10px;
   display: flex;
   justify-content: space-between;
@@ -2132,7 +2133,7 @@ function downloadDossierJson() {
 }
 
 .why-badge {
-  background: var(--accent, #2563eb);
+  background: var(--accent);
   color: white;
   font-weight: 700;
   font-size: 0.75rem;
@@ -2150,8 +2151,8 @@ function downloadDossierJson() {
 }
 
 .fishbone-branch {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 10px;
 }
@@ -2165,8 +2166,8 @@ function downloadDossierJson() {
 .dossier-seal-banner {
   display: flex;
   gap: 16px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
   border-radius: 8px;
   padding: 16px;
   align-items: center;
@@ -2183,7 +2184,7 @@ function downloadDossierJson() {
   background: white;
   padding: 4px 8px;
   border-radius: 4px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   margin: 6px 0;
 }
 
@@ -2194,8 +2195,8 @@ function downloadDossierJson() {
 }
 
 .dossier-stat-item {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 12px;
   text-align: center;
@@ -2205,12 +2206,12 @@ function downloadDossierJson() {
   display: block;
   font-size: 1.4rem;
   font-weight: 800;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 
 .dossier-stat-label {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .btn-xs {
@@ -2220,34 +2221,34 @@ function downloadDossierJson() {
 }
 
 .badge-rca {
-  background: #e0e7ff;
-  color: #4338ca;
+  background: var(--semantic-color-indigo-bg);
+  color: var(--semantic-color-accent);
   font-size: 0.7rem;
 }
 
 .badge-critical {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 .badge-high {
-  background: #ffedd5;
-  color: #c2410c;
+  background: var(--semantic-color-orange-bg);
+  color: var(--semantic-color-orange-text);
 }
 .badge-major {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
 }
 .badge-minor {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 .badge-low {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 .badge-neutral {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 table,

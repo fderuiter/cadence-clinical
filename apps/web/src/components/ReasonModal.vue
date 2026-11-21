@@ -50,7 +50,11 @@
           v-if="validationError"
           :id="idPrefix + 'reason-error'"
           class="validation-error-msg"
-          style="color: #ef4444; margin-top: 8px; font-weight: 600"
+          style="
+            color: var(--semantic-color-error);
+            margin-top: 8px;
+            font-weight: 600;
+          "
           role="status"
           aria-live="polite"
         >

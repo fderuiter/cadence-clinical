@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -59,20 +60,56 @@ public static class QualityGates
     public static IReadOnlyList<QualityGate> All { get; } =
     [
         new("dotnet-format", [], "Whitespace formatting against `.editorconfig` (`dotnet format whitespace`)",
-            ctx => RunProcess(ctx.RepoRoot, "dotnet", "format", "whitespace", "Cadence.sln", "--verify-no-changes", "--no-restore") == 0)
+            ctx => CheckDotnetFormat(ctx, "whitespace"))
         {
-            PreCommit = PreCommitMode.Skipped,
-            PreCommitNote = "the hook runs `dotnet format` on the staged C# files itself",
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "checks only the staged C# files; fails closed when `dotnet` is missing",
         },
         new("dotnet-format-style", [], "Roslyn code-style rules (`dotnet format style`)",
-            ctx => RunProcess(ctx.RepoRoot, "dotnet", "format", "style", "Cadence.sln", "--verify-no-changes", "--no-restore") == 0)
+            ctx => CheckDotnetFormat(ctx, "style"))
         {
-            PreCommit = PreCommitMode.Skipped,
-            PreCommitNote = "the hook runs `dotnet format` on the staged C# files itself",
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "checks only the staged C# files; fails closed when `dotnet` is missing",
         },
+        new("prettier", [], "Prettier formatting across JS, TS, Vue, CSS, JSON, Markdown and YAML files",
+            ctx => FrontendQualityGateService.CheckPrettier(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "checks staged JS, TS, Vue, CSS, JSON, Markdown and YAML files; fails closed when `pnpm` or `node_modules` is missing",
+        },
+        new("eslint", [], "ESLint and duplicate store identifier checks across JS, TS and Vue files",
+            ctx => FrontendQualityGateService.CheckEslint(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "lints staged JS, TS and Vue files; fails closed when `pnpm` or `node_modules` is missing",
+        },
+        new("yaml", ["check-yaml", "validate-yaml"],
+            "YAML 1.2 syntax, indentation, quoted scalars, flow brackets and duplicate mapping keys",
+            ctx => YamlSyntaxValidatorService.ValidateYaml(ctx.TargetFiles, ctx.RepoRoot, ctx.PreCommit) == 0)
+        { TakesFiles = true },
+        new("trailing-whitespace", ["check-trailing-whitespace"],
+            "No trailing spaces or tabs at the end of lines in text files",
+            ctx => FileHygieneValidatorService.ValidateTrailingWhitespace(ctx.TargetFiles, ctx.RepoRoot, ctx.PreCommit) == 0)
+        { TakesFiles = true },
+        new("end-of-file", ["end-of-file-fixer", "eof-newline"],
+            "Non-empty UTF-8 text files end with a newline character",
+            ctx => FileHygieneValidatorService.ValidateEndOfFileNewline(ctx.TargetFiles, ctx.RepoRoot, ctx.PreCommit) == 0)
+        { TakesFiles = true },
         new("clean-secrets", ["clean-secrets-baseline"],
             "Normalizes `.secrets.baseline`; fails when it is not valid JSON (CI then checks that it did not change)",
             ctx => SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: ctx.RepoRoot) == 0),
+        new("detect-secrets", ["secrets-scan"],
+            "Scans changed files against `.secrets.baseline` using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
+            ctx => DetectSecretsGateService.Scan(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "scans staged files instead of the branch diff",
+        },
         new("duplication", ["detect-code-duplication"], "Duplicated code blocks over 15 normalized lines involving a C# file",
             ctx => DuplicationDetectorService.DetectDuplication(ctx.Files, ctx.RepoRoot) == 0)
         { TakesFiles = true },
@@ -102,9 +139,10 @@ public static class QualityGates
             ctx => ReadmeValidatorService.ValidateReadmes(ctx.RepoRoot) == 0),
         new("codeowners", ["validate-codeowners"], "Path pattern existence and owner handle syntax in `.github/CODEOWNERS`",
             ctx => CodeownersValidatorService.ValidateCodeowners(ctx.RepoRoot) == 0),
-        new("workflow-security", ["validate-workflow-security", "action-pinning"],
+        new("workflow-security", ["validate-workflow-security", "action-pinning", "check-action-pinning"],
             "40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, and least-privilege permissions across `.github/workflows` and `.github/actions`",
-            ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: ctx.RepoRoot) == 0),
+            ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(ctx.Files, ctx.RepoRoot) == 0)
+        { TakesFiles = true },
         new("rulesets", ["validate-rulesets"],
             "Branch and tag rulesets in `.github/rulesets/*.json`, strict status check policy, `CI Gate` upstream job coverage, and workflow check parity",
             ctx => RulesetService.Validate(ctx.RepoRoot) == 0),
@@ -192,6 +230,91 @@ public static class QualityGates
         return commandsDocumented && tablesCurrent;
     }
 
+    private static bool CheckDotnetFormat(GateContext ctx, string subcommand)
+    {
+        if (!IsDotnetAvailable())
+        {
+            Console.WriteLine("[ERROR] .NET SDK ('dotnet') was not found on PATH.");
+            return false;
+        }
+
+        if (ctx.PreCommit || ctx.TargetFiles is not null)
+        {
+            var rawFiles = ctx.PreCommit && (ctx.TargetFiles is null || ctx.TargetFiles.Length == 0)
+                ? PreCommitOpenApiService.GetStagedFiles(ctx.RepoRoot)
+                : (IReadOnlyList<string>)(ctx.TargetFiles ?? []);
+
+            var csFiles = rawFiles
+                .Where(f => f.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+                .Select(f => Path.IsPathRooted(f) ? Path.GetRelativePath(ctx.RepoRoot, f) : f)
+                .Where(f => File.Exists(Path.Combine(ctx.RepoRoot, f)))
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToList();
+
+            if (csFiles.Count == 0)
+            {
+                return true;
+            }
+
+            if (string.Equals(subcommand, "whitespace", StringComparison.Ordinal))
+            {
+                var whitespaceArgs = new List<string> { "format", "whitespace", ".", "--folder", "--verify-no-changes", "--include" };
+                whitespaceArgs.AddRange(csFiles);
+                return RunProcess(ctx.RepoRoot, "dotnet", [.. whitespaceArgs]) == 0;
+            }
+
+            var groups = csFiles.GroupBy(f => FindNearestCsproj(ctx.RepoRoot, f), StringComparer.Ordinal).ToList();
+            if (groups.Count >= 3 && File.Exists(Path.Combine(ctx.RepoRoot, "Cadence.sln")))
+            {
+                var slnArgs = new List<string> { "format", subcommand, "Cadence.sln", "--verify-no-changes", "--no-restore", "--include" };
+                slnArgs.AddRange(csFiles);
+                return RunProcess(ctx.RepoRoot, "dotnet", [.. slnArgs]) == 0;
+            }
+
+            foreach (var group in groups)
+            {
+                string workspace = group.Key ?? "Cadence.sln";
+                var args = new List<string> { "format", subcommand, workspace, "--verify-no-changes", "--no-restore", "--include" };
+                args.AddRange(group);
+                if (RunProcess(ctx.RepoRoot, "dotnet", [.. args]) != 0)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        return RunProcess(ctx.RepoRoot, "dotnet", "format", subcommand, "Cadence.sln", "--verify-no-changes", "--no-restore") == 0;
+    }
+
+    private static string? FindNearestCsproj(string repoRoot, string relativeFile)
+    {
+        string fullRepoRoot = Path.GetFullPath(repoRoot);
+        string? dir = Path.GetDirectoryName(Path.GetFullPath(Path.Combine(fullRepoRoot, relativeFile)));
+        while (!string.IsNullOrEmpty(dir) && dir.StartsWith(fullRepoRoot, StringComparison.Ordinal))
+        {
+            string[] projects = Directory.GetFiles(dir, "*.csproj");
+            if (projects.Length == 1)
+            {
+                return Path.GetRelativePath(fullRepoRoot, projects[0]);
+            }
+
+            if (string.Equals(dir, fullRepoRoot, StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            dir = Directory.GetParent(dir)?.FullName;
+        }
+
+        return null;
+    }
+
+    private static bool IsDotnetAvailable() =>
+        DetectSecretsGateService.FindExecutableOnPath("dotnet", Environment.GetEnvironmentVariable("PATH")) is not null;
+
     private static bool CheckSchemaDoc(GateContext ctx)
     {
         if (ctx.PreCommit)
@@ -265,7 +388,7 @@ public static class QualityGates
             process.WaitForExit();
             return process.ExitCode;
         }
-        catch (System.ComponentModel.Win32Exception ex)
+        catch (Win32Exception ex)
         {
             Console.WriteLine($"[ERROR] Could not run {fileName}: {ex.Message}");
             return 1;

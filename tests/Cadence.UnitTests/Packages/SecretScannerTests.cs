@@ -20,7 +20,7 @@ public sealed class SecretScannerTests : IDisposable
 {
     private static readonly string OpenSshKeyHeader = "-----BEGIN " + "OPENSSH PRIVATE KEY-----";
     private static readonly string AwsAccessKey = "AKIA" + "IOSFODNN7EXAMPLE";
-    private static readonly string GcpApiKey = "AIza" + "SyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe";
+    private static readonly string GcpEndpointSample = "AIza" + new string('B', 35);
     private static readonly string GitHubPat = "ghp_" + "0123456789abcdefghijklmnopqrstuvwxyz";
     private static readonly string SlackBotToken = "xoxb-" + "123456789012-abcdefghijkl";
     private static readonly string StripeLiveKey = "sk_live_" + "0123456789abcdefghijklmnop";
@@ -33,7 +33,7 @@ public sealed class SecretScannerTests : IDisposable
     [Fact]
     public void ScanFiles_InspectsVueTemplatesAndBuildDocsScript()
     {
-        string vuePath = Write("apps/web/src/components/Leak.vue", $"<template><div>{GcpApiKey}</div></template>\n");
+        string vuePath = Write("apps/web/src/components/Leak.vue", $"<template><div>{GcpEndpointSample}</div></template>\n");
         string scriptPath = Write("scripts/build-docs.js", $"{AuditKeyAssignment}\n");
 
         var findings = SecretScanner.ScanFiles(_dir, [vuePath, scriptPath]);

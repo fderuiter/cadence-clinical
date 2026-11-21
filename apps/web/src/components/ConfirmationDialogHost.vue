@@ -86,24 +86,24 @@ const handleCancel = () => {
 }
 
 .variant-danger .confirmation-icon-wrapper {
-  background-color: var(--semantic-color-error-bg, #fee2e2);
-  color: var(--semantic-color-error, #b91c1c);
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 
 .variant-warning .confirmation-icon-wrapper {
-  background-color: var(--semantic-color-warning-bg, #fef9c3);
-  color: var(--semantic-color-warning, #854d0e);
+  background-color: var(--semantic-color-warning-bg);
+  color: var(--semantic-color-warning);
 }
 
 .variant-info .confirmation-icon-wrapper {
-  background-color: var(--semantic-color-accent-bg, #e0f2fe);
-  color: var(--semantic-color-primary, #026597);
+  background-color: var(--semantic-color-accent-bg);
+  color: var(--semantic-color-primary);
 }
 
 .confirmation-message {
   margin: 0;
   font-size: var(--semantic-font-size-base, 15px);
-  color: var(--semantic-color-text, #0f172a);
+  color: var(--semantic-color-text);
   line-height: 1.5;
 }
 
@@ -119,39 +119,39 @@ const handleCancel = () => {
 }
 
 .btn-secondary {
-  background: var(--semantic-color-surface, #ffffff);
-  border-color: var(--semantic-color-border, #e2e8f0);
-  color: var(--semantic-color-text, #0f172a);
+  background: var(--semantic-color-surface);
+  border-color: var(--semantic-color-border);
+  color: var(--semantic-color-text);
 }
 
 .btn-secondary:hover {
-  background: var(--semantic-color-surface-muted, #f8fafc);
+  background: var(--semantic-color-surface-muted);
 }
 
 .btn-danger {
-  background: var(--semantic-color-error, #b91c1c);
-  color: #ffffff;
+  background: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
 }
 
 .btn-danger:hover {
-  background: #991b1b;
+  background: var(--semantic-color-error-text-dark);
 }
 
 .btn-warning {
-  background: var(--semantic-color-warning, #854d0e);
-  color: #ffffff;
+  background: var(--semantic-color-warning);
+  color: var(--semantic-color-surface);
 }
 
 .btn-warning:hover {
-  background: #713f12;
+  background: var(--semantic-color-warning-dark);
 }
 
 .btn-info {
-  background: var(--semantic-color-primary, #026597);
-  color: #ffffff;
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-info:hover {
-  background: var(--semantic-color-primary-dark, #014d76);
+  background: var(--semantic-color-primary-dark);
 }
 </style>

@@ -351,7 +351,7 @@ useFocusTrap(drawerRef, {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .header-titles h3 {
@@ -384,7 +384,7 @@ useFocusTrap(drawerRef, {
 }
 
 .config-card {
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
@@ -412,7 +412,7 @@ useFocusTrap(drawerRef, {
 
 .error-banner {
   background-color: var(--error-bg);
-  border: 1px solid #fecaca;
+  border: 1px solid var(--semantic-color-error-border-soft);
   color: var(--error);
   padding: 12px 16px;
   border-radius: 6px;
@@ -469,7 +469,7 @@ useFocusTrap(drawerRef, {
 }
 
 .metric-skipped {
-  border-left: 4px solid #64748b;
+  border-left: 4px solid var(--semantic-color-border-control);
 }
 
 .metric-value {
@@ -513,7 +513,7 @@ useFocusTrap(drawerRef, {
   height: 14px;
   border-radius: 7px;
   overflow: hidden;
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
 }
 
 .seg-unchanged {
@@ -594,7 +594,7 @@ useFocusTrap(drawerRef, {
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .drawer-input-block {
@@ -638,7 +638,7 @@ useFocusTrap(drawerRef, {
 }
 
 .badge-accent {
-  background-color: #e0e7ff;
-  color: #3730a3;
+  background-color: var(--semantic-color-indigo-bg);
+  color: var(--semantic-color-indigo-text);
 }
 </style>

@@ -37,6 +37,12 @@ export default defineConfig({
         const title = process.env.VITE_APP_TITLE || "Cadence Clinical";
         return html.replace(/%VITE_APP_TITLE%/g, title);
       },
+      configurePreviewServer(server) {
+        if (server.httpServer) {
+          server.httpServer.keepAliveTimeout = 65000;
+          server.httpServer.headersTimeout = 66000;
+        }
+      },
     },
     createStripMockWorkerInProdPlugin(__dirname),
   ],
@@ -79,6 +85,9 @@ export default defineConfig({
         secure: false,
       },
     },
+  },
+  preview: {
+    host: "::",
   },
   build: {
     outDir: "dist",

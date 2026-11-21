@@ -6,7 +6,13 @@
         <h3 style="margin: 0; font-size: 16px; font-weight: 700">
           🛡️ CRA Quality Control Review Queue
         </h3>
-        <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-muted)">
+        <p
+          style="
+            margin: 2px 0 0 0;
+            font-size: 12px;
+            color: var(--semantic-color-text-secondary);
+          "
+        >
           Adjudicate AI auto-classified documents staged in TECHNICAL_QC state
           under FDA 21 CFR Part 11
         </p>
@@ -36,7 +42,7 @@
       class="filter-ribbon"
       style="
         padding: 10px 16px;
-        background: #f8fafc;
+        background: var(--semantic-color-surface-muted);
         border-bottom: 1px solid var(--border);
         display: flex;
         justify-content: space-between;
@@ -87,7 +93,11 @@
       <div
         v-if="filteredItems.length === 0"
         class="empty-qc-state"
-        style="padding: 40px; text-align: center; color: var(--text-muted)"
+        style="
+          padding: 40px;
+          text-align: center;
+          color: var(--semantic-color-text-secondary);
+        "
       >
         <span style="font-size: 32px">✅</span>
         <p style="margin: 8px 0 0 0; font-size: 14px; font-weight: 600">
@@ -234,7 +244,11 @@
           Batch Accept AI Classifications
         </h4>
         <p
-          style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px"
+          style="
+            font-size: 12px;
+            color: var(--semantic-color-text-secondary);
+            margin-bottom: 12px;
+          "
         >
           You are approving predicted DIA TMF taxonomy tags for
           <strong>{{ selectedItemIds.length }}</strong> staged documents.
@@ -638,7 +652,7 @@ onMounted(() => {
 .qc-queue-container {
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   overflow: hidden;
@@ -671,14 +685,14 @@ onMounted(() => {
 }
 
 .qc-table th {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   font-weight: 600;
   position: sticky;
   top: 0;
 }
 
 .qc-row:hover {
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .qc-modal-overlay {
@@ -697,7 +711,7 @@ onMounted(() => {
 .qc-modal {
   width: 440px;
   max-width: 90vw;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
@@ -708,7 +722,7 @@ onMounted(() => {
 }
 
 .info-card {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px 12px;
