@@ -51,6 +51,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
     private const string Monitor = "cra@observation-host.test";
     private const string Stranger = "stranger@observation-host.test";
     private const string CorrectionReason = "Transcription error – source reads 128";
+    private const string PreinstalledChromium = "/opt/pw-browsers/chromium";
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, AllowOutOfOrderMetadataProperties = true };
 
@@ -414,8 +415,6 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
 
         return (process.ExitCode, await stdout + await stderr);
     }
-
-    private const string PreinstalledChromium = "/opt/pw-browsers/chromium";
 
     private static string RepositoryRoot()
     {

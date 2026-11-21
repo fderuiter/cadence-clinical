@@ -17,7 +17,9 @@ using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Modules.Execution.Endpoints;
+using Cadence.Security.Authentication;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 
 using FluentAssertions;
 
@@ -111,16 +113,36 @@ public sealed class CrossModuleJourneyTests(KernelHostJourneyFixture fixture) : 
         verified.Revision.Should().Be(1);
         written.Add((verified.AssertionId.ToString(), JourneyStudy.Monitor));
 
-        // Database lock, signed by the data manager. TODO(2026-10-20): replace the relay with the lock route (#5466) and
-        // the signature with signing over HTTP (#5552).
-        var lockId = AssertionId.New();
+        // Database lock, signed by the data manager over the live HTTP lock route (#5466).
         var studyScope = NodeRef.For(study.Study);
-        var lockSignature = await fixture.OkThroughHostAsync(dm, "Signing the database lock", w => new Attest(
-            w.Tenant, AttestationId.New(), AttestationMeaning.Approved, LockStatement.Target(lockId, LockStatement.Apply(lockId, LockKind.Locked, studyScope)),
-            SystemClock.Instance.UtcNow.AddMinutes(-1), "pwd+otp", w.IdempotencyKey, w.ReasonForChange), ct);
-        var locked = await fixture.OkThroughHostAsync(dm, "Data review complete; locking the database", w => new ApplyLock(
-            w.Tenant, lockId, study.Study, studyScope, LockKind.Locked, lockSignature, w.IdempotencyKey, w.ReasonForChange), ct);
-        written.AddRange([(lockSignature.ToString(), JourneyStudy.DataManager), (locked.LockId.ToString(), JourneyStudy.DataManager)]);
+        KernelLockResponse locked;
+        using (var lockReq = new HttpRequestMessage(HttpMethod.Post, new Uri("/api/v1/kernel/locks", UriKind.Relative)))
+        {
+            lockReq.Headers.Add(KernelObservationEndpoints.IdempotencyKeyHeader, $"journey-lock-{Guid.NewGuid():N}");
+            lockReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Data review complete; locking the database"));
+            lockReq.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(
+                    JourneyStudy.DataManager,
+                    KernelLockEndpoints.ApplyLockAction,
+                    KernelLockEndpoints.ApplyLockSemanticAction));
+            lockReq.Content = System.Net.Http.Json.JsonContent.Create(new
+            {
+                study_ref = studyScope.ToString(),
+                scope_ref = studyScope.ToString(),
+                kind = "Locked",
+                meaning = "Approved",
+            });
+
+            using var lockRes = await dm.SendAsync(lockReq, ct);
+            var lockBody = await lockRes.Content.ReadAsStringAsync(ct);
+            lockRes.StatusCode.Should().Be(HttpStatusCode.Created, lockBody);
+            locked = JsonSerializer.Deserialize<KernelLockResponse>(lockBody, KernelHostJourneyFixture.Json)!;
+        }
+
+        var lockedId = AssertionId.FromGuid(NodeRef.Parse(locked.Ref!).Id);
+        var lockSignature = AttestationId.FromGuid(NodeRef.Parse(locked.AttestationRef!).Id);
+        written.AddRange([(lockSignature.ToString(), JourneyStudy.DataManager), (lockedId.ToString(), JourneyStudy.DataManager)]);
 
         var observationRef = NodeRef.For(observation);
         var (refused, refusal) = await KernelHostJourneyFixture.CallAsync(crc, HttpMethod.Post, $"observations/{observationRef}/corrections", "Late change after lock",
@@ -139,7 +161,7 @@ public sealed class CrossModuleJourneyTests(KernelHostJourneyFixture fixture) : 
         read.Assertions.Should().Contain(a => a.AssertionId == query.AssertionId && a.Kind == AssertionKind.Queried && a.RetractedBy == closed.AssertionId);
         read.Assertions.Should().Contain(a => a.AssertionId == answer.AssertionId && a.Kind == AssertionKind.QueryAnswered && a.AssertedBy == JourneyStudy.Coordinator);
         read.Assertions.Should().Contain(a => a.AssertionId == verified.AssertionId && a.Kind == AssertionKind.Verified && a.Revision == 1 && a.AssertedBy == JourneyStudy.Monitor);
-        read.Locks.Should().ContainSingle().Which.LockId.Should().Be(locked.LockId);
+        read.Locks.Should().ContainSingle().Which.LockId.Should().Be(lockedId);
 
         // Provenance: the value's lineage reaches the protocol version that governed its collection.
         var (traced, trace) = await KernelHostJourneyFixture.CallAsync(dm, HttpMethod.Get, $"nodes/{observationRef}/lineage?direction=Backward&depth=5", null, null, ct);
@@ -151,9 +173,31 @@ public sealed class CrossModuleJourneyTests(KernelHostJourneyFixture fixture) : 
         var lineage = JsonSerializer.Deserialize<KernelLineageResponse>(trace, KernelHostJourneyFixture.Json)!;
         lineage.Nodes.Should().Contain(n => n.Ref != null && NodeRef.Parse(n.Ref).Unversioned() == NodeRef.For(study.ProtocolVersion));
 
-        // TODO(2026-10-20): export the locked study to SDTM Dataset-JSON and assert the VS record carries 128 mm[Hg] with
-        // lineage back to this observation revision. No export from kernel observations exists yet (port of
-        // dataset_json_etl.py #5042; continuous SDTM projection #4814).
+        // Streamed Dataset-JSON export from the locked study snapshot over live HTTP (#5042, #5592).
+        var (exportRes, exportJson) = await KernelHostJourneyFixture.CallAsync(
+            dm,
+            HttpMethod.Get,
+            $"studies/{studyScope}/exports?format=dataset_json&lock_filter=locked_only",
+            null,
+            null,
+            ct);
+        using (exportRes)
+        {
+            exportRes.StatusCode.Should().Be(HttpStatusCode.OK, exportJson);
+        }
+
+        using (var datasetDoc = JsonDocument.Parse(exportJson))
+        {
+            datasetDoc.RootElement.GetProperty("datasetJSONVersion").GetString().Should().Be("1.1.0");
+            var vitalsGroup = datasetDoc.RootElement.GetProperty("itemGroupData").GetProperty($"IG.{JourneyStudy.VitalsSpec}");
+            vitalsGroup.GetProperty("records").GetInt32().Should().Be(1);
+            var columns = vitalsGroup.GetProperty("items").EnumerateArray().Select(c => c.GetProperty("name").GetString()!).ToList();
+            var row = vitalsGroup.GetProperty("rows")[0].EnumerateArray().ToList();
+            row[columns.IndexOf("observation_ref")].GetString().Should().Be(NodeRef.For(observation, 1).ToString());
+            row[columns.IndexOf("result_decimal")].GetDecimal().Should().Be(128m);
+            row[columns.IndexOf("result_unit")].GetString().Should().Be("mm[Hg]");
+            row[columns.IndexOf("lock_state")].GetString().Should().Be("Locked");
+        }
 
         await AssertOneParticipantAsync(participant, enrollment, [("observations", observation.Value), ("collection_instances", opened.FormId)], ct);
         await AssertAuditedAsync(study, written, ct);

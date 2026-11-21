@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 
@@ -56,7 +57,7 @@ public static class ApiClientValidatorService
         {
             process = PosixScriptProcessHelper.StartWithPosixScriptFallback(psi);
         }
-        catch (System.ComponentModel.Win32Exception ex)
+        catch (Win32Exception ex)
         {
             Console.WriteLine($"[ERROR] Could not run {fileName} ({ex.Message}). Install Node.js and pnpm, then run 'pnpm install'.");
             return 1;

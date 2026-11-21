@@ -60,8 +60,8 @@ public static class CliConsole
         {
             Ansi = AnsiSupport.No,
             ColorSystem = ColorSystemSupport.NoColors,
-            Interactive = InteractionSupport.No,
             Enrichment = new ProfileEnrichment { UseDefaultEnrichers = false },
+            Interactive = InteractionSupport.No,
             Out = new AnsiConsoleOutput(output),
         });
         console.Profile.Width = PlainWidth;
