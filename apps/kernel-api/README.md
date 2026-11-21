@@ -69,6 +69,18 @@ The host also runs the kernel command pipeline (`AddKernelCommandPipeline`), so 
 | `POST assertions/{ref}/retraction`      | Withdraws an active assertion (`assertion.retract`, `RetractAssertion`) by recording a retracting assertion. 200; 409 `K.Assertion.AlreadyRetracted`, 423 `K.Assertion.Locked`, 422 without a reason.                                                                                                                                        |
 | `GET observations/{ref}`                | The value, version, the locks covering it (ADR-2621), every revision, the assertions about it and the kernel audit entries. 403 when the caller may not see its enrollment.                                                                                                                                                                  |
 
+### Signed locks and streaming clinical exports (spec §10.1, §10.5)
+
+Applying or releasing a clinical lock requires an `Idempotency-Key`, a signed `X-Change-Reason`, and a fresh single-use 60-second `X-Sig-Token` (21 CFR Part 11). Each lock write records an `Attest` over the canonical `LockStatement` before dispatching `ApplyLock` or `ReleaseLock`. Study exports and participant casebooks project canonical bitemporal kernel state at `as_of(valid_at, known_at)` (`K-TRUTH-1`), exclude `IdentityVault` direct identifiers, and emit explicit `masked` placeholders for unauthorized sites or blinded treatment values (`K-AUTH-4`).
+
+| Route (`/api/v1/kernel/…`)                                   | Does                                                                                                                                                                                                       |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST locks`                                                 | Applies a `Frozen` or `Locked` assertion (`lock.apply`) across `study`, `study_site`, `enrollment`, `collection_instance` or `observation` after verifying `X-Sig-Token` and recording `Attest`.           |
+| `POST locks/{lockRef}/release`                               | Releases an active lock (`lock.release`) with a step-up signed retracting assertion and `Attest`.                                                                                                          |
+| `GET studies/{studyRef}/locks?as_of=&active_only=`           | Lists locks recorded for a study at an optional bitemporal `as_of` coordinate, masking unauthorized or blinded scopes in place.                                                                            |
+| `GET studies/{studyRef}/exports?format=&lock_filter=&as_of=` | Streams a bitemporal study snapshot as `csv`, `odm_xml` (ODM v1.3.2 `MetaDataVersion` + `ClinicalData`), or `dataset_json` (Dataset-JSON v1.1.0), filtered by lock state and masked per caller visibility. |
+| `GET enrollments/{enrollmentRef}/casebook?format=&as_of=`    | Streams a participant casebook (`json`, `odm_xml`, or printable `html`) with revisions, queries, verifications, `Attestation` signatures, and `X-Content-Sha256` digests.                                  |
+
 ### Execution forms (ADR-2622)
 
 `POST /api/v1/execution/forms`, `GET /api/v1/execution/forms/{formId}` and `PUT /api/v1/execution/forms/{formId}/values` open, read and save eCRF forms; the [Execution module README](../execution/module/README.md) describes them.

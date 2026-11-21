@@ -370,11 +370,8 @@ public class SelfBillingInvoice
             throw new ArgumentException("ERP reference identifier is required.", nameof(erpReferenceId));
         }
 
-        bool isApprovedOrReconciled =
-            string.Equals(_status, SelfBillingInvoiceStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(_status, SelfBillingInvoiceStatus.RECONCILED.ToString(), StringComparison.OrdinalIgnoreCase);
-
-        if (!isApprovedOrReconciled)
+        if (!string.Equals(_status, SelfBillingInvoiceStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(_status, SelfBillingInvoiceStatus.RECONCILED.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidStateTransitionException(
                 nameof(SelfBillingInvoice),
