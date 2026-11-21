@@ -1,3 +1,4 @@
+import { isStepUpAuthFailure } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { resolveGatewayBaseUrl } from "../utils/demoMode";
 
@@ -35,6 +36,31 @@ export async function getBearerToken() {
     return authStore.ensureFreshToken(TOKEN_MIN_VALIDITY_SECONDS);
   }
   return authStore.accessToken || null;
+}
+
+/**
+ * Attempts one single-flight OIDC refresh after an HTTP 401 gateway response.
+ * Ignores 21 CFR Part 11 step-up credential or `X-Sig-Token` failures so a
+ * wrong signature password never logs the clinician out of their workspace.
+ *
+ * @param {string|URL} url
+ * @param {unknown} [errorBody=null]
+ * @returns {Promise<string|null>}
+ */
+export async function refreshBearerTokenOnUnauthorized(url, errorBody = null) {
+  if (isStepUpAuthFailure(url, 401, errorBody)) {
+    return null;
+  }
+  let authStore;
+  try {
+    authStore = useAuthStore();
+  } catch {
+    return null;
+  }
+  if (typeof authStore.refreshAfterUnauthorized === "function") {
+    return authStore.refreshAfterUnauthorized();
+  }
+  return null;
 }
 
 /**
@@ -80,13 +106,35 @@ export function installAuthorizedFetch(target = globalThis) {
     const headers = new Headers(
       init.headers || (input instanceof Request ? input.headers : undefined)
     );
-    if (!headers.has("Authorization")) {
+    const hadExplicitAuth = headers.has("Authorization");
+    if (!hadExplicitAuth) {
       const token = await getBearerToken();
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
     }
-    return original.call(target, input, { ...init, headers });
+    const retryClone =
+      !hadExplicitAuth && input instanceof Request ? input.clone() : null;
+    const response = await original.call(target, input, { ...init, headers });
+    if (response.status === 401 && !hadExplicitAuth) {
+      const errBody = await response
+        .clone()
+        .json()
+        .catch(() => null);
+      const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
+      if (freshToken) {
+        const retryHeaders = new Headers(headers);
+        retryHeaders.set("Authorization", `Bearer ${freshToken}`);
+        if (retryClone) {
+          return original.call(target, retryClone, {
+            ...init,
+            headers: retryHeaders,
+          });
+        }
+        return original.call(target, input, { ...init, headers: retryHeaders });
+      }
+    }
+    return response;
   };
   authorizedFetch.__cadenceAuthorized = true;
   target.fetch = authorizedFetch;

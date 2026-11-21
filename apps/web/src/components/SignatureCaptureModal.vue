@@ -80,11 +80,16 @@ const signingReason = computed({
   },
 });
 
+const needsPasswordReentry = computed(() =>
+  Boolean(innerRef.value?.needsPasswordReentry)
+);
+
 defineExpose({
   password,
   totp,
   signerName: signerNameProxy,
   signerRole: signerRoleProxy,
   signingReason,
+  needsPasswordReentry,
 });
 </script>

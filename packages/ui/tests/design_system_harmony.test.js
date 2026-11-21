@@ -29,6 +29,7 @@ const EXPECTED_SHARED_COMPONENTS = [
   "MediaPlayer",
   "ModalErrorAlert",
   "PersonaSwitcher",
+  "SignOutConfirmModal",
 ];
 
 const EXPECTED_KEYBOARD_HELPERS = [
@@ -188,7 +189,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 19 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 20 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -198,7 +199,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(19);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(20);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
@@ -217,7 +218,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 19 components and 3 keyboard helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 20 components and 3 keyboard helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(

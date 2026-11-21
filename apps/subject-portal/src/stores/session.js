@@ -19,6 +19,7 @@ export const useSessionStore = defineStore("session", {
         token: null,
         isOfflineMode: demo,
         isDemoMode: demo,
+        sessionExpired: false,
       },
       authError: "",
       pinSetup: {
