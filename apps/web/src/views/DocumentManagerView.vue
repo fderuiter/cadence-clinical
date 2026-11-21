@@ -62,7 +62,7 @@
                 style="
                   margin: 2px 0 0 0;
                   font-size: 11px;
-                  color: var(--text-muted);
+                  color: var(--semantic-color-text-secondary);
                 "
               >
                 {{ inspectedDoc.filename }}
@@ -568,7 +568,7 @@ defineExpose({
   display: flex;
   height: calc(100vh - 120px);
   gap: 20px;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   margin: -20px;
   padding: 20px;
   overflow: hidden;
@@ -578,7 +578,7 @@ defineExpose({
 .sidebar-binder-tree {
   width: 340px;
   min-width: 300px;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -586,7 +586,7 @@ defineExpose({
 
 .document-content-area {
   flex: 1;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -599,8 +599,8 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  border-bottom: 1px solid var(--border, #e2e8f0);
-  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+  background: var(--semantic-color-surface-muted);
 }
 
 .etmf-tab-group {
@@ -610,24 +610,24 @@ defineExpose({
 
 .etmf-tab-btn {
   padding: 6px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   font-size: 12px;
   font-weight: 600;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
 }
 
 .etmf-tab-btn.active {
-  background: #0f4c81;
-  border-color: #0f4c81;
-  color: #ffffff;
+  background: var(--semantic-color-primary-dark);
+  border-color: var(--semantic-color-primary-dark);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .etmf-study-chip {
   font-size: 12px;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .qc-accept-panel {
@@ -642,16 +642,18 @@ defineExpose({
   box-sizing: border-box;
   padding: 6px 8px;
   font-size: 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   border-radius: 4px;
 }
 
 .qc-role-note {
   margin: 0;
   font-size: 11px;
-  color: #92400e;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  color: var(--semantic-color-warning-dark);
+  background: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
   border-radius: 4px;
   padding: 6px 8px;
 }
@@ -659,9 +661,9 @@ defineExpose({
 .qc-error-note {
   margin: 0;
   font-size: 11px;
-  color: #991b1b;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  color: var(--semantic-color-error-text-dark);
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
   border-radius: 4px;
   padding: 6px 8px;
 }
@@ -687,7 +689,7 @@ defineExpose({
     var(--drawer-width-sm, min(100vw, 440px))
   );
   max-width: 100vw;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -762,7 +764,8 @@ defineExpose({
 
 .meta-label {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
+  font-weight: 500;
 }
 
 .meta-val {
@@ -776,18 +779,18 @@ defineExpose({
 }
 
 .reason-box {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--semantic-color-primary, #2563eb);
+  border-left: 3px solid var(--semantic-color-primary);
   padding: 10px 12px;
   border-radius: 6px;
   font-size: 12px;
 }
 
 .crypto-seal-card {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
   padding: 10px 12px;
+  background: var(--semantic-color-surface-muted);
+  border: 1px dashed var(--border);
   border-radius: 6px;
 }
 
@@ -796,8 +799,8 @@ defineExpose({
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   word-break: break-all;
-  color: #166534;
-  background: rgba(255, 255, 255, 0.7);
+  color: var(--semantic-color-success-dark);
+  background: var(--semantic-color-surface);
   padding: 6px;
   border-radius: 4px;
 }
@@ -810,17 +813,17 @@ defineExpose({
 }
 
 .intelligence-card {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 12px;
 }
 
 .text-success {
-  color: #166534;
+  color: var(--semantic-color-success-dark);
 }
 
 .text-warning {
-  color: #b45309;
+  color: var(--semantic-color-warning);
 }
 </style>

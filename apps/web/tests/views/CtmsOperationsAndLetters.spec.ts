@@ -87,7 +87,7 @@ describe("CtmsView live operations, structured visit findings, compiled letters,
       letterId: "LTR-ABCD1234",
       visitId: "visit-comp-1",
       letterType: "follow_up_letter",
-      pdfSha256Hash: "a1b2c3d4e5f6",
+      pdfSha256Hash: "a1b2c3d4e5f6", // pragma: allowlist secret
       pdfObjectKey: "letters/CAD-101/SITE-101/LTR-ABCD1234.pdf",
       isSigned: true,
       status: "FINALIZED",

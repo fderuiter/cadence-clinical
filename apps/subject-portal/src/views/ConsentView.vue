@@ -38,7 +38,7 @@
           style="
             padding: 6px 12px;
             border-radius: 4px;
-            border: 1px solid var(--semantic-color-border);
+            border: 1px solid var(--semantic-color-border-control);
             background: var(--semantic-color-surface);
             color: var(--semantic-color-text);
           "
@@ -200,11 +200,11 @@
         <div
           id="liveness-camera-simulator"
           style="
-            border: 2px dashed var(--semantic-color-border);
+            border: 2px dashed var(--semantic-color-border-control);
             border-radius: 8px;
             padding: 24px;
             text-align: center;
-            background: rgba(0, 0, 0, 0.02);
+            background: var(--semantic-color-surface-muted);
             margin-bottom: 16px;
           "
         >
@@ -237,8 +237,8 @@
             type="button"
             class="btn btn-secondary"
             style="
-              border: 1px solid var(--semantic-color-border);
-              background: transparent;
+              border: 1px solid var(--semantic-color-border-control);
+              background: var(--semantic-color-surface);
             "
           >
             Study Coordinator Video Fallback

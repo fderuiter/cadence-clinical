@@ -1,4 +1,4 @@
-# ADR-2820: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks
+# ADR-2821: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks
 
 - **Status:** Accepted
 - **Date:** 2026-11-20

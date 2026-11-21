@@ -305,7 +305,7 @@ defineExpose({ checkStatus, loadStudySites });
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--surface, #ffffff);
+  background: var(--semantic-color-surface);
 }
 
 .activate {
@@ -328,26 +328,26 @@ defineExpose({ checkStatus, loadStudySites });
 }
 
 .status-complete {
-  color: #166534;
+  color: var(--semantic-color-success-dark);
   font-weight: 600;
 }
 
 .status-incomplete {
-  color: #92400e;
+  color: var(--semantic-color-warning-dark);
   font-weight: 600;
 }
 
 .status-error {
-  color: #991b1b;
+  color: var(--semantic-color-error);
   font-weight: 600;
 }
 
 .role-note {
   margin: 0;
   font-size: 0.875rem;
-  color: #92400e;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  color: var(--semantic-color-warning-dark);
+  background: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
   border-radius: 4px;
   padding: 8px 12px;
 }

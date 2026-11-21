@@ -1348,9 +1348,9 @@ const readinessPercentage = computed(() => {
 });
 
 const gaugeColor = computed(() => {
-  if (readinessPercentage.value === 100) return "#10b981";
-  if (readinessPercentage.value >= 50) return "#f59e0b";
-  return "#ef4444";
+  if (readinessPercentage.value === 100) return "var(--semantic-color-success)";
+  if (readinessPercentage.value >= 50) return "var(--semantic-color-warning)";
+  return "var(--semantic-color-error)";
 });
 
 function getFacetRegulatoryDesc(country) {
@@ -1596,36 +1596,36 @@ onMounted(() => {
   flex-direction: column;
   gap: 20px;
   padding: 24px;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   border-radius: 8px;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--semantic-color-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .view-mode-bar {
   display: flex;
   gap: 12px;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid var(--semantic-color-border);
   padding-bottom: 12px;
 }
 
 .view-tab-btn {
   padding: 8px 16px;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-weight: 600;
   font-size: 0.9rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .view-tab-btn.active {
-  background: #2563eb;
-  color: #ffffff;
-  border-color: #2563eb;
-  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+  background: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
+  border-color: var(--semantic-color-interactive-primary);
+  box-shadow: 0 2px 4px rgba(29, 78, 216, 0.2);
 }
 
 .console-header {
@@ -1659,45 +1659,45 @@ onMounted(() => {
 }
 
 .badge-gxp {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 
 .badge-regulatory {
-  background: #e0e7ff;
-  color: #3730a3;
+  background: var(--semantic-color-indigo-bg);
+  color: var(--semantic-color-indigo-text);
 }
 
 .badge-standard {
-  background: #f3e8ff;
-  color: #6b21a8;
+  background: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
 }
 
 .badge-country {
-  background: #0284c7;
-  color: #ffffff;
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .badge-approved {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .badge-pending {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .console-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   margin: 0;
 }
 
 .console-subtitle {
   font-size: 0.9rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin: 0;
 }
 
@@ -1711,9 +1711,9 @@ onMounted(() => {
   margin: 0;
   padding: 8px 12px;
   font-size: 0.85rem;
-  color: #92400e;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  color: var(--semantic-color-warning-dark);
+  background: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
   border-radius: 6px;
 }
 
@@ -1727,24 +1727,24 @@ onMounted(() => {
 }
 
 .alert-danger {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .alert-info {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1e40af;
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
 }
 
 .scope-bar {
   display: flex;
   gap: 16px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   padding: 12px 16px;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
   align-items: center;
   flex-wrap: wrap;
 }
@@ -1755,16 +1755,17 @@ onMounted(() => {
   gap: 8px;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .text-input,
 .select-input {
   padding: 6px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.875rem;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
 }
 
 .metrics-row {
@@ -1777,49 +1778,49 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   padding: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
 }
 
 .metric-card.metric-success {
-  border-left: 4px solid #10b981;
+  border-left: 4px solid var(--semantic-color-success);
 }
 
 .metric-card.metric-danger {
-  border-left: 4px solid #ef4444;
+  border-left: 4px solid var(--semantic-color-error);
 }
 
 .metric-card.metric-info {
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid var(--semantic-color-interactive-primary);
 }
 
 .metric-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
 }
 
 .metric-value {
   font-size: 1.8rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .metric-sub {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-subtle);
 }
 
 .batch-action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #eff6ff;
+  background: var(--semantic-color-info-bg);
   padding: 12px 16px;
   border-radius: 6px;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--semantic-color-info-border);
 }
 
 .batch-selection-info {
@@ -1830,7 +1831,7 @@ onMounted(() => {
 
 .selection-count-text {
   font-size: 0.9rem;
-  color: #1e40af;
+  color: var(--semantic-color-info);
 }
 
 .btn {
@@ -1847,27 +1848,31 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: #2563eb;
-  color: #ffffff;
+  background: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: var(--semantic-color-interactive-primary-hover);
 }
 
 .btn-secondary {
-  background: #ffffff;
-  color: #334155;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-body);
+  border: 1px solid var(--semantic-color-border-control);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 
+.btn-override {
+  background: var(--semantic-color-ai);
+  color: var(--semantic-color-surface);
+}
 .btn-counter-badge {
-  background: #ffffff;
-  color: #2563eb;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-interactive-primary);
   font-size: 0.75rem;
   font-weight: 800;
   border-radius: 999px;
@@ -1880,7 +1885,7 @@ onMounted(() => {
 }
 
 .matrix-table-card {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   overflow-x: auto;
 }
@@ -1893,29 +1898,29 @@ onMounted(() => {
 }
 
 .matrix-table th {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   padding: 12px 16px;
   font-weight: 700;
-  color: #475569;
-  border-bottom: 1px solid #e2e8f0;
+  color: var(--semantic-color-text-secondary);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .matrix-table td {
   padding: 12px 16px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--semantic-color-surface-header);
   vertical-align: middle;
 }
 
 .row-selected {
-  background-color: #eff6ff;
+  background-color: var(--semantic-color-info-bg);
 }
 
 .row-certified {
-  background-color: #f0fdf4;
+  background-color: var(--semantic-color-success-bg-soft);
 }
 
 .row-non-compliant {
-  background-color: #fff1f2;
+  background-color: var(--semantic-color-error-bg-row);
 }
 
 .site-cell {
@@ -1926,17 +1931,17 @@ onMounted(() => {
 
 .site-id-badge {
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .site-name-text {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .site-jurisdiction-tag {
   font-size: 0.75rem;
-  color: #0284c7;
+  color: var(--semantic-color-primary);
   font-weight: 600;
 }
 
@@ -1954,13 +1959,13 @@ onMounted(() => {
 }
 
 .pill-pass {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .pill-fail {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .readiness-score-badge {
@@ -1971,19 +1976,19 @@ onMounted(() => {
 }
 
 .badge-score-100 {
-  background: #10b981;
-  color: #ffffff;
+  background: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 
 .badge-score-fail {
-  background: #ef4444;
-  color: #ffffff;
+  background: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
 }
 
 .exception-warning {
   display: block;
   font-size: 0.7rem;
-  color: #dc2626;
+  color: var(--semantic-color-error-text-dark);
   font-weight: 600;
   margin-top: 2px;
 }
@@ -1997,28 +2002,28 @@ onMounted(() => {
 }
 
 .chip-approved {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .chip-overridden {
-  background: #f3e8ff;
-  color: #6b21a8;
+  background: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
 }
 
 .chip-compliant {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary-dark);
 }
 
 .chip-blocked {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .batch-success-banner {
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  background: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border);
   padding: 16px;
   border-radius: 8px;
   display: flex;
@@ -2040,16 +2045,16 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   padding: 8px 12px;
   border-radius: 6px;
-  border: 1px solid #6ee7b7;
+  border: 1px solid var(--semantic-color-success-border);
 }
 
 .token-code {
   font-family: monospace;
   font-size: 0.75rem;
-  color: #047857;
+  color: var(--semantic-color-success-dark);
 }
 
 /* Modals */
@@ -2068,7 +2073,7 @@ onMounted(() => {
 }
 
 .modal-card {
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border-radius: 8px;
   width: 90%;
   max-width: 500px;
@@ -2087,7 +2092,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--semantic-color-border);
   padding-bottom: 12px;
 }
 
@@ -2095,7 +2100,7 @@ onMounted(() => {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .modal-body {
@@ -2105,10 +2110,10 @@ onMounted(() => {
 }
 
 .batch-summary-box {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   padding: 12px;
   border-radius: 6px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-muted);
 }
 
 .selected-sites-grid {
@@ -2119,8 +2124,8 @@ onMounted(() => {
 }
 
 .selected-site-tag {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--semantic-color-info-light);
+  color: var(--semantic-color-info);
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -2131,8 +2136,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: #fffbebf5;
-  border: 1px solid #fde68a;
+  background: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
   padding: 16px;
   border-radius: 6px;
 }
@@ -2141,7 +2146,7 @@ onMounted(() => {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: #92400e;
+  color: var(--semantic-color-warning-dark);
 }
 
 .form-row {
@@ -2158,16 +2163,18 @@ onMounted(() => {
 
 .textarea-input {
   padding: 8px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.875rem;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--semantic-color-border);
   padding-top: 12px;
 }
 
@@ -2198,16 +2205,16 @@ onMounted(() => {
   gap: 8px;
   padding: 16px;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
+  border: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface);
 }
 
 .facet-passed {
-  border-left: 4px solid #10b981;
+  border-left: 4px solid var(--semantic-color-success);
 }
 
 .facet-failed {
-  border-left: 4px solid #ef4444;
+  border-left: 4px solid var(--semantic-color-error);
 }
 
 .facet-header {
@@ -2229,12 +2236,12 @@ onMounted(() => {
 .facet-name {
   font-weight: 700;
   font-size: 0.9rem;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .facet-rule-tag {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .facet-status-chip {
@@ -2245,18 +2252,18 @@ onMounted(() => {
 }
 
 .chip-pass {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .chip-fail {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .facet-desc {
   font-size: 0.8rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   margin: 0;
 }
 
@@ -2269,7 +2276,7 @@ onMounted(() => {
 .gauge-bar-outer {
   width: 120px;
   height: 8px;
-  background: #e2e8f0;
+  background: var(--semantic-color-border);
   border-radius: 4px;
   overflow: hidden;
 }

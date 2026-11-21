@@ -38,6 +38,70 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/knowledge/contextual-help": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["ResolveContextualHelp"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/knowledge/categories": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["ListKnowledgeCategories"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/knowledge/articles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["ListKnowledgeArticles"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/knowledge/articles/{article_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetKnowledgeArticle"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/training/curricula": {
     parameters: {
       query?: never;
@@ -202,6 +266,26 @@ export interface components {
       /** Format: date-time */
       executed_at: string;
     };
+    Knowledge_ContextualHelpMappingDto: {
+      id: string;
+      route_pattern: string;
+      persona: null | string;
+      article_id: string;
+      section_anchor: null | string;
+      /** Format: int32 */
+      priority: number | string;
+      is_active: boolean;
+    };
+    Knowledge_ContextualHelpResponseDto: {
+      matched_mapping:
+        null | components["schemas"]["Knowledge_ContextualHelpMappingDto"];
+      primary_article:
+        null | components["schemas"]["Knowledge_KnowledgeArticleDto"];
+      primary_version:
+        null | components["schemas"]["Knowledge_KnowledgeArticleVersionDto"];
+      section_anchor: null | string;
+      related_articles: components["schemas"]["Knowledge_KnowledgeArticleDto"][];
+    };
     Knowledge_DelegationSummaryDto: {
       id: string;
       study_id: string;
@@ -221,6 +305,55 @@ export interface components {
     Knowledge_FailedDelegationItemDto: {
       delegation_id: string;
       reason: string;
+    };
+    Knowledge_KnowledgeArticleDto: {
+      id: string;
+      slug: string;
+      title: string;
+      category_id: string;
+      category_name: null | string;
+      status: string;
+      /** Format: int32 */
+      version_index: number | string;
+      version_label: string;
+      current_published_version_id: null | string;
+      tags: string[];
+      author_user_id: string;
+      last_edited_by: null | string;
+      approved_by: null | string;
+      body_markdown: null | string;
+      body_html: null | string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    Knowledge_KnowledgeArticleVersionDto: {
+      id: string;
+      article_id: string;
+      /** Format: int32 */
+      version_index: number | string;
+      version_label: string;
+      body_markdown: string;
+      body_html: null | string;
+      status_at_snapshot: string;
+      is_locked: boolean;
+      /** Format: date-time */
+      created_at: string;
+      created_by: string;
+      reason_for_change: string;
+    };
+    Knowledge_KnowledgeCategoryDto: {
+      id: string;
+      name: string;
+      slug: string;
+      description: null | string;
+      parent_id: null | string;
+      persona_visibility: string[];
+      is_deleted: boolean;
+      /** Format: date-time */
+      created_at: string;
+      created_by: string;
     };
     Knowledge_ProblemDetails: {
       type?: null | string;
@@ -314,6 +447,107 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Knowledge_AnonymousTypeOfstringAndstring"];
+        };
+      };
+    };
+  };
+  ResolveContextualHelp: {
+    parameters: {
+      query?: {
+        route?: string;
+        persona?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Knowledge_ContextualHelpResponseDto"];
+        };
+      };
+    };
+  };
+  ListKnowledgeCategories: {
+    parameters: {
+      query?: {
+        persona?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Knowledge_KnowledgeCategoryDto"][];
+        };
+      };
+    };
+  };
+  ListKnowledgeArticles: {
+    parameters: {
+      query?: {
+        status_filter?: string;
+        category_id?: string;
+        q?: string;
+        persona?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Knowledge_KnowledgeArticleDto"][];
+        };
+      };
+    };
+  };
+  GetKnowledgeArticle: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        article_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Knowledge_KnowledgeArticleDto"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
         };
       };
     };

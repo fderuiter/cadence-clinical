@@ -119,8 +119,8 @@ const selectPersona = (persona) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--color-surface, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 6px 12px;
   cursor: pointer;
@@ -129,15 +129,15 @@ const selectPersona = (persona) => {
 }
 
 .persona-toggle-btn:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: var(--semantic-color-surface-muted);
+  border-color: var(--semantic-color-border-control);
 }
 
 .persona-indicator {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--color-success, #15803d);
+  background: var(--semantic-color-success);
 }
 
 .persona-details {
@@ -149,21 +149,21 @@ const selectPersona = (persona) => {
 .persona-label {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .persona-badge {
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: #f1f5f9;
-  color: var(--color-text-muted, #475569);
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-muted);
   font-weight: 600;
 }
 
 .dropdown-arrow {
   font-size: 10px;
-  color: var(--color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 
 .persona-menu {
@@ -171,8 +171,8 @@ const selectPersona = (persona) => {
   top: calc(100% + 4px);
   right: 0;
   width: 280px;
-  background: var(--color-surface, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   box-shadow:
     0 10px 15px -3px rgba(0, 0, 0, 0.1),
@@ -187,9 +187,9 @@ const selectPersona = (persona) => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--color-text-muted, #475569);
-  background: var(--color-surface-muted, #f8fafc);
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  color: var(--semantic-color-text-muted);
+  background: var(--semantic-color-surface-muted);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .menu-item {
@@ -202,7 +202,7 @@ const selectPersona = (persona) => {
   background: transparent;
   text-align: left;
   cursor: pointer;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--semantic-color-surface-header);
   transition: background-color 0.15s ease;
 }
 
@@ -211,11 +211,11 @@ const selectPersona = (persona) => {
 }
 
 .menu-item:hover {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
 }
 
 .menu-item.active {
-  background: var(--color-primary-light, #e0f2fe);
+  background: var(--semantic-color-primary-light);
 }
 
 .item-content {
@@ -226,19 +226,19 @@ const selectPersona = (persona) => {
 .item-title {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .item-role {
   font-size: 11px;
-  color: var(--color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 
 .item-badge {
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: #f1f5f9;
-  color: var(--color-text-muted, #475569);
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-muted);
 }
 </style>

@@ -26,6 +26,7 @@ export const GENERATED_SERVICES = [
   "execution",
   "kernel",
   "knowledge",
+  "tickets",
 ];
 
 const HEADER =

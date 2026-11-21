@@ -27,7 +27,7 @@
         border-radius: 8px;
         background: var(--semantic-color-error-bg);
         border: 1px solid var(--semantic-color-error);
-        color: var(--semantic-color-error);
+        color: var(--semantic-color-error-text-dark);
         font-size: 14px;
         font-weight: 600;
       "
@@ -279,7 +279,7 @@
           aria-label="Upload receipt image for travel reimbursement"
           aria-describedby="receipt-upload-hint"
           style="
-            border: 2px dashed var(--semantic-color-border);
+            border: 2px dashed var(--semantic-color-border-control);
             border-radius: 8px;
             padding: 20px;
             text-align: center;
@@ -507,7 +507,7 @@
             style="
               padding: 16px;
               border-radius: 8px;
-              background: var(--semantic-color-success-bg);
+              background: var(--semantic-color-success-bg-soft);
               border: 1px solid var(--semantic-color-success);
               color: var(--semantic-color-text);
             "
@@ -552,9 +552,9 @@
             style="
               padding: 16px;
               border-radius: 8px;
-              background: var(--semantic-color-warning-bg);
-              border: 1px solid var(--semantic-color-warning);
-              color: var(--semantic-color-text);
+              background: var(--semantic-color-warning-bg-light);
+              border: 1px solid var(--semantic-color-warning-border-strong);
+              color: var(--semantic-color-text-dark);
             "
           >
             <h4

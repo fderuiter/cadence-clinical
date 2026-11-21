@@ -720,7 +720,7 @@ async function handleDeleteFile(file) {
 .documents-hub-layout {
   display: flex;
   height: calc(100vh - 120px);
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   margin: -20px;
   overflow: hidden;
   position: relative;
@@ -730,7 +730,7 @@ async function handleDeleteFile(file) {
 .hub-sidebar {
   width: 340px;
   min-width: 300px;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   height: 100%;
   overflow: hidden;
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.03);
@@ -743,7 +743,7 @@ async function handleDeleteFile(file) {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
 }
 
 .hub-header-bar {
@@ -752,7 +752,7 @@ async function handleDeleteFile(file) {
   align-items: center;
   padding: 16px 24px;
   border-bottom: 1px solid var(--border);
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   gap: 16px;
 }
 
@@ -780,7 +780,7 @@ async function handleDeleteFile(file) {
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
 }
 
 .hub-search-input {
@@ -789,14 +789,14 @@ async function handleDeleteFile(file) {
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.85rem;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   outline: none;
   transition: all 0.2s;
   box-sizing: border-box;
 }
 
 .hub-search-input:focus {
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
 }
@@ -809,7 +809,7 @@ async function handleDeleteFile(file) {
   background: none;
   border: none;
   font-size: 1rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
 }
 
@@ -819,7 +819,7 @@ async function handleDeleteFile(file) {
   justify-content: space-between;
   align-items: center;
   padding: 10px 24px;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   border-bottom: 1px solid var(--border);
   min-height: 44px;
   gap: 12px;
@@ -837,8 +837,8 @@ async function handleDeleteFile(file) {
   align-items: center;
   gap: 6px;
   padding: 3px 8px;
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
   border-radius: 6px;
   font-size: 0.75rem;
 }
@@ -846,7 +846,7 @@ async function handleDeleteFile(file) {
 .remove-pill-btn {
   background: none;
   border: none;
-  color: #0369a1;
+  color: var(--semantic-color-primary);
   font-weight: bold;
   cursor: pointer;
   padding: 0 2px;
@@ -862,8 +862,8 @@ async function handleDeleteFile(file) {
 .selection-count-badge {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #0284c7;
-  background-color: #e0f2fe;
+  color: var(--semantic-color-primary);
+  background-color: var(--semantic-color-primary-light);
   padding: 4px 8px;
   border-radius: 4px;
 }
@@ -882,12 +882,12 @@ async function handleDeleteFile(file) {
 }
 
 .documents-table th {
-  background-color: #ffffff;
-  color: #475569;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
   font-size: 0.78rem;
   padding: 10px 14px;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid var(--semantic-color-border);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -904,22 +904,22 @@ async function handleDeleteFile(file) {
 .sort-indicator {
   font-size: 0.7rem;
   margin-left: 4px;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
 }
 
 .documents-table td {
   padding: 10px 14px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #1e293b;
+  border-bottom: 1px solid var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-dark);
   vertical-align: middle;
 }
 
 .document-row:hover {
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .document-row.row-selected {
-  background-color: #f0f9ff;
+  background-color: var(--semantic-color-info-bg-soft);
 }
 
 .checkbox-col {
@@ -940,7 +940,7 @@ async function handleDeleteFile(file) {
 
 .filename-text {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   max-width: 320px;
   white-space: nowrap;
   overflow: hidden;
@@ -954,8 +954,8 @@ async function handleDeleteFile(file) {
 
 .version-pill {
   font-size: 0.7rem;
-  background-color: #f1f5f9;
-  color: #475569;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
   padding: 1px 5px;
   border-radius: 4px;
   font-weight: 600;
@@ -965,13 +965,13 @@ async function handleDeleteFile(file) {
   font-family: monospace;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #0369a1;
+  color: var(--semantic-color-primary);
 }
 
 .site-badge {
   font-family: monospace;
   font-size: 0.78rem;
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -979,12 +979,12 @@ async function handleDeleteFile(file) {
 .uploader-name {
   font-family: monospace;
   font-size: 0.78rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .date-cell {
   font-size: 0.78rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   white-space: nowrap;
 }
 
@@ -997,23 +997,23 @@ async function handleDeleteFile(file) {
 }
 
 .status-approved {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 
 .status-review {
-  background-color: #fef9c3;
-  color: #854d0e;
+  background-color: var(--semantic-color-warning-bg);
+  color: var(--semantic-color-warning);
 }
 
 .status-hold {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 
 .status-draft {
-  background-color: #f1f5f9;
-  color: #475569;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 .shared-badge {
@@ -1025,13 +1025,13 @@ async function handleDeleteFile(file) {
 }
 
 .shared-badge.has-grants {
-  background-color: #e0f2fe;
-  color: #0284c7;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 
 .shared-badge.private {
-  background-color: #f1f5f9;
-  color: #64748b;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 .actions-th {
@@ -1050,30 +1050,30 @@ async function handleDeleteFile(file) {
 }
 
 .btn-outline-info {
-  border: 1px solid #0284c7;
-  color: #0284c7;
+  border: 1px solid var(--semantic-color-primary);
+  color: var(--semantic-color-primary);
   background-color: transparent;
 }
 
 .btn-outline-info:hover:not(:disabled) {
-  background-color: #e0f2fe;
+  background-color: var(--semantic-color-primary-light);
 }
 
 .btn-outline-danger {
-  border: 1px solid #ef4444;
-  color: #ef4444;
+  border: 1px solid var(--semantic-color-error);
+  color: var(--semantic-color-error);
   background-color: transparent;
 }
 
 .btn-outline-danger:hover:not(:disabled) {
-  background-color: #fee2e2;
+  background-color: var(--semantic-color-error-bg);
 }
 
 .btn-outline-danger:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  border-color: #cbd5e1;
-  color: #94a3b8;
+  border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text-secondary);
 }
 
 /* Empty State */
@@ -1097,13 +1097,13 @@ async function handleDeleteFile(file) {
 .empty-state-box h4 {
   margin: 0;
   font-size: 1rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .empty-state-box p {
   margin: 0;
   font-size: 0.82rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 /* Pagination Bar */
@@ -1113,7 +1113,7 @@ async function handleDeleteFile(file) {
   align-items: center;
   padding: 12px 24px;
   border-top: 1px solid var(--border);
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   font-size: 0.82rem;
 }
 
@@ -1130,7 +1130,7 @@ async function handleDeleteFile(file) {
 
 .page-num-btn.active {
   background-color: var(--accent);
-  color: #ffffff;
+  color: var(--semantic-color-surface);
   border-color: var(--accent);
 }
 

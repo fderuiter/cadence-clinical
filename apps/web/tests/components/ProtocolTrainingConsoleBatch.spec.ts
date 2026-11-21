@@ -210,7 +210,7 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
       signed_delegations: [],
       failed_items: [],
       sha256_seal:
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
       etmf_artifact_id: "05.02.04",
       executed_at: "2026-10-07T10:00:00Z",
     });

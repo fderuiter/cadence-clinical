@@ -6,6 +6,7 @@ using System.IO;
 using System.Net.Sockets;
 
 using Cadence.Cli.Services;
+using Cadence.ToolingCore.Services;
 
 using Spectre.Console;
 
@@ -28,6 +29,7 @@ public static class DoctorCommand
         AnsiConsole.MarkupLine("[cyan]=== Cadence Clinical System Diagnostics ===[/]\n");
 
         // 1. .NET SDK
+        bool dotnetOk = false;
         try
         {
             var psi = new ProcessStartInfo("dotnet", "--version") { RedirectStandardOutput = true, UseShellExecute = false };
@@ -35,11 +37,19 @@ public static class DoctorCommand
             string output = p?.StandardOutput.ReadToEnd().Trim() ?? "";
             p?.WaitForExit();
             if (output.StartsWith("10."))
-                AnsiConsole.MarkupLine($"  .NET 10 SDK: [green]Active ({output})[/]");
+            {
+                AnsiConsole.MarkupLine($"  .NET 10 SDK: [green]Active ({Markup.Escape(output)})[/]");
+                dotnetOk = true;
+            }
             else if (!string.IsNullOrEmpty(output))
-                AnsiConsole.MarkupLine($"  .NET SDK: [yellow]Active ({output}) - .NET 10 preview recommended[/]");
+            {
+                AnsiConsole.MarkupLine($"  .NET SDK: [yellow]Active ({Markup.Escape(output)}) - .NET 10 preview recommended[/]");
+                dotnetOk = true;
+            }
             else
+            {
                 AnsiConsole.MarkupLine("  .NET 10 SDK: [red]Not Found[/]");
+            }
         }
         catch
         {
@@ -53,7 +63,10 @@ public static class DoctorCommand
         // 3. pnpm against the packageManager pin (#5331)
         bool pnpmOk = CheckPnpm();
 
-        // 4. PostgreSQL connectivity
+        // 4. detect-secrets guardrail tool (.cadence/venv, PATH, or uvx)
+        bool detectSecretsOk = CheckDetectSecrets();
+
+        // 5. PostgreSQL connectivity
         try
         {
             using var client = new TcpClient();
@@ -69,7 +82,21 @@ public static class DoctorCommand
             AnsiConsole.MarkupLine("  PostgreSQL (5432): [grey]Unreachable[/]");
         }
 
-        return pnpmOk ? 0 : 1;
+        return dotnetOk && pnpmOk && detectSecretsOk ? 0 : 1;
+    }
+
+    private static bool CheckDetectSecrets()
+    {
+        var tool = DetectSecretsGateService.ResolveTool(QualityGateOrchestrator.FindRepoRoot());
+        if (tool is not null)
+        {
+            AnsiConsole.MarkupLine($"  detect-secrets: [green]{Markup.Escape(tool.Version)} ({Markup.Escape(tool.Source)})[/]");
+            return true;
+        }
+
+        AnsiConsole.MarkupLine(
+            $"  detect-secrets: [red]Missing[/] (run './scripts/setup_wizard.sh --minimal' or 'python3 -m venv .cadence/venv && .cadence/venv/bin/python -m pip install --upgrade pip detect-secrets=={DetectSecretsGateService.PinnedVersion}')");
+        return false;
     }
 
     private static bool CheckPnpm()
@@ -78,8 +105,9 @@ public static class DoctorCommand
         string? installed = null;
         try
         {
-            var psi = new ProcessStartInfo("pnpm", "--version") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
-            using var p = Process.Start(psi);
+            var psi = new ProcessStartInfo("pnpm") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+            psi.ArgumentList.Add("--version");
+            using var p = PosixScriptProcessHelper.StartWithPosixScriptFallback(psi);
             if (p is not null)
             {
                 string output = p.StandardOutput.ReadToEnd().Trim();

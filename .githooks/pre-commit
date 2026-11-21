@@ -1,64 +1,29 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # ==============================================================================
 # Cadence Clinical Platform - Automated Git Pre-Commit Hook
-# Validates Prettier formatting, C# code formatting and the Cadence quality gates (packages/cli/src/Services/QualityGates.cs).
-# Requirements: PRD-SYS-053, ADR-2233
+# Fail-closed POSIX launcher delegating all pre-commit guardrails to Cadence CLI.
 # ==============================================================================
 
-set -euo pipefail
+set -eu
 
-# Ensure local .NET installation is in PATH
-if [ -d "$HOME/.dotnet" ]; then
-    export DOTNET_ROOT="${DOTNET_ROOT:-$HOME/.dotnet}"
-    export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
+if [ -d "${HOME:-}/.dotnet" ]; then
+    DOTNET_ROOT="${DOTNET_ROOT:-$HOME/.dotnet}"
+    export DOTNET_ROOT
+    PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
+    export PATH
 fi
 
-echo "[Pre-Commit] Executing Cadence Quality Sentinels & Policy Gates..."
-
-# Secret scanning of staged files against .secrets.baseline (issue #4765).
-if command -v detect-secrets-hook >/dev/null 2>&1; then
-    staged_files=()
-    while IFS= read -r -d '' file; do
-        staged_files+=("$file")
-    done < <(git diff --cached --name-only --diff-filter=ACMR -z)
-    if [ "${#staged_files[@]}" -gt 0 ]; then
-        # File exclusions come from the baseline itself; passing extra flags would rewrite it.
-        detect-secrets-hook --baseline .secrets.baseline "${staged_files[@]}"
-    fi
-else
-    echo "::warning:: detect-secrets not installed (pip install detect-secrets==1.5.0); secret scan skipped."
-fi
-
-if command -v pnpm >/dev/null 2>&1; then
-    # A pnpm that cannot start is not a formatting failure (#5331).
-    if ! pnpm --version >/dev/null 2>&1; then
-        echo "::error:: pnpm is installed but cannot run. Run 'corepack enable' so pnpm follows the packageManager pin in package.json."
-        exit 1
-    fi
-    mapfile -t staged_prettier < <(git diff --cached --name-only --diff-filter=ACMR -- '*.js' '*.jsx' '*.ts' '*.tsx' '*.vue' '*.json' '*.css' '*.md' '*.yaml' '*.yml')
-    if [ "${#staged_prettier[@]}" -gt 0 ]; then
-        if ! pnpm exec prettier --check "${staged_prettier[@]}"; then
-            echo "::error:: Prettier formatting violations detected! Run 'pnpm format' to auto-fix."
-            exit 1
-        fi
-    fi
-else
-    echo "::warning:: pnpm not found; Prettier check skipped."
-fi
-
-if command -v dotnet >/dev/null 2>&1; then
-    # Format only the staged C# files; CI and 'pnpm cadence check' cover the whole solution.
-    mapfile -t staged_cs < <(git diff --cached --name-only --diff-filter=ACMR -- '*.cs')
-    if [ "${#staged_cs[@]}" -gt 0 ]; then
-        if ! dotnet format Cadence.sln --verify-no-changes --include "${staged_cs[@]}"; then
-            echo "::error:: C# formatting, style or analyzer violations detected! Run 'dotnet format Cadence.sln' to auto-fix."
-            exit 1
-        fi
-    fi
-    node scripts/run-cli.js check --pre-commit
-else
-    echo "::error:: .NET SDK not found. Please install .NET 10 SDK to run Cadence quality gates."
+if ! command -v node >/dev/null 2>&1; then
+    echo "::error:: Node.js ('node') was not found on PATH. Run './scripts/setup_wizard.sh' (or './scripts/setup_wizard.ps1' on Windows) to configure required pre-commit tools." >&2
     exit 1
 fi
 
-echo "[Pre-Commit] All quality sentinels passed."
+if ! command -v dotnet >/dev/null 2>&1; then
+    echo "::error:: .NET SDK ('dotnet') was not found on PATH. Install the .NET 10 SDK to run Cadence pre-commit quality gates." >&2
+    exit 1
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "$REPO_ROOT"
+
+exec node scripts/run-cli.js check --pre-commit
