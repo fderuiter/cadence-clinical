@@ -13,11 +13,10 @@ declare global {
 }
 
 export function getBaseUrl(): string {
-  const configured = import.meta.env?.VITE_API_BASE_URL;
+  const env = import.meta.env as Record<string, string | undefined> | undefined;
+  const configured = env?.VITE_API_BASE_URL;
   if (configured) return configured;
-  const isDemo =
-    import.meta.env?.MODE === "demo" ||
-    import.meta.env?.VITE_DEMO_MODE === "true";
+  const isDemo = env?.MODE === "demo" || env?.VITE_DEMO_MODE === "true";
   if (
     isDemo &&
     typeof globalThis.location?.origin === "string" &&

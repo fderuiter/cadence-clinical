@@ -11,9 +11,11 @@ const hasExplicitFullStackTarget = process.argv.some(
 );
 
 const isAccessibilityOnly =
-  process.env.E2E_KEYCLOAK !== "true" &&
-  process.env.RECORD_VIDEO !== "true" &&
-  !hasExplicitFullStackTarget;
+  process.env.CADENCE_TEST_BROWSER === "1" ||
+  process.argv.some((arg) => arg.includes("accessibility")) ||
+  (process.env.E2E_KEYCLOAK !== "true" &&
+    process.env.RECORD_VIDEO !== "true" &&
+    !hasExplicitFullStackTarget);
 
 const accessibilityProject = {
   name: "accessibility",

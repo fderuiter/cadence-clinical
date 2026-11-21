@@ -77,6 +77,7 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<KernelAuditChainVerifier>();
         services.TryAddSingleton<IAttestationVerifier, KernelAttestationVerifier>();
         services.TryAddSingleton<IEnrollmentDirectory, KernelEnrollmentDirectory>();
+        services.TryAddSingleton<IStudyDirectory, KernelStudyDirectory>();
         services.TryAddSingleton<IAuthorityStore, KernelAuthorityStore>();
         services.TryAddSingleton<IProtocolVersionReader, KernelProtocolVersionReader>();
         services.TryAddSingleton<IProposalReader, KernelProposalReader>();

@@ -18,9 +18,6 @@ passing_trx='<TestRun><Results><UnitTestResult testName="Kernel.Passes" outcome=
 
 benchmark_only_trx='<TestRun><Results>
 <UnitTestResult testName="LineageBenchmarkPostgresTests.BenchmarkTenMillionEdgesTraceLatency" outcome="NotExecuted" />
-</Results></TestRun>'
-
-benchmark_display_name_trx='<TestRun><Results>
 <UnitTestResult testName="Benchmark_TenMillionEdges_TraceLatency" outcome="NotExecuted" />
 </Results></TestRun>'
 
@@ -58,7 +55,6 @@ expect() {
 expect "fails on a skipped database test" 1 "$(new_tree skipped "$skipped_trx" "$passing_trx")"
 expect "passes when every database test executed" 0 "$(new_tree passing "$passing_trx" "$passing_trx")"
 expect "ignores the opt-in lineage benchmark" 0 "$(new_tree benchmark "$benchmark_only_trx" "$passing_trx")"
-expect "ignores the opt-in lineage benchmark DisplayName" 0 "$(new_tree benchmark_display "$benchmark_display_name_trx" "$passing_trx")"
 expect "ignores the opt-in browser correction check" 0 "$(new_tree browser_optin "$browser_optin_trx" "$passing_trx")"
 expect "fails when Cadence.E2ETests produces no TRX report" 1 "$(new_tree missing_e2e "$passing_trx" "")"
 expect "fails when Cadence.IntegrationTests produces no TRX report" 1 "$(new_tree missing_integration "" "$passing_trx")"
