@@ -140,7 +140,13 @@ const routerLinkComponent = instance?.appContext.components.RouterLink;
 const fallbackPlansHref = `${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}plans`;
 
 const studyCode = ref(props.studyCode || store.activeStudyId);
-const siteCode = ref(store.activeSiteId);
+const siteCode = ref(
+  props.studyCode &&
+    store.activeStudyId &&
+    store.activeStudyId !== props.studyCode
+    ? ""
+    : store.activeSiteId
+);
 const compliance = ref(null);
 const checked = ref(false);
 const loading = ref(false);

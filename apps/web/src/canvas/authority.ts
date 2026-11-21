@@ -7,9 +7,12 @@ interface RoleHolder {
   hasRole: (role: string) => boolean;
 }
 
-/** The realm roles exactly as the gateway signs them to Execution. */
+/** The realm roles and active persona/site claims as signed by the gateway to Execution. */
 interface RawRoleHolder {
   rawRoles?: readonly string[] | null;
+  currentPersona?: string | null;
+  assignedSiteIds?: readonly string[] | null;
+  siteIds?: readonly string[] | null;
 }
 
 /**
@@ -36,11 +39,48 @@ const PARTICIPANT_ROLES = new Set([
   "clinical research coordinator",
 ]);
 
-/** Add participants and change their state. */
-export function canManageParticipants(auth: RawRoleHolder): boolean {
+/** Whether the caller's token carries a raw coordinator/investigator role accepted by Execution. */
+export function holdsParticipantRole(auth: RawRoleHolder): boolean {
   return (auth.rawRoles ?? []).some((role) =>
     PARTICIPANT_ROLES.has(role.trim().toLowerCase())
   );
+}
+
+/**
+ * Add participants and change their state. Sponsor lenses (`super_admin`, `sponsor_designer`, `data_manager`)
+ * stay read-only for participant records; when a workspace persona is active, switching to the Site Coordinator
+ * lens (`site_crc`) reveals participant mutations for authorized site staff.
+ */
+export function canManageParticipants(auth: RawRoleHolder): boolean {
+  if (!holdsParticipantRole(auth)) return false;
+  if (auth.currentPersona && auth.currentPersona !== "site_crc") {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Filters candidate site codes to those authorized by the caller's explicit `site_id` claims (`SiteAccessEvaluator`).
+ * When the caller has no explicit `site_id` restriction, returns `availableSiteCodes` unchanged.
+ */
+export function authorizedParticipantSiteCodes(
+  auth: RawRoleHolder,
+  availableSiteCodes: readonly string[]
+): string[] {
+  const assigned = (auth.assignedSiteIds ?? auth.siteIds ?? [])
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && s !== "*");
+  if (assigned.length === 0) {
+    return [...availableSiteCodes];
+  }
+  const assignedLower = new Set(assigned.map((s) => s.toLowerCase()));
+  if (availableSiteCodes.length === 0) {
+    return assigned;
+  }
+  const matched = availableSiteCodes.filter((code) =>
+    assignedLower.has(code.trim().toLowerCase())
+  );
+  return matched.length > 0 ? matched : assigned;
 }
 
 // Execution's query lifecycle roles (ClinicalQueryApplicationService.IsAuthorizedCraOrDm).
@@ -69,6 +109,6 @@ export function canCorrectObservations(
   auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
 ): boolean {
   if (!auth.isAuthenticated) return true;
-  if (canManageParticipants(auth)) return true;
+  if (holdsParticipantRole(auth)) return true;
   return OBSERVATION_CORRECTION_ROLES.some((role) => auth.hasRole(role));
 }

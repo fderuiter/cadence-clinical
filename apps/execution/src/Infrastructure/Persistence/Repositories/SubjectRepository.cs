@@ -28,6 +28,8 @@ public sealed class SubjectRepository(ExecutionDbContext context)
 {
     public async Task<int> EnrollNextIndexAsync(StudyCode studyCode, CancellationToken cancellationToken)
     {
+        EnsureVerifiedTenantContext();
+
         if (Context.Database.IsRelational() && Context.Database.CurrentTransaction is null)
         {
             // Outside a transaction the advisory lock would be released as soon as its statement ended.
@@ -35,15 +37,21 @@ public sealed class SubjectRepository(ExecutionDbContext context)
                 $"{nameof(EnrollNextIndexAsync)} must run inside {nameof(ExecuteInTransactionAsync)}, which holds the per-study lock until the insert commits.");
         }
 
+        Guid? relationalTenantFilter = Context.ActiveRelationalTenantFilter;
+
         if (Context.Database.IsNpgsql())
         {
+            FormattableString lockSql = Context.ActiveBoundTenantId is { } activeTenantId
+                ? AdvisoryLockSql.ForStudy(activeTenantId, studyCode)
+                : AdvisoryLockSql.ForStudy(studyCode);
             await Context.Database
-                .ExecuteSqlInterpolatedAsync(AdvisoryLockSql.ForStudy(studyCode), cancellationToken)
+                .ExecuteSqlInterpolatedAsync(lockSql, cancellationToken)
                 .ConfigureAwait(false);
         }
 
         int? maxIndex = await Context.ClinicalSubjects.AsNoTracking()
-            .Where(s => s.StudyCode == studyCode)
+            .Where(s => s.StudyCode == studyCode
+                && (relationalTenantFilter == null || s.TenantId == relationalTenantFilter))
             .Select(s => (int?)s.EnrollmentIndex)
             .MaxAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -53,41 +61,55 @@ public sealed class SubjectRepository(ExecutionDbContext context)
 
     public async Task<ClinicalSubject?> GetByIdAsync(string id, CancellationToken cancellationToken)
     {
+        EnsureVerifiedTenantContext();
+
         if (!Guid.TryParse(id, out var guid))
         {
             return null;
         }
 
         var subjectId = new SubjectId(guid);
+        Guid? relationalTenantFilter = Context.ActiveRelationalTenantFilter;
 
         // Tracked (not AsNoTracking): callers such as SubjectApplicationService.AdvanceStateAsync load via
         // this method, call a mutating domain method on the result, and persist the change through a
         // subsequent SaveChangesAsync with no intervening Attach/Update call (02_technical_design.md §3.2) --
         // that flow only works if the returned entity is tracked by this repository's ExecutionDbContext.
         return await Context.ClinicalSubjects
-            .SingleOrDefaultAsync(s => s.Id == subjectId, cancellationToken)
+            .SingleOrDefaultAsync(
+                s => s.Id == subjectId && (relationalTenantFilter == null || s.TenantId == relationalTenantFilter),
+                cancellationToken)
             .ConfigureAwait(false);
     }
 
     public async Task<ClinicalSubject?> GetByCodeAsync(string code, CancellationToken cancellationToken)
     {
+        EnsureVerifiedTenantContext();
+
         if (string.IsNullOrWhiteSpace(code))
         {
             return null;
         }
 
         var subjectCode = new SubjectCode(code);
+        Guid? relationalTenantFilter = Context.ActiveRelationalTenantFilter;
 
         // Tracked -- see GetByIdAsync's comment; the same load-then-mutate-then-save flow applies here.
         return await Context.ClinicalSubjects
-            .SingleOrDefaultAsync(s => s.SubjectCode == subjectCode, cancellationToken)
+            .SingleOrDefaultAsync(
+                s => s.SubjectCode == subjectCode && (relationalTenantFilter == null || s.TenantId == relationalTenantFilter),
+                cancellationToken)
             .ConfigureAwait(false);
     }
 
     public async Task<SubjectPage> ListAsync(SubjectListCriteria criteria, CancellationToken cancellationToken)
     {
+        EnsureVerifiedTenantContext();
+        Guid? relationalTenantFilter = Context.ActiveRelationalTenantFilter;
+
         var query = Context.ClinicalSubjects.AsNoTracking()
-            .Where(s => s.StudyCode == criteria.StudyCode);
+            .Where(s => s.StudyCode == criteria.StudyCode
+                && (relationalTenantFilter == null || s.TenantId == relationalTenantFilter));
 
         if (criteria.SiteCode is { } siteCode)
         {
@@ -136,6 +158,22 @@ public sealed class SubjectRepository(ExecutionDbContext context)
             .Replace("%", "\\%", StringComparison.Ordinal)
             .Replace("_", "\\_", StringComparison.Ordinal);
 
-    public async Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken) =>
+    public async Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken)
+    {
+        EnsureVerifiedTenantContext();
+        if (Context.ActiveBoundTenantId is { } tenantId)
+        {
+            subject.TenantId = tenantId;
+        }
+
         await Context.ClinicalSubjects.AddAsync(subject, cancellationToken).ConfigureAwait(false);
+    }
+
+    private void EnsureVerifiedTenantContext()
+    {
+        if (Context.HasUnverifiedRequestTenant)
+        {
+            throw new InvalidOperationException("Verified workspace tenant context is required for subject persistence.");
+        }
+    }
 }

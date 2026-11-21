@@ -9,6 +9,7 @@ export type StageId =
 
 export type SectionId =
   | "protocol-versions"
+  | "sites"
   | "site-activation"
   | "participants"
   | "queries"
@@ -49,6 +50,12 @@ export const STAGES: readonly Stage[] = [
     label: "Start",
     scope: "Countries, site activation, essential documents, training",
     sections: [
+      {
+        id: "sites",
+        label: "Sites",
+        description:
+          "Investigational sites linked to this study, site institutions, and country registrations",
+      },
       {
         id: "site-activation",
         label: "Site activation",

@@ -69,12 +69,41 @@ export interface StudySiteOption {
 }
 
 /**
- * Visible study sites for `studyCode` from the kernel's zoom children (`study_site`), ordered by site code.
+ * Visible study sites for `studyCode` from the kernel's study-site directory (or zoom children fallback), ordered by site code.
  * Returns an empty list when the kernel has no visible study or study sites for the caller.
  */
 export async function findStudySites(
   studyCode: string
 ): Promise<StudySiteOption[]> {
+  if (typeof kernelApi.listStudySites === "function") {
+    try {
+      const linked = await kernelApi.listStudySites(studyCode);
+      if (Array.isArray(linked) && linked.length > 0) {
+        const byCode = new Map<string, StudySiteOption>();
+        for (const item of linked) {
+          const code = item.site_code?.trim();
+          if (!code || byCode.has(code)) continue;
+          const name = item.site_name?.trim();
+          const country = item.country?.trim();
+          const detail =
+            name && name !== code
+              ? country
+                ? `${name} (${country})`
+                : name
+              : country || "";
+          byCode.set(code, {
+            code,
+            label: detail ? `${code} — ${detail}` : code,
+          });
+        }
+        return Array.from(byCode.values()).sort((a, b) =>
+          a.code.localeCompare(b.code)
+        );
+      }
+    } catch {
+      // Fall back to zoom-children lookup when study-sites endpoint is unavailable or mocked out.
+    }
+  }
   if (typeof kernelApi.getChildren !== "function") return [];
   const studyRef = await findKernelStudyRef(studyCode);
   if (!studyRef) return [];

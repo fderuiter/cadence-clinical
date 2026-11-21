@@ -35,6 +35,11 @@ public sealed class SiteComplianceCacheConfiguration : IEntityTypeConfiguration<
         // HasConversion needed. Introducing a SiteComplianceCacheId wrapper would touch the domain
         // aggregate itself, which is out of scope for this persistence-mapping ticket.
 
+        builder.Property(x => x.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uuid")
+            .IsRequired();
+
         builder.Property(x => x.StudyCode)
             .HasConversion(c => c.Value, v => new StudyCode(v))
             .HasMaxLength(255)
@@ -46,6 +51,10 @@ public sealed class SiteComplianceCacheConfiguration : IEntityTypeConfiguration<
             .IsRequired();
 
         builder.Property(x => x.Milestone).HasMaxLength(255).IsRequired();
+
+        builder.HasIndex(x => new { x.TenantId, x.StudyCode, x.SiteCode, x.Milestone })
+            .IsUnique()
+            .HasDatabaseName("IX_site_compliance_caches_tenant_id_StudyCode_SiteCode_Milestone");
 
         // `missing_documents` was a comma-joined string in the legacy SQLAlchemy model — a storage
         // artifact, not an observable API contract (ComplianceStatusResponse.MissingDocuments is already

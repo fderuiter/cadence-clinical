@@ -169,7 +169,7 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
             await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
 
-        foreach (string code in new[] { "tenant-test", "tenant-alpha", "tenant-beta", "tenant-a", "tenant-b" })
+        foreach (string code in new[] { "cadence-local", "tenant-test", "tenant-alpha", "tenant-beta", "tenant-a", "tenant-b" })
         {
             Guid id = DeterministicTenantCodeResolver.ComputeDeterministicGuid(code);
             await using var ins = conn.CreateCommand();

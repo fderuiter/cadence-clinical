@@ -176,8 +176,8 @@ public sealed class CommercialAndOnboardingUnitTests
         BaselineKernelCommandAttribute.IsBaseline(typeof(RecordObservation)).Should().BeFalse();
     }
 
-    [Fact(DisplayName = "HttpKeycloakOnboardingClient_WritesTenantClaimStudyWildcardAndSponsorRoles_PreservingUserFields")]
-    public async Task HttpKeycloakOnboardingClientWritesTenantClaimStudyWildcardAndSponsorRolesPreservingUserFields()
+    [Fact(DisplayName = "HttpKeycloakOnboardingClient_WritesTenantClaimExplicitSiteAndStudyScopesWithoutWildcard_PreservingUserFields")]
+    public async Task HttpKeycloakOnboardingClientWritesTenantClaimExplicitSiteAndStudyScopesWithoutWildcardPreservingUserFields()
     {
         var ct = TestContext.Current.CancellationToken;
         string subjectId = "4e999999-1111-4444-8888-999999999999";
@@ -204,11 +204,14 @@ public sealed class CommercialAndOnboardingUnitTests
 
         await using var provider = services.BuildServiceProvider();
         var client = provider.GetRequiredService<IKeycloakOnboardingClient>();
+        var scopeSync = provider.GetRequiredService<IKernelIdentityScopeSynchronizer>();
 
         await client.AssignTrialWorkspaceAsync(
             subjectId,
             tenantCode,
-            ["Sponsor Admin", "Sponsor Designer"],
+            ["Sponsor Admin", "Sponsor Designer", "Site Investigator"],
+            ["SITE-MERIDIAN"],
+            [],
             ct);
 
         handler.TokenRequested.Should().BeTrue();
@@ -218,8 +221,14 @@ public sealed class CommercialAndOnboardingUnitTests
         handler.UpdatedUserJson["email"]!.GetValue<string>().Should().Be("founder@meridian.example");
         handler.UpdatedUserJson["firstName"]!.GetValue<string>().Should().Be("Elena");
         handler.UpdatedUserJson["attributes"]!["tenant_id"]![0]!.GetValue<string>().Should().Be(tenantCode);
-        handler.UpdatedUserJson["attributes"]!["study_ids"]![0]!.GetValue<string>().Should().Be("*");
-        handler.AssignedRoleNames.Should().Equal("Sponsor Admin", "Sponsor Designer");
+        handler.UpdatedUserJson["attributes"]!["site_id"]![0]!.GetValue<string>().Should().Be("SITE-MERIDIAN");
+        handler.UpdatedUserJson["attributes"]!["study_ids"].Should().BeNull("trial onboarding never grants wildcard '*' study_ids");
+        handler.AssignedRoleNames.Should().Equal("Sponsor Admin", "Sponsor Designer", "Site Investigator");
+
+        await scopeSync.GrantStudyScopeAsync(Actor.Person(subjectId), TenantId.New(), tenantCode, "MERIDIAN-101", ct);
+        handler.UpdatedUserJson["attributes"]!["study_ids"]![0]!.GetValue<string>().Should().Be("MERIDIAN-101");
+        handler.UpdatedUserJson["attributes"]!["study_ids"]!.AsArray().Select(n => n!.GetValue<string>())
+            .Should().NotContain("*");
     }
 
     private sealed class FixedActor(Actor actor) : ICurrentActor
