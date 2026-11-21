@@ -131,6 +131,7 @@ app.MapKernelApi()
     .MapKernelReads()
     .MapKernelStudyImports()
     .MapKernelObservations()
+    .MapKernelExecution()
     .MapKernelProposals()
     .MapKernelEntitlements()
     .MapTrialOnboarding();

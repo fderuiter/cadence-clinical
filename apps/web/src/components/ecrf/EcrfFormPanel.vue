@@ -108,7 +108,7 @@
         />
         <label for="ecrf-planned-activity">Visit (planned activity)</label>
         <select
-          v-if="enrollmentContext && structuredActivities.length > 0"
+          v-if="enrollmentContext && hasProtocolSchedule"
           id="ecrf-planned-activity"
           v-model="plannedActivityId"
         >
@@ -934,6 +934,7 @@ import {
   getCurrentInstance,
   nextTick,
   onMounted,
+  onUnmounted,
   reactive,
   ref,
   watch,
@@ -1077,16 +1078,21 @@ const effectiveScheduleError = computed(() =>
 const structuredSpecs = computed(
   () => props.enrollmentContext?.collectionSpecs ?? []
 );
+const hasProtocolSchedule = computed(
+  () => (props.enrollmentContext?.plannedActivities?.length ?? 0) > 0
+);
 const structuredActivities = computed(() => {
   const all = props.enrollmentContext?.plannedActivities ?? [];
   if (!all.length) return [];
   const selectedSpec = structuredSpecs.value.find(
     (s) => s.id === collectionSpecId.value
   );
-  if (!selectedSpec?.plannedActivityIds?.length) return all;
+  if (!selectedSpec || !Array.isArray(selectedSpec.plannedActivityIds)) {
+    return all;
+  }
+  if (selectedSpec.plannedActivityIds.length === 0) return [];
   const scheduled = new Set(selectedSpec.plannedActivityIds);
-  const matching = all.filter((a) => scheduled.has(a.id));
-  return matching.length > 0 ? matching : all;
+  return all.filter((a) => scheduled.has(a.id));
 });
 
 function activityLabel(activity: StudyPlannedActivityOption): string {
@@ -1106,10 +1112,24 @@ watch(
   }
 );
 
+watch(
+  () => props.collectionSpecId,
+  (next) => {
+    collectionSpecId.value = next ?? "";
+  }
+);
+
+watch(
+  () => props.plannedActivityId,
+  (next) => {
+    plannedActivityId.value = next ?? "";
+  }
+);
+
 watch(structuredActivities, (allowed) => {
   if (
     plannedActivityId.value &&
-    allowed.length > 0 &&
+    hasProtocolSchedule.value &&
     !allowed.some((a) => a.id === plannedActivityId.value)
   ) {
     plannedActivityId.value = "";
@@ -1596,6 +1616,9 @@ defineExpose({ dirty, form });
 
 // The view guards navigation while a page has unsaved entries.
 watch(dirty, (value) => emit("dirty-change", value));
+onUnmounted(() => {
+  if (dirty.value) emit("dirty-change", false);
+});
 </script>
 
 <style scoped>

@@ -9,6 +9,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
+using Cadence.Modules.Execution.Domain;
 using Cadence.Modules.Execution.Infrastructure;
 using Cadence.Security.DependencyInjection;
 
@@ -76,7 +77,8 @@ internal static class FormEndpoints
         HttpContext context,
         ICollectionInstanceRecords forms,
         IKernelReadAccess access,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromServices] IModuleTenantContextFactory<ExecutionModuleDbContext>? contexts = null)
     {
         if (enrollmentId is not { } id || id == Guid.Empty)
         {
@@ -94,7 +96,35 @@ internal static class FormEndpoints
         }
 
         var summaries = await forms.ListForEnrollmentAsync(tenant, enrollment, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([.. summaries.Select(FormSummaryResponse.From)]);
+        if (summaries.Count == 0 || contexts is null)
+        {
+            return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([.. summaries.Select(s => FormSummaryResponse.From(s))]);
+        }
+
+        Dictionary<CollectionInstanceId, (int Open, int Answered)> queryCounts;
+        await using (var db = contexts.Create(tenant))
+        {
+            var activeQueries = await db.FormQueries.AsNoTracking()
+                .Where(q => q.EnrollmentId == enrollment && (q.Status == FormQueryStatus.Open || q.Status == FormQueryStatus.Answered))
+                .Select(q => new { q.FormId, q.Status })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            queryCounts = activeQueries
+                .GroupBy(q => q.FormId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => (
+                        Open: g.Count(x => x.Status == FormQueryStatus.Open),
+                        Answered: g.Count(x => x.Status == FormQueryStatus.Answered)));
+        }
+
+        return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([
+            .. summaries.Select(s =>
+            {
+                var (openCount, answeredCount) = queryCounts.GetValueOrDefault(s.CollectionInstanceId);
+                return FormSummaryResponse.From(s, openCount, answeredCount);
+            }),
+        ]);
     }
 
     internal static async Task<Results<Created<FormStateResponse>, ProblemHttpResult>> OpenAsync(

@@ -37,10 +37,13 @@
 
     <template v-else>
       <ParticipantFormsPanel
+        :study-code="canvas.studyCode"
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
         :form-location="formLocation"
         :new-form-location="newFormLocation"
+        :new-form-cell-location="newFormCellLocation"
+        :handoff-location="handoffLocation"
       />
 
       <QueriesPanel
@@ -73,6 +76,11 @@ defineProps<{
   canManage: boolean;
   formLocation: (formId: string) => RouteLocationRaw;
   newFormLocation: RouteLocationRaw;
+  newFormCellLocation?: (
+    collectionSpecId: string,
+    plannedActivityId?: string | null
+  ) => RouteLocationRaw;
+  handoffLocation?: RouteLocationRaw | null;
   observationLocation: (
     observationId: string,
     formId: string
