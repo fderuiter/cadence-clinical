@@ -11,7 +11,6 @@ import { watch } from "vue";
 import { state } from "../stores/state.js";
 import {
   clearInMemoryKey,
-  clearSessionKey,
   clearSessionKeyFromDB,
   getInMemorySessionKey,
   getWrappedMasterKeyConfig,
@@ -443,7 +442,7 @@ export function watchUserIdentity() {
 // User logout clears cached OIDC identity, active in-memory PIN key, and session state.
 export async function logout() {
   portalSessionCoordinator.beginVoluntaryLogout();
-  const wasDemo = isDemoModeActive();
+  const wasDemo = Boolean(state.session.isDemoMode);
   state.authError = "";
   state.session.sessionExpired = false;
 
@@ -461,8 +460,7 @@ export async function logout() {
   }
 
   const prevUserId = state.session.userId;
-  clearSessionKey(prevUserId);
-  await clearSessionKeyFromDB(prevUserId);
+  clearInMemoryKey();
 
   state.pinSetup.isOpen = false;
   state.pinSetup.pin = "";
@@ -507,6 +505,8 @@ export async function logout() {
     renderCompliance();
     renderInbox();
   }
+
+  await clearSessionKeyFromDB(prevUserId);
 
   if (
     typeof window !== "undefined" &&

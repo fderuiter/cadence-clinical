@@ -67,45 +67,50 @@ export default defineConfig(({ mode }) => ({
         }
       },
     },
-    {
-      name: "e2e-module-entrypoints",
-      apply: "build",
-      config(userConfig) {
-        if (userConfig.build?.outDir !== "node_modules/.e2e-prod") {
-          return undefined;
-        }
-        return {
-          build: {
-            rollupOptions: {
-              preserveEntrySignatures: "exports-only",
-              input: {
-                main: path.resolve(__dirname, "index.html"),
-                "src/index": path.resolve(__dirname, "src/index.js"),
-                "src/sync-queue": path.resolve(__dirname, "src/sync-queue.js"),
-              },
-              output: {
-                entryFileNames: (chunkInfo) =>
-                  chunkInfo.name.startsWith("src/")
-                    ? "[name].js"
-                    : "assets/[name]-[hash].js",
-              },
-            },
-          },
-        };
-      },
-      transformIndexHtml: {
-        order: "post",
-        handler(html, ctx) {
-          if (ctx.bundle && html.includes("/subject-portal/assets/main-")) {
-            return html.replace(
-              "</body>",
-              '<script type="module">import "/subject-portal/src/index.js";import "/subject-portal/src/sync-queue.js";</script></body>'
-            );
-          }
-          return html;
+    (() => {
+      let isE2eProd = false;
+      const indexEntry = path.resolve(__dirname, "src/index.js");
+      const syncQueueEntry = path.resolve(__dirname, "src/sync-queue.js");
+      return {
+        name: "e2e-module-entrypoints",
+        apply: "build",
+        configResolved(resolved) {
+          isE2eProd = resolved.build?.outDir === "node_modules/.e2e-prod";
         },
-      },
-    },
+        transform(code, id) {
+          if (!isE2eProd) return null;
+          const cleanId = id.split("?")[0];
+          if (cleanId === indexEntry) {
+            return {
+              code: `${code}\nglobalThis.__CADENCE_E2E_INDEX__ = { state, refreshSubmissionsState, syncOfflineQueue, checkPINWrapper };\nconst __cadenceE2eBase = "/subject-portal/src";\nvoid import(/* @vite-ignore */ \`\${__cadenceE2eBase}/index.js\`).catch(() => {});\nvoid import(/* @vite-ignore */ \`\${__cadenceE2eBase}/sync-queue.js\`).catch(() => {});\n`,
+              map: null,
+            };
+          }
+          if (cleanId === syncQueueEntry) {
+            return {
+              code: `${code}\nglobalThis.__CADENCE_E2E_SYNC_QUEUE__ = { queueSubmission, clearSessionKey };\n`,
+              map: null,
+            };
+          }
+          return null;
+        },
+        generateBundle() {
+          if (!isE2eProd) return;
+          this.emitFile({
+            type: "asset",
+            fileName: "src/index.js",
+            source:
+              "const m = globalThis.__CADENCE_E2E_INDEX__;\nexport const { state, refreshSubmissionsState, syncOfflineQueue, checkPINWrapper } = m;\n",
+          });
+          this.emitFile({
+            type: "asset",
+            fileName: "src/sync-queue.js",
+            source:
+              "const m = globalThis.__CADENCE_E2E_SYNC_QUEUE__;\nexport const { queueSubmission, clearSessionKey } = m;\n",
+          });
+        },
+      };
+    })(),
     createStripMockWorkerInProdPlugin(__dirname),
     createDemoFixturesPlugin(__dirname),
   ],

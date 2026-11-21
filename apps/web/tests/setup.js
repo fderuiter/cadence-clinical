@@ -44,6 +44,42 @@ class LocalStorageMock {
 const localStorageInstance = new LocalStorageMock();
 const sessionStorageInstance = new LocalStorageMock();
 
+const eventTargetProtos = new Set(
+  [
+    typeof EventTarget !== "undefined" ? EventTarget.prototype : null,
+    typeof window !== "undefined" ? window.EventTarget?.prototype : null,
+  ].filter((proto) => proto && typeof proto.dispatchEvent === "function")
+);
+
+for (const proto of eventTargetProtos) {
+  const origDispatchEvent = proto.dispatchEvent;
+  proto.dispatchEvent = function (event) {
+    if (event && typeof event._vts === "number") {
+      let node = this;
+      while (node && typeof node === "object") {
+        for (const sym of Object.getOwnPropertySymbols(node)) {
+          if (sym.description === "_vei") {
+            const invokers = node[sym];
+            if (invokers && typeof invokers === "object") {
+              for (const inv of Object.values(invokers)) {
+                if (
+                  inv &&
+                  typeof inv.attached === "number" &&
+                  event._vts <= inv.attached
+                ) {
+                  event._vts = inv.attached + 1;
+                }
+              }
+            }
+          }
+        }
+        node = node.parentNode || null;
+      }
+    }
+    return origDispatchEvent.call(this, event);
+  };
+}
+
 if (typeof window !== "undefined") {
   Object.defineProperty(window, "localStorage", {
     value: localStorageInstance,

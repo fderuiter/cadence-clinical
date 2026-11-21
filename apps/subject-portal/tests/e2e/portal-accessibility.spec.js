@@ -2,6 +2,15 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 async function completeInitialPinSetupIfOpen(page) {
+  const skipLink = page.locator("#app .skip-link");
+  const attached = await skipLink
+    .waitFor({ state: "attached", timeout: 5000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!attached) {
+    await page.reload();
+    await skipLink.waitFor({ state: "attached", timeout: 10000 });
+  }
   const pinSetupModal = page.locator("#portal-pin-setup-modal");
   const pinUnlockModal = page.locator("#portal-pin-unlock-modal");
   await Promise.race([
@@ -559,7 +568,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
   test("should pass WCAG 2.2 AA contrast and SC 1.4.11 >= 3:1 control border audits on demo-mode WalletView, ConsentView, and LaySummariesView", async ({
     page,
   }) => {
-    await page.goto("http://localhost:5175/subject-portal/");
+    await page.goto("http://127.0.0.1:5175/subject-portal/");
     await completeInitialPinSetupIfOpen(page);
 
     // 1. WalletView: gradient stipend card, receipt upload zone, and expense form controls

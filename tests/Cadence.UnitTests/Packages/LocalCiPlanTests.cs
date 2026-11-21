@@ -364,6 +364,34 @@ public partial class LocalCiPlanTests
     }
 
     [Fact]
+    public void ProductionPipeline_ForwardsCiEvidenceWhenNotDispatchedAndRunsTestsBeforeDeletingCommittedDocsOnDispatch()
+    {
+        string[] lines = File.ReadAllLines(Path.Combine(RepoRoot(), ".github", "workflows", "production-pipeline.yml"));
+        string raw = string.Join('\n', lines);
+
+        raw.Should().NotContain("github.event_name == 'workflow_call'",
+            "reusable workflows inherit the caller's push event_name in GitHub Actions");
+
+        var releaseJob = ParseWorkflow(lines).Single(j => j.Key == "release-and-archive");
+        var downloadStep = releaseJob.Steps.Single(s => s.Name == "Download Verified .NET Test Evidence");
+        var dispatchTestStep = releaseJob.Steps.Single(s => s.Name == "Execute .NET Test Suite (Manual Dispatch)");
+        var generateStep = releaseJob.Steps.Single(s => s.Name == "Generate GxP Reports");
+
+        downloadStep.If.Should().Be("github.event_name != 'workflow_dispatch'");
+        downloadStep.Uses.Should().Be("actions/download-artifact");
+        dispatchTestStep.If.Should().Be("github.event_name == 'workflow_dispatch'");
+        dispatchTestStep.Run.Should().Contain("dotnet test Cadence.sln")
+            .And.Contain("bash scripts/check-database-test-results.sh");
+
+        int dispatchIndex = releaseJob.Steps.IndexOf(dispatchTestStep);
+        int generateIndex = releaseJob.Steps.IndexOf(generateStep);
+        dispatchIndex.Should().BeLessThan(generateIndex,
+            "manual dispatch must run Cadence.UnitTests before committed docs/SDLC reports are deleted");
+        generateStep.Run.Should().Contain("rm -f docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md")
+            .And.Contain("node scripts/run-cli.js gxp snapshot --results-dir TestResults/gxp");
+    }
+
+    [Fact]
     public void AotRuntimeIdentifier_IsPortable()
     {
         CiPlan.AotRuntimeIdentifier.Should().MatchRegex("^(linux|osx|win)-(x64|arm64|x86|arm)$");

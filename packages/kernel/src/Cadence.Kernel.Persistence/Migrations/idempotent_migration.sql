@@ -1,4 +1,4 @@
-﻿DO $EF$
+DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -4221,49 +4221,49 @@ START TRANSACTION;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
     ALTER TABLE kernel.provenance_activities ADD proposal_id uuid;
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
     ALTER TABLE kernel.provenance_activities ADD requested_by character varying(256);
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
     ALTER TABLE kernel.proposals ADD requested_by_id character varying(256);
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
     CREATE INDEX "IX_provenance_activities_tenant_id_proposal_id" ON kernel.provenance_activities (tenant_id, proposal_id) WHERE proposal_id IS NOT NULL;
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
     ALTER TABLE kernel.proposals ADD CONSTRAINT ck_proposals_requested_by CHECK ((proposed_by_kind = 'AutomationAgent' AND requested_by_id IS NOT NULL AND char_length(requested_by_id) > 0) OR (proposed_by_kind <> 'AutomationAgent' AND requested_by_id IS NULL));
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
     DROP TRIGGER IF EXISTS "trg_proposals_immutable" ON "kernel"."proposals";
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
     CREATE TRIGGER "trg_proposals_immutable" BEFORE UPDATE ON "kernel"."proposals"
         FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_immutable_columns('id', 'tenant_id', 'study_id', 'intent', 'plan_artifact_version_id', 'affected', 'simulated_impact', 'requested_capabilities', 'expires_at', 'proposed_at', 'proposed_by_id', 'proposed_by_kind', 'model_id', 'content_hash', 'created_at', 'created_by', 'requested_by_id', 'confidence_score');
     END IF;
@@ -4271,9 +4271,9 @@ END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20261020031614_AgentRequesterAndProposalExecution', '10.0.15');
+    VALUES ('20261020031614_AgentRequesterAndProposalExecution', '10.0.15'); -- pragma: allowlist secret
     END IF;
 END $EF$;
 COMMIT;
@@ -4282,7 +4282,7 @@ START TRANSACTION;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
     CREATE TABLE kernel.subscriptions (
         id uuid NOT NULL,
         tenant_id uuid NOT NULL,
@@ -4304,7 +4304,7 @@ END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
     CREATE TABLE kernel.product_entitlements (
         id uuid NOT NULL,
         tenant_id uuid NOT NULL,
@@ -4326,28 +4326,28 @@ END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
     CREATE UNIQUE INDEX "IX_product_entitlements_tenant_id_family" ON kernel.product_entitlements (tenant_id, family);
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
     CREATE INDEX "IX_product_entitlements_tenant_id_subscription_id" ON kernel.product_entitlements (tenant_id, subscription_id);
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
     CREATE UNIQUE INDEX "IX_subscriptions_tenant_id" ON kernel.subscriptions (tenant_id);
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
     ALTER TABLE "kernel"."subscriptions" ENABLE ROW LEVEL SECURITY;
     ALTER TABLE "kernel"."subscriptions" FORCE ROW LEVEL SECURITY;
     CREATE POLICY "tenant_isolation" ON "kernel"."subscriptions"
@@ -4358,7 +4358,7 @@ END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
     ALTER TABLE "kernel"."product_entitlements" ENABLE ROW LEVEL SECURITY;
     ALTER TABLE "kernel"."product_entitlements" FORCE ROW LEVEL SECURITY;
     CREATE POLICY "tenant_isolation" ON "kernel"."product_entitlements"
@@ -4369,9 +4369,9 @@ END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20261120152149_CommercialSubscriptionsAndEntitlements', '10.0.15');
+    VALUES ('20261120152149_CommercialSubscriptionsAndEntitlements', '10.0.15'); -- pragma: allowlist secret
     END IF;
 END $EF$;
 COMMIT;
