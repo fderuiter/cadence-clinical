@@ -188,6 +188,189 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         hidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    /// <summary>
+    /// Casebook form summaries report missing-required counts (including when a blank item holds a <c>NotAsked</c>
+    /// missing-data query), open and answered query counts, source verification counts, signature and superseded-signature
+    /// status, and scoped freeze/lock coverage across scheduled, repeating, and unscheduled forms.
+    /// </summary>
+    [Fact(DisplayName = "HostForm_ListForEnrollment_ReportsCompletenessQueryVerificationLockAndSignatureSummaries")]
+    public async Task HostFormListForEnrollmentReportsCompletenessQueryVerificationLockAndSignatureSummaries()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        const string monitorUser = "cra@execution-forms.test";
+        const string investigatorUser = "pi@execution-forms.test";
+
+        var code = $"T-CASE-{Guid.NewGuid():N}"[..16];
+        var tenant = TenantId.New();
+        await _scenario.Protocol.OkAsync(
+            new ProvisionTenant(tenant, code, "Execution casebook summary tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+        var (_, study) = await _scenario.Protocol.NewStudyAsync(tenant, ct);
+        await _scenario.EffectiveVersionAsync(tenant, study, ct);
+        var studySite = await _scenario.Observations.AddStudySiteAsync(tenant, study, ct);
+        var enrollment = await _scenario.Observations.ScreenAsync(tenant, studySite, ct);
+        var collectedAt = _scenario.Tick();
+
+        foreach (var capability in new[] { "collection.open", "collection.record", "execution.query.answer" })
+        {
+            await _scenario.Protocol.OkAsync(
+                new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), capability, null, AuthorityScope.StudySite(studySite), _scenario.Tick(), null, false,
+                    KernelProtocolScenario.Key(), "Coordinator appointed"),
+                ct);
+        }
+
+        foreach (var capability in new[] { "execution.query.raise", "execution.query.manage", "observation.verify", "collection.record_unasked" })
+        {
+            await _scenario.Protocol.OkAsync(
+                new IssueGrant(tenant, GrantId.New(), Actor.Person(monitorUser), capability, null, AuthorityScope.StudySite(studySite), _scenario.Tick(), null, false,
+                    KernelProtocolScenario.Key(), "Monitor appointed"),
+                ct);
+        }
+
+        await _scenario.Protocol.OkAsync(
+            new IssueGrant(tenant, GrantId.New(), Actor.Person(investigatorUser), "collection.sign", null, AuthorityScope.StudySite(studySite), _scenario.Tick(), null, false,
+                KernelProtocolScenario.Key(), "Investigator appointed"),
+            ct);
+        foreach (var (consumer, capabilities) in new (string Consumer, string[] Capabilities)[]
+        {
+            ("execution-forms", ["execution.form.open"]),
+            ("execution-queries", ["observation.query", "observation.query.answer", "assertion.retract"]),
+        })
+        {
+            foreach (var capability in capabilities)
+            {
+                await _scenario.Protocol.OkAsync(
+                    new IssueGrant(tenant, GrantId.New(), Actor.ServiceAccount(consumer), capability, null, AuthorityScope.Tenant(), _scenario.Tick(), null, false,
+                        KernelProtocolScenario.Key(), "Module consumer grant"),
+                    ct);
+            }
+        }
+
+        using var crc = Client(code, Crc);
+        using var monitor = Client(code, monitorUser);
+        using var investigator = Client(code, investigatorUser);
+
+        var scheduled = await SendAsync<FormStateResponse>(crc, HttpMethod.Post, string.Empty, "Scheduled visit #1", new
+        {
+            enrollment_id = enrollment.Value,
+            collection_spec_id = SpecId,
+            planned_activity_id = VisitId,
+            collected_at = collectedAt,
+        }, HttpStatusCode.Created, ct);
+
+        var repeating = await SendAsync<FormStateResponse>(crc, HttpMethod.Post, string.Empty, "Repeating measurement #2", new
+        {
+            enrollment_id = enrollment.Value,
+            collection_spec_id = SpecId,
+            planned_activity_id = VisitId,
+            collected_at = collectedAt.AddMinutes(15),
+        }, HttpStatusCode.Created, ct);
+
+        var unscheduled = await SendAsync<FormStateResponse>(crc, HttpMethod.Post, string.Empty, "Unscheduled vital check", new
+        {
+            enrollment_id = enrollment.Value,
+            collection_spec_id = SpecId,
+            planned_activity_id = (string?)null,
+            collected_at = collectedAt.AddHours(1),
+        }, HttpStatusCode.Created, ct);
+
+        // Scheduled form #1: save both required items, verify one, raise + answer query on one, raise open query on the other, sign, then correct to supersede signature.
+        var savedScheduled = await SendAsync<FormSavedResponse>(crc, HttpMethod.Put, $"/{scheduled.FormId:D}/values", SaveReason,
+            Page((Systolic, Quantity(122), 0), (Diastolic, Quantity(80), 0)), HttpStatusCode.OK, ct);
+        var systolicObs = ObservationId.FromGuid(savedScheduled.Values.Single(v => v.ItemId == Systolic).ObservationId);
+        var diastolicObs = ObservationId.FromGuid(savedScheduled.Values.Single(v => v.ItemId == Diastolic).ObservationId);
+
+        await _scenario.Protocol.OkAsync(
+            new VerifyObservation(tenant, AssertionId.New(), enrollment, systolicObs, 1, KernelProtocolScenario.Key(), "Verified against chart"),
+            ct);
+
+        var answeredQuery = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{scheduled.FormId:D}/queries", "Check cuff size", new
+        {
+            observation_id = systolicObs.Value,
+            revision = 1,
+            text = "Confirm sitting posture",
+        }, HttpStatusCode.Created, ct);
+        await SendAsync<FormQueryResponse>(crc, HttpMethod.Post, $"/{scheduled.FormId:D}/queries/{answeredQuery.QueryId:D}/answer", "Answered query", new
+        {
+            text = "Sitting after 5 minutes rest",
+        }, HttpStatusCode.OK, ct);
+
+        await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{scheduled.FormId:D}/queries", "Confirm diastolic", new
+        {
+            observation_id = diastolicObs.Value,
+            revision = 1,
+            text = "Verify against source printout",
+        }, HttpStatusCode.Created, ct);
+
+        var detailBeforeSign = await SendAsync<FormResponse>(investigator, HttpMethod.Get, $"/{scheduled.FormId:D}", null, null, HttpStatusCode.OK, ct);
+        using (var signReq = Request(HttpMethod.Post, $"/{scheduled.FormId:D}/signatures", "I approve these values", new
+        {
+            meaning = "approved",
+            content_hash = detailBeforeSign.ContentHash,
+        }))
+        {
+            signReq.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(investigatorUser, FormSignatureEndpoints.SignAction(scheduled.FormId), FormSignatureEndpoints.SignSemanticAction));
+            using var signRes = await investigator.SendAsync(signReq, ct);
+            signRes.StatusCode.Should().Be(HttpStatusCode.Created, await signRes.Content.ReadAsStringAsync(ct));
+        }
+
+        // Repeating form #2: save only Systolic and raise a missing-data query on blank Diastolic (NotAsked).
+        await SendAsync<FormSavedResponse>(crc, HttpMethod.Put, $"/{repeating.FormId:D}/values", SaveReason,
+            Page((Systolic, Quantity(130), 0)), HttpStatusCode.OK, ct);
+        await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{repeating.FormId:D}/queries", "Missing diastolic", new
+        {
+            item_id = Diastolic,
+            text = "Diastolic value missing on repeat check",
+        }, HttpStatusCode.Created, ct);
+
+        var summariesBeforeCorrection = await SendAsync<FormSummaryResponse[]>(monitor, HttpMethod.Get, $"?enrollment_id={enrollment.Value:D}", null, null, HttpStatusCode.OK, ct);
+        summariesBeforeCorrection.Should().HaveCount(3);
+
+        var s1 = summariesBeforeCorrection.Single(s => s.FormId == scheduled.FormId);
+        s1.Complete.Should().BeTrue();
+        s1.MissingRequiredCount.Should().Be(0);
+        s1.RecordedCount.Should().Be(2);
+        s1.OpenQueryCount.Should().Be(1);
+        s1.AnsweredQueryCount.Should().Be(1);
+        s1.VerifiedCount.Should().Be(1);
+        s1.UnverifiedCount.Should().Be(1);
+        s1.Signed.Should().BeTrue();
+        s1.SignatureSuperseded.Should().BeFalse();
+        s1.SignatureCount.Should().Be(1);
+        s1.Locked.Should().BeFalse();
+        s1.Frozen.Should().BeFalse();
+
+        var s2 = summariesBeforeCorrection.Single(s => s.FormId == repeating.FormId);
+        s2.Complete.Should().BeFalse();
+        s2.MissingRequiredCount.Should().Be(1);
+        s2.RecordedCount.Should().Be(1, "a NotAsked placeholder from a missing-data query is not counted as recorded");
+        s2.OpenQueryCount.Should().Be(1);
+
+        var s3 = summariesBeforeCorrection.Single(s => s.FormId == unscheduled.FormId);
+        s3.PlannedActivityId.Should().BeNull();
+        s3.Complete.Should().BeFalse();
+        s3.MissingRequiredCount.Should().Be(2);
+        s3.RecordedCount.Should().Be(0);
+
+        // Correct diastolic on scheduled form #1 (supersedes signature), then freeze the enrollment.
+        await SendAsync<FormSavedResponse>(crc, HttpMethod.Put, $"/{scheduled.FormId:D}/values", SaveReason,
+            Page((Diastolic, Quantity(82), 1)), HttpStatusCode.OK, ct);
+        await _scenario.Protocol.OkAsync(
+            await _scenario.Observations.LockAsync(tenant, study, Cadence.Kernel.References.NodeRef.For(enrollment), ct, LockKind.Frozen),
+            ct);
+
+        var summariesAfterFreeze = await SendAsync<FormSummaryResponse[]>(monitor, HttpMethod.Get, $"?enrollment_id={enrollment.Value:D}", null, null, HttpStatusCode.OK, ct);
+        var s1After = summariesAfterFreeze.Single(s => s.FormId == scheduled.FormId);
+        s1After.Signed.Should().BeFalse();
+        s1After.SignatureSuperseded.Should().BeTrue();
+        s1After.SignatureCount.Should().Be(1);
+        s1After.Frozen.Should().BeTrue();
+        s1After.Locked.Should().BeFalse();
+        s1After.LockCount.Should().Be(1);
+    }
+
     private static object Page(params (string Item, object Value, int ExpectedRevision)[] values) =>
         new { values = values.Select(v => new { item_id = v.Item, value = v.Value, expected_revision = v.ExpectedRevision }).ToArray() };
 

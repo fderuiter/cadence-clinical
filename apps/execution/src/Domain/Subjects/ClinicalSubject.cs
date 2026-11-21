@@ -40,11 +40,12 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
     private ClinicalSubject() { } // EF Core
 
     public static ClinicalSubject Create(SubjectCode subjectCode, StudyCode studyCode, SiteCode? siteCode,
-        int enrollmentIndex, string? encryptedDemographics, IReadOnlyDictionary<string, object?>? stratFactors)
+        int enrollmentIndex, string? encryptedDemographics, IReadOnlyDictionary<string, object?>? stratFactors,
+        SubjectId? id = null)
     {
         var subject = new ClinicalSubject
         {
-            Id = SubjectId.New(),
+            Id = id ?? SubjectId.New(),
             SubjectCode = subjectCode,
             StudyCode = studyCode,
             SiteCode = siteCode,

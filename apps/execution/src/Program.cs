@@ -18,6 +18,7 @@ using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure;
 using Cadence.Apps.Execution.Infrastructure.Consumers;
+using Cadence.Apps.Execution.Infrastructure.Kernel;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Apps.Execution.Infrastructure.OpenApi;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
@@ -138,25 +139,17 @@ builder.Services.AddSingleton<IUcumNormalizationService, UcumNormalizationServic
 //
 // The connection string comes from ConnectionStrings:cadence or POSTGRES_CONNECTION_STRING; there is no
 // hardcoded fallback in any environment, so a missing value fails at startup naming both keys.
-string executionDbConnectionString = CadenceDatabaseExtensions.WithModuleSchema(
-    CadenceDatabaseExtensions.ResolvePostgresConnectionString(builder.Configuration, builder.Environment),
-    ExecutionDbContextFactory.Schema);
 var concurrencyTokenIncrementInterceptor = new ConcurrencyTokenIncrementInterceptor();
-builder.Services.AddCadenceDbContext<ExecutionDbContext>((sp, options) =>
-{
-    // Transient failures are retried by EF Core's execution strategy, around a whole SaveChanges or a whole
-    // ExecuteInTransactionAsync unit of work; concurrency conflicts are not, and surface as 409 (#4766, #5383).
-    options.UseNpgsql(executionDbConnectionString, npgsql => npgsql.EnableRetryOnFailure());
-    options.AddInterceptors(
-        concurrencyTokenIncrementInterceptor,
-        new Cadence.Database.GxPAuditInterceptor(
-            () => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId,
-            sp.GetRequiredService<IClock>()));
-});
-
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<ExecutionDbContext>(name: nameof(ExecutionDbContext), tags: [CadenceDatabaseExtensions.ReadinessTag]);
-builder.Services.AddCadenceMigrations<ExecutionDbContext>(builder.Configuration);
+builder.AddCadencePostgresDbContext<ExecutionDbContext>(
+    ExecutionDbContextFactory.Schema,
+    configureOptions: (sp, options) =>
+    {
+        options.AddInterceptors(
+            concurrencyTokenIncrementInterceptor,
+            new Cadence.Database.GxPAuditInterceptor(
+                () => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId,
+                sp.GetRequiredService<IClock>()));
+    });
 
 // E-signature step-up tokens are single use across every instance and restart: their use is recorded in
 // consumed_signature_tokens, not in process memory (#5311, ADR-2515).
@@ -192,6 +185,14 @@ builder.Services.AddScoped<IAuditActorScope>(sp => sp.GetRequiredService<Ambient
 // container resolves an unregistered parameter type via its declared default value, so this needs no
 // explicit registration; see that constructor's own doc comment for why a real evaluator does not exist in
 // this slice yet).
+if (builder.Configuration[HttpKernelEnrollmentSynchronizer.ConfigurationKey] is { Length: > 0 } kernelServiceUrl)
+{
+    builder.Services.AddHttpClient<IKernelEnrollmentSynchronizer, HttpKernelEnrollmentSynchronizer>(client =>
+    {
+        client.BaseAddress = new Uri(kernelServiceUrl.TrimEnd('/'));
+    });
+}
+
 builder.Services.AddScoped<ISubjectApplicationService, SubjectApplicationService>();
 builder.Services.AddScoped<IRandomizationApplicationService, RandomizationApplicationService>();
 builder.Services.AddScoped<ISiteComplianceApplicationService, SiteComplianceApplicationService>();

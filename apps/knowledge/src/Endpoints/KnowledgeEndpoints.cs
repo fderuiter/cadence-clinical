@@ -92,7 +92,8 @@ public static class KnowledgeEndpoints
     public static IEndpointRouteBuilder MapKnowledgeEndpoints(this IEndpointRouteBuilder app)
     {
         RouteGroupBuilder group = app.MapGroup("/api/v1/knowledge")
-            .WithTags("Knowledge");
+            .WithTags("Knowledge")
+            .RequireTenantScope();
 
         group.MapGet("/contextual-help", ResolveContextualHelpAsync)
             .WithName("ResolveContextualHelp")
@@ -385,7 +386,7 @@ public static class KnowledgeEndpoints
             return ContextualHelpScorer.NormalizePersona(queryPersona);
         }
 
-        var principal = CallerScope.Principal(httpContext);
+        var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         string? primaryRole = principal?.Roles.FirstOrDefault();
         return ContextualHelpScorer.NormalizePersona(primaryRole);
     }

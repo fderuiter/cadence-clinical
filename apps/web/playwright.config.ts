@@ -23,6 +23,7 @@ const accessibilityProject = {
   testMatch: /web-accessibility\.spec\.ts/,
   use: {
     ...devices["Desktop Chrome"],
+    channel: "chromium",
     baseURL: "http://127.0.0.1:3001/cadence-clinical/",
     launchOptions: buildChromiumLaunchOptions(chromium, {
       args: [

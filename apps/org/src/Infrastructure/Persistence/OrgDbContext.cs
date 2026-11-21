@@ -1,7 +1,10 @@
+using System;
+
 using Cadence.Apps.Org.Domain;
 using Cadence.Apps.Org.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -10,8 +13,12 @@ namespace Cadence.Apps.Org.Infrastructure.Persistence;
 /// <summary>
 /// EF Core 10 DbContext for Org microservice persistence gateway.
 /// </summary>
-public sealed class OrgDbContext(DbContextOptions<OrgDbContext> options) : DbContext(options)
+public sealed class OrgDbContext(DbContextOptions<OrgDbContext> options) : DbContext(options), ITenantScopedDbContext
 {
+    public Guid? ActiveInMemoryTenantFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantFilter(this);
+
+    public string? ActiveInMemoryTenantStringFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantStringFilter(this);
+
     public DbSet<PersonnelAssignment> PersonnelAssignments => Set<PersonnelAssignment>();
     public DbSet<DelegationOfAuthority> DelegationsOfAuthority => Set<DelegationOfAuthority>();
     public DbSet<TrainingLog> TrainingLogs => Set<TrainingLog>();
@@ -27,5 +34,6 @@ public sealed class OrgDbContext(DbContextOptions<OrgDbContext> options) : DbCon
         modelBuilder.ApplyConfiguration(new TrainingLogConfiguration());
         modelBuilder.ApplyConfiguration(new OrgAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

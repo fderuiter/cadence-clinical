@@ -101,7 +101,7 @@ public static partial class SubjectEndpoints
             .Produces<SubjectResponse>(StatusCodes.Status201Created)
             .ProducesValidationProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("subject_enrollment:create")
+            .RequirePermission("subject_enrollment:create").RequireCallerStudyScope()
             .AddEndpointFilter<ValidationFilter<SubjectCreateRequest>>();
 
         group.MapPost("/{subjectId}/consent", RecordSubjectConsentAsync)
@@ -110,7 +110,7 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission("subject_enrollment:update")
+            .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
             .AddEndpointFilter<ValidationFilter<SubjectConsentRequest>>();
 
         // Legacy dual-route compatibility alias (`01_spec.md` §3 trap table): the legacy router declared
@@ -128,7 +128,7 @@ public static partial class SubjectEndpoints
         // legacy accidental-dual-registration quirk existing callers may still depend on.
         group.MapPost("/{subjectId}/consents", RecordSubjectConsentAsync)
             .WithName("RecordSubjectConsentAlias")
-            .RequirePermission("subject_enrollment:update")
+            .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
             .AddEndpointFilter<ValidationFilter<SubjectConsentRequest>>()
             .ExcludeFromDescription();
 
@@ -139,7 +139,7 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
-            .RequirePermission("subject_enrollment:update")
+            .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
             .AddEndpointFilter<ValidationFilter<SubjectStateUpdateRequest>>()
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
@@ -149,14 +149,14 @@ public static partial class SubjectEndpoints
             .Produces<SubjectListResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("subject_enrollment:read");
+            .RequirePermission("subject_enrollment:read").RequireCallerStudyScope();
 
         group.MapGet("/{subjectId}", GetSubjectDetailAsync)
             .WithName("GetSubjectDetail")
             .Produces<SubjectDetailResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission("subject_enrollment:read");
+            .RequirePermission("subject_enrollment:read").RequireCallerStudyScope();
 
         group.MapPut("/{subjectId}/demographics", UpdateSubjectDemographicsAsync)
             .WithName("UpdateSubjectDemographics")
@@ -164,13 +164,13 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
-            .RequirePermission("subject_enrollment:update")
+            .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapDelete("/{subjectId}/demographics", DeleteSubjectDemographicsAsync)
             .WithName("DeleteSubjectDemographics")
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("subject_enrollment:update")
+            .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;
@@ -292,7 +292,7 @@ public static partial class SubjectEndpoints
     }
 
     /// <summary>
-    /// <c>GET /api/v1/execution/subjects?study_id=&amp;site_id=&amp;status=&amp;limit=&amp;offset=</c>. The list
+    /// <c>GET /api/v1/execution/subjects?study_id=&amp;site_id=&amp;status=&amp;q=&amp;limit=&amp;offset=</c>. The list
     /// carries no treatment group, so it needs no blinding check.
     /// </summary>
     public static async Task<IResult> ListSubjectsAsync(
@@ -303,7 +303,8 @@ public static partial class SubjectEndpoints
         [FromQuery(Name = "offset")] int? offset,
         HttpContext http,
         ISubjectApplicationService svc,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery(Name = "q")] string? q = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -327,7 +328,8 @@ public static partial class SubjectEndpoints
                 limit,
                 offset,
                 ct,
-                string.IsNullOrWhiteSpace(siteId) ? siteFilter : null)
+                string.IsNullOrWhiteSpace(siteId) ? siteFilter : null,
+                q)
             .ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }

@@ -2164,10 +2164,14 @@ export interface components {
       strat_factors: null | Record<string, never>;
     };
     Execution_SubjectDetailResponse: {
+      id: components["schemas"]["Execution_SubjectId"];
       subject_id: components["schemas"]["Execution_SubjectCode"];
       study_id: components["schemas"]["Execution_StudyCode"];
       status: string;
       site_id: null | components["schemas"]["Execution_SiteCode"];
+      active_protocol_version: string;
+      /** Format: int32 */
+      enrollment_index: number | string;
       treatment_group: null | string;
       randomization_seed: null | string;
       investigational_product_id: null | string;
@@ -2385,6 +2389,7 @@ export interface operations {
         status?: string;
         limit?: number | string;
         offset?: number | string;
+        q?: string;
       };
       header?: never;
       path?: never;

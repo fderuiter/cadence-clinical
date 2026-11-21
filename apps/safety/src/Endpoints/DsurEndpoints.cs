@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,6 +9,7 @@ using Cadence.Apps.Safety.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -45,7 +47,7 @@ public static class DsurEndpoints
             .Produces<PeriodicSafetyReportRecord>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .RequirePermission(SafetyPermission);
+            .RequirePermission(SafetyPermission).RequireCallerStudyScope();
 
         MapApprove(group.MapPost("/dsur/{id}/approve", ApproveDsurAsync)
             .WithName("ApproveDsurReport")
@@ -59,40 +61,40 @@ public static class DsurEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .RequirePermission(SafetyPermission);
+            .RequirePermission(SafetyPermission).RequireCallerStudyScope();
 
         group.MapGet("/dsur/{id}", GetDsurByIdAsync)
             .WithName("GetDsurReportById")
             .WithSummary("Retrieves a DSUR periodic safety report record by identifier.")
             .Produces<PeriodicSafetyReportRecord>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(ReadPermission);
+            .RequirePermission(ReadPermission).RequireCallerStudyScope();
 
         group.MapGet("/dsur", ListDsurReportsAsync)
             .WithName("ListDsurReports")
             .WithSummary("Lists all DSUR periodic safety report records.")
             .Produces<PeriodicSafetyReportRecord[]>(StatusCodes.Status200OK)
-            .RequirePermission(ReadPermission);
+            .RequirePermission(ReadPermission).RequireCallerStudyScope();
 
         // Alias routes for periodic-reports endpoint path conventions
         group.MapPost("/periodic-reports/compile", CompileDsurAsync)
             .WithName("CompilePeriodicReport")
-            .RequirePermission(SafetyPermission);
+            .RequirePermission(SafetyPermission).RequireCallerStudyScope();
 
         MapApprove(group.MapPost("/periodic-reports/{id}/approve", ApproveDsurAsync)
             .WithName("ApprovePeriodicReport"));
 
         group.MapPut("/periodic-reports/{id}", UpdateDsurAsync)
             .WithName("UpdatePeriodicReport")
-            .RequirePermission(SafetyPermission);
+            .RequirePermission(SafetyPermission).RequireCallerStudyScope();
 
         group.MapGet("/periodic-reports/{id}", GetDsurByIdAsync)
             .WithName("GetPeriodicReportById")
-            .RequirePermission(ReadPermission);
+            .RequirePermission(ReadPermission).RequireCallerStudyScope();
 
         group.MapGet("/periodic-reports", ListDsurReportsAsync)
             .WithName("ListPeriodicReports")
-            .RequirePermission(ReadPermission);
+            .RequirePermission(ReadPermission).RequireCallerStudyScope();
 
         return group;
     }
@@ -104,7 +106,7 @@ public static class DsurEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .RequirePermission(ApprovePermission)
+            .RequirePermission(ApprovePermission).RequireCallerStudyScope()
             .RequireElectronicSignature(ApproveSemanticAction, ApproveActionFor);
 
     private static string ApproveActionFor(HttpContext httpContext) =>
@@ -125,6 +127,21 @@ public static class DsurEndpoints
         if (request == null || string.IsNullOrWhiteSpace(request.CompoundName))
         {
             return TypedResults.Problem("CompoundName is required for DSUR compilation.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
+        {
+            if (!string.IsNullOrWhiteSpace(request.StudyId))
+            {
+                if (!ClinicalScopeGuard.CanAccessStudy(httpContext, request.StudyId))
+                {
+                    return TypedResults.Problem(ClinicalScopeGuard.StudyAccessDeniedDetail, statusCode: StatusCodes.Status403Forbidden);
+                }
+            }
+            else if (ClinicalScopeGuard.RequireAllStudies(httpContext) is { } allStudiesDenied)
+            {
+                return allStudiesDenied;
+            }
         }
 
         var compiler = new DsurCompilerEngine(dbContext, clock);
@@ -151,6 +168,15 @@ public static class DsurEndpoints
             return TypedResults.Problem("A reason for change is required to approve and lock a DSUR.", statusCode: StatusCodes.Status400BadRequest);
         }
 
+        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
+        {
+            var existing = await dbContext.PeriodicSafetyReports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+            if (existing is not null && !CanCallerAccessReport(httpContext, existing))
+            {
+                return TypedResults.Problem(ClinicalScopeGuard.StudyAccessDeniedDetail, statusCode: StatusCodes.Status403Forbidden);
+            }
+        }
+
         var compiler = new DsurCompilerEngine(dbContext, clock);
 
         var result = await compiler.ApproveDsurAsync(id, request, callerUserId, cancellationToken);
@@ -171,6 +197,20 @@ public static class DsurEndpoints
             return VerifiedCallerRequired();
         }
 
+        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
+        {
+            var existing = await dbContext.PeriodicSafetyReports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+            if (existing is not null && !CanCallerAccessReport(httpContext, existing))
+            {
+                return TypedResults.Problem(ClinicalScopeGuard.StudyAccessDeniedDetail, statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.StudyId) && !ClinicalScopeGuard.CanAccessStudy(httpContext, request.StudyId))
+            {
+                return TypedResults.Problem(ClinicalScopeGuard.StudyAccessDeniedDetail, statusCode: StatusCodes.Status403Forbidden);
+            }
+        }
+
         var compiler = new DsurCompilerEngine(dbContext, clock);
 
         var result = await compiler.UpdateDsurAsync(id, request, callerUserId, cancellationToken);
@@ -181,10 +221,11 @@ public static class DsurEndpoints
     public static async Task<IResult> GetDsurByIdAsync(
         string id,
         SafetyDbContext dbContext,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        HttpContext? httpContext = null)
     {
         var record = await dbContext.PeriodicSafetyReports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
-        if (record == null)
+        if (record == null || (httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null && !CanCallerAccessReport(httpContext, record)))
         {
             return TypedResults.Problem($"DSUR periodic report record '{id}' not found.", statusCode: StatusCodes.Status404NotFound);
         }
@@ -194,11 +235,32 @@ public static class DsurEndpoints
 
     public static async Task<IResult> ListDsurReportsAsync(
         SafetyDbContext dbContext,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        HttpContext? httpContext = null)
     {
-        var records = await dbContext.PeriodicSafetyReports.AsNoTracking().ToArrayAsync(cancellationToken);
+        var query = dbContext.PeriodicSafetyReports.AsNoTracking();
+        if (httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
+        {
+            string? requestedStudyId = httpContext.Request.Query["study_id"].FirstOrDefault();
+            if (!ClinicalScopeGuard.ResolveStudyFilter(httpContext, requestedStudyId, out var studies, out var errorResult))
+            {
+                return errorResult!;
+            }
+
+            if (studies is not null)
+            {
+                query = query.Where(r => r.StudyId != null && studies.Contains(r.StudyId));
+            }
+        }
+
+        var records = await query.ToArrayAsync(cancellationToken);
         return TypedResults.Ok(records);
     }
+
+    private static bool CanCallerAccessReport(HttpContext httpContext, PeriodicSafetyReportRecord record) =>
+        string.IsNullOrWhiteSpace(record.StudyId)
+            ? ClinicalScopeGuard.RequireAllStudies(httpContext) is null
+            : ClinicalScopeGuard.CanAccessStudy(httpContext, record.StudyId);
 
     private static IResult ToResult(DsurOperationStatus status, string message, PeriodicSafetyReportRecord? record) =>
         status switch

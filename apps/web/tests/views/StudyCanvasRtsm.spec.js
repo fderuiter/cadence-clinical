@@ -153,6 +153,11 @@ describe("Clinical Canvas RTSM, consent, blinding, and emergency unblinding", ()
           name: "ctms",
           component: CtmsView,
         },
+        {
+          path: "/ecrf",
+          name: "ecrf",
+          component: { template: "<div />" },
+        },
       ],
     });
     participants = [makeParticipant()];

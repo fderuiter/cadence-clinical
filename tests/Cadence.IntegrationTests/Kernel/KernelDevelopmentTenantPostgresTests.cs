@@ -152,6 +152,115 @@ public sealed class KernelDevelopmentTenantPostgresTests(KernelPostgresFixture f
         }
     }
 
+    /// <summary>
+    /// Demo data seeds an approved and effective protocol version for <c>CADENCE-101</c> with scheduled and unscheduled
+    /// collection specifications, activates <c>SITE-101</c> and <c>SITE-102</c> so forms open without
+    /// <c>K.Collection.NoGoverningVersion</c>, and exposes <c>POST /api/v1/kernel/enrollments/screen</c> under site grants.
+    /// </summary>
+    [Fact(DisplayName = "DemoData_SeedsEffectiveSchedule_OpensForms_AndScreensSyncedParticipantUnderSiteGrants")]
+    public async Task DemoDataSeedsEffectiveScheduleOpensFormsAndScreensSyncedParticipantUnderSiteGrants()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        string code = $"dev-{Guid.NewGuid():N}"[..20];
+        var collectedAt = new DateTimeOffset(2026, 1, 15, 10, 0, 0, TimeSpan.Zero);
+
+        using var host = Host(code, demoData: true);
+        using var crc = host.CreateSignedClient(new GatewayIdentity(CrcSubject, [], [], TenantId: code));
+
+        var studyRef = (await GetAsync(crc, "/api/v1/kernel/search?q=CADENCE-101", ct)).EnumerateArray()
+            .Single(h => h.GetProperty("code").GetString() == "CADENCE-101").GetProperty("ref").GetString()!;
+
+        var versions = (await GetAsync(crc, $"/api/v1/kernel/studies/{Uri.EscapeDataString(studyRef)}/protocol-versions", ct)).EnumerateArray()
+            .Where(v => v.GetProperty("mask").ValueKind == JsonValueKind.Null && v.GetProperty("status").GetString() == "Approved")
+            .ToList();
+        var versionRef = versions.Should().ContainSingle().Subject.GetProperty("ref").GetString()!;
+
+        var soa = await GetAsync(crc, $"/api/v1/kernel/protocol-versions/{Uri.EscapeDataString(versionRef)}/schedule-of-activities", ct);
+        soa.GetProperty("epochs").GetArrayLength().Should().Be(3);
+        soa.GetProperty("columns").GetArrayLength().Should().Be(5);
+        var rows = soa.GetProperty("rows").EnumerateArray().ToList();
+        rows.Should().HaveCount(4);
+        rows.Count(r => r.GetProperty("frequency").GetInt32() > 0).Should().Be(2);
+        rows.Count(r => r.GetProperty("frequency").GetInt32() == 0).Should().Be(2);
+
+        var ownSiteRef = (await GetAsync(crc, $"/api/v1/kernel/nodes/{Uri.EscapeDataString(studyRef)}/children", ct)).EnumerateArray()
+            .Select(c => c.GetProperty("node"))
+            .Single(n => n.GetProperty("kind").GetString() == "study_site" && n.GetProperty("mask").ValueKind == JsonValueKind.Null)
+            .GetProperty("ref").GetString()!;
+
+        var enrollmentRef = (await GetAsync(crc, $"/api/v1/kernel/nodes/{Uri.EscapeDataString(ownSiteRef)}/children", ct)).EnumerateArray()
+            .Select(c => c.GetProperty("node"))
+            .Single(n => n.GetProperty("kind").GetString() == "enrollment" && n.GetProperty("code").GetString() == "SUBJ-101-001")
+            .GetProperty("ref").GetString()!;
+        var enrollmentId = Cadence.Kernel.References.NodeRef.Parse(enrollmentRef).Id;
+
+        using (var openScheduled = SendJsonRequest(HttpMethod.Post, "/api/v1/execution/forms", "Screening vital signs", new
+        {
+            enrollment_id = enrollmentId,
+            collection_spec_id = "cs.vitals",
+            planned_activity_id = "act.screening",
+            collected_at = collectedAt,
+        }))
+        using (var scheduledResponse = await crc.SendAsync(openScheduled, ct))
+        {
+            string body = await scheduledResponse.Content.ReadAsStringAsync(ct);
+            scheduledResponse.StatusCode.Should().Be(HttpStatusCode.Created, body);
+        }
+
+        using (var openUnscheduled = SendJsonRequest(HttpMethod.Post, "/api/v1/execution/forms", "Unscheduled adverse event log", new
+        {
+            enrollment_id = enrollmentId,
+            collection_spec_id = "cs.adverse_event",
+            planned_activity_id = (string?)null,
+            collected_at = collectedAt.AddHours(1),
+        }))
+        using (var unscheduledResponse = await crc.SendAsync(openUnscheduled, ct))
+        {
+            string body = await unscheduledResponse.Content.ReadAsStringAsync(ct);
+            unscheduledResponse.StatusCode.Should().Be(HttpStatusCode.Created, body);
+        }
+
+        using (var screenOwnSite = SendJsonRequest(HttpMethod.Post, "/api/v1/kernel/enrollments/screen", "Participant registered in Clinical Canvas", new
+        {
+            study_code = "CADENCE-101",
+            site_code = "SITE-101",
+            subject_code = "SUBJ-101-099",
+            screened_at = collectedAt,
+        }))
+        using (var createdEnrollment = await crc.SendAsync(screenOwnSite, ct))
+        {
+            string body = await createdEnrollment.Content.ReadAsStringAsync(ct);
+            createdEnrollment.StatusCode.Should().Be(HttpStatusCode.Created, body);
+        }
+
+        var syncedChildren = (await GetAsync(crc, $"/api/v1/kernel/nodes/{Uri.EscapeDataString(ownSiteRef)}/children", ct)).EnumerateArray()
+            .Select(c => c.GetProperty("node"))
+            .ToList();
+        syncedChildren.Should().ContainSingle(n => n.GetProperty("kind").GetString() == "enrollment" && n.GetProperty("code").GetString() == "SUBJ-101-099");
+
+        using var screenOtherSite = SendJsonRequest(HttpMethod.Post, "/api/v1/kernel/enrollments/screen", "Cross-site screening attempt", new
+        {
+            study_code = "CADENCE-101",
+            site_code = "SITE-102",
+            subject_code = "SUBJ-102-099",
+            screened_at = collectedAt,
+        });
+        using var deniedEnrollment = await crc.SendAsync(screenOtherSite, ct);
+        deniedEnrollment.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    private static HttpRequestMessage SendJsonRequest(HttpMethod method, string path, string reason, object payload)
+    {
+        var request = new HttpRequestMessage(method, new Uri(path, UriKind.Relative))
+        {
+            Content = System.Net.Http.Json.JsonContent.Create(payload),
+        };
+        request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
+        request.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode(reason));
+        return request;
+    }
+
     private const string CrcSubject = "1a4345cc-364c-4b8b-881e-93bbea528b0a";
     private const string SubjectParticipantId = "7a8b9c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d";
 

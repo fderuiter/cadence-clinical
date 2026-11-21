@@ -27,14 +27,20 @@ public class EtmfDocumentLifecycleTests
 {
     private readonly FakeClock _clock = new(new DateTimeOffset(2026, 11, 14, 10, 0, 0, TimeSpan.Zero));
 
-    private static DefaultHttpContext CreateHttpContext(string userId = "cra.alice", string roles = "CRA,QualityReviewer", string studyId = "STUDY-001")
+    private static DefaultHttpContext CreateHttpContext(
+        string userId = "cra.alice",
+        string roles = "CRA,QualityReviewer",
+        string studyId = "STUDY-001",
+        string siteId = "SITE-001")
     {
         var context = new DefaultHttpContext();
         context.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
         {
             UserId = userId,
+            TenantId = "tenant-test",
             Roles = roles.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
             AssignedStudies = [studyId],
+            AssignedSites = [siteId],
         };
         return context;
     }

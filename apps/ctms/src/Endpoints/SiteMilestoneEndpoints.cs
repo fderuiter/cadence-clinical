@@ -35,14 +35,14 @@ public static class SiteMilestoneEndpoints
             .WithName("ListSiteMilestones")
             .WithSummary("List site milestones filtered by study or site.")
             .Produces<List<SiteMilestoneResponseDto>>(StatusCodes.Status200OK)
-            .RequirePermission(ReadPermission);
+            .RequirePermission(ReadPermission).RequireCallerStudyAndSiteScope();
 
         group.MapPost("/site-milestones", CreateSiteMilestoneAsync)
             .WithName("CreateSiteMilestone")
             .WithSummary("Create a new site milestone.")
             .Produces<SiteMilestoneResponseDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .RequirePermission(CreatePermission);
+            .RequirePermission(CreatePermission).RequireCallerStudyAndSiteScope();
 
         group.MapPut("/site-milestones/{milestone_id}", UpdateSiteMilestoneAsync)
             .WithName("UpdateSiteMilestone")
@@ -50,7 +50,7 @@ public static class SiteMilestoneEndpoints
             .Produces<SiteMilestoneResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(UpdatePermission);
+            .RequirePermission(UpdatePermission).RequireCallerStudyAndSiteScope();
 
         return group;
     }
@@ -59,9 +59,22 @@ public static class SiteMilestoneEndpoints
         [FromQuery(Name = "study_id")] string? studyId,
         [FromQuery(Name = "site_id")] string? siteId,
         CtmsDbContext db,
-        CancellationToken ct)
+        CancellationToken ct,
+        HttpContext? httpContext = null)
     {
+        HashSet<string>? studyFilter = null;
+        if (httpContext is not null
+            && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
+            && !ClinicalScopeGuard.ResolveStudyAndSiteFilters(httpContext, studyId, siteId, out studyFilter, out _, out var denied))
+        {
+            return denied!;
+        }
+
         IQueryable<CtmsSiteMilestone> query = db.CtmsSiteMilestones.AsNoTracking();
+        if (studyFilter is not null)
+        {
+            query = query.Where(m => studyFilter.Contains(m.StudyId));
+        }
 
         if (!string.IsNullOrWhiteSpace(studyId))
         {
@@ -76,6 +89,10 @@ public static class SiteMilestoneEndpoints
         var milestones = await query
             .OrderBy(m => m.PlannedDate ?? new DateTimeOffset(m.CreatedAt, TimeSpan.Zero))
             .ToListAsync(ct);
+        if (httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
+        {
+            milestones = milestones.Where(m => ClinicalScopeGuard.CanAccessSite(httpContext, m.SiteId)).ToList();
+        }
 
         var dtos = milestones.Select(ToResponseDto).ToList();
         return TypedResults.Ok(dtos);
@@ -109,6 +126,12 @@ public static class SiteMilestoneEndpoints
                 title: "Validation error",
                 detail: "site_id, study_id, and milestone_type are required.",
                 statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
+            && ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.Study, request.Site) is { } createDenied)
+        {
+            return createDenied;
         }
 
         var (user, role) = ResolveCaller(httpContext);
@@ -169,6 +192,12 @@ public static class SiteMilestoneEndpoints
                 title: "Milestone not found",
                 detail: $"Site milestone '{milestoneId}' not found.",
                 statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
+            && ClinicalScopeGuard.RequireStudyAndSite(httpContext, milestone.StudyId, milestone.SiteId) is { } updateDenied)
+        {
+            return updateDenied;
         }
 
         if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, request?.ReasonForChange, out string reason, out var problem))

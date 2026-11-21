@@ -415,4 +415,38 @@ public class SubjectRepositoryTests
             DeleteDbFileBestEffort(path);
         }
     }
+
+    [Fact]
+    public async Task ListAsync_GivenQueryWithCaseDifferencesAndLikeWildcards_MatchesOnlyLiteralSubstring()
+    {
+        string path = await CreateSchemaAsync();
+        try
+        {
+            await using (var seed = new ExecutionDbContext(FileOptions(path)))
+            {
+                seed.ClinicalSubjects.Add(ClinicalSubject.Create(new SubjectCode("SUBJ-100%-A"), StudyA, null, 0, null, null));
+                seed.ClinicalSubjects.Add(ClinicalSubject.Create(new SubjectCode("SUBJ-1000-A"), StudyA, null, 1, null, null));
+                seed.ClinicalSubjects.Add(ClinicalSubject.Create(new SubjectCode("SUBJ-UNDER_1"), StudyA, null, 2, null, null));
+                seed.ClinicalSubjects.Add(ClinicalSubject.Create(new SubjectCode("SUBJ-UNDERX1"), StudyA, null, 3, null, null));
+                await seed.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var repository = CreateRepository(path);
+            var percentMatch = await repository.ListAsync(
+                new SubjectListCriteria(StudyA, null, null, 50, 0, Query: "100%-a"),
+                TestContext.Current.CancellationToken);
+            var underscoreMatch = await repository.ListAsync(
+                new SubjectListCriteria(StudyA, null, null, 50, 0, Query: "under_1"),
+                TestContext.Current.CancellationToken);
+
+            percentMatch.Total.Should().Be(1);
+            percentMatch.Items.Single().SubjectCode.Value.Should().Be("SUBJ-100%-A");
+            underscoreMatch.Total.Should().Be(1);
+            underscoreMatch.Items.Single().SubjectCode.Value.Should().Be("SUBJ-UNDER_1");
+        }
+        finally
+        {
+            DeleteDbFileBestEffort(path);
+        }
+    }
 }

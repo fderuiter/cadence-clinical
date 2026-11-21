@@ -6,22 +6,22 @@ Generated from the EF Core model of `Cadence.Apps.Safety.Infrastructure.Persiste
 
 | Table | Entity | Columns |
 | --- | --- | --- |
-| [`safety.audit_log_entries`](#safetyaudit_log_entries) | `AuditLogEntry` | 11 |
+| [`safety.audit_log_entries`](#safetyaudit_log_entries) | `AuditLogEntry` | 12 |
 | [`safety.consumed_signature_tokens`](#safetyconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
-| [`safety.device_safety_investigations`](#safetydevice_safety_investigations) | `DeviceSafetyInvestigation` | 31 |
-| [`safety.periodic_safety_reports`](#safetyperiodic_safety_reports) | `PeriodicSafetyReportRecord` | 17 |
-| [`safety.sae_discrepancies`](#safetysae_discrepancies) | `SaeDiscrepancy` | 12 |
-| [`safety.sae_reconciliation_jobs`](#safetysae_reconciliation_jobs) | `SaeReconciliationJob` | 9 |
-| [`safety.sae_reconciliation_runs`](#safetysae_reconciliation_runs) | `SaeReconciliationRun` | 7 |
-| [`safety.safety_as2_transmission_audit_logs`](#safetysafety_as2_transmission_audit_logs) | `As2TransmissionAuditLog` | 10 |
-| [`safety.safety_as2_transmissions`](#safetysafety_as2_transmissions) | `As2Transmission` | 36 |
-| [`safety.safety_audit_logs`](#safetysafety_audit_logs) | `SafetyAuditLog` | 8 |
-| [`safety.safety_cases`](#safetysafety_cases) | `SafetyCaseIcsr` | 8 |
-| [`safety.safety_export_jobs`](#safetysafety_export_jobs) | `ExportJob` | 9 |
-| [`safety.safety_narratives`](#safetysafety_narratives) | `SafetyNarrative` | 21 |
-| [`safety.safety_reporting_evaluations`](#safetysafety_reporting_evaluations) | `IcsrReportingEvaluation` | 28 |
-| [`safety.safety_signal_alerts`](#safetysafety_signal_alerts) | `SafetySignalAlert` | 33 |
-| [`safety.safety_signal_detection_runs`](#safetysafety_signal_detection_runs) | `SafetySignalDetectionRun` | 11 |
+| [`safety.device_safety_investigations`](#safetydevice_safety_investigations) | `DeviceSafetyInvestigation` | 32 |
+| [`safety.periodic_safety_reports`](#safetyperiodic_safety_reports) | `PeriodicSafetyReportRecord` | 18 |
+| [`safety.sae_discrepancies`](#safetysae_discrepancies) | `SaeDiscrepancy` | 13 |
+| [`safety.sae_reconciliation_jobs`](#safetysae_reconciliation_jobs) | `SaeReconciliationJob` | 10 |
+| [`safety.sae_reconciliation_runs`](#safetysae_reconciliation_runs) | `SaeReconciliationRun` | 8 |
+| [`safety.safety_as2_transmission_audit_logs`](#safetysafety_as2_transmission_audit_logs) | `As2TransmissionAuditLog` | 11 |
+| [`safety.safety_as2_transmissions`](#safetysafety_as2_transmissions) | `As2Transmission` | 37 |
+| [`safety.safety_audit_logs`](#safetysafety_audit_logs) | `SafetyAuditLog` | 9 |
+| [`safety.safety_cases`](#safetysafety_cases) | `SafetyCaseIcsr` | 9 |
+| [`safety.safety_export_jobs`](#safetysafety_export_jobs) | `ExportJob` | 10 |
+| [`safety.safety_narratives`](#safetysafety_narratives) | `SafetyNarrative` | 22 |
+| [`safety.safety_reporting_evaluations`](#safetysafety_reporting_evaluations) | `IcsrReportingEvaluation` | 29 |
+| [`safety.safety_signal_alerts`](#safetysafety_signal_alerts) | `SafetySignalAlert` | 34 |
+| [`safety.safety_signal_detection_runs`](#safetysafety_signal_detection_runs) | `SafetySignalDetectionRun` | 12 |
 
 ## safety.audit_log_entries
 
@@ -40,10 +40,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## safety.consumed_signature_tokens
 
@@ -96,6 +98,7 @@ Entity: `DeviceSafetyInvestigation`
 | `VigilanceDeadlineDays` | `integer` | no |  |  |
 | `VigilanceDueDate` | `timestamp with time zone` | no |  |  |
 | `VigilanceReportingRequired` | `boolean` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -109,6 +112,7 @@ Indexes:
 - `IX_device_safety_investigations_Status`: (`Status`)
 - `IX_device_safety_investigations_StudyId`: (`StudyId`)
 - `IX_device_safety_investigations_SubjectId`: (`SubjectId`)
+- `IX_device_safety_investigations_tenant_id`: (`tenant_id`)
 
 ## safety.periodic_safety_reports
 
@@ -133,6 +137,7 @@ Entity: `PeriodicSafetyReportRecord`
 | `TotalPatientYearsExposure` | `double precision` | no |  |  |
 | `TotalSaes` | `integer` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -140,6 +145,7 @@ Indexes:
 - `IX_periodic_safety_reports_ReportType`: (`ReportType`)
 - `IX_periodic_safety_reports_Status`: (`Status`)
 - `IX_periodic_safety_reports_StudyId`: (`StudyId`)
+- `IX_periodic_safety_reports_tenant_id`: (`tenant_id`)
 
 ## safety.sae_discrepancies
 
@@ -159,11 +165,13 @@ Entity: `SaeDiscrepancy`
 | `RunId` | `character varying(36)` | no |  |  |
 | `Source` | `character varying(100)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_sae_discrepancies_CaseEventKey`: (`CaseEventKey`)
 - `IX_sae_discrepancies_RunId`: (`RunId`)
+- `IX_sae_discrepancies_tenant_id`: (`tenant_id`)
 
 ## safety.sae_reconciliation_jobs
 
@@ -180,11 +188,13 @@ Entity: `SaeReconciliationJob`
 | `Status` | `character varying(50)` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_sae_reconciliation_jobs_RunId`: (`RunId`)
 - `IX_sae_reconciliation_jobs_StudyId`: (`StudyId`)
+- `IX_sae_reconciliation_jobs_tenant_id`: (`tenant_id`)
 
 ## safety.sae_reconciliation_runs
 
@@ -199,10 +209,12 @@ Entity: `SaeReconciliationRun`
 | `RunDate` | `timestamp with time zone` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_sae_reconciliation_runs_StudyId`: (`StudyId`)
+- `IX_sae_reconciliation_runs_tenant_id`: (`tenant_id`)
 
 ## safety.safety_as2_transmission_audit_logs
 
@@ -220,6 +232,7 @@ Entity: `As2TransmissionAuditLog`
 | `ToStatus` | `character varying(50)` | yes |  |  |
 | `TransmissionId` | `character varying(36)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -227,6 +240,7 @@ Indexes:
 - `IX_safety_as2_transmission_audit_logs_CreatedAt`: (`CreatedAt`)
 - `IX_safety_as2_transmission_audit_logs_CreatedBy`: (`CreatedBy`)
 - `IX_safety_as2_transmission_audit_logs_TransmissionId`: (`TransmissionId`)
+- `IX_safety_as2_transmission_audit_logs_tenant_id`: (`tenant_id`)
 
 ## safety.safety_as2_transmissions
 
@@ -270,6 +284,7 @@ Entity: `As2Transmission`
 | `TransmissionId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `WorldwideUniqueCaseId` | `character varying(255)` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -282,6 +297,7 @@ Indexes:
 - `IX_safety_as2_transmissions_TargetAuthority`: (`TargetAuthority`)
 - `IX_safety_as2_transmissions_TransmissionId`: unique (`TransmissionId`)
 - `IX_safety_as2_transmissions_WorldwideUniqueCaseId`: (`WorldwideUniqueCaseId`)
+- `IX_safety_as2_transmissions_tenant_id`: (`tenant_id`)
 
 ## safety.safety_audit_logs
 
@@ -297,11 +313,13 @@ Entity: `SafetyAuditLog`
 | `ReasonForChange` | `character varying(1000)` | yes |  |  |
 | `RecordId` | `character varying(255)` | yes |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_safety_audit_logs_CreatedAt`: (`CreatedAt`)
 - `IX_safety_audit_logs_CreatedBy`: (`CreatedBy`)
+- `IX_safety_audit_logs_tenant_id`: (`tenant_id`)
 
 ## safety.safety_cases
 
@@ -317,11 +335,13 @@ Entity: `SafetyCaseIcsr`
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `WorldwideUniqueCaseId` | `character varying(255)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_safety_cases_PatientId`: (`PatientId`)
 - `IX_safety_cases_WorldwideUniqueCaseId`: (`WorldwideUniqueCaseId`)
+- `IX_safety_cases_tenant_id`: (`tenant_id`)
 
 ## safety.safety_export_jobs
 
@@ -338,6 +358,11 @@ Entity: `ExportJob`
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `Status` | `character varying(50)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_safety_export_jobs_tenant_id`: (`tenant_id`)
 
 ## safety.safety_narratives
 
@@ -366,6 +391,7 @@ Entity: `SafetyNarrative`
 | `TimelineEventsJson` | `jsonb` | no |  |  |
 | `Title` | `character varying(500)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -374,6 +400,7 @@ Indexes:
 - `IX_safety_narratives_SaeEventKey`: (`SaeEventKey`)
 - `IX_safety_narratives_StudyId`: (`StudyId`)
 - `IX_safety_narratives_SubjectId`: (`SubjectId`)
+- `IX_safety_narratives_tenant_id`: (`tenant_id`)
 
 ## safety.safety_reporting_evaluations
 
@@ -409,6 +436,7 @@ Entity: `IcsrReportingEvaluation`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -417,6 +445,7 @@ Indexes:
 - `IX_safety_reporting_evaluations_ReceiptDate`: (`ReceiptDate`)
 - `IX_safety_reporting_evaluations_StudyId`: (`StudyId`)
 - `IX_safety_reporting_evaluations_SubjectId`: (`SubjectId`)
+- `IX_safety_reporting_evaluations_tenant_id`: (`tenant_id`)
 
 ## safety.safety_signal_alerts
 
@@ -457,6 +486,7 @@ Entity: `SafetySignalAlert`
 | `TermLevel` | `character varying(50)` | no |  |  |
 | `TriageSummary` | `character varying(2000)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -467,6 +497,7 @@ Indexes:
 - `IX_safety_signal_alerts_Status`: (`Status`)
 - `IX_safety_signal_alerts_StudyId`: (`StudyId`)
 - `IX_safety_signal_alerts_TargetDrug`: (`TargetDrug`)
+- `IX_safety_signal_alerts_tenant_id`: (`tenant_id`)
 
 ## safety.safety_signal_detection_runs
 
@@ -485,8 +516,10 @@ Entity: `SafetySignalDetectionRun`
 | `TargetDrug` | `character varying(255)` | no |  |  |
 | `TotalCasesAnalyzed` | `integer` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_safety_signal_detection_runs_StudyId`: (`StudyId`)
 - `IX_safety_signal_detection_runs_TargetDrug`: (`TargetDrug`)
+- `IX_safety_signal_detection_runs_tenant_id`: (`tenant_id`)
