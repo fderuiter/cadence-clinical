@@ -222,8 +222,8 @@ useFocusTrap(drawerRef, {
 .clinical-drawer-panel {
   height: 100vh;
   max-width: 100vw;
-  background: var(--color-surface, #ffffff);
-  border-left: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
   box-shadow: -8px 0 24px -4px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
@@ -233,7 +233,7 @@ useFocusTrap(drawerRef, {
 
 .clinical-drawer-panel.position-left {
   border-left: none;
-  border-right: 1px solid var(--color-border, #e2e8f0);
+  border-right: 1px solid var(--color-border);
   box-shadow: 8px 0 24px -4px rgba(0, 0, 0, 0.12);
   animation-name: clinical-drawer-slide-in-left;
 }
@@ -288,8 +288,8 @@ useFocusTrap(drawerRef, {
   justify-content: space-between;
   gap: 12px;
   padding: 18px 24px;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
-  background: var(--color-surface-muted, #f8fafc);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
 }
 
 .clinical-drawer-titles {
@@ -301,20 +301,20 @@ useFocusTrap(drawerRef, {
   margin: 0;
   font-size: var(--font-size-md, 16px);
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--color-text);
 }
 
 .clinical-drawer-subtitle {
   margin: 4px 0 0 0;
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted, #475569);
+  color: var(--color-text-muted);
 }
 
 .clinical-drawer-close-btn {
   background: transparent;
   border: none;
   font-size: 16px;
-  color: var(--color-text-muted, #475569);
+  color: var(--color-text-muted);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
@@ -322,8 +322,8 @@ useFocusTrap(drawerRef, {
 }
 
 .clinical-drawer-close-btn:hover:not(:disabled) {
-  background: #e2e8f0;
-  color: var(--color-text, #0f172a);
+  background: var(--color-border);
+  color: var(--color-text);
 }
 
 .clinical-drawer-close-btn:disabled {
@@ -339,8 +339,8 @@ useFocusTrap(drawerRef, {
 
 .clinical-drawer-footer {
   padding: 16px 24px;
-  border-top: 1px solid var(--color-border, #e2e8f0);
-  background: var(--color-surface-muted, #f8fafc);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
 }
 
 @media (max-width: 640px) {

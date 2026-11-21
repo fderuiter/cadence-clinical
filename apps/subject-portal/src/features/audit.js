@@ -52,7 +52,7 @@ export function renderLedger() {
         </div>
         <div class="ledger-item-details">
           <span><strong>Details:</strong> ${JSON.stringify(block.details)}</span><br/>
-          <span><strong>Reason/Declaration:</strong> <span style="color: #60a5fa; font-weight:600;">${block.reason}</span></span>
+          <span><strong>Reason/Declaration:</strong> <span style="color: var(--semantic-color-accent-inverse); font-weight:600;">${block.reason}</span></span>
         </div>
         <div class="ledger-hash">
           <span>hash: ${block.hash}</span>

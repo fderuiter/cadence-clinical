@@ -1293,13 +1293,13 @@ onMounted(() => {
 .console-title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--text-main);
+  color: var(--semantic-color-text);
   margin: 0 0 6px 0;
 }
 
 .console-subtitle {
   font-size: 13px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
   line-height: 1.5;
   margin: 0;
 }
@@ -1339,16 +1339,16 @@ onMounted(() => {
 }
 
 .bg-blue {
-  background: #eff6ff;
+  background: var(--semantic-color-info-bg);
 }
 .bg-green {
-  background: #f0fdf4;
+  background: var(--semantic-color-success-bg-soft);
 }
 .bg-purple {
-  background: #f5f3ff;
+  background: var(--semantic-color-ai-bg);
 }
 .bg-red {
-  background: #fef2f2;
+  background: var(--semantic-color-error-bg-soft);
 }
 
 .metric-content {
@@ -1358,20 +1358,20 @@ onMounted(() => {
 
 .metric-label {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
 
 .metric-value {
   font-size: 20px;
   font-weight: 700;
-  color: var(--text-main);
+  color: var(--semantic-color-text);
   margin: 2px 0;
 }
 
 .metric-sub {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 /* Nav Tabs */
@@ -1390,7 +1390,7 @@ onMounted(() => {
   margin-bottom: -2px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1399,7 +1399,7 @@ onMounted(() => {
 }
 
 .tab-button:hover {
-  color: var(--text-main);
+  color: var(--semantic-color-text);
 }
 
 .tab-button.active {
@@ -1408,8 +1408,8 @@ onMounted(() => {
 }
 
 .badge-count {
-  background: var(--danger);
-  color: #ffffff;
+  background: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
   font-size: 10px;
   padding: 2px 6px;
   border-radius: 10px;
@@ -1445,7 +1445,7 @@ onMounted(() => {
 .card-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-main);
+  color: var(--semantic-color-text);
   margin: 0;
 }
 
@@ -1474,19 +1474,19 @@ onMounted(() => {
 }
 
 .tbr2 {
-  background: #b91c1c;
+  background: var(--semantic-color-error);
 }
 .tbr1 {
-  background: #f59e0b;
+  background: var(--semantic-color-warning-action);
 }
 .in-range {
-  background: #10b981;
+  background: var(--semantic-color-success);
 }
 .tar1 {
-  background: #f97316;
+  background: var(--semantic-color-warning-action);
 }
 .tar2 {
-  background: #7c3aed;
+  background: var(--semantic-color-ai);
 }
 
 .tir-legend {
@@ -1509,19 +1509,19 @@ onMounted(() => {
 }
 
 .dot-tbr2 {
-  background: #b91c1c;
+  background: var(--semantic-color-error);
 }
 .dot-tbr1 {
-  background: #f59e0b;
+  background: var(--semantic-color-warning-action);
 }
 .dot-target {
-  background: #10b981;
+  background: var(--semantic-color-success);
 }
 .dot-tar1 {
-  background: #f97316;
+  background: var(--semantic-color-warning-action);
 }
 .dot-tar2 {
-  background: #7c3aed;
+  background: var(--semantic-color-ai);
 }
 
 .metric-subgrid {
@@ -1539,13 +1539,13 @@ onMounted(() => {
 
 .sub-label {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 .sub-val {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-main);
+  color: var(--semantic-color-text);
 }
 
 /* Tables */
@@ -1563,8 +1563,8 @@ onMounted(() => {
 
 .data-table th {
   padding: 10px 14px;
-  background: var(--surface-secondary, #f8fafc);
-  color: var(--text-muted);
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
   border-bottom: 1px solid var(--border);
 }
@@ -1572,16 +1572,16 @@ onMounted(() => {
 .data-table td {
   padding: 12px 14px;
   border-bottom: 1px solid var(--border);
-  color: var(--text-main);
+  color: var(--semantic-color-text);
 }
 
 .row-unack {
-  background: #fff1f2;
+  background: var(--semantic-color-error-bg-row);
 }
 
 .empty-state {
   text-align: center;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
   padding: 32px;
 }
 
@@ -1593,8 +1593,8 @@ onMounted(() => {
 }
 
 .json-code {
-  background: #0f172a;
-  color: #38bdf8;
+  background: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-accent-inverse);
   padding: 14px;
   border-radius: 6px;
   font-size: 12px;
@@ -1612,32 +1612,32 @@ onMounted(() => {
 }
 
 .badge-gxp {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 .badge-standard {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 .badge-stream {
-  background: #ede9fe;
-  color: #6b21a8;
+  background: var(--semantic-color-ai-bg);
+  color: var(--semantic-color-purple-text);
 }
 .badge-success {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 .badge-danger {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
 }
 .badge-muted {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 .badge-active {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 
 .severity-badge {
@@ -1649,20 +1649,20 @@ onMounted(() => {
 }
 
 .severity-badge.critical {
-  background: #dc2626;
-  color: #ffffff;
+  background: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
 }
 .severity-badge.warning {
-  background: #f59e0b;
-  color: #ffffff;
+  background: var(--semantic-color-warning-action);
+  color: var(--semantic-color-surface);
 }
 .severity-badge.info {
-  background: #0284c7;
-  color: #ffffff;
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 
 .device-pill {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
   padding: 3px 8px;
   border-radius: 4px;
   font-weight: 600;
@@ -1670,8 +1670,8 @@ onMounted(() => {
 }
 
 .lakehouse-tag {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 11px;
@@ -1693,20 +1693,20 @@ onMounted(() => {
 
 .btn-primary {
   background: var(--primary);
-  color: #ffffff;
+  color: var(--semantic-color-surface);
 }
 .btn-secondary {
   background: var(--semantic-color-surface);
   border-color: var(--border);
-  color: var(--text-main);
+  color: var(--semantic-color-text);
 }
 .btn-accent {
-  background: #7c3aed;
-  color: #ffffff;
+  background: var(--semantic-color-ai);
+  color: var(--semantic-color-surface);
 }
 .btn-danger {
-  background: var(--danger);
-  color: #ffffff;
+  background: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
 }
 .btn-sm {
   padding: 4px 10px;
@@ -1755,7 +1755,7 @@ onMounted(() => {
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 .modal-body {
@@ -1785,7 +1785,7 @@ onMounted(() => {
 .form-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-main);
+  color: var(--semantic-color-text);
 }
 
 .form-control {
@@ -1794,7 +1794,7 @@ onMounted(() => {
   border-radius: var(--radius-md, 6px);
   font-size: 13px;
   background: var(--semantic-color-surface);
-  color: var(--text-main);
+  color: var(--semantic-color-text);
 }
 
 .textarea {
@@ -1802,8 +1802,8 @@ onMounted(() => {
 }
 
 .alert-detail-box {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
   padding: 12px;
   border-radius: 6px;
   font-size: 13px;
@@ -1811,10 +1811,10 @@ onMounted(() => {
 }
 
 .text-danger {
-  color: #dc2626;
+  color: var(--semantic-color-error);
 }
 .text-success {
-  color: #16a34a;
+  color: var(--semantic-color-success);
 }
 .font-bold {
   font-weight: 700;
@@ -1824,7 +1824,7 @@ onMounted(() => {
 }
 .threshold-sub {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
   margin-left: 4px;
 }
 

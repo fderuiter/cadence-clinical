@@ -1,11 +1,40 @@
 import { defineStore } from "pinia";
 import { knowledgeService } from "../api/knowledge.js";
+import { describeApiError } from "../utils/apiErrors.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
+
+const DEMO_ESCALATED_TICKETS_STORAGE_KEY = "cadence_demo_escalated_tickets";
+
+function loadSessionEscalatedTickets() {
+  if (typeof sessionStorage === "undefined") return [];
+  try {
+    const raw = sessionStorage.getItem(DEMO_ESCALATED_TICKETS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveSessionEscalatedTickets(tickets) {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.setItem(
+      DEMO_ESCALATED_TICKETS_STORAGE_KEY,
+      JSON.stringify(tickets)
+    );
+  } catch {
+    // Ignore storage quota errors in restricted environments.
+  }
+}
 
 export const useKnowledgeStore = defineStore("knowledge", {
   state: () => ({
     isOpen: false,
     currentRoute: "/ecrf",
+    hasLoadedContextualHelp: false,
     activePersona: "super_admin",
     primaryArticle: null,
     primaryVersion: null,
@@ -19,8 +48,11 @@ export const useKnowledgeStore = defineStore("knowledge", {
     isSearching: false,
     loading: false,
     error: null,
+    lastFailedAction: null,
     isEscalating: false,
     escalationPayload: null,
+    escalatedTickets: loadSessionEscalatedTickets(),
+    lastEscalatedTicket: null,
   }),
 
   getters: {
@@ -86,8 +118,10 @@ export const useKnowledgeStore = defineStore("knowledge", {
 
       this.currentRoute = targetRoute;
       this.activePersona = targetPersona;
+      this.hasLoadedContextualHelp = true;
       this.loading = true;
       this.error = null;
+      this.lastFailedAction = null;
 
       try {
         const response = await knowledgeService.resolveContextualHelp({
@@ -111,7 +145,20 @@ export const useKnowledgeStore = defineStore("knowledge", {
           this.relatedArticles = [];
         }
       } catch (err) {
-        this.error = err.message || "Failed to resolve contextual guidance.";
+        this.matchedMapping = null;
+        this.primaryArticle = null;
+        this.primaryVersion = null;
+        this.sectionAnchor = null;
+        this.relatedArticles = [];
+        this.error =
+          describeApiError(err) ||
+          err?.message ||
+          "Failed to resolve contextual guidance.";
+        this.lastFailedAction = {
+          type: "contextual",
+          route: targetRoute,
+          persona: targetPersona,
+        };
       } finally {
         this.loading = false;
       }
@@ -123,13 +170,23 @@ export const useKnowledgeStore = defineStore("knowledge", {
       if (!q) {
         this.searchResults = [];
         this.isSearching = false;
+        if (this.lastFailedAction?.type === "search") {
+          this.error = null;
+          this.lastFailedAction = null;
+        }
         return;
       }
 
       this.isSearching = true;
       this.loading = true;
+      this.error = null;
+      this.lastFailedAction = null;
       try {
-        const articles = await knowledgeService.listArticles();
+        const articles = await knowledgeService.listArticles({
+          status: "PUBLISHED",
+          q,
+          persona: this.activePersona,
+        });
         if (Array.isArray(articles)) {
           const lowerQ = q.toLowerCase();
           this.searchResults = articles.filter((art) => {
@@ -144,31 +201,63 @@ export const useKnowledgeStore = defineStore("knowledge", {
                 : false;
             return matchTitle || matchBody || matchTags;
           });
+        } else {
+          this.searchResults = [];
         }
       } catch (err) {
-        console.warn("Manual article search error:", err);
+        this.searchResults = [];
+        this.error =
+          describeApiError(err) ||
+          err?.message ||
+          "Failed to search SOP articles.";
+        this.lastFailedAction = {
+          type: "search",
+          query: q,
+        };
       } finally {
         this.loading = false;
       }
+    },
+
+    async retryLastAction() {
+      if (this.lastFailedAction?.type === "search") {
+        return await this.search(this.lastFailedAction.query);
+      }
+      const targetRoute =
+        this.lastFailedAction?.route || this.currentRoute || "/";
+      const targetPersona =
+        this.lastFailedAction?.persona || this.activePersona;
+      return await this.fetchContextualHelp(targetRoute, targetPersona);
     },
 
     prepareEscalation() {
       const activeArticle = this.displayedArticle;
       const articleTitle = activeArticle?.title || "None";
       const articleId = activeArticle?.id || "N/A";
-      const route = this.currentRoute;
+      const route = this.currentRoute || "/";
       const persona = this.activePersona;
 
       let defaultCategory = "SYSTEM_SUPPORT";
       if (route.startsWith("/ecrf")) {
         defaultCategory = "PROTOCOL_DEVIATION";
-      } else if (route.startsWith("/mdr") || route.startsWith("/rules")) {
+      } else if (
+        route.startsWith("/mdr") ||
+        route.startsWith("/rules") ||
+        route.startsWith("/studies")
+      ) {
         defaultCategory = "DATA_QUERY";
       } else if (route.startsWith("/ctms")) {
         defaultCategory = "MONITORING_FINDING";
-      } else if (route.startsWith("/audit")) {
+      } else if (route.startsWith("/ssu")) {
+        defaultCategory = "SITE_OPERATIONS";
+      } else if (route.startsWith("/audit") || route.startsWith("/auditor")) {
         defaultCategory = "REGULATORY_QUERY";
       }
+
+      const studyMatch = route.match(/^\/studies\/([^/?#]+)/);
+      const inferredStudyId = studyMatch
+        ? decodeURIComponent(studyMatch[1])
+        : "";
 
       this.escalationPayload = {
         title: `[Help Escalation] Operational Assistance on ${route}`,
@@ -176,13 +265,37 @@ export const useKnowledgeStore = defineStore("knowledge", {
         category: defaultCategory,
         gxp_severity: "MINOR",
         priority: "MEDIUM",
+        study_id: inferredStudyId,
         entity_type: "CRF_FORM",
         entity_id: articleId !== "N/A" ? articleId : null,
+        source_route: route,
+        persona,
         reason_for_change: `Escalated to Support Ticket from Contextual Help on ${route}`,
       };
 
       this.isEscalating = true;
       return this.escalationPayload;
+    },
+
+    recordEscalatedTicket(ticket) {
+      if (!ticket) return;
+      this.lastEscalatedTicket = ticket;
+      const deduped = this.escalatedTickets.filter(
+        (existing) =>
+          existing.id !== ticket.id && existing.reference !== ticket.reference
+      );
+      this.escalatedTickets = [ticket, ...deduped];
+      if (isDemoBuild()) {
+        saveSessionEscalatedTickets(this.escalatedTickets);
+      }
+    },
+
+    clearEscalatedTickets() {
+      this.escalatedTickets = [];
+      this.lastEscalatedTicket = null;
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.removeItem(DEMO_ESCALATED_TICKETS_STORAGE_KEY);
+      }
     },
 
     cancelEscalation() {

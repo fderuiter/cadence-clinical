@@ -190,8 +190,10 @@ function fieldHasWarning(field) {
   return !!getFieldWarningMessage(field);
 }
 
+const itemsRevision = ref(0);
 const items = computed({
   get: () => {
+    void itemsRevision.value;
     const storeSection = designerStore.activeForm?.sections?.find(
       (s) => s.id === props.section.id
     );
@@ -212,6 +214,7 @@ const items = computed({
         designerStore.activeForm.sections[idx].items = val;
       }
     }
+    itemsRevision.value++;
   },
 });
 

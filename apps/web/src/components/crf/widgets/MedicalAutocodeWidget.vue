@@ -127,11 +127,11 @@ const selectTerm = (term) => {
 .widget-label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text-primary, #1e293b);
+  color: var(--semantic-color-text);
 }
 
 .required-star {
-  color: var(--error, #ef4444);
+  color: var(--error);
 }
 
 .input-wrapper {
@@ -143,16 +143,16 @@ const selectTerm = (term) => {
 .autocode-input {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
   font-size: 0.9375rem;
-  background-color: var(--surface, #ffffff);
-  color: var(--text-primary, #1e293b);
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
 }
 
 .autocode-input:focus {
   outline: none;
-  border-color: var(--primary, #2563eb);
+  border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
@@ -160,7 +160,7 @@ const selectTerm = (term) => {
   position: absolute;
   right: 12px;
   font-size: 0.75rem;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .suggestions-dropdown {
@@ -169,8 +169,8 @@ const selectTerm = (term) => {
   left: 0;
   right: 0;
   z-index: 50;
-  background-color: var(--surface, #ffffff);
-  border: 1px solid var(--border, #cbd5e1);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   max-height: 200px;
@@ -188,25 +188,25 @@ const selectTerm = (term) => {
 }
 
 .suggestion-item:hover {
-  background-color: var(--surface-hover, #f1f5f9);
+  background-color: var(--semantic-color-surface-header);
 }
 
 .term-name {
   font-weight: 500;
-  color: var(--text-primary, #1e293b);
+  color: var(--semantic-color-text);
 }
 
 .term-badge {
   font-size: 0.75rem;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .selected-coding-badge {
   margin-top: 4px;
   padding: 4px 8px;
-  background-color: var(--primary-subtle, #eff6ff);
-  border-left: 3px solid var(--primary, #2563eb);
+  background-color: var(--semantic-color-info-bg);
+  border-left: 3px solid var(--primary);
   font-size: 0.8125rem;
-  color: var(--primary-dark, #1d4ed8);
+  color: var(--semantic-color-primary-dark);
 }
 </style>

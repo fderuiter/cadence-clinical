@@ -715,7 +715,7 @@ onUnmounted(() => {
     var(--drawer-width-md, min(100vw, 480px))
   );
   max-width: 100vw;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -740,7 +740,7 @@ onUnmounted(() => {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .header-info {
@@ -774,7 +774,7 @@ onUnmounted(() => {
   background: none;
   border: none;
   font-size: 1.2rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
@@ -785,14 +785,14 @@ onUnmounted(() => {
   justify-content: center;
 }
 .close-drawer-btn:hover {
-  background-color: #e2e8f0;
-  color: #0f172a;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
 }
 
 .tab-navigation {
   display: flex;
   border-bottom: 1px solid var(--border);
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
 }
 
 .tab-btn {
@@ -802,7 +802,7 @@ onUnmounted(() => {
   background: none;
   font-size: 0.82rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all 0.2s;
@@ -814,13 +814,13 @@ onUnmounted(() => {
 
 .tab-btn:hover {
   color: var(--accent);
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .tab-btn.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
 }
 
 .drawer-body {
@@ -850,12 +850,12 @@ onUnmounted(() => {
 .form-label {
   font-size: 0.82rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .form-label.required::after {
   content: " *";
-  color: #ef4444;
+  color: var(--semantic-color-error);
 }
 
 .form-control {
@@ -884,7 +884,7 @@ onUnmounted(() => {
   top: 100%;
   left: 0;
   right: 0;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
@@ -901,11 +901,11 @@ onUnmounted(() => {
   align-items: center;
   cursor: pointer;
   font-size: 0.82rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--semantic-color-surface-header);
 }
 
 .suggestion-item:hover {
-  background-color: #eff6ff;
+  background-color: var(--semantic-color-info-bg);
 }
 
 .sugg-label {
@@ -915,8 +915,8 @@ onUnmounted(() => {
 
 .sugg-type {
   font-size: 0.72rem;
-  color: #64748b;
-  background-color: #f1f5f9;
+  color: var(--semantic-color-text-secondary);
+  background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -926,7 +926,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 0.82rem;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   cursor: pointer;
 }
 
@@ -943,18 +943,18 @@ onUnmounted(() => {
 
 .success-alert {
   padding: 10px 12px;
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border-soft);
+  color: var(--semantic-color-success-dark);
   font-size: 0.82rem;
   border-radius: 6px;
 }
 
 .guest-info-banner {
   padding: 10px 12px;
-  background-color: #eff6ff;
+  background-color: var(--semantic-color-info-bg);
   border-left: 3px solid var(--accent);
-  color: #1e40af;
+  color: var(--semantic-color-info);
   font-size: 0.82rem;
   line-height: 1.4;
   border-radius: 4px;
@@ -962,7 +962,7 @@ onUnmounted(() => {
 
 .generated-link-card {
   padding: 16px;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
   border-radius: 8px;
   display: flex;
@@ -978,7 +978,7 @@ onUnmounted(() => {
 
 .expires-text {
   font-size: 0.78rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .url-copy-box {
@@ -989,13 +989,13 @@ onUnmounted(() => {
 .url-input {
   font-family: monospace;
   font-size: 0.8rem;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
 }
 
 .gxp-link-meta {
   margin: 0;
   font-size: 0.72rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-style: italic;
 }
 
@@ -1003,7 +1003,7 @@ onUnmounted(() => {
 .empty-grants-message {
   padding: 24px;
   text-align: center;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.85rem;
   font-style: italic;
 }
@@ -1016,7 +1016,7 @@ onUnmounted(() => {
 
 .grant-row-card {
   padding: 12px;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
   border-radius: 6px;
   display: flex;
@@ -1044,35 +1044,35 @@ onUnmounted(() => {
 }
 
 .grant-meta-line {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.75rem;
   display: flex;
   gap: 12px;
 }
 
 .grant-reason-line {
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.75rem;
 }
 
 .revoke-confirm-card {
   margin-top: 16px;
   padding: 16px;
-  background-color: #fef2f2;
-  border: 1px solid #fca5a5;
+  background-color: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border);
   border-radius: 6px;
 }
 
 .revoke-confirm-card h4 {
   margin: 0 0 6px 0;
-  color: #dc2626;
+  color: var(--semantic-color-error);
   font-size: 0.9rem;
 }
 
 .revoke-confirm-card p {
   margin: 0 0 10px 0;
   font-size: 0.8rem;
-  color: #991b1b;
+  color: var(--semantic-color-error-text-dark);
 }
 
 /* Mobile Breakpoint Overrides (max-width: 640px) */

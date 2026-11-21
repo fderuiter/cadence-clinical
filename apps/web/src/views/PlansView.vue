@@ -326,13 +326,13 @@ async function handleSelectTier(tierCode) {
   max-width: 1120px;
   margin: 0 auto;
   padding: 24px 20px 56px;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .prerelease-banner {
-  background: #fffbeb;
-  border: 1px solid #f59e0b;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-light);
+  border: 1px solid var(--semantic-color-warning-border-strong);
+  color: var(--semantic-color-warning-text);
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 0.9rem;
@@ -351,7 +351,7 @@ async function handleSelectTier(tierCode) {
   letter-spacing: 0.08em;
   font-size: 0.78rem;
   font-weight: 700;
-  color: #1d4ed8;
+  color: var(--semantic-color-interactive-primary);
   margin-bottom: 8px;
 }
 
@@ -361,7 +361,7 @@ async function handleSelectTier(tierCode) {
 }
 
 .plans-lead {
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   line-height: 1.6;
   margin-bottom: 20px;
 }
@@ -381,15 +381,15 @@ async function handleSelectTier(tierCode) {
 }
 
 .plans-alert-error {
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  border: 1px solid var(--semantic-color-error-border);
+  color: var(--semantic-color-error-dark);
 }
 
 .plans-alert-ok {
-  background: #f0fdf4;
-  border: 1px solid #86efac;
-  color: #166534;
+  background: var(--semantic-color-success-bg);
+  border: 1px solid var(--semantic-color-success-border);
+  color: var(--semantic-color-success-dark);
 }
 
 .plans-tiers-grid {
@@ -400,8 +400,8 @@ async function handleSelectTier(tierCode) {
 }
 
 .plan-card {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-muted);
   border-radius: 12px;
   padding: 24px;
   display: flex;
@@ -411,7 +411,7 @@ async function handleSelectTier(tierCode) {
 }
 
 .plan-card.is-active-tier {
-  border: 2px solid #2563eb;
+  border: 2px solid var(--semantic-color-interactive-primary);
 }
 
 .plan-badge-row {
@@ -422,8 +422,8 @@ async function handleSelectTier(tierCode) {
 }
 
 .plan-pill {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--semantic-color-info-bg);
+  color: var(--semantic-color-info);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 3px 10px;
@@ -431,8 +431,8 @@ async function handleSelectTier(tierCode) {
 }
 
 .plan-current-pill {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 3px 10px;
@@ -440,14 +440,14 @@ async function handleSelectTier(tierCode) {
 }
 
 .plan-subtitle {
-  color: #334155;
+  color: var(--semantic-color-text-body);
   font-weight: 600;
   margin: 6px 0 8px;
 }
 
 .plan-scoping {
   font-size: 0.86rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-bottom: 16px;
 }
 
@@ -460,7 +460,7 @@ async function handleSelectTier(tierCode) {
   font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   margin-bottom: 8px;
 }
 
@@ -471,9 +471,9 @@ async function handleSelectTier(tierCode) {
 }
 
 .family-chip {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #0f172a;
+  background: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border-muted);
+  color: var(--semantic-color-text);
   font-size: 0.8rem;
   font-weight: 600;
   padding: 3px 9px;
@@ -483,7 +483,7 @@ async function handleSelectTier(tierCode) {
 .plan-highlights {
   padding-left: 18px;
   margin: 0 0 20px;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   font-size: 0.9rem;
   line-height: 1.5;
 }
@@ -507,7 +507,7 @@ async function handleSelectTier(tierCode) {
 }
 
 .plans-section-intro {
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   margin-bottom: 18px;
   max-width: 820px;
 }
@@ -523,8 +523,8 @@ async function handleSelectTier(tierCode) {
 .guarantee-card,
 .family-card,
 .benchmark-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 10px;
   padding: 18px;
 }
@@ -544,33 +544,33 @@ async function handleSelectTier(tierCode) {
 }
 
 .family-tier-tag {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface-subtle);
+  border: 1px solid var(--semantic-color-border-muted);
   border-radius: 999px;
   padding: 2px 8px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .family-responsibility {
   font-size: 0.84rem;
   font-weight: 600;
-  color: #1d4ed8;
+  color: var(--semantic-color-interactive-primary);
   margin-bottom: 6px;
 }
 
 .family-summary,
 .family-apps {
   font-size: 0.86rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   margin-bottom: 8px;
 }
 
 .family-status {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #0f766e;
+  color: var(--semantic-color-success);
   margin: 0;
 }
 </style>

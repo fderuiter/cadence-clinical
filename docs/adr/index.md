@@ -128,6 +128,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2542: The Kernel Host Provisions the Development Tenant](2026-10-19-the-kernel-host-provisions-the-development-tenant.md) (2026-10-19)
 - [ADR-2543: The Kernel Host Seeds the Local Demo Study](2026-10-19-the-kernel-host-seeds-the-local-demo-study.md) (2026-10-19)
 - [ADR-2547: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap](2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md) (2026-11-20)
+- [ADR-2548: Export Canonical Demo Manifest from Kernel Seed](2026-11-20-export-canonical-demo-manifest-from-kernel-seed.md) (2026-11-20)
 - [ADR-2600: Modules Write Through the Kernel Command Path](2026-10-19-modules-write-through-the-kernel-command-path.md) (2026-10-19)
 - [ADR-2601: One Composition Host for the Kernel and Its Modules](2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md) (2026-10-19)
 - [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) (2026-10-28) _(Partially superseded by ADR-2603)_
@@ -371,6 +372,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2232: Financial and Site Operations Engines Standard](2026-08-29-financial-and-site-operations-engines-standard.md) (2026-08-29)
 - [ADR-2425: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md) (2026-08-31)
 - [ADR-2640: Randomisation Allocates from Approved, Encrypted Scheme Versions](2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md) (2026-10-20)
+- [ADR-2641: Contextual SOP Specificity Resolution and Audited Support Ticket Escalation](2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md) (2026-11-20)
 
 ### 5. Compliance, Audit & Governance
 
@@ -608,4 +610,4 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2817: Caller-Bound Participant Self-Service Wallet and Receipt OCR Capabilities](2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md) (2026-11-19)
 - [ADR-2818: Clinical and Gateway Endpoints Take Time From IClock and Ban TimeProvider](2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.md) (2026-11-20)
 - [ADR-2819: Focus Active eCRF View on Backed Kernel Forms Outside Demo Mode](2026-11-20-focus-active-ecrf-view-on-backed-kernel-forms-outside-demo-mode.md) (2026-11-20)
-- [ADR-2820: Export Canonical Demo Manifest from Kernel Seed](2026-11-20-export-canonical-demo-manifest-from-kernel-seed.md) (2026-11-20)
+- [ADR-2820: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates](2026-11-19-recalibrate-shared-color-tokens-and-wcag-22-aa-contrast-gates.md) (2026-11-19)

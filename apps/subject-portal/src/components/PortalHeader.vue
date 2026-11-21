@@ -22,7 +22,7 @@
           'sync-failed': isSyncFailed,
           'sync-retrying': sync.syncRetryInfo?.isRetrying,
         }"
-        aria-label="Toggle sync status drawer"
+        title="Toggle sync status drawer"
         @click="toggleSyncDrawer"
       >
         <span class="sync-icon" aria-hidden="true">{{

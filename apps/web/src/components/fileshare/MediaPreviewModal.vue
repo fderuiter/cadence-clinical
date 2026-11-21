@@ -165,10 +165,7 @@
             <div class="checksum-block">
               <h5>SHA-256 Digest:</h5>
               <code class="checksum-text" :title="fileRecord?.checksum_sha256">
-                {{
-                  fileRecord?.checksum_sha256 ||
-                  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                }}
+                {{ fileRecord?.checksum_sha256 || emptySha256Digest }}
               </code>
             </div>
           </div>
@@ -581,6 +578,8 @@ const pollTimer = ref(null);
 const qualityLevels = ref([]);
 const selectedQuality = ref(-1);
 const hlsInstance = ref(null);
+const emptySha256Digest =
+  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"; // pragma: allowlist secret
 const reportedCheckpoints = ref(new Set());
 const pendingAuditEvents = ref(new Set());
 const auditErrorState = ref(null);
@@ -1100,7 +1099,7 @@ function getStatusClass(status) {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
 }
 
 .header-details h3 {
@@ -1129,13 +1128,13 @@ function getStatusClass(status) {
   display: flex;
   flex: 1;
   overflow: hidden;
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
 }
 
 /* Sidebar styling */
 .metadata-sidebar {
   width: 320px;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -1149,7 +1148,7 @@ function getStatusClass(status) {
 }
 
 .meta-section.border-top {
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--semantic-color-border);
   padding-top: 16px;
 }
 
@@ -1157,7 +1156,7 @@ function getStatusClass(status) {
   margin: 0 0 12px 0;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -1170,36 +1169,15 @@ function getStatusClass(status) {
 }
 
 .meta-label {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
 
 .meta-value {
-  color: #0f172a;
+  color: var(--semantic-color-text);
   text-align: right;
   word-break: break-all;
   max-width: 180px;
-}
-
-.font-mono {
-  font-family: monospace;
-}
-
-.font-bold {
-  font-weight: 700;
-}
-
-.text-muted {
-  color: #64748b;
-}
-.text-warning {
-  color: #d97706;
-}
-.text-success {
-  color: #16a34a;
-}
-.text-danger {
-  color: #dc2626;
 }
 
 .change-reason-block h5,
@@ -1207,26 +1185,26 @@ function getStatusClass(status) {
   margin: 0 0 6px 0;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .reason-text {
   font-size: 0.8rem;
-  color: #1e293b;
-  background-color: #f8fafc;
+  color: var(--semantic-color-text-dark);
+  background-color: var(--semantic-color-surface-muted);
   padding: 8px;
   border-radius: 4px;
   margin: 0;
   line-height: 1.4;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--semantic-color-border);
 }
 
 .checksum-text {
   display: block;
   font-family: monospace;
   font-size: 0.72rem;
-  background-color: #f1f5f9;
-  color: #0f172a;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
   padding: 6px;
   border-radius: 4px;
   word-break: break-all;
@@ -1239,15 +1217,15 @@ function getStatusClass(status) {
 }
 
 .manifest-card.signed {
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border-soft);
+  color: var(--semantic-color-success-dark);
 }
 
 .manifest-card.approved {
-  background-color: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
+  background-color: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border);
+  color: var(--semantic-color-success-dark);
 }
 
 .sign-status {
@@ -1270,32 +1248,32 @@ function getStatusClass(status) {
 }
 
 .approved-pill {
-  background-color: #dcfce7;
-  color: #166534;
-  border: 1px solid #86efac;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
+  border: 1px solid var(--semantic-color-success-border);
 }
 
 .rendition-pill {
-  background-color: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #bae6fd;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
+  border: 1px solid var(--semantic-color-info-border-accent);
 }
 
 .pending-pill {
-  background-color: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
+  border: 1px solid var(--semantic-color-warning-border);
 }
 
 .badge-signer {
   font-size: 0.75rem;
-  color: #14532d;
+  color: var(--semantic-color-success-dark);
 }
 
 .btn-approve {
-  background-color: #16a34a;
-  color: #ffffff;
-  border: 1px solid #16a34a;
+  background-color: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-success);
   padding: 6px 12px;
   font-size: 0.82rem;
   font-weight: 600;
@@ -1310,8 +1288,8 @@ function getStatusClass(status) {
 }
 
 .btn-approve:hover:not(:disabled) {
-  background-color: #15803d;
-  border-color: #15803d;
+  background-color: var(--semantic-color-success);
+  border-color: var(--semantic-color-success);
 }
 
 .btn-approve:disabled {
@@ -1320,7 +1298,7 @@ function getStatusClass(status) {
 }
 
 .text-success {
-  color: #16a34a;
+  color: var(--semantic-color-success);
 }
 
 /* Viewer Workspace */
@@ -1335,32 +1313,11 @@ function getStatusClass(status) {
 }
 
 /* Dynamic rotating diagonal watermark */
-.watermark-overlay-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 100;
-  pointer-events: none;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  align-items: center;
-  opacity: 0.12;
-}
-
-.diagonal-watermark-row {
-  transform: rotate(-30deg);
-  white-space: nowrap;
-}
-
 .watermark-text {
   font-family: Arial, sans-serif;
   font-size: 1rem;
   font-weight: 900;
-  color: #ef4444;
+  color: var(--semantic-color-error);
   letter-spacing: 0.15em;
 }
 
@@ -1382,7 +1339,7 @@ function getStatusClass(status) {
 
 /* Video specific */
 .video-container {
-  background-color: #000000;
+  background-color: var(--semantic-color-black);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
@@ -1391,7 +1348,7 @@ function getStatusClass(status) {
 .video-player-wrapper {
   position: relative;
   width: 100%;
-  background-color: #000000;
+  background-color: var(--semantic-color-black);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1400,7 +1357,7 @@ function getStatusClass(status) {
 .video-element {
   width: 100%;
   max-height: 480px;
-  background-color: #000000;
+  background-color: var(--semantic-color-black);
 }
 
 .video-quality-overlay {
@@ -1421,14 +1378,14 @@ function getStatusClass(status) {
 .quality-label {
   font-size: 0.72rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   margin: 0;
 }
 
 .quality-select {
-  background: #1e293b;
-  color: #f8fafc;
-  border: 1px solid #475569;
+  background: var(--semantic-color-surface-elevated);
+  color: var(--semantic-color-text-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 2px 6px;
   font-size: 0.75rem;
@@ -1438,12 +1395,12 @@ function getStatusClass(status) {
 }
 
 .quality-select:focus {
-  border-color: var(--primary, #3b82f6);
+  border-color: var(--primary);
 }
 
 .quality-badge {
   margin-left: 8px;
-  color: #38bdf8;
+  color: var(--semantic-color-primary);
   font-weight: 600;
 }
 
@@ -1451,7 +1408,7 @@ function getStatusClass(status) {
 .video-processing-card {
   width: 100%;
   min-height: 320px;
-  background-color: #0f172a;
+  background-color: var(--semantic-color-surface-inverse);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1459,14 +1416,14 @@ function getStatusClass(status) {
   padding: 40px 24px;
   box-sizing: border-box;
   text-align: center;
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
 }
 
 .spinner-circle {
   width: 44px;
   height: 44px;
   border: 3px solid rgba(255, 255, 255, 0.15);
-  border-top-color: var(--primary, #3b82f6);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 20px;
@@ -1490,27 +1447,27 @@ function getStatusClass(status) {
   margin: 0 0 8px 0;
   font-size: 1.15rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
 }
 
 .processing-subtitle {
   margin: 0 0 16px 0;
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   max-width: 420px;
   line-height: 1.5;
 }
 
 .polling-status {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin: 0;
 }
 
 .btn-outline-light {
   background-color: transparent;
-  color: #f8fafc;
-  border: 1px solid #475569;
+  color: var(--semantic-color-text-inverse);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   padding: 6px 12px;
   font-size: 0.8rem;
@@ -1520,22 +1477,22 @@ function getStatusClass(status) {
 }
 
 .btn-outline-light:hover {
-  background-color: #1e293b;
-  border-color: #94a3b8;
+  background-color: var(--semantic-color-surface-elevated);
+  border-color: var(--semantic-color-border-inverse);
 }
 
 .media-meta-badge {
   width: 100%;
   padding: 8px 12px;
-  background-color: #1e293b;
-  color: #94a3b8;
+  background-color: var(--semantic-color-surface-elevated);
+  color: var(--semantic-color-text-inverse-muted);
   font-size: 0.75rem;
   text-align: center;
 }
 
 /* Audio specific */
 .audio-container {
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   padding: 32px;
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -1552,7 +1509,7 @@ function getStatusClass(status) {
 
 .audio-icon-display {
   font-size: 3rem;
-  background-color: #eff6ff;
+  background-color: var(--semantic-color-info-bg);
   width: 72px;
   height: 72px;
   border-radius: 36px;
@@ -1581,7 +1538,7 @@ function getStatusClass(status) {
 
 /* Image specific */
 .image-container {
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   padding: 16px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -1598,7 +1555,7 @@ function getStatusClass(status) {
 /* PDF document sheet */
 .pdf-document-sheet {
   width: 100%;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   border-radius: 4px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
   padding: 40px;
@@ -1612,7 +1569,7 @@ function getStatusClass(status) {
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
   text-transform: uppercase;
   margin-bottom: 20px;
@@ -1626,18 +1583,18 @@ function getStatusClass(status) {
   margin: 0 0 6px 0;
   font-size: 1.4rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .doc-display-subtitle {
   margin: 0 0 16px 0;
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .doc-divider {
   border: none;
-  border-top: 2px solid #e2e8f0;
+  border-top: 2px solid var(--semantic-color-border);
   margin-bottom: 20px;
 }
 
@@ -1649,22 +1606,22 @@ function getStatusClass(status) {
   margin: 0 0 8px 0;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .doc-text-section p {
   margin: 0;
   font-size: 0.85rem;
   line-height: 1.6;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .doc-sheet-footer {
   display: flex;
   justify-content: space-between;
   font-size: 0.7rem;
-  color: #94a3b8;
-  border-top: 1px solid #e2e8f0;
+  color: var(--semantic-color-text-secondary);
+  border-top: 1px solid var(--semantic-color-border);
   padding-top: 12px;
   margin-top: 24px;
 }
@@ -1687,13 +1644,13 @@ function getStatusClass(status) {
 }
 
 .audit-alert-card {
-  background-color: #1e293b;
-  border: 1px solid #ef4444;
+  background-color: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-error);
   border-radius: 8px;
   padding: 24px;
   max-width: 440px;
   text-align: center;
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
 }
 
@@ -1707,19 +1664,19 @@ function getStatusClass(status) {
   margin: 0 0 8px 0;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
 }
 
 .audit-alert-card .alert-message {
   margin: 0 0 16px 0;
   font-size: 0.85rem;
-  color: #cbd5e1;
+  color: var(--semantic-color-text-secondary);
   line-height: 1.5;
 }
 
 .btn-retry-audit {
-  background-color: #ef4444;
-  color: #ffffff;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
   border: none;
   border-radius: 6px;
   padding: 8px 16px;
@@ -1730,6 +1687,6 @@ function getStatusClass(status) {
 }
 
 .btn-retry-audit:hover {
-  background-color: #dc2626;
+  background-color: var(--semantic-color-error);
 }
 </style>

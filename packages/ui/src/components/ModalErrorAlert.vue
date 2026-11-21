@@ -132,10 +132,10 @@ onMounted(() => {
   flex-direction: column;
   gap: 10px;
   padding: 12px 16px;
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 6px;
-  color: #991b1b;
+  background-color: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
+  border-radius: var(--radius-sm);
+  color: var(--semantic-color-error-text-dark);
   font-size: 0.875rem;
   line-height: 1.4;
   margin-top: 10px;
@@ -143,7 +143,7 @@ onMounted(() => {
 }
 
 .modal-error-alert:focus {
-  outline: 2px solid #dc2626;
+  outline: 2px solid var(--semantic-color-error);
   outline-offset: 1px;
 }
 
@@ -169,11 +169,11 @@ onMounted(() => {
 
 .alert-title {
   font-weight: 600;
-  color: #7f1d1d;
+  color: var(--semantic-color-error-text-deep);
 }
 
 .alert-message {
-  color: #991b1b;
+  color: var(--semantic-color-error-text-dark);
 }
 
 .alert-actions {
@@ -191,29 +191,29 @@ onMounted(() => {
   padding: 4px 10px;
   font-size: 0.8rem;
   font-weight: 600;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .btn-retry {
-  background-color: #dc2626;
-  color: #ffffff;
-  border: 1px solid #dc2626;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-error);
 }
 
 .btn-retry:hover {
-  background-color: #b91c1c;
-  border-color: #b91c1c;
+  background-color: var(--semantic-color-error-text-dark);
+  border-color: var(--semantic-color-error-text-dark);
 }
 
 .btn-dismiss {
-  background-color: #ffffff;
-  color: #7f1d1d;
-  border: 1px solid #fca5a5;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-error-text-deep);
+  border: 1px solid var(--semantic-color-error);
 }
 
 .btn-dismiss:hover {
-  background-color: #fee2e2;
+  background-color: var(--semantic-color-error-bg);
 }
 </style>
