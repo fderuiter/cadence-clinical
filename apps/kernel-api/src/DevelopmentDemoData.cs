@@ -63,7 +63,7 @@ internal static class DevelopmentDemoData
         ("DEMO_INVESTIGATOR", "Site investigator", ["participant.screen", "observation.record", "observation.correct", "collection.open", "collection.record", "collection.sign", "execution.query.answer"]),
         ("DEMO_MONITOR", "Clinical research associate", ["validation_finding.investigate", "validation_finding.classify", "validation_finding.explain", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
         ("DEMO_DATA_MANAGER", "Data manager", ["validation_run.record", "validation_finding.accept", "validation_finding.reopen", "observation.lock", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
-        ("DEMO_DESIGNER", "Study designer", ["protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.approve", "protocol.amend", "attestation.sign"]),
+        ("DEMO_DESIGNER", "Study designer", ["organization.register", "study.register", "concept.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.approve", "protocol.amend", "attestation.sign"]),
         ("DEMO_SAFETY", "Safety reviewer", ["validation_finding.investigate", "validation_finding.classify"]),
         ("DEMO_AUDITOR", "Auditor", ["validation_finding.investigate"]),
     ];
@@ -169,7 +169,7 @@ internal static class DevelopmentDemoData
             {
                 scope = AuthorityScope.StudySite(studySites[site]);
             }
-            else if (string.Equals(subject, DesignerLeadSubject, StringComparison.Ordinal))
+            else if (string.Equals(role, "DEMO_DESIGNER", StringComparison.Ordinal))
             {
                 scope = AuthorityScope.Tenant();
             }

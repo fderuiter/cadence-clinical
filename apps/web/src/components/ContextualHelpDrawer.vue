@@ -1100,10 +1100,10 @@ onUnmounted(() => {
 
 .help-error-alert {
   padding: 16px;
-  border: 1px solid #dc2626;
+  border: 1px solid var(--semantic-color-error);
   border-radius: 8px;
-  background-color: #fef2f2;
-  color: #7f1d1d;
+  background-color: var(--semantic-color-error-bg-soft);
+  color: var(--semantic-color-error-text-deep);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1119,14 +1119,14 @@ onUnmounted(() => {
   margin: 0;
   font-size: 0.92rem;
   font-weight: 700;
-  color: #7f1d1d;
+  color: var(--semantic-color-error-text-deep);
 }
 
 .error-alert-message {
   margin: 0;
   font-size: 0.84rem;
   line-height: 1.45;
-  color: #991b1b;
+  color: var(--semantic-color-error-text-dark);
 }
 
 .error-alert-actions {
@@ -1135,8 +1135,8 @@ onUnmounted(() => {
 }
 
 .btn-retry {
-  border-color: #b91c1c;
-  color: #7f1d1d;
+  border-color: var(--semantic-color-error-dark);
+  color: var(--semantic-color-error-text-deep);
 }
 
 :deep(.clinical-drawer-footer) {
