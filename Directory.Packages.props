@@ -6,43 +6,43 @@
 
   <ItemGroup>
     <!-- ASP.NET Core & OpenTelemetry -->
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="$(DotNetServicingVersion)" />
     <!-- Gateway OIDC bearer-token validation against Keycloak (#4761). -->
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(DotNetServicingVersion)" />
     <!-- WebApplicationFactory and Aspire require the same Microsoft.Extensions servicing versions. -->
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.15" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.15" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.15" />
-    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.15" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(DotNetServicingVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(DotNetServicingVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(DotNetServicingVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="$(DotNetServicingVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="$(DotNetServicingVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="$(DotNetServicingVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="$(DotNetServicingVersion)" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.0.18" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OpenTelemetryInstrumentationVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryInstrumentationVersion)" />
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.19.1-beta.1" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.19.0" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.15" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryInstrumentationVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="$(DotNetServicingVersion)" />
 
     <!-- Aspire AppHost & Orchestration (keep all Aspire.Hosting.* packages aligned with Aspire.AppHost.Sdk in Cadence.AppHost.csproj) -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireHostingVersion)" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="$(AspireHostingVersion)" />
+    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="$(AspireHostingVersion)" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireHostingVersion)" />
 
     <!-- Persistence & Database Drivers -->
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="$(DotNetServicingVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="$(DotNetServicingVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(DotNetServicingVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="$(DotNetServicingVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(DotNetServicingVersion)" />
 
     <!-- Asynchronous Messaging & Transactional Outbox -->
-    <PackageVersion Include="MassTransit" Version="8.5.12" />
-    <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="8.5.12" />
+    <PackageVersion Include="MassTransit" Version="$(MassTransitVersion)" />
+    <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="$(MassTransitVersion)" />
 
     <!-- CLI & Developer Experience -->
     <PackageVersion Include="Spectre.Console" Version="0.49.1" />
@@ -50,11 +50,12 @@
 
     <!-- Validation & Security -->
     <PackageVersion Include="Fluid.Core" Version="2.40.0" />
-    <PackageVersion Include="FluentValidation" Version="12.2.0" />
-    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
-    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.19.2" />
-    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.23.0" />
-    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+    <PackageVersion Include="FluentValidation" Version="$(FluentValidationVersion)" />
+    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="$(FluentValidationVersion)" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="$(IdentityModelVersion)" />
+    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="$(IdentityModelVersion)" />
+    <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="$(IdentityModelVersion)" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="$(DotNetServicingVersion)" />
 
     <!-- Testing Infrastructure -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
@@ -69,17 +70,17 @@
 
     <!-- AI model port and providers (ADR-2630; keep Microsoft.Extensions.AI.* aligned on 10.x for net10.0) -->
     <PackageVersion Include="Anthropic" Version="13.10.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="$(DotNetAiVersion)" />
     <PackageVersion Include="Anthropic.Aws" Version="1.0.1" />
     <PackageVersion Include="Anthropic.Bedrock" Version="1.0.4" />
     <PackageVersion Include="Anthropic.Foundry" Version="1.0.0" />
     <PackageVersion Include="Anthropic.Vertex" Version="1.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.11.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="$(DotNetAiVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="$(DotNetAiVersion)" />
 
     <!-- Resilience & HTTP Clients -->
     <PackageVersion Include="Polly" Version="8.5.2" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="$(DotNetServicingVersion)" />
     <!-- AI agent tools (ADR-2633): the provider-neutral function abstraction and the official MCP C# SDK. -->
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
@@ -88,7 +89,8 @@
     <PackageVersion Include="fo-dicom" Version="5.2.6" />
     <PackageVersion Include="FFMpegCore" Version="6.0.0" />
     <PackageVersion Include="nClam" Version="7.0.0" />
-    <PackageVersion Include="AWSSDK.S3" Version="4.1.2" />
+    <!-- Stay on AWSSDK.S3 4.0.x while targeting net10.0; AWSSDK.Core >= 4.1.0 depends on System.IO.Hashing 11.0.0. -->
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.12" />
 
     <!-- Analyzers & Code Quality -->
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
