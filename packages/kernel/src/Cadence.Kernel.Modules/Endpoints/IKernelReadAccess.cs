@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.References;
 
 namespace Cadence.Kernel.Modules;
@@ -17,4 +18,14 @@ public interface IKernelReadAccess
     /// masked for any reason, or when the request has no accountable actor.
     /// </summary>
     ValueTask<bool> CanSeeAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// True when the current caller holds a grant permitting <paramref name="capability"/> on <paramref name="resource"/>
+    /// in <paramref name="tenant"/> (ADR-2482).
+    /// </summary>
+    ValueTask<bool> CanExerciseAsync(
+        TenantId tenant,
+        Capability capability,
+        NodeRef resource,
+        CancellationToken cancellationToken) => ValueTask.FromResult(true);
 }

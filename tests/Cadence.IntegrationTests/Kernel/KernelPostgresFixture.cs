@@ -157,6 +157,7 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddKernelValidationPersistence()
             .AddKernelValidation()
             .AddCadenceRules()
+            .AddCadenceCollectionValidation()
             .AddCadenceStandards()
             .AddKernelIdentityVault()
             .AddKernelIdentityVaultPersistence(VaultMasterKey, VaultRegion);

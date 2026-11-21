@@ -18,6 +18,8 @@ using Cadence.Kernel.Persistence.Activity;
 using Cadence.Kernel.Persistence.Navigation;
 using Cadence.Kernel.Persistence.Search;
 using Cadence.Kernel.Persistence.Simulation;
+using Cadence.Kernel.Persistence.Standards;
+using Cadence.Kernel.Persistence.Validation;
 using Cadence.Kernel.Protocol.Import;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Time;
@@ -25,6 +27,7 @@ using Cadence.Modules.Execution;
 using Cadence.Modules.Intelligence;
 using Cadence.Modules.Intelligence.Mcp;
 using Cadence.Modules.Intelligence.Tools;
+using Cadence.Rules;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
@@ -82,6 +85,12 @@ builder.Services
     .AddKernelSimulationInputs()
     .AddKernelSimulation()
 
+    // Standards registry, validation findings ledger, and rule evaluation (spec §6.3, §10, K-RULE-3, K-FIND-1)
+    .AddKernelStandardsPersistence()
+    .AddKernelValidationPersistence()
+    .AddCadenceRules()
+    .AddCadenceCollectionValidation()
+
     // Writes: the kernel command pipeline (ADR-2449). Observation reads and writes are the first module writes it serves
     // (ADR-2620); every write is authorized by the authority evaluator above and commits state, audit and outbox together.
     .AddKernelCommandPipeline()
@@ -134,6 +143,7 @@ app.MapKernelApi()
     .MapKernelExecution()
     .MapKernelLocks()
     .MapKernelProposals()
+    .MapKernelValidation()
     .MapKernelEntitlements()
     .MapTrialOnboarding();
 app.MapIntelligenceModule();

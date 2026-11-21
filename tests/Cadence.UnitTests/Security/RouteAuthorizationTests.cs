@@ -52,6 +52,7 @@ public sealed class RouteAuthorizationTests
         ("kernel", "POST /api/v1/execution/forms", "Sends OpenCollectionInstance, which the kernel authorizes against the caller's grant on the enrollment (collection.open)."),
         ("kernel", "GET /api/v1/execution/forms/{formId:guid}", "Answers only when the caller may see the form's enrollment, as kernel reads decide it; otherwise 403."),
         ("kernel", "PUT /api/v1/execution/forms/{formId:guid}/values", "Sends RecordCollectedValues, which the kernel authorizes against the caller's grant on the form's enrollment (collection.record)."),
+        ("kernel", "POST /api/v1/execution/forms/{formId:guid}/preview", "Answers only when the caller may see the form's enrollment, as kernel reads decide it, and evaluates pinned collection rules in memory without mutating state; otherwise 403."),
         ("kernel", "POST /api/v1/execution/forms/{formId:guid}/signatures", "Needs a fresh single-use X-Sig-Token for this form, then sends SignCollectionInstance, which the kernel authorizes against the caller's grant on the form's enrollment (collection.sign)."),
         ("kernel", "GET /api/v1/execution/forms/queries", "Answers only when the caller may see the enrollment, as kernel reads decide it; otherwise 403."),
         ("kernel", "GET /api/v1/execution/forms/{formId:guid}/queries", "Answers only when the caller may see the form's enrollment, as kernel reads decide it; otherwise 403."),

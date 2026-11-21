@@ -13,6 +13,7 @@ export type SectionId =
   | "participants"
   | "queries"
   | "locks"
+  | "validation"
   | "exports";
 
 export interface Section {
@@ -85,6 +86,12 @@ export const STAGES: readonly Stage[] = [
         label: "Locks",
         description:
           "Frozen and locked scopes across the study, with signed apply and release",
+      },
+      {
+        id: "validation",
+        label: "Validation",
+        description:
+          "Edit check rule packs, pre-activation previews, study pinning, and validation findings",
       },
     ],
   },
