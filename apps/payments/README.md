@@ -18,7 +18,7 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
   - `PayableLedger` is integrated with `ClinicalVisitCompletedConsumer` to calculate investigator fee line items, split payee allocations, and holdback retention reserves upon signed visit milestone completion via the transactional outbox.
 - `Infrastructure/Consumers/`: `ClinicalVisitCompletedConsumer` listens for `ClinicalVisitCompleted` domain events and writes `Payable`, `PayableAllocation`, `HoldbackReserve`, and `PaymentAuditLog` entities.
 - `Infrastructure/Persistence/`: `PaymentsDbContext`, a design-time `PaymentsDbContextFactory`, and `Configurations/` (Fluent API mappings).
-- `Infrastructure/Persistence/Migrations/`: `20260924145423_InitialCreate`, `20260925183437_ConvertPaymentPropertiesToDecimal`.
+- `Infrastructure/Persistence/Migrations/`: `20260924145423_InitialCreate`, `20260925183437_ConvertPaymentPropertiesToDecimal`, `20260929203006_StoreProcessorReferencesInsteadOfPaymentSecrets`, `20261001161305_AddParticipantCompensationTables`, `20261006193258_AddDisbursementReferenceToExpenseClaims`, `20261121012903_AddPaymentStatusCheckConstraints`, `20261121053614_EnforceTenantRowLevelSecurity`, `20261121150826_AddSelfServiceIdempotencyKeys`.
 
 ## HTTP surface
 
@@ -79,14 +79,16 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   `svc:payments` on the demonstration stipend rules the service seeds on first read, and `svc:system_auto_approval` on
   the rows the expense auto-approval policy writes (its details name the submitting caller). `SubjectId` on a wallet,
   claim or transaction is the participant the row belongs to, not the actor.
-- **Caller-bound participant self-service ([ADR-2817](../../docs/adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md)).**
+- **Caller-bound participant self-service ([ADR-2817](../../docs/adr/2026-11-19-caller-bound-participant-self-service-wallet-and-receipt-ocr-capabilities.md), [ADR-2526](../../docs/adr/2026-11-20-idempotent-self-service-participant-expense-claims-and-wallet-disbursements.md)).**
   The `subject` role holds only the five `payments_self_*` capabilities mapped to `/api/v1/payments/participant/me/*`
   and never reaches staff directory, card-issuance, W-9 verification, claim-review, or invoice routes (`403` with zero
   database mutations). Every `/participant/me/*` handler resolves the wallet through `ResolveOwnWalletAsync` bound to
   `PaymentsCaller.UserId`, refuses (`403`) any cross-participant `subjectId` or `walletId`, masks card/routing/account
   identifiers before serialization, enforces the `<= $100.00` (`<= $75.00` meal) / `>= 0.90` OCR confidence / IRS
-  `$600.00` verified W-9 auto-approval policy, and computes diary synchronization stipends strictly from server-side
-  `ParticipantStipendRule` rows (`400` if a request supplies an `amount`).
+  `$600.00` verified W-9 auto-approval policy, persists `(WalletId, IdempotencyKey)` deduplication keys across
+  `/participant/me/expenses` and `/participant/me/disburse` so retries never double-credit or double-debit balances,
+  and computes diary synchronization stipends strictly from server-side `ParticipantStipendRule` rows (`400` if a
+  request supplies an `amount`).
 - `GET /participant/wallets/subject/{subjectId}` no longer opens a wallet when none exists; it answers `404`.
 - **Study and site scope (#5401, [ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).**
   Every handler reaches only the studies in the caller's signed `study_ids` and, for a site-scoped role (CRC,

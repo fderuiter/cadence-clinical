@@ -512,6 +512,17 @@ public static partial class DemoManifestGeneratorService
         return roles;
     }
 
+    private static Dictionary<string, string> ParseStringConstants(string kernelSource)
+    {
+        var constants = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (GroupCollection groups in StringConstantRegex().Matches(kernelSource).Select(match => match.Groups))
+        {
+            constants[groups["name"].Value] = groups["value"].Value;
+        }
+
+        return constants;
+    }
+
     private static List<(string Username, string SubjectUuid, string RoleCode, string? SiteCode)> ParseKernelUsers(string kernelSource, List<string> issues)
     {
         string? block = ExtractArrayBlock(kernelSource, "Users");
@@ -521,18 +532,34 @@ public static partial class DemoManifestGeneratorService
             return [];
         }
 
-        var users = UserTupleRegex()
-            .Matches(block)
-            .Select(match =>
+        var constants = ParseStringConstants(kernelSource);
+        var users = new List<(string Username, string SubjectUuid, string RoleCode, string? SiteCode)>();
+        foreach (GroupCollection groups in UserTupleRegex().Matches(block).Select(match => match.Groups))
+        {
+            string subjectUuid;
+            if (groups["sub"].Success)
             {
-                string? site = match.Groups["site"].Success ? match.Groups["site"].Value : null;
-                return (
-                    match.Groups["user"].Value,
-                    match.Groups["sub"].Value,
-                    match.Groups["role"].Value,
-                    site);
-            })
-            .ToList();
+                subjectUuid = groups["sub"].Value;
+            }
+            else
+            {
+                string constName = groups["subConst"].Value;
+                if (!constants.TryGetValue(constName, out string? resolved))
+                {
+                    issues.Add($"Could not resolve constant '{constName}' referenced in Users array of '{KernelSeedRelativePath}'.");
+                    continue;
+                }
+
+                subjectUuid = resolved;
+            }
+
+            string? site = groups["site"].Success ? groups["site"].Value : null;
+            users.Add((
+                groups["user"].Value,
+                subjectUuid,
+                groups["role"].Value,
+                site));
+        }
 
         if (users.Count == 0)
         {
@@ -1116,7 +1143,12 @@ public static partial class DemoManifestGeneratorService
     private static partial Regex QuotedStringRegex();
 
     [GeneratedRegex(
-        @"\(\s*""(?<user>[^""]+)""\s*,\s*""(?<sub>[^""]+)""\s*,\s*""(?<role>[^""]+)""\s*,\s*(?:""(?<site>[^""]+)""|null)\s*\)",
+        @"\bconst\s+string\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*""(?<value>[^""]*)""\s*;",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex StringConstantRegex();
+
+    [GeneratedRegex(
+        @"\(\s*""(?<user>[^""]+)""\s*,\s*(?:""(?<sub>[^""]+)""|(?<subConst>[A-Za-z_][A-Za-z0-9_]*))\s*,\s*""(?<role>[^""]+)""\s*,\s*(?:""(?<site>[^""]+)""|null)\s*\)",
         RegexOptions.CultureInvariant)]
     private static partial Regex UserTupleRegex();
 
