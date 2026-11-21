@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
 
 /// <inheritdoc />
-public partial class SyncPaymentsOutboxAndPayoutModel : Migration
+public partial class AddPaymentStatusCheckConstraints : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)

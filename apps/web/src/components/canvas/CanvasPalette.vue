@@ -23,7 +23,7 @@
         :placeholder="
           studyCode
             ? 'Stage, section, participant, workflow or study code'
-            : 'Study code or workflow, e.g. CAD-101'
+            : 'Study code or workflow, e.g. CADENCE-101'
         "
         aria-label="Search"
         @keydown="onKeydown"

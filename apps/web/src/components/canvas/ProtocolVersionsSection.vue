@@ -58,6 +58,14 @@
         </tr>
       </tbody>
     </table>
+
+    <ProtocolImportPanel
+      v-if="canShowImportPanel"
+      :study-ref="studyNodeRef"
+      :study-code="studyCode"
+      :selected-version-ref="activeSummaryVersionRef"
+      @imported="onDraftImported"
+    />
   </section>
 </template>
 
@@ -66,11 +74,13 @@ import { computed, ref, watch } from "vue";
 import {
   isMasked,
   kernelApi,
+  type KernelProtocolDraftSummary,
   type KernelProtocolVersion,
 } from "../../api/kernelApi";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
+import ProtocolImportPanel from "./ProtocolImportPanel.vue";
 import SupportDetails from "./SupportDetails.vue";
 
 /**
@@ -83,6 +93,22 @@ const versions = ref<KernelProtocolVersion[]>([]);
 const loading = ref(false);
 const error = ref("");
 const noStudy = ref(false);
+const studyNodeRef = ref("");
+
+const canShowImportPanel = computed(
+  () =>
+    !loading.value &&
+    !error.value &&
+    !noStudy.value &&
+    Boolean(studyNodeRef.value) &&
+    typeof kernelApi.importProtocolDraft === "function"
+);
+
+const activeSummaryVersionRef = computed(() => {
+  if (props.selectedRef) return props.selectedRef;
+  const firstVisible = versions.value.find((v) => v.ref && !isMasked(v));
+  return firstVisible?.ref ?? "";
+});
 
 /** Visible versions by id: a parent reference may name the version with or without its revision. */
 const byId = computed(
@@ -127,6 +153,7 @@ async function load(code: string) {
   loading.value = true;
   error.value = "";
   noStudy.value = false;
+  studyNodeRef.value = "";
   versions.value = [];
   try {
     const study = await findKernelStudyRef(code);
@@ -135,6 +162,7 @@ async function load(code: string) {
       noStudy.value = true;
       return;
     }
+    studyNodeRef.value = study;
     const listed = await kernelApi.listProtocolVersions(study);
     if (request === latest) {
       versions.value = listed;
@@ -154,6 +182,34 @@ async function load(code: string) {
     }
   } finally {
     if (request === latest) loading.value = false;
+  }
+}
+
+async function onDraftImported(summary: KernelProtocolDraftSummary) {
+  if (studyNodeRef.value) {
+    try {
+      const listed = await kernelApi.listProtocolVersions(studyNodeRef.value);
+      versions.value = listed;
+      for (const v of listed) {
+        if (v.ref) {
+          seedNodeSummary(v.ref, {
+            kind: "protocol_version",
+            title: `Version ${v.number}`,
+            status: v.status,
+          });
+        }
+      }
+    } catch {
+      // Keep the imported version visible even if refreshing the list fails.
+    }
+  }
+  if (summary.version?.ref) {
+    seedNodeSummary(summary.version.ref, {
+      kind: "protocol_version",
+      title: `Version ${summary.version.number}`,
+      status: summary.version.status,
+    });
+    emit("select", summary.version);
   }
 }
 
