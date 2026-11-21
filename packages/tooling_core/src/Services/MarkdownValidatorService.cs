@@ -18,6 +18,7 @@ public static class MarkdownValidatorService
             $"{Path.DirectorySeparatorChar}.agents{Path.DirectorySeparatorChar}",
             $"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}",
             $"{Path.DirectorySeparatorChar}.venv{Path.DirectorySeparatorChar}",
+            $"{Path.DirectorySeparatorChar}.cadence{Path.DirectorySeparatorChar}",
             $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}",
             $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}",
             $"{Path.DirectorySeparatorChar}dist{Path.DirectorySeparatorChar}",

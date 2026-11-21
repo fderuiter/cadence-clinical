@@ -427,8 +427,8 @@ const formatTime = (isoString) => {
 }
 
 .study-tag {
-  background-color: #f1f5f9;
-  color: #334155;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
   border: 1px solid var(--border);
   padding: 3px 8px;
   border-radius: 4px;
@@ -437,9 +437,9 @@ const formatTime = (isoString) => {
 }
 
 .protocol-tag {
-  background-color: #eff6ff;
+  background-color: var(--semantic-color-info-bg);
   color: var(--primary);
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--semantic-color-info-border);
   padding: 3px 8px;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -461,9 +461,9 @@ const formatTime = (isoString) => {
 }
 
 .signature-manifest-banner {
-  background-color: #f0fdf4;
+  background-color: var(--semantic-color-success-bg-soft);
   border-left: 4px solid var(--success);
-  border: 1px solid #bbf7d0;
+  border: 1px solid var(--semantic-color-success-border-soft);
   padding: 16px;
   border-radius: 8px;
   display: flex;
@@ -479,14 +479,14 @@ const formatTime = (isoString) => {
 
 .manifest-details {
   font-size: 0.85rem;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .manifest-details code {
-  background-color: #e2e8f0;
+  background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
   font-family: monospace;
@@ -516,7 +516,7 @@ const formatTime = (isoString) => {
 .outline-group h4 {
   margin: 0 0 10px 0;
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -547,7 +547,7 @@ const formatTime = (isoString) => {
 }
 
 .outline-item.active {
-  background-color: #eff6ff;
+  background-color: var(--semantic-color-info-bg);
   color: var(--primary);
   font-weight: 600;
 }
@@ -572,18 +572,18 @@ const formatTime = (isoString) => {
   font-size: 0.65rem;
   padding: 2px 5px;
   cursor: pointer;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 
 .btn-clause-ctrl:hover:not(:disabled) {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
   color: var(--primary);
 }
 
 .btn-delete-clause:hover {
-  background: #fee2e2;
+  background: var(--semantic-color-error-bg);
   color: var(--error);
-  border-color: #fca5a5;
+  border-color: var(--semantic-color-error-border);
 }
 
 .separator {
@@ -615,7 +615,7 @@ const formatTime = (isoString) => {
   border-radius: 8px;
   padding: 40px;
   text-align: center;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 /* Version History Styles */
@@ -643,13 +643,13 @@ const formatTime = (isoString) => {
 }
 
 .history-time {
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.75rem;
 }
 
 .history-reason {
   margin: 2px 0 0 0;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-style: italic;
 }
 
@@ -696,7 +696,7 @@ const formatTime = (isoString) => {
   border: none;
   font-size: 1.2rem;
   cursor: pointer;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
 }
 
 .modal-body {
@@ -707,9 +707,9 @@ const formatTime = (isoString) => {
 }
 
 .warning-text {
-  background-color: #fffbeb;
-  border: 1px solid #fef3c7;
-  color: #b45309;
+  background-color: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning);
   padding: 12px;
   border-radius: 6px;
   font-size: 0.85rem;

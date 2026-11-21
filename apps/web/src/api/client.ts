@@ -13,8 +13,8 @@ export function getBaseUrl(): string {
   const configured = import.meta.env?.VITE_API_BASE_URL;
   if (configured) return configured;
   const isDemo =
-    import.meta.env.MODE === "demo" ||
-    import.meta.env.VITE_DEMO_MODE === "true";
+    import.meta.env?.MODE === "demo" ||
+    import.meta.env?.VITE_DEMO_MODE === "true";
   if (
     isDemo &&
     typeof globalThis.location?.origin === "string" &&
@@ -74,10 +74,10 @@ export function getAuthMiddleware(): Middleware {
 
 const INITIAL_BASE_URL = getBaseUrl();
 
-function rewriteRequestBaseUrl(
+async function rewriteRequestBaseUrl(
   initialBaseUrl: string,
   input: RequestInfo | URL
-): RequestInfo | URL {
+): Promise<RequestInfo | URL> {
   const currentBase = getBaseUrl().replace(/\/+$/, "");
   const initialBase = initialBaseUrl.replace(/\/+$/, "");
   if (currentBase === initialBase) return input;
@@ -85,10 +85,11 @@ function rewriteRequestBaseUrl(
   if (input instanceof Request && input.url.startsWith(`${initialBase}/`)) {
     const rewrittenUrl = `${currentBase}${input.url.slice(initialBase.length)}`;
     const hasBody = input.method !== "GET" && input.method !== "HEAD";
+    const body = hasBody && input.body ? await input.arrayBuffer() : undefined;
     return new Request(rewrittenUrl, {
       method: input.method,
       headers: new Headers(input.headers),
-      body: hasBody ? input.body : undefined,
+      body,
       credentials: input.credentials,
       mode: input.mode,
       cache: input.cache,
@@ -98,7 +99,6 @@ function rewriteRequestBaseUrl(
       integrity: input.integrity,
       keepalive: input.keepalive,
       signal: input.signal,
-      ...(hasBody ? ({ duplex: "half" } as RequestInit) : {}),
     });
   }
   if (typeof input === "string" && input.startsWith(`${initialBase}/`)) {
@@ -110,8 +110,14 @@ function rewriteRequestBaseUrl(
   return input;
 }
 
-function dispatchOpenApiFetch(input: RequestInfo | URL, init?: RequestInit) {
-  return globalThis.fetch(rewriteRequestBaseUrl(INITIAL_BASE_URL, input), init);
+async function dispatchOpenApiFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit
+) {
+  return globalThis.fetch(
+    await rewriteRequestBaseUrl(INITIAL_BASE_URL, input),
+    init
+  );
 }
 
 export const openApiClient = createClient<paths>({
@@ -126,10 +132,10 @@ export function createOpenApiClient<T extends {} = paths>(baseUrl?: string) {
   // Resolve fetch and dynamic getBaseUrl() per call, as openApiClient does, so tests and the MSW worker see the current global and env base URL.
   const client = createClient<T>({
     baseUrl: initialBase,
-    fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+    fetch: async (input: RequestInfo | URL, init?: RequestInit) =>
       globalThis.fetch(
         baseUrl === undefined
-          ? rewriteRequestBaseUrl(initialBase, input)
+          ? await rewriteRequestBaseUrl(initialBase, input)
           : input,
         init
       ),

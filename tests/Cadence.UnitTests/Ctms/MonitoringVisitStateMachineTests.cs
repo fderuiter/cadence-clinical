@@ -1,14 +1,18 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Core.Domain;
 using Cadence.Database;
 using Cadence.Testing;
 using Cadence.Testing.Time;
+
 using FluentAssertions;
+
 using Microsoft.EntityFrameworkCore;
+
 using Xunit;
 
 namespace Cadence.UnitTests.Ctms;

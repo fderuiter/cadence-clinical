@@ -97,7 +97,7 @@ export async function initializeApp() {
     await loadAssignedInstruments(userId);
     await loadCompliance(userId);
     await loadNotifications(userId);
-    await loadParticipantWallet().catch((err) => {
+    void loadParticipantWallet().catch((err) => {
       console.warn("[Wallet] Initial wallet hydration warning:", err?.message);
     });
   } else if (isDemoModeActive()) {

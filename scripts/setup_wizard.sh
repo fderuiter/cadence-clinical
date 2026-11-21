@@ -141,11 +141,31 @@ fi
 # --------------------------------------------------------------------------
 # Stage 3: Git Pre-Commit Hooks & Quality Gates
 # --------------------------------------------------------------------------
-stage "Git Quality Gates" "Configuring native .NET pre-commit hooks and testing dependencies..."
+stage "Git Quality Gates" "Configuring native .NET pre-commit hooks and secret-scanning dependencies..."
 if git config core.hooksPath .githooks && chmod +x "$REPO_ROOT/.githooks/pre-commit" 2>/dev/null; then
-  ok "Native git pre-commit quality hooks enabled (.githooks/pre-commit)."
+  ok "Native git pre-commit quality hooks enabled (.githooks/pre-commit -> cadence check --pre-commit)."
 else
   warn_failed "Failed to configure .githooks/pre-commit. Run 'git config core.hooksPath .githooks' manually."
+fi
+
+CADENCE_VENV="$REPO_ROOT/.cadence/venv"
+if [[ -x "$CADENCE_VENV/bin/detect-secrets-hook" ]] && "$CADENCE_VENV/bin/detect-secrets-hook" --version >/dev/null 2>&1 \
+   && [[ -x "$CADENCE_VENV/bin/pip-audit" ]] && "$CADENCE_VENV/bin/pip-audit" --version >/dev/null 2>&1; then
+  ok "detect-secrets $("$CADENCE_VENV/bin/detect-secrets-hook" --version) and pip-audit already provisioned in .cadence/venv."
+elif command -v uv >/dev/null 2>&1; then
+  if uv venv "$CADENCE_VENV" >/dev/null 2>&1 && uv pip install --python "$CADENCE_VENV/bin/python" --quiet detect-secrets==1.5.0 pip-audit==2.10.1; then
+    ok "detect-secrets 1.5.0 and pip-audit 2.10.1 provisioned in .cadence/venv via uv."
+  else
+    fail_blocking "Failed to provision detect-secrets==1.5.0 and pip-audit==2.10.1 in .cadence/venv via uv."
+  fi
+elif command -v python3 >/dev/null 2>&1; then
+  if python3 -m venv "$CADENCE_VENV" && "$CADENCE_VENV/bin/python" -m pip install --quiet --upgrade pip detect-secrets==1.5.0 pip-audit==2.10.1; then
+    ok "detect-secrets 1.5.0 and pip-audit 2.10.1 provisioned in .cadence/venv via python3 -m venv."
+  else
+    fail_blocking "Failed to provision detect-secrets==1.5.0 and pip-audit==2.10.1 in .cadence/venv. Ensure python3-venv is installed."
+  fi
+else
+  fail_blocking "Neither 'uv' nor 'python3' was found on PATH to provision detect-secrets==1.5.0 and pip-audit==2.10.1 for pre-commit guardrails."
 fi
 
 if [[ "$MINIMAL" == "1" ]]; then

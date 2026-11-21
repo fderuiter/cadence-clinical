@@ -31,7 +31,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "pnpm exec vite",
-    url: "http://localhost:3000/cadence-clinical/",
+    url: "http://localhost:3000/cadence-clinical/tests/browser/observationHarness.ts",
     reuseExistingServer: false,
     timeout: 120000,
     env: { VITE_API_BASE_URL: "http://localhost:3000" },

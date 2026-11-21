@@ -141,8 +141,8 @@ const handleClick = (e) => {
 
 .ai-action-btn:focus-visible {
   box-shadow:
-    0 0 0 2px var(--color-surface, #ffffff),
-    0 0 0 4px var(--color-primary, #026597);
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-primary);
 }
 
 /* Sizes */
@@ -166,45 +166,45 @@ const handleClick = (e) => {
 
 /* Variants */
 .ai-btn-primary {
-  background: var(--color-primary, #026597);
-  color: #ffffff;
-  border-color: var(--color-primary-dark, #014d76);
+  background: var(--color-primary);
+  color: var(--semantic-color-surface);
+  border-color: var(--color-primary-dark);
 }
 
 .ai-btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-dark, #014d76);
+  background: var(--color-primary-dark);
 }
 
 .ai-btn-secondary {
-  background: var(--color-surface, #ffffff);
-  border-color: var(--color-border, #e2e8f0);
-  color: var(--color-text, #0f172a);
+  background: var(--color-surface);
+  border-color: var(--semantic-color-border-control);
+  color: var(--color-text);
 }
 
 .ai-btn-secondary:hover:not(:disabled) {
-  background: var(--color-surface-muted, #f8fafc);
-  border-color: var(--color-primary, #026597);
-  color: var(--color-primary, #026597);
+  background: var(--color-surface-muted);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .ai-btn-subtle {
-  background: var(--color-primary-light, #e0f2fe);
-  color: var(--color-primary-dark, #014d76);
-  border-color: transparent;
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  border-color: var(--semantic-color-border-control);
 }
 
 .ai-btn-subtle:hover:not(:disabled) {
-  background: #bae6fd;
+  background: var(--semantic-color-info-border-accent);
 }
 
 .ai-btn-outline {
   background: transparent;
-  border-color: var(--color-primary, #026597);
-  color: var(--color-primary, #026597);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .ai-btn-outline:hover:not(:disabled) {
-  background: var(--color-primary-light, #e0f2fe);
+  background: var(--color-primary-light);
 }
 
 /* Disabled & Loading States */

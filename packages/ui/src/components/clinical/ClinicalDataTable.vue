@@ -186,8 +186,8 @@ const toggleRowSelection = (row) => {
 .clinical-data-table-container {
   display: flex;
   flex-direction: column;
-  background: var(--color-surface, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -198,20 +198,20 @@ const toggleRowSelection = (row) => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: var(--color-surface-muted, #f8fafc);
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  background: var(--semantic-color-surface-muted);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .table-title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .table-meta {
   font-size: 13px;
-  color: var(--color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 
 .table-wrapper {
@@ -230,9 +230,9 @@ const toggleRowSelection = (row) => {
 .col-header {
   padding: 10px 16px;
   font-weight: 600;
-  color: var(--semantic-color-text-muted, #475569);
-  background: var(--semantic-color-surface-muted, #f8fafc);
-  border-bottom: 1px solid var(--semantic-color-border, #e2e8f0);
+  color: var(--semantic-color-text-muted);
+  background: var(--semantic-color-surface-muted);
+  border-bottom: 1px solid var(--semantic-color-border);
   user-select: none;
 }
 
@@ -241,7 +241,7 @@ const toggleRowSelection = (row) => {
 }
 
 .col-header.sortable:hover {
-  background: var(--semantic-color-surface-header, #f1f5f9);
+  background: var(--semantic-color-surface-header);
 }
 
 .header-content {
@@ -252,26 +252,26 @@ const toggleRowSelection = (row) => {
 
 .sort-icon {
   font-size: 11px;
-  color: var(--semantic-color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 
 .data-row {
-  border-bottom: 1px solid var(--semantic-color-border, #e2e8f0);
+  border-bottom: 1px solid var(--semantic-color-border);
   transition: background-color 0.15s ease;
 }
 
 .data-row:hover {
-  background: var(--semantic-color-primary-light, #e0f2fe);
+  background: var(--semantic-color-primary-light);
   cursor: pointer;
 }
 
 .data-row.selected {
-  background: var(--semantic-color-primary-light, #e0f2fe);
+  background: var(--semantic-color-primary-light);
 }
 
 .data-cell {
   padding: 10px 16px;
-  color: var(--semantic-color-text, #0f172a);
+  color: var(--semantic-color-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -284,7 +284,7 @@ const toggleRowSelection = (row) => {
 .empty-cell {
   padding: 32px;
   text-align: center;
-  color: var(--color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   font-style: italic;
 }
 
@@ -294,15 +294,16 @@ const toggleRowSelection = (row) => {
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  background: var(--color-surface-muted, #f8fafc);
-  border-top: 1px solid var(--color-border, #e2e8f0);
+  background: var(--semantic-color-surface-muted);
+  border-top: 1px solid var(--semantic-color-border);
 }
 
 .pagination-btn {
   padding: 6px 12px;
   font-size: 13px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--semantic-color-border-control);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   border-radius: 4px;
   cursor: pointer;
 }
@@ -313,12 +314,12 @@ const toggleRowSelection = (row) => {
 }
 
 .pagination-btn:not(:disabled):hover {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
 }
 
 .pagination-info {
   font-size: 13px;
-  color: var(--color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 
 .sr-only {
