@@ -1,21 +1,28 @@
 <template>
-  <section
-    id="canvas-form-workspace"
-    class="canvas-form-workspace"
-    aria-labelledby="canvas-form-workspace-title"
-  >
+  <div id="canvas-form-workspace" class="canvas-form-workspace">
     <router-link id="canvas-form-back" class="back" :to="backLocation">
       {{ backLabel }}
     </router-link>
 
     <header class="workspace-header">
-      <h2 id="canvas-form-workspace-title">
-        {{ workspaceTitle }}
-      </h2>
-      <span v-if="participant" class="workspace-meta">
-        {{ participant.subject_id }} ·
-        {{ participant.site_id ? `Site ${participant.site_id}` : "No site" }}
-      </span>
+      <div class="workspace-title-group">
+        <h2 id="canvas-form-workspace-title">
+          {{ workspaceTitle }}
+        </h2>
+        <span v-if="participant" class="workspace-meta">
+          {{ participant.subject_id }} ·
+          {{ participant.site_id ? `Site ${participant.site_id}` : "No site" }}
+        </span>
+      </div>
+      <router-link
+        v-if="handoffLocation"
+        id="workspace-handoff-standalone"
+        data-testid="workspace-ecrf-handoff"
+        class="btn btn-secondary workspace-handoff-btn"
+        :to="handoffLocation"
+      >
+        Open standalone form view
+      </router-link>
     </header>
 
     <template v-if="!formId && recordLoading">
@@ -55,6 +62,8 @@
 
       <EcrfFormPanel
         :form-id="formId"
+        :collection-spec-id="collectionSpecId"
+        :planned-activity-id="plannedActivityId"
         :enrollment-context="enrollmentContext"
         :schedule-loading="!formId && canvas.scheduleLoading"
         :schedule-error="!formId ? canvas.scheduleError : null"
@@ -68,7 +77,7 @@
         @closed="emit('closed')"
       />
     </template>
-  </section>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -90,11 +99,14 @@ const props = defineProps<{
   recordLoading?: boolean;
   /** UUID of an existing form to load, or null when opening a new form. */
   formId: string | null;
+  collectionSpecId?: string | null;
+  plannedActivityId?: string | null;
   formLabel?: string;
   canManageQueries: boolean;
   canVerifySource?: boolean;
   backLocation: RouteLocationRaw;
   backLabel: string;
+  handoffLocation?: RouteLocationRaw | null;
   formLocation: (formId: string) => RouteLocationRaw;
   observationLocation: (
     observationId: string,
@@ -167,8 +179,22 @@ const enrollmentContext = computed<CanvasFormEnrollmentContext | null>(() => {
 .workspace-header {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.workspace-title-group {
+  display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 12px;
+}
+
+.workspace-handoff-btn {
+  font-size: 0.82rem;
+  padding: 4px 10px;
+  text-decoration: none;
 }
 
 .workspace-header h2 {

@@ -2727,6 +2727,173 @@
         ]
       }
     },
+    "/api/v1/kernel/enrollments/screen": {
+      "post": {
+        "tags": [
+          "Kernel enrollments"
+        ],
+        "summary": "Registers a pseudonymous participant when needed and starts a screening enrollment at a study site (participant.screen).",
+        "operationId": "KernelScreenEnrollment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_KernelScreenEnrollmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelEnrollmentStateResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelEnrollmentStateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Execution.ParticipantUnknown\u0060, \u0060K.Execution.StudySiteUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Execution.AlreadyActiveAtSite\u0060, \u0060K.Execution.SubjectCodeTaken\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Execution.SubjectCodeInvalid\u0060, \u0060K.Execution.TransitionTimeInvalid\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Execution.ParticipantUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Execution.StudySiteUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Execution.AlreadyActiveAtSite",
+            "status": 409
+          },
+          {
+            "code": "K.Execution.SubjectCodeTaken",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Execution.SubjectCodeInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Execution.TransitionTimeInvalid",
+            "status": 422
+          }
+        ]
+      }
+    },
     "/api/v1/kernel/locks": {
       "post": {
         "tags": [
@@ -4765,8 +4932,24 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          }
+        ]
       }
     },
     "/api/v1/execution/forms": {
@@ -7851,6 +8034,85 @@
               "null",
               "string"
             ]
+          },
+          "missing_required_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "open_query_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "answered_query_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "verified_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "unverified_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "locked": {
+            "type": "boolean",
+            "default": false
+          },
+          "frozen": {
+            "type": "boolean",
+            "default": false
+          },
+          "lock_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "signed": {
+            "type": "boolean",
+            "default": false
+          },
+          "signature_superseded": {
+            "type": "boolean",
+            "default": false
+          },
+          "signature_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -8480,6 +8742,64 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Kernel_KernelEnrollmentStateResponse": {
+        "required": [
+          "ref",
+          "enrollment_id",
+          "participant_id",
+          "study_id",
+          "study_site_id",
+          "subject_code",
+          "enrollment_status",
+          "status_since",
+          "enrollment_number",
+          "content_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "enrollment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_site_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subject_code": {
+            "type": "string"
+          },
+          "enrollment_status": {
+            "type": "string"
+          },
+          "status_since": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "enrollment_number": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "content_hash": {
+            "type": "string"
           }
         }
       },
@@ -9799,6 +10119,46 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_KernelSoaFootnoteResponse"
             }
+          }
+        }
+      },
+      "Kernel_KernelScreenEnrollmentRequest": {
+        "required": [
+          "participant_id",
+          "enrollment_id",
+          "study_code",
+          "site_code",
+          "subject_code",
+          "screened_at"
+        ],
+        "type": "object",
+        "properties": {
+          "participant_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "enrollment_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "study_code": {
+            "type": "string"
+          },
+          "site_code": {
+            "type": "string"
+          },
+          "subject_code": {
+            "type": "string"
+          },
+          "screened_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -11450,6 +11810,9 @@
     },
     {
       "name": "Kernel observations"
+    },
+    {
+      "name": "Kernel enrollments"
     },
     {
       "name": "Kernel locks"

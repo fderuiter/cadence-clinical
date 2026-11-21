@@ -64,7 +64,8 @@ public sealed class SubjectApplicationService(
     IAuditLogWriter auditLog,
     ICurrentAuditContextAccessor auditContext,
     Func<ClinicalSubject, CancellationToken, Task<bool>>? screeningEligibility = null,
-    IClock? clock = null) : ISubjectApplicationService
+    IClock? clock = null,
+    IKernelEnrollmentSynchronizer? kernelEnrollmentSynchronizer = null) : ISubjectApplicationService
 {
     private readonly IClock _clock = clock ?? SystemClock.Instance;
 
@@ -92,6 +93,25 @@ public sealed class SubjectApplicationService(
         var subjectCode = new SubjectCode(request.SubjectId);
         var studyCode = new StudyCode(request.StudyId);
         SiteCode? siteCode = request.SiteId is not null ? new SiteCode(request.SiteId) : null;
+        var subjectId = SubjectId.New();
+
+        if (kernelEnrollmentSynchronizer is not null
+            && siteCode is { } assignedSite
+            && await subjects.GetByCodeAsync(subjectCode.Value, ct).ConfigureAwait(false) is null)
+        {
+            var syncResult = await kernelEnrollmentSynchronizer.SynchronizeScreeningEnrollmentAsync(
+                subjectId.Value,
+                studyCode.Value,
+                assignedSite.Value,
+                subjectCode.Value,
+                _clock.UtcNow,
+                auditContext.ChangeReason,
+                ct).ConfigureAwait(false);
+            if (syncResult.IsFailure)
+            {
+                return Result<SubjectResponse>.Failure(syncResult.Error!);
+            }
+        }
 
         // The index read, the insert and its audit entry are one unit of work under the per-study lock; a transient
         // failure re-runs all three (#5383).
@@ -100,7 +120,7 @@ public sealed class SubjectApplicationService(
             int enrollmentIndex = await subjects.EnrollNextIndexAsync(studyCode, token).ConfigureAwait(false);
 
             var subject = ClinicalSubject.Create(subjectCode, studyCode, siteCode, enrollmentIndex,
-                encryptedDemographics, stratFactors: null);
+                encryptedDemographics, stratFactors: null, id: subjectId);
             // MIG-SUBJ-017: the .NET replacement for the legacy's own `current_change_reason.get() or "..."`
             // per-endpoint idiom is this one, uniformly-defaulting accessor — see ICurrentAuditContextAccessor's
             // own doc comment ("closing the legacy's two-idiom split... giving every reader exactly one

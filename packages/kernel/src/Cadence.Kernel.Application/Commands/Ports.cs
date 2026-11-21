@@ -25,6 +25,16 @@ public interface ICurrentActor
 }
 
 /// <summary>
+/// The service account a host-internal unit of work acts as, set only by host or endpoint code inside a dedicated DI
+/// scope. Regular request scopes leave it null so a request's actor comes from the verified caller identity.
+/// </summary>
+public sealed class ServiceActorScope
+{
+    /// <summary>The service account acting in this scope, or null when the caller's own identity applies.</summary>
+    public Actor? Actor { get; set; }
+}
+
+/// <summary>
 /// The authorization step of the pipeline (spec §9.3, K-AUTH-1). The authority slice plugs a policy evaluator in
 /// here; the kernel refuses to start without one.
 /// </summary>

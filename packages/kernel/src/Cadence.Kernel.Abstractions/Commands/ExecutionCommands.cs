@@ -11,6 +11,7 @@ namespace Cadence.Kernel.Commands;
 /// </summary>
 [KernelCapability("participant.register", VerbClass.Execute)]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
 public sealed record RegisterParticipant(
     TenantId TenantId,
     ParticipantId ParticipantId,
@@ -27,6 +28,15 @@ public sealed record RegisterParticipant(
 /// </remarks>
 [KernelCapability("participant.screen", VerbClass.Execute, Resource = nameof(ScreenParticipant.StudySiteId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(ExecutionErrors),
+    nameof(ExecutionErrors.ParticipantUnknown),
+    nameof(ExecutionErrors.StudySiteUnknown),
+    nameof(ExecutionErrors.SubjectCodeInvalid),
+    nameof(ExecutionErrors.SubjectCodeTaken),
+    nameof(ExecutionErrors.AlreadyActiveAtSite),
+    nameof(ExecutionErrors.TransitionTimeInvalid))]
 public sealed record ScreenParticipant(
     TenantId TenantId,
     EnrollmentId EnrollmentId,
