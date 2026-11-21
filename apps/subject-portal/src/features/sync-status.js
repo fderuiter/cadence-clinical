@@ -242,7 +242,7 @@ export async function renderSyncQueueList() {
       }
 
       return `
-        <div class="task-item" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; border: 1px solid var(--semantic-color-border); border-radius: 8px; background: rgba(255,255,255,0.02);">
+        <div class="task-item" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; border: 1px solid var(--semantic-color-border); border-radius: 8px; background: var(--semantic-color-surface);">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; flex-direction: column;">
               <span style="font-weight: 700; font-size: 14px;">${instName}</span>

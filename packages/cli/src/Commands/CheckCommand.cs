@@ -22,7 +22,7 @@ public static class CheckCommand
         };
         var preCommit = new Option<bool>("--pre-commit")
         {
-            Description = "Run the quick variants used by the pre-commit hook (the openapi gate skips exporting specs from the services).",
+            Description = "Run the pre-commit guardrails against staged files (used by .githooks/pre-commit).",
         };
         var exclude = new Option<string[]>("--exclude")
         {

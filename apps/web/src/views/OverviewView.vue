@@ -595,13 +595,17 @@ function startGuidedTour() {
   padding: 24px;
   max-width: 1280px;
   margin: 0 auto;
-  font-family: var(--font, system-ui, -apple-system, sans-serif);
-  color: var(--primary, #0f172a);
+  font-family: var(--semantic-font-family);
+  color: var(--semantic-color-text);
 }
 
 .overview-header-card {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    var(--semantic-color-surface-inverse) 0%,
+    var(--semantic-color-surface-elevated) 100%
+  );
+  color: var(--semantic-color-text-inverse);
   border-radius: 12px;
   padding: 28px;
   margin-bottom: 24px;
@@ -634,19 +638,19 @@ function startGuidedTour() {
   font-size: 1.8rem;
   font-weight: 700;
   margin: 0 0 4px 0;
-  color: #ffffff;
+  color: var(--semantic-color-text-inverse);
 }
 
 .welcome-subtitle {
   font-size: 0.95rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-inverse-muted);
   margin: 0 0 10px 0;
   font-weight: 500;
 }
 
 .persona-description {
   font-size: 0.9rem;
-  color: #cbd5e1;
+  color: var(--semantic-color-text-inverse-muted);
   line-height: 1.5;
   max-width: 650px;
 }
@@ -667,7 +671,7 @@ function startGuidedTour() {
   gap: 8px;
   font-weight: 600;
   font-size: 0.85rem;
-  color: #f1f5f9; /* deid-ignore */
+  color: var(--semantic-color-surface-header);
   margin-bottom: 12px;
 }
 
@@ -684,12 +688,12 @@ function startGuidedTour() {
   height: 18px;
   margin-top: 2px;
   cursor: pointer;
-  accent-color: #38bdf8;
+  accent-color: var(--semantic-color-accent-inverse);
 }
 
 .toggle-text {
   font-size: 0.8rem;
-  color: #e2e8f0; /* deid-ignore */
+  color: var(--semantic-color-border);
   line-height: 1.4;
 }
 
@@ -700,19 +704,19 @@ function startGuidedTour() {
   font-size: 0.75rem;
   font-weight: 600;
   background: rgba(56, 189, 248, 0.15);
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
   border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
 .pref-status-badge.is-bypassed {
   background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
+  color: var(--semantic-color-warning-border);
   border-color: rgba(245, 158, 11, 0.3);
 }
 
 .overview-plan-banner {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-muted);
   border-radius: 12px;
   padding: 14px 20px;
   margin-bottom: 24px;
@@ -738,27 +742,27 @@ function startGuidedTour() {
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 700;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1e40af;
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
 }
 
 .overview-plan-pill.is-expired {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #991b1b;
+  background: var(--semantic-color-error-bg);
+  border-color: var(--semantic-color-error-border);
+  color: var(--semantic-color-error-dark);
 }
 
 .overview-families-text {
   font-size: 0.86rem;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .overview-prerelease-note {
   font-size: 0.8rem;
-  color: #92400e;
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
+  color: var(--semantic-color-warning-text);
+  background: var(--semantic-color-warning-bg-light);
+  border: 1px solid var(--semantic-color-warning-border-strong);
   border-radius: 6px;
   padding: 3px 8px;
 }
@@ -790,8 +794,8 @@ function startGuidedTour() {
 }
 
 .overview-section {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -811,12 +815,12 @@ function startGuidedTour() {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .progress-badge {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
   font-size: 0.75rem;
   font-weight: 600;
   padding: 4px 8px;
@@ -825,19 +829,19 @@ function startGuidedTour() {
 
 .subtitle-tag {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
 
 .section-intro {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin: 0 0 16px 0;
 }
 
 .progress-bar-container {
   height: 6px;
-  background: #e2e8f0;
+  background: var(--semantic-color-border);
   border-radius: 3px;
   overflow: hidden;
   margin-bottom: 20px;
@@ -845,7 +849,11 @@ function startGuidedTour() {
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #10b981);
+  background: linear-gradient(
+    90deg,
+    var(--semantic-color-interactive-primary),
+    var(--semantic-color-success)
+  );
   transition: width 0.3s ease;
 }
 
@@ -863,20 +871,20 @@ function startGuidedTour() {
   align-items: flex-start;
   justify-content: space-between;
   padding: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 .checklist-item-row:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: var(--semantic-color-surface-header);
+  border-color: var(--semantic-color-border-muted);
 }
 
 .checklist-item-row.is-completed {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
+  background: var(--semantic-color-success-bg-soft);
+  border-color: var(--semantic-color-success-border-soft);
 }
 
 .checklist-item-label {
@@ -892,7 +900,7 @@ function startGuidedTour() {
   height: 18px;
   margin-top: 2px;
   cursor: pointer;
-  accent-color: #10b981;
+  accent-color: var(--semantic-color-success);
 }
 
 .task-content {
@@ -904,26 +912,26 @@ function startGuidedTour() {
 .task-title {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
 }
 
 .is-completed .task-title {
   text-decoration: line-through;
-  color: #15803d;
+  color: var(--semantic-color-success);
 }
 
 .task-desc {
   font-size: 0.78rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   line-height: 1.3;
 }
 
 .btn-task-launch {
   padding: 4px 8px;
   font-size: 0.75rem;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #3b82f6;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
+  color: var(--semantic-color-interactive-primary);
   border-radius: 4px;
   cursor: pointer;
   font-weight: 600;
@@ -932,14 +940,14 @@ function startGuidedTour() {
 }
 
 .btn-task-launch:hover {
-  background: #3b82f6;
-  color: #ffffff;
-  border-color: #3b82f6;
+  background: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
+  border-color: var(--semantic-color-interactive-primary);
 }
 
 .tour-action-footer {
   padding-top: 12px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--semantic-color-surface-header);
 }
 
 .btn-start-tour {
@@ -949,14 +957,14 @@ function startGuidedTour() {
   font-weight: 600;
   border-radius: 8px;
   cursor: pointer;
-  background: #0284c7;
-  color: #ffffff;
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
   border: none;
   transition: background 0.2s ease;
 }
 
 .btn-start-tour:hover {
-  background: #0369a1;
+  background: var(--semantic-color-primary-dark);
 }
 
 .launchers-grid {
@@ -966,8 +974,8 @@ function startGuidedTour() {
 }
 
 .launcher-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 10px;
   padding: 16px;
   display: flex;
@@ -982,12 +990,12 @@ function startGuidedTour() {
 .launcher-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: #3b82f6;
+  border-color: var(--semantic-color-interactive-primary);
 }
 
 .launcher-card.is-featured {
-  border-color: #93c5fd;
-  background: #eff6ff;
+  border-color: var(--semantic-color-divider-accent);
+  background: var(--semantic-color-info-bg);
 }
 
 .launcher-header {
@@ -1010,25 +1018,25 @@ function startGuidedTour() {
 }
 
 .badge-active {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .badge-neutral {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 .launcher-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   margin: 0 0 6px 0;
 }
 
 .launcher-description {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin: 0 0 16px 0;
   line-height: 1.4;
   flex: 1;
@@ -1039,17 +1047,17 @@ function startGuidedTour() {
   padding: 8px 12px;
   font-size: 0.82rem;
   font-weight: 600;
-  background: #ffffff;
-  color: #2563eb;
-  border: 1px solid #bfdbfe;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-interactive-primary);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .launcher-card:hover .btn-launcher-action {
-  background: #2563eb;
-  color: #ffffff;
-  border-color: #2563eb;
+  background: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
+  border-color: var(--semantic-color-interactive-primary);
 }
 </style>

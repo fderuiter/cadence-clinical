@@ -411,7 +411,7 @@ function handleTreeKeyDown(e) {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   border-right: 1px solid var(--border);
   box-sizing: border-box;
 }
@@ -422,7 +422,7 @@ function handleTreeKeyDown(e) {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
 }
 
 .tree-title-row {
@@ -462,7 +462,7 @@ function handleTreeKeyDown(e) {
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.8rem;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   outline: none;
   box-sizing: border-box;
 }
@@ -476,7 +476,7 @@ function handleTreeKeyDown(e) {
 .empty-tree-message {
   padding: 16px;
   text-align: center;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-style: italic;
   font-size: 0.82rem;
 }
@@ -497,25 +497,25 @@ function handleTreeKeyDown(e) {
 }
 
 .node-header:hover {
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
 }
 
 .node-header.is-selected {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
   font-weight: 600;
 }
 
 .global-root-node {
   margin-bottom: 8px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--semantic-color-surface-header);
   padding-bottom: 4px;
 }
 
 .toggle-icon {
   font-size: 0.65rem;
   width: 14px;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   flex-shrink: 0;
 }
 
@@ -529,7 +529,7 @@ function handleTreeKeyDown(e) {
   font-family: monospace;
   font-size: 0.72rem;
   font-weight: 700;
-  color: #0284c7;
+  color: var(--semantic-color-primary);
   margin-right: 4px;
 }
 
@@ -537,14 +537,14 @@ function handleTreeKeyDown(e) {
 .section-label {
   font-weight: 700;
   margin-right: 4px;
-  color: #334155;
+  color: var(--semantic-color-text-body);
 }
 
 .folder-code {
   font-family: monospace;
   font-size: 0.72rem;
-  background-color: #f1f5f9;
-  color: #2563eb;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-interactive-primary);
   padding: 1px 4px;
   border-radius: 4px;
   margin-right: 6px;
@@ -564,6 +564,6 @@ function handleTreeKeyDown(e) {
 .node-children {
   margin-left: 12px;
   padding-left: 6px;
-  border-left: 1px dashed #cbd5e1;
+  border-left: 1px dashed var(--semantic-color-border-control);
 }
 </style>

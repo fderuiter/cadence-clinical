@@ -35,7 +35,7 @@
                 style="
                   margin: 2px 0 0 0;
                   font-size: 11px;
-                  color: var(--text-muted);
+                  color: var(--semantic-color-text-secondary);
                 "
               >
                 {{ inspectedDoc.filename }}
@@ -310,7 +310,7 @@ function getDocSha256(doc) {
   if (doc.sha256) return doc.sha256;
   if (doc.cryptographic_seal) return doc.cryptographic_seal;
   if (doc.merkle_hash) return doc.merkle_hash;
-  return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+  return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"; // pragma: allowlist secret
 }
 
 function getIntelligenceReport(doc) {
@@ -413,7 +413,7 @@ onMounted(() => {
   display: flex;
   height: calc(100vh - 120px);
   gap: 20px;
-  background-color: #f8fafc;
+  background-color: var(--semantic-color-surface-muted);
   margin: -20px;
   padding: 20px;
   overflow: hidden;
@@ -423,7 +423,7 @@ onMounted(() => {
 .sidebar-binder-tree {
   width: 340px;
   min-width: 300px;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -431,7 +431,7 @@ onMounted(() => {
 
 .document-content-area {
   flex: 1;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -458,7 +458,7 @@ onMounted(() => {
     var(--drawer-width-sm, min(100vw, 440px))
   );
   max-width: 100vw;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -533,7 +533,7 @@ onMounted(() => {
 
 .meta-label {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
 
@@ -556,7 +556,7 @@ onMounted(() => {
 
 .crypto-seal-card {
   padding: 10px 12px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   border: 1px dashed var(--border);
   border-radius: 6px;
 }
@@ -566,7 +566,7 @@ onMounted(() => {
   font-size: 11px;
   color: var(--primary);
   word-break: break-all;
-  background: #fff;
+  background: var(--semantic-color-surface);
   padding: 6px;
   border-radius: 4px;
   border: 1px solid var(--border);

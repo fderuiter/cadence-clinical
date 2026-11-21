@@ -1341,7 +1341,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: var(--semantic-color-surface-muted, #f8fafc);
+  background: var(--semantic-color-surface-muted);
   color: var(--primary);
   font-family: var(--font);
 }
@@ -1371,7 +1371,7 @@ onUnmounted(() => {
   gap: 16px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .zoom-path {
@@ -1425,9 +1425,9 @@ onUnmounted(() => {
 }
 
 .ai-toggle[aria-pressed="true"] {
-  border-color: var(--semantic-color-ai-border, #c4b5fd);
-  background: var(--semantic-color-ai-bg, #f5f3ff);
-  color: var(--semantic-color-ai, #6d28d9);
+  border-color: var(--semantic-color-ai-border);
+  background: var(--semantic-color-ai-bg);
+  color: var(--semantic-color-ai);
 }
 
 .sr-only {
@@ -1458,7 +1458,7 @@ onUnmounted(() => {
   gap: 8px 24px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .study-header h1 {
@@ -1510,7 +1510,7 @@ onUnmounted(() => {
   max-height: calc(100vh - var(--canvas-pane-top));
   overflow-y: auto;
   padding: 12px;
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .nav-group-title {
@@ -1560,7 +1560,7 @@ onUnmounted(() => {
   align-self: start;
   max-height: calc(100vh - var(--canvas-pane-top));
   overflow-y: auto;
-  background: var(--semantic-color-surface, #fff);
+  background: var(--semantic-color-surface);
 }
 
 .stage-overview h2 {

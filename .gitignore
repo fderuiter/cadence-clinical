@@ -61,6 +61,7 @@ share/python-wheels/
 .coverage
 .coverage.*
 coverage/
+.cadence/venv/
 .cadence/test_graph.json
 .cadence/gxp_cache.json
 nosetests.xml

@@ -58,7 +58,10 @@
           <span>{{ $t("econsent.authoring.templatesTitle") }}</span>
           <span
             v-if="loading"
-            style="font-size: 0.85rem; color: #64748b"
+            style="
+              font-size: 0.85rem;
+              color: var(--semantic-color-text-secondary);
+            "
             role="status"
             >{{ $t("econsent.authoring.loading") }}</span
           >
@@ -94,7 +97,7 @@
           <div
             v-if="templates.length === 0"
             style="
-              color: #64748b;
+              color: var(--semantic-color-text-secondary);
               font-style: italic;
               padding: 12px 0;
               text-align: center;
@@ -242,9 +245,9 @@
           id="editor-validation-error"
           class="validation-error-msg"
           style="
-            background-color: #fef2f2;
-            border: 1px solid #fee2e2;
-            color: #b91c1c;
+            background-color: var(--semantic-color-error-bg-soft);
+            border: 1px solid var(--semantic-color-error-bg);
+            color: var(--semantic-color-error);
             padding: 12px;
             border-radius: 6px;
             margin-bottom: 16px;
@@ -382,7 +385,7 @@
                 style="
                   margin-top: 12px;
                   padding: 12px;
-                  background-color: #f8fafc;
+                  background-color: var(--semantic-color-surface-muted);
                   border: 1px solid var(--border);
                   border-radius: 6px;
                 "
@@ -417,7 +420,13 @@
             >
               {{ $t("econsent.authoring.clausesHeader") }}
             </legend>
-            <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 12px">
+            <p
+              style="
+                font-size: 0.8rem;
+                color: var(--semantic-color-text-secondary);
+                margin-bottom: 12px;
+              "
+            >
               {{ $t("econsent.authoring.clausesHelp") }}
             </p>
 
@@ -516,7 +525,13 @@
             >
               {{ $t("econsent.authoring.stepsHeader") }}
             </legend>
-            <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 12px">
+            <p
+              style="
+                font-size: 0.8rem;
+                color: var(--semantic-color-text-secondary);
+                margin-bottom: 12px;
+              "
+            >
               {{ $t("econsent.authoring.stepsHelp") }}
             </p>
 
@@ -632,7 +647,7 @@
             </legend>
             <div
               style="
-                background-color: #f1f5f9;
+                background-color: var(--semantic-color-surface-header);
                 padding: 12px;
                 border-radius: 8px;
                 border: 1px solid var(--border);
@@ -668,7 +683,11 @@
               </div>
               <div
                 v-else-if="previewClauses.length === 0"
-                style="font-size: 0.8rem; color: #64748b; font-style: italic"
+                style="
+                  font-size: 0.8rem;
+                  color: var(--semantic-color-text-secondary);
+                  font-style: italic;
+                "
               >
                 {{ $t("econsent.authoring.noClauses") }}
               </div>
@@ -679,7 +698,10 @@
                 <div
                   v-for="c in previewClauses"
                   :key="c.clause_id"
-                  style="border-bottom: 1px solid #e2e8f0; padding-bottom: 8px"
+                  style="
+                    border-bottom: 1px solid var(--semantic-color-border);
+                    padding-bottom: 8px;
+                  "
                 >
                   <h4
                     style="
