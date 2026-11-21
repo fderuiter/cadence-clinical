@@ -147,4 +147,79 @@ public class SubjectApplicationServiceCreateTests
 
         await act.Should().ThrowAsync<ArgumentException>();
     }
+
+    [Fact]
+    public async Task CreateAsync_GivenKernelEnrollmentSynchronizerAndSite_ScreensParticipantBeforePersistingSubject()
+    {
+        var synchronizer = new RecordingKernelEnrollmentSynchronizer();
+        var subjects = new InMemorySubjectRepository();
+        var service = new SubjectApplicationService(
+            subjects,
+            new InMemoryConsentRepository(),
+            new InMemorySiteComplianceRepository(),
+            new FakeDemographicsEncryptionService(),
+            new RecordingAuditLogWriter(),
+            new FakeCurrentAuditContextAccessor(),
+            kernelEnrollmentSynchronizer: synchronizer);
+
+        var result = await service.CreateAsync(
+            CreateRequest("SUBJ-101-009", studyId: "CADENCE-101", siteId: "SITE-101"),
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        synchronizer.Calls.Should().ContainSingle().Which.Should().Match<(Guid ParticipantId, string StudyCode, string SiteCode, string SubjectCode)>(c =>
+            c.ParticipantId == result.Value!.Id.Value
+            && c.StudyCode == "CADENCE-101"
+            && c.SiteCode == "SITE-101"
+            && c.SubjectCode == "SUBJ-101-009");
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenKernelEnrollmentSynchronizerFails_ReturnsFailureWithoutPersistingOrAuditingSubject()
+    {
+        var synchronizer = new RecordingKernelEnrollmentSynchronizer
+        {
+            NextResult = Cadence.Core.Domain.Result<Guid>.Failure(
+                Cadence.Core.Domain.DomainError.Forbidden("K.Authorization.Denied", "Cross-site screening denied.")),
+        };
+        var subjects = new InMemorySubjectRepository();
+        var auditLog = new RecordingAuditLogWriter();
+        var service = new SubjectApplicationService(
+            subjects,
+            new InMemoryConsentRepository(),
+            new InMemorySiteComplianceRepository(),
+            new FakeDemographicsEncryptionService(),
+            auditLog,
+            new FakeCurrentAuditContextAccessor(),
+            kernelEnrollmentSynchronizer: synchronizer);
+
+        var result = await service.CreateAsync(
+            CreateRequest("SUBJ-102-009", studyId: "CADENCE-101", siteId: "SITE-102"),
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("K.Authorization.Denied");
+        (await subjects.GetByCodeAsync("SUBJ-102-009", TestContext.Current.CancellationToken)).Should().BeNull();
+        auditLog.Calls.Should().BeEmpty();
+    }
+
+    private sealed class RecordingKernelEnrollmentSynchronizer : IKernelEnrollmentSynchronizer
+    {
+        public List<(Guid ParticipantId, string StudyCode, string SiteCode, string SubjectCode)> Calls { get; } = [];
+
+        public Cadence.Core.Domain.Result<Guid> NextResult { get; set; } = Cadence.Core.Domain.Result<Guid>.Success(Guid.NewGuid());
+
+        public Task<Cadence.Core.Domain.Result<Guid>> SynchronizeScreeningEnrollmentAsync(
+            Guid participantId,
+            string studyCode,
+            string siteCode,
+            string subjectCode,
+            DateTimeOffset screenedAt,
+            string changeReason,
+            CancellationToken cancellationToken)
+        {
+            Calls.Add((participantId, studyCode, siteCode, subjectCode));
+            return Task.FromResult(NextResult);
+        }
+    }
 }

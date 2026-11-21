@@ -25,6 +25,7 @@ vi.mock("../../src/api/kernelApi", () => ({
     trace: vi.fn(),
     dependents: vi.fn(),
     amendmentImpact: vi.fn(),
+    simulate: vi.fn(),
   },
   isMasked: (object) => object.mask !== null,
 }));
@@ -295,6 +296,115 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
 
     expect(wrapper.find("#inspector-version-error").text()).toBe(
       `The kernel couldn't answer: ${V2} does not exist in your tenant.`
+    );
+  });
+
+  it("enables Simulate on protocol versions, renders hash seals and matrix gap findings, and resets on version switch", async () => {
+    vi.mocked(kernelApi.simulate).mockResolvedValue({
+      scope: STUDY,
+      as_of: {
+        valid_at: "2027-03-14T10:00:00Z",
+        known_at: "2027-03-14T10:00:00Z",
+      },
+      candidate: { source: "stored", version_ref: V2 },
+      engine_versions: [],
+      input_hash: "sha256:input-v2",
+      result_hash: "sha256:result-v2",
+      structural_diff: [],
+      schedule_changes: [],
+      masked: [],
+      matrix_gaps: [
+        {
+          kind: "UnboundCollection",
+          severity: "Warning",
+          json_pointer_path: "/schedule/activities/2",
+          description: "PK Blood Draw has no scheduled visit window.",
+          recommendation: "Bind PK Blood Draw to Visit 3.",
+        },
+      ],
+    });
+
+    await open(`/studies/CAD-101?section=protocol-versions&node=${V2}`);
+
+    const simBtn = wrapper.find("#verb-simulate");
+    expect(simBtn.attributes("aria-disabled")).toBeUndefined();
+
+    await simBtn.trigger("click");
+    await flushPromises();
+
+    expect(kernelApi.simulate).toHaveBeenCalledWith({
+      storedVersionRef: V2,
+    });
+    expect(wrapper.find("#kernel-simulate-hashes").text()).toContain(
+      "sha256:input-v2"
+    );
+    expect(wrapper.find("#kernel-simulate-hashes").text()).toContain(
+      "sha256:result-v2"
+    );
+    expect(wrapper.find("#kernel-simulate-gaps").text()).toContain(
+      "PK Blood Draw has no scheduled visit window."
+    );
+
+    // Switching to Version 1 resets the active verb to Details and clears previous simulation results.
+    await wrapper.find("#protocol-version-1").trigger("click");
+    await router.isReady();
+    await flushPromises();
+
+    expect(wrapper.find("#verb-details").attributes("aria-pressed")).toBe(
+      "true"
+    );
+    expect(wrapper.find("#kernel-simulate").exists()).toBe(false);
+  });
+
+  it("ignores stale in-flight simulation responses when switching versions and surfaces kernel simulation errors", async () => {
+    let resolveV2Sim;
+    vi.mocked(kernelApi.simulate)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveV2Sim = resolve;
+          })
+      )
+      .mockRejectedValueOnce(
+        new ApiError("Base protocol version is not frozen.", 422)
+      );
+
+    await open(`/studies/CAD-101?section=protocol-versions&node=${V2}`);
+    await wrapper.find("#verb-simulate").trigger("click");
+    await flushPromises();
+
+    // Switch to V1 before V2's simulation finishes.
+    await wrapper.find("#protocol-version-1").trigger("click");
+    await router.isReady();
+    await flushPromises();
+
+    resolveV2Sim({
+      scope: STUDY,
+      as_of: {
+        valid_at: "2027-03-14T10:00:00Z",
+        known_at: "2027-03-14T10:00:00Z",
+      },
+      candidate: { source: "stored", version_ref: V2 },
+      engine_versions: [],
+      input_hash: "sha256:stale-v2",
+      result_hash: "sha256:stale-v2-out",
+      structural_diff: [],
+      schedule_changes: [],
+      masked: [],
+      matrix_gaps: [],
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain("sha256:stale-v2");
+
+    await wrapper.find("#verb-simulate").trigger("click");
+    await flushPromises();
+
+    expect(kernelApi.simulate).toHaveBeenLastCalledWith({
+      storedVersionRef: V1,
+    });
+    expect(wrapper.find("#kernel-simulate-error").text()).toBe(
+      "Base protocol version is not frozen."
     );
   });
 });

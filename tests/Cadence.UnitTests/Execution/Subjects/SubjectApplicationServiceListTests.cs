@@ -89,6 +89,21 @@ public class SubjectApplicationServiceListTests
         result.Value.Offset.Should().Be(2);
     }
 
+    [Fact]
+    public async Task ListAsync_FiltersByCaseInsensitiveSubjectCodeQueryAndTrimsWhitespace()
+    {
+        await SeedAsync("SUBJ-ALPHA-01", "STUDY-001", "SITE-001", 0);
+        await SeedAsync("SUBJ-BETA-02", "STUDY-001", "SITE-001", 1);
+        await SeedAsync("SUBJ-ALPHA-03", "STUDY-001", "SITE-002", 2);
+
+        var result = await CreateService().ListAsync("STUDY-001", null, null, null, null,
+            TestContext.Current.CancellationToken, query: "  alpha-0  ");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Total.Should().Be(2);
+        result.Value.Items.Select(s => s.SubjectId_.Value).Should().Equal("SUBJ-ALPHA-01", "SUBJ-ALPHA-03");
+    }
+
     [Theory]
     [InlineData(null, null, null, null, "STUDY_ID_REQUIRED")]
     [InlineData("STUDY-001", "NOT_A_STATUS", null, null, "INVALID_SUBJECT_STATUS")]

@@ -4,6 +4,7 @@ import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import EcrfFormPanel from "../../src/components/ecrf/EcrfFormPanel.vue";
+import ScopeLockControls from "../../src/components/canvas/ScopeLockControls.vue";
 import { ecrfFormsApi } from "../../src/api/ecrfFormsApi";
 import { ApiError } from "../../src/api/client";
 import { ecrfQueriesApi } from "../../src/api/ecrfQueriesApi";
@@ -2012,5 +2013,41 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
       true
     );
     await expect(wrapper.element).toBeAccessible();
+  });
+
+  it("reloads the open form and its queries when ScopeLockControls emits changed", async () => {
+    vi.mocked(ecrfFormsApi.getForm)
+      .mockResolvedValueOnce(form() as never)
+      .mockResolvedValueOnce(
+        form({
+          locks: [
+            {
+              lock_id: "lock-form-1",
+              kind: "Frozen",
+              scope: `collection_instance:${FORM_ID}`,
+              locked_at: "2027-04-02T00:00:00Z",
+              locked_by: "person:dm1",
+              reason: "Interim freeze",
+            },
+          ],
+        }) as never
+      );
+
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+    expect(ecrfFormsApi.getForm).toHaveBeenCalledTimes(1);
+    expect(ecrfQueriesApi.listForForm).toHaveBeenCalledTimes(1);
+
+    const lockControls = wrapper.findComponent(ScopeLockControls);
+    expect(lockControls.exists()).toBe(true);
+    lockControls.vm.$emit("changed");
+    await flushPromises();
+
+    expect(ecrfFormsApi.getForm).toHaveBeenCalledTimes(2);
+    expect(ecrfFormsApi.getForm).toHaveBeenLastCalledWith(FORM_ID);
+    expect(ecrfQueriesApi.listForForm).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-testid="ecrf-form-locks"]').text()).toContain(
+      "Interim freeze"
+    );
   });
 });

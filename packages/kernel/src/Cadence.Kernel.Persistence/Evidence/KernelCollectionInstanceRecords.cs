@@ -129,17 +129,106 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             v => v.Id,
             v => ProtocolDesignDocument.Read(v.Content).Design?.CollectionSpecs ?? []);
 
-        return [.. instances.Select(instance => ToSummary(instance, specsByVersion.GetValueOrDefault(instance.ProtocolVersionId) ?? []))];
+        var allMemberIds = instances.SelectMany(c => c.Members.Select(m => m.ObservationId)).Distinct().ToList();
+        var observations = allMemberIds.Count == 0
+            ? new Dictionary<ObservationId, Observation>()
+            : (await db.Observations.AsNoTracking()
+                    .Where(o => allMemberIds.Contains(o.Id))
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false))
+                .ToDictionary(o => o.Id);
+
+        var first = instances[0];
+        List<NodeRef> allScopes =
+        [
+            NodeRef.For(first.StudyId),
+            NodeRef.For(first.StudySiteId),
+            NodeRef.For(enrollment),
+            .. instances.Select(i => NodeRef.For(i.Id)),
+            .. allMemberIds.Select(o => NodeRef.For(o)),
+        ];
+        var scoped = await ScopedAssertions.ReadAsync(db, allScopes, cancellationToken).ConfigureAwait(false);
+        var allLocks = scoped.Locks();
+        var allMemberGuids = allMemberIds.Select(o => o.Value).ToHashSet();
+        var verifiedRevisions = scoped
+            .About(a => a.TargetKind == NodeKinds.Observation && allMemberGuids.Contains(a.TargetId))
+            .Where(a => a.Kind == AssertionKind.Verified && a.RetractedAt is null && a.Revision is not null)
+            .Select(a => (a.Target.Id, Revision: a.Revision!.Value))
+            .ToHashSet();
+
+        var instanceGuids = instances.Select(i => i.Id.Value).ToList();
+        var rawSignatures = await db.Attestations.AsNoTracking()
+            .Where(a => a.TargetKind == NodeKinds.CollectionInstance && instanceGuids.Contains(a.TargetId))
+            .Select(a => new { a.TargetId, a.TargetContentHash })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var signaturesByInstance = rawSignatures.ToLookup(a => a.TargetId, a => a.TargetContentHash);
+
+        return
+        [
+            .. instances.Select(instance => ToSummary(
+                instance,
+                specsByVersion.GetValueOrDefault(instance.ProtocolVersionId) ?? [],
+                observations,
+                allLocks,
+                verifiedRevisions,
+                signaturesByInstance[instance.Id.Value])),
+        ];
     }
 
-    private static CollectionInstanceSummary ToSummary(CollectionInstance instance, IReadOnlyList<CollectionSpec> specs)
+    private static CollectionInstanceSummary ToSummary(
+        CollectionInstance instance,
+        IReadOnlyList<CollectionSpec> specs,
+        IReadOnlyDictionary<ObservationId, Observation> observations,
+        IReadOnlyList<LockView> allLocks,
+        IReadOnlySet<(Guid ObservationId, int Revision)> verifiedRevisions,
+        IEnumerable<string> signatureHashes)
     {
         var spec = specs.FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal));
         var specItems = spec?.Items ?? [];
         var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
-        var recordedItems = instance.Members.Select(m => m.ItemId).ToHashSet(StringComparer.Ordinal);
-        var itemCount = specItems.Select(i => i.Id).Concat(recordedItems).Distinct(StringComparer.Ordinal).Count();
-        var complete = specItems.All(i => !i.Required || recordedItems.Contains(i.Id));
+
+        var memberObservations = instance.Members
+            .Where(m => observations.ContainsKey(m.ObservationId))
+            .OrderBy(m => m.ItemId, StringComparer.Ordinal)
+            .Select(m => (m.ItemId, Observation: observations[m.ObservationId]))
+            .ToList();
+        var recordedMembers = memberObservations
+            .Where(m => m.Observation.Value is not MissingValue { Reason: NullFlavor.NotAsked })
+            .ToList();
+        var recordedItems = recordedMembers.Select(m => m.ItemId).ToHashSet(StringComparer.Ordinal);
+
+        var itemCount = specItems.Select(i => i.Id)
+            .Concat(instance.Members.Select(m => m.ItemId))
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+        var missingRequiredCount = specItems.Count(i => i.Required && !recordedItems.Contains(i.Id));
+        var complete = missingRequiredCount == 0;
+        var recordedCount = recordedMembers.Count;
+
+        var verifiedCount = recordedMembers.Count(m => verifiedRevisions.Contains((m.Observation.Id.Value, m.Observation.Revision)));
+        var unverifiedCount = recordedCount - verifiedCount;
+
+        var memberGuids = instance.Members.Select(m => m.ObservationId.Value).ToHashSet();
+        var coveringLocks = allLocks
+            .Where(l =>
+                (l.Scope.Kind == NodeKinds.Study && l.Scope.Id == instance.StudyId.Value)
+                || (l.Scope.Kind == NodeKinds.StudySite && l.Scope.Id == instance.StudySiteId.Value)
+                || (l.Scope.Kind == NodeKinds.Enrollment && l.Scope.Id == instance.EnrollmentId.Value)
+                || (l.Scope.Kind == NodeKinds.CollectionInstance && l.Scope.Id == instance.Id.Value)
+                || (l.Scope.Kind == NodeKinds.Observation && memberGuids.Contains(l.Scope.Id)))
+            .ToList();
+        var locked = coveringLocks.Any(l => l.Kind == LockKind.Locked);
+        var frozen = coveringLocks.Any(l => l.Kind == LockKind.Frozen);
+
+        string? contentHash = memberObservations.Count == 0
+            ? null
+            : CollectionInstance.ContentHashOf(
+                memberObservations.Select(m => new CollectionContentEntry(m.Observation.Id, m.Observation.Revision, m.Observation.Value)));
+        var hashes = signatureHashes.ToList();
+        var signed = contentHash is not null && hashes.Any(h => string.Equals(h, contentHash, StringComparison.Ordinal));
+        var signatureSuperseded = !signed && hashes.Count > 0;
+
         return new CollectionInstanceSummary(
             instance.Id,
             instance.EnrollmentId,
@@ -155,8 +244,17 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             instance.VersionIndex,
             complete,
             itemCount,
-            recordedItems.Count,
-            collectionTitle);
+            recordedCount,
+            collectionTitle,
+            missingRequiredCount,
+            verifiedCount,
+            unverifiedCount,
+            locked,
+            frozen,
+            coveringLocks.Count,
+            signed,
+            signatureSuperseded,
+            hashes.Count);
     }
 
     /// <summary>

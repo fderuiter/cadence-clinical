@@ -468,4 +468,52 @@ describe("eCRF screen: the participant's case report form", () => {
     ).toBeUndefined();
     expect(confirm).toHaveBeenCalledTimes(1);
   });
+
+  it("pre-populates collectionSpecId and plannedActivityId (including visitId fallback) on Clinical Canvas handoff", async () => {
+    setRouteQuery({
+      studyId: "CAD-101",
+      siteId: "SITE-01",
+      subjectId: "017-0001",
+      enrollmentId: "0192f3c4-0000-7000-8000-00000000e777",
+      collectionSpecId: "VS",
+      visitId: "SCR",
+    });
+    vi.mocked(executionApi.listSubjects).mockResolvedValue({
+      items: [
+        {
+          id: "sub-1",
+          subject_id: "017-0001",
+          study_id: "CAD-101",
+          site_id: "SITE-01",
+          status: "ENROLLED",
+        },
+      ],
+      total: 1,
+      limit: 200,
+      offset: 0,
+    });
+
+    wrapper = mountView();
+    await flushPromises();
+
+    expect(wrapper.find("#ecrf-enrollment-id").element.value).toBe(
+      "0192f3c4-0000-7000-8000-00000000e777"
+    );
+    expect(wrapper.find("#ecrf-collection-spec").element.value).toBe("VS");
+    expect(wrapper.find("#ecrf-planned-activity").element.value).toBe("SCR");
+
+    // Updating query to another cell reactively updates spec & planned activity
+    setRouteQuery({
+      studyId: "CAD-101",
+      siteId: "SITE-01",
+      subjectId: "017-0001",
+      enrollmentId: "0192f3c4-0000-7000-8000-00000000e777",
+      collectionSpecId: "AE",
+      plannedActivityId: "",
+    });
+    await flushPromises();
+
+    expect(wrapper.find("#ecrf-collection-spec").element.value).toBe("AE");
+    expect(wrapper.find("#ecrf-planned-activity").element.value).toBe("");
+  });
 });
