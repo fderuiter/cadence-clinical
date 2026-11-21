@@ -544,6 +544,7 @@ import {
   PRODUCT_FAMILIES,
 } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
+import { demoNowMs, nextDemoStep } from "../utils/demoMode.js";
 
 const MAX_PARTICIPANT_COUNT = 1e6;
 const authStore = useAuthStore();
@@ -679,7 +680,7 @@ async function handleSelectTier(tierCode) {
 
   isBusy.value = true;
   try {
-    const idempotencyKey = `web-tier-switch-${authStore.identity?.tenantId || "tenant"}-${tierCode.toLowerCase()}-${Date.now()}`;
+    const idempotencyKey = `web-tier-switch-${authStore.identity?.tenantId || "tenant"}-${tierCode.toLowerCase()}-${demoNowMs(nextDemoStep("plans-tier-switch"))}`;
     const updated = await kernelApi.upgradeSubscriptionTier({
       tier: tierCode,
       idempotencyKey,
@@ -718,7 +719,7 @@ async function handleActivateSubscription() {
 
   isBusy.value = true;
   try {
-    const idempotencyKey = `web-scoped-activate-${authStore.identity?.tenantId || "tenant"}-${scopingForm.tier.toLowerCase()}-${Date.now()}`;
+    const idempotencyKey = `web-scoped-activate-${authStore.identity?.tenantId || "tenant"}-${scopingForm.tier.toLowerCase()}-${demoNowMs(nextDemoStep("plans-scoped-activate"))}`;
     const updated = await kernelApi.activateSubscription({
       tier: scopingForm.tier,
       studyPhase: scopingForm.studyPhase.trim() || null,

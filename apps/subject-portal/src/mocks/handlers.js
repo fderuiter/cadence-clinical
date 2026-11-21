@@ -1,19 +1,40 @@
+import {
+  DEFAULT_DEMO_PARTICIPANT,
+  DEFAULT_DEMO_SITE,
+  DEMO_STUDY,
+} from "demo-fixtures";
 import { http, HttpResponse, passthrough } from "msw";
 import { evaluateDemoBoundaryRequest } from "ui/testing";
-import { isDemoBuild } from "../utils/demoMode.js";
+import { demoNowIso, demoNowMs, isDemoBuild } from "../utils/demoMode.js";
 import { createPortalDemoHandlers } from "./demoHandlers.js";
 
 // Deterministic mock-sandbox state for explicit demo mode / Vitest MSW tests.
 // Never fabricates fallback merchant/amount/confidence when receipt content is unreadable.
 const mockWalletLedger = new Map();
+let mockActionCounter = 0;
 
-function getOrCreateMockWallet(subjectId = "subject_001") {
+function nextMockTimestampMs() {
+  mockActionCounter += 1;
+  return demoNowMs(mockActionCounter);
+}
+
+function nextMockTimestampIso() {
+  mockActionCounter += 1;
+  return demoNowIso(mockActionCounter);
+}
+
+const DEFAULT_MOCK_SUBJECT_ID =
+  DEFAULT_DEMO_PARTICIPANT?.subjectCode || "SUBJ-101-001";
+const DEFAULT_MOCK_STUDY_ID = DEMO_STUDY?.code || "CADENCE-101";
+const DEFAULT_MOCK_SITE_ID = DEFAULT_DEMO_SITE?.code || "SITE-101";
+
+function getOrCreateMockWallet(subjectId = DEFAULT_MOCK_SUBJECT_ID) {
   if (!mockWalletLedger.has(subjectId)) {
     mockWalletLedger.set(subjectId, {
       id: `wallet_${subjectId}`,
       subjectId,
-      studyId: "study_001",
-      siteId: "site_001",
+      studyId: DEFAULT_MOCK_STUDY_ID,
+      siteId: DEFAULT_MOCK_SITE_ID,
       currentBalance: 125.0,
       lifetimeStipends: 125.0,
       lifetimeReimbursements: 0.0,
@@ -32,6 +53,8 @@ function getOrCreateMockWallet(subjectId = "subject_001") {
       recentTransactions: [],
       expenseClaims: [],
       creditedKeys: new Set(),
+      expenseIdempotencyMap: new Map(),
+      disburseIdempotencyMap: new Map(),
     });
   }
   return mockWalletLedger.get(subjectId);
@@ -258,25 +281,40 @@ function parseReceiptContent(body) {
   };
 }
 
-function evaluateExpenseSubmission(body) {
+function evaluateExpenseSubmission(body, wallet = null) {
   const grossAmount = Number(body.grossAmount ?? body.gross_amount ?? 0);
   const confidence = Number(body.ocrConfidence ?? body.ocr_confidence ?? 0);
   const category = String(body.category || "TRANSIT").toUpperCase();
+  const merchantName = String(
+    body.merchantName ?? body.merchant_name ?? ""
+  ).trim();
+  const expenseDate = String(
+    body.expenseDate ?? body.expense_date ?? ""
+  ).trim();
   const isMeal = Boolean(
     body.isMealAllowance ?? body.is_meal_allowance ?? category === "MEAL"
   );
   const perDiemCap = Number(body.perDiemCap ?? body.per_diem_cap ?? 75.0);
+  const isW9Blocked = Boolean(
+    wallet &&
+    (wallet.is1099ThresholdExceeded || Number(wallet.taxableYtd || 0) >= 600) &&
+    String(wallet.w9Status || "").toUpperCase() !== "VERIFIED"
+  );
 
   const isAmountUnderCap = grossAmount > 0 && grossAmount <= 100.0;
   const isConfidenceHigh = confidence >= 0.9;
   const isMealCompliant = !isMeal || grossAmount <= perDiemCap;
 
-  if (isAmountUnderCap && isConfidenceHigh && isMealCompliant) {
-    const timestamp = Date.now();
+  if (isAmountUnderCap && isConfidenceHigh && isMealCompliant && !isW9Blocked) {
+    const timestamp = nextMockTimestampMs();
     const disbRef = `DISB-ACH-${timestamp}`;
+    const createdIso = nextMockTimestampIso();
     return {
       id: `claim_${timestamp}`,
       claim_id: `claim_${timestamp}`,
+      category,
+      merchantName,
+      expenseDate,
       status: "APPROVED",
       approvalDecision: "AUTO_APPROVED",
       autoApproved: true,
@@ -288,7 +326,8 @@ function evaluateExpenseSubmission(body) {
       netAmount: grossAmount,
       net_amount: grossAmount,
       disbursement_method: "DIRECT_ACH",
-      dispatched_at: new Date().toISOString(),
+      dispatched_at: createdIso,
+      createdAt: createdIso,
     };
   }
 
@@ -303,16 +342,24 @@ function evaluateExpenseSubmission(body) {
       `Meal expense $${grossAmount.toFixed(2)} exceeds per-diem cap ($${perDiemCap.toFixed(2)}).`
     );
   }
+  if (isW9Blocked) {
+    reasons.push(
+      "IRS $600.00 annual taxable threshold reached without verified Form W-9 certification."
+    );
+  }
   if (!isConfidenceHigh) {
     reasons.push(
       `OCR confidence score ${confidence.toFixed(2)} is below 0.90 threshold.`
     );
   }
   const reviewNotes = `${reasons.join(" ")} Routed to site coordinator review queue.`;
-  const id = `claim_${Date.now()}`;
+  const id = `claim_${nextMockTimestampMs()}`;
   return {
     id,
     claim_id: id,
+    category,
+    merchantName,
+    expenseDate,
     status: "PENDING_REVIEW",
     approvalDecision: "PENDING_REVIEW",
     autoApproved: false,
@@ -325,19 +372,21 @@ function evaluateExpenseSubmission(body) {
     gross_amount: grossAmount,
     netAmount: grossAmount,
     net_amount: grossAmount,
+    createdAt: nextMockTimestampIso(),
   };
 }
 
 const sharedPortalActionHandlers = [
   http.post("*/api/v1/ai/biometrics/verify-liveness", async ({ request }) => {
     const body = await request.json().catch(() => ({}));
-    const subject = body.subject_pseudonym || "subj-001";
+    const subject = body.subject_pseudonym || DEFAULT_MOCK_SUBJECT_ID;
     const isFallback = Boolean(body.fallback_mode);
     const frames = body.video_frames || [];
     const isLive = isFallback || frames.length > 0;
     const score = isFallback ? 0.92 : isLive ? 0.98 : 0.15;
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-    const token = `mock_liveness_token_${subject}_${isFallback ? "fallback" : "camera"}_${Date.now()}`;
+    const nowMs = nextMockTimestampMs();
+    const expiresAt = new Date(nowMs + 15 * 60 * 1000).toISOString();
+    const token = `mock_liveness_token_${subject}_${isFallback ? "fallback" : "camera"}_${nowMs}`;
 
     if (!isLive) {
       return HttpResponse.json(
@@ -363,7 +412,8 @@ const sharedPortalActionHandlers = [
 
   http.get("*/api/v1/payments/participant/me/wallet", ({ request }) => {
     const url = new URL(request.url);
-    const subjectId = url.searchParams.get("subjectId") || "subject_001";
+    const subjectId =
+      url.searchParams.get("subjectId") || DEFAULT_MOCK_SUBJECT_ID;
     const wallet = getOrCreateMockWallet(subjectId);
     return HttpResponse.json({
       wallet,
@@ -392,7 +442,32 @@ const sharedPortalActionHandlers = [
     "*/api/v1/payments/participant/me/expenses",
     async ({ request }) => {
       const body = await request.json().catch(() => ({}));
-      return HttpResponse.json(evaluateExpenseSubmission(body));
+      const wallet = getOrCreateMockWallet(
+        body.subjectId || DEFAULT_MOCK_SUBJECT_ID
+      );
+      const idempotencyKey = (
+        request.headers.get("Idempotency-Key") ||
+        body.idempotencyKey ||
+        body.idempotency_key ||
+        ""
+      ).trim();
+
+      if (idempotencyKey && wallet.expenseIdempotencyMap.has(idempotencyKey)) {
+        return HttpResponse.json(
+          wallet.expenseIdempotencyMap.get(idempotencyKey)
+        );
+      }
+
+      const evaluated = evaluateExpenseSubmission(body, wallet);
+      if (evaluated.autoApproved) {
+        wallet.lifetimeReimbursements += evaluated.netAmount;
+        wallet.lifetimeDisbursements += evaluated.netAmount;
+      }
+      wallet.expenseClaims.unshift(evaluated);
+      if (idempotencyKey) {
+        wallet.expenseIdempotencyMap.set(idempotencyKey, evaluated);
+      }
+      return HttpResponse.json(evaluated);
     }
   ),
 
@@ -405,8 +480,44 @@ const sharedPortalActionHandlers = [
     "*/api/v1/payments/participant/me/disburse",
     async ({ request }) => {
       const body = await request.json().catch(() => ({}));
-      const wallet = getOrCreateMockWallet(body.subjectId || "subject_001");
-      if (wallet.currentBalance <= 0) {
+      const wallet = getOrCreateMockWallet(
+        body.subjectId || DEFAULT_MOCK_SUBJECT_ID
+      );
+      const idempotencyKey = (
+        request.headers.get("Idempotency-Key") ||
+        body.idempotencyKey ||
+        body.idempotency_key ||
+        ""
+      ).trim();
+
+      if (idempotencyKey && wallet.disburseIdempotencyMap.has(idempotencyKey)) {
+        return HttpResponse.json({
+          ...wallet.disburseIdempotencyMap.get(idempotencyKey),
+          currentBalance: wallet.currentBalance,
+          lifetimeDisbursements: wallet.lifetimeDisbursements,
+        });
+      }
+
+      if (
+        (wallet.is1099ThresholdExceeded ||
+          Number(wallet.taxableYtd || 0) >= 600) &&
+        String(wallet.w9Status || "").toUpperCase() !== "VERIFIED"
+      ) {
+        return HttpResponse.json(
+          {
+            detail:
+              "Annual taxable payments have reached $600.00 without a verified Form W-9. Automated payouts are halted until your Form W-9 is verified by site staff.",
+          },
+          { status: 409 }
+        );
+      }
+
+      const requestedAmount =
+        typeof body.amount === "number" && body.amount > 0
+          ? Math.round(body.amount * 100) / 100
+          : wallet.currentBalance;
+
+      if (wallet.currentBalance <= 0 || requestedAmount <= 0) {
         return HttpResponse.json(
           {
             detail:
@@ -415,24 +526,51 @@ const sharedPortalActionHandlers = [
           { status: 409 }
         );
       }
-      const amount = wallet.currentBalance;
-      wallet.currentBalance = 0;
-      wallet.lifetimeDisbursements += amount;
-      const refNum = `DISB-ACH-${Date.now()}`;
-      return HttpResponse.json({
-        id: `disb_${Date.now()}`,
+
+      if (requestedAmount > wallet.currentBalance) {
+        return HttpResponse.json(
+          {
+            detail: `Requested payout ($${requestedAmount.toFixed(2)}) exceeds available wallet balance ($${wallet.currentBalance.toFixed(2)}).`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const disbursementType =
+        String(body.disbursementType || "DIRECT_ACH").toUpperCase() ===
+        "VIRTUAL_CARD"
+          ? "VIRTUAL_CARD"
+          : "DIRECT_ACH";
+      wallet.currentBalance =
+        Math.round((wallet.currentBalance - requestedAmount) * 100) / 100;
+      wallet.lifetimeDisbursements =
+        Math.round((wallet.lifetimeDisbursements + requestedAmount) * 100) /
+        100;
+      const nowMs = nextMockTimestampMs();
+      const prefix = disbursementType === "VIRTUAL_CARD" ? "VCARD" : "ACH";
+      const refNum = `DISB-${prefix}-${nowMs}`;
+      const destinationMask =
+        disbursementType === "VIRTUAL_CARD"
+          ? wallet.virtualCardMask
+          : wallet.achAccountMask;
+      const responsePayload = {
+        id: `disb_${nowMs}`,
         walletId: wallet.id,
         subjectId: wallet.subjectId,
-        amount,
-        currentBalance: 0,
+        amount: requestedAmount,
+        currentBalance: wallet.currentBalance,
         lifetimeDisbursements: wallet.lifetimeDisbursements,
-        currency: "USD",
-        disbursementType: body.disbursementType || "DIRECT_ACH",
-        destinationMask: wallet.achAccountMask,
+        currency: wallet.currency || "USD",
+        disbursementType,
+        destinationMask,
         referenceNumber: refNum,
         status: "DISPATCHED",
-        createdAt: new Date().toISOString(),
-      });
+        createdAt: nextMockTimestampIso(),
+      };
+      if (idempotencyKey) {
+        wallet.disburseIdempotencyMap.set(idempotencyKey, responsePayload);
+      }
+      return HttpResponse.json(responsePayload);
     }
   ),
 
@@ -454,7 +592,9 @@ const sharedPortalActionHandlers = [
           { status: 400 }
         );
       }
-      const wallet = getOrCreateMockWallet(body.subjectId || "subject_001");
+      const wallet = getOrCreateMockWallet(
+        body.subjectId || DEFAULT_MOCK_SUBJECT_ID
+      );
       const key =
         body.idempotencyKey ||
         `diary_${wallet.subjectId}_${body.diaryId || body.assignmentId}_${body.sequenceNumber || 1}`;
@@ -484,7 +624,7 @@ const sharedPortalActionHandlers = [
         walletId: wallet.id,
         subjectId: wallet.subjectId,
         currency: "USD",
-        transactionId: `tx_${Date.now()}`,
+        transactionId: `tx_${nextMockTimestampMs()}`,
         referenceNumber: key,
         idempotencyKey: key,
       });
@@ -493,12 +633,12 @@ const sharedPortalActionHandlers = [
 
   http.post("*/api/v1/payments/disburse", async ({ request }) => {
     const body = await request.json().catch(() => ({}));
-    const subjectId = body.subject_id || "subject_001";
+    const subjectId = body.subject_id || DEFAULT_MOCK_SUBJECT_ID;
     const amount = typeof body.amount === "number" ? body.amount : 25.0;
     const seq = body.sequence_number || 1;
     return HttpResponse.json({
       success: true,
-      id: "disb_" + Date.now(),
+      id: "disb_" + nextMockTimestampMs(),
       wallet_id: "wallet_" + subjectId,
       subject_id: subjectId,
       amount: amount,
@@ -507,7 +647,7 @@ const sharedPortalActionHandlers = [
       status: "COMPLETED",
       reference_number: "DISB-MOCK-" + seq,
       idempotency_key: body.idempotency_key || `seq_${seq}_${subjectId}`,
-      dispatched_at: new Date().toISOString(),
+      dispatched_at: nextMockTimestampIso(),
     });
   }),
 
@@ -515,11 +655,11 @@ const sharedPortalActionHandlers = [
     "*/api/v1/payments/participant/wallets/disburse",
     async ({ request }) => {
       const body = await request.json().catch(() => ({}));
-      const subjectId = body.subject_id || "subject_001";
+      const subjectId = body.subject_id || DEFAULT_MOCK_SUBJECT_ID;
       const amount = typeof body.amount === "number" ? body.amount : 25.0;
       return HttpResponse.json({
         success: true,
-        id: "disb_" + Date.now(),
+        id: "disb_" + nextMockTimestampMs(),
         wallet_id: "wallet_" + subjectId,
         subject_id: subjectId,
         amount: amount,
@@ -528,7 +668,7 @@ const sharedPortalActionHandlers = [
         status: "COMPLETED",
         reference_number: "DISB-MOCK",
         idempotency_key: body.idempotency_key || `disburse_${subjectId}`,
-        dispatched_at: new Date().toISOString(),
+        dispatched_at: nextMockTimestampIso(),
       });
     }
   ),
@@ -561,6 +701,11 @@ export function buildPortalGatewayHandlers(options = {}) {
   });
 
   return [...sharedPortalActionHandlers, ...demoHandlers, boundaryHandler];
+}
+
+export function resetMockWalletLedger() {
+  mockWalletLedger.clear();
+  mockActionCounter = 0;
 }
 
 export const gatewayHandlers = buildPortalGatewayHandlers();

@@ -1,4 +1,12 @@
 import {
+  DEMO_PARTICIPANTS,
+  DEMO_SITES,
+  DEMO_SPONSOR,
+  DEMO_STUDY,
+  DEMO_TENANT_UUID as MANIFEST_DEMO_TENANT_UUID,
+  getDemoPersonaForWorkspace,
+} from "demo-fixtures";
+import {
   DEFAULT_CATEGORIES,
   DEFAULT_MOCK_ARTICLES,
   getFallbackContextualHelp,
@@ -17,8 +25,10 @@ import {
   findCommercialTier,
   PRE_RELEASE_ENVIRONMENT_NOTICE,
 } from "../catalog/productCatalog.js";
+import { demoNowIso, demoNowMs } from "../utils/demoMode.js";
 
-const DEMO_TENANT_UUID = "00000000-0000-0000-0000-000000000010"; // deid-ignore
+const DEMO_TENANT_UUID =
+  MANIFEST_DEMO_TENANT_UUID || "00000000-0000-0000-0000-000000000010"; // deid-ignore
 const DEMO_SUBSCRIPTION_UUID = "00000000-0000-0000-0000-000000000011"; // deid-ignore
 
 const STUDY_UUID = "00000000-0000-0000-0000-000000000001"; // deid-ignore
@@ -31,7 +41,6 @@ const SITE_101_UUID = "00000000-0000-0000-0000-000000000201"; // deid-ignore
 const SITE_102_UUID = "00000000-0000-0000-0000-000000000202"; // deid-ignore
 const ENROLLMENT_1001_UUID = "00000000-0000-0000-0000-000000001001"; // deid-ignore
 const ENROLLMENT_1002_UUID = "00000000-0000-0000-0000-000000001002"; // deid-ignore
-const ENROLLMENT_001_UUID = "00000000-0000-0000-0000-000000001003"; // deid-ignore
 const OBS_1_UUID = "00000000-0000-0000-0000-000000000001"; // deid-ignore
 const OBS_2_UUID = "00000000-0000-0000-0000-000000000002"; // deid-ignore
 const OBS_3_UUID = "00000000-0000-0000-0000-000000000003"; // deid-ignore
@@ -186,6 +195,10 @@ function resolveSiteUuid(siteCode) {
   const normalized = String(siteCode || "SITE-101")
     .trim()
     .toUpperCase();
+  const manifestSite = DEMO_SITES.find((s) => s.code === normalized);
+  if (manifestSite && normalized !== "SITE-101" && normalized !== "SITE-102") {
+    return manifestSite.studySiteUuid;
+  }
   if (normalized === "SITE-101") return SITE_101_UUID;
   if (normalized === "SITE-102") return SITE_102_UUID;
   const digits = normalized.replace(/\D/g, "") || "299";
@@ -194,6 +207,8 @@ function resolveSiteUuid(siteCode) {
 
 function resolveSiteCodeFromRef(nodeRef, subjects = []) {
   const raw = String(nodeRef || "").replace(/^study_site:/, "");
+  const manifestSite = DEMO_SITES.find((s) => s.studySiteUuid === raw);
+  if (manifestSite) return manifestSite.code;
   if (raw === SITE_101_UUID) return "SITE-101";
   if (raw === SITE_102_UUID) return "SITE-102";
   for (const subj of subjects) {
@@ -321,6 +336,16 @@ function buildSsuSiteEntry(country, siteId, siteName, overrides = {}) {
 
 function createStartupMatrixForCountry(countryCode = "US") {
   const country = (countryCode || "US").toUpperCase();
+  if (country === "US" && DEMO_SITES.length >= 2) {
+    return DEMO_SITES.map((site, idx) =>
+      buildSsuSiteEntry(country, site.code, site.name, {
+        overall_status: idx === 0 ? "APPROVED" : "PENDING",
+        greenlight_token: idx === 0 ? `demo_gl_tok_${site.code}` : null,
+        greenlight_certified_by: idx === 0 ? "designer.lead" : null,
+        greenlight_certified_at: idx === 0 ? "2026-01-11T09:00:00Z" : null,
+      })
+    );
+  }
   const prefixByCountry = {
     US: "SITE-10",
     DE: "SITE-20",
@@ -454,9 +479,22 @@ export function createWebDemoStore() {
     state.idempotentStudyResponses = new Map();
     state.idempotentImportResponses = new Map();
 
-    const cadence101 = createInitialDemoStudyDirectoryEntry();
+    const canonicalStudyCode = DEMO_STUDY.code || "CADENCE-101";
+    const baseCadenceStudy = createInitialDemoStudyDirectoryEntry();
+    const canonicalStudyEntry = {
+      ...baseCadenceStudy,
+      ref: DEMO_STUDY.ref || baseCadenceStudy.ref,
+      code: canonicalStudyCode,
+      title: DEMO_STUDY.title || baseCadenceStudy.title,
+      phase: DEMO_STUDY.phase || baseCadenceStudy.phase,
+      sponsor: DEMO_SPONSOR.code || baseCadenceStudy.sponsor_code,
+      sponsor_code: DEMO_SPONSOR.code || baseCadenceStudy.sponsor_code,
+      sponsor_name: DEMO_SPONSOR.name || baseCadenceStudy.sponsor_name,
+      site_count: DEMO_SITES.length || baseCadenceStudy.site_count,
+    };
+
     state.studies = new Map([
-      ["CADENCE-101", cadence101],
+      [canonicalStudyCode, canonicalStudyEntry],
       [
         "DEMO-01",
         {
@@ -491,7 +529,19 @@ export function createWebDemoStore() {
       ],
     ]);
 
+    const canonicalSubjects = DEMO_PARTICIPANTS.map((participant, idx) => ({
+      id: participant.enrollmentUuid,
+      subject_id: participant.subjectCode,
+      study_id: canonicalStudyCode,
+      site_id: participant.siteCode,
+      status: idx === 2 ? "ENROLLED" : "ACTIVE",
+      active_protocol_version: idx === 1 ? "1.0" : "2.0",
+      enrollment_index: idx + 1,
+      treatment_group: idx === 1 ? "ARM-B" : "ARM-A",
+    }));
+
     state.subjects = [
+      ...canonicalSubjects,
       {
         id: ENROLLMENT_1001_UUID,
         subject_id: "SUBJ-1001",
@@ -511,16 +561,6 @@ export function createWebDemoStore() {
         active_protocol_version: "2.0",
         enrollment_index: 2,
         treatment_group: null,
-      },
-      {
-        id: ENROLLMENT_001_UUID,
-        subject_id: "SUBJ-001",
-        study_id: "STUDY-USDM-001",
-        site_id: "SITE-101",
-        status: "ACTIVE",
-        active_protocol_version: "1.0",
-        enrollment_index: 1,
-        treatment_group: "ARM-A",
       },
     ];
 
@@ -1030,7 +1070,7 @@ export function createWebDemoStore() {
       subscription_ref: `subscription:${DEMO_SUBSCRIPTION_UUID}`,
       tier: "Complete",
       status: "Active",
-      started_at: new Date().toISOString(),
+      started_at: demoNowIso(),
       trial_ends_at: null,
       is_read_only: false,
       product_families: [...findCommercialTier("Complete").families],
@@ -1048,14 +1088,17 @@ export function createWebDemoStore() {
 
   function recordActivity(type, family, subjectKind, subjectRef, actorId) {
     const idx = nextCounter();
-    const now = new Date().toISOString();
+    const now = demoNowIso(idx);
     state.activityEntries.unshift({
       event_id: makeUuidFromIndex("00000900", idx),
       type,
       family,
       recorded: now,
       occurred_valid: now,
-      actor_id: actorId || "usr-demo-operator",
+      actor_id:
+        actorId ||
+        getDemoPersonaForWorkspace("super_admin")?.username ||
+        "designer.lead",
       subject_kind: subjectKind,
       subject: subjectRef,
       mask: null,
@@ -1137,7 +1180,11 @@ export function createWebDemoStore() {
           code: study.code,
           detail: `Status: ${study.status}`,
           exact_code: Boolean(trimmed && study.code.toLowerCase() === lower),
-          rank: study.code === "DEMO-01" ? 1.0 : 0.9,
+          rank:
+            study.code === (DEMO_STUDY.code || "CADENCE-101") ||
+            study.code === "DEMO-01"
+              ? 1.0
+              : 0.9,
         });
       }
 
@@ -3393,7 +3440,7 @@ export function createWebDemoStore() {
       }
 
       const idx = nextCounter();
-      const nowMs = Date.now();
+      const nowMs = demoNowMs(idx);
       const nowIso = new Date(nowMs).toISOString();
       const year = new Date(nowMs).getUTCFullYear();
       const seq = String(idx).padStart(4, "0");
@@ -3482,7 +3529,7 @@ export function createWebDemoStore() {
         "Execution",
         "subscription",
         state.entitlements.subscription_ref,
-        "usr-demo-operator"
+        getDemoPersonaForWorkspace("super_admin")?.username || "designer.lead"
       );
       return { data: cloneJson(state.entitlements) };
     },
@@ -3587,7 +3634,7 @@ export function createWebDemoStore() {
         "Execution",
         "subscription",
         state.entitlements.subscription_ref,
-        "usr-demo-operator"
+        getDemoPersonaForWorkspace("super_admin")?.username || "designer.lead"
       );
       return { data: cloneJson(state.entitlements) };
     },
@@ -3601,7 +3648,7 @@ export function createWebDemoStore() {
               .trim()
               .toLowerCase()
         ) || "Individual";
-      const now = new Date();
+      const now = new Date(demoNowMs());
       const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
       state.entitlements = {
         ...state.entitlements,

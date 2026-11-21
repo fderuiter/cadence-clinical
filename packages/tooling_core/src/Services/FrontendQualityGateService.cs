@@ -13,7 +13,6 @@ namespace Cadence.ToolingCore.Services;
 public static class FrontendQualityGateService
 {
     private const int MaxFilesPerBatch = 100;
-    private const int PosixEnoexec = 8;
 
     private static readonly HashSet<string> PrettierExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -158,7 +157,7 @@ public static class FrontendQualityGateService
 
             try
             {
-                using var process = Process.Start(psi);
+                using var process = PosixProcessLauncher.Start(psi);
                 if (process is null)
                 {
                     continue;
@@ -176,14 +175,6 @@ public static class FrontendQualityGateService
 
                 Console.WriteLine("[ERROR] pnpm is installed on PATH but exited non-zero. Run 'corepack enable' so pnpm matches the packageManager pin in package.json.");
                 return null;
-            }
-            catch (Win32Exception ex) when (!OperatingSystem.IsWindows() && ex.NativeErrorCode == PosixEnoexec)
-            {
-                string? resolved = ResolveOnPath(candidate, repoRoot);
-                if (resolved is not null && RunProcess(repoRoot, "/bin/sh", [resolved, "--version"], suppressOutput: true) == 0)
-                {
-                    return candidate;
-                }
             }
             catch (Win32Exception)
             {
@@ -246,7 +237,7 @@ public static class FrontendQualityGateService
 
         try
         {
-            using var process = Process.Start(psi);
+            using var process = PosixProcessLauncher.Start(psi);
             if (process is null)
             {
                 return 1;
@@ -266,48 +257,11 @@ public static class FrontendQualityGateService
 
             return process.ExitCode;
         }
-        catch (Win32Exception ex) when (!OperatingSystem.IsWindows() && ex.NativeErrorCode == PosixEnoexec && fileName != "/bin/sh")
-        {
-            string? resolved = ResolveOnPath(fileName, workingDirectory);
-            if (resolved is not null)
-            {
-                return RunProcess(workingDirectory, "/bin/sh", [resolved, .. arguments], suppressOutput);
-            }
-
-            Console.WriteLine($"[ERROR] Could not start '{fileName}': {ex.Message}");
-            return 1;
-        }
         catch (Win32Exception ex)
         {
             Console.WriteLine($"[ERROR] Could not start '{fileName}': {ex.Message}");
             return 1;
         }
-    }
-
-    private static string? ResolveOnPath(string fileName, string workingDirectory)
-    {
-        if (fileName.Contains(Path.DirectorySeparatorChar) || fileName.Contains(Path.AltDirectorySeparatorChar))
-        {
-            string full = Path.IsPathRooted(fileName) ? fileName : Path.GetFullPath(fileName, workingDirectory);
-            return File.Exists(full) ? full : null;
-        }
-
-        string? pathValue = Environment.GetEnvironmentVariable("PATH");
-        if (string.IsNullOrWhiteSpace(pathValue))
-        {
-            return null;
-        }
-
-        foreach (string dir in pathValue.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-        {
-            string candidate = Path.Combine(dir, fileName);
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        return null;
     }
 
     private static string FindRepoRoot()

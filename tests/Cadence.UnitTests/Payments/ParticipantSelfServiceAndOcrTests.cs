@@ -389,6 +389,238 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
     }
 
     [Fact]
+    [GxPRequirement("PRD-PAT-002")]
+    [GxPRequirement("PRD-PAY-006")]
+    public async Task SelfServiceExpense_ReplayingSameIdempotencyKey_ReturnsPriorResult_IsolatesAcrossWallets_AndValidatesLength()
+    {
+        await EnsureDbCreatedAsync();
+        using var clientA = SubjectClient("SUBJ-EXP-IDEM-01");
+        using var clientB = SubjectClient("SUBJ-EXP-IDEM-02");
+
+        // Oversized Idempotency-Key (> 255 chars) is rejected with 400 BadRequest
+        using var oversizedReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/payments/participant/me/expenses")
+        {
+            Content = JsonContent.Create(new SelfServiceSubmitExpenseRequestDto(
+                Category: "TRANSIT",
+                MerchantName: "Metro Transit",
+                GrossAmount: 20.00m,
+                ExpenseDate: "2026-08-23",
+                OcrConfidence: 0.95,
+                StudyCode: "STUDY-01",
+                SiteCode: "SITE-01")),
+        };
+        oversizedReq.Headers.Add("Idempotency-Key", new string('k', 256));
+        using var oversizedResp = await clientA.SendAsync(oversizedReq, Ct);
+        oversizedResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var autoRequest = new SelfServiceSubmitExpenseRequestDto(
+            Category: "TRANSIT",
+            MerchantName: "Metro Transit",
+            GrossAmount: 28.50m,
+            ExpenseDate: "2026-08-23",
+            OcrConfidence: 0.96,
+            StudyCode: "STUDY-01",
+            SiteCode: "SITE-01");
+
+        using var firstReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/payments/participant/me/expenses")
+        {
+            Content = JsonContent.Create(autoRequest),
+        };
+        firstReq.Headers.Add("Idempotency-Key", "exp-idem-auto-01");
+
+        using var firstResp = await clientA.SendAsync(firstReq, Ct);
+        firstResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var firstClaim = (await firstResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        firstClaim.AutoApproved.Should().BeTrue();
+        firstClaim.LifetimeReimbursements.Should().Be(28.50m);
+        firstClaim.LifetimeDisbursements.Should().Be(28.50m);
+
+        string snapshotAfterFirst = await SnapshotAsync();
+
+        using var replayReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/payments/participant/me/expenses")
+        {
+            Content = JsonContent.Create(autoRequest),
+        };
+        replayReq.Headers.Add("Idempotency-Key", "exp-idem-auto-01");
+
+        using var replayResp = await clientA.SendAsync(replayReq, Ct);
+        replayResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var replayedClaim = (await replayResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        replayedClaim.Id.Should().Be(firstClaim.Id);
+        replayedClaim.DisbursementReference.Should().Be(firstClaim.DisbursementReference);
+        replayedClaim.LifetimeReimbursements.Should().Be(28.50m);
+        replayedClaim.LifetimeDisbursements.Should().Be(28.50m);
+        (await SnapshotAsync()).Should().Be(snapshotAfterFirst, "replaying an auto-approved expense Idempotency-Key must not create extra claims or payouts");
+
+        // Another participant using the identical Idempotency-Key gets their own isolated wallet & claim
+        using var otherSubjectReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/payments/participant/me/expenses")
+        {
+            Content = JsonContent.Create(autoRequest),
+        };
+        otherSubjectReq.Headers.Add("Idempotency-Key", "exp-idem-auto-01");
+        using var otherSubjectResp = await clientB.SendAsync(otherSubjectReq, Ct);
+        otherSubjectResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var otherSubjectClaim = (await otherSubjectResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        otherSubjectClaim.Id.Should().NotBe(firstClaim.Id);
+        otherSubjectClaim.WalletId.Should().NotBe(firstClaim.WalletId);
+        otherSubjectClaim.SubjectId.Should().Be("SUBJ-EXP-IDEM-02");
+
+        // Body IdempotencyKey on a PENDING_REVIEW claim also deduplicates cleanly
+        var pendingRequest = new SelfServiceSubmitExpenseRequestDto(
+            Category: "LODGING",
+            MerchantName: "Harbor Hotel",
+            GrossAmount: 145.00m,
+            ExpenseDate: "2026-08-24",
+            OcrConfidence: 0.97,
+            StudyCode: "STUDY-01",
+            SiteCode: "SITE-01",
+            IdempotencyKey: "exp-idem-pending-01");
+
+        using var pendingResp1 = await clientA.PostAsJsonAsync("/api/v1/payments/participant/me/expenses", pendingRequest, Ct);
+        pendingResp1.StatusCode.Should().Be(HttpStatusCode.OK);
+        var pending1 = (await pendingResp1.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        pending1.Status.Should().Be("PENDING_REVIEW");
+
+        string snapshotAfterPending = await SnapshotAsync();
+
+        using var pendingResp2 = await clientA.PostAsJsonAsync("/api/v1/payments/participant/me/expenses", pendingRequest, Ct);
+        pendingResp2.StatusCode.Should().Be(HttpStatusCode.OK);
+        var pending2 = (await pendingResp2.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        pending2.Id.Should().Be(pending1.Id);
+        pending2.Status.Should().Be("PENDING_REVIEW");
+        (await SnapshotAsync()).Should().Be(snapshotAfterPending, "replaying a pending-review expense Idempotency-Key must not duplicate claims");
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-PAY-006")]
+    public async Task SelfServiceDisburse_ReplayingSameIdempotencyKey_DeduplicatesPartialAndFullPayouts_AndIsolatesWallets()
+    {
+        await EnsureDbCreatedAsync();
+        await using (var seed = OpenDb())
+        {
+            DateTimeOffset now = SystemClock.Instance.UtcNow;
+            seed.ParticipantWallets.AddRange(
+                new ParticipantWallet
+                {
+                    Id = "wallet-payout-idem-01",
+                    SubjectId = "SUBJ-PAYOUT-IDEM-01",
+                    StudyId = "STUDY-01",
+                    SiteId = "SITE-01",
+                    CurrentBalance = 100.00m,
+                    LifetimeStipends = 100.00m,
+                    Currency = "EUR",
+                    Status = "ACTIVE",
+                    W9Status = "NOT_REQUIRED",
+                    VirtualCardMask = "5412750011119988",
+                    AchAccountMask = "000998874321",
+                    CreatedAt = now,
+                    CreatedBy = "crc-1",
+                    UpdatedAt = now,
+                },
+                new ParticipantWallet
+                {
+                    Id = "wallet-payout-idem-02",
+                    SubjectId = "SUBJ-PAYOUT-IDEM-02",
+                    StudyId = "STUDY-01",
+                    SiteId = "SITE-01",
+                    CurrentBalance = 50.00m,
+                    LifetimeStipends = 50.00m,
+                    Currency = "USD",
+                    Status = "ACTIVE",
+                    W9Status = "NOT_REQUIRED",
+                    AchAccountMask = "000112237777",
+                    CreatedAt = now,
+                    CreatedBy = "crc-1",
+                    UpdatedAt = now,
+                });
+            await seed.SaveChangesAsync(Ct);
+        }
+
+        using var client = SubjectClient("SUBJ-PAYOUT-IDEM-01");
+        using var client2 = SubjectClient("SUBJ-PAYOUT-IDEM-02");
+
+        // Oversized Idempotency-Key (> 255 chars) is rejected with 400 BadRequest
+        using var oversizedResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/disburse",
+            new SelfServiceDisburseRequestDto(DisbursementType: "DIRECT_ACH", IdempotencyKey: new string('d', 256)),
+            Ct);
+        oversizedResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        // 1. Partial VIRTUAL_CARD payout of 40.00 EUR with Idempotency-Key header
+        var partialPayload = new SelfServiceDisburseRequestDto(DisbursementType: "VIRTUAL_CARD", Amount: 40.00m);
+        using var req1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/payments/participant/me/disburse")
+        {
+            Content = JsonContent.Create(partialPayload),
+        };
+        req1.Headers.Add("Idempotency-Key", "disb-idem-partial-01");
+
+        using var resp1 = await client.SendAsync(req1, Ct);
+        resp1.StatusCode.Should().Be(HttpStatusCode.OK);
+        var disb1 = (await resp1.Content.ReadFromJsonAsync<SelfServiceDisburseResponseDto>(Ct))!;
+        disb1.Amount.Should().Be(40.00m);
+        disb1.CurrentBalance.Should().Be(60.00m);
+        disb1.Currency.Should().Be("EUR");
+        disb1.DisbursementType.Should().Be("VIRTUAL_CARD");
+        disb1.DestinationMask.Should().EndWith("9988");
+        disb1.ReferenceNumber.Should().StartWith("DISB-VCARD-");
+
+        string snapshotAfterPartial = await SnapshotAsync();
+
+        // Replay partial payout -> returns identical disbursement without debiting another 40.00 EUR
+        using var req1Replay = new HttpRequestMessage(HttpMethod.Post, "/api/v1/payments/participant/me/disburse")
+        {
+            Content = JsonContent.Create(partialPayload),
+        };
+        req1Replay.Headers.Add("Idempotency-Key", "disb-idem-partial-01");
+
+        using var resp1Replay = await client.SendAsync(req1Replay, Ct);
+        resp1Replay.StatusCode.Should().Be(HttpStatusCode.OK);
+        var disb1Replay = (await resp1Replay.Content.ReadFromJsonAsync<SelfServiceDisburseResponseDto>(Ct))!;
+        disb1Replay.Id.Should().Be(disb1.Id);
+        disb1Replay.ReferenceNumber.Should().Be(disb1.ReferenceNumber);
+        disb1Replay.CurrentBalance.Should().Be(60.00m);
+        (await SnapshotAsync()).Should().Be(snapshotAfterPartial);
+
+        // Distinct participant reusing the same Idempotency-Key executes independently on their own wallet
+        using var client2Resp = await client2.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/disburse",
+            new SelfServiceDisburseRequestDto(DisbursementType: "DIRECT_ACH", Amount: 25.00m, IdempotencyKey: "disb-idem-partial-01"),
+            Ct);
+        client2Resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var client2Disb = (await client2Resp.Content.ReadFromJsonAsync<SelfServiceDisburseResponseDto>(Ct))!;
+        client2Disb.Id.Should().NotBe(disb1.Id);
+        client2Disb.WalletId.Should().Be("wallet-payout-idem-02");
+        client2Disb.CurrentBalance.Should().Be(25.00m);
+
+        // 2. Full remaining balance payout (60.00 EUR) draining wallet to 0.00 EUR
+        var fullPayload = new SelfServiceDisburseRequestDto(DisbursementType: "DIRECT_ACH", IdempotencyKey: "disb-idem-full-02");
+        using var resp2 = await client.PostAsJsonAsync("/api/v1/payments/participant/me/disburse", fullPayload, Ct);
+        resp2.StatusCode.Should().Be(HttpStatusCode.OK);
+        var disb2 = (await resp2.Content.ReadFromJsonAsync<SelfServiceDisburseResponseDto>(Ct))!;
+        disb2.Amount.Should().Be(60.00m);
+        disb2.CurrentBalance.Should().Be(0.00m);
+        disb2.DestinationMask.Should().EndWith("4321");
+
+        string snapshotAfterFull = await SnapshotAsync();
+
+        // Replay full payout after wallet is $0.00 -> returns prior 200 OK instead of 409 Conflict
+        using var resp2Replay = await client.PostAsJsonAsync("/api/v1/payments/participant/me/disburse", fullPayload, Ct);
+        resp2Replay.StatusCode.Should().Be(HttpStatusCode.OK);
+        var disb2Replay = (await resp2Replay.Content.ReadFromJsonAsync<SelfServiceDisburseResponseDto>(Ct))!;
+        disb2Replay.Id.Should().Be(disb2.Id);
+        disb2Replay.Amount.Should().Be(60.00m);
+        disb2Replay.CurrentBalance.Should().Be(0.00m);
+        (await SnapshotAsync()).Should().Be(snapshotAfterFull);
+
+        // New Idempotency-Key on empty wallet still returns 409 Conflict
+        using var emptyNewKeyResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/disburse",
+            new SelfServiceDisburseRequestDto(DisbursementType: "DIRECT_ACH", IdempotencyKey: "disb-idem-empty-03"),
+            Ct);
+        emptyNewKeyResp.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
     [GxPRequirement("PRD-PAY-006")]
     public async Task SelfServiceDiaryStipend_UsesServerRule_EnforcesIdempotency_AndRejectsClientAmount()
     {

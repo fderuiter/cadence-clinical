@@ -23,13 +23,15 @@ public static class ApiClientValidatorService
             return 1;
         }
 
+        string pnpmCommand = OperatingSystem.IsWindows() ? "pnpm.cmd" : "pnpm";
+
         // A spec change without regenerated web types would leave the typed clients compiling against the old API.
-        if (RunCommand(repoRoot, "pnpm", ["--filter", "web", "run", "generate:api", "--", "--check"], "the generated web API types") != 0)
+        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "run", "generate:api", "--", "--check"], "the generated web API types") != 0)
         {
             return 1;
         }
 
-        if (RunCommand(repoRoot, "pnpm", ["--filter", "web", "exec", "tsc", "--noEmit"], "the web API clients") != 0)
+        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "exec", "tsc", "--noEmit"], "the web API clients") != 0)
         {
             return 1;
         }
@@ -37,8 +39,6 @@ public static class ApiClientValidatorService
         Console.WriteLine("✔ Web API clients typecheck against their OpenAPI types.");
         return 0;
     }
-
-    private const int PosixEnoexec = 8;
 
     private static int RunCommand(string workingDir, string fileName, string[] arguments, string subject)
     {
@@ -57,18 +57,7 @@ public static class ApiClientValidatorService
         Process? process;
         try
         {
-            process = Process.Start(psi);
-        }
-        catch (Win32Exception ex) when (!OperatingSystem.IsWindows() && ex.NativeErrorCode == PosixEnoexec && fileName != "/bin/sh")
-        {
-            string? resolved = ResolveOnPath(fileName, workingDir);
-            if (resolved is not null)
-            {
-                return RunCommand(workingDir, "/bin/sh", [resolved, .. arguments], subject);
-            }
-
-            Console.WriteLine($"[ERROR] Could not run {fileName} ({ex.Message}). Install Node.js and pnpm, then run 'pnpm install'.");
-            return 1;
+            process = PosixProcessLauncher.Start(psi);
         }
         catch (Win32Exception ex)
         {
@@ -112,31 +101,5 @@ public static class ApiClientValidatorService
             current = parent ?? "";
         }
         return Directory.GetCurrentDirectory();
-    }
-
-    private static string? ResolveOnPath(string fileName, string workingDirectory)
-    {
-        if (fileName.Contains(Path.DirectorySeparatorChar) || fileName.Contains(Path.AltDirectorySeparatorChar))
-        {
-            string full = Path.IsPathRooted(fileName) ? fileName : Path.GetFullPath(fileName, workingDirectory);
-            return File.Exists(full) ? full : null;
-        }
-
-        string? pathValue = Environment.GetEnvironmentVariable("PATH");
-        if (string.IsNullOrWhiteSpace(pathValue))
-        {
-            return null;
-        }
-
-        foreach (string dir in pathValue.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-        {
-            string candidate = Path.Combine(dir, fileName);
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        return null;
     }
 }

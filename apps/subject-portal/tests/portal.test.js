@@ -1345,7 +1345,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
 
           // 3. Verify immediate deletion
           expect(localStorage.getItem("oidc_user_id")).toBeNull();
-          expect(portal.state.session.userId).toBe("subject_001");
+          expect(portal.state.session.userId).toBe("SUBJ-101-001");
         });
       });
     });

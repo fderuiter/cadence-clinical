@@ -19,6 +19,7 @@ import {
   clearFieldInvalid,
   markFieldInvalid,
 } from "../widgets/field-errors.js";
+import { showToast } from "../widgets/toast.js";
 
 // 5. My Consent (eConsent ICF Review, Comprehension, and Signature)
 
@@ -227,6 +228,8 @@ export async function verifyBiometricLiveness(isFallback = false) {
       state.livenessVerified = true;
 
       if (banner) {
+        banner.setAttribute("role", "status");
+        banner.setAttribute("aria-live", "polite");
         banner.textContent = `Liveness Verification Successful (${isFallback ? "Coordinator Fallback Mode" : "Camera Anti-Spoof Score: " + (response.anti_spoof_score * 100).toFixed(0) + "%"}). Liveness token issued for 15 minutes.`;
         banner.style.display = "block";
         banner.style.backgroundColor = "var(--semantic-color-success-bg-soft)";
@@ -237,6 +240,8 @@ export async function verifyBiometricLiveness(isFallback = false) {
       state.livenessVerified = false;
       state.consentLivenessToken = null;
       if (banner) {
+        banner.setAttribute("role", "alert");
+        banner.setAttribute("aria-live", "assertive");
         banner.textContent =
           "Biometric liveness verification failed. Please retry or select Study Coordinator Video Fallback.";
         banner.style.display = "block";
@@ -251,6 +256,8 @@ export async function verifyBiometricLiveness(isFallback = false) {
     state.livenessVerified = false;
     state.consentLivenessToken = null;
     if (banner) {
+      banner.setAttribute("role", "alert");
+      banner.setAttribute("aria-live", "assertive");
       banner.textContent =
         "Liveness verification error: " + (err.message || err);
       banner.style.display = "block";
@@ -294,7 +301,18 @@ export async function submitConsentAnswers() {
   });
 
   if (!allValid) {
-    alert("Please answer all comprehension questions before submitting.");
+    const incompleteMsg =
+      "Please answer all comprehension questions before submitting.";
+    if (banner) {
+      banner.setAttribute("role", "alert");
+      banner.setAttribute("aria-live", "assertive");
+      banner.textContent = incompleteMsg;
+      banner.style.display = "block";
+      banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
+      banner.style.color = "var(--semantic-color-error-text-dark)";
+      banner.style.border = "1px solid var(--semantic-color-error)";
+    }
+    showToast(incompleteMsg, { variant: "error" });
     return;
   }
 
@@ -349,10 +367,14 @@ export async function submitConsentAnswers() {
       banner.textContent = decision.message;
       banner.style.display = "block";
       if (decision.canSign) {
+        banner.setAttribute("role", "status");
+        banner.setAttribute("aria-live", "polite");
         banner.style.backgroundColor = "var(--semantic-color-success-bg-soft)";
         banner.style.color = "var(--semantic-color-success-dark)";
         banner.style.border = "1px solid var(--semantic-color-success)";
       } else {
+        banner.setAttribute("role", "alert");
+        banner.setAttribute("aria-live", "assertive");
         banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
         banner.style.color = "var(--semantic-color-error-text-dark)";
         banner.style.border = "1px solid var(--semantic-color-error)";
@@ -365,13 +387,15 @@ export async function submitConsentAnswers() {
     state.consentPassed = false;
     const msg = "Answers submission failed: " + (err.message || err);
     if (banner) {
+      banner.setAttribute("role", "alert");
+      banner.setAttribute("aria-live", "assertive");
       banner.textContent = msg;
       banner.style.display = "block";
       banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
       banner.style.color = "var(--semantic-color-error-text-dark)";
       banner.style.border = "1px solid var(--semantic-color-error)";
     }
-    alert(msg);
+    showToast(msg, { variant: "error" });
     renderConsentUI();
   }
 }

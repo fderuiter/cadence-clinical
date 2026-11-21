@@ -15,12 +15,16 @@
     </div>
     <div v-if="isAuthenticated || isDemo" class="info-row">
       <span class="info-lbl">{{ isDemo ? "Demo Wallet:" : "Wallet:" }}</span>
-      <span id="session-wallet-balance" class="info-val">
-        ${{
-          typeof wallet.walletBalance === "number"
-            ? wallet.walletBalance.toFixed(2)
-            : "0.00"
-        }}
+      <span
+        id="session-wallet-balance"
+        class="info-val"
+        :aria-busy="
+          wallet.walletLoading && wallet.walletBalance === null
+            ? 'true'
+            : undefined
+        "
+      >
+        {{ formattedSessionWalletBalance }}
       </span>
     </div>
     <div
@@ -81,6 +85,7 @@
 </template>
 
 <script setup>
+import { DEFAULT_DEMO_PARTICIPANT } from "demo-fixtures";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { computed } from "vue";
 
@@ -92,11 +97,21 @@ import {
 import { maskParticipantIdentifier } from "../features/site-support.js";
 import { useSessionStore } from "../stores/session.js";
 import { useWalletStore } from "../stores/wallet.js";
+import { formatWalletCurrency } from "../utils/currency.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
 const sessionStore = useSessionStore();
 const wallet = useWalletStore();
+
+const formattedSessionWalletBalance = computed(() => {
+  if (wallet.walletLoading && wallet.walletBalance === null) {
+    return "Loading...";
+  }
+  const amount =
+    typeof wallet.walletBalance === "number" ? wallet.walletBalance : 0;
+  return formatWalletCurrency(amount, wallet.currency);
+});
 
 const {
   isConfirmOpen: isSignOutConfirmOpen,
@@ -140,7 +155,7 @@ const isSignedInOrDemo = computed(
 
 const displaySubjectId = computed(() => {
   const raw = isDemo.value
-    ? sessionStore.session.userId || "subject_001"
+    ? sessionStore.session.userId || DEFAULT_DEMO_PARTICIPANT?.subjectCode
     : sessionStore.session.userId;
   return maskParticipantIdentifier(raw) || "Not signed in";
 });

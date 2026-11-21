@@ -836,6 +836,7 @@ import { computed, onMounted, ref } from "vue";
 import { interopService } from "../../api/interop";
 import { useToastStore } from "../../stores/toasts";
 import { describeApiError } from "../../utils/apiErrors";
+import { demoNowDate, demoRandom, nextDemoStep } from "../../utils/demoMode";
 
 export interface DeviceEntity {
   device_id: string;
@@ -1206,7 +1207,7 @@ async function submitSimulatedIngestion() {
   const toastStore = useToastStore();
 
   try {
-    const now = new Date();
+    const now = demoNowDate(nextDemoStep("sensor-telemetry"), 60 * 1000);
     const readings = [];
     for (let i = 0; i < simulateForm.value.sample_count; i++) {
       const sampleTime = new Date(now.getTime() - i * 5 * 60 * 1000);
@@ -1216,7 +1217,7 @@ async function submitSimulatedIngestion() {
           simulateForm.value.device_type === "CGM" ? "glucose" : "step_count",
         value:
           simulateForm.value.device_type === "CGM"
-            ? 120.0 + (Math.random() * 40 - 20)
+            ? 120.0 + (demoRandom("sensor-telemetry") * 40 - 20)
             : 500,
         unit: simulateForm.value.device_type === "CGM" ? "mg/dL" : "steps",
       });

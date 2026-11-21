@@ -1,4 +1,5 @@
 // 21 CFR Part 11 electronic signature modal for ePRO and eConsent.
+import { DEFAULT_DEMO_SITE, DEMO_STUDY } from "demo-fixtures";
 import {
   SEMANTIC_ACTIONS,
   buildStepUpVerificationPayload,
@@ -15,8 +16,9 @@ import {
   queueSubmission,
   saveAssignmentsToDB,
 } from "../sync-queue.js";
-import { isDemoModeActive } from "../utils/demoMode.js";
+import { demoNowIso, isDemoModeActive } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
+import { showToast } from "../widgets/toast.js";
 import { logAuditRecord } from "./audit.js";
 import { renderCompliance } from "./compliance.js";
 import { loadConsentDetails } from "./consent.js";
@@ -75,7 +77,11 @@ export function openSignatureModal(actionType = "epro") {
   const reasonSelect = document.getElementById("sign-reason");
   const modalHeader = document.getElementById("portal-modal-title");
   const errorBanner = document.getElementById("modal-error-banner");
-  if (errorBanner) errorBanner.style.display = "none";
+  if (errorBanner) {
+    errorBanner.style.display = "none";
+    errorBanner.setAttribute("role", "status");
+    errorBanner.setAttribute("aria-live", "polite");
+  }
 
   if (actionType === "consent") {
     if (modalHeader)
@@ -159,6 +165,17 @@ export function closeSignatureModal() {
   }
 }
 
+function displayModalOrToastError(errorBanner, message) {
+  if (errorBanner) {
+    errorBanner.setAttribute("role", "alert");
+    errorBanner.setAttribute("aria-live", "assertive");
+    errorBanner.textContent = message;
+    errorBanner.style.display = "block";
+  } else {
+    showToast(message, { variant: "error" });
+  }
+}
+
 export async function verifyAndSubmitSignature() {
   const usernameInput = document.getElementById("sign-username");
   const passwordInput = document.getElementById("sign-password");
@@ -170,16 +187,17 @@ export async function verifyAndSubmitSignature() {
     .value.trim();
   const errorBanner = document.getElementById("modal-error-banner");
 
-  if (errorBanner) errorBanner.style.display = "none";
+  if (errorBanner) {
+    errorBanner.style.display = "none";
+    errorBanner.setAttribute("role", "status");
+    errorBanner.setAttribute("aria-live", "polite");
+  }
 
   if (!username || !password) {
-    if (errorBanner) {
-      errorBanner.textContent =
-        "Please enter both User ID and Security PIN/Password to sign.";
-      errorBanner.style.display = "block";
-    } else {
-      alert("Please enter both User ID and Security PIN/Password to sign.");
-    }
+    displayModalOrToastError(
+      errorBanner,
+      "Please enter both User ID and Security PIN/Password to sign."
+    );
     if (
       !username &&
       usernameInput &&
@@ -194,12 +212,7 @@ export async function verifyAndSubmitSignature() {
 
   const reasonCheck = resolveSignatureReason(reasonSelect, reasonCustom);
   if (!reasonCheck.valid) {
-    if (errorBanner) {
-      errorBanner.textContent = reasonCheck.error;
-      errorBanner.style.display = "block";
-    } else {
-      alert(reasonCheck.error);
-    }
+    displayModalOrToastError(errorBanner, reasonCheck.error);
     const customInput = document.getElementById("sign-reason-custom");
     if (
       requiresCustomSignatureReason(reasonSelect) &&
@@ -256,8 +269,14 @@ export async function verifyAndSubmitSignature() {
         }
 
         const subjectPseudonym = state.session.userId || cleanUsername;
-        const studyId = tpl?.study_id || state.session.studyId || "study_01";
-        const siteId = tpl?.site_id || state.session.siteId || "site_01";
+        const studyId =
+          tpl?.study_id ||
+          state.session.studyId ||
+          (isDemoModeActive() ? DEMO_STUDY?.code || null : null);
+        const siteId =
+          tpl?.site_id ||
+          state.session.siteId ||
+          (isDemoModeActive() ? DEFAULT_DEMO_SITE?.code || null : null);
         const protocolVersion = tpl?.protocol_version || "v1.0";
         const digestSha256 =
           tpl?.digest_sha256 ||
@@ -285,7 +304,7 @@ export async function verifyAndSubmitSignature() {
             digest_sha256: digestSha256,
             signature_data: cleanUsername,
             liveness_token: state.consentLivenessToken,
-            device_timestamp: new Date().toISOString(),
+            device_timestamp: demoNowIso(),
           }),
           headers: {
             "X-Sig-Token": sigToken,
@@ -318,16 +337,14 @@ export async function verifyAndSubmitSignature() {
         );
 
         closeSignatureModal();
-        alert("Informed Consent successfully signed and archived!");
+        showToast("Informed Consent successfully signed and archived!");
         loadConsentDetails();
       } catch (err) {
         // Show in accessible error status banner, focus #sign-password for retry, and preserve credential hygiene
-        if (errorBanner) {
-          errorBanner.textContent = `Signature Verification Rejected: ${err.message}`;
-          errorBanner.style.display = "block";
-        } else {
-          alert(`Signature Verification Rejected: ${err.message}`);
-        }
+        displayModalOrToastError(
+          errorBanner,
+          `Signature Verification Rejected: ${err.message}`
+        );
         if (passwordInput && typeof passwordInput.focus === "function") {
           passwordInput.focus();
         }
@@ -347,17 +364,14 @@ export async function verifyAndSubmitSignature() {
       );
 
       closeSignatureModal();
-      alert("Informed Consent signed in Demo Mode (synthetic preview only).");
+      showToast(
+        "Informed Consent signed in Demo Mode (synthetic preview only)."
+      );
       loadConsentDetails();
     } else {
       const refusalMsg =
         "Electronic consent cannot be signed while unauthenticated or when signature verification services are unavailable. Nothing was saved.";
-      if (errorBanner) {
-        errorBanner.textContent = refusalMsg;
-        errorBanner.style.display = "block";
-      } else {
-        alert(refusalMsg);
-      }
+      displayModalOrToastError(errorBanner, refusalMsg);
       if (passwordInput && typeof passwordInput.focus === "function") {
         passwordInput.focus();
       }
@@ -384,7 +398,14 @@ export async function verifyAndSubmitSignature() {
       });
     } catch (err) {
       console.error("Failed to write to offline queue IndexedDB:", err);
-      alert("Could not queue submission locally. Please try again.");
+      const formErr = document.getElementById("questionnaire-form-error");
+      const queueErrMsg =
+        "Could not queue submission locally. Please try again.";
+      if (formErr) {
+        formErr.textContent = queueErrMsg;
+        formErr.style.display = "block";
+      }
+      showToast(queueErrMsg, { variant: "error" });
       return;
     }
 
@@ -427,7 +448,7 @@ export async function verifyAndSubmitSignature() {
     }
 
     state.activeQuestionnaire = null;
-    alert(
+    showToast(
       "Diary signed and queued locally — pending server confirmation before completion."
     );
 

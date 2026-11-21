@@ -79,7 +79,7 @@
                   id="share-user-input"
                   v-model="internalTarget"
                   type="text"
-                  placeholder="e.g. cra_fderuiter, auditor, site_crc, data_manager..."
+                  placeholder="e.g. cra.monitor, auditor, site_crc, data_manager..."
                   class="form-control"
                   required
                   @focus="showUserSuggestions = true"
@@ -488,25 +488,29 @@ const activeGrantsList = computed(() => {
 
 const availableUsersAndRoles = [
   {
-    value: "cra_fderuiter",
-    label: "cra_fderuiter (CRA Monitor)",
+    value: "cra.monitor",
+    label: "cra.monitor (CRA Monitor)",
     type: "User",
   },
-  { value: "crc_user_101", label: "crc_user_101 (Site CRC)", type: "User" },
-  { value: "crc_user_102", label: "crc_user_102 (Site CRC)", type: "User" },
+  { value: "crc.site101", label: "crc.site101 (Site CRC)", type: "User" },
   {
-    value: "auditor_user_01",
-    label: "auditor_user_01 (GxP Auditor)",
-    type: "User",
-  },
-  {
-    value: "data_manager_01",
-    label: "data_manager_01 (Data Manager)",
+    value: "pi.site101",
+    label: "pi.site101 (Site Investigator)",
     type: "User",
   },
   {
-    value: "sponsor_designer_01",
-    label: "sponsor_designer_01 (Protocol Designer)",
+    value: "auditor.lead",
+    label: "auditor.lead (GxP Auditor)",
+    type: "User",
+  },
+  {
+    value: "dm.lead",
+    label: "dm.lead (Data Manager)",
+    type: "User",
+  },
+  {
+    value: "designer_demo",
+    label: "designer_demo (Protocol Designer)",
     type: "User",
   },
   {

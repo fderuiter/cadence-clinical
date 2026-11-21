@@ -157,6 +157,9 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
                     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'cadence_app') THEN
                         CREATE ROLE cadence_app LOGIN PASSWORD 'cadence_app' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
                     END IF;
+                EXCEPTION
+                    WHEN duplicate_object OR unique_violation THEN
+                        NULL;
                 END
                 $$;
                 GRANT USAGE ON SCHEMA "kernel" TO cadence_app;

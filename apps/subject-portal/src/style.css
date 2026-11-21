@@ -809,7 +809,7 @@ a:focus-visible,
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 38px;
+  min-height: var(--touch-target-min);
 }
 
 .can-hover .btn-sync-status:hover {
@@ -1083,7 +1083,7 @@ a:focus-visible,
   color: var(--semantic-color-surface);
   padding: 12px 24px;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--semantic-shadow-xl);
   z-index: 9999;
   font-weight: 600;
   font-size: 14px;
@@ -1092,6 +1092,16 @@ a:focus-visible,
   transition:
     opacity 0.3s ease,
     transform 0.3s ease;
+}
+
+.toast-notification.toast-error {
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
+}
+
+.toast-notification.toast-warning {
+  background-color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .toast-notification.toast-show {
@@ -1364,4 +1374,72 @@ a:focus-visible,
 .modal-support-strip {
   padding: 0 24px 18px 24px;
   background-color: var(--semantic-color-surface-muted);
+}
+
+/* 48px Touch Target Guarantees & Wallet Skeleton */
+.vas-slider-input {
+  min-height: var(--touch-target-min);
+  height: var(--touch-target-min);
+  cursor: pointer;
+}
+
+label.radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  min-height: var(--touch-target-min);
+  padding: var(--spacing-2xs) var(--spacing-xs);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: var(--font-size-base);
+  color: var(--semantic-color-text);
+}
+
+#consent-lang-selector,
+#ocr-meal-allowance-check,
+.meal-allowance-label {
+  min-height: var(--touch-target-min);
+}
+
+.wallet-skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.wallet-skeleton-line,
+.wallet-skeleton-tile {
+  background: var(--semantic-color-border);
+  border-radius: var(--radius-md);
+  animation: wallet-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.wallet-skeleton-title {
+  width: 42%;
+  height: 18px;
+}
+
+.wallet-skeleton-balance {
+  width: 28%;
+  height: 36px;
+}
+
+.wallet-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.wallet-skeleton-tile {
+  height: 52px;
+}
+
+@keyframes wallet-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }

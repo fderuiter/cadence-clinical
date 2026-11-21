@@ -593,6 +593,15 @@
         ],
         "summary": "Submits a travel or meal expense claim for the signed participant with policy auto-approval and direct ACH dispatch.",
         "operationId": "SubmitSelfExpenseClaim",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -617,6 +626,15 @@
         ],
         "summary": "Triggers an on-demand payout of the signed participant\u0027s available wallet balance.",
         "operationId": "DisburseSelfWalletBalance",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1590,6 +1608,12 @@
             ]
           },
           "walletId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "idempotencyKey": {
             "type": [
               "null",
               "string"

@@ -7,6 +7,7 @@ import { pinia } from "../src/stores/pinia.js";
 import {
   dispatchApi,
   login,
+  logout,
   openReconsentModal,
   openSignatureModal,
   portalSessionCoordinator,
@@ -186,10 +187,11 @@ describe("Subject Portal OIDC Session Resilience, Draft-Safe Logout & Part 11 Mo
     await nextTick();
 
     card.query("#btn-logout").click();
-    await new Promise((r) => setTimeout(r, 20));
-    await nextTick();
-
-    expect(card.query('[data-testid="signout-confirm-modal"]')).not.toBeNull();
+    await vi.waitFor(() => {
+      expect(
+        card.query('[data-testid="signout-confirm-modal"]')
+      ).not.toBeNull();
+    });
     expect(state.activeQuestionnaire).not.toBeNull();
 
     card.query('[data-testid="signout-stay-btn"]').click();
@@ -201,13 +203,14 @@ describe("Subject Portal OIDC Session Resilience, Draft-Safe Logout & Part 11 Mo
     expect(state.session.token).toBe("valid-access-token");
 
     card.query("#btn-logout").click();
-    await new Promise((r) => setTimeout(r, 20));
-    await nextTick();
+    await vi.waitFor(() => {
+      expect(card.query('[data-testid="signout-confirm-btn"]')).not.toBeNull();
+    });
     card.query('[data-testid="signout-confirm-btn"]').click();
-    await new Promise((r) => setTimeout(r, 20));
-
-    expect(state.activeQuestionnaire).toBeNull();
-    expect(state.session.token).toBeNull();
+    await vi.waitFor(() => {
+      expect(state.activeQuestionnaire).toBeNull();
+      expect(state.session.token).toBeNull();
+    });
     card.unmount();
   });
 
@@ -266,5 +269,36 @@ describe("Subject Portal OIDC Session Resilience, Draft-Safe Logout & Part 11 Mo
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(state.reconsentModalError).toMatch(/custom signing reason/i);
     reconsentWrapper.unmount();
+  });
+
+  it("clears reactive session identity and PIN modal state synchronously on logout before async cleanup settles", async () => {
+    let resolveKeycloakLogout;
+    window.keycloakInstance = {
+      logout: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            resolveKeycloakLogout = resolve;
+          })
+      ),
+    };
+    state.pinUnlock.isOpen = true;
+    state.activeQuestionnaire = {
+      assignment: { id: "assign-sync-1" },
+      instrument: { id: "inst-sync-1", items: {} },
+      answers: {},
+    };
+
+    const logoutPromise = logout();
+
+    expect(state.session.userId).toBeNull();
+    expect(state.session.token).toBeNull();
+    expect(state.pinUnlock.isOpen).toBe(false);
+    expect(state.activeQuestionnaire).toBeNull();
+
+    await vi.waitFor(() => {
+      expect(window.keycloakInstance.logout).toHaveBeenCalledTimes(1);
+    });
+    resolveKeycloakLogout();
+    await logoutPromise;
   });
 });

@@ -14,10 +14,10 @@ namespace Cadence.UnitTests.Packages;
 
 public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
 {
-    private const string ValidCheckoutSha = "3d3c42e5aac5ba805825da76410c181273ba90b1";
-    private const string ValidSetupNodeSha = "949feb2413d6458794dcd2491c4babbbce0c15c1";
-    private const string ValidGithubScriptSha = "3a2844b7e9c422d3c10d287c895573f7108da1b3";
-    private const string ValidDockerDigest = "10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5";
+    private const string ValidCheckoutSha = "3d3c42e5aac5ba805825da76410c181273ba90b1"; // pragma: allowlist secret
+    private const string ValidSetupNodeSha = "949feb2413d6458794dcd2491c4babbbce0c15c1"; // pragma: allowlist secret
+    private const string ValidGithubScriptSha = "3a2844b7e9c422d3c10d287c895573f7108da1b3"; // pragma: allowlist secret
+    private const string ValidDockerDigest = "10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5"; // pragma: allowlist secret
 
     private readonly string _root = Directory.CreateDirectory(
         Path.Combine(Path.GetTempPath(), "workflow-security-" + Guid.NewGuid().ToString("N"))).FullName;
@@ -438,6 +438,11 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
 
         string sanitizeContent = File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", "sanitize-bot-comment.yml"));
         sanitizeContent.Should().Contain("github.event.comment.user.type == 'Bot'");
+        sanitizeContent.Should().Contain("github.event.comment.user.login == 'github-actions[bot]'");
+        sanitizeContent.Should().NotContain("google-labs-jules[bot]",
+            "GITHUB_TOKEN cannot edit issue comments authored by external GitHub Apps");
+        sanitizeContent.Should().NotContain("google-labs-stitch[bot]",
+            "GITHUB_TOKEN cannot edit issue comments authored by external GitHub Apps");
         sanitizeContent.Should().NotContain("pull-requests: write");
         sanitizeContent.Should().Contain("issues: write");
     }

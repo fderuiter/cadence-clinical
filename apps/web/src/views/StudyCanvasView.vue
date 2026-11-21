@@ -853,6 +853,7 @@ import NeedsAttention from "../components/ai/NeedsAttention.vue";
 import ProposalReview from "../components/ai/ProposalReview.vue";
 import ObservationView from "./ObservationView.vue";
 import { useAiAssistance } from "../ai/aiAssistance";
+import { demoRandomToken, isDemoBuild } from "../utils/demoMode";
 
 /**
  * The Clinical Canvas (docs/ux/CLINICAL_CANVAS.md): one study at a time, navigated by lifecycle stage, in
@@ -970,10 +971,13 @@ const canCreateStudy = computed(() => {
 });
 
 function nextStudyIdempotencyKey(): string {
+  if (isDemoBuild()) {
+    return `study-${demoRandomToken(12, 36, "study-create.idempotency")}`;
+  }
   if (typeof globalThis.crypto?.randomUUID === "function") {
     return globalThis.crypto.randomUUID();
   }
-  return `study-${Math.random().toString(36).slice(2)}`;
+  return `study-${demoRandomToken(12, 36, "study-create.idempotency")}`;
 }
 
 watch(

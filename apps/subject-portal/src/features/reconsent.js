@@ -1,4 +1,5 @@
 // Protocol amendment re-consent: the pending requirement and its modal.
+import { DEMO_STUDY } from "demo-fixtures";
 import {
   SEMANTIC_ACTIONS,
   buildStepUpVerificationPayload,
@@ -9,9 +10,19 @@ import { nextTick } from "vue";
 
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { showToast } from "../widgets/toast.js";
 import { logAuditRecord } from "./audit.js";
+
+function resolveReconsentStudyId() {
+  return (
+    state.pendingReconsent?.study_id ||
+    state.session?.studyId ||
+    (isDemoModeActive() ? DEMO_STUDY?.code || null : null) ||
+    "STUDY-01"
+  );
+}
 
 export function openReconsentModal() {
   if (typeof document !== "undefined" && !state.reconsentModalOpen) {
@@ -20,7 +31,7 @@ export function openReconsentModal() {
   if (!state.pendingReconsent) {
     state.pendingReconsent = {
       id: "req_default",
-      study_id: "STUDY-01",
+      study_id: resolveReconsentStudyId(),
       protocol_version: "2.0",
       change_summary:
         "Protocol amendment updates requiring active subject re-consent.",
@@ -59,8 +70,9 @@ export async function checkPendingReconsent() {
 
   try {
     if (isAuthenticatedSession()) {
+      const studyId = resolveReconsentStudyId();
       const pendingReqs = await dispatchApi(
-        `api/v1/econsent/reconsent/pending/STUDY-01?subject_pseudonym=${state.session.userId}`
+        `api/v1/econsent/reconsent/pending/${encodeURIComponent(studyId)}?subject_pseudonym=${encodeURIComponent(state.session.userId)}`
       );
       if (Array.isArray(pendingReqs) && pendingReqs.length > 0) {
         state.pendingReconsent = pendingReqs[0];
@@ -87,7 +99,7 @@ export async function checkPendingReconsent() {
   if (reconsentNotif) {
     state.pendingReconsent = {
       id: reconsentNotif.related_entity_id || "req_notif",
-      study_id: "STUDY-01",
+      study_id: reconsentNotif.study_id || resolveReconsentStudyId(),
       protocol_version: "2.0",
       change_summary:
         reconsentNotif.message_content ||
@@ -134,7 +146,7 @@ export async function submitReconsentSignature() {
   state.reconsentForm.password = "";
   state.reconsentModalError = "";
 
-  const studyId = state.pendingReconsent?.study_id || "STUDY-01";
+  const studyId = resolveReconsentStudyId();
   const protocolVersion = state.pendingReconsent?.protocol_version || "2.0";
   const requirementId = state.pendingReconsent?.id;
   const declReason = requiresCustomSignatureReason(state.reconsentForm.reason)

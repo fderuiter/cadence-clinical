@@ -1,4 +1,4 @@
-# ADR-2549: Signed Gateway Expiry Guard and Scoped Trial Upgrades
+# ADR-2604: Signed Gateway Expiry Guard and Scoped Trial Upgrades
 
 - **Status:** Accepted
 - **Date:** 2026-11-21

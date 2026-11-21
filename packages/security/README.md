@@ -33,7 +33,7 @@ signatures and audit digests shared by every Cadence service.
   host that maps a `RequireElectronicSignature` route without one (#5434,
   [ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
   `RequireElectronicSignature(...)` applies it to a route and `HttpContext.VerifiedSigToken()` reads the verified token;
-  `AuditorWriteGuardMiddleware`, `ExpiredSubscriptionWriteGuardMiddleware` (enforces `403 K.Subscription.Expired` on mutating requests when signed `X-Tenant-Read-Only` is `true`, exempting `GET`/`HEAD`, `etmf_document:export`, `ElectronicSignatureRequired`, and routes marked with `AllowExpiredTenantWrite()`, [ADR-2549](../../docs/adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md)), and `ChangeReasonHeader`, the one codec for `X-Change-Reason`: plain
+  `AuditorWriteGuardMiddleware`, `ExpiredSubscriptionWriteGuardMiddleware` (enforces `403 K.Subscription.Expired` on mutating requests when signed `X-Tenant-Read-Only` is `true`, exempting `GET`/`HEAD`, `etmf_document:export`, `ElectronicSignatureRequired`, and routes marked with `AllowExpiredTenantWrite()`, [ADR-2604](../../docs/adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md)), and `ChangeReasonHeader`, the one codec for `X-Change-Reason`: plain
   printable ASCII, or RFC 8187 `UTF-8''` percent-encoded UTF-8 for any other text. Every reader decodes the
   header with it, so the audit trail stores what the user typed
   ([ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md)). A signed request without `X-Tenant-Id` authenticates with no

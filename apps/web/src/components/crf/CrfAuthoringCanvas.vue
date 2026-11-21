@@ -154,6 +154,7 @@
             <div
               v-for="warning in layoutWarnings"
               :key="warning.fieldId"
+              class="warning-item"
               style="
                 border: 1px solid var(--semantic-color-warning-border);
                 background-color: var(--semantic-color-warning-bg-light);
@@ -470,7 +471,8 @@
                 font-weight: 600;
               "
             >
-              ✅ Form compiled successfully to valid CDISC USDM structure!
+              ✅ Compilation successful: form compiled to valid CDISC USDM
+              structure!
             </div>
           </div>
         </div>
