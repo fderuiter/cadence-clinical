@@ -38,16 +38,17 @@ public interface ISubjectApplicationService
     /// <summary>Clears demographics, subject to the same post-randomization lock. Implemented by MIG-SUBJ-019.</summary>
     Task<Result<SubjectResponse>> DeleteDemographicsAsync(string subjectIdOrCode, string changeReason, CancellationToken ct);
 
-    /// <summary>Subject detail without any treatment arm; the endpoint adds the arm for an unblinded caller from the
-    /// randomisation allocation (#5607).</summary>
+    /// <summary>Subject detail resolved by surrogate UUID or subject code, without any treatment arm; the endpoint adds
+    /// the arm for an unblinded caller from the randomisation allocation (#5607).</summary>
     Task<Result<SubjectDetailResponse>> GetDetailAsync(string subjectId, CancellationToken ct);
 
     /// <summary>
-    /// Lists one page of a study's subjects in enrollment order, optionally narrowed to a site and a status.
-    /// <paramref name="studyId"/> is required; <paramref name="limit"/> defaults to 50 and is capped at 200.
+    /// Lists one page of a study's subjects in enrollment order, optionally narrowed to a site, status, or subject code
+    /// substring (<paramref name="query"/>). <paramref name="studyId"/> is required; <paramref name="limit"/> defaults
+    /// to 50 and is capped at 200.
     /// </summary>
     Task<Result<SubjectListResponse>> ListAsync(string? studyId, string? siteId, string? status, int? limit, int? offset,
-        CancellationToken ct, IReadOnlyCollection<string>? allowedSiteIds = null);
+        CancellationToken ct, IReadOnlyCollection<string>? allowedSiteIds = null, string? query = null);
 
     /// <summary>Resolves a participant's study and site codes without mutating state or decrypting data.</summary>
     Task<(StudyCode StudyId, SiteCode? SiteId)?> GetSubjectScopeAsync(string subjectIdOrCode, CancellationToken ct = default) =>

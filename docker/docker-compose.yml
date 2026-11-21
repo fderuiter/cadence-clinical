@@ -241,6 +241,7 @@ services:
       RANDOMIZATION_ALLOCATION_KEY: Y2FkZW5jZS1sb2NhbC1kZXYtcmFuZG9taXphdGlvbiE= # pragma: allowlist secret
       # Local-only HMAC key for 30-day participant BYOD activation code digests; generate a real one with `openssl rand -base64 32`.
       FIELD_LOOKUP_HASH_KEY: bG9jYWwtZGV2LW9ubHktbG9va3VwLWhhc2gta2V5MDA= # pragma: allowlist secret
+      KERNEL_SERVICE_URL: http://kernel:8080
     depends_on: *db-depends
 
   etmf:

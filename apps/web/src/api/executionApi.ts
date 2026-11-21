@@ -31,6 +31,7 @@ export interface ListSubjectsQuery {
   studyId: string;
   siteId?: string;
   status?: string;
+  q?: string;
   limit?: number;
   offset?: number;
 }
@@ -47,6 +48,7 @@ export const executionApi = {
             study_id: query.studyId,
             site_id: query.siteId,
             status: query.status,
+            q: query.q,
             limit: query.limit,
             offset: query.offset,
           },
@@ -55,7 +57,7 @@ export const executionApi = {
     );
   },
 
-  /** Full detail for a participant by subject code (GET /api/v1/execution/subjects/{subjectId}). */
+  /** Full detail for a participant by surrogate UUID or subject code (GET /api/v1/execution/subjects/{subjectId}). */
   getSubjectDetail(subjectId: string): Promise<SubjectDetail> {
     return unwrapResponse(
       client.GET("/api/v1/execution/subjects/{subjectId}", {

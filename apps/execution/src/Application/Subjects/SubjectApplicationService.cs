@@ -28,12 +28,12 @@ namespace Cadence.Apps.Execution.Application.Subjects;
 ///
 /// <para>
 /// <see cref="ResolveSubjectAsync"/> is the shared Rule 9 dual-lookup helper (try the surrogate id, then the
-/// domain code) <see cref="RecordConsentAsync"/>, <see cref="AdvanceStateAsync"/>, and
-/// <see cref="UpdateDemographicsAsync"/>/<see cref="DeleteDemographicsAsync"/> all use — kept as a private
-/// instance method (not duplicated per call site) so the two-step lookup sequencing lives in exactly one
-/// place, per <c>02_technical_design.md</c> §3.2. <see cref="GetDetailAsync"/> and
-/// <see cref="EvaluateAndTransitionScreeningAsync"/> deliberately do <b>not</b> use it — see their own doc
-/// comments for why a single, code-only lookup is the legacy-faithful choice for those two. Likewise,
+/// domain code) <see cref="RecordConsentAsync"/>, <see cref="AdvanceStateAsync"/>,
+/// <see cref="UpdateDemographicsAsync"/>/<see cref="DeleteDemographicsAsync"/>, and <see cref="GetDetailAsync"/> all
+/// use — kept as a private instance method (not duplicated per call site) so the two-step lookup sequencing lives in
+/// exactly one place, per <c>02_technical_design.md</c> §3.2.
+/// <see cref="EvaluateAndTransitionScreeningAsync"/> deliberately does <b>not</b> use it — see its own doc
+/// comment for why a single, code-only lookup is the legacy-faithful choice there. Likewise,
 /// <see cref="TransitionSubjectAsync"/> is the shared Rule 2 gate + transition + audit + response helper
 /// <see cref="AdvanceStateAsync"/> and <see cref="EvaluateAndTransitionScreeningAsync"/> both call, so a
 /// transition into <see cref="SubjectState.Enrolled"/> is gated, and audited on the blocked path, identically
@@ -67,7 +67,8 @@ public sealed class SubjectApplicationService(
     ICurrentAuditContextAccessor auditContext,
     Func<ClinicalSubject, CancellationToken, Task<bool>>? screeningEligibility = null,
     IClock? clock = null,
-    ILookupHasher? lookupHasher = null) : ISubjectApplicationService
+    ILookupHasher? lookupHasher = null,
+    IKernelEnrollmentSynchronizer? kernelEnrollmentSynchronizer = null) : ISubjectApplicationService
 {
     private const string ActivationAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // pragma: allowlist secret
 
@@ -97,6 +98,25 @@ public sealed class SubjectApplicationService(
         var subjectCode = new SubjectCode(request.SubjectId);
         var studyCode = new StudyCode(request.StudyId);
         SiteCode? siteCode = request.SiteId is not null ? new SiteCode(request.SiteId) : null;
+        var subjectId = SubjectId.New();
+
+        if (kernelEnrollmentSynchronizer is not null
+            && siteCode is { } assignedSite
+            && await subjects.GetByCodeAsync(subjectCode.Value, ct).ConfigureAwait(false) is null)
+        {
+            var syncResult = await kernelEnrollmentSynchronizer.SynchronizeScreeningEnrollmentAsync(
+                subjectId.Value,
+                studyCode.Value,
+                assignedSite.Value,
+                subjectCode.Value,
+                _clock.UtcNow,
+                auditContext.ChangeReason,
+                ct).ConfigureAwait(false);
+            if (syncResult.IsFailure)
+            {
+                return Result<SubjectResponse>.Failure(syncResult.Error!);
+            }
+        }
 
         // The index read, the insert and its audit entry are one unit of work under the per-study lock; a transient
         // failure re-runs all three (#5383).
@@ -105,7 +125,7 @@ public sealed class SubjectApplicationService(
             int enrollmentIndex = await subjects.EnrollNextIndexAsync(studyCode, token).ConfigureAwait(false);
 
             var subject = ClinicalSubject.Create(subjectCode, studyCode, siteCode, enrollmentIndex,
-                encryptedDemographics, stratFactors: null);
+                encryptedDemographics, stratFactors: null, id: subjectId);
             // MIG-SUBJ-017: the .NET replacement for the legacy's own `current_change_reason.get() or "..."`
             // per-endpoint idiom is this one, uniformly-defaulting accessor — see ICurrentAuditContextAccessor's
             // own doc comment ("closing the legacy's two-idiom split... giving every reader exactly one
@@ -328,28 +348,32 @@ public sealed class SubjectApplicationService(
     }
 
     /// <summary>
-    /// Full subject detail (raise site #13), single-lookup by domain code only — matching
-    /// <c>get_subject_detail</c>'s legacy contract (<c>01_spec.md</c> §1.2) — deliberately not the
-    /// <see cref="ResolveSubjectAsync"/> dual-lookup <see cref="AdvanceStateAsync"/>/
-    /// <see cref="UpdateDemographicsAsync"/>/<see cref="DeleteDemographicsAsync"/> share: every fixture route
-    /// exercising this method (e.g. <c>GET /api/v1/execution/subjects/SUBJ-DOES-NOT-EXIST</c>) passes a
-    /// domain subject code, never a surrogate GUID, and <c>01_spec.md</c> Rule 9 lists only
-    /// <c>advance_subject_state</c>/<c>update_demographics</c> as dual-lookup call sites. The treatment group,
+    /// Full subject detail (raise site #13), resolved via the shared <see cref="ResolveSubjectAsync"/> dual-lookup
+    /// (surrogate UUID PK first, then domain subject code) so addressable Clinical Canvas participant links
+    /// (<c>participant:&lt;uuid&gt;</c>) and legacy subject-code routes both resolve cleanly. The treatment group,
     /// randomisation seed and investigational product id are always null here: the arm lives only encrypted on the
     /// randomisation allocation, and the endpoint asks <c>RandomizationApplicationService.RevealAsync</c> for it only
     /// when the caller is unblinded (#5607).
     /// </summary>
     public async Task<Result<SubjectDetailResponse>> GetDetailAsync(string subjectId, CancellationToken ct)
     {
-        var subject = await subjects.GetByCodeAsync(subjectId, ct).ConfigureAwait(false);
+        var subject = await ResolveSubjectAsync(subjectId, ct).ConfigureAwait(false);
         if (subject is null)
         {
             return SubjectErrors.NotFound(subjectId);
         }
 
-        return new SubjectDetailResponse(subject.SubjectCode, subject.StudyCode,
-            SubjectStateCodec.ToCode(subject.Status), subject.SiteCode, TreatmentGroup: null,
-            RandomizationSeed: null, InvestigationalProductId: null);
+        return new SubjectDetailResponse(
+            subject.Id,
+            subject.SubjectCode,
+            subject.StudyCode,
+            SubjectStateCodec.ToCode(subject.Status),
+            subject.SiteCode,
+            subject.ActiveProtocolVersion,
+            subject.EnrollmentIndex,
+            TreatmentGroup: null,
+            RandomizationSeed: null,
+            InvestigationalProductId: null);
     }
 
     /// <summary>Default page size for <see cref="ListAsync"/>.</summary>
@@ -364,7 +388,7 @@ public sealed class SubjectApplicationService(
     /// validation error rather than a silently widened or emptied list.
     /// </summary>
     public async Task<Result<SubjectListResponse>> ListAsync(string? studyId, string? siteId, string? status, int? limit,
-        int? offset, CancellationToken ct, IReadOnlyCollection<string>? allowedSiteIds = null)
+        int? offset, CancellationToken ct, IReadOnlyCollection<string>? allowedSiteIds = null, string? query = null)
     {
         if (string.IsNullOrWhiteSpace(studyId))
         {
@@ -426,7 +450,10 @@ public sealed class SubjectApplicationService(
             return DomainError.Validation("INVALID_OFFSET", "offset cannot be negative.");
         }
 
-        var page = await subjects.ListAsync(new SubjectListCriteria(studyCode, siteCode, state, pageSize, skip, allowedSites), ct)
+        string? trimmedQuery = string.IsNullOrWhiteSpace(query) ? null : query.Trim();
+
+        var page = await subjects.ListAsync(
+                new SubjectListCriteria(studyCode, siteCode, state, pageSize, skip, allowedSites, trimmedQuery), ct)
             .ConfigureAwait(false);
 
         return new SubjectListResponse(page.Items.Select(SubjectSummaryResponse.FromAggregate).ToList(), page.Total,
@@ -442,8 +469,8 @@ public sealed class SubjectApplicationService(
 
     /// <summary>
     /// Evaluates screening eligibility and transitions to <see cref="SubjectState.ScreenFailed"/> or
-    /// <see cref="SubjectState.Enrolled"/> (SCN-005/SCN-007), single-lookup by domain code only — see
-    /// <see cref="GetDetailAsync"/>'s remarks on why this is not the shared dual-lookup helper; raise site
+    /// <see cref="SubjectState.Enrolled"/> (SCN-005/SCN-007), single-lookup by domain code only (matching
+    /// <c>01_spec.md</c> Rule 9); raise site
     /// #10's not-found is standardized onto <see cref="SubjectErrors.NotFound"/> rather than reproducing the
     /// legacy's distinct "Clinical subject not found." string. Resolves the acting user/reason from
     /// <see cref="ICurrentAuditContextAccessor"/> (MIG-SUBJ-017 — the one call site Rule 9 singles out for the
@@ -547,11 +574,11 @@ public sealed class SubjectApplicationService(
 
     /// <summary>
     /// Rule 9 dual-lookup: try the surrogate PK first, then the domain code — shared by
-    /// <see cref="RecordConsentAsync"/> (MIG-SUBJ-018) and MIG-SUBJ-019's <see cref="AdvanceStateAsync"/>/
-    /// <see cref="UpdateDemographicsAsync"/>/<see cref="DeleteDemographicsAsync"/>, so the two-step lookup
-    /// sequencing lives in exactly one place rather than being duplicated per call site. Returns
-    /// <see langword="null"/> when neither lookup matches; callers are responsible for mapping that to
-    /// <see cref="SubjectErrors.NotFound"/>.
+    /// <see cref="RecordConsentAsync"/> (MIG-SUBJ-018), <see cref="AdvanceStateAsync"/>/
+    /// <see cref="UpdateDemographicsAsync"/>/<see cref="DeleteDemographicsAsync"/>, and
+    /// <see cref="GetDetailAsync"/>, so the two-step lookup sequencing lives in exactly one place rather than
+    /// being duplicated per call site. Returns <see langword="null"/> when neither lookup matches; callers are
+    /// responsible for mapping that to <see cref="SubjectErrors.NotFound"/>.
     /// </summary>
     private async Task<ClinicalSubject?> ResolveSubjectAsync(string subjectIdOrCode, CancellationToken ct) =>
         await subjects.GetByIdAsync(subjectIdOrCode, ct).ConfigureAwait(false)

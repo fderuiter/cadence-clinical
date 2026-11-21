@@ -18,6 +18,7 @@ using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure;
 using Cadence.Apps.Execution.Infrastructure.Consumers;
+using Cadence.Apps.Execution.Infrastructure.Kernel;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Apps.Execution.Infrastructure.OpenApi;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
@@ -187,6 +188,14 @@ builder.Services.AddScoped<IAuditActorScope>(sp => sp.GetRequiredService<Ambient
 // container resolves an unregistered parameter type via its declared default value, so this needs no
 // explicit registration; see that constructor's own doc comment for why a real evaluator does not exist in
 // this slice yet).
+if (builder.Configuration[HttpKernelEnrollmentSynchronizer.ConfigurationKey] is { Length: > 0 } kernelServiceUrl)
+{
+    builder.Services.AddHttpClient<IKernelEnrollmentSynchronizer, HttpKernelEnrollmentSynchronizer>(client =>
+    {
+        client.BaseAddress = new Uri(kernelServiceUrl.TrimEnd('/'));
+    });
+}
+
 builder.Services.AddScoped<ISubjectApplicationService, SubjectApplicationService>();
 builder.Services.AddScoped<IRandomizationApplicationService, RandomizationApplicationService>();
 builder.Services.AddScoped<ISiteComplianceApplicationService, SiteComplianceApplicationService>();

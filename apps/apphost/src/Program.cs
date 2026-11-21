@@ -166,6 +166,7 @@ var execution = Service(builder.AddProject<Projects.Cadence_Apps_Execution>("exe
 var kernel = Service(builder.AddProject<Projects.Cadence_Kernel_Host>("kernel"))
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
 useKeycloakAdminOnKernel(kernel);
+execution.WithEnvironment("KERNEL_SERVICE_URL", kernel.GetEndpoint("http"));
 if (builder.Environment.IsDevelopment())
 {
     kernel.WithEnvironment("Kernel__DevelopmentTenant__Code", "cadence-local");

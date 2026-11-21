@@ -330,7 +330,7 @@ public static partial class SubjectEndpoints
     }
 
     /// <summary>
-    /// <c>GET /api/v1/execution/subjects?study_id=&amp;site_id=&amp;status=&amp;limit=&amp;offset=</c>. The list
+    /// <c>GET /api/v1/execution/subjects?study_id=&amp;site_id=&amp;status=&amp;q=&amp;limit=&amp;offset=</c>. The list
     /// carries no treatment group, so it needs no blinding check.
     /// </summary>
     public static async Task<IResult> ListSubjectsAsync(
@@ -341,7 +341,8 @@ public static partial class SubjectEndpoints
         [FromQuery(Name = "offset")] int? offset,
         HttpContext http,
         ISubjectApplicationService svc,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery(Name = "q")] string? q = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -365,7 +366,8 @@ public static partial class SubjectEndpoints
                 limit,
                 offset,
                 ct,
-                string.IsNullOrWhiteSpace(siteId) ? siteFilter : null)
+                string.IsNullOrWhiteSpace(siteId) ? siteFilter : null,
+                q)
             .ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
