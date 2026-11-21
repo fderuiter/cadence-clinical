@@ -243,6 +243,49 @@ export function personasForRoles(rawRoles) {
  * @property {string} tenantId - `tenant_id` claim; blank when the token has none
  */
 
+/** Milliseconds per UTC calendar day for trial countdown calculation. */
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * Computes exact whole days remaining until `trialEndsAtIso`, clamped at 0.
+ *
+ * @param {string|null|undefined} trialEndsAtIso
+ * @param {number} [nowMs=Date.now()]
+ * @returns {number|null}
+ */
+export function computeTrialDaysRemaining(trialEndsAtIso, nowMs = Date.now()) {
+  if (!trialEndsAtIso || typeof trialEndsAtIso !== "string") {
+    return null;
+  }
+  const endMs = Date.parse(trialEndsAtIso);
+  if (Number.isNaN(endMs)) {
+    return null;
+  }
+  return Math.max(0, Math.ceil((endMs - nowMs) / MS_PER_DAY));
+}
+
+/**
+ * Formats an ISO-8601 trial end timestamp as a deterministic UTC calendar date (`Jan 15, 2030`).
+ *
+ * @param {string|null|undefined} trialEndsAtIso
+ * @returns {string|null}
+ */
+export function formatTrialEndDate(trialEndsAtIso) {
+  if (!trialEndsAtIso || typeof trialEndsAtIso !== "string") {
+    return null;
+  }
+  const parsed = new Date(trialEndsAtIso);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(parsed);
+}
+
 function emptyAuthState() {
   return {
     isAuthenticated: false,
@@ -265,6 +308,8 @@ function emptyAuthState() {
     /** @type {import("../api/kernelApi").KernelEntitlements | null} */
     entitlements: null,
     entitlementsLoaded: false,
+    /** @type {string | null} */
+    subscriptionExpiredNotice: null,
     /** True only in a demo build; nothing at run time can turn it on (#4523). */
     isDemoMode: isDemoBuild(),
   };
@@ -318,6 +363,21 @@ export const useAuthStore = defineStore("auth", {
         state.entitlements?.is_read_only ||
         state.entitlements?.status === "Expired"
       ),
+    trialEndsAt: (state) => state.entitlements?.trial_ends_at || null,
+    trialEndsAtFormatted: (state) =>
+      formatTrialEndDate(state.entitlements?.trial_ends_at),
+    trialDaysRemaining: (state) => {
+      if (
+        state.entitlements?.is_read_only ||
+        state.entitlements?.status === "Expired"
+      ) {
+        return 0;
+      }
+      if (state.entitlements?.status !== "Trialing") {
+        return null;
+      }
+      return computeTrialDaysRemaining(state.entitlements?.trial_ends_at);
+    },
     entitledFamilies: (state) =>
       state.entitlements?.product_families ||
       (state.isDemoMode
@@ -343,6 +403,14 @@ export const useAuthStore = defineStore("auth", {
         return `${tier} · Trial Expired (Read & Export)`;
       }
       if (status === "Trialing") {
+        const days = computeTrialDaysRemaining(
+          state.entitlements?.trial_ends_at
+        );
+        const endDate = formatTrialEndDate(state.entitlements?.trial_ends_at);
+        if (days !== null && endDate) {
+          const unit = days === 1 ? "day" : "days";
+          return `${tier} · Trial · ${days} ${unit} left (ends ${endDate})`;
+        }
         return `${tier} · Trial`;
       }
       if (state.entitlements?.tier) {
@@ -501,8 +569,7 @@ export const useAuthStore = defineStore("auth", {
       }
       try {
         const snapshot = await kernelApi.entitlements();
-        this.entitlements = snapshot;
-        this.entitlementsLoaded = true;
+        this.applyEntitlements(snapshot);
         return snapshot;
       } catch {
         if (this.isDemoMode && !this.entitlements) {
@@ -537,6 +604,47 @@ export const useAuthStore = defineStore("auth", {
         }
         return this.entitlements;
       }
+    },
+    /** Applies an updated entitlement snapshot and clears any stale expired-trial alert when active. */
+    applyEntitlements(snapshot) {
+      this.entitlements = snapshot;
+      this.entitlementsLoaded = Boolean(snapshot);
+      if (snapshot && !snapshot.is_read_only && snapshot.status !== "Expired") {
+        this.subscriptionExpiredNotice = null;
+      }
+    },
+    /**
+     * Marks the workspace subscription as expired (`Read & Export` mode) when a
+     * mutation fails with `403 K.Subscription.Expired` before entitlements reload.
+     */
+    markSubscriptionExpired(message = null) {
+      const existing = this.entitlements || {
+        tenant_ref: "",
+        tenant_id: this.user?.tenantId || "",
+        subscription_ref: null,
+        tier: "Individual",
+        status: "Expired",
+        started_at: null,
+        trial_ends_at: null,
+        is_read_only: true,
+        product_families: ["Blueprint", "Capture"],
+        baseline_capabilities: [
+          "audit_trail",
+          "electronic_signatures",
+          "authorization",
+          "record_export",
+        ],
+        environment_notice: PRE_RELEASE_ENVIRONMENT_NOTICE,
+      };
+      this.entitlements = {
+        ...existing,
+        status: "Expired",
+        is_read_only: true,
+      };
+      this.entitlementsLoaded = true;
+      this.subscriptionExpiredNotice =
+        message ||
+        "Workspace trial has expired (Read & Export mode). Complete study scoping on Plans to activate write access.";
     },
     /**
      * Clears the local session, every account's browser drafts and the

@@ -2069,6 +2069,24 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("ActivatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("activated_at");
+
+                    b.Property<int?>("ActiveStudyCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("active_study_count");
+
+                    b.Property<string>("BillingConfirmation")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("billing_confirmation");
+
+                    b.Property<string>("CountriesCsv")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("countries_csv");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -2083,11 +2101,19 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expired_at");
 
+                    b.Property<int?>("ParticipantCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("participant_count");
+
                     b.Property<string>("ReasonForChange")
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("reason_for_change");
+
+                    b.Property<int?>("SiteCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("site_count");
 
                     b.Property<DateTimeOffset>("StartedAt")
                         .HasColumnType("timestamp with time zone")
@@ -2098,6 +2124,15 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
                         .HasColumnName("status");
+
+                    b.Property<int?>("StudyDurationMonths")
+                        .HasColumnType("integer")
+                        .HasColumnName("study_duration_months");
+
+                    b.Property<string>("StudyPhase")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("study_phase");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")

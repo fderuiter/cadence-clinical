@@ -129,6 +129,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2542: The Kernel Host Provisions the Development Tenant](2026-10-19-the-kernel-host-provisions-the-development-tenant.md) (2026-10-19)
 - [ADR-2543: The Kernel Host Seeds the Local Demo Study](2026-10-19-the-kernel-host-seeds-the-local-demo-study.md) (2026-10-19)
 - [ADR-2547: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap](2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md) (2026-11-20)
+- [ADR-2549: Signed Gateway Expiry Guard and Scoped Trial Upgrades](2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md) (2026-11-21)
 - [ADR-2600: Modules Write Through the Kernel Command Path](2026-10-19-modules-write-through-the-kernel-command-path.md) (2026-10-19)
 - [ADR-2601: One Composition Host for the Kernel and Its Modules](2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md) (2026-10-19)
 - [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) (2026-10-28) _(Partially superseded by ADR-2603)_

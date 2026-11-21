@@ -582,6 +582,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2641: Contextual SOP Specificity Resolution and Audited Support Ticket Escalation](adr/2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md) | Current | - Status: Accepted |
 | [ADR-2548: Enforce PostgreSQL Forced RLS and Shared Clinical Scope Guards Across Standalone Services](adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md) | Current | - Status: Accepted |
 | [ADR-2551: Share Session Resilience, Draft-Safe Sign-Out, and Part 11 Signature Primitives](adr/2026-11-20-share-session-logout-and-signature-primitives.md) | Current | - Status: Accepted |
+| [ADR-2549: Signed Gateway Expiry Guard and Scoped Trial Upgrades](adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

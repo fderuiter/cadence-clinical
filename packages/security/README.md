@@ -33,12 +33,12 @@ signatures and audit digests shared by every Cadence service.
   host that maps a `RequireElectronicSignature` route without one (#5434,
   [ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
   `RequireElectronicSignature(...)` applies it to a route and `HttpContext.VerifiedSigToken()` reads the verified token;
-  `AuditorWriteGuardMiddleware`, and `ChangeReasonHeader`, the one codec for `X-Change-Reason`: plain
+  `AuditorWriteGuardMiddleware`, `ExpiredSubscriptionWriteGuardMiddleware` (enforces `403 K.Subscription.Expired` on mutating requests when signed `X-Tenant-Read-Only` is `true`, exempting `GET`/`HEAD`, `etmf_document:export`, `ElectronicSignatureRequired`, and routes marked with `AllowExpiredTenantWrite()`, [ADR-2549](../../docs/adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md)), and `ChangeReasonHeader`, the one codec for `X-Change-Reason`: plain
   printable ASCII, or RFC 8187 `UTF-8''` percent-encoded UTF-8 for any other text. Every reader decodes the
   header with it, so the audit trail stores what the user typed
   ([ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md)). A signed request without `X-Tenant-Id` authenticates with no
   `tenant_id` claim; there is no default tenant, and `GatewayIdentity.TenantId`, `Principal.TenantId`, and `CallerScope.TenantId` are null when
-  the sign-in names none ([ADR-2514](../../docs/adr/2026-09-30-the-tenant-comes-from-sign-in-with-no-fallback.md)).
+  the sign-in names none ([ADR-2514](../../docs/adr/2026-09-30-the-tenant-comes-from-sign-in-with-no-fallback.md)). `GatewayHeaders.TenantReadOnly` (`X-Tenant-Read-Only`) is bound into `HmacSigner` and exposed as `Principal.TenantReadOnly`.
 - **Authorization:** `PermissionMatrix`, `RoleNormalization`, `Principal`, `ClinicalScopeGuard`, site/study access evaluators
   and the permission, role, tenant-scope, study-scope, site-scope, change-justification and auditor-read-only handlers.
   `RequirePermission("resource:action")` on a route requires that permission in `PermissionMatrix`; the

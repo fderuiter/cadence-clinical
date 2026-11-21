@@ -3,6 +3,7 @@ import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./types";
 import {
   getBearerToken,
+  notifySubscriptionExpiredIfNeeded,
   refreshBearerTokenOnUnauthorized,
 } from "./authorization.js";
 
@@ -200,7 +201,12 @@ export async function unwrapResponse<T>(
   const { data, error, response } = await promise;
   if (error || !response.ok) {
     const errData = error || null;
+    const expiredGuidance = notifySubscriptionExpiredIfNeeded(
+      response?.status ?? null,
+      errData
+    );
     const detail =
+      expiredGuidance ||
       (errData as Record<string, unknown>)?.detail ||
       (errData as Record<string, unknown>)?.message ||
       `Request failed with status ${response?.status ?? 500}`;

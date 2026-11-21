@@ -76,6 +76,75 @@
       </p>
     </header>
 
+    <section
+      v-if="
+        authStore.isAuthenticated &&
+        !authStore.needsTrialOnboarding &&
+        authStore.isTrialExpired
+      "
+      id="plans-expired-banner"
+      class="plans-status-banner is-expired"
+      aria-label="Expired trial workspace status"
+    >
+      <div>
+        <h2>Trial Expired &mdash; Read &amp; Export Mode Active</h2>
+        <p>
+          Your 30-day workspace trial
+          <template v-if="authStore.trialEndsAtFormatted">
+            ended on <strong>{{ authStore.trialEndsAtFormatted }}</strong>
+          </template>
+          <template v-else>has ended</template>. Clinical record viewing,
+          regulated exports, and 21 CFR Part 11 electronic signatures remain
+          available while workspace mutations are paused. Direct tier switching
+          is disabled; submit the structured study scoping intake below to
+          activate full write access.
+        </p>
+      </div>
+      <a
+        id="btn-jump-scoping-intake"
+        href="#scoped-upgrade-intake"
+        class="btn btn-primary"
+      >
+        Go to Study Scoping Intake
+      </a>
+    </section>
+
+    <section
+      v-else-if="
+        authStore.isAuthenticated &&
+        !authStore.needsTrialOnboarding &&
+        authStore.subscriptionStatus === 'Trialing'
+      "
+      id="plans-trial-status-banner"
+      class="plans-status-banner is-trialing"
+      aria-label="Active trial countdown status"
+    >
+      <div>
+        <h2>
+          Active {{ authStore.activeTier }} Trial<template
+            v-if="
+              authStore.trialDaysRemaining !== null &&
+              authStore.trialEndsAtFormatted
+            "
+          >
+            &mdash; {{ authStore.trialDaysRemaining }}
+            {{ authStore.trialDaysRemaining === 1 ? "day" : "days" }} left (ends
+            {{ authStore.trialEndsAtFormatted }})
+          </template>
+        </h2>
+        <p>
+          Switching tiers during an active trial updates enabled product
+          families immediately while keeping your workspace in trial status and
+          preserving the original 30-day trial end timestamp. To transition to
+          an active commercial subscription, complete the study scoping intake
+          below.
+        </p>
+      </div>
+      <a href="#scoped-upgrade-intake" class="btn btn-secondary">
+        Activate Subscription
+      </a>
+    </section>
+
     <section class="plans-tiers-grid" aria-label="Commercial packaging tiers">
       <article
         v-for="tier in COMMERCIAL_TIERS"
@@ -134,8 +203,8 @@
               isBusy ||
               (authStore.isAuthenticated &&
                 !authStore.needsTrialOnboarding &&
-                authStore.activeTier === tier.code &&
-                !authStore.isTrialExpired)
+                (authStore.isTrialExpired ||
+                  authStore.activeTier === tier.code))
             "
             @click="handleSelectTier(tier.code)"
           >
@@ -143,6 +212,245 @@
           </button>
         </div>
       </article>
+    </section>
+
+    <section
+      v-if="
+        authStore.isAuthenticated &&
+        !authStore.needsTrialOnboarding &&
+        authStore.hasRole('Sponsor Admin')
+      "
+      id="scoped-upgrade-intake"
+      class="plans-section scoping-intake-section"
+      aria-labelledby="heading-scoped-upgrade"
+    >
+      <h2 id="heading-scoped-upgrade">Scoped Study Subscription Activation</h2>
+      <p class="plans-section-intro">
+        Transitioning a workspace from Trial or Expired status to an Active
+        commercial subscription requires structured study scoping and a purchase
+        order or signed quote reference. Live payment card processing is not
+        used; Clinical Kernel visibility, study grants, blinding, and consent
+        remain governed separately from commercial tiers.
+      </p>
+
+      <form
+        id="form-scoped-activation"
+        class="scoping-form"
+        novalidate
+        @submit.prevent="handleActivateSubscription"
+      >
+        <div class="scoping-grid">
+          <div class="scoping-field">
+            <label for="select-activation-tier">Target packaging tier</label>
+            <select
+              id="select-activation-tier"
+              v-model="scopingForm.tier"
+              :disabled="isBusy"
+            >
+              <option
+                v-for="tierOption in COMMERCIAL_TIERS"
+                :key="tierOption.code"
+                :value="tierOption.code"
+              >
+                {{ tierOption.name }}
+              </option>
+            </select>
+            <p v-if="scopingErrors.tier" class="field-error" role="alert">
+              {{ scopingErrors.tier.join(" ") }}
+            </p>
+          </div>
+
+          <div class="scoping-field">
+            <label for="select-study-phase">Primary study phase</label>
+            <select
+              id="select-study-phase"
+              v-model="scopingForm.studyPhase"
+              :disabled="isBusy"
+            >
+              <option value="">Select study phase</option>
+              <option value="Phase I">Phase I</option>
+              <option value="Phase I/II">Phase I/II</option>
+              <option value="Phase II">Phase II</option>
+              <option value="Phase II/III">Phase II/III</option>
+              <option value="Phase III">Phase III</option>
+              <option value="Phase IV">Phase IV</option>
+              <option value="Observational">Observational</option>
+            </select>
+            <p
+              v-if="scopingErrors.study_phase"
+              id="error-study-phase"
+              class="field-error"
+              role="alert"
+            >
+              {{ scopingErrors.study_phase.join(" ") }}
+            </p>
+          </div>
+
+          <div class="scoping-field">
+            <label for="input-study-duration-months">
+              Planned study duration (months)
+            </label>
+            <input
+              id="input-study-duration-months"
+              v-model="scopingForm.studyDurationMonths"
+              type="number"
+              min="1"
+              max="240"
+              placeholder="e.g. 18"
+              :disabled="isBusy"
+            />
+            <p
+              v-if="scopingErrors.study_duration_months"
+              id="error-study-duration-months"
+              class="field-error"
+              role="alert"
+            >
+              {{ scopingErrors.study_duration_months.join(" ") }}
+            </p>
+          </div>
+
+          <div class="scoping-field">
+            <label for="input-study-countries">
+              Participating countries (comma-separated ISO codes or names)
+            </label>
+            <input
+              id="input-study-countries"
+              v-model="scopingForm.countriesInput"
+              type="text"
+              placeholder="e.g. US, DE, NL"
+              :disabled="isBusy"
+            />
+            <p
+              v-if="scopingErrors.countries"
+              id="error-countries"
+              class="field-error"
+              role="alert"
+            >
+              {{ scopingErrors.countries.join(" ") }}
+            </p>
+          </div>
+
+          <div class="scoping-field">
+            <label for="input-site-count">Planned clinical site count</label>
+            <input
+              id="input-site-count"
+              v-model="scopingForm.siteCount"
+              type="number"
+              min="1"
+              max="10000"
+              placeholder="e.g. 12"
+              :disabled="isBusy"
+            />
+            <p
+              v-if="scopingErrors.site_count"
+              id="error-site-count"
+              class="field-error"
+              role="alert"
+            >
+              {{ scopingErrors.site_count.join(" ") }}
+            </p>
+          </div>
+
+          <div class="scoping-field">
+            <label for="input-participant-count">
+              Planned participant enrollment count
+            </label>
+            <input
+              id="input-participant-count"
+              v-model="scopingForm.participantCount"
+              type="number"
+              min="1"
+              :max="MAX_PARTICIPANT_COUNT"
+              placeholder="e.g. 240"
+              :disabled="isBusy"
+            />
+            <p
+              v-if="scopingErrors.participant_count"
+              id="error-participant-count"
+              class="field-error"
+              role="alert"
+            >
+              {{ scopingErrors.participant_count.join(" ") }}
+            </p>
+          </div>
+
+          <div class="scoping-field">
+            <label for="input-active-study-count">
+              Concurrent active study count
+            </label>
+            <input
+              id="input-active-study-count"
+              v-model="scopingForm.activeStudyCount"
+              type="number"
+              min="1"
+              max="1000"
+              placeholder="e.g. 2"
+              :disabled="isBusy"
+            />
+            <p
+              v-if="scopingErrors.active_study_count"
+              id="error-active-study-count"
+              class="field-error"
+              role="alert"
+            >
+              {{ scopingErrors.active_study_count.join(" ") }}
+            </p>
+          </div>
+
+          <div class="scoping-field">
+            <label for="input-billing-confirmation">
+              Purchase order or signed quote reference
+            </label>
+            <input
+              id="input-billing-confirmation"
+              v-model="scopingForm.billingConfirmation"
+              type="text"
+              placeholder="e.g. PO-2026-0419 or QUOTE-CAD-882"
+              :disabled="isBusy"
+            />
+            <p
+              v-if="scopingErrors.billing_confirmation"
+              id="error-billing-confirmation"
+              class="field-error"
+              role="alert"
+            >
+              {{ scopingErrors.billing_confirmation.join(" ") }}
+            </p>
+          </div>
+        </div>
+
+        <p
+          v-if="activationError"
+          id="scoped-activation-error"
+          class="plans-alert plans-alert-error"
+          role="alert"
+        >
+          {{ activationError }}
+        </p>
+        <p
+          v-if="activationSuccess"
+          id="scoped-activation-success"
+          class="plans-alert plans-alert-ok"
+          role="status"
+        >
+          {{ activationSuccess }}
+        </p>
+
+        <div class="scoping-actions">
+          <button
+            id="btn-submit-scoped-activation"
+            type="submit"
+            class="btn btn-primary"
+            :disabled="isBusy"
+          >
+            {{
+              isBusy
+                ? "Validating & Activating…"
+                : `Confirm Study Scoping & Activate ${scopingForm.tier}`
+            }}
+          </button>
+        </div>
+      </form>
     </section>
 
     <section
@@ -221,9 +529,13 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { kernelApi } from "../api/kernelApi";
+import {
+  describeKernelError,
+  extractKernelFieldErrors,
+  kernelApi,
+} from "../api/kernelApi";
 import {
   BASELINE_KERNEL_GUARANTEES,
   COMMERCIAL_TIERS,
@@ -233,12 +545,63 @@ import {
 } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
 
+const MAX_PARTICIPANT_COUNT = 1e6;
 const authStore = useAuthStore();
 const router = useRouter();
 
 const isBusy = ref(false);
 const actionError = ref("");
 const actionNotice = ref("");
+const activationError = ref("");
+const activationSuccess = ref("");
+const scopingErrors = ref({});
+
+const scopingForm = reactive({
+  tier: authStore.activeTier || "Select",
+  studyPhase: "",
+  studyDurationMonths: "",
+  countriesInput: "",
+  siteCount: "",
+  participantCount: "",
+  activeStudyCount: "",
+  billingConfirmation: "",
+});
+
+function populateScopingFromEntitlements(entitlements) {
+  if (!entitlements) return;
+  if (entitlements.tier) {
+    scopingForm.tier = entitlements.tier;
+  }
+  const existing = entitlements.scoping;
+  if (!existing) return;
+  scopingForm.studyPhase = existing.study_phase || "";
+  scopingForm.studyDurationMonths =
+    existing.study_duration_months != null
+      ? String(existing.study_duration_months)
+      : "";
+  scopingForm.countriesInput = Array.isArray(existing.countries)
+    ? existing.countries.join(", ")
+    : "";
+  scopingForm.siteCount =
+    existing.site_count != null ? String(existing.site_count) : "";
+  scopingForm.participantCount =
+    existing.participant_count != null
+      ? String(existing.participant_count)
+      : "";
+  scopingForm.activeStudyCount =
+    existing.active_study_count != null
+      ? String(existing.active_study_count)
+      : "";
+  scopingForm.billingConfirmation = existing.billing_confirmation || "";
+}
+
+watch(
+  () => authStore.entitlements,
+  (nextEntitlements) => {
+    populateScopingFromEntitlements(nextEntitlements);
+  },
+  { immediate: true }
+);
 
 onMounted(() => {
   if (authStore.isAuthenticated) {
@@ -255,11 +618,18 @@ function ctaLabelFor(tierCode) {
   if (authStore.needsTrialOnboarding || !authStore.identity?.tenantId) {
     return `Set up ${tierCode} Trial Workspace`;
   }
-  if (authStore.activeTier === tierCode && !authStore.isTrialExpired) {
-    return `Active (${tierCode})`;
+  if (authStore.isTrialExpired) {
+    return `Requires Scoped Activation`;
+  }
+  if (authStore.activeTier === tierCode) {
+    return authStore.subscriptionStatus === "Trialing"
+      ? `Active Trial (${tierCode})`
+      : `Active (${tierCode})`;
   }
   if (authStore.hasRole("Sponsor Admin")) {
-    return `Activate ${tierCode} in Workspace`;
+    return authStore.subscriptionStatus === "Trialing"
+      ? `Switch Trial to ${tierCode}`
+      : `Switch Workspace to ${tierCode}`;
   }
   return `Open Study Workspace`;
 }
@@ -300,20 +670,75 @@ async function handleSelectTier(tierCode) {
     return;
   }
 
+  if (authStore.isTrialExpired) {
+    scopingForm.tier = tierCode;
+    actionError.value =
+      "Direct tier switching is unavailable once a trial expires. Complete the study scoping intake below to activate your workspace.";
+    return;
+  }
+
   isBusy.value = true;
   try {
-    const idempotencyKey = `web-tier-upgrade-${authStore.identity?.tenantId || "tenant"}-${tierCode.toLowerCase()}-${Date.now()}`;
+    const idempotencyKey = `web-tier-switch-${authStore.identity?.tenantId || "tenant"}-${tierCode.toLowerCase()}-${Date.now()}`;
     const updated = await kernelApi.upgradeSubscriptionTier({
       tier: tierCode,
       idempotencyKey,
-      reason: `Evaluate ${tierCode} commercial tier in pre-release workspace`,
+      reason: `Switch workspace commercial tier to ${tierCode}`,
     });
-    authStore.entitlements = updated;
-    authStore.entitlementsLoaded = true;
-    actionNotice.value = `Workspace updated to ${updated.tier} (${updated.product_families.join(", ")}). Existing tenant, studies, and audit records were preserved.`;
+    authStore.applyEntitlements(updated);
+    scopingForm.tier = updated.tier;
+    actionNotice.value =
+      updated.status === "Trialing"
+        ? `Trial tier switched to ${updated.tier} (${updated.product_families.join(", ")}). Trial countdown and existing clinical records remain unchanged.`
+        : `Workspace updated to ${updated.tier} (${updated.product_families.join(", ")}). Existing tenant, studies, and audit records were preserved.`;
   } catch (err) {
     actionError.value =
-      err?.message || "Could not update workspace tier entitlement.";
+      describeKernelError(err) ||
+      "Could not update workspace tier entitlement.";
+  } finally {
+    isBusy.value = false;
+  }
+}
+
+function parseOptionalInt(raw) {
+  if (raw === "" || raw === null || raw === undefined) return null;
+  const parsed = Number.parseInt(String(raw), 10);
+  return Number.isNaN(parsed) ? -1 : parsed;
+}
+
+async function handleActivateSubscription() {
+  activationError.value = "";
+  activationSuccess.value = "";
+  scopingErrors.value = {};
+
+  const countries = String(scopingForm.countriesInput || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  isBusy.value = true;
+  try {
+    const idempotencyKey = `web-scoped-activate-${authStore.identity?.tenantId || "tenant"}-${scopingForm.tier.toLowerCase()}-${Date.now()}`;
+    const updated = await kernelApi.activateSubscription({
+      tier: scopingForm.tier,
+      studyPhase: scopingForm.studyPhase.trim() || null,
+      studyDurationMonths: parseOptionalInt(scopingForm.studyDurationMonths),
+      countries,
+      siteCount: parseOptionalInt(scopingForm.siteCount),
+      participantCount: parseOptionalInt(scopingForm.participantCount),
+      activeStudyCount: parseOptionalInt(scopingForm.activeStudyCount),
+      billingConfirmation: scopingForm.billingConfirmation.trim() || null,
+      idempotencyKey,
+      reason: `Activate ${scopingForm.tier} commercial subscription with validated study scoping`,
+    });
+    authStore.applyEntitlements(updated);
+    activationSuccess.value = `Activated ${updated.tier} subscription (${updated.product_families.join(", ")}). Full workspace write access is active.`;
+  } catch (err) {
+    const extracted = extractKernelFieldErrors(err);
+    scopingErrors.value = extracted;
+    activationError.value =
+      describeKernelError(err) ||
+      "Study scoping validation failed. Review highlighted fields and try again.";
   } finally {
     isBusy.value = false;
   }
@@ -389,6 +814,94 @@ async function handleSelectTier(tierCode) {
   background: var(--semantic-color-success-bg);
   border: 1px solid var(--semantic-color-success-border);
   color: var(--semantic-color-success-dark);
+}
+
+.plans-status-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 18px 22px;
+  border-radius: 12px;
+  margin-bottom: 28px;
+}
+
+.plans-status-banner h2 {
+  font-size: 1.15rem;
+  margin: 0 0 6px;
+}
+
+.plans-status-banner p {
+  margin: 0;
+  max-width: 780px;
+  line-height: 1.5;
+  font-size: 0.92rem;
+}
+
+.plans-status-banner.is-trialing {
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-color-text);
+}
+
+.plans-status-banner.is-expired {
+  background: var(--semantic-color-error-bg);
+  border: 1px solid var(--semantic-color-error-border);
+  color: var(--semantic-color-error-dark);
+}
+
+.scoping-intake-section {
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 12px;
+  padding: 28px;
+}
+
+.scoping-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.scoping-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.scoping-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scoping-field label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--semantic-color-text);
+}
+
+.scoping-field input,
+.scoping-field select {
+  padding: 9px 11px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  font-size: 0.92rem;
+}
+
+.field-error {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--semantic-color-error-dark);
+}
+
+.scoping-actions {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .plans-tiers-grid {

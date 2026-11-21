@@ -232,6 +232,34 @@
       </div>
     </header>
 
+    <div
+      v-if="
+        authStore.isAuthenticated &&
+        (authStore.isTrialExpired || authStore.subscriptionExpiredNotice)
+      "
+      id="shell-expired-subscription-banner"
+      class="shell-expired-banner"
+      role="region"
+      aria-label="Workspace subscription expiry notice"
+    >
+      <div class="shell-expired-copy">
+        <strong>Read &amp; Export mode active:</strong>
+        <span>
+          {{
+            authStore.subscriptionExpiredNotice ||
+            "Your 30-day workspace trial has ended. Clinical reads, regulated exports, and electronic signatures remain available while new mutations are paused."
+          }}
+        </span>
+      </div>
+      <router-link
+        id="shell-expired-upgrade-link"
+        to="/plans#scoped-upgrade-intake"
+        class="btn btn-sm btn-primary shell-expired-cta"
+      >
+        Complete Study Scoping &amp; Activate
+      </router-link>
+    </div>
+
     <main
       id="main-content"
       class="shell-main"
@@ -622,6 +650,31 @@ onUnmounted(() => {
   background: var(--semantic-color-error-bg);
   border-color: var(--semantic-color-error-border);
   color: var(--semantic-color-error-dark);
+}
+
+.shell-expired-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 24px;
+  background: var(--semantic-color-error-bg);
+  border-bottom: 1px solid var(--semantic-color-error-border);
+  color: var(--semantic-color-error-dark);
+  font-size: 0.86rem;
+}
+
+.shell-expired-copy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.shell-expired-cta {
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .command-palette-trigger {
