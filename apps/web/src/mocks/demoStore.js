@@ -2319,7 +2319,7 @@ export function createWebDemoStore() {
       };
     },
 
-    listSubjects({ studyId, siteId, status, limit = 50, offset = 0 } = {}) {
+    listSubjects({ studyId, siteId, status, q, limit = 50, offset = 0 } = {}) {
       let filtered = [...state.subjects];
       if (studyId) {
         const byStudy = filtered.filter(
@@ -2338,6 +2338,12 @@ export function createWebDemoStore() {
       if (status) {
         filtered = filtered.filter(
           (s) => s.status.toUpperCase() === String(status).toUpperCase()
+        );
+      }
+      if (q && String(q).trim()) {
+        const needle = String(q).trim().toLowerCase();
+        filtered = filtered.filter((s) =>
+          s.subject_id.toLowerCase().includes(needle)
         );
       }
       const numOffset = Number(offset) || 0;
@@ -2424,10 +2430,13 @@ export function createWebDemoStore() {
             s.id === subjectId
         ) || state.subjects[0];
       return {
+        id: found.id,
         subject_id: found.subject_id,
         study_id: found.study_id,
         status: found.status,
         site_id: found.site_id,
+        active_protocol_version: found.active_protocol_version || "2.0",
+        enrollment_index: found.enrollment_index ?? 0,
         treatment_group: found.treatment_group,
         randomization_seed: null,
         investigational_product_id: null,

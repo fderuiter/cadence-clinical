@@ -63,6 +63,36 @@ export async function findKernelEnrollmentRef(
   return ref?.kind === "enrollment" ? ref : null;
 }
 
+export interface StudySiteOption {
+  code: string;
+  label: string;
+}
+
+/**
+ * Visible study sites for `studyCode` from the kernel's zoom children (`study_site`), ordered by site code.
+ * Returns an empty list when the kernel has no visible study or study sites for the caller.
+ */
+export async function findStudySites(
+  studyCode: string
+): Promise<StudySiteOption[]> {
+  if (typeof kernelApi.getChildren !== "function") return [];
+  const studyRef = await findKernelStudyRef(studyCode);
+  if (!studyRef) return [];
+  const children = await kernelApi.getChildren(studyRef);
+  const byCode = new Map<string, StudySiteOption>();
+  for (const child of children) {
+    if (child.node.kind !== "study_site" || child.node.mask) continue;
+    const code = child.node.code?.trim();
+    if (!code || byCode.has(code)) continue;
+    const title = child.node.title?.trim();
+    const label = title && title !== code ? `${code} — ${title}` : code;
+    byCode.set(code, { code, label });
+  }
+  return Array.from(byCode.values()).sort((a, b) =>
+    a.code.localeCompare(b.code)
+  );
+}
+
 export interface StudyCollectionSpecOption {
   id: string;
   name: string;
