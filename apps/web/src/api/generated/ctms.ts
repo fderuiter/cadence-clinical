@@ -743,6 +743,15 @@ export interface operations {
         };
         content?: never;
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
       /** @description Not Found */
       404: {
         headers: {

@@ -61,7 +61,7 @@ public static class StartupGreenlightEndpoints
 
         startup.MapGet("/matrix", GetCountryMatrixAsync)
             .WithName("GetCountryGreenlightMatrix")
-            .RequirePermission(ReadPermission)
+            .RequirePermission(ReadPermission).RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Displays country-level matrix showing 6-facet greenlight readiness for all sites in a selected country.")
             .Produces<List<SiteGreenlightGateResponseDto>>(StatusCodes.Status200OK)
@@ -69,7 +69,7 @@ public static class StartupGreenlightEndpoints
 
         startup.MapPost("/matrix/batch-certify", BatchCertifyCountrySitesAsync)
             .WithName("BatchCertifyCountrySites")
-            .RequirePermission(CertifyPermission)
+            .RequirePermission(CertifyPermission).RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Batch-certifies all selected 100% compliant sites in a target country with a single e-signature.")
             .Produces<BatchCertifyResponseDto>(StatusCodes.Status200OK)

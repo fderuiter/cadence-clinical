@@ -1,7 +1,10 @@
+using System;
+
 using Cadence.Apps.Fileshare.Domain;
 using Cadence.Apps.Fileshare.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -10,8 +13,12 @@ namespace Cadence.Apps.Fileshare.Infrastructure.Persistence;
 /// <summary>
 /// EF Core 10 DbContext for Fileshare microservice persistence gateway.
 /// </summary>
-public sealed class FileshareDbContext(DbContextOptions<FileshareDbContext> options) : DbContext(options)
+public sealed class FileshareDbContext(DbContextOptions<FileshareDbContext> options) : DbContext(options), ITenantScopedDbContext
 {
+    public Guid? ActiveInMemoryTenantFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantFilter(this);
+
+    public string? ActiveInMemoryTenantStringFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantStringFilter(this);
+
     public DbSet<FileRecord> FileRecords => Set<FileRecord>();
     public DbSet<ShareGrant> ShareGrants => Set<ShareGrant>();
     public DbSet<GuestLink> GuestLinks => Set<GuestLink>();
@@ -29,5 +36,6 @@ public sealed class FileshareDbContext(DbContextOptions<FileshareDbContext> opti
         modelBuilder.ApplyConfiguration(new PlaybackAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new FileAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

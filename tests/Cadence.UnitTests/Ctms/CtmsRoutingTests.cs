@@ -81,12 +81,11 @@ public sealed class CtmsRoutingTests : IAsyncDisposable
     {
         var normalized = RoleNormalization.GetNormalizedRoles([role]);
         bool siteScoped = normalized.Any(SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains);
-        var identity = new GatewayIdentity(
-            UserId: userId,
-            Roles: [role],
-            SiteIds: siteIds ?? (siteScoped ? ["SITE-1"] : []),
-            TenantId: TestSecurityContext.TenantCode,
-            StudyIds: studyIds ?? ["*"]);
+        var identity = TestSecurityContext.Identity(userId, role) with
+        {
+            StudyIds = studyIds ?? ["*"],
+            SiteIds = siteIds ?? (siteScoped ? ["SITE-1"] : []),
+        };
         var handler = new TestSecurityContext.GatewaySigningHandler(identity)
         {
             InnerHandler = _server.CreateHandler()

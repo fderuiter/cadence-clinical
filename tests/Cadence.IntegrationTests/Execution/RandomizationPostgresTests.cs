@@ -526,13 +526,19 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
         return await db.ClinicalSubjects.AsNoTracking().SingleAsync(s => s.SubjectCode == new SubjectCode(code), Ct);
     }
 
-    /// <summary>A raw connection as the application role the host itself uses.</summary>
+    /// <summary>A raw connection as the application role and active tenant session the host itself uses.</summary>
     private async Task<NpgsqlConnection> OpenAsync()
     {
         using var scope = factory.Services.CreateScope();
         string connectionString = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>().Database.GetConnectionString()!;
+        Guid? tenantId = await scope.ServiceProvider
+            .GetRequiredService<Cadence.Database.Tenancy.ICurrentTenantAccessor>()
+            .GetCurrentTenantIdAsync(Ct);
         var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync(Ct);
+        await using var setTenant = new NpgsqlCommand("SELECT pg_catalog.set_config('cadence.tenant_id', @tenant, false)", connection);
+        setTenant.Parameters.AddWithValue("tenant", tenantId?.ToString("D") ?? string.Empty);
+        await setTenant.ExecuteNonQueryAsync(Ct);
         return connection;
     }
 

@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Claims;
-
-using Cadence.Security.Authentication;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -11,10 +8,9 @@ using Microsoft.AspNetCore.Http.HttpResults;
 namespace Cadence.Security.Rbac;
 
 /// <summary>
-/// Shared fail-closed study and site scope evaluator for Minimal API endpoints (ADR-2516).
-/// Evaluates the gateway-signed caller identity via <see cref="CallerScope"/>,
-/// <see cref="StudyAccessEvaluator"/>, and <see cref="SiteAccessEvaluator"/>, returning standardized
-/// RFC 7807 HTTP 403 <c>ProblemDetails</c> responses with <c>code = "FORBIDDEN_SCOPE"</c>.
+/// Shared fail-closed study and site scope evaluator for Minimal API endpoints (ADR-2516, ADR-2548).
+/// Delegates caller scope evaluation to <see cref="ClinicalScopeGuard"/> while returning standardized
+/// RFC 7807 HTTP 403 <c>ProblemHttpResult</c> responses with <c>code = "FORBIDDEN_SCOPE"</c>.
 /// @req:PRD-SYS-192
 /// </summary>
 public static class EndpointScopeGuard
@@ -23,68 +19,22 @@ public static class EndpointScopeGuard
     public const string ForbiddenCode = "FORBIDDEN_SCOPE";
 
     /// <summary>
-    /// Resolves the authenticated <see cref="Principal"/> from <see cref="CallerScope.Principal"/>
-    /// (populated by <c>GatewayAuthenticationHandler</c>), falling back to verified <see cref="HttpContext.User"/>
-    /// claims when endpoint methods are invoked directly in unit tests without the authentication middleware.
+    /// Resolves the authenticated <see cref="Principal"/> via <see cref="ClinicalScopeGuard.ResolvePrincipal"/>.
     /// </summary>
-    public static Principal? ResolvePrincipal(HttpContext? httpContext)
-    {
-        if (httpContext is null)
-        {
-            return null;
-        }
-
-        if (CallerScope.Principal(httpContext) is { } principal)
-        {
-            return principal;
-        }
-
-        ClaimsPrincipal user = httpContext.User;
-        string? userId = user.FindFirst(CadenceClaimTypes.Subject)?.Value;
-        if (user.Identity?.IsAuthenticated != true || string.IsNullOrWhiteSpace(userId))
-        {
-            return null;
-        }
-
-        var rawRoles = ReadClaims(user, ClaimTypes.Role);
-        return new Principal
-        {
-            UserId = userId,
-            Roles = RoleNormalization.GetNormalizedRoles(rawRoles),
-            RawRoles = rawRoles,
-            AssignedStudies = ReadClaims(user, CadenceClaimTypes.StudyIds),
-            AssignedSites = ReadClaims(user, CadenceClaimTypes.SiteId),
-            UnblindedAccess = string.Equals(
-                user.FindFirst(CadenceClaimTypes.UnblindedAccess)?.Value,
-                "true",
-                StringComparison.OrdinalIgnoreCase),
-        };
-    }
+    public static Principal? ResolvePrincipal(HttpContext? httpContext) =>
+        ClinicalScopeGuard.ResolvePrincipal(httpContext);
 
     /// <summary>True when the caller is authorized to access <paramref name="studyId"/>.</summary>
-    public static bool CanAccessStudy(HttpContext? httpContext, string? studyId)
-    {
-        if (httpContext is null)
-        {
-            return false;
-        }
-
-        if (CallerScope.Principal(httpContext) is not null)
-        {
-            return CallerScope.CanAccessStudy(httpContext, studyId);
-        }
-
-        return StudyAccessEvaluator.CanAccessStudy(ResolvePrincipal(httpContext), studyId);
-    }
+    public static bool CanAccessStudy(HttpContext? httpContext, string? studyId) =>
+        ClinicalScopeGuard.CanAccessStudy(httpContext, studyId);
 
     /// <summary>True when the caller is authorized to access <paramref name="siteId"/>.</summary>
     public static bool CanAccessSite(HttpContext? httpContext, string? siteId) =>
-        SiteAccessEvaluator.CanAccessSite(ResolvePrincipal(httpContext), siteId);
+        ClinicalScopeGuard.CanAccessSite(httpContext, siteId);
 
     /// <summary>True when the caller holds a site-scoped role or carries explicit site assignments.</summary>
-    public static bool IsSiteBound(Principal principal) =>
-        principal.Roles.Any(SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains)
-        || principal.AssignedSites.Count > 0;
+    public static bool IsSiteBound(Principal? principal) =>
+        ClinicalScopeGuard.IsSiteBound(principal);
 
     /// <summary>
     /// Returns <see langword="null"/> when the caller has at least one non-empty study assignment,
@@ -288,10 +238,4 @@ public static class EndpointScopeGuard
             statusCode: StatusCodes.Status403Forbidden,
             title: title,
             extensions: new Dictionary<string, object?> { ["code"] = ForbiddenCode });
-
-    private static List<string> ReadClaims(ClaimsPrincipal user, string claimType) =>
-        user.FindAll(claimType)
-            .Select(c => c.Value)
-            .Where(v => !string.IsNullOrWhiteSpace(v))
-            .ToList();
 }

@@ -72,8 +72,11 @@ public static class CadenceSecurityServiceCollectionExtensions
         // Authorization Handlers
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddSingleton<IAuthorizationHandler, RoleAuthorizationHandler>();
+        services.AddSingleton<IAuthorizationHandler, TenantScopeAuthorizationHandler>();
         services.AddSingleton<IAuthorizationHandler, StudyScopeAuthorizationHandler>();
         services.AddSingleton<IAuthorizationHandler, SiteScopeAuthorizationHandler>();
+        services.AddSingleton<IAuthorizationHandler, CallerStudyScopeAuthorizationHandler>();
+        services.AddSingleton<IAuthorizationHandler, CallerStudyAndSiteScopeAuthorizationHandler>();
         services.AddSingleton<IAuthorizationHandler, UndeclaredEndpointAuthorizationHandler>();
         services.AddSingleton<IAuthorizationHandler, ChangeJustificationAuthorizationHandler>();
         services.AddSingleton<IAuthorizationHandler, AuditorReadOnlyAuthorizationHandler>();
@@ -94,15 +97,30 @@ public static class CadenceSecurityServiceCollectionExtensions
                 .AddAuthenticationSchemes(GatewayAuthenticationHandler.SchemeName)
                 .RequireAuthenticatedUser());
 
+            authOptions.AddPolicy(CadencePolicies.TenantScope, policy => policy
+                .AddAuthenticationSchemes(GatewayAuthenticationHandler.SchemeName)
+                .RequireAuthenticatedUser()
+                .AddRequirements(new TenantScopeRequirement()));
+
             authOptions.AddPolicy(CadencePolicies.StudyScope, policy => policy
                 .AddAuthenticationSchemes(GatewayAuthenticationHandler.SchemeName)
                 .RequireAuthenticatedUser()
-                .AddRequirements(new StudyScopeRequirement()));
+                .AddRequirements(new TenantScopeRequirement(), new StudyScopeRequirement()));
 
             authOptions.AddPolicy(CadencePolicies.SiteScope, policy => policy
                 .AddAuthenticationSchemes(GatewayAuthenticationHandler.SchemeName)
                 .RequireAuthenticatedUser()
-                .AddRequirements(new SiteScopeRequirement()));
+                .AddRequirements(new TenantScopeRequirement(), new SiteScopeRequirement()));
+
+            authOptions.AddPolicy(CadencePolicies.CallerStudyScope, policy => policy
+                .AddAuthenticationSchemes(GatewayAuthenticationHandler.SchemeName)
+                .RequireAuthenticatedUser()
+                .AddRequirements(new TenantScopeRequirement(), new CallerStudyScopeRequirement()));
+
+            authOptions.AddPolicy(CadencePolicies.CallerStudyAndSiteScope, policy => policy
+                .AddAuthenticationSchemes(GatewayAuthenticationHandler.SchemeName)
+                .RequireAuthenticatedUser()
+                .AddRequirements(new TenantScopeRequirement(), new CallerStudyAndSiteScopeRequirement()));
 
             authOptions.AddPolicy("RequireChangeJustification", policy =>
                 policy.Requirements.Add(new ChangeJustificationRequirement()));
@@ -151,6 +169,32 @@ public static class CadenceSecurityServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Requires the caller to carry a verified active <c>X-Tenant-Id</c> (ADR-2514, PRD-CRF-013).
+    /// </summary>
+    public static TBuilder RequireTenantScope<TBuilder>(this TBuilder builder) where TBuilder : IEndpointConventionBuilder =>
+        builder
+            .RequireAuthorization(CadencePolicies.TenantScope)
+            .WithMetadata(new EndpointScopeMetadata(EndpointScopeKind.Tenant));
+
+    /// <summary>
+    /// Requires the caller to carry a verified active tenant and at least one study assignment (<c>X-Study-Ids</c>),
+    /// where object- or payload-level study matching is enforced in the handler via <see cref="ClinicalScopeGuard"/>.
+    /// </summary>
+    public static TBuilder RequireCallerStudyScope<TBuilder>(this TBuilder builder) where TBuilder : IEndpointConventionBuilder =>
+        builder
+            .RequireAuthorization(CadencePolicies.CallerStudyScope)
+            .WithMetadata(new EndpointScopeMetadata(EndpointScopeKind.CallerStudy));
+
+    /// <summary>
+    /// Requires the caller to carry a verified active tenant, at least one study assignment, and (when site-scoped)
+    /// at least one site assignment, where object- or payload-level study/site matching is enforced via <see cref="ClinicalScopeGuard"/>.
+    /// </summary>
+    public static TBuilder RequireCallerStudyAndSiteScope<TBuilder>(this TBuilder builder) where TBuilder : IEndpointConventionBuilder =>
+        builder
+            .RequireAuthorization(CadencePolicies.CallerStudyAndSiteScope)
+            .WithMetadata(new EndpointScopeMetadata(EndpointScopeKind.CallerStudyAndSite));
+
+    /// <summary>
     /// Requires the study named by the route value <paramref name="routeParameter"/> to be one the signed caller is
     /// assigned to (<c>X-Study-Ids</c>, or <c>*</c> for every study). It fails closed: a route without that value, or a
     /// caller with no assignment, gets <c>403</c>. The study id is never read from the query, body or an unsigned
@@ -162,7 +206,8 @@ public static class CadenceSecurityServiceCollectionExtensions
         ArgumentException.ThrowIfNullOrWhiteSpace(routeParameter);
         return builder
             .RequireAuthorization(CadencePolicies.StudyScope)
-            .WithMetadata(new StudyScopeRouteParameter(routeParameter));
+            .WithMetadata(new StudyScopeRouteParameter(routeParameter))
+            .WithMetadata(new EndpointScopeMetadata(EndpointScopeKind.RouteStudy, routeParameter));
     }
 
     /// <summary>
@@ -175,7 +220,8 @@ public static class CadenceSecurityServiceCollectionExtensions
         ArgumentException.ThrowIfNullOrWhiteSpace(routeParameter);
         return builder
             .RequireAuthorization(CadencePolicies.SiteScope)
-            .WithMetadata(new SiteScopeRouteParameter(routeParameter));
+            .WithMetadata(new SiteScopeRouteParameter(routeParameter))
+            .WithMetadata(new EndpointScopeMetadata(EndpointScopeKind.RouteSite, routeParameter));
     }
 
     /// <summary>

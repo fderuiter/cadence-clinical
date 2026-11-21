@@ -36,7 +36,7 @@ public static class SiteMilestoneEndpoints
             .WithSummary("List site milestones filtered by study or site.")
             .Produces<List<SiteMilestoneResponseDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission(ReadPermission);
+            .RequirePermission(ReadPermission).RequireCallerStudyAndSiteScope();
 
         group.MapPost("/site-milestones", CreateSiteMilestoneAsync)
             .WithName("CreateSiteMilestone")
@@ -44,7 +44,7 @@ public static class SiteMilestoneEndpoints
             .Produces<SiteMilestoneResponseDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission(CreatePermission);
+            .RequirePermission(CreatePermission).RequireCallerStudyAndSiteScope();
 
         group.MapPut("/site-milestones/{milestone_id}", UpdateSiteMilestoneAsync)
             .WithName("UpdateSiteMilestone")
@@ -53,7 +53,7 @@ public static class SiteMilestoneEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(UpdatePermission);
+            .RequirePermission(UpdatePermission).RequireCallerStudyAndSiteScope();
 
         return group;
     }

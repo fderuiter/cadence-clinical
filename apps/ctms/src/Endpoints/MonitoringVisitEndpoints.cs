@@ -44,7 +44,7 @@ public static class MonitoringVisitEndpoints
             .WithSummary("List monitoring visits filtered by study, site, CRA, or status.")
             .Produces<List<MonitoringVisitResponseDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission(ReadPermission);
+            .RequirePermission(ReadPermission).RequireCallerStudyAndSiteScope();
 
         group.MapPost("/monitoring-visits", ScheduleMonitoringVisitAsync)
             .WithName("ScheduleMonitoringVisit")
@@ -52,7 +52,7 @@ public static class MonitoringVisitEndpoints
             .Produces<MonitoringVisitResponseDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission(CreatePermission);
+            .RequirePermission(CreatePermission).RequireCallerStudyAndSiteScope();
 
         group.MapPost("/monitoring-visits/{visit_id}/complete", CompleteMonitoringVisitAsync)
             .WithName("CompleteMonitoringVisit")
@@ -61,7 +61,7 @@ public static class MonitoringVisitEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(UpdatePermission);
+            .RequirePermission(UpdatePermission).RequireCallerStudyAndSiteScope();
 
         group.MapPost("/monitoring-visits/{visit_id}/sign-off", SignOffMonitoringVisitAsync)
             .WithName("SignOffMonitoringVisit")
@@ -70,7 +70,7 @@ public static class MonitoringVisitEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(SignOffPermission);
+            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope();
 
         group.MapGet("/monitoring-visits/{visit_id}/letters", GetMonitoringVisitLettersAsync)
             .WithName("GetMonitoringVisitLetters")
@@ -78,7 +78,7 @@ public static class MonitoringVisitEndpoints
             .Produces<List<GeneratedLetterResponseDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(ReadLetterPermission);
+            .RequirePermission(ReadLetterPermission).RequireCallerStudyAndSiteScope();
 
         group.MapGet("/monitoring-visits/{visit_id}/letters/{letter_type}", GetMonitoringVisitLetterByTypeAsync)
             .WithName("GetMonitoringVisitLetterByType")
@@ -86,7 +86,7 @@ public static class MonitoringVisitEndpoints
             .Produces<GeneratedLetterResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(ReadLetterTypePermission);
+            .RequirePermission(ReadLetterTypePermission).RequireCallerStudyAndSiteScope();
 
         return group;
     }

@@ -54,7 +54,7 @@ public static class SiteComplianceEndpoints
             .ProducesValidationProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             // Called service to service by eTMF, signed as its service account holding the etmf_service role.
-            .RequirePermission("site_compliance:etmf_sync")
+            .RequirePermission("site_compliance:etmf_sync").RequireCallerStudyScope()
             .AddEndpointFilter<ValidationFilter<EtmfCompletenessWebhookPayload>>();
 
         app.MapPost("/api/v1/execution/sites/{siteId}/activate", ActivateSiteAsync)

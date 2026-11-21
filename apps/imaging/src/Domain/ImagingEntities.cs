@@ -17,7 +17,7 @@ public class ImagingStudyEnvelope
     public string? StoragePrefix { get; set; }
     public string Status { get; set; } = "STORED";
     public string AdjudicationStatus { get; set; } = "UNASSIGNED";
-    public string TenantId { get; set; } = "tenant_default";
+    public string TenantId { get; set; } = string.Empty;
     public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
     public required DateTimeOffset UpdatedAt { get; set; }
@@ -198,7 +198,7 @@ public class ImagingAdjudicationSession
     public DateTimeOffset? LockedAt { get; set; }
     public string? LockedBy { get; set; }
     public string SessionDigest { get; set; } = string.Empty;
-    public string TenantId { get; set; } = "tenant_default";
+    public string TenantId { get; set; } = string.Empty;
     public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
     public required DateTimeOffset UpdatedAt { get; set; }

@@ -11,6 +11,7 @@ using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Endpoints;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
@@ -262,10 +263,13 @@ public sealed class DsurApprovalAuthorityTests(DsurApprovalAuthorityTests.Safety
                 services.AddDbContext<SafetyDbContext>((sp, options) => options
                     .UseInMemoryDatabase(_databaseName)
                     .UseInternalServiceProvider(inMemory)
-                    .AddInterceptors(new GxPAuditInterceptor(
-                        () => sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User.FindFirst(CadenceClaimTypes.Subject)?.Value
-                            ?? "test-seeding",
-                        sp.GetRequiredService<IClock>())));
+                    .UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: false)
+                    .AddInterceptors(
+                        StandaloneTenantSaveChangesInterceptor.Instance,
+                        new GxPAuditInterceptor(
+                            () => sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User.FindFirst(CadenceClaimTypes.Subject)?.Value
+                                ?? "test-seeding",
+                            sp.GetRequiredService<IClock>())));
 
                 // The durable token store needs PostgreSQL; DsurApprovalPostgresTests covers it.
                 services.RemoveAll<ISigTokenUseStore>();

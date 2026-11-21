@@ -47,7 +47,7 @@ public static class DoaEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(AssignPermission);
+            .RequirePermission(AssignPermission).RequireCallerStudyAndSiteScope();
 
         doa.MapPost("/revoke", RevokeDelegationAsync)
             .WithName("RevokeSiteTasks")
@@ -56,7 +56,7 @@ public static class DoaEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(RevokePermission);
+            .RequirePermission(RevokePermission).RequireCallerStudyAndSiteScope();
 
         doa.MapPost("/sign-off", SignOffDelegationAsync)
             .WithName("SignOffDelegation")
@@ -65,7 +65,7 @@ public static class DoaEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(SignOffPermission);
+            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope();
 
         doa.MapGet("/sites/{site_id}/log", GetSiteDoaLogAsync)
             .WithName("GetSiteDoaLog")
@@ -73,7 +73,7 @@ public static class DoaEndpoints
             .Produces<DoaLogResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(ReadPermission);
+            .RequirePermission(ReadPermission).RequireSiteScope("site_id");
 
         doa.MapGet("/sites/{site_id}/export-pdf", ExportSiteDoaPdfAsync)
             .WithName("ExportSiteDoaPdf")
@@ -81,7 +81,7 @@ public static class DoaEndpoints
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(ReadPermission);
+            .RequirePermission(ReadPermission).RequireSiteScope("site_id");
 
         return group;
     }

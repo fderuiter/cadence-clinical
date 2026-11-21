@@ -9,35 +9,45 @@ using Microsoft.AspNetCore.Http;
 namespace Cadence.Apps.Execution.Endpoints;
 
 /// <summary>
-/// Shared fail-closed study and site scope guard for Execution Minimal API endpoints (ADR-2516).
-/// Delegates caller scope resolution to <see cref="EndpointScopeGuard"/> in <c>Cadence.Security</c>.
+/// Execution facade over <see cref="ClinicalScopeGuard"/> preserving Execution's RFC 7807
+/// <c>FORBIDDEN_SCOPE</c> extension code (ADR-2516, ADR-2548, PRD-SYS-192).
 /// @req:PRD-SYS-192
 /// </summary>
 public static class ExecutionScopeGuard
 {
+    private const string ForbiddenCode = "FORBIDDEN_SCOPE";
+
     public static Principal? ResolvePrincipal(HttpContext? httpContext) =>
-        EndpointScopeGuard.ResolvePrincipal(httpContext);
+        ClinicalScopeGuard.ResolvePrincipal(httpContext);
 
     public static bool CanAccessStudy(HttpContext? httpContext, string? studyId) =>
-        EndpointScopeGuard.CanAccessStudy(httpContext, studyId);
+        ClinicalScopeGuard.CanAccessStudy(httpContext, studyId);
 
     public static bool CanAccessSite(HttpContext? httpContext, string? siteId) =>
-        EndpointScopeGuard.CanAccessSite(httpContext, siteId);
+        ClinicalScopeGuard.CanAccessSite(httpContext, siteId);
 
     public static bool IsSiteBound(Principal principal) =>
-        EndpointScopeGuard.IsSiteBound(principal);
+        ClinicalScopeGuard.IsSiteBound(principal);
 
     public static IResult? RequireAnyStudyScope(HttpContext? httpContext) =>
-        EndpointScopeGuard.RequireAnyStudyScope(httpContext);
+        ClinicalScopeGuard.RequireAnyStudyScope(httpContext) is null
+            ? null
+            : Forbidden("Caller has no assigned study scope.");
 
     public static IResult? RequireAllStudies(HttpContext? httpContext) =>
-        EndpointScopeGuard.RequireAllStudies(httpContext);
+        ClinicalScopeGuard.RequireAllStudies(httpContext) is null
+            ? null
+            : Forbidden("Global enterprise scope requires wildcard study assignment ('*').");
 
     public static IResult? RequireStudy(HttpContext? httpContext, string? studyId) =>
-        EndpointScopeGuard.RequireStudy(httpContext, studyId);
+        CanAccessStudy(httpContext, studyId)
+            ? null
+            : Forbidden($"Caller is not authorized for study '{studyId ?? string.Empty}'.");
 
     public static IResult? RequireSite(HttpContext? httpContext, string? siteId) =>
-        EndpointScopeGuard.RequireSite(httpContext, siteId);
+        CanAccessSite(httpContext, siteId)
+            ? null
+            : Forbidden($"Caller is not authorized for site '{siteId ?? string.Empty}'.");
 
     public static IResult? RequireStudyAndSite(HttpContext? httpContext, string? studyId, string? siteId) =>
         RequireStudy(httpContext, studyId) ?? RequireSite(httpContext, siteId);
@@ -83,15 +93,65 @@ public static class ExecutionScopeGuard
     public static IResult? ResolveStudyFilter(
         HttpContext? httpContext,
         string? studyId,
-        out IReadOnlySet<string>? studyFilter) =>
-        EndpointScopeGuard.ResolveStudyFilter(httpContext, studyId, out studyFilter);
+        out IReadOnlySet<string>? studyFilter)
+    {
+        if (!string.IsNullOrWhiteSpace(studyId))
+        {
+            studyFilter = null;
+            return RequireStudy(httpContext, studyId);
+        }
+
+        if (ClinicalScopeGuard.ResolveStudyFilter(httpContext, studyId, out var allowedStudies, out _))
+        {
+            studyFilter = allowedStudies;
+            return null;
+        }
+
+        studyFilter = null;
+        return Forbidden("Caller has no assigned study scope.");
+    }
 
     public static IResult? ResolveSiteFilter(
         HttpContext? httpContext,
         string? siteId,
         out IReadOnlySet<string>? siteFilter,
-        out string? effectiveSingleSiteId) =>
-        EndpointScopeGuard.ResolveSiteFilter(httpContext, siteId, out siteFilter, out effectiveSingleSiteId);
+        out string? effectiveSingleSiteId)
+    {
+        if (!string.IsNullOrWhiteSpace(siteId))
+        {
+            siteFilter = null;
+            effectiveSingleSiteId = siteId;
+            if (ClinicalScopeGuard.CanAccessSite(httpContext, siteId))
+            {
+                return null;
+            }
+
+            return ResolvePrincipal(httpContext) is null
+                ? Forbidden("Caller identity is required.")
+                : Forbidden($"Caller is not authorized for site '{siteId}'.");
+        }
+
+        if (ClinicalScopeGuard.ResolveSiteFilter(httpContext, null, out var allowedSites, out _))
+        {
+            siteFilter = allowedSites is null
+                ? null
+                : new HashSet<string>(allowedSites, StringComparer.OrdinalIgnoreCase);
+            effectiveSingleSiteId = allowedSites is { Count: 1 } ? allowedSites.First() : null;
+            return null;
+        }
+
+        siteFilter = null;
+        effectiveSingleSiteId = null;
+        var principal = ResolvePrincipal(httpContext);
+        if (principal is null)
+        {
+            return Forbidden("Caller identity is required.");
+        }
+
+        return IsSiteBound(principal)
+            ? Forbidden("Site-scoped caller has no assigned sites.")
+            : Forbidden("Caller has no assigned site scope.");
+    }
 
     public static IResult? RequireStudyAndResolveSiteFilter(
         HttpContext? httpContext,
@@ -139,5 +199,9 @@ public static class ExecutionScopeGuard
         EndpointScopeGuard.ApplyFilters(items, studyFilter, studySelector, siteFilter, siteSelector);
 
     public static IResult Forbidden(string detail) =>
-        EndpointScopeGuard.Problem(detail);
+        Results.Problem(
+            detail: detail,
+            statusCode: StatusCodes.Status403Forbidden,
+            title: "Forbidden",
+            extensions: new Dictionary<string, object?> { ["code"] = ForbiddenCode });
 }

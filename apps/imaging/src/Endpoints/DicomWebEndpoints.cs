@@ -29,7 +29,7 @@ public static class DicomWebEndpoints
 
         group.MapPost("/studies", StoreInstancesAsync)
             .WithName("StowRsStoreInstances")
-            .RequirePermission("imaging_study:upload")
+            .RequirePermission("imaging_study:upload").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<IngestionResult>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -37,7 +37,7 @@ public static class DicomWebEndpoints
 
         group.MapPost("/studies/batch", StoreBatchInstancesAsync)
             .WithName("BatchIngestStudyFolder")
-            .RequirePermission("imaging_study:upload")
+            .RequirePermission("imaging_study:upload").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<BatchIngestionResult>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -46,21 +46,21 @@ public static class DicomWebEndpoints
 
         group.MapGet("/studies/{studyUid}", GetStudyByUidAsync)
             .WithName("WadoRsGetStudy")
-            .RequirePermission("imaging_study:read")
+            .RequirePermission("imaging_study:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<ImagingStudyEnvelope>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/studies/{studyUid}/series/{seriesUid}/instances/{instanceUid}/frames/{frameList}", GetInstanceFramesAsync)
             .WithName("WadoRsGetInstanceFrames")
-            .RequirePermission("imaging_study:read")
+            .RequirePermission("imaging_study:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/certificates/{certificateId}", GetCertificateByIdAsync)
             .WithName("GetDeidCertificate")
-            .RequirePermission("imaging_study:read")
+            .RequirePermission("imaging_study:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<CertificateResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -108,7 +108,7 @@ public static class DicomWebEndpoints
             return TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Request payload cannot be empty." });
         }
 
-        if (!CallerScope.CanAccessStudy(request.HttpContext, studyId))
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(request.HttpContext, studyId, siteId) is not null)
         {
             return OutsideStudy();
         }
@@ -195,7 +195,7 @@ public static class DicomWebEndpoints
             return TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Batch payload cannot be empty." });
         }
 
-        if (!CallerScope.CanAccessStudy(request.HttpContext, studyId))
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(request.HttpContext, studyId, siteId) is not null)
         {
             return OutsideStudy();
         }
@@ -229,7 +229,8 @@ public static class DicomWebEndpoints
             .FirstOrDefaultAsync(s => s.StudyInstanceUid == studyUid || s.Id == studyUid, cancellationToken)
             .ConfigureAwait(false);
 
-        if (study == null || !CallerScope.CanAccessStudy(httpContext, study.StudyId))
+        if (study == null
+            || ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, study.StudyId, study.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
             return TypedResults.NotFound(new { code = "STUDY_NOT_FOUND", message = $"Study '{studyUid}' not found." });
         }
@@ -254,16 +255,18 @@ public static class DicomWebEndpoints
             .FirstOrDefaultAsync(i => i.SopInstanceUid == instanceUid || i.Id == instanceUid, cancellationToken)
             .ConfigureAwait(false);
 
-        string? clinicalStudyId = instance == null
+        var parentStudy = instance == null
             ? null
             : await (from series in dbContext.ImagingSeriesEnvelopes
                      join study in dbContext.ImagingStudyEnvelopes on series.StudyEnvelopeId equals study.Id
                      where series.Id == instance.SeriesEnvelopeId
-                     select study.StudyId)
+                     select new { study.StudyId, study.SiteId })
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);
 
-        if (instance == null || !CallerScope.CanAccessStudy(httpContext, clinicalStudyId))
+        if (instance == null
+            || parentStudy == null
+            || ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, parentStudy.StudyId, parentStudy.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
             return TypedResults.NotFound(new { code = "INSTANCE_NOT_FOUND", message = $"Instance '{instanceUid}' not found." });
         }
@@ -285,7 +288,7 @@ public static class DicomWebEndpoints
             .FirstOrDefaultAsync(c => c.Id == certificateId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (cert == null || !CallerScope.CanAccessStudy(httpContext, cert.StudyId))
+        if (cert == null || ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, cert.StudyId, cert.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
             return TypedResults.NotFound(new { code = "CERTIFICATE_NOT_FOUND", message = $"Certificate '{certificateId}' not found." });
         }
