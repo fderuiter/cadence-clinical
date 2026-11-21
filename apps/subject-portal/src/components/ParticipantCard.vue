@@ -257,7 +257,7 @@ async function handleRedeemActivation() {
 .participant-activation-input {
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-control);
   border-radius: 6px;
   background-color: var(--bg-card);
   color: var(--text-main);

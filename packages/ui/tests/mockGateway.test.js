@@ -1,10 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
+  ensureMswServiceWorkerReady,
   isGatewayApiCall,
   validateGatewayRequest,
   generateGatewaySignature,
   isWhitelistedSubjectRoute,
   isPathSignatureGated,
+  waitForMswController,
+  withMswStartTimeout,
 } from "../mockGateway.js";
 import * as uiRoot from "../index.js";
 
@@ -299,5 +302,99 @@ describe("isGatewayApiCall", () => {
     expect(isGatewayApiCall(new URL("http://localhost:5173/studies/1"))).toBe(
       false
     );
+  });
+});
+
+describe("MSW Service Worker startup helpers", () => {
+  const originalServiceWorkerDesc = Object.getOwnPropertyDescriptor(
+    globalThis.navigator,
+    "serviceWorker"
+  );
+
+  afterEach(() => {
+    if (originalServiceWorkerDesc) {
+      Object.defineProperty(
+        globalThis.navigator,
+        "serviceWorker",
+        originalServiceWorkerDesc
+      );
+    } else {
+      delete globalThis.navigator.serviceWorker;
+    }
+  });
+
+  it("does not resolve waitForMswController prematurely on serviceWorker.ready while controller is null", async () => {
+    const listeners = new Set();
+    const fakeSwContainer = {
+      controller: null,
+      ready: Promise.resolve({ active: { state: "activated" } }),
+      addEventListener: vi.fn((event, cb) => {
+        if (event === "controllerchange") listeners.add(cb);
+      }),
+      removeEventListener: vi.fn((event, cb) => {
+        if (event === "controllerchange") listeners.delete(cb);
+      }),
+    };
+    Object.defineProperty(globalThis.navigator, "serviceWorker", {
+      configurable: true,
+      value: fakeSwContainer,
+    });
+
+    let settled = false;
+    const waitPromise = waitForMswController(2000).then(() => {
+      settled = true;
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    fakeSwContainer.controller = {
+      scriptURL: "http://localhost/mockServiceWorker.js",
+    };
+    for (const cb of [...listeners]) {
+      cb();
+    }
+
+    await waitPromise;
+    expect(settled).toBe(true);
+    expect(listeners.size).toBe(0);
+  });
+
+  it("pre-registers and awaits controller claim in ensureMswServiceWorkerReady", async () => {
+    const fakeSwContainer = {
+      controller: null,
+      register: vi.fn(async () => {
+        fakeSwContainer.controller = {
+          scriptURL: "http://localhost/cadence-clinical/mockServiceWorker.js",
+        };
+        return { scope: "/cadence-clinical/" };
+      }),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    Object.defineProperty(globalThis.navigator, "serviceWorker", {
+      configurable: true,
+      value: fakeSwContainer,
+    });
+
+    await ensureMswServiceWorkerReady(
+      {
+        url: "/cadence-clinical/mockServiceWorker.js",
+        options: { scope: "/cadence-clinical/" },
+      },
+      500
+    );
+
+    expect(fakeSwContainer.register).toHaveBeenCalledWith(
+      "/cadence-clinical/mockServiceWorker.js",
+      { scope: "/cadence-clinical/" }
+    );
+  });
+
+  it("rejects stalled worker.start() promises via withMswStartTimeout", async () => {
+    await expect(
+      withMswStartTimeout(new Promise(() => {}), 25)
+    ).rejects.toThrow(/timed out after 25ms/);
   });
 });

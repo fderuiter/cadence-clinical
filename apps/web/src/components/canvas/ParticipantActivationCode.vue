@@ -138,8 +138,10 @@ async function copyCode() {
 
 .activation-code textarea {
   padding: 6px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-control);
   border-radius: 4px;
+  background-color: var(--bg-card);
+  color: var(--text-main);
 }
 
 .issued-card {

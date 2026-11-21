@@ -510,10 +510,13 @@ export function normalizeMswBasePath(baseUrl, fallback = "/") {
 }
 
 /**
- * Waits until the active Service Worker controls the page (or ready/timeout).
- * @param {number} [timeoutMs=1500]
+ * Waits until the active Service Worker controls the page (or timeout).
+ * Note: `navigator.serviceWorker.ready` resolves as soon as the registration
+ * enters `activated`, BEFORE `self.clients.claim()` sets `controller`; racing
+ * `ready` here would resolve prematurely while `controller` is still null.
+ * @param {number} [timeoutMs=5000]
  */
-export async function waitForMswController(timeoutMs = 1500) {
+export async function waitForMswController(timeoutMs = 5000) {
   if (
     typeof navigator === "undefined" ||
     !("serviceWorker" in navigator) ||
@@ -521,15 +524,92 @@ export async function waitForMswController(timeoutMs = 1500) {
   ) {
     return;
   }
-  await Promise.race([
-    new Promise((resolve) => {
-      navigator.serviceWorker.addEventListener("controllerchange", resolve, {
-        once: true,
-      });
-    }),
-    navigator.serviceWorker.ready,
-    new Promise((resolve) => setTimeout(resolve, timeoutMs)),
-  ]);
+  await new Promise((resolve) => {
+    let settled = false;
+    let timerId = null;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (timerId !== null) {
+        clearTimeout(timerId);
+      }
+      navigator.serviceWorker.removeEventListener?.(
+        "controllerchange",
+        onControllerChange
+      );
+      resolve();
+    };
+    const onControllerChange = () => {
+      finish();
+    };
+    navigator.serviceWorker.addEventListener?.(
+      "controllerchange",
+      onControllerChange
+    );
+    if (navigator.serviceWorker.controller) {
+      finish();
+      return;
+    }
+    timerId = setTimeout(finish, timeoutMs);
+  });
+}
+
+/**
+ * Pre-registers and waits for the Service Worker to claim this client before
+ * MSW's `worker.start()` posts `INTEGRITY_CHECK_REQUEST` (preventing MSW 3.x
+ * from dropping the integrity message on a cold `installing` worker).
+ * @param {{ url: string, options?: RegistrationOptions }} serviceWorker
+ * @param {number} [timeoutMs=5000]
+ */
+export async function ensureMswServiceWorkerReady(
+  serviceWorker,
+  timeoutMs = 5000
+) {
+  if (
+    typeof navigator === "undefined" ||
+    !("serviceWorker" in navigator) ||
+    typeof navigator.serviceWorker?.register !== "function"
+  ) {
+    return;
+  }
+  if (navigator.serviceWorker.controller) {
+    return;
+  }
+  await navigator.serviceWorker.register(
+    serviceWorker.url,
+    serviceWorker.options
+  );
+  await waitForMswController(timeoutMs);
+}
+
+/**
+ * Bounds an MSW `worker.start()` promise so a stalled headless Service Worker
+ * handshake cannot deadlock application bootstrap prior to mounting `#app`.
+ * @template T
+ * @param {Promise<T>} startTask
+ * @param {number} [timeoutMs=8000]
+ * @returns {Promise<T>}
+ */
+export async function withMswStartTimeout(startTask, timeoutMs = 8000) {
+  let timerId = null;
+  try {
+    return await Promise.race([
+      startTask,
+      new Promise((_, reject) => {
+        timerId = setTimeout(() => {
+          reject(
+            new Error(
+              `MSW worker.start() timed out after ${timeoutMs}ms waiting for Service Worker activation.`
+            )
+          );
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timerId !== null) {
+      clearTimeout(timerId);
+    }
+  }
 }
 
 /**

@@ -55,10 +55,13 @@ export default defineConfig(({ mode }) => ({
     },
     {
       name: "html-transform",
-      transformIndexHtml(html) {
-        const title =
-          process.env.VITE_APP_TITLE || "Subject Portal - Cadence Clinical";
-        return html.replace(/%VITE_APP_TITLE%/g, title);
+      transformIndexHtml: {
+        order: "pre",
+        handler(html) {
+          const title =
+            process.env.VITE_APP_TITLE || "Subject Portal - Cadence Clinical";
+          return html.replace(/%VITE_APP_TITLE%/g, title);
+        },
       },
       configurePreviewServer(server) {
         if (server.httpServer) {

@@ -1,5 +1,10 @@
 import { setupWorker } from "msw/browser";
-import { normalizeMswBasePath, waitForMswController } from "ui/testing";
+import {
+  ensureMswServiceWorkerReady,
+  normalizeMswBasePath,
+  waitForMswController,
+  withMswStartTimeout,
+} from "ui/testing";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { gatewayHandlers } from "./handlers.js";
 
@@ -39,13 +44,23 @@ export async function startMswWorker(portalOptions = {}) {
   if (typeof window === "undefined" || !targetWorker) return null;
   if (portalStartTask && !portalOptions.worker) return portalStartTask;
 
+  const serviceWorker = resolvePortalServiceWorkerOptions(
+    portalOptions.baseUrl
+  );
+
   const task = (async () => {
     try {
-      const reg = await targetWorker.start({
+      if (!portalOptions.worker) {
+        await ensureMswServiceWorkerReady(serviceWorker);
+      }
+      const startCall = targetWorker.start({
         onUnhandledFrame: isDemoBuild(portalOptions.env) ? "error" : "warn",
         quiet: Boolean(portalOptions.quiet),
-        serviceWorker: resolvePortalServiceWorkerOptions(portalOptions.baseUrl),
+        serviceWorker,
       });
+      const reg = portalOptions.worker
+        ? await startCall
+        : await withMswStartTimeout(startCall);
       await waitForMswController();
       console.log(
         "[MSW] Mock Service Worker started for Subject Portal API Gateway simulation."

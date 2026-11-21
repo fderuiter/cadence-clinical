@@ -60,18 +60,20 @@ self.addEventListener("install", (event) => {
 // Activate event: Clean up old caches while preserving MSW client-tracking caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME && !key.startsWith("msw:")) {
-            console.log("[Service Worker] Removing old cache:", key);
-            return caches.delete(key);
-          }
-        })
-      );
-    })
+    Promise.all([
+      caches.keys().then((keys) => {
+        return Promise.all(
+          keys.map((key) => {
+            if (key !== CACHE_NAME && !key.startsWith("msw:")) {
+              console.log("[Service Worker] Removing old cache:", key);
+              return caches.delete(key);
+            }
+          })
+        );
+      }),
+      self.clients.claim(),
+    ])
   );
-  self.clients.claim();
 });
 
 // Fetch event: Network-First falling back to Cache for static shell assets;

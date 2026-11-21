@@ -14,6 +14,22 @@ const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/cadence-clinical/",
+  optimizeDeps: {
+    entries: ["index.html", "tests/browser/observation.html"],
+    include: [
+      "vue",
+      "vue-router",
+      "pinia",
+      "vue-i18n",
+      "keycloak-js",
+      "openapi-fetch",
+      "vuedraggable",
+      "hls.js",
+      "msw",
+      "msw/browser",
+      "usdm-schemas > zod",
+    ],
+  },
   plugins: [
     vue(),
     {
@@ -33,9 +49,12 @@ export default defineConfig({
     },
     {
       name: "html-transform",
-      transformIndexHtml(html) {
-        const title = process.env.VITE_APP_TITLE || "Cadence Clinical";
-        return html.replace(/%VITE_APP_TITLE%/g, title);
+      transformIndexHtml: {
+        order: "pre",
+        handler(html) {
+          const title = process.env.VITE_APP_TITLE || "Cadence Clinical";
+          return html.replace(/%VITE_APP_TITLE%/g, title);
+        },
       },
       configurePreviewServer(server) {
         if (server.httpServer) {
