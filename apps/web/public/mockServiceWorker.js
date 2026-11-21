@@ -53,6 +53,10 @@ addEventListener("message", function (event) {
     return;
   }
 
+  if (event.data === "CLIENT_CLOSE") {
+    activeClientIds.delete(clientId);
+  }
+
   event.waitUntil(
     (async () => {
       // Never mutate the active clients before they are restored,
@@ -79,10 +83,11 @@ addEventListener("message", function (event) {
           return client.id !== clientId;
         });
 
-        // Unregister itself when there are no more clients
+        // Clear persisted client IDs when no active clients remain, while keeping
+        // the registration alive so back-to-back full-page navigations neither
+        // abort in-flight subresources nor detach MSW mid-bootstrap.
         if (remainingClients.length === 0) {
           await clearStoredActiveClientIds();
-          await self.registration.unregister();
         }
 
         const client = await self.clients.get(clientId);
@@ -159,6 +164,21 @@ addEventListener("fetch", function (event) {
   if (
     event.request.cache === "only-if-cached" &&
     event.request.mode !== "same-origin"
+  ) {
+    return;
+  }
+
+  // Bypass same-origin HTML navigations and static bundle assets so full-page
+  // navigations never deadlock waiting on an unloading client's MessageChannel.
+  if (
+    event.request.method === "GET" &&
+    (event.request.mode === "navigate" ||
+      event.request.destination === "script" ||
+      event.request.destination === "style" ||
+      event.request.destination === "font" ||
+      event.request.destination === "image" ||
+      event.request.destination === "manifest") &&
+    new URL(event.request.url).origin === self.location.origin
   ) {
     return;
   }

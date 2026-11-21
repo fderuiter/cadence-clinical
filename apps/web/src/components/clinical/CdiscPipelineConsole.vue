@@ -686,8 +686,8 @@ function downloadDefineXml() {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  background-color: var(--bg-card, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 20px;
 }
@@ -715,31 +715,31 @@ function downloadDefineXml() {
 }
 
 .badge-gxp {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 
 .badge-cdisc {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: var(--semantic-color-info-light);
+  color: var(--semantic-color-info);
 }
 
 .badge-spec {
-  background-color: #dcfce7;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .pipeline-title {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .pipeline-subtitle {
   margin: 4px 0 0 0;
   font-size: 0.85rem;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   max-width: 800px;
   line-height: 1.4;
 }
@@ -753,10 +753,10 @@ function downloadDefineXml() {
 .version-select {
   padding: 8px 12px;
   font-size: 0.85rem;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background-color: #ffffff;
-  color: var(--text-primary, #0f172a);
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
 }
 
 .btn {
@@ -778,14 +778,14 @@ function downloadDefineXml() {
 }
 
 .btn-primary {
-  background-color: var(--primary, #0284c7);
-  color: #ffffff;
+  background-color: var(--primary);
+  color: var(--semantic-color-surface);
 }
 
 .btn-secondary {
-  background-color: #f1f5f9;
-  color: var(--text-primary, #0f172a);
-  border: 1px solid var(--border, #cbd5e1);
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
+  border: 1px solid var(--border);
 }
 
 .btn-sm {
@@ -799,13 +799,13 @@ function downloadDefineXml() {
   gap: 12px;
   padding: 12px 16px;
   border-radius: 6px;
-  border: 1px solid #bbf7d0;
-  background-color: #f0fdf4;
+  border: 1px solid var(--semantic-color-success-border-soft);
+  background-color: var(--semantic-color-success-bg-soft);
 }
 
 .execution-banner.completed {
-  border-color: #bbf7d0;
-  background-color: #f0fdf4;
+  border-color: var(--semantic-color-success-border-soft);
+  background-color: var(--semantic-color-success-bg-soft);
 }
 
 .banner-icon {
@@ -815,12 +815,12 @@ function downloadDefineXml() {
 .banner-title {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #166534;
+  color: var(--semantic-color-success-dark);
 }
 
 .banner-details {
   font-size: 0.8rem;
-  color: #15803d;
+  color: var(--semantic-color-success);
   margin-top: 2px;
 }
 
@@ -832,14 +832,14 @@ function downloadDefineXml() {
 }
 
 .badge-pill.valid {
-  background-color: #dcfce7;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .workspace-tabs {
   display: flex;
   gap: 8px;
-  border-bottom: 2px solid var(--border, #e2e8f0);
+  border-bottom: 2px solid var(--border);
 }
 
 .subtab-btn {
@@ -849,14 +849,14 @@ function downloadDefineXml() {
   padding: 8px 16px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   margin-bottom: -2px;
 }
 
 .subtab-btn.active {
-  color: var(--primary, #0284c7);
-  border-bottom-color: var(--primary, #0284c7);
+  color: var(--primary);
+  border-bottom-color: var(--primary);
 }
 
 .section-title-row {
@@ -870,16 +870,16 @@ function downloadDefineXml() {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .section-badge {
   font-size: 0.75rem;
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 600;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 
 .domain-grid {
@@ -889,8 +889,8 @@ function downloadDefineXml() {
 }
 
 .domain-card {
-  background-color: #ffffff;
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 12px;
   display: flex;
@@ -907,32 +907,32 @@ function downloadDefineXml() {
 .domain-tag {
   font-size: 0.8rem;
   font-weight: 800;
-  background-color: #eff6ff;
-  color: #1d4ed8;
+  background-color: var(--semantic-color-info-bg);
+  color: var(--semantic-color-interactive-primary);
   padding: 2px 6px;
   border-radius: 4px;
 }
 
 .domain-tag.adam-tag {
-  background-color: #faf5ff;
-  color: #7e22ce;
+  background-color: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
 }
 
 .record-badge {
   font-size: 0.7rem;
   font-weight: 700;
-  color: #059669;
+  color: var(--semantic-color-success);
 }
 
 .domain-title {
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .domain-desc {
   font-size: 0.75rem;
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
   line-height: 1.3;
 }
 
@@ -944,12 +944,12 @@ function downloadDefineXml() {
 }
 
 .meta-label {
-  color: var(--text-muted, #94a3b8);
+  color: var(--semantic-color-text-secondary);
 }
 
 .meta-val {
   font-weight: 600;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .viewer-toolbar {
@@ -957,8 +957,8 @@ function downloadDefineXml() {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background-color: #f8fafc;
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   border-radius: 6px;
   margin-bottom: 10px;
 }
@@ -966,7 +966,7 @@ function downloadDefineXml() {
 .spec-label {
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .status-indicator {
@@ -976,7 +976,7 @@ function downloadDefineXml() {
 }
 
 .status-indicator.valid {
-  color: #166534;
+  color: var(--semantic-color-success-dark);
 }
 
 .toolbar-right {
@@ -985,8 +985,8 @@ function downloadDefineXml() {
 }
 
 .code-viewer {
-  background-color: #0f172a;
-  color: #f8fafc;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
   padding: 16px;
   border-radius: 6px;
   font-family: monospace;
@@ -997,8 +997,8 @@ function downloadDefineXml() {
 }
 
 .vlm-summary-card {
-  background-color: #f8fafc;
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 12px;
   margin-bottom: 10px;
@@ -1008,7 +1008,7 @@ function downloadDefineXml() {
   margin: 0 0 8px 0;
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .vlm-grid {
@@ -1025,10 +1025,10 @@ function downloadDefineXml() {
 
 .vlm-label {
   font-weight: 700;
-  color: #0284c7;
+  color: var(--semantic-color-primary);
 }
 
 .vlm-val {
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 </style>

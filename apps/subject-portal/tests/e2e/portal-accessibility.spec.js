@@ -24,7 +24,31 @@ async function completeInitialPinSetupIfOpen(page) {
   }
 }
 
-// Dedicated end-to-end accessibility testing suite verifying full WCAG 2.1 AA compliance across all views
+const WCAG_AA_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+
+async function getControlBorderContrast(page, selector) {
+  return page.locator(selector).evaluate((el) => {
+    function parseRgb(str) {
+      const m = str.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+      return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [255, 255, 255];
+    }
+    function luminance([r, g, b]) {
+      const [rl, gl, bl] = [r, g, b].map((v) => {
+        const s = v / 255;
+        return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+    }
+    const style = window.getComputedStyle(el);
+    const borderRgb = parseRgb(style.borderTopColor);
+    const bgRgb = parseRgb(style.backgroundColor);
+    const l1 = luminance(borderRgb);
+    const l2 = luminance(bgRgb);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  });
+}
+
+// Dedicated end-to-end accessibility testing suite verifying full WCAG 2.2 AA compliance across all views
 test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
   test.use({ serviceWorkers: "block" });
 
@@ -191,39 +215,27 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       });
     });
 
-    await page.route(
-      "**/api/v1/payments/participant/me/wallet",
-      async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            wallet: {
-              id: "wallet-mock-001",
-              study_id: "study_001",
-              site_id: "site_001",
-              current_balance: 75.0,
-              lifetime_stipends: 150.0,
-              lifetime_reimbursements: 25.0,
-              lifetime_disbursements: 100.0,
-              w9_status: "NOT_REQUIRED",
-              currency: "USD",
-              ach_account_mask: "•••• 4821",
-              ach_routing_mask: "•••••0210",
-            },
-            recent_transactions: [
-              {
-                id: "tx-mock-001",
-                description: "Screening Visit Stipend",
-                transactionType: "STIPEND",
-                amount: 75.0,
-              },
-            ],
-            expense_claims: [],
-          }),
-        });
-      }
-    );
+    await page.route("**/payments/participant/me/wallet", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          wallet: {
+            id: "wallet_mock_001",
+            studyId: "study_001",
+            siteId: "site_001",
+            currentBalance: 50,
+            lifetimeStipends: 50,
+            lifetimeReimbursements: 0,
+            lifetimeDisbursements: 0,
+            w9Status: "NOT_REQUIRED",
+            currency: "USD",
+          },
+          recentTransactions: [],
+          expenseClaims: [],
+        }),
+      });
+    });
 
     // Inject pre-configured mock credentials into storage to bypass login server
     await page.addInitScript(() => {
@@ -409,7 +421,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
 
     const unlockAudit = await new AxeBuilder({ page })
       .include("#portal-pin-unlock-modal")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .withTags(WCAG_AA_TAGS)
       .analyze();
     expect(unlockAudit.violations).toEqual([]);
 
@@ -420,9 +432,193 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(page.locator("#btn-login")).toBeVisible();
 
     const unauthAudit = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .withTags(WCAG_AA_TAGS)
       .analyze();
     expect(unauthAudit.violations).toEqual([]);
+  });
+
+  test("should pass WCAG 2.2 AA contrast audits on ReconsentBanner, ReconsentModal, queued & quarantined sync badges, and SyncDrawer", async ({
+    page,
+  }) => {
+    await page.route("**/econsent/reconsent/pending/**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: "req_amendment_v2",
+            study_id: "STUDY-01",
+            protocol_version: "2.0",
+            change_summary:
+              "Updated cardiology safety visit window and reimbursement terms.",
+          },
+        ]),
+      });
+    });
+
+    await page.route("**/interop/epro/sync", async (route) => {
+      await route.fulfill({
+        status: 422,
+        contentType: "application/json",
+        body: JSON.stringify({
+          detail: [
+            {
+              loc: ["body", "submissions", 0, "answers", "vssbp"],
+              msg: "Systolic blood pressure exceeds protocol safety ceiling of 250 mmHg",
+            },
+          ],
+        }),
+      });
+    });
+
+    await page.route("**/interop/epro/submit", async (route) => {
+      await route.fulfill({
+        status: 422,
+        contentType: "application/json",
+        body: JSON.stringify({
+          detail: [
+            {
+              loc: ["body", "answers", "vssbp"],
+              msg: "Systolic blood pressure exceeds protocol safety ceiling of 250 mmHg",
+            },
+          ],
+        }),
+      });
+    });
+
+    await page.goto("");
+    await completeInitialPinSetupIfOpen(page);
+
+    // 1. Re-consent modal opens automatically when pending requirement exists
+    const reconsentModal = page.locator("#portal-reconsent-modal");
+    await expect(reconsentModal).toBeVisible();
+    const modalAudit = await new AxeBuilder({ page })
+      .include("#portal-reconsent-modal")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(modalAudit.violations).toEqual([]);
+
+    // Dismiss modal to reveal persistent ReconsentBanner (#reconsent-urgent-banner + #btn-open-reconsent-modal)
+    await page.click("#btn-reconsent-cancel");
+    await expect(reconsentModal).toBeHidden();
+    await expect(page.locator("#reconsent-urgent-banner")).toBeVisible();
+    await expect(page.locator("#btn-open-reconsent-modal")).toBeVisible();
+
+    const bannerAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(bannerAudit.violations).toEqual([]);
+
+    // 2. Queue an offline submission to render .sync-badge in queued amber state
+    await page.evaluate(async () => {
+      const { queueSubmission } =
+        await import("/subject-portal/src/sync-queue.js");
+      const { refreshSubmissionsState } =
+        await import("/subject-portal/src/index.js");
+      await queueSubmission({
+        subject_id: "subject_mocked_001",
+        diary_id: "inst_daily_diary",
+        assignment_id: "assign_01",
+        answers: { vssbp: 265, vsdpb: 90, vshr: 78 },
+        change_reason: "Offline entry for contrast verification",
+        username: "subject_mocked_001",
+      });
+      await refreshSubmissionsState();
+    });
+
+    const syncBadge = page.locator("#header-sync-badge");
+    await expect(syncBadge).toBeVisible();
+    const queuedHeaderAudit = await new AxeBuilder({ page })
+      .include(".portal-header")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(queuedHeaderAudit.violations).toEqual([]);
+
+    // 3. Open SyncDrawer, audit queued state, then trigger server 422 quarantine and audit quarantined badge + recovery card
+    await page.click("#btn-global-sync-drawer");
+    await expect(page.locator("#global-sync-drawer")).toHaveClass(/active/);
+    const queuedDrawerAudit = await new AxeBuilder({ page })
+      .include("#global-sync-drawer")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(queuedDrawerAudit.violations).toEqual([]);
+
+    await page.click("#btn-drawer-sync-now");
+    await expect(syncBadge).toHaveClass(/sync-badge-quarantined/);
+
+    const quarantinedHeaderAudit = await new AxeBuilder({ page })
+      .include(".portal-header")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(quarantinedHeaderAudit.violations).toEqual([]);
+
+    const quarantinedDrawerAudit = await new AxeBuilder({ page })
+      .include("#global-sync-drawer")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(quarantinedDrawerAudit.violations).toEqual([]);
+  });
+
+  test("should pass WCAG 2.2 AA contrast and SC 1.4.11 >= 3:1 control border audits on demo-mode WalletView, ConsentView, and LaySummariesView", async ({
+    page,
+  }) => {
+    await page.goto("http://localhost:5175/subject-portal/");
+    await completeInitialPinSetupIfOpen(page);
+
+    // 1. WalletView: gradient stipend card, receipt upload zone, and expense form controls
+    await page.click("#tab-btn-wallet button");
+    await expect(page.locator("#view-wallet")).toBeVisible();
+    const walletAudit = await new AxeBuilder({ page })
+      .include("#view-wallet")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(walletAudit.violations).toEqual([]);
+
+    const walletSelect = page.locator("#view-wallet select").first();
+    if ((await walletSelect.count()) > 0) {
+      expect(
+        await getControlBorderContrast(page, "#view-wallet select")
+      ).toBeGreaterThanOrEqual(3);
+    }
+
+    // 2. ConsentView: language selector, comprehension radio grid, and liveness verification controls
+    await page.click("#tab-btn-consent button");
+    await expect(page.locator("#view-consent")).toBeVisible();
+    const consentAudit = await new AxeBuilder({ page })
+      .include("#view-consent")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(consentAudit.violations).toEqual([]);
+
+    const consentSelect = page.locator("#view-consent select").first();
+    if ((await consentSelect.count()) > 0) {
+      expect(
+        await getControlBorderContrast(page, "#view-consent select")
+      ).toBeGreaterThanOrEqual(3);
+    }
+    const consentRadioGrid = page
+      .locator("#view-consent .clinical-radio-grid")
+      .first();
+    if ((await consentRadioGrid.count()) > 0) {
+      expect(
+        await getControlBorderContrast(
+          page,
+          "#view-consent .clinical-radio-grid"
+        )
+      ).toBeGreaterThanOrEqual(3);
+    }
+
+    // 3. LaySummariesView: regulatory & GxP badges and summary preview card
+    await page.click("#tab-btn-lay-summaries button");
+    await expect(page.locator("#view-lay-summaries")).toBeVisible();
+    await expect(
+      page.locator("#view-lay-summaries .badge-regulatory")
+    ).toBeVisible();
+    const laySummaryAudit = await new AxeBuilder({ page })
+      .include("#view-lay-summaries")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(laySummaryAudit.violations).toEqual([]);
   });
 
   test("should exclude closed SyncDrawer from Tab order, trap focus when open, and restore focus on Escape", async ({
@@ -641,7 +837,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
         btnOpacity: btnStyle.opacity,
         badgeOpacity: badgeStyle.opacity,
         animationIterationCount: btnStyle.animationIterationCount,
-        btnAnimationSec: parseFloat(btnStyle.animationDuration) || 0,
+        animSeconds: parseFloat(btnStyle.animationDuration) || 0,
         drawerTransitionSec: parseFloat(drawerStyle.transitionDuration) || 0,
       };
     });
@@ -649,7 +845,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(motionStyles.btnOpacity).toBe("1");
     expect(motionStyles.badgeOpacity).toBe("1");
     expect(motionStyles.animationIterationCount).toBe("1");
-    expect(motionStyles.btnAnimationSec).toBeLessThanOrEqual(0.001);
+    expect(motionStyles.animSeconds).toBeLessThanOrEqual(0.001);
     expect(motionStyles.drawerTransitionSec).toBeLessThanOrEqual(0.001);
   });
 });

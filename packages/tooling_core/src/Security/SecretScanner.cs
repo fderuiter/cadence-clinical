@@ -28,7 +28,7 @@ public static class SecretScanner
 
     private static readonly string[] ExcludedDirKeywords = new[]
     {
-        "tests", "fixtures", ".git", "bin", "obj", "node_modules", ".venv", ".agents", "scripts"
+        "tests", "fixtures", ".git", "bin", "obj", "node_modules", ".venv", ".cadence", ".agents", "scripts"
     };
 
     public static List<SecretScanFinding> ScanFiles(

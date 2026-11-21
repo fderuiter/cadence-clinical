@@ -43,7 +43,7 @@
           <p
             style="
               font-size: 13px;
-              color: var(--text-muted);
+              color: var(--semantic-color-text-secondary);
               margin-bottom: 12px;
             "
           >
@@ -83,10 +83,7 @@
               <span style="font-size: 20px">🟢</span>
               <div>
                 <strong
-                  style="
-                    color: var(--semantic-color-success-dark);
-                    font-size: 14px;
-                  "
+                  style="color: var(--semantic-color-success); font-size: 14px"
                   >INTEGRITY VERIFIED</strong
                 >
                 <p
@@ -146,7 +143,12 @@
               text-align: center;
             "
           >
-            <span style="font-size: 13px; color: var(--text-muted)">
+            <span
+              style="
+                font-size: 13px;
+                color: var(--semantic-color-text-secondary);
+              "
+            >
               Ledger integrity status unknown. Click
               <strong>Verify Now</strong> to execute GxP block verification.
             </span>
@@ -163,7 +165,7 @@
           <p
             style="
               font-size: 13px;
-              color: var(--text-muted);
+              color: var(--semantic-color-text-secondary);
               margin-bottom: 12px;
             "
           >
@@ -244,7 +246,7 @@
           <p
             style="
               font-size: 13px;
-              color: var(--text-muted);
+              color: var(--semantic-color-text-secondary);
               margin-bottom: 12px;
             "
           >
@@ -367,7 +369,11 @@
       </div>
 
       <p
-        style="font-size: 13px; color: var(--text-muted); margin: 8px 0 16px 0"
+        style="
+          font-size: 13px;
+          color: var(--semantic-color-text-secondary);
+          margin: 8px 0 16px 0;
+        "
       >
         Review indexed documents within the eTMF. Preview documents inline with
         browser watermarks or download fully audited, watermarked PDF/TXT
@@ -398,12 +404,24 @@
           </thead>
           <tbody>
             <tr v-if="documentsLoading" style="text-align: center">
-              <td colspan="7" style="padding: 20px; color: var(--text-muted)">
+              <td
+                colspan="7"
+                style="
+                  padding: 20px;
+                  color: var(--semantic-color-text-secondary);
+                "
+              >
                 Retrieving active eTMF document registry...
               </td>
             </tr>
             <tr v-else-if="documents.length === 0" style="text-align: center">
-              <td colspan="7" style="padding: 20px; color: var(--text-muted)">
+              <td
+                colspan="7"
+                style="
+                  padding: 20px;
+                  color: var(--semantic-color-text-secondary);
+                "
+              >
                 No documents found in the eTMF registry. Ingest some documents
                 from design or execution views!
               </td>
@@ -542,7 +560,7 @@
             padding: 24px;
             min-height: 250px;
             background: white;
-            color: #333;
+            color: var(--semantic-color-text-dark);
             font-family: monospace;
             font-size: 13px;
             line-height: 1.5;
@@ -561,7 +579,6 @@
               bottom: 0;
               pointer-events: none;
               z-index: 5;
-              background-image: url(&quot;data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><text x='10' y='90' font-family='Arial' font-size='10' fill='rgba(220,53,69,0.12)' transform='rotate(-30 80 80)' letter-spacing='0.5'>CONFIDENTIAL AUDITOR COPY</text></svg>&quot;);
               background-repeat: repeat;
             "
           />
@@ -584,7 +601,7 @@
           style="
             padding: 16px;
             border-top: 1px solid var(--border);
-            background: #f8fafc;
+            background: var(--semantic-color-surface-muted);
             font-size: 13px;
           "
         >
@@ -623,7 +640,7 @@
               style="
                 grid-column: span 2;
                 font-size: 11px;
-                color: var(--text-muted);
+                color: var(--semantic-color-text-secondary);
                 word-break: break-all;
               "
             >
@@ -635,7 +652,7 @@
               style="
                 grid-column: span 2;
                 font-size: 11px;
-                color: var(--text-muted);
+                color: var(--semantic-color-text-secondary);
                 word-break: break-all;
               "
             >
@@ -650,7 +667,7 @@
             padding: 10px 16px;
             border-top: 1px solid var(--border);
             font-size: 11px;
-            color: var(--text-muted);
+            color: var(--semantic-color-text-secondary);
             display: flex;
             justify-content: space-between;
             background: var(--semantic-color-surface-muted);
@@ -684,7 +701,11 @@
       </div>
 
       <p
-        style="font-size: 13px; color: var(--text-muted); margin: 8px 0 16px 0"
+        style="
+          font-size: 13px;
+          color: var(--semantic-color-text-secondary);
+          margin: 8px 0 16px 0;
+        "
       >
         Complete, chronologically ordered Part 11 system log. View read actions
         (VIEW, LIST), ingestion audits, QC status transitions, and binder
@@ -960,12 +981,24 @@
           </thead>
           <tbody>
             <tr v-if="auditLoading" style="text-align: center">
-              <td colspan="6" style="padding: 20px; color: var(--text-muted)">
+              <td
+                colspan="6"
+                style="
+                  padding: 20px;
+                  color: var(--semantic-color-text-secondary);
+                "
+              >
                 Retrieving chronological ledger events...
               </td>
             </tr>
             <tr v-else-if="auditLogs.length === 0" style="text-align: center">
-              <td colspan="6" style="padding: 20px; color: var(--text-muted)">
+              <td
+                colspan="6"
+                style="
+                  padding: 20px;
+                  color: var(--semantic-color-text-secondary);
+                "
+              >
                 No audit trail logs match the specified criteria.
               </td>
             </tr>
@@ -986,7 +1019,7 @@
                     font-family: monospace;
                     font-size: 11px;
                     white-space: nowrap;
-                    color: var(--text-muted);
+                    color: var(--semantic-color-text-secondary);
                   "
                 >
                   {{ formatTimestamp(log.timestamp) }}
@@ -997,7 +1030,11 @@
                 <td style="padding: 10px; font-size: 12px">
                   <span
                     class="badge"
-                    style="background: #f1f5f9; color: #475569; font-size: 10px"
+                    style="
+                      background: var(--semantic-color-surface-header);
+                      color: var(--semantic-color-text-secondary);
+                      font-size: 10px;
+                    "
                   >
                     {{ getEntityType(log) }}
                   </span>
@@ -1031,7 +1068,7 @@
                 class="audit-details-row"
                 style="
                   border-bottom: 2px solid var(--border);
-                  background: #f8fafc;
+                  background: var(--semantic-color-surface-muted);
                 "
               >
                 <td colspan="6" style="padding: 16px 20px">
@@ -1059,7 +1096,12 @@
                           log.id
                         }}</code>
                       </div>
-                      <div style="font-size: 11px; color: var(--text-muted)">
+                      <div
+                        style="
+                          font-size: 11px;
+                          color: var(--semantic-color-text-secondary);
+                        "
+                      >
                         Actor Role: <strong>{{ log.user_role }}</strong> |
                         Record:
                         <strong>{{
@@ -1108,7 +1150,7 @@
                       <div
                         class="old-value-diff"
                         style="
-                          background: #fff;
+                          background: var(--semantic-color-surface);
                           border: 1px solid var(--border);
                           border-radius: 6px;
                           padding: 10px 12px;
@@ -1117,7 +1159,7 @@
                         <div
                           style="
                             font-weight: 600;
-                            color: #dc3545;
+                            color: var(--semantic-color-error);
                             margin-bottom: 6px;
                             display: flex;
                             align-items: center;
@@ -1132,8 +1174,8 @@
                             font-size: 11px;
                             white-space: pre-wrap;
                             word-break: break-all;
-                            color: #555;
-                            background: #fafafa;
+                            color: var(--semantic-color-text-secondary);
+                            background: var(--semantic-color-surface-muted);
                             padding: 8px;
                             border-radius: 4px;
                           "
@@ -1146,7 +1188,7 @@
                       <div
                         class="new-value-diff"
                         style="
-                          background: #fff;
+                          background: var(--semantic-color-surface);
                           border: 1px solid var(--border);
                           border-radius: 6px;
                           padding: 10px 12px;
@@ -1155,7 +1197,7 @@
                         <div
                           style="
                             font-weight: 600;
-                            color: var(--semantic-color-success-dark);
+                            color: var(--semantic-color-success);
                             margin-bottom: 6px;
                             display: flex;
                             align-items: center;
@@ -1170,8 +1212,8 @@
                             font-size: 11px;
                             white-space: pre-wrap;
                             word-break: break-all;
-                            color: #333;
-                            background: #f4faf4;
+                            color: var(--semantic-color-text-dark);
+                            background: var(--semantic-color-success-bg-soft);
                             padding: 8px;
                             border-radius: 4px;
                           "
@@ -1188,7 +1230,7 @@
                         display: flex;
                         align-items: center;
                         justify-content: space-between;
-                        background: #fff;
+                        background: var(--semantic-color-surface);
                         padding: 8px 12px;
                         border-radius: 6px;
                         border: 1px dashed var(--border);
@@ -1236,7 +1278,9 @@
           border-top: 1px solid var(--border);
         "
       >
-        <span style="font-size: 12px; color: var(--text-muted)">
+        <span
+          style="font-size: 12px; color: var(--semantic-color-text-secondary)"
+        >
           Showing records {{ offset + 1 }} to
           {{ Math.min(offset + limit, totalLogs) }} of {{ totalLogs }}
         </span>
@@ -1276,7 +1320,11 @@
       </div>
 
       <p
-        style="font-size: 13px; color: var(--text-muted); margin: 8px 0 16px 0"
+        style="
+          font-size: 13px;
+          color: var(--semantic-color-text-secondary);
+          margin: 8px 0 16px 0;
+        "
       >
         Perform live gap-analysis against the Expected Document List (EDL) to
         verify regulatory compliance of mandatory TMF artifacts for trial
@@ -1469,8 +1517,8 @@
                 <strong
                   :style="{
                     color: completenessResult.is_complete
-                      ? 'var(--semantic-color-success-dark)'
-                      : 'var(--semantic-color-text)',
+                      ? 'var(--semantic-color-success)'
+                      : 'var(--semantic-color-warning)',
                     fontSize: '15px',
                   }"
                 >
@@ -1588,7 +1636,7 @@
                   <span
                     v-else
                     style="
-                      color: var(--text-muted);
+                      color: var(--semantic-color-text-secondary);
                       font-size: 12px;
                       font-style: italic;
                     "
@@ -2259,6 +2307,9 @@ onMounted(() => {
 }
 .clinical-table tr:hover {
   background-color: rgba(0, 0, 0, 0.02);
+}
+.watermark-overlay {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><text x='10' y='90' font-family='Arial' font-size='10' fill='rgba(220,53,69,0.12)' transform='rotate(-30 80 80)' letter-spacing='0.5'>CONFIDENTIAL AUDITOR COPY</text></svg>");
 }
 .spinner {
   border: 3px solid rgba(0, 0, 0, 0.1);

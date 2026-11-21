@@ -110,7 +110,7 @@
             <button
               type="button"
               class="btn btn-sm btn-navigate-task"
-              :aria-label="'Navigate to ' + task.title"
+              :aria-label="'Go to Task — ' + task.title"
               @click="navigateToTask(task)"
             >
               Go to Task ↗
@@ -258,13 +258,13 @@ function startGuidedTour() {
   width: 420px;
   max-width: 100vw;
   height: 100%;
-  background-color: #ffffff;
+  background-color: var(--semantic-color-surface);
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   z-index: 1051;
-  font-family: var(--font, sans-serif);
-  color: var(--primary, #0f172a);
+  font-family: var(--semantic-font-family);
+  color: var(--semantic-color-text);
   animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -279,8 +279,8 @@ function startGuidedTour() {
 
 .drawer-header {
   padding: 20px;
-  background-color: #f8fafc;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .header-main-row {
@@ -305,20 +305,20 @@ function startGuidedTour() {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--primary, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .drawer-subtitle {
   margin: 2px 0 0 0;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .btn-close {
   background: none;
   border: none;
   font-size: 1.25rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
@@ -328,13 +328,13 @@ function startGuidedTour() {
 }
 
 .btn-close:hover {
-  background-color: #e2e8f0;
-  color: #0f172a;
+  background-color: var(--semantic-color-border);
+  color: var(--semantic-color-text);
 }
 
 .progress-section {
-  background-color: #ffffff;
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   padding: 12px;
 }
@@ -349,24 +349,24 @@ function startGuidedTour() {
 
 .progress-percentage {
   font-weight: 700;
-  color: var(--accent, #2563eb);
+  color: var(--semantic-color-interactive-primary);
 }
 
 .progress-counts {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.75rem;
 }
 
 .progress-bar-track {
   height: 8px;
-  background-color: #e2e8f0;
+  background-color: var(--semantic-color-border);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background-color: var(--accent, #2563eb);
+  background-color: var(--semantic-color-interactive-primary);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -374,9 +374,9 @@ function startGuidedTour() {
 .complete-banner {
   margin-top: 10px;
   padding: 8px 10px;
-  background-color: #f0fdf4;
-  border: 1px solid #86efac;
-  color: #166534;
+  background-color: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border);
+  color: var(--semantic-color-success-dark);
   font-size: 0.78rem;
   font-weight: 600;
   border-radius: 6px;
@@ -396,21 +396,21 @@ function startGuidedTour() {
 }
 
 .task-card {
-  background-color: #ffffff;
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   padding: 14px;
   transition: all 0.2s ease;
 }
 
 .task-card:hover {
-  border-color: #cbd5e1;
+  border-color: var(--semantic-color-border-muted);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .task-card.completed {
-  background-color: #f8fafc;
-  border-color: #e2e8f0;
+  background-color: var(--semantic-color-surface-muted);
+  border-color: var(--semantic-color-border);
 }
 
 .task-header-row {
@@ -430,20 +430,20 @@ function startGuidedTour() {
 .task-checkbox {
   width: 16px;
   height: 16px;
-  accent-color: var(--accent, #2563eb);
+  accent-color: var(--semantic-color-interactive-primary);
   cursor: pointer;
 }
 
 .task-title {
   font-weight: 600;
   font-size: 0.9rem;
-  color: var(--primary, #0f172a);
+  color: var(--semantic-color-text);
   cursor: pointer;
 }
 
 .task-card.completed .task-title {
   text-decoration: line-through;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .task-status-badge {
@@ -455,19 +455,19 @@ function startGuidedTour() {
 }
 
 .status-complete {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
 }
 
 .status-pending {
-  background-color: #f1f5f9;
-  color: #64748b;
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
 }
 
 .task-desc {
   margin: 0 0 10px 0;
   font-size: 0.8rem;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   line-height: 1.35;
   padding-left: 24px;
 }
@@ -481,9 +481,9 @@ function startGuidedTour() {
 .btn-navigate-task {
   font-size: 0.75rem;
   padding: 4px 10px;
-  background-color: #f1f5f9;
-  color: var(--primary, #0f172a);
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
@@ -491,9 +491,9 @@ function startGuidedTour() {
 }
 
 .btn-navigate-task:hover {
-  background-color: var(--accent, #2563eb);
-  color: #ffffff;
-  border-color: var(--accent, #2563eb);
+  background-color: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
+  border-color: var(--semantic-color-interactive-primary);
 }
 
 :deep(.clinical-drawer-footer) {
@@ -503,8 +503,8 @@ function startGuidedTour() {
 
 .drawer-footer {
   padding: 16px 20px;
-  background-color: #f8fafc;
-  border-top: 1px solid var(--border, #e2e8f0);
+  background-color: var(--semantic-color-surface-muted);
+  border-top: 1px solid var(--semantic-color-border);
 }
 
 .footer-actions {

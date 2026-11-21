@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cadence.Apps.Tickets.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TicketsDbContext))]
-    [Migration("20261120165216_EnforceTicketStatusConstraint")]
-    partial class EnforceTicketStatusConstraint
+    [Migration("20261120192739_EnforceTicketStatusCheckConstraint")]
+    partial class EnforceTicketStatusCheckConstraint
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

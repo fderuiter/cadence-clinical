@@ -133,8 +133,8 @@ const filteredLogs = computed(() => {
 .audit-log-viewer {
   display: flex;
   flex-direction: column;
-  background: var(--color-surface, #ffffff);
-  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -146,8 +146,8 @@ const filteredLogs = computed(() => {
   flex-wrap: wrap;
   gap: 12px;
   padding: 12px 16px;
-  background: var(--color-surface-muted, #f8fafc);
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  background: var(--semantic-color-surface-muted);
+  border-bottom: 1px solid var(--semantic-color-border);
 }
 
 .header-titles {
@@ -160,7 +160,7 @@ const filteredLogs = computed(() => {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .part11-badge {
@@ -168,8 +168,8 @@ const filteredLogs = computed(() => {
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 12px;
-  background: var(--color-success-bg, #dcfce7);
-  color: var(--color-success, #15803d);
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 
 .audit-controls {
@@ -181,9 +181,10 @@ const filteredLogs = computed(() => {
 .audit-select {
   padding: 6px 10px;
   font-size: 13px;
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  background: var(--color-surface, #ffffff);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
 }
 
 .audit-timeline {
@@ -206,15 +207,15 @@ const filteredLogs = computed(() => {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--color-primary, #026597);
+  background: var(--semantic-color-primary);
   margin-top: 6px;
   flex-shrink: 0;
 }
 
 .timeline-content {
   flex: 1;
-  background: #f8fafc;
-  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 12px;
 }
@@ -232,49 +233,49 @@ const filteredLogs = computed(() => {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
-  background: #e2e8f0;
-  color: #334155;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
 }
 
 .action-tag[data-action="CREATE"] {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success);
 }
 .action-tag[data-action="UPDATE"] {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
 }
 .action-tag[data-action="DELETE"] {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error);
 }
 .action-tag[data-action="SIGN"] {
-  background: #fef9c3;
-  color: #854d0e;
+  background: var(--semantic-color-warning-bg);
+  color: var(--semantic-color-warning);
 }
 
 .timestamp {
-  color: var(--color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   font-size: 12px;
 }
 
 .user-id {
-  color: var(--color-text, #0f172a);
+  color: var(--semantic-color-text);
 }
 
 .target-info {
   font-size: 13px;
-  color: var(--color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   margin-bottom: 6px;
 }
 
 .change-reason {
   font-size: 13px;
-  color: var(--color-text, #0f172a);
-  background: #ffffff;
+  color: var(--semantic-color-text);
+  background: var(--semantic-color-surface);
   padding: 6px 10px;
   border-radius: 4px;
-  border-left: 3px solid var(--color-primary, #026597);
+  border-left: 3px solid var(--semantic-color-primary);
   margin-bottom: 8px;
 }
 
@@ -287,30 +288,30 @@ const filteredLogs = computed(() => {
   border-collapse: collapse;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
-  background: var(--semantic-color-surface, #ffffff);
-  border: 1px solid var(--semantic-color-border, #e2e8f0);
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
 }
 
 .diff-table th,
 .diff-table td {
   padding: 6px 10px;
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--semantic-color-border);
 }
 
 .diff-old {
-  color: #b91c1c;
-  background: #fff1f2;
+  color: var(--semantic-color-error);
+  background: var(--semantic-color-error-bg-row);
 }
 
 .diff-new {
-  color: #15803d;
-  background: #f0fdf4;
+  color: var(--semantic-color-success);
+  background: var(--semantic-color-success-bg-soft);
 }
 
 .empty-state {
   text-align: center;
   padding: 32px;
-  color: var(--color-text-muted, #475569);
+  color: var(--semantic-color-text-muted);
   font-style: italic;
 }
 </style>

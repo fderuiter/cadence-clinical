@@ -15,7 +15,7 @@
         display: flex;
         gap: 10px;
         margin-bottom: 24px;
-        border-bottom: 2px solid #e2e8f0;
+        border-bottom: 2px solid var(--semantic-color-border);
         padding-bottom: 12px;
         flex-wrap: wrap;
       "
@@ -64,7 +64,7 @@
         style="
           margin-bottom: 24px;
           border-left: 5px solid var(--primary);
-          background: #ffffff;
+          background: var(--semantic-color-surface);
           padding: 20px;
         "
       >
@@ -110,8 +110,8 @@
             <span
               class="badge"
               style="
-                background-color: #0284c7;
-                color: #ffffff;
+                background-color: var(--semantic-color-primary);
+                color: var(--semantic-color-surface);
                 font-weight: 600;
               "
             >
@@ -142,7 +142,7 @@
         <!-- Protocol Identity Banner -->
         <div
           style="
-            background: #f8fafc;
+            background: var(--semantic-color-surface-muted);
             border: 1px solid var(--border);
             border-radius: var(--radius-md, 8px);
             padding: 12px 16px;
@@ -167,7 +167,7 @@
                 style="
                   font-size: 0.75rem;
                   font-weight: 700;
-                  color: #64748b;
+                  color: var(--semantic-color-text-secondary);
                   text-transform: uppercase;
                 "
                 >Study ID:</span
@@ -181,7 +181,13 @@
                 >{{ synthesisResult.studyId }}</strong
               >
             </div>
-            <div style="font-size: 0.88rem; font-weight: 600; color: #1e293b">
+            <div
+              style="
+                font-size: 0.88rem;
+                font-weight: 600;
+                color: var(--semantic-color-text-dark);
+              "
+            >
               {{ synthesisResult.studyTitle }}
             </div>
           </div>
@@ -196,8 +202,8 @@
             <span
               class="badge"
               style="
-                background-color: #e0f2fe;
-                color: #0369a1;
+                background-color: var(--semantic-color-primary-light);
+                color: var(--semantic-color-primary);
                 font-weight: 600;
                 font-size: 0.8rem;
                 padding: 4px 10px;
@@ -208,8 +214,8 @@
             <span
               class="badge"
               style="
-                background-color: #f3e8ff;
-                color: #7e22ce;
+                background-color: var(--semantic-color-purple-bg);
+                color: var(--semantic-color-purple-text);
                 font-weight: 600;
                 font-size: 0.8rem;
                 padding: 4px 10px;
@@ -234,7 +240,7 @@
           <div
             class="metric-panel"
             style="
-              background: #f8fafc;
+              background: var(--semantic-color-surface-muted);
               border: 1px solid var(--border);
               border-radius: var(--radius-md, 8px);
               padding: 14px;
@@ -244,7 +250,7 @@
               style="
                 font-size: 0.75rem;
                 font-weight: 700;
-                color: #64748b;
+                color: var(--semantic-color-text-secondary);
                 text-transform: uppercase;
                 margin-bottom: 6px;
               "
@@ -261,14 +267,18 @@
             >
               {{ synthesisResult.graphEntitiesCount }}
               <span
-                style="font-size: 0.8rem; font-weight: normal; color: #64748b"
+                style="
+                  font-size: 0.8rem;
+                  font-weight: normal;
+                  color: var(--semantic-color-text-secondary);
+                "
                 >nodes</span
               >
             </div>
             <div
               style="
                 font-size: 0.78rem;
-                color: #475569;
+                color: var(--semantic-color-text-secondary);
                 display: flex;
                 flex-direction: column;
                 gap: 3px;
@@ -295,7 +305,7 @@
           <div
             class="metric-panel"
             style="
-              background: #f8fafc;
+              background: var(--semantic-color-surface-muted);
               border: 1px solid var(--border);
               border-radius: var(--radius-md, 8px);
               padding: 14px;
@@ -305,7 +315,7 @@
               style="
                 font-size: 0.75rem;
                 font-weight: 700;
-                color: #64748b;
+                color: var(--semantic-color-text-secondary);
                 text-transform: uppercase;
                 margin-bottom: 6px;
               "
@@ -316,20 +326,24 @@
               style="
                 font-size: 1.4rem;
                 font-weight: 800;
-                color: #0284c7;
+                color: var(--semantic-color-primary);
                 margin-bottom: 6px;
               "
             >
               {{ synthesisResult.formsCount }}
               <span
-                style="font-size: 0.8rem; font-weight: normal; color: #64748b"
+                style="
+                  font-size: 0.8rem;
+                  font-weight: normal;
+                  color: var(--semantic-color-text-secondary);
+                "
                 >forms</span
               >
             </div>
             <div
               style="
                 font-size: 0.78rem;
-                color: #475569;
+                color: var(--semantic-color-text-secondary);
                 display: flex;
                 flex-direction: column;
                 gap: 3px;
@@ -353,7 +367,7 @@
           <div
             class="metric-panel"
             style="
-              background: #f8fafc;
+              background: var(--semantic-color-surface-muted);
               border: 1px solid var(--border);
               border-radius: var(--radius-md, 8px);
               padding: 14px;
@@ -363,7 +377,7 @@
               style="
                 font-size: 0.75rem;
                 font-weight: 700;
-                color: #64748b;
+                color: var(--semantic-color-text-secondary);
                 text-transform: uppercase;
                 margin-bottom: 6px;
               "
@@ -374,20 +388,24 @@
               style="
                 font-size: 1.4rem;
                 font-weight: 800;
-                color: #7c3aed;
+                color: var(--semantic-color-ai);
                 margin-bottom: 6px;
               "
             >
               {{ synthesisResult.rulesCount }}
               <span
-                style="font-size: 0.8rem; font-weight: normal; color: #64748b"
+                style="
+                  font-size: 0.8rem;
+                  font-weight: normal;
+                  color: var(--semantic-color-text-secondary);
+                "
                 >edit checks</span
               >
             </div>
             <div
               style="
                 font-size: 0.78rem;
-                color: #475569;
+                color: var(--semantic-color-text-secondary);
                 display: flex;
                 flex-direction: column;
                 gap: 3px;
@@ -410,7 +428,7 @@
           <div
             class="metric-panel"
             style="
-              background: #f8fafc;
+              background: var(--semantic-color-surface-muted);
               border: 1px solid var(--border);
               border-radius: var(--radius-md, 8px);
               padding: 14px;
@@ -420,7 +438,7 @@
               style="
                 font-size: 0.75rem;
                 font-weight: 700;
-                color: #64748b;
+                color: var(--semantic-color-text-secondary);
                 text-transform: uppercase;
                 margin-bottom: 6px;
               "
@@ -431,20 +449,24 @@
               style="
                 font-size: 1.4rem;
                 font-weight: 800;
-                color: #059669;
+                color: var(--semantic-color-success);
                 margin-bottom: 6px;
               "
             >
               {{ synthesisResult.tmfEdlCount }}
               <span
-                style="font-size: 0.8rem; font-weight: normal; color: #64748b"
+                style="
+                  font-size: 0.8rem;
+                  font-weight: normal;
+                  color: var(--semantic-color-text-secondary);
+                "
                 >documents</span
               >
             </div>
             <div
               style="
                 font-size: 0.78rem;
-                color: #475569;
+                color: var(--semantic-color-text-secondary);
                 display: flex;
                 flex-direction: column;
                 gap: 3px;
@@ -465,9 +487,9 @@
         <div
           v-if="promotionSuccessMessage"
           style="
-            background-color: #f0fdf4;
-            border: 1px solid #86efac;
-            color: #166534;
+            background-color: var(--semantic-color-success-bg-soft);
+            border: 1px solid var(--semantic-color-success-border);
+            color: var(--semantic-color-success-dark);
             padding: 10px 14px;
             border-radius: 6px;
             font-size: 0.85rem;
@@ -595,9 +617,9 @@
           <div
             v-if="store.soaError"
             style="
-              background-color: #fef2f2;
-              border: 1px solid #fca5a5;
-              color: #b91c1c;
+              background-color: var(--semantic-color-error-bg-soft);
+              border: 1px solid var(--semantic-color-error-border);
+              color: var(--semantic-color-error);
               padding: 12px;
               border-radius: 6px;
               margin-bottom: 16px;
@@ -1025,7 +1047,13 @@
             <span class="card-title" style="font-size: 1.1rem; font-weight: 700"
               >Schedule of Activities (SoA) Matrix &amp; Protocol Timeline</span
             >
-            <p style="font-size: 0.78rem; color: #64748b; margin: 2px 0 0 0">
+            <p
+              style="
+                font-size: 0.78rem;
+                color: var(--semantic-color-text-secondary);
+                margin: 2px 0 0 0;
+              "
+            >
               Interactively inspect visits, epochs, study arms, and planned
               clinical activities.
             </p>
@@ -1081,7 +1109,11 @@
             </button>
             <span
               v-if="store.soaLoading"
-              style="font-size: 0.8rem; font-weight: normal; color: #64748b"
+              style="
+                font-size: 0.8rem;
+                font-weight: normal;
+                color: var(--semantic-color-text-secondary);
+              "
               >(Syncing...)</span
             >
           </div>
@@ -1141,7 +1173,13 @@
             align-items: center;
           "
         >
-          <p style="font-size: 0.8rem; color: #64748b; margin: 0">
+          <p
+            style="
+              font-size: 0.8rem;
+              color: var(--semantic-color-text-secondary);
+              margin: 0;
+            "
+          >
             Edit this CDISC USDM JSON definition and click "Update Visualizer"
             to dynamically re-render the Matrix.
           </p>
@@ -1180,7 +1218,13 @@
       <div class="card-title">
         NCI Thesaurus Concept Registry &amp; Terminology Browser
       </div>
-      <p style="font-size: 0.85rem; color: #475569; margin-bottom: 16px">
+      <p
+        style="
+          font-size: 0.85rem;
+          color: var(--semantic-color-text-secondary);
+          margin-bottom: 16px;
+        "
+      >
         Search the NCI Thesaurus (EVS) for standard controlled terminology
         concepts, or author new study concepts directly.
       </p>
@@ -1224,13 +1268,20 @@
 
           <div
             v-if="searchingConcepts"
-            style="font-size: 0.85rem; color: #64748b"
+            style="
+              font-size: 0.85rem;
+              color: var(--semantic-color-text-secondary);
+            "
           >
             Searching terminology EVS client...
           </div>
           <div
             v-else-if="conceptResults.length === 0"
-            style="font-size: 0.85rem; color: #64748b; font-style: italic"
+            style="
+              font-size: 0.85rem;
+              color: var(--semantic-color-text-secondary);
+              font-style: italic;
+            "
           >
             No results found.
           </div>
@@ -1254,7 +1305,7 @@
                   border: 1px solid var(--border);
                   border-radius: 6px;
                   cursor: pointer;
-                  background-color: #f8fafc;
+                  background-color: var(--semantic-color-surface-muted);
                 "
                 @click="selectConceptForEdit(c)"
               >
@@ -1270,7 +1321,12 @@
                   <span style="color: var(--accent)">{{ c.concept_code }}</span>
                   <span>{{ c.preferred_name }}</span>
                 </div>
-                <div style="font-size: 0.75rem; color: #475569">
+                <div
+                  style="
+                    font-size: 0.75rem;
+                    color: var(--semantic-color-text-secondary);
+                  "
+                >
                   {{ c.definition || "No definition available." }}
                 </div>
               </li>
@@ -1374,14 +1430,20 @@
       <div class="card-title">
         Study Protocol Alignment &amp; Differences Report
       </div>
-      <p style="font-size: 0.85rem; color: #475569; margin-bottom: 16px">
+      <p
+        style="
+          font-size: 0.85rem;
+          color: var(--semantic-color-text-secondary);
+          margin-bottom: 16px;
+        "
+      >
         Compare the current active study schema (USDM version) against the last
         approved study baseline to audit and verify differences.
       </p>
 
       <div
         style="
-          background-color: #f8fafc;
+          background-color: var(--semantic-color-surface-muted);
           border: 1px solid var(--border);
           border-radius: 8px;
           padding: 16px;
@@ -1413,7 +1475,12 @@
           "
         >
           <div style="border-right: 1px solid var(--border)">
-            <div style="font-size: 0.8rem; color: #64748b">
+            <div
+              style="
+                font-size: 0.8rem;
+                color: var(--semantic-color-text-secondary);
+              "
+            >
               Baseline Study Arms
             </div>
             <div
@@ -1427,7 +1494,14 @@
             </div>
           </div>
           <div style="border-right: 1px solid var(--border)">
-            <div style="font-size: 0.8rem; color: #64748b">Baseline Epochs</div>
+            <div
+              style="
+                font-size: 0.8rem;
+                color: var(--semantic-color-text-secondary);
+              "
+            >
+              Baseline Epochs
+            </div>
             <div
               style="
                 font-size: 1.5rem;
@@ -1439,7 +1513,9 @@
             </div>
           </div>
           <div style="border-right: 1px solid var(--border)">
-            <div style="font-size: 0.8rem; color: #64748b font-weight: normal;">
+            <div
+              style="font-size: 0.8rem; color: var(--semantic-color-text-secondary) font-weight: normal;"
+            >
               Baseline Visits
             </div>
             <div
@@ -1453,7 +1529,12 @@
             </div>
           </div>
           <div>
-            <div style="font-size: 0.8rem; color: #64748b">
+            <div
+              style="
+                font-size: 0.8rem;
+                color: var(--semantic-color-text-secondary);
+              "
+            >
               Baseline Procedures
             </div>
             <div
@@ -1485,7 +1566,7 @@
           padding: 24px;
           border: 1px dashed var(--border);
           text-align: center;
-          color: #64748b;
+          color: var(--semantic-color-text-secondary);
           font-style: italic;
         "
       >
@@ -1515,12 +1596,21 @@
               {{ diff.type.toUpperCase() }}
             </span>
             <strong style="font-size: 0.9rem">{{ diff.element }}</strong>
-            <span style="font-size: 0.85rem; color: #475569; margin-left: 8px"
+            <span
+              style="
+                font-size: 0.85rem;
+                color: var(--semantic-color-text-secondary);
+                margin-left: 8px;
+              "
               >({{ diff.description }})</span
             >
           </div>
           <span
-            style="font-size: 0.8rem; font-family: monospace; color: #64748b"
+            style="
+              font-size: 0.8rem;
+              font-family: monospace;
+              color: var(--semantic-color-text-secondary);
+            "
             >Path: /usdm/{{ diff.category }}/{{ diff.id }}</span
           >
         </div>
@@ -1571,7 +1661,7 @@
           <p
             style="
               font-size: 0.85rem;
-              color: #475569;
+              color: var(--semantic-color-text-secondary);
               margin-top: 0;
               margin-bottom: 14px;
               line-height: 1.4;
@@ -1595,7 +1685,7 @@
               border-radius: var(--radius-md, 8px);
               padding: 20px;
               text-align: center;
-              background-color: #f8fafc;
+              background-color: var(--semantic-color-surface-muted);
               cursor: pointer;
               margin-bottom: 14px;
               transition: all 0.2s ease;
@@ -1620,7 +1710,13 @@
               Drag &amp; drop a CDISC USDM protocol (.json) file here, or click
               to browse
             </div>
-            <div style="font-size: 0.78rem; color: #64748b; margin-top: 4px">
+            <div
+              style="
+                font-size: 0.78rem;
+                color: var(--semantic-color-text-secondary);
+                margin-top: 4px;
+              "
+            >
               Supports CDISC USDM v3.0, v4.0, and DDF JSON specifications
             </div>
           </div>
@@ -1638,7 +1734,11 @@
           >
             <label
               for="usdm-payload-input"
-              style="font-size: 0.82rem; font-weight: 700; color: #334155"
+              style="
+                font-size: 0.82rem;
+                font-weight: 700;
+                color: var(--semantic-color-text-body);
+              "
             >
               Or paste raw CDISC USDM JSON payload:
             </label>
@@ -1688,8 +1788,8 @@
               v-if="validationStatus.isValid"
               class="validation-status-box valid"
               style="
-                background: #f0fdf4;
-                border: 1px solid #86efac;
+                background: var(--semantic-color-success-bg-soft);
+                border: 1px solid var(--semantic-color-success-border);
                 border-radius: 6px;
                 padding: 10px 14px;
               "
@@ -1708,7 +1808,11 @@
                   >✓ Valid USDM Schema (v4.0 Compliant)</span
                 >
                 <span
-                  style="font-size: 0.8rem; color: #166534; font-weight: 700"
+                  style="
+                    font-size: 0.8rem;
+                    color: var(--semantic-color-success-dark);
+                    font-weight: 700;
+                  "
                 >
                   {{ validationSummary.id }}: {{ validationSummary.title }}
                 </span>
@@ -1724,9 +1828,9 @@
                 <span
                   class="badge"
                   style="
-                    background-color: #dcfce7;
-                    color: #15803d;
-                    border: 1px solid #86efac;
+                    background-color: var(--semantic-color-success-bg);
+                    color: var(--semantic-color-success);
+                    border: 1px solid var(--semantic-color-success-border);
                   "
                 >
                   {{ validationSummary.armsCount }} Arms
@@ -1734,9 +1838,9 @@
                 <span
                   class="badge"
                   style="
-                    background-color: #dcfce7;
-                    color: #15803d;
-                    border: 1px solid #86efac;
+                    background-color: var(--semantic-color-success-bg);
+                    color: var(--semantic-color-success);
+                    border: 1px solid var(--semantic-color-success-border);
                   "
                 >
                   {{ validationSummary.epochsCount }} Epochs
@@ -1744,9 +1848,9 @@
                 <span
                   class="badge"
                   style="
-                    background-color: #dcfce7;
-                    color: #15803d;
-                    border: 1px solid #86efac;
+                    background-color: var(--semantic-color-success-bg);
+                    color: var(--semantic-color-success);
+                    border: 1px solid var(--semantic-color-success-border);
                   "
                 >
                   {{ validationSummary.visitsCount }} Encounters/Visits
@@ -1754,9 +1858,9 @@
                 <span
                   class="badge"
                   style="
-                    background-color: #dcfce7;
-                    color: #15803d;
-                    border: 1px solid #86efac;
+                    background-color: var(--semantic-color-success-bg);
+                    color: var(--semantic-color-success);
+                    border: 1px solid var(--semantic-color-success-border);
                   "
                 >
                   {{ validationSummary.activitiesCount }} Activities
@@ -1764,9 +1868,9 @@
                 <span
                   class="badge"
                   style="
-                    background-color: #dcfce7;
-                    color: #15803d;
-                    border: 1px solid #86efac;
+                    background-color: var(--semantic-color-success-bg);
+                    color: var(--semantic-color-success);
+                    border: 1px solid var(--semantic-color-success-border);
                   "
                 >
                   {{ validationSummary.criteriaCount }} Criteria
@@ -1779,8 +1883,8 @@
               v-else
               class="validation-status-box invalid"
               style="
-                background: #fef2f2;
-                border: 1px solid #fca5a5;
+                background: var(--semantic-color-error-bg-soft);
+                border: 1px solid var(--semantic-color-error-border);
                 border-radius: 6px;
                 padding: 10px 14px;
               "
@@ -1797,7 +1901,11 @@
                   >⚠️ Schema Validation Issue</span
                 >
                 <span
-                  style="font-size: 0.82rem; color: #991b1b; font-weight: 600"
+                  style="
+                    font-size: 0.82rem;
+                    color: var(--semantic-color-error-text-dark);
+                    font-weight: 600;
+                  "
                 >
                   {{ validationStatus.errorMessage }}
                 </span>
@@ -1808,7 +1916,7 @@
                   margin: 6px 0 0 0;
                   padding-left: 20px;
                   font-size: 0.78rem;
-                  color: #991b1b;
+                  color: var(--semantic-color-error-text-dark);
                 "
               >
                 <li v-for="(err, idx) in validationStatus.errors" :key="idx">
@@ -3283,7 +3391,7 @@ function navigateToSoa() {
 .dropzone-area:hover,
 .dropzone-area.dragging {
   border-color: var(--primary) !important;
-  background-color: #eff6ff !important;
+  background-color: var(--semantic-color-info-bg) !important;
 }
 
 .crf-canvas-touch-container {

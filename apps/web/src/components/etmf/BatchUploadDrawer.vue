@@ -28,7 +28,7 @@
               style="
                 margin: 2px 0 0 0;
                 font-size: 12px;
-                color: var(--text-muted);
+                color: var(--semantic-color-text-secondary);
               "
             >
               Drag and drop up to 50 regulatory documents for DIA TMF Reference
@@ -354,7 +354,7 @@
           <div
             style="
               margin-top: 10px;
-              background: #f8fafc;
+              background: var(--semantic-color-surface-muted);
               padding: 8px;
               border-radius: 4px;
               font-size: 11px;
@@ -652,7 +652,7 @@ useFocusTrap(inspectionCardRef, {
 .batch-drawer {
   width: min(100vw, 780px);
   height: 100%;
-  background: #ffffff;
+  background: var(--semantic-color-surface);
   display: flex;
   flex-direction: column;
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
@@ -686,18 +686,18 @@ useFocusTrap(inspectionCardRef, {
 }
 
 .dropzone {
-  border: 2px dashed #cbd5e1;
+  border: 2px dashed var(--semantic-color-border-control);
   border-radius: 8px;
   padding: 28px;
   text-align: center;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .dropzone:hover,
 .dropzone.is-dragging {
-  border-color: #007bff;
+  border-color: var(--semantic-color-interactive-primary);
   background: rgba(0, 123, 255, 0.04);
 }
 
@@ -715,14 +715,14 @@ useFocusTrap(inspectionCardRef, {
 }
 
 .browse-link {
-  color: #007bff;
+  color: var(--semantic-color-interactive-primary);
   text-decoration: underline;
 }
 
 .dropzone-hint {
   margin: 4px 0 0 0;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--semantic-color-text-secondary);
 }
 
 .reason-section {
@@ -732,21 +732,21 @@ useFocusTrap(inspectionCardRef, {
 }
 
 .progress-section {
-  background: #f1f5f9;
+  background: var(--semantic-color-surface-header);
   padding: 12px 16px;
   border-radius: 6px;
 }
 
 .progress-bar-track {
   height: 8px;
-  background: #e2e8f0;
+  background: var(--semantic-color-surface-header);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: #007bff;
+  background: var(--semantic-color-interactive-primary);
   transition: width 0.3s ease;
 }
 
@@ -777,7 +777,7 @@ useFocusTrap(inspectionCardRef, {
 }
 
 .queue-table th {
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   font-weight: 600;
   position: sticky;
   top: 0;
@@ -796,7 +796,7 @@ useFocusTrap(inspectionCardRef, {
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
 }
 
 .item-inspection-overlay {
@@ -815,7 +815,7 @@ useFocusTrap(inspectionCardRef, {
 .item-inspection-card {
   width: 480px;
   max-width: 90vw;
-  background: #fff;
+  background: var(--semantic-color-surface);
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
