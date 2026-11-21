@@ -351,7 +351,7 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
     ]);
   });
 
-  it("renders the interactive casebook matrix with live status rollups, repeating instances, unscheduled forms, inline opening, unsaved-entry guard, context handoff, and zero axe violations", async () => {
+  async function mountParticipantCasebook() {
     const pinia = createPinia();
     setActivePinia(pinia);
     const auth = useAuthStore();
@@ -465,6 +465,12 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
     await wrapper.find("#inspector-open-record").trigger("click");
     await flushPromises();
 
+    return { wrapper, router };
+  }
+
+  it("renders the interactive casebook matrix with live status rollups, repeating instances, unscheduled forms, context handoffs, and zero axe violations", async () => {
+    const { wrapper } = await mountParticipantCasebook();
+
     const matrix = wrapper.find("#casebook-matrix");
     expect(matrix.exists()).toBe(true);
     expect(matrix.text()).toContain("Screening");
@@ -522,6 +528,11 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
     );
 
     await expect(wrapper.element).toBeAccessible();
+    wrapper.unmount();
+  });
+
+  it("opens unscheduled and existing forms inline with unsaved-entry guard, draft restoration, shared schedule caching, and zero axe violations", async () => {
+    const { wrapper, router } = await mountParticipantCasebook();
 
     await wrapper
       .find('[id="unscheduled-open-cs.adverse_event"]')
