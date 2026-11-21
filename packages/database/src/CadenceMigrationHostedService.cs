@@ -51,6 +51,7 @@ public sealed partial class CadenceMigrationHostedService<TContext>(
         LogApplying(logger, typeof(TContext).Name);
 
         await using var scope = scopeFactory.CreateAsyncScope();
+        using var _ = scope.ServiceProvider.GetService<Tenancy.ITenantScope>()?.Suppress();
         var context = scope.ServiceProvider.GetRequiredService<TContext>();
 
         // The module schema (first entry of the search path, see WithModuleSchema) must exist before EF creates

@@ -6,19 +6,19 @@ Generated from the EF Core model of `Cadence.Apps.Knowledge.Infrastructure.Persi
 
 | Table | Entity | Columns |
 | --- | --- | --- |
-| [`knowledge.DelegationRecords`](#knowledgedelegationrecords) | `DelegationRecord` | 15 |
-| [`knowledge.OrgAuditLogs`](#knowledgeorgauditlogs) | `OrgAuditLog` | 9 |
-| [`knowledge.TrainingAssignments`](#knowledgetrainingassignments) | `TrainingAssignment` | 15 |
-| [`knowledge.TrainingCertificates`](#knowledgetrainingcertificates) | `TrainingCertificate` | 9 |
-| [`knowledge.TrainingCurricula`](#knowledgetrainingcurricula) | `TrainingCurriculum` | 9 |
-| [`knowledge.audit_log_entries`](#knowledgeaudit_log_entries) | `AuditLogEntry` | 11 |
+| [`knowledge.DelegationRecords`](#knowledgedelegationrecords) | `DelegationRecord` | 16 |
+| [`knowledge.OrgAuditLogs`](#knowledgeorgauditlogs) | `OrgAuditLog` | 10 |
+| [`knowledge.TrainingAssignments`](#knowledgetrainingassignments) | `TrainingAssignment` | 16 |
+| [`knowledge.TrainingCertificates`](#knowledgetrainingcertificates) | `TrainingCertificate` | 10 |
+| [`knowledge.TrainingCurricula`](#knowledgetrainingcurricula) | `TrainingCurriculum` | 10 |
+| [`knowledge.audit_log_entries`](#knowledgeaudit_log_entries) | `AuditLogEntry` | 12 |
 | [`knowledge.consumed_signature_tokens`](#knowledgeconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
-| [`knowledge.knowledge_article_audit_logs`](#knowledgeknowledge_article_audit_logs) | `KnowledgeArticleAuditLog` | 12 |
-| [`knowledge.knowledge_article_versions`](#knowledgeknowledge_article_versions) | `KnowledgeArticleVersion` | 11 |
-| [`knowledge.knowledge_articles`](#knowledgeknowledge_articles) | `KnowledgeArticle` | 16 |
-| [`knowledge.knowledge_categories`](#knowledgeknowledge_categories) | `KnowledgeCategory` | 11 |
-| [`knowledge.knowledge_contextual_help_mappings`](#knowledgeknowledge_contextual_help_mappings) | `ContextualHelpMapping` | 11 |
-| [`knowledge.protocol_knowledge_chunks`](#knowledgeprotocol_knowledge_chunks) | `ProtocolKnowledgeChunk` | 17 |
+| [`knowledge.knowledge_article_audit_logs`](#knowledgeknowledge_article_audit_logs) | `KnowledgeArticleAuditLog` | 13 |
+| [`knowledge.knowledge_article_versions`](#knowledgeknowledge_article_versions) | `KnowledgeArticleVersion` | 12 |
+| [`knowledge.knowledge_articles`](#knowledgeknowledge_articles) | `KnowledgeArticle` | 17 |
+| [`knowledge.knowledge_categories`](#knowledgeknowledge_categories) | `KnowledgeCategory` | 12 |
+| [`knowledge.knowledge_contextual_help_mappings`](#knowledgeknowledge_contextual_help_mappings) | `ContextualHelpMapping` | 12 |
+| [`knowledge.protocol_knowledge_chunks`](#knowledgeprotocol_knowledge_chunks) | `ProtocolKnowledgeChunk` | 18 |
 
 ## knowledge.DelegationRecords
 
@@ -41,6 +41,11 @@ Entity: `DelegationRecord`
 | `Status` | `text` | no |  |  |
 | `StudyId` | `text` | no |  |  |
 | `TaskCode` | `text` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_DelegationRecords_tenant_id`: (`tenant_id`)
 
 ## knowledge.OrgAuditLogs
 
@@ -57,6 +62,11 @@ Entity: `OrgAuditLog`
 | `ReasonForChange` | `text` | no |  |  |
 | `RecordId` | `text` | yes |  |  |
 | `Timestamp` | `timestamp with time zone` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_OrgAuditLogs_tenant_id`: (`tenant_id`)
 
 ## knowledge.TrainingAssignments
 
@@ -79,6 +89,11 @@ Entity: `TrainingAssignment`
 | `UserId` | `text` | no |  |  |
 | `UserName` | `text` | no |  |  |
 | `UserRole` | `text` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_TrainingAssignments_tenant_id`: (`tenant_id`)
 
 ## knowledge.TrainingCertificates
 
@@ -95,6 +110,11 @@ Entity: `TrainingCertificate`
 | `Sha256Seal` | `text` | no |  |  |
 | `SignerName` | `text` | no |  |  |
 | `SignerRole` | `text` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_TrainingCertificates_tenant_id`: (`tenant_id`)
 
 ## knowledge.TrainingCurricula
 
@@ -111,6 +131,11 @@ Entity: `TrainingCurriculum`
 | `ReasonForChange` | `text` | no |  |  |
 | `StudyId` | `text` | no |  |  |
 | `Title` | `text` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_TrainingCurricula_tenant_id`: (`tenant_id`)
 
 ## knowledge.audit_log_entries
 
@@ -129,10 +154,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## knowledge.consumed_signature_tokens
 
@@ -166,6 +193,7 @@ Entity: `KnowledgeArticleAuditLog`
 | `ReasonForChange` | `character varying(1000)` | yes |  |  |
 | `Sha256Digest` | `character varying(128)` | yes |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -173,6 +201,7 @@ Indexes:
 - `IX_knowledge_article_audit_logs_ArticleId`: (`ArticleId`)
 - `IX_knowledge_article_audit_logs_CreatedAt`: (`CreatedAt`)
 - `IX_knowledge_article_audit_logs_CreatedBy`: (`CreatedBy`)
+- `IX_knowledge_article_audit_logs_tenant_id`: (`tenant_id`)
 
 ## knowledge.knowledge_article_versions
 
@@ -191,11 +220,13 @@ Entity: `KnowledgeArticleVersion`
 | `StatusAtSnapshot` | `character varying(50)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `VersionLabel` | `character varying(50)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_knowledge_article_versions_ArticleId`: (`ArticleId`)
 - `IX_knowledge_article_versions_VersionIndex`: (`VersionIndex`)
+- `IX_knowledge_article_versions_tenant_id`: (`tenant_id`)
 
 ## knowledge.knowledge_articles
 
@@ -219,13 +250,15 @@ Entity: `KnowledgeArticle`
 | `Title` | `character varying(500)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `VersionLabel` | `character varying(50)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_knowledge_articles_CategoryId`: (`CategoryId`)
 - `IX_knowledge_articles_CurrentPublishedVersionId`: (`CurrentPublishedVersionId`)
-- `IX_knowledge_articles_Slug`: unique (`Slug`)
 - `IX_knowledge_articles_Status`: (`Status`)
+- `IX_knowledge_articles_tenant_id`: (`tenant_id`)
+- `IX_knowledge_articles_tenant_id_Slug`: unique (`tenant_id`, `Slug`)
 
 ## knowledge.knowledge_categories
 
@@ -244,12 +277,14 @@ Entity: `KnowledgeCategory`
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `Slug` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
-- `IX_knowledge_categories_Name`: unique (`Name`)
 - `IX_knowledge_categories_ParentId`: (`ParentId`)
-- `IX_knowledge_categories_Slug`: unique (`Slug`)
+- `IX_knowledge_categories_tenant_id`: (`tenant_id`)
+- `IX_knowledge_categories_tenant_id_Name`: unique (`tenant_id`, `Name`)
+- `IX_knowledge_categories_tenant_id_Slug`: unique (`tenant_id`, `Slug`)
 
 ## knowledge.knowledge_contextual_help_mappings
 
@@ -268,12 +303,14 @@ Entity: `ContextualHelpMapping`
 | `RoutePattern` | `character varying(500)` | no |  |  |
 | `SectionAnchor` | `character varying(255)` | yes |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_knowledge_contextual_help_mappings_ArticleId`: (`ArticleId`)
 - `IX_knowledge_contextual_help_mappings_Persona`: (`Persona`)
 - `IX_knowledge_contextual_help_mappings_RoutePattern`: (`RoutePattern`)
+- `IX_knowledge_contextual_help_mappings_tenant_id`: (`tenant_id`)
 
 ## knowledge.protocol_knowledge_chunks
 
@@ -298,6 +335,7 @@ Entity: `ProtocolKnowledgeChunk`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `TokenCount` | `integer` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -305,3 +343,4 @@ Indexes:
 - `IX_protocol_knowledge_chunks_PageNumber`: (`PageNumber`)
 - `IX_protocol_knowledge_chunks_ProtocolVersion`: (`ProtocolVersion`)
 - `IX_protocol_knowledge_chunks_StudyId`: (`StudyId`)
+- `IX_protocol_knowledge_chunks_tenant_id`: (`tenant_id`)

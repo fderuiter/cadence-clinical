@@ -4,11 +4,13 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Interop.Application.Services;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
+using Cadence.Database.Tenancy;
 using Cadence.IntegrationTests.Database;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,7 +42,10 @@ public sealed class InteropPostgresApiFactory : WebApplicationFactory<Cadence.Ap
         }
 
         await using var scope = Services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<InteropDbContext>().Database.MigrateAsync().ConfigureAwait(false);
+        using var _ = scope.ServiceProvider.GetService<ITenantScope>()?.Suppress();
+        var db = scope.ServiceProvider.GetRequiredService<InteropDbContext>();
+        await db.Database.ExecuteSqlRawAsync($"CREATE SCHEMA IF NOT EXISTS \"{InteropDbContextFactory.Schema}\"").ConfigureAwait(false);
+        await db.Database.MigrateAsync().ConfigureAwait(false);
     }
 
     public override async ValueTask DisposeAsync()
@@ -63,6 +68,15 @@ public sealed class InteropPostgresApiFactory : WebApplicationFactory<Cadence.Ap
 
         builder.ConfigureServices(services =>
         {
+            services.RemoveAll<CurrentTenantAccessor>();
+            services.AddSingleton<CurrentTenantAccessor>(sp =>
+            {
+                var accessor = new CurrentTenantAccessor(
+                    sp.GetRequiredService<ITenantCodeResolver>(),
+                    sp.GetService<IHttpContextAccessor>());
+                accessor.UseNonHttpSeedingFallbackTenant(TestSecurityContext.TenantCode);
+                return accessor;
+            });
             services.RemoveAll<ISceDockerEngineDriver>();
             services.AddSingleton<ISceDockerEngineDriver, SucceedingSandboxDriver>();
         });

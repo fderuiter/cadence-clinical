@@ -580,6 +580,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2547: Keycloak Self-Registration and Clinical Kernel Trial Bootstrap](adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md) | Current | - Status: Accepted |
 | [ADR-2819: Focus Active eCRF View on Backed Kernel Forms Outside Demo Mode](adr/2026-11-20-focus-active-ecrf-view-on-backed-kernel-forms-outside-demo-mode.md) | Current | - Status: Accepted |
 | [ADR-2641: Contextual SOP Specificity Resolution and Audited Support Ticket Escalation](adr/2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md) | Current | - Status: Accepted |
+| [ADR-2548: Enforce PostgreSQL Forced RLS and Shared Clinical Scope Guards Across Standalone Services](adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md) | Current | - Status: Accepted |
 | [ADR-2551: Share Session Resilience, Draft-Safe Sign-Out, and Part 11 Signature Primitives](adr/2026-11-20-share-session-logout-and-signature-primitives.md) | Current | - Status: Accepted |
 
 ## Developing and running
