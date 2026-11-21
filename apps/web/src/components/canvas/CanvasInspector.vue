@@ -237,6 +237,27 @@
             <dt>Withdrawn because</dt>
             <dd>{{ protocolVersion.withdrawal_reason }}</dd>
           </template>
+          <template v-if="designSummary">
+            <dt>Design forms</dt>
+            <dd id="inspector-version-forms">
+              {{ designSummary.form_count }}
+              {{ designSummary.form_count === 1 ? "form" : "forms" }} ({{
+                designSummary.item_count
+              }}
+              {{ designSummary.item_count === 1 ? "item" : "items" }})
+            </dd>
+            <template
+              v-if="
+                designSummary.import_notes &&
+                designSummary.import_notes.length > 0
+              "
+            >
+              <dt>Import notes</dt>
+              <dd id="inspector-version-notes">
+                {{ designSummary.import_notes.length }} recorded
+              </dd>
+            </template>
+          </template>
         </dl>
 
         <template v-else-if="participant">
@@ -329,6 +350,7 @@ import KernelLineagePanel from "./KernelLineagePanel.vue";
 import {
   kernelApi,
   type KernelCommand,
+  type KernelProtocolDraftSummary,
   type KernelProtocolVersion,
   type KernelSimulationResult,
 } from "../../api/kernelApi";
@@ -486,6 +508,29 @@ const simulationResult = ref<KernelSimulationResult | null>(null);
 const simulationLoading = ref(false);
 const simulationError = ref("");
 let simulationRequest = 0;
+const designSummary = ref<KernelProtocolDraftSummary | null>(null);
+let designSummaryReq = 0;
+
+watch(
+  () => props.protocolVersion?.ref,
+  async (versionRef) => {
+    const req = ++designSummaryReq;
+    designSummary.value = null;
+    if (
+      !versionRef ||
+      typeof kernelApi.getProtocolDesignSummary !== "function"
+    ) {
+      return;
+    }
+    try {
+      const summary = await kernelApi.getProtocolDesignSummary(versionRef);
+      if (req === designSummaryReq) designSummary.value = summary;
+    } catch {
+      // Optional summary when protocol content exists.
+    }
+  },
+  { immediate: true }
+);
 
 async function runSimulation() {
   if (!canSimulate.value || !kernelRef.value) return;

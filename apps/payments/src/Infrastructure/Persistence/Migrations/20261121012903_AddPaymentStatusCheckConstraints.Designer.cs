@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(PaymentsDbContext))]
-    [Migration("20261121013140_AddPaymentDomainStatusConstraints")]
-    partial class AddPaymentDomainStatusConstraints
+    [Migration("20261121012903_AddPaymentStatusCheckConstraints")]
+    partial class AddPaymentStatusCheckConstraints
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
