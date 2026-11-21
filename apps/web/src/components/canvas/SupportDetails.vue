@@ -40,18 +40,18 @@ const hasDetails = computed(() =>
 .support-details {
   margin-top: 6px;
   font-size: 0.8125rem;
-  color: var(--ink-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 
 .support-details-summary {
   cursor: pointer;
   display: inline-block;
   font-weight: 500;
-  color: var(--ink-muted, #475569);
+  color: var(--semantic-color-text-muted);
 }
 
 .support-details-summary:focus-visible {
-  outline: 2px solid var(--accent, #0f766e);
+  outline: 2px solid var(--semantic-color-accent);
   outline-offset: 2px;
   border-radius: 3px;
 }
@@ -59,8 +59,8 @@ const hasDetails = computed(() =>
 .support-details-body {
   margin-top: 4px;
   padding: 6px 10px;
-  border-left: 2px solid var(--line, #cbd5e1);
-  background: var(--paper-subtle, #f8fafc);
+  border-left: 2px solid var(--semantic-color-border-muted);
+  background: var(--semantic-color-surface-subtle);
   border-radius: 0 4px 4px 0;
 }
 

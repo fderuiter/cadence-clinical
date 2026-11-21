@@ -51,10 +51,10 @@ up() {
     # start-dev --import-realm skips a realm Keycloak already has, so a changed realm file (such as the users' fixed
     # subject ids the kernel's demo grants name, ADR-2543) would never arrive. Re-import it, replacing the stored realm.
     if [ -d "$KC_HOME/data/h2" ]; then
-      JAVA_TOOL_OPTIONS="" "$KC_HOME/bin/kc.sh" import --db dev-file --file "$KC_HOME/data/import/cadence-realm.json" --override true \
+      JAVA_TOOL_OPTIONS='' "$KC_HOME/bin/kc.sh" import --db dev-file --file "$KC_HOME/data/import/cadence-realm.json" --override true \
         >"$STATE/keycloak-import.log" 2>&1 || { echo "keycloak realm import failed: $STATE/keycloak-import.log" >&2; return 1; }
     fi
-    KC_BOOTSTRAP_ADMIN_USERNAME=admin KC_BOOTSTRAP_ADMIN_PASSWORD=admin JAVA_TOOL_OPTIONS="" \
+    KC_BOOTSTRAP_ADMIN_USERNAME=admin KC_BOOTSTRAP_ADMIN_PASSWORD=admin JAVA_TOOL_OPTIONS='' \
       nohup "$KC_HOME/bin/kc.sh" start-dev --import-realm --http-port 8080 >"$STATE/keycloak.log" 2>&1 &
     echo $! >"$STATE/keycloak.pid"
     wait_for http://localhost:8080/realms/cadence/.well-known/openid-configuration 180
@@ -104,7 +104,7 @@ down() {
   tmux kill-session -t apphost 2>/dev/null || true
   # kc.sh execs java, so the pid is Keycloak's own. (pkill -f keycloak would also match the calling shell.)
   if [ -f "$STATE/keycloak.pid" ]; then
-    kill "$(cat "$STATE/keycloak.pid")" 2>/dev/null || true
+    if kill "$(cat "$STATE/keycloak.pid")" 2>/dev/null; then :; fi
     rm -f "$STATE/keycloak.pid"
   fi
   timeout 60 bash -c 'while curl -s -o /dev/null http://localhost:8080/; do sleep 1; done' || true

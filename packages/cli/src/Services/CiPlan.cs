@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
+using Cadence.ToolingCore.Services;
 
 namespace Cadence.Cli.Services;
 
@@ -18,7 +19,8 @@ namespace Cadence.Cli.Services;
 /// different runtime identifier or output folder, for example). <c>LocalCiPlanTests</c> checks that this text, or
 /// <see cref="Display"/> when it is null, appears in the step's <c>run:</c> block.
 /// </param>
-public sealed record CiCommand(string FileName, IReadOnlyList<string> Arguments, string? CiText = null)
+/// <param name="AllowedExitCodes">Exit codes treated as success (defaults to <c>0</c> only when null).</param>
+public sealed record CiCommand(string FileName, IReadOnlyList<string> Arguments, string? CiText = null, IReadOnlyList<int>? AllowedExitCodes = null)
 {
     /// <summary>The command as a person would type it.</summary>
     public string Display => string.Join(' ', Arguments.Select(Quote).Prepend(FileName));
@@ -256,7 +258,7 @@ public static class CiPlan
             new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
             new("dotnet-quality", "Run Cadence quality sentinels")
             {
-                Commands = [CadenceCliNoBuild("check", "--exclude", "api-clients", "--exclude", "vulnerabilities")],
+                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities")],
             },
             new("dotnet-quality", "Run architecture tests")
             {
@@ -312,10 +314,18 @@ public static class CiPlan
             {
                 Always = true,
                 RequiredTool = "detect-secrets-hook",
-                ToolHint = "pip install detect-secrets==1.5.0",
+                ToolHint = $"run './scripts/setup_wizard.sh --minimal' or 'python3 -m venv .cadence/venv && .cadence/venv/bin/python -m pip install --upgrade pip detect-secrets=={DetectSecretsGateService.PinnedVersion}'",
                 Files = CiFileSource.ChangedFilesAcmr,
                 NoFilesMessage = "No changed files to scan.",
-                Commands = [new CiCommand("detect-secrets-hook", ["--baseline", ".secrets.baseline", "--exclude-files", @"'(pnpm-lock\.yaml|package-lock\.json|yarn\.lock)'"])],
+                RestoreFiles = [".secrets.baseline"],
+                Commands =
+                [
+                    new CiCommand(
+                        "detect-secrets-hook",
+                        ["--baseline", ".secrets.baseline", "--exclude-files", SecretsBaselineCleanerService.CanonicalExcludePattern],
+                        CiText: $"detect-secrets-hook --baseline .secrets.baseline --exclude-files '{SecretsBaselineCleanerService.CanonicalExcludePattern}'",
+                        AllowedExitCodes: [0, 3]),
+                ],
             },
             new("security", "Run DEID compliance scan")
             {

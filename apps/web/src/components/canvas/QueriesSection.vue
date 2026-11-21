@@ -449,15 +449,15 @@ watch([statusFilter, appliedSite, appliedParticipant, changedFilter], () => {
 .study-queries-filters select,
 .study-queries-filters input {
   padding: 5px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  background: #fff;
+  background: var(--semantic-color-surface);
   font-size: 0.85rem;
 }
 
 .status-line {
   margin: 0;
-  color: var(--neutral-dark, #475569);
+  color: var(--semantic-color-text-secondary);
   font-size: 0.85rem;
 }
 

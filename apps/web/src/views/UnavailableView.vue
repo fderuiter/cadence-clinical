@@ -125,9 +125,9 @@ const heading = computed(() =>
 }
 
 .unavailable-prerelease-tag {
-  background: #fffbeb;
-  border: 1px solid #f59e0b;
-  color: #92400e;
+  background: var(--semantic-color-warning-bg-light);
+  border: 1px solid var(--semantic-color-warning-border-strong);
+  color: var(--semantic-color-warning-text);
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 0.82rem;
@@ -139,7 +139,7 @@ const heading = computed(() =>
 }
 
 .unavailable-summary {
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
   margin-bottom: 20px;
   line-height: 1.5;
 }
@@ -152,8 +152,8 @@ const heading = computed(() =>
 }
 
 .unavailable-info-card {
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface-muted);
   border-radius: 10px;
   padding: 16px;
 }
@@ -164,14 +164,14 @@ const heading = computed(() =>
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin-bottom: 6px;
 }
 
 .unavailable-info-card h3 {
   font-size: 1.05rem;
   margin: 0 0 8px;
-  color: #0f172a;
+  color: var(--semantic-color-text);
 }
 
 .entitlement-status {
@@ -181,23 +181,23 @@ const heading = computed(() =>
 }
 
 .entitlement-status.ok {
-  color: #166534;
+  color: var(--semantic-color-success);
 }
 
 .entitlement-status.upgrade {
-  color: #b45309;
+  color: var(--semantic-color-warning);
 }
 
 .roadmap-stage {
   font-size: 0.88rem;
   font-weight: 600;
-  color: #1d4ed8;
+  color: var(--semantic-color-interactive-primary);
   margin: 0 0 8px;
 }
 
 .info-card-note {
   font-size: 0.82rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin: 0;
   line-height: 1.45;
 }

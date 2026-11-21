@@ -852,8 +852,8 @@ onMounted(() => {
   width: 100%;
   max-width: 1100px;
   height: 100vh;
-  background-color: #0f172a;
-  color: #f8fafc;
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
   display: flex;
   flex-direction: column;
   box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
@@ -869,8 +869,8 @@ onMounted(() => {
 
 .drawer-header {
   padding: 20px 24px;
-  background: #1e293b;
-  border-bottom: 1px solid #334155;
+  background: var(--semantic-color-surface-elevated);
+  border-bottom: 1px solid var(--semantic-color-border-inverse);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -892,24 +892,24 @@ onMounted(() => {
 }
 
 .badge-gxp {
-  background: #0284c7;
-  color: #ffffff;
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
 }
 .badge-rtsm {
-  background: #7c3aed;
-  color: #ffffff;
+  background: var(--semantic-color-ai);
+  color: var(--semantic-color-surface);
 }
 .badge-atomic {
-  background: #059669;
-  color: #ffffff;
+  background: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 .badge-active {
-  background: #10b981;
-  color: #ffffff;
+  background: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 .badge-alert-lot {
-  background: #ef4444;
-  color: #ffffff;
+  background: var(--semantic-color-error);
+  color: var(--semantic-color-surface);
   font-size: 0.65rem;
   margin-left: 6px;
 }
@@ -918,20 +918,20 @@ onMounted(() => {
   margin: 0 0 6px 0;
   font-size: 1.4rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
 }
 
 .drawer-subtitle {
   margin: 0;
   font-size: 0.88rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   max-width: 800px;
 }
 
 .btn-close {
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-size: 1.5rem;
   cursor: pointer;
   padding: 4px 8px;
@@ -939,8 +939,8 @@ onMounted(() => {
 }
 
 .btn-close:hover {
-  color: #f8fafc;
-  background: #334155;
+  color: var(--semantic-color-text-inverse);
+  background: var(--semantic-color-border-inverse);
 }
 
 .context-bar {
@@ -948,8 +948,8 @@ onMounted(() => {
   align-items: center;
   gap: 24px;
   padding: 12px 24px;
-  background: #0f172a;
-  border-bottom: 1px solid #1e293b;
+  background: var(--semantic-color-surface-inverse);
+  border-bottom: 1px solid var(--semantic-color-text-dark);
   font-size: 0.88rem;
 }
 
@@ -958,11 +958,11 @@ onMounted(() => {
   gap: 6px;
 }
 .context-label {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
 .context-value {
-  color: #cbd5e1;
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
 .mono {
@@ -975,13 +975,13 @@ onMounted(() => {
 
 .scanner-section {
   padding: 16px 24px;
-  background: #1e293b;
-  border-bottom: 1px solid #334155;
+  background: var(--semantic-color-surface-elevated);
+  border-bottom: 1px solid var(--semantic-color-border-inverse);
 }
 
 .scanner-card {
-  background: #0f172a;
-  border: 1px solid #3b82f6;
+  background: var(--semantic-color-surface-inverse);
+  border: 1px solid var(--semantic-color-interactive-primary);
   border-radius: 8px;
   padding: 14px 18px;
 }
@@ -996,7 +996,7 @@ onMounted(() => {
 .scanner-label {
   font-weight: 700;
   font-size: 0.95rem;
-  color: #60a5fa;
+  color: var(--semantic-color-primary);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1009,30 +1009,30 @@ onMounted(() => {
 
 .barcode-input {
   flex: 1;
-  background: #1e293b;
-  border: 1px solid #475569;
+  background: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
   padding: 10px 14px;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
   font-size: 1.05rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .barcode-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--semantic-color-interactive-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 .scanner-help {
   margin: 8px 0 0 0;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
 }
 
 .scanner-help code {
-  background: #334155;
-  color: #e2e8f0;
+  background: var(--semantic-color-border-inverse);
+  color: var(--semantic-color-border);
   padding: 1px 4px;
   border-radius: 3px;
 }
@@ -1049,8 +1049,8 @@ onMounted(() => {
 
 .alert-warning {
   background: rgba(245, 158, 11, 0.15);
-  border: 1px solid #f59e0b;
-  color: #fbbf24;
+  border: 1px solid var(--semantic-color-warning-border-strong);
+  color: var(--semantic-color-warning);
 }
 
 .btn-alert-dismiss {
@@ -1066,12 +1066,12 @@ onMounted(() => {
   grid-template-columns: repeat(5, 1fr);
   gap: 12px;
   padding: 16px 24px;
-  background: #0f172a;
+  background: var(--semantic-color-surface-inverse);
 }
 
 .metric-card {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
   padding: 10px 12px;
   display: flex;
@@ -1082,35 +1082,35 @@ onMounted(() => {
 .metric-num {
   font-size: 1.4rem;
   font-weight: 800;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
 }
 
 .metric-label {
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
   font-weight: 600;
   margin-top: 2px;
 }
 
 .metric-returned .metric-num {
-  color: #10b981;
+  color: var(--semantic-color-success);
 }
 .metric-quarantined .metric-num {
-  color: #f59e0b;
+  color: var(--semantic-color-warning);
 }
 .metric-depot .metric-num {
-  color: #3b82f6;
+  color: var(--semantic-color-interactive-primary);
 }
 .metric-discrepancy .metric-num {
-  color: #ef4444;
+  color: var(--semantic-color-error);
 }
 
 .toolbar {
   padding: 10px 24px;
-  background: #1e293b;
-  border-top: 1px solid #334155;
-  border-bottom: 1px solid #334155;
+  background: var(--semantic-color-surface-elevated);
+  border-top: 1px solid var(--semantic-color-border-inverse);
+  border-bottom: 1px solid var(--semantic-color-border-inverse);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1124,7 +1124,7 @@ onMounted(() => {
 
 .toolbar-label {
   font-size: 0.82rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
 
@@ -1137,8 +1137,8 @@ onMounted(() => {
 .empty-state-box {
   text-align: center;
   padding: 48px 24px;
-  background: #1e293b;
-  border: 2px dashed #334155;
+  background: var(--semantic-color-surface-elevated);
+  border: 2px dashed var(--semantic-color-border-inverse);
   border-radius: 8px;
 }
 
@@ -1148,11 +1148,11 @@ onMounted(() => {
 }
 .empty-state-box h3 {
   margin: 0 0 8px 0;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
 }
 .empty-state-box p {
   margin: 0;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   max-width: 500px;
   margin: 0 auto;
   font-size: 0.9rem;
@@ -1166,30 +1166,30 @@ onMounted(() => {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
-  background: #1e293b;
+  background: var(--semantic-color-surface-elevated);
   border-radius: 8px;
   overflow: hidden;
 }
 
 .batch-table th {
-  background: #0f172a;
-  color: #94a3b8;
+  background: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse-muted);
   text-align: left;
   padding: 12px 14px;
   font-weight: 700;
-  border-bottom: 2px solid #334155;
+  border-bottom: 2px solid var(--semantic-color-border-inverse);
   font-size: 0.8rem;
   text-transform: uppercase;
 }
 
 .batch-table td {
   padding: 12px 14px;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid var(--semantic-color-text-body);
   vertical-align: middle;
 }
 
 .kit-row:hover {
-  background: #283548;
+  background: var(--semantic-color-surface-elevated);
 }
 
 .row-quarantine {
@@ -1207,34 +1207,34 @@ onMounted(() => {
 
 .input-sm {
   width: 64px;
-  background: #0f172a;
-  border: 1px solid #475569;
+  background: var(--semantic-color-surface-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 4px 6px;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
   font-size: 0.82rem;
 }
 
 .select-sm {
-  background: #0f172a;
-  border: 1px solid #475569;
+  background: var(--semantic-color-surface-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 6px 8px;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
   font-size: 0.82rem;
 }
 
 .disp-returned_to_site {
-  color: #10b981;
-  border-color: #10b981;
+  color: var(--semantic-color-success);
+  border-color: var(--semantic-color-success);
 }
 .disp-quarantined_for_destruction {
-  color: #f59e0b;
-  border-color: #f59e0b;
+  color: var(--semantic-color-warning);
+  border-color: var(--semantic-color-warning-border-strong);
 }
 .disp-returned_to_depot {
-  color: #3b82f6;
-  border-color: #3b82f6;
+  color: var(--semantic-color-interactive-primary);
+  border-color: var(--semantic-color-interactive-primary);
 }
 
 .status-flag {
@@ -1245,22 +1245,22 @@ onMounted(() => {
 }
 
 .flag-valid {
-  color: #10b981;
+  color: var(--semantic-color-success);
   background: rgba(16, 185, 129, 0.1);
 }
 .flag-warning {
-  color: #ef4444;
+  color: var(--semantic-color-error);
   background: rgba(239, 68, 68, 0.15);
 }
 .flag-quarantine {
-  color: #f59e0b;
+  color: var(--semantic-color-warning);
   background: rgba(245, 158, 11, 0.15);
 }
 
 .btn-icon {
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   font-size: 1rem;
   padding: 4px 8px;
@@ -1268,7 +1268,7 @@ onMounted(() => {
 }
 
 .btn-icon:hover {
-  color: #ef4444;
+  color: var(--semantic-color-error);
   background: rgba(239, 68, 68, 0.1);
 }
 
@@ -1277,8 +1277,8 @@ onMounted(() => {
 }
 
 .esign-card {
-  background: #1e293b;
-  border: 1px solid #3b82f6;
+  background: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-interactive-primary);
   border-radius: 8px;
   padding: 18px 20px;
 }
@@ -1286,7 +1286,7 @@ onMounted(() => {
 .esign-title {
   margin: 0 0 14px 0;
   font-size: 0.98rem;
-  color: #60a5fa;
+  color: var(--semantic-color-primary);
   font-weight: 700;
 }
 
@@ -1309,29 +1309,29 @@ onMounted(() => {
 .form-label {
   font-size: 0.82rem;
   font-weight: 600;
-  color: #cbd5e1;
+  color: var(--semantic-color-text-secondary);
 }
 
 .input-text,
 .textarea-input {
-  background: #0f172a;
-  border: 1px solid #475569;
+  background: var(--semantic-color-surface-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
   padding: 8px 12px;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
   font-size: 0.88rem;
 }
 
 .input-text:focus,
 .textarea-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--semantic-color-interactive-primary);
 }
 
 .drawer-footer {
   padding: 16px 24px;
-  background: #1e293b;
-  border-top: 1px solid #334155;
+  background: var(--semantic-color-surface-elevated);
+  border-top: 1px solid var(--semantic-color-border-inverse);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1339,10 +1339,10 @@ onMounted(() => {
 
 .summary-text {
   font-size: 0.88rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
 }
 .summary-text strong {
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
 }
 
 .footer-buttons {
@@ -1361,48 +1361,48 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: #2563eb;
-  color: #ffffff;
+  background: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
 }
 .btn-primary:hover {
-  background: #1d4ed8;
+  background: var(--semantic-color-interactive-primary);
 }
 .btn-success {
-  background: #059669;
-  color: #ffffff;
+  background: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
 }
 .btn-success:hover {
-  background: #047857;
+  background: var(--semantic-color-success);
 }
 .btn-secondary {
-  background: #334155;
-  color: #f8fafc;
-  border-color: #475569;
+  background: var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse);
+  border-color: var(--semantic-color-border-control);
 }
 .btn-secondary:hover {
-  background: #475569;
+  background: var(--semantic-color-text-secondary);
 }
 
 .btn-outline-success {
   background: transparent;
-  border-color: #10b981;
-  color: #10b981;
+  border-color: var(--semantic-color-success);
+  color: var(--semantic-color-success);
 }
 .btn-outline-success:hover {
   background: rgba(16, 185, 129, 0.1);
 }
 .btn-outline-warning {
   background: transparent;
-  border-color: #f59e0b;
-  color: #f59e0b;
+  border-color: var(--semantic-color-warning-border-strong);
+  color: var(--semantic-color-warning);
 }
 .btn-outline-warning:hover {
   background: rgba(245, 158, 11, 0.1);
 }
 .btn-outline-primary {
   background: transparent;
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-interactive-primary);
 }
 .btn-outline-primary:hover {
   background: rgba(59, 130, 246, 0.1);
@@ -1410,12 +1410,12 @@ onMounted(() => {
 
 .btn-ghost-danger {
   background: transparent;
-  color: #ef4444;
+  color: var(--semantic-color-error);
   border: 1px solid transparent;
 }
 .btn-ghost-danger:hover {
   background: rgba(239, 68, 68, 0.1);
-  border-color: #ef4444;
+  border-color: var(--semantic-color-error);
 }
 
 .btn:disabled {
@@ -1424,8 +1424,8 @@ onMounted(() => {
 }
 
 .cert-modal {
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: var(--semantic-color-surface-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 12px;
   max-width: 700px;
   width: 90%;
@@ -1433,7 +1433,7 @@ onMounted(() => {
 }
 
 .cert-modal-header {
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid var(--semantic-color-text-body);
   padding-bottom: 12px;
   margin-bottom: 18px;
 }
@@ -1441,20 +1441,20 @@ onMounted(() => {
 .cert-badge {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #34d399;
+  color: var(--semantic-color-success);
   margin-bottom: 4px;
 }
 .cert-modal-title {
   margin: 0;
   font-size: 1.3rem;
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
 }
 
 .cert-header-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  background: #1e293b;
+  background: var(--semantic-color-surface-elevated);
   padding: 14px;
   border-radius: 8px;
   margin-bottom: 18px;
@@ -1467,12 +1467,12 @@ onMounted(() => {
   gap: 2px;
 }
 .cert-meta-item .lbl {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.75rem;
   font-weight: 600;
 }
 .cert-meta-item .val {
-  color: #f8fafc;
+  color: var(--semantic-color-text-inverse);
 }
 
 .cert-section {
@@ -1480,7 +1480,7 @@ onMounted(() => {
 }
 .cert-section h4 {
   margin: 0 0 8px 0;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.88rem;
   text-transform: uppercase;
 }
@@ -1492,17 +1492,17 @@ onMounted(() => {
 }
 
 .cert-kit-chip {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-border-inverse);
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 0.82rem;
-  color: #38bdf8;
+  color: var(--semantic-color-accent-inverse);
 }
 
 .cert-signature-box {
-  background: #0284c7;
-  color: #ffffff;
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-surface);
   padding: 12px 16px;
   border-radius: 8px;
   display: flex;

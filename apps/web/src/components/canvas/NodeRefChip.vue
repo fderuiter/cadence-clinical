@@ -121,7 +121,7 @@ function onSelectClick() {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--accent, #0f766e);
+  color: var(--semantic-color-primary);
   font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -135,17 +135,17 @@ function onSelectClick() {
 }
 
 .noderef-chip:hover {
-  color: var(--accent-strong, #115e59);
+  color: var(--semantic-color-primary-dark);
 }
 
 .noderef-chip:focus-visible {
-  outline: 2px solid var(--accent, #0f766e);
+  outline: 2px solid var(--semantic-color-accent);
   outline-offset: 2px;
   border-radius: 3px;
 }
 
 .noderef-masked {
-  color: var(--ink-muted, #475569);
+  color: var(--semantic-color-text-muted);
   font-style: italic;
 }
 </style>

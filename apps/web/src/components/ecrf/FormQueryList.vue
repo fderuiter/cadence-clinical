@@ -489,7 +489,7 @@ async function confirmBulk() {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted);
   font-size: 0.85rem;
 }
 .form-query-bulk-controls {
@@ -506,10 +506,10 @@ async function confirmBulk() {
   gap: 4px;
 }
 .form-query-bulk-result--ok {
-  color: #166534;
+  color: var(--semantic-color-success-dark);
 }
 .form-query-bulk-result--failed {
-  color: #991b1b;
+  color: var(--semantic-color-error-text-dark);
 }
 .form-query-list {
   display: flex;
@@ -537,29 +537,29 @@ async function confirmBulk() {
 .form-query-status {
   padding: 0 8px;
   border-radius: 999px;
-  background: var(--neutral-light, #f1f5f9);
+  background: var(--neutral-light);
   font-size: 0.75rem;
   font-weight: 600;
 }
 .form-query-status[data-status="open"] {
-  background: var(--warning-bg, #fffbeb);
-  color: var(--warning, #92400e);
+  background: var(--warning-bg);
+  color: var(--warning);
 }
 .form-query-context {
   font-weight: 600;
-  color: var(--primary, #0f172a);
+  color: var(--primary);
 }
 .form-query-target {
-  color: var(--neutral-dark, #475569);
+  color: var(--neutral-dark);
 }
 .form-query-link {
-  color: var(--accent, #2563eb);
+  color: var(--semantic-color-interactive-primary);
   text-decoration: underline;
 }
 .form-query-changed {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #1d4ed8;
+  color: var(--semantic-color-interactive-primary);
 }
 .form-query-messages {
   margin: 0;
@@ -572,7 +572,7 @@ async function confirmBulk() {
 }
 .form-query-form textarea {
   padding: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
 }
 .form-query-buttons {

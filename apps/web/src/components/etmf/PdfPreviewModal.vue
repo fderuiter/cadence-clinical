@@ -394,14 +394,14 @@ function formatDate(dateStr) {
   display: flex;
   flex: 1;
   overflow: hidden;
-  background-color: #f1f5f9;
+  background-color: var(--semantic-color-surface-header);
 }
 
 /* Metadata Sidebar styling */
 .metadata-sidebar {
   width: 300px;
-  background-color: #ffffff;
-  border-right: 1px solid #cbd5e1;
+  background-color: var(--semantic-color-surface);
+  border-right: 1px solid var(--semantic-color-border-control);
   display: flex;
   flex-direction: column;
   padding: 16px;
@@ -414,7 +414,7 @@ function formatDate(dateStr) {
 }
 
 .meta-section.border-top {
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--semantic-color-border);
   padding-top: 16px;
 }
 
@@ -422,7 +422,7 @@ function formatDate(dateStr) {
   margin: 0 0 12px 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--semantic-color-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -435,36 +435,28 @@ function formatDate(dateStr) {
 }
 
 .meta-label {
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
 
 .meta-value {
-  color: #0f172a;
+  color: var(--semantic-color-text);
   text-align: right;
   word-break: break-all;
 }
 
-.font-mono {
-  font-family: monospace;
-}
-
-.font-bold {
-  font-weight: 700;
-}
-
 /* Status colors */
 .text-muted {
-  color: var(--text-muted, #64748b);
+  color: var(--semantic-color-text-secondary);
 }
 .text-warning {
-  color: var(--warning, #d97706);
+  color: var(--semantic-color-warning);
 }
 .text-success {
-  color: var(--success, #16a34a);
+  color: var(--semantic-color-success);
 }
 .text-danger {
-  color: var(--danger, #dc2626);
+  color: var(--semantic-color-error);
 }
 
 .change-reason-block h5,
@@ -472,18 +464,18 @@ function formatDate(dateStr) {
   margin: 0 0 6px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--text-secondary, #475569);
+  color: var(--semantic-color-text-secondary);
 }
 
 .reason-text {
+  font-size: 0.8rem;
+  color: var(--semantic-color-text-dark);
+  background-color: var(--semantic-color-surface-muted);
   margin: 0;
   padding: 8px;
-  font-size: 0.8rem;
   line-height: 1.4;
-  color: var(--text-main, #1e293b);
-  background-color: var(--surface-muted, #f8fafc);
-  border: 1px solid var(--border-subtle, #e2e8f0);
-  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--semantic-color-border);
+  border-radius: var(--radius-xs);
 }
 
 .checksum-text {
@@ -491,9 +483,9 @@ function formatDate(dateStr) {
   padding: 6px;
   font-family: var(--font-mono, monospace);
   font-size: 0.75rem;
-  background-color: var(--surface-code, #f1f5f9);
-  color: var(--text-primary, #0f172a);
-  border-radius: var(--radius-sm, 4px);
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
+  border-radius: var(--radius-xs);
   overflow-x: auto;
   word-break: break-all;
 }
@@ -506,15 +498,15 @@ function formatDate(dateStr) {
 }
 
 .manifest-card.signed {
-  background-color: var(--status-success-bg, #f0fdf4);
-  border: 1px solid var(--status-success-border, #bbf7d0);
-  color: var(--status-success-text, #166534);
+  background-color: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border-soft);
+  color: var(--semantic-color-success-dark);
 }
 
 .manifest-card.unsigned {
-  background-color: var(--status-warning-bg, #fffbeb);
-  border: 1px solid var(--status-warning-border, #fef3c7);
-  color: var(--status-warning-text, #92400e);
+  background-color: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
 }
 
 .sign-status {
@@ -551,7 +543,7 @@ function formatDate(dateStr) {
   width: 100%;
   max-width: 650px;
   min-height: 800px;
-  background-color: var(--surface-bg, #ffffff);
+  background-color: var(--semantic-color-surface);
   border-radius: var(--radius-sm, 4px);
   box-shadow:
     0 10px 15px -3px rgba(0, 0, 0, 0.1),
@@ -559,30 +551,12 @@ function formatDate(dateStr) {
 }
 
 /* CSS Watermarking overlay rotates 35deg diagonally across the page content background */
-.watermark-overlay-container {
-  position: absolute;
-  inset: 0;
-  z-index: 100;
-  pointer-events: none;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  align-items: center;
-  opacity: 0.12; /* subtle watermark overlay */
-}
-
-.diagonal-watermark-row {
-  white-space: nowrap;
-  transform: rotate(-30deg);
-}
-
 .watermark-text {
   font-family: var(--font-sans, Arial, sans-serif);
   font-size: 1rem;
   font-weight: 900;
+  color: var(--semantic-color-error);
   letter-spacing: 0.1em;
-  color: var(--danger, #ef4444);
 }
 
 /* Page content Mock-up sheet */
@@ -599,7 +573,7 @@ function formatDate(dateStr) {
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--semantic-color-text-secondary);
   font-weight: 600;
   text-transform: uppercase;
   margin-bottom: 24px;
@@ -612,19 +586,19 @@ function formatDate(dateStr) {
 .doc-title {
   font-size: 1.6rem;
   font-weight: 800;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   margin: 0 0 8px 0;
 }
 
 .doc-subtitle {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--semantic-color-text-secondary);
   margin: 0 0 16px 0;
 }
 
 .divider {
   border: none;
-  border-top: 2px solid #cbd5e1;
+  border-top: 2px solid var(--semantic-color-border-control);
   margin-bottom: 24px;
 }
 
@@ -635,14 +609,14 @@ function formatDate(dateStr) {
 .doc-section-content h3 {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--semantic-color-text-dark);
   margin: 0 0 10px 0;
 }
 
 .doc-section-content p {
   font-size: 0.85rem;
   line-height: 1.6;
-  color: #334155;
+  color: var(--semantic-color-text-body);
   margin: 0;
 }
 
@@ -650,28 +624,28 @@ function formatDate(dateStr) {
   display: flex;
   justify-content: space-between;
   font-size: 0.7rem;
-  color: #94a3b8;
-  border-top: 1px solid #e2e8f0;
+  color: var(--semantic-color-text-secondary);
+  border-top: 1px solid var(--semantic-color-border);
   padding-top: 12px;
   margin-top: 32px;
 }
 
 /* Redaction styles */
 .redaction-overlay-block {
-  background-color: #000000;
-  color: #000000;
+  background-color: var(--semantic-color-black);
+  color: var(--semantic-color-black);
   border-radius: 2px;
   padding: 1px 4px;
   font-family: monospace;
   user-select: none;
 }
 .redaction-overlay-block:hover {
-  color: #ef4444;
+  color: var(--semantic-color-error);
 }
 .redaction-badge-banner {
-  background-color: #fef2f2;
-  border: 1px solid #fca5a5;
-  color: #dc2626;
+  background-color: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border);
+  color: var(--semantic-color-error);
   padding: 8px 12px;
   border-radius: 4px;
   font-weight: 700;
@@ -680,8 +654,8 @@ function formatDate(dateStr) {
   text-align: center;
 }
 .redaction-summary-box {
-  background-color: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 12px;
   margin-top: 8px;
@@ -695,12 +669,12 @@ function formatDate(dateStr) {
 }
 .redacted-line {
   font-family: monospace;
-  color: #475569;
+  color: var(--semantic-color-text-secondary);
 }
 .manifest-card.redacted {
-  background-color: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1e40af;
+  background-color: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
 }
 .redact-status {
   font-weight: 700;
@@ -718,7 +692,7 @@ function formatDate(dateStr) {
   font-size: 0.8rem;
 }
 .meta-label-items {
-  color: #1e40af;
+  color: var(--semantic-color-info);
   font-weight: 600;
 }
 .redact-ul {
@@ -733,8 +707,8 @@ function formatDate(dateStr) {
   display: block;
   font-family: monospace;
   font-size: 0.75rem;
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: var(--semantic-color-info-light);
+  color: var(--semantic-color-info);
   padding: 6px;
   border-radius: 4px;
   overflow-x: auto;

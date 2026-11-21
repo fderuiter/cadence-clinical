@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Cadence.Apps.Tickets.Infrastructure.Persistence.Migrations;
 
 /// <inheritdoc />
-public partial class SyncTicketLifecycleModel : Migration
+public partial class EnforceTicketStatusCheckConstraint : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)

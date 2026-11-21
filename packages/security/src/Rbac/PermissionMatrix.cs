@@ -13,6 +13,30 @@ public static partial class PermissionMatrix
     private static readonly Dictionary<string, Dictionary<string, HashSet<string>>> _rolePermissions =
         new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Canonical operational and clinical staff roles permitted to read SOP guidance and log/view support tickets
+    /// (excludes read-only auditors and study participants).
+    /// </summary>
+    private static readonly string[] OperationalStaffRoles =
+    [
+        RoleNormalization.ROLE_SYSADMIN,
+        RoleNormalization.ROLE_SPONSOR_DESIGNER,
+        RoleNormalization.ROLE_REVIEWER,
+        RoleNormalization.ROLE_SPONSOR_DM,
+        RoleNormalization.ROLE_SPONSOR_MM,
+        RoleNormalization.ROLE_SPONSOR_STATISTICIAN,
+        RoleNormalization.ROLE_UNBLINDED_STATISTICIAN,
+        RoleNormalization.ROLE_IDMC,
+        RoleNormalization.ROLE_INVESTIGATOR,
+        RoleNormalization.ROLE_CRC,
+        RoleNormalization.ROLE_CRA_CANONICAL,
+        "monitor",
+        RoleNormalization.ROLE_EXTERNAL_MONITOR,
+        RoleNormalization.ROLE_PHARMACIST,
+        RoleNormalization.ROLE_FINANCE_OFFICER,
+        "terminology_manager",
+    ];
+
     public static IReadOnlyDictionary<string, Dictionary<string, HashSet<string>>> ROLE_PERMISSIONS => _rolePermissions;
 
     static PermissionMatrix()
@@ -424,6 +448,7 @@ public static partial class PermissionMatrix
         AddImagingGrants();
         AddEconsentGrants();
         AddKnowledgeGrants();
+        AddTicketsGrants();
         AddCtmsGrants();
         AddSafetyGrants();
     }
@@ -441,6 +466,8 @@ public static partial class PermissionMatrix
     private static partial void AddEconsentGrants();
 
     private static partial void AddKnowledgeGrants();
+
+    private static partial void AddTicketsGrants();
 
     private static partial void AddCtmsGrants();
 

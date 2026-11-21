@@ -91,7 +91,7 @@ jobs:
             done
           fi
           if command -v hadolint >/dev/null 2>&1; then
-            mapfile -t DOCKERFILES < <(find . -type f -name "Dockerfile*" -not -path "*/.venv/*" -not -path "*/node_modules/*")
+            mapfile -t DOCKERFILES < <(find . -type f -name "Dockerfile*" -not -path "*/.venv/*" -not -path "*/.cadence/*" -not -path "*/node_modules/*")
             if [ ${#DOCKERFILES[@]} -gt 0 ] && [ -n "${DOCKERFILES[0]}" ]; then
               echo "Linting Dockerfiles:"
               printf '%s\n' "${DOCKERFILES[@]}"
@@ -114,7 +114,7 @@ jobs:
             fi
           fi
           if command -v shellcheck >/dev/null 2>&1; then
-            mapfile -t SHELL_SCRIPTS < <(find . -type f -name "*.sh" -not -path "*/.venv/*" -not -path "*/node_modules/*")
+            mapfile -t SHELL_SCRIPTS < <(find . -type f -name "*.sh" -not -path "*/.venv/*" -not -path "*/.cadence/*" -not -path "*/node_modules/*")
             if [ ${#SHELL_SCRIPTS[@]} -gt 0 ] && [ -n "${SHELL_SCRIPTS[0]}" ]; then
               echo "Linting shell scripts:"
               printf '%s\n' "${SHELL_SCRIPTS[@]}"
@@ -187,7 +187,7 @@ jobs:
         run: dotnet build Cadence.sln
 
       - name: Run Cadence quality sentinels
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude api-clients --exclude vulnerabilities
+        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities
 
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
@@ -285,6 +285,7 @@ jobs:
       audit_outcome: ${{ steps.run_audit.outcome }}
       static_outcome: ${{ steps.run_static.outcome }}
       secrets_outcome: ${{ steps.run_secrets.outcome }}
+      detect_secrets_outcome: ${{ steps.run_detect_secrets.outcome }}
       deid_outcome: ${{ steps.run_deid_scan.outcome }}
     steps:
       - name: Check out repository
@@ -354,12 +355,26 @@ jobs:
         if: always()
         env:
           BASE_REF: ${{ github.base_ref || 'main' }}
+          EVENT_NAME: ${{ github.event_name }}
         run: | # pragma: allowlist secret
-          python3 -m pip install --quiet detect-secrets==1.5.0 || true
-          export PATH="$HOME/.local/bin:$PATH"
-          git fetch --no-tags origin "$BASE_REF" || true
-          git diff --name-only --diff-filter=ACMR -z "origin/$BASE_REF...HEAD" \
-            | xargs -0 --no-run-if-empty detect-secrets-hook --baseline .secrets.baseline --exclude-files '(pnpm-lock\.yaml|package-lock\.json|yarn\.lock)'
+          python3 -m venv "$RUNNER_TEMP/detect-secrets-venv"
+          "$RUNNER_TEMP/detect-secrets-venv/bin/python" -m pip install --quiet --upgrade pip detect-secrets==1.5.0
+          export PATH="$RUNNER_TEMP/detect-secrets-venv/bin:$PATH"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            DIFF_RANGE="origin/$BASE_REF...HEAD"
+          else
+            DIFF_RANGE="HEAD~1..HEAD"
+          fi
+          mapfile -d '' -t CHANGED_FILES < <(git diff --name-only --diff-filter=ACMR -z "$DIFF_RANGE")
+          if [ "${#CHANGED_FILES[@]}" -gt 0 ]; then
+            rc=0
+            detect-secrets-hook --baseline .secrets.baseline --exclude-files '(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|Migrations/[^/]+\.Designer\.cs$|Migrations/idempotent_migration\.sql$|report.*\.xml|coverage.*\.xml|\.cadence/|dist/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)' "${CHANGED_FILES[@]}" || rc=$?
+            git checkout -- .secrets.baseline
+            if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ]; then
+              exit "$rc"
+            fi
+          fi
 
       - name: Run DEID compliance scan
         id: run_deid_scan
