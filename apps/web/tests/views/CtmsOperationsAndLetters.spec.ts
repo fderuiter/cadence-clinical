@@ -3,7 +3,6 @@ import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ctmsApi } from "../../src/api/ctmsApi";
 import { executionApi } from "../../src/api/executionApi";
-import { soaClient } from "../../src/api/soaClient";
 import apiClient from "../../src/services/api";
 import { useAuthStore } from "../../src/stores/auth";
 import CtmsView from "../../src/views/CtmsView.vue";
@@ -97,7 +96,7 @@ describe("CtmsView live operations, structured visit findings, compiled letters,
       pdfAccessUrl: "/api/v1/ctms/letters/LTR-ABCD1234/pdf",
       pdfBase64: "JVBERi0xLjc=",
     });
-    vi.spyOn(soaClient, "verifySignature").mockResolvedValue({
+    vi.spyOn(apiClient, "post").mockResolvedValue({
       sig_token: "sig-token-letter-1",
     });
   });
@@ -182,9 +181,11 @@ describe("CtmsView live operations, structured visit findings, compiled letters,
       .trigger("click");
     await flushPromises();
 
-    expect(soaClient.verifySignature).toHaveBeenCalledWith(
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/api/v1/auth/signature-verification",
       expect.objectContaining({
         action: "/api/v1/ctms/letters/compile",
+        semantic_action: "ctms.letter.compile",
       })
     );
     expect(ctmsApi.compileVisitLetter).toHaveBeenCalledWith(

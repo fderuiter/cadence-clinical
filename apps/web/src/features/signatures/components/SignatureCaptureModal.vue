@@ -50,6 +50,8 @@
         <GxpCredentialsInput
           v-model:username="usernameVal"
           v-model:totp="totp"
+          :password-reentry-required="needsPasswordReentry"
+          data-pragma="pragma: allowlist secret"
           :disabled="busy"
           @keyup-enter="confirm"
           v-model:password="password"/><!-- pragma: allowlist secret -->
@@ -105,7 +107,7 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
   username: { type: String, default: "" },
   signerName: { type: String, default: "" },
   signerRole: { type: String, default: "" },
-  role: { type: String, default: "Subject" },
+  role: { type: String, default: "" },
   semanticAction: { type: String, default: "" },
   onSign: { type: Function, default: null },
   reasons: { type: Array, default: null },
@@ -114,7 +116,8 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
 
 <script setup>
 import { computed, ref, watch, inject } from "vue";
-import { ModalErrorAlert, useFocusTrap } from "ui";
+import { deriveSignerRoleFromClaims, ModalErrorAlert, useFocusTrap } from "ui";
+import { useAuthStore } from "../../../stores/auth.js";
 import GxpCredentialsInput from "./GxpCredentialsInput.vue";
 
 const props = defineProps({
@@ -137,14 +140,37 @@ useFocusTrap(modalRef, {
   onEscape: cancel,
 });
 
+function resolveDefaultSignerRole() {
+  const explicit = props.signerRole || props.role;
+  if (explicit) {
+    return explicit;
+  }
+  try {
+    const authStore = useAuthStore();
+    return deriveSignerRoleFromClaims(
+      {
+        username: authStore.user?.username || props.username || "",
+        roles: authStore.rawRoles || [],
+      },
+      "Subject"
+    );
+  } catch {
+    return deriveSignerRoleFromClaims(
+      { username: props.username || "", roles: [] },
+      "Subject"
+    );
+  }
+}
+
 const usernameVal = ref(props.username);
 const signerNameVal = ref(props.signerName || props.username || "");
-const signerRoleVal = ref(props.signerRole || props.role || "Subject");
+const signerRoleVal = ref(resolveDefaultSignerRole());
 const password = ref("");
 const totp = ref("");
 const signingReason = ref("");
 const busy = ref(false);
 const error = ref("");
+const needsPasswordReentry = ref(false);
 
 // Inject dynamic decoupled signature service
 const signatureService = inject("signatureService", null);
@@ -182,15 +208,22 @@ watch(
     if (newVal) {
       usernameVal.value = props.username;
       signerNameVal.value = props.signerName || props.username || "";
-      signerRoleVal.value = props.signerRole || props.role || "Subject";
+      signerRoleVal.value = resolveDefaultSignerRole();
       password.value = "";
       totp.value = "";
       signingReason.value = "";
       busy.value = false;
       error.value = "";
+      needsPasswordReentry.value = false;
     }
   }
 );
+
+watch(password, (nextPassword) => {
+  if (nextPassword) {
+    needsPasswordReentry.value = false;
+  }
+});
 
 watch(
   () => props.username,
@@ -211,8 +244,8 @@ watch(
 
 watch(
   () => props.signerRole || props.role,
-  (newVal) => {
-    if (newVal) signerRoleVal.value = newVal;
+  () => {
+    signerRoleVal.value = resolveDefaultSignerRole();
   }
 );
 
@@ -221,6 +254,7 @@ function cancel() {
   totp.value = "";
   error.value = "";
   busy.value = false;
+  needsPasswordReentry.value = false;
   emit("cancel");
 }
 
@@ -239,6 +273,7 @@ async function handleRetry() {
     return;
   }
   if (!password.value) {
+    needsPasswordReentry.value = true;
     focusModalField("#sig-password");
     return;
   }
@@ -286,11 +321,12 @@ async function confirm() {
   const t = totp.value || null;
   const r = signingReason.value;
   const sName = signerNameVal.value || u;
-  const sRole = signerRoleVal.value || "Subject";
+  const sRole = signerRoleVal.value || resolveDefaultSignerRole();
 
   // IMMEDIATELY clear sensitive fields to comply with GxP no-leak mandates
   password.value = "";
   totp.value = "";
+  needsPasswordReentry.value = false;
   error.value = "";
   busy.value = true;
 
@@ -393,6 +429,7 @@ async function confirm() {
     }
 
     error.value = displayError;
+    needsPasswordReentry.value = !password.value;
     emit("error", err);
   } finally {
     busy.value = false;
@@ -406,6 +443,7 @@ defineExpose({
   signerNameVal,
   signerRoleVal,
   signingReason,
+  needsPasswordReentry,
 });
 </script>
 

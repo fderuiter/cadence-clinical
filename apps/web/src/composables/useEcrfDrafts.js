@@ -7,6 +7,7 @@ import {
   getCurrentInstance,
 } from "vue";
 
+import { registerDraftSource } from "ui";
 import { useAuthStore } from "../stores/auth.js";
 import { scopedKey, storageScopeOf } from "../utils/userScopedStorage.js";
 
@@ -190,6 +191,30 @@ export function useEcrfDrafts(
     }, 500);
   }
 
+  function flushDraft() {
+    const hadPendingTimer = Boolean(debounceTimer);
+    cancelAutoSave();
+    const key = getStorageKey();
+    if (!key) return;
+    if (isDirty.value) {
+      saveDraft();
+    } else if (hadPendingTimer || hasDraft.value) {
+      if (typeof localStorage !== "undefined") {
+        try {
+          localStorage.removeItem(key);
+        } catch {
+          // ignore
+        }
+      }
+      hasDraft.value = false;
+    }
+  }
+
+  const unregisterDraftSource = registerDraftSource({
+    flush: flushDraft,
+    hasDrafts: () => Boolean(isDirty.value || hasDraft.value),
+  });
+
   // A different account (or sign-out) never inherits this one's draft state.
   watch(
     () => scopedKey(scope.value, "ecrf_draft"),
@@ -210,7 +235,10 @@ export function useEcrfDrafts(
   );
 
   if (getCurrentInstance()) {
-    onUnmounted(cancelAutoSave);
+    onUnmounted(() => {
+      cancelAutoSave();
+      unregisterDraftSource();
+    });
   }
 
   return {
@@ -222,6 +250,7 @@ export function useEcrfDrafts(
     draftRestored,
     setInitialValues,
     saveDraft,
+    flushDraft,
     restoreDraft,
     clearDraft,
   };

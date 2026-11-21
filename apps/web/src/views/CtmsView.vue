@@ -2308,7 +2308,14 @@
     </div>
 
     <!-- Modal 2: FDA Part 11 Electronic Signature & Re-Authentication -->
-    <div v-if="showSignatureModal" class="modal-overlay">
+    <div
+      v-if="showSignatureModal"
+      ref="sigModalRef"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Electronic Signature and Identity Verification"
+    >
       <div class="modal">
         <div class="modal-header">
           Electronic Signature & Identity Verification (Part 11)
@@ -2343,7 +2350,7 @@
             <input
               id="sig-password"
               v-model="sigPassword"
-              type="password"
+              v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
               placeholder="Password"
               :disabled="sigBusy"
             />
@@ -2393,7 +2400,7 @@
           <button
             class="btn btn-cancel"
             :disabled="sigBusy"
-            @click="showSignatureModal = false"
+            @click="cancelSignatureModal"
           >
             Cancel
           </button>
@@ -3054,6 +3061,12 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useRoute } from "vue-router";
+import {
+  buildStepUpVerificationPayload,
+  SEMANTIC_ACTIONS,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  useFocusTrap,
+} from "ui";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import CraVerificationConsole from "../components/persona/CraVerificationConsole.vue";
@@ -3066,7 +3079,6 @@ import { isDemoBuild } from "../utils/demoMode.js";
 import apiClient from "../services/api";
 import { ctmsApi } from "../api/ctmsApi";
 import { executionApi } from "../api/executionApi";
-import { soaClient } from "../api/soaClient";
 import {
   DOA_SIGNOFF_ROLE_REASON,
   MONITORING_LETTER_COMPILE_ROLE_REASON,
@@ -3355,6 +3367,7 @@ const sigReasonForChange = ref("");
 const sigError = ref("");
 const sigBusy = ref(false);
 let signatureActionPath = "/api/v1/ctms/doa/sign-off";
+let signatureSemanticAction = SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF;
 let signatureCallback = null;
 
 const showScheduleVisitModal = ref(false);
@@ -3606,16 +3619,34 @@ function confirmJustification() {
 }
 
 // Prompt for eSignature (FDA Part 11)
+const sigModalRef = ref(null);
+useFocusTrap(sigModalRef, {
+  isOpen: () => showSignatureModal.value,
+  onEscape: cancelSignatureModal,
+});
+
+function cancelSignatureModal() {
+  sigPassword.value = "";
+  sigTotp.value = "";
+  sigError.value = "";
+  sigBusy.value = false;
+  showSignatureModal.value = false;
+}
+
 function promptSignature(
   callback,
   options = {
     action: "/api/v1/ctms/doa/sign-off",
+    semanticAction: SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF,
     defaultSigningReason: "INVESTIGATOR_SIGNATURE",
     initialReason: "",
   }
 ) {
   sigUsername.value =
-    authStore.identity?.username || store.user?.username || "";
+    authStore.user?.username ||
+    authStore.identity?.username ||
+    store.user?.username ||
+    "";
   sigPassword.value = "";
   sigTotp.value = "";
   sigSigningReason.value =
@@ -3624,6 +3655,11 @@ function promptSignature(
   sigError.value = "";
   sigBusy.value = false;
   signatureActionPath = options.action || "/api/v1/ctms/doa/sign-off";
+  signatureSemanticAction =
+    options.semanticAction ||
+    (signatureActionPath.includes("letters/compile")
+      ? "ctms.letter.compile"
+      : SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF);
   signatureCallback = callback;
   showSignatureModal.value = true;
 }
@@ -3642,16 +3678,30 @@ async function confirmSignature() {
     return;
   }
 
+  const username = sigUsername.value;
+  const password = sigPassword.value;
+  const totp = sigTotp.value || null;
+  const reason = sigReasonForChange.value.trim();
+
+  // Immediately scrub sensitive credentials on submit (21 CFR Part 11 hygiene)
+  sigPassword.value = "";
+  sigTotp.value = "";
   sigBusy.value = true;
   sigError.value = "";
 
   try {
-    const reauthRes = await soaClient.verifySignature({
-      username: sigUsername.value,
-      password: sigPassword.value,
-      totp: sigTotp.value || null,
+    const verificationPayload = buildStepUpVerificationPayload({
+      username,
+      password,
+      totp,
       action: signatureActionPath,
+      semanticAction: signatureSemanticAction,
     });
+
+    const reauthRes = await apiClient.post(
+      "/api/v1/auth/signature-verification",
+      verificationPayload
+    );
 
     const sigToken = reauthRes?.sig_token;
     if (!sigToken) {
@@ -3661,7 +3711,7 @@ async function confirmSignature() {
     }
 
     if (signatureCallback) {
-      await signatureCallback(sigToken, sigReasonForChange.value.trim());
+      await signatureCallback(sigToken, reason);
     }
     showSignatureModal.value = false;
   } catch (err) {
@@ -3983,6 +4033,7 @@ async function confirmCompileLetter() {
       },
       {
         action: "/api/v1/ctms/letters/compile",
+        semanticAction: "ctms.letter.compile",
         defaultSigningReason: "APPROVAL",
         initialReason: reason,
       }
