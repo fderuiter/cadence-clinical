@@ -1,14 +1,17 @@
 using System.Threading.Tasks;
 
 using Cadence.Apps.Payments.Infrastructure.Persistence;
+using Cadence.Database.Tenancy;
 using Cadence.IntegrationTests.Database;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using Xunit;
 
@@ -35,7 +38,10 @@ public sealed class PaymentsPostgresApiFactory : WebApplicationFactory<Cadence.A
         }
 
         await using var scope = Services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<PaymentsDbContext>().Database.MigrateAsync().ConfigureAwait(false);
+        using var _ = scope.ServiceProvider.GetService<ITenantScope>()?.Suppress();
+        var db = scope.ServiceProvider.GetRequiredService<PaymentsDbContext>();
+        await db.Database.ExecuteSqlRawAsync($"CREATE SCHEMA IF NOT EXISTS \"{PaymentsDbContextFactory.Schema}\"").ConfigureAwait(false);
+        await db.Database.MigrateAsync().ConfigureAwait(false);
     }
 
     public override async ValueTask DisposeAsync()
@@ -55,6 +61,19 @@ public sealed class PaymentsPostgresApiFactory : WebApplicationFactory<Cadence.A
         {
             builder.UseTestPostgresConnectionString();
         }
+
+        builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<CurrentTenantAccessor>();
+            services.AddSingleton<CurrentTenantAccessor>(sp =>
+            {
+                var accessor = new CurrentTenantAccessor(
+                    sp.GetRequiredService<ITenantCodeResolver>(),
+                    sp.GetService<IHttpContextAccessor>());
+                accessor.UseNonHttpSeedingFallbackTenant(TestSecurityContext.TenantCode);
+                return accessor;
+            });
+        });
 
         base.ConfigureWebHost(builder);
     }

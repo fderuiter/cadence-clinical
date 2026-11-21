@@ -42,7 +42,7 @@ public static class CgtEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write");
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
 
         group.MapPost("/milestone", async (
             CgtMilestoneCreateRequest request,
@@ -65,7 +65,7 @@ public static class CgtEndpoints
                 return Results.NotFound(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write");
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyScope();
 
         group.MapPost("/manufacturing-bind", async (
             CgtManufacturingBindRequest request,
@@ -88,7 +88,7 @@ public static class CgtEndpoints
                 return Results.NotFound(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write");
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyScope();
 
         group.MapPost("/bedside-verify", async (
             CgtBedsideVerificationRequest request,
@@ -120,7 +120,7 @@ public static class CgtEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write");
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
 
         group.MapPost("/infuse", async (
             CgtInfusionExecuteRequest request,
@@ -152,7 +152,7 @@ public static class CgtEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write");
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
 
         group.MapPost("/returns", async (
             CgtVialReturnReconciliationRequest request,
@@ -173,7 +173,7 @@ public static class CgtEndpoints
             var result = await service.LogVialReturnAsync(request, ct);
             return Results.Ok(result);
         })
-        .RequirePermission("cgt_chain_of_custody:write");
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
 
         group.MapPost("/destruction-certificate", async (
             CgtDestructionCertificateCreateRequest request,
@@ -202,7 +202,7 @@ public static class CgtEndpoints
                 return Results.UnprocessableEntity(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write");
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
 
         group.MapPost("/verify-barcode", (
             CgtBarcodeVerifyRequest request,
@@ -230,7 +230,7 @@ public static class CgtEndpoints
 
             return Results.Ok(result);
         })
-        .RequirePermission("cgt_chain_of_custody:read");
+        .RequirePermission("cgt_chain_of_custody:read").RequireCallerStudyAndSiteScope();
 
         group.MapGet("/chain-of-custody/{studyId}/{subjectId}", async (
             string studyId,

@@ -1,7 +1,10 @@
+using System;
+
 using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -10,8 +13,11 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence;
 /// <summary>
 /// EF Core 10 DbContext for Interop microservice persistence gateway.
 /// </summary>
-public sealed class InteropDbContext(DbContextOptions<InteropDbContext> options) : DbContext(options)
+public sealed class InteropDbContext(DbContextOptions<InteropDbContext> options) : DbContext(options), ITenantScopedDbContext
 {
+    public Guid? ActiveInMemoryTenantFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantFilter(this);
+
+    public string? ActiveInMemoryTenantStringFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantStringFilter(this);
     public DbSet<EproSubmission> EproSubmissions => Set<EproSubmission>();
     public DbSet<InteropAuditLog> InteropAuditLogs => Set<InteropAuditLog>();
     public DbSet<Instrument> Instruments => Set<Instrument>();
@@ -55,5 +61,6 @@ public sealed class InteropDbContext(DbContextOptions<InteropDbContext> options)
         modelBuilder.ApplyConfiguration(new DatabaseLockAuthTokenConfiguration());
         modelBuilder.ApplyConfiguration(new ExecutionRunRecordConfiguration());
         modelBuilder.ApplyConfiguration(new BiostatExportAuditLogConfiguration());
+        modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

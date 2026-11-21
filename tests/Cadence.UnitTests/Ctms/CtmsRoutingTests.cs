@@ -72,7 +72,10 @@ public sealed class CtmsRoutingTests : IAsyncDisposable
 
     private HttpClient CreateClient(string role = "sysadmin", string userId = "admin-1")
     {
-        var identity = TestSecurityContext.Identity(userId, role);
+        var identity = TestSecurityContext.Identity(userId, role) with
+        {
+            SiteIds = string.Equals(role, "sysadmin", StringComparison.OrdinalIgnoreCase) ? [] : ["SITE-1"],
+        };
         var handler = new TestSecurityContext.GatewaySigningHandler(identity)
         {
             InnerHandler = _server.CreateHandler()

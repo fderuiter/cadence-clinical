@@ -317,3 +317,20 @@ export function canAssignTrainingCurriculum(auth: RawRoleHolder): boolean {
 export function canSignTrainingDelegations(auth: RawRoleHolder): boolean {
   return hasAnyCanonicalRole(auth, TRAINING_DELEGATION_SIGN_ROLES);
 }
+
+// Roles granted observation.correct in the kernel (site coordinators, investigators, and data managers;
+// monitors and auditors inspect observations read-only per KernelObservationEndpoints.cs).
+const OBSERVATION_CORRECTION_ROLES = [
+  "site_investigator",
+  "crc",
+  "data_manager",
+];
+
+/** Whether the caller holds a role permitted to submit observation value corrections. */
+export function canCorrectObservations(
+  auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
+): boolean {
+  if (!auth.isAuthenticated) return true;
+  if (canManageParticipants(auth)) return true;
+  return OBSERVATION_CORRECTION_ROLES.some((role) => auth.hasRole(role));
+}

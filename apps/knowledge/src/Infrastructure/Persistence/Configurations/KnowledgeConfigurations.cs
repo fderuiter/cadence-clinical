@@ -13,9 +13,7 @@ public class KnowledgeCategoryConfiguration : IEntityTypeConfiguration<Knowledge
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasMaxLength(36);
         builder.Property(x => x.Name).HasMaxLength(255).IsRequired();
-        builder.HasIndex(x => x.Name).IsUnique();
         builder.Property(x => x.Slug).HasMaxLength(255).IsRequired();
-        builder.HasIndex(x => x.Slug).IsUnique();
         builder.Property(x => x.ParentId).HasMaxLength(36);
         builder.HasIndex(x => x.ParentId);
         builder.Property(x => x.PersonaVisibility).HasMaxLength(1000);
@@ -32,7 +30,6 @@ public class KnowledgeArticleConfiguration : IEntityTypeConfiguration<KnowledgeA
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasMaxLength(36);
         builder.Property(x => x.Slug).HasMaxLength(255).IsRequired();
-        builder.HasIndex(x => x.Slug).IsUnique();
         builder.Property(x => x.Title).HasMaxLength(500).IsRequired();
         builder.Property(x => x.CategoryId).HasMaxLength(36).IsRequired();
         builder.HasIndex(x => x.CategoryId);

@@ -537,6 +537,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/enrollments/screen": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Registers a pseudonymous participant when needed and starts a screening enrollment at a study site (participant.screen). */
+    post: operations["KernelScreenEnrollment"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/locks": {
     parameters: {
       query?: never;
@@ -1458,6 +1475,49 @@ export interface components {
       /** Format: int32 */
       recorded_count: number | string;
       collection_title?: null | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      missing_required_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      open_query_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      answered_query_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      verified_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unverified_count: number | string;
+      /** @default false */
+      locked: boolean;
+      /** @default false */
+      frozen: boolean;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      lock_count: number | string;
+      /** @default false */
+      signed: boolean;
+      /** @default false */
+      signature_superseded: boolean;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      signature_count: number | string;
     };
     Kernel_FormValueRequest: {
       item_id: string;
@@ -1604,6 +1664,24 @@ export interface components {
       instance_type: null | string;
       change: string;
       properties: string[];
+    };
+    Kernel_KernelEnrollmentStateResponse: {
+      ref: string;
+      /** Format: uuid */
+      enrollment_id: string;
+      /** Format: uuid */
+      participant_id: string;
+      /** Format: uuid */
+      study_id: string;
+      /** Format: uuid */
+      study_site_id: string;
+      subject_code: string;
+      enrollment_status: string;
+      /** Format: date-time */
+      status_since: string;
+      /** Format: int32 */
+      enrollment_number: null | number | string;
+      content_hash: string;
     };
     Kernel_KernelEntitlementsResponse: {
       tenant_ref: string;
@@ -1877,6 +1955,17 @@ export interface components {
       columns: components["schemas"]["Kernel_KernelSoaColumnResponse"][];
       rows: components["schemas"]["Kernel_KernelSoaRowResponse"][];
       footnotes: components["schemas"]["Kernel_KernelSoaFootnoteResponse"][];
+    };
+    Kernel_KernelScreenEnrollmentRequest: {
+      /** Format: uuid */
+      participant_id: null | string;
+      /** Format: uuid */
+      enrollment_id: null | string;
+      study_code: string;
+      site_code: string;
+      subject_code: string;
+      /** Format: date-time */
+      screened_at: string;
     };
     Kernel_KernelSearchHitResponse: {
       ref: string;
@@ -3976,6 +4065,93 @@ export interface operations {
       };
     };
   };
+  KernelScreenEnrollment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_KernelScreenEnrollmentRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelEnrollmentStateResponse"];
+        };
+      };
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelEnrollmentStateResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Execution.ParticipantUnknown`, `K.Execution.StudySiteUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Execution.AlreadyActiveAtSite`, `K.Execution.SubjectCodeTaken`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Execution.SubjectCodeInvalid`, `K.Execution.TransitionTimeInvalid`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
   KernelApplyLock: {
     parameters: {
       query?: never;
@@ -5065,6 +5241,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
         headers: {
           [name: string]: unknown;
         };

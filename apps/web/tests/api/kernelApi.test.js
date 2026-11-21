@@ -460,3 +460,113 @@ describe("isMasked", () => {
     expect(isMasked({ kind: "study", ref: STUDY, mask: null })).toBe(false);
   });
 });
+
+describe("kernelApi simulation and matrix gap check", () => {
+  let fetchSpy;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    fetchSpy.mockRestore();
+  });
+
+  it("sends simulate through the authenticated OpenAPI client honoring dynamic VITE_API_BASE_URL", async () => {
+    const { useAuthStore } = await import("../../src/stores/auth");
+    useAuthStore().setAuth({
+      authenticated: true,
+      token: "sim-jwt-token",
+      tokenParsed: { sub: "designer-1" },
+    });
+    vi.stubEnv("VITE_API_BASE_URL", "https://gateway.cadence.test");
+
+    const simulation = {
+      scope: STUDY,
+      as_of: {
+        valid_at: "2027-03-14T10:00:00Z",
+        known_at: "2027-03-14T10:00:00Z",
+      },
+      candidate: { source: "stored", version_ref: VERSION },
+      engine_versions: [],
+      input_hash: "sha256:in-1",
+      result_hash: "sha256:out-1",
+      structural_diff: [],
+      schedule_changes: [],
+      masked: [],
+      matrix_gaps: [],
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, simulation));
+
+    const result = await kernelApi.simulate({ storedVersionRef: VERSION });
+
+    expect(result).toEqual(simulation);
+    const request = fetchSpy.mock.calls.at(-1)[0];
+    const url = new URL(request.url);
+    expect(request.method).toBe("POST");
+    expect(url.origin).toBe("https://gateway.cadence.test");
+    expect(url.pathname).toBe("/api/v1/kernel/simulation/simulate");
+    expect(request.headers.get("Authorization")).toBe("Bearer sim-jwt-token");
+    expect(await request.json()).toEqual({
+      base_version_ref: null,
+      stored_version_ref: VERSION,
+      candidate_content: null,
+      valid_at: null,
+      known_at: null,
+    });
+  });
+
+  it("sends checkMatrixGaps through the authenticated OpenAPI client and surfaces 422 ApiError details", async () => {
+    const { useAuthStore } = await import("../../src/stores/auth");
+    useAuthStore().setAuth({
+      authenticated: true,
+      token: "gap-jwt-token",
+      tokenParsed: { sub: "designer-1" },
+    });
+
+    const findings = [
+      {
+        kind: 1,
+        severity: 2,
+        json_pointer_path: "/schedule/0",
+        description: "Unscheduled vital signs collection",
+        recommendation: "Bind VS to Visit 1",
+      },
+    ];
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, findings));
+
+    await expect(kernelApi.checkMatrixGaps('{"usdm":"3.0"}')).resolves.toEqual(
+      findings
+    );
+    const request = fetchSpy.mock.calls.at(-1)[0];
+    expect(request.method).toBe("POST");
+    expect(new URL(request.url).pathname).toBe(
+      "/api/v1/kernel/protocols/matrix-gap-check"
+    );
+    expect(request.headers.get("Authorization")).toBe("Bearer gap-jwt-token");
+    expect(await request.json()).toEqual({
+      protocol_content: '{"usdm":"3.0"}',
+    });
+
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(
+        422,
+        {
+          title: "Unprocessable Entity",
+          detail: "Protocol JSON is invalid.",
+          code: "K.Simulation.ContentInvalid",
+        },
+        "application/problem+json"
+      )
+    );
+
+    const err = await kernelApi
+      .simulate({ candidateContent: "bad" })
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.status).toBe(422);
+    expect(err.message).toBe("Protocol JSON is invalid.");
+  });
+});

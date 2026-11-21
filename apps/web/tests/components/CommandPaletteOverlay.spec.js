@@ -344,4 +344,116 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
       HTMLElement.prototype.scrollIntoView = originalScroll;
     }
   });
+
+  it("queries Execution listSubjects with q for partial subject searches beyond 200 rows and drops stale out-of-order responses", async () => {
+    vi.useFakeTimers();
+    const preload = Array.from({ length: 200 }, (_, i) => ({
+      id: `0192f3c4-5e6a-7b8c-9d0e-a1b2c3d4${String(i + 1).padStart(4, "0")}`,
+      subject_id: `SUBJ-${String(i + 1).padStart(4, "0")}`,
+      study_id: "CAD-101",
+      site_id: "SITE-17",
+      status: "ACTIVE",
+      active_protocol_version: "3.0",
+      enrollment_index: i + 1,
+    }));
+    const beyond = {
+      id: "0192f3c4-5e6a-7b8c-9d0e-a1b2c3d40245",
+      subject_id: "SUBJ-0245",
+      study_id: "CAD-101",
+      site_id: "SITE-22",
+      status: "SCREENING",
+      active_protocol_version: "3.0",
+      enrollment_index: 245,
+    };
+    const staleMatch = {
+      id: "0192f3c4-5e6a-7b8c-9d0e-a1b2c3d40219",
+      subject_id: "SUBJ-0219",
+      study_id: "CAD-101",
+      site_id: "SITE-17",
+      status: "ACTIVE",
+      active_protocol_version: "3.0",
+      enrollment_index: 219,
+    };
+
+    let resolveStaleQuery;
+    const listSpy = vi
+      .spyOn(executionApi, "listSubjects")
+      .mockImplementation(({ q, limit = 200, offset = 0 }) => {
+        if (!q) {
+          return Promise.resolve({
+            items: preload,
+            total: 250,
+            limit,
+            offset,
+          });
+        }
+        if (q === "021") {
+          return new Promise((resolve) => {
+            resolveStaleQuery = resolve;
+          });
+        }
+        if (q === "024") {
+          return Promise.resolve({
+            items: [beyond],
+            total: 1,
+            limit,
+            offset: 0,
+          });
+        }
+        return Promise.resolve({ items: [], total: 0, limit, offset: 0 });
+      });
+    const detailSpy = vi
+      .spyOn(executionApi, "getSubjectDetail")
+      .mockRejectedValue(
+        Object.assign(new Error("Not found"), { status: 404 })
+      );
+    const searchSpy = vi.spyOn(kernelApi, "search").mockResolvedValue([]);
+
+    try {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["CRA"];
+
+      const canvasStore = useStudyCanvasStore();
+      canvasStore.openStudy("CAD-101");
+      await router.push("/studies/CAD-101");
+
+      const wrapper = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      const input = wrapper.find("#canvas-palette-input");
+      await input.setValue("021");
+      vi.advanceTimersByTime(250);
+
+      await input.setValue("024");
+      vi.advanceTimersByTime(250);
+      await flushPromises();
+
+      expect(listSpy).toHaveBeenCalledWith({
+        studyId: "CAD-101",
+        q: "024",
+        limit: 5,
+      });
+      expect(wrapper.text()).toContain("SUBJ-0245");
+
+      resolveStaleQuery({
+        items: [staleMatch],
+        total: 1,
+        limit: 5,
+        offset: 0,
+      });
+      await flushPromises();
+
+      expect(wrapper.text()).toContain("SUBJ-0245");
+      expect(wrapper.text()).not.toContain("SUBJ-0219");
+    } finally {
+      listSpy.mockRestore();
+      detailSpy.mockRestore();
+      searchSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
 });

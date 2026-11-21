@@ -6,25 +6,25 @@ Generated from the EF Core model of `Cadence.Apps.Interop.Infrastructure.Persist
 
 | Table | Entity | Columns |
 | --- | --- | --- |
-| [`interop.audit_log_entries`](#interopaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`interop.clinical_queries`](#interopclinical_queries) | `ClinicalQuery` | 10 |
-| [`interop.device_registrations`](#interopdevice_registrations) | `DeviceRegistrationRecord` | 20 |
-| [`interop.ehr_endpoints`](#interopehr_endpoints) | `EhrEndpointRecord` | 17 |
-| [`interop.ehr_reconciliation_candidates`](#interopehr_reconciliation_candidates) | `EhrReconciliationCandidateRecord` | 32 |
-| [`interop.epro_defeated_submissions`](#interopepro_defeated_submissions) | `EproSubmissionDefeated` | 8 |
-| [`interop.epro_quarantined_submissions`](#interopepro_quarantined_submissions) | `EproSubmissionQuarantine` | 12 |
-| [`interop.epro_submissions`](#interopepro_submissions) | `EproSubmission` | 12 |
-| [`interop.instruments`](#interopinstruments) | `Instrument` | 10 |
-| [`interop.interop_audit_logs`](#interopinterop_audit_logs) | `InteropAuditLog` | 7 |
-| [`interop.sce_biostat_export_audit_logs`](#interopsce_biostat_export_audit_logs) | `BiostatExportAuditLog` | 13 |
-| [`interop.sce_database_lock_auth_tokens`](#interopsce_database_lock_auth_tokens) | `DatabaseLockAuthToken` | 18 |
-| [`interop.sce_execution_runs`](#interopsce_execution_runs) | `ExecutionRunRecord` | 33 |
-| [`interop.sce_statistical_programs`](#interopsce_statistical_programs) | `StatisticalProgram` | 17 |
-| [`interop.sensor_daily_summaries`](#interopsensor_daily_summaries) | `SensorDailySummaryRecord` | 38 |
-| [`interop.sensor_safety_alerts`](#interopsensor_safety_alerts) | `SensorSafetyAlertRecord` | 20 |
-| [`interop.sensor_telemetry_streams`](#interopsensor_telemetry_streams) | `SensorTelemetryStreamRecord` | 17 |
-| [`interop.subject_assignments`](#interopsubject_assignments) | `SubjectAssignment` | 13 |
-| [`interop.subject_notifications`](#interopsubject_notifications) | `SubjectNotification` | 12 |
+| [`interop.audit_log_entries`](#interopaudit_log_entries) | `AuditLogEntry` | 12 |
+| [`interop.clinical_queries`](#interopclinical_queries) | `ClinicalQuery` | 11 |
+| [`interop.device_registrations`](#interopdevice_registrations) | `DeviceRegistrationRecord` | 21 |
+| [`interop.ehr_endpoints`](#interopehr_endpoints) | `EhrEndpointRecord` | 18 |
+| [`interop.ehr_reconciliation_candidates`](#interopehr_reconciliation_candidates) | `EhrReconciliationCandidateRecord` | 33 |
+| [`interop.epro_defeated_submissions`](#interopepro_defeated_submissions) | `EproSubmissionDefeated` | 9 |
+| [`interop.epro_quarantined_submissions`](#interopepro_quarantined_submissions) | `EproSubmissionQuarantine` | 13 |
+| [`interop.epro_submissions`](#interopepro_submissions) | `EproSubmission` | 13 |
+| [`interop.instruments`](#interopinstruments) | `Instrument` | 11 |
+| [`interop.interop_audit_logs`](#interopinterop_audit_logs) | `InteropAuditLog` | 8 |
+| [`interop.sce_biostat_export_audit_logs`](#interopsce_biostat_export_audit_logs) | `BiostatExportAuditLog` | 14 |
+| [`interop.sce_database_lock_auth_tokens`](#interopsce_database_lock_auth_tokens) | `DatabaseLockAuthToken` | 19 |
+| [`interop.sce_execution_runs`](#interopsce_execution_runs) | `ExecutionRunRecord` | 34 |
+| [`interop.sce_statistical_programs`](#interopsce_statistical_programs) | `StatisticalProgram` | 18 |
+| [`interop.sensor_daily_summaries`](#interopsensor_daily_summaries) | `SensorDailySummaryRecord` | 39 |
+| [`interop.sensor_safety_alerts`](#interopsensor_safety_alerts) | `SensorSafetyAlertRecord` | 21 |
+| [`interop.sensor_telemetry_streams`](#interopsensor_telemetry_streams) | `SensorTelemetryStreamRecord` | 18 |
+| [`interop.subject_assignments`](#interopsubject_assignments) | `SubjectAssignment` | 14 |
+| [`interop.subject_notifications`](#interopsubject_notifications) | `SubjectNotification` | 13 |
 
 ## interop.audit_log_entries
 
@@ -43,10 +43,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## interop.clinical_queries
 
@@ -64,12 +66,14 @@ Entity: `ClinicalQuery`
 | `TestCode` | `character varying(100)` | no |  |  |
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VisitId` | `character varying(255)` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_clinical_queries_StudyId`: (`StudyId`)
 - `IX_clinical_queries_SubjectId`: (`SubjectId`)
 - `IX_clinical_queries_TestCode`: (`TestCode`)
+- `IX_clinical_queries_tenant_id`: (`tenant_id`)
 
 ## interop.device_registrations
 
@@ -97,6 +101,7 @@ Entity: `DeviceRegistrationRecord`
 | `UdiPiSerial` | `character varying(100)` | yes |  |  |
 | `Vendor` | `character varying(100)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -107,6 +112,7 @@ Indexes:
 - `IX_device_registrations_StudyId`: (`StudyId`)
 - `IX_device_registrations_SubjectId`: (`SubjectId`)
 - `IX_device_registrations_UdiDi`: (`UdiDi`)
+- `IX_device_registrations_tenant_id`: (`tenant_id`)
 
 ## interop.ehr_endpoints
 
@@ -131,12 +137,14 @@ Entity: `EhrEndpointRecord`
 | `SystemType` | `character varying(50)` | no |  |  |
 | `TokenUrl` | `character varying(500)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ehr_endpoints_ClientId`: (`ClientId`)
 - `IX_ehr_endpoints_IsActive`: (`IsActive`)
 - `IX_ehr_endpoints_SystemType`: (`SystemType`)
+- `IX_ehr_endpoints_tenant_id`: (`tenant_id`)
 
 ## interop.ehr_reconciliation_candidates
 
@@ -176,6 +184,7 @@ Entity: `EhrReconciliationCandidateRecord`
 | `TargetDomain` | `character varying(50)` | no |  |  |
 | `TargetVariable` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -191,6 +200,7 @@ Indexes:
 - `IX_ehr_reconciliation_candidates_SubjectPseudonym`: (`SubjectPseudonym`)
 - `IX_ehr_reconciliation_candidates_TargetDomain`: (`TargetDomain`)
 - `IX_ehr_reconciliation_candidates_TargetVariable`: (`TargetVariable`)
+- `IX_ehr_reconciliation_candidates_tenant_id`: (`tenant_id`)
 
 ## interop.epro_defeated_submissions
 
@@ -206,11 +216,13 @@ Entity: `EproSubmissionDefeated`
 | `OfflineSyncMarkersJson` | `jsonb` | no |  |  |
 | `Status` | `character varying(100)` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_epro_defeated_submissions_DiaryId`: (`DiaryId`)
 - `IX_epro_defeated_submissions_SubjectId`: (`SubjectId`)
+- `IX_epro_defeated_submissions_tenant_id`: (`tenant_id`)
 
 ## interop.epro_quarantined_submissions
 
@@ -230,12 +242,14 @@ Entity: `EproSubmissionQuarantine`
 | `TriageHistoryJson` | `jsonb` | no |  |  |
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `ValidationErrorsJson` | `jsonb` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_epro_quarantined_submissions_DeviceTimestamp`: (`DeviceTimestamp`)
 - `IX_epro_quarantined_submissions_DiaryId`: (`DiaryId`)
 - `IX_epro_quarantined_submissions_SubjectId`: (`SubjectId`)
+- `IX_epro_quarantined_submissions_tenant_id`: (`tenant_id`)
 
 ## interop.epro_submissions
 
@@ -255,12 +269,14 @@ Entity: `EproSubmission`
 | `SubjectId` | `character varying(255)` | no |  |  |
 | `SyncStatus` | `character varying(50)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_epro_submissions_DeviceTimestamp`: (`DeviceTimestamp`)
 - `IX_epro_submissions_DiaryId`: (`DiaryId`)
 - `IX_epro_submissions_SubjectId`: (`SubjectId`)
+- `IX_epro_submissions_tenant_id`: (`tenant_id`)
 
 ## interop.instruments
 
@@ -278,6 +294,11 @@ Entity: `Instrument`
 | `ResponseTypesJson` | `jsonb` | no |  |  |
 | `ScoringMetadataJson` | `jsonb` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_instruments_tenant_id`: (`tenant_id`)
 
 ## interop.interop_audit_logs
 
@@ -292,11 +313,13 @@ Entity: `InteropAuditLog`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_interop_audit_logs_Timestamp`: (`Timestamp`)
 - `IX_interop_audit_logs_UserId`: (`UserId`)
+- `IX_interop_audit_logs_tenant_id`: (`tenant_id`)
 
 ## interop.sce_biostat_export_audit_logs
 
@@ -317,12 +340,14 @@ Entity: `BiostatExportAuditLog`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_sce_biostat_export_audit_logs_StudyId`: (`StudyId`)
 - `IX_sce_biostat_export_audit_logs_Timestamp`: (`Timestamp`)
 - `IX_sce_biostat_export_audit_logs_UserId`: (`UserId`)
+- `IX_sce_biostat_export_audit_logs_tenant_id`: (`tenant_id`)
 
 ## interop.sce_database_lock_auth_tokens
 
@@ -348,11 +373,13 @@ Entity: `DatabaseLockAuthToken`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `TokenId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_sce_database_lock_auth_tokens_StudyId`: (`StudyId`)
 - `IX_sce_database_lock_auth_tokens_TokenId`: unique (`TokenId`)
+- `IX_sce_database_lock_auth_tokens_tenant_id`: (`tenant_id`)
 
 ## interop.sce_execution_runs
 
@@ -393,6 +420,7 @@ Entity: `ExecutionRunRecord`
 | `StdoutCapture` | `text` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -400,6 +428,7 @@ Indexes:
 - `IX_sce_execution_runs_RunId`: unique (`RunId`)
 - `IX_sce_execution_runs_SnapshotId`: (`SnapshotId`)
 - `IX_sce_execution_runs_StudyId`: (`StudyId`)
+- `IX_sce_execution_runs_tenant_id`: (`tenant_id`)
 
 ## interop.sce_statistical_programs
 
@@ -424,10 +453,12 @@ Entity: `StatisticalProgram`
 | `Title` | `character varying(255)` | no |  |  |
 | `Version` | `character varying(50)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_sce_statistical_programs_StudyId`: (`StudyId`)
+- `IX_sce_statistical_programs_tenant_id`: (`tenant_id`)
 
 ## interop.sensor_daily_summaries
 
@@ -473,6 +504,7 @@ Entity: `SensorDailySummaryRecord`
 | `TbrLevel2Percentage` | `double precision` | yes |  |  |
 | `TirPercentage` | `double precision` | yes |  |  |
 | `TotalSteps` | `integer` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -484,6 +516,7 @@ Indexes:
 - `IX_sensor_daily_summaries_StudyId`: (`StudyId`)
 - `IX_sensor_daily_summaries_SubjectId`: (`SubjectId`)
 - `IX_sensor_daily_summaries_SummaryDate`: (`SummaryDate`)
+- `IX_sensor_daily_summaries_tenant_id`: (`tenant_id`)
 
 ## interop.sensor_safety_alerts
 
@@ -511,6 +544,7 @@ Entity: `SensorSafetyAlertRecord`
 | `ThresholdValue` | `double precision` | no |  |  |
 | `TriggeredAt` | `timestamp with time zone` | no |  |  |
 | `Unit` | `character varying(50)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -524,6 +558,7 @@ Indexes:
 - `IX_sensor_safety_alerts_StudyId`: (`StudyId`)
 - `IX_sensor_safety_alerts_SubjectId`: (`SubjectId`)
 - `IX_sensor_safety_alerts_TriggeredAt`: (`TriggeredAt`)
+- `IX_sensor_safety_alerts_tenant_id`: (`tenant_id`)
 
 ## interop.sensor_telemetry_streams
 
@@ -548,6 +583,7 @@ Entity: `SensorTelemetryStreamRecord`
 | `StartTimestamp` | `timestamp with time zone` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -559,6 +595,7 @@ Indexes:
 - `IX_sensor_telemetry_streams_SiteId`: (`SiteId`)
 - `IX_sensor_telemetry_streams_StudyId`: (`StudyId`)
 - `IX_sensor_telemetry_streams_SubjectId`: (`SubjectId`)
+- `IX_sensor_telemetry_streams_tenant_id`: (`tenant_id`)
 
 ## interop.subject_assignments
 
@@ -579,11 +616,13 @@ Entity: `SubjectAssignment`
 | `StartDate` | `timestamp with time zone` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_subject_assignments_InstrumentId`: (`InstrumentId`)
 - `IX_subject_assignments_SubjectId`: (`SubjectId`)
+- `IX_subject_assignments_tenant_id`: (`tenant_id`)
 
 ## interop.subject_notifications
 
@@ -603,9 +642,11 @@ Entity: `SubjectNotification`
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_subject_notifications_AssignmentId`: (`AssignmentId`)
 - `IX_subject_notifications_DueAt`: (`DueAt`)
 - `IX_subject_notifications_SubjectId`: (`SubjectId`)
+- `IX_subject_notifications_tenant_id`: (`tenant_id`)

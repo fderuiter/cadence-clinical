@@ -56,6 +56,27 @@ internal sealed class KernelEnrollmentDirectory(KernelTenantDbContextFactory con
         return statuses.Count == 0 ? null : statuses.Single();
     }
 
+    public async Task<(StudyId StudyId, StudySiteId StudySiteId)?> FindStudySiteAsync(
+        TenantId tenant, string studyCode, string siteCode, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(studyCode) || string.IsNullOrWhiteSpace(siteCode))
+        {
+            return null;
+        }
+
+        await using var db = contexts.Create(tenant);
+        var match = await (
+                from studySite in db.StudySites.AsNoTracking()
+                join study in db.Studies.AsNoTracking() on studySite.StudyId equals study.Id
+                join site in db.Sites.AsNoTracking() on studySite.SiteId equals site.Id
+                where studySite.IsActive && study.IsActive && site.IsActive
+                    && study.StudyCode == studyCode && site.SiteCode == siteCode
+                select new { study.Id, StudySiteId = studySite.Id })
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return match is null ? null : (match.Id, match.StudySiteId);
+    }
+
     public async Task<int> NextEnrollmentNumberAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);

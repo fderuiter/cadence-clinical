@@ -6,15 +6,15 @@ Generated from the EF Core model of `Cadence.Apps.Imaging.Infrastructure.Persist
 
 | Table | Entity | Columns |
 | --- | --- | --- |
-| [`imaging.audit_log_entries`](#imagingaudit_log_entries) | `AuditLogEntry` | 11 |
+| [`imaging.audit_log_entries`](#imagingaudit_log_entries) | `AuditLogEntry` | 12 |
 | [`imaging.imaging_adjudication_sessions`](#imagingimaging_adjudication_sessions) | `ImagingAdjudicationSession` | 36 |
-| [`imaging.imaging_audit_logs`](#imagingimaging_audit_logs) | `ImagingAuditLog` | 7 |
-| [`imaging.imaging_caliper_annotations`](#imagingimaging_caliper_annotations) | `ImagingAnnotation` | 29 |
-| [`imaging.imaging_deid_certificates`](#imagingimaging_deid_certificates) | `DeidentificationCertificate` | 19 |
-| [`imaging.imaging_instance_envelopes`](#imagingimaging_instance_envelopes) | `ImagingInstanceEnvelope` | 18 |
-| [`imaging.imaging_series_envelopes`](#imagingimaging_series_envelopes) | `ImagingSeriesEnvelope` | 10 |
+| [`imaging.imaging_audit_logs`](#imagingimaging_audit_logs) | `ImagingAuditLog` | 8 |
+| [`imaging.imaging_caliper_annotations`](#imagingimaging_caliper_annotations) | `ImagingAnnotation` | 30 |
+| [`imaging.imaging_deid_certificates`](#imagingimaging_deid_certificates) | `DeidentificationCertificate` | 20 |
+| [`imaging.imaging_instance_envelopes`](#imagingimaging_instance_envelopes) | `ImagingInstanceEnvelope` | 19 |
+| [`imaging.imaging_series_envelopes`](#imagingimaging_series_envelopes) | `ImagingSeriesEnvelope` | 11 |
 | [`imaging.imaging_study_envelopes`](#imagingimaging_study_envelopes) | `ImagingStudyEnvelope` | 19 |
-| [`imaging.imaging_tumor_response_assessments`](#imagingimaging_tumor_response_assessments) | `TumorResponseAssessment` | 34 |
+| [`imaging.imaging_tumor_response_assessments`](#imagingimaging_tumor_response_assessments) | `TumorResponseAssessment` | 35 |
 
 ## imaging.audit_log_entries
 
@@ -33,10 +33,12 @@ Entity: `AuditLogEntry`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## imaging.imaging_adjudication_sessions
 
@@ -75,11 +77,11 @@ Entity: `ImagingAdjudicationSession`
 | `StudyEnvelopeId` | `character varying(36)` | yes |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
-| `TenantId` | `character varying(255)` | no |  |  |
 | `TimepointName` | `character varying(100)` | no |  |  |
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `WorkflowStatus` | `character varying(50)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -90,9 +92,9 @@ Indexes:
 - `IX_imaging_adjudication_sessions_StudyEnvelopeId`: (`StudyEnvelopeId`)
 - `IX_imaging_adjudication_sessions_StudyId`: (`StudyId`)
 - `IX_imaging_adjudication_sessions_SubjectId`: (`SubjectId`)
-- `IX_imaging_adjudication_sessions_TenantId`: (`TenantId`)
 - `IX_imaging_adjudication_sessions_TimepointName`: (`TimepointName`)
 - `IX_imaging_adjudication_sessions_WorkflowStatus`: (`WorkflowStatus`)
+- `IX_imaging_adjudication_sessions_tenant_id`: (`tenant_id`)
 
 ## imaging.imaging_audit_logs
 
@@ -107,12 +109,14 @@ Entity: `ImagingAuditLog`
 | `DetailsJson` | `jsonb` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `StudyEnvelopeId` | `character varying(36)` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_imaging_audit_logs_Action`: (`Action`)
 - `IX_imaging_audit_logs_ActorId`: (`ActorId`)
 - `IX_imaging_audit_logs_StudyEnvelopeId`: (`StudyEnvelopeId`)
+- `IX_imaging_audit_logs_tenant_id`: (`tenant_id`)
 
 ## imaging.imaging_caliper_annotations
 
@@ -149,6 +153,7 @@ Entity: `ImagingAnnotation`
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
 | `VolumeMm3` | `double precision` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -161,6 +166,7 @@ Indexes:
 - `IX_imaging_caliper_annotations_StudyId`: (`StudyId`)
 - `IX_imaging_caliper_annotations_SubjectId`: (`SubjectId`)
 - `IX_imaging_caliper_annotations_TimepointName`: (`TimepointName`)
+- `IX_imaging_caliper_annotations_tenant_id`: (`tenant_id`)
 
 ## imaging.imaging_deid_certificates
 
@@ -187,6 +193,7 @@ Entity: `DeidentificationCertificate`
 | `SubjectId` | `character varying(255)` | no |  |  |
 | `TargetSha256` | `character varying(64)` | no |  |  |
 | `Timestamp` | `character varying(50)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -198,6 +205,7 @@ Indexes:
 - `IX_imaging_deid_certificates_StudyId`: (`StudyId`)
 - `IX_imaging_deid_certificates_SubjectId`: (`SubjectId`)
 - `IX_imaging_deid_certificates_TargetSha256`: (`TargetSha256`)
+- `IX_imaging_deid_certificates_tenant_id`: (`tenant_id`)
 
 ## imaging.imaging_instance_envelopes
 
@@ -223,6 +231,7 @@ Entity: `ImagingInstanceEnvelope`
 | `SopInstanceUid` | `character varying(64)` | no |  |  |
 | `WindowCenter` | `double precision` | yes |  |  |
 | `WindowWidth` | `double precision` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -232,6 +241,7 @@ Indexes:
 - `IX_imaging_instance_envelopes_SeriesEnvelopeId`: (`SeriesEnvelopeId`)
 - `IX_imaging_instance_envelopes_SopClassUid`: (`SopClassUid`)
 - `IX_imaging_instance_envelopes_SopInstanceUid`: unique (`SopInstanceUid`)
+- `IX_imaging_instance_envelopes_tenant_id`: (`tenant_id`)
 
 ## imaging.imaging_series_envelopes
 
@@ -249,12 +259,14 @@ Entity: `ImagingSeriesEnvelope`
 | `SeriesInstanceUid` | `character varying(64)` | no |  |  |
 | `SeriesNumber` | `integer` | yes |  |  |
 | `StudyEnvelopeId` | `character varying(36)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_imaging_series_envelopes_Modality`: (`Modality`)
 - `IX_imaging_series_envelopes_SeriesInstanceUid`: (`SeriesInstanceUid`)
 - `IX_imaging_series_envelopes_StudyEnvelopeId`: (`StudyEnvelopeId`)
+- `IX_imaging_series_envelopes_tenant_id`: (`tenant_id`)
 
 ## imaging.imaging_study_envelopes
 
@@ -278,9 +290,9 @@ Entity: `ImagingStudyEnvelope`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `StudyInstanceUid` | `character varying(64)` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
-| `TenantId` | `character varying(255)` | no |  |  |
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -291,7 +303,7 @@ Indexes:
 - `IX_imaging_study_envelopes_StudyId`: (`StudyId`)
 - `IX_imaging_study_envelopes_StudyInstanceUid`: unique (`StudyInstanceUid`)
 - `IX_imaging_study_envelopes_SubjectId`: (`SubjectId`)
-- `IX_imaging_study_envelopes_TenantId`: (`TenantId`)
+- `IX_imaging_study_envelopes_tenant_id`: (`tenant_id`)
 
 ## imaging.imaging_tumor_response_assessments
 
@@ -333,6 +345,7 @@ Entity: `TumorResponseAssessment`
 | `TimepointName` | `character varying(100)` | no |  |  |
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
@@ -342,3 +355,4 @@ Indexes:
 - `IX_imaging_tumor_response_assessments_StudyId`: (`StudyId`)
 - `IX_imaging_tumor_response_assessments_SubjectId`: (`SubjectId`)
 - `IX_imaging_tumor_response_assessments_TimepointName`: (`TimepointName`)
+- `IX_imaging_tumor_response_assessments_tenant_id`: (`tenant_id`)
