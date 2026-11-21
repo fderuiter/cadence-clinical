@@ -1,4 +1,5 @@
-import { defineConfig, devices } from "@playwright/test";
+import { chromium, defineConfig, devices } from "@playwright/test";
+import { buildChromiumLaunchOptions } from "../../scripts/playwright-chromium-launcher.mjs";
 
 const hasExplicitFullStackTarget = process.argv.some(
   (arg) =>
@@ -23,14 +24,14 @@ const accessibilityProject = {
   use: {
     ...devices["Desktop Chrome"],
     baseURL: "http://127.0.0.1:3001/cadence-clinical/",
-    launchOptions: {
+    launchOptions: buildChromiumLaunchOptions(chromium, {
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
       ],
-    },
+    }),
   },
 };
 
@@ -66,6 +67,13 @@ export default defineConfig({
           use: {
             ...devices["Desktop Chrome"],
             storageState: "playwright/.auth/user.json",
+            launchOptions: buildChromiumLaunchOptions(chromium, {
+              args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+              ],
+            }),
           },
           dependencies: ["setup"],
         },
