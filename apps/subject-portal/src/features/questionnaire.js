@@ -368,8 +368,21 @@ export function validateActiveQuestionnaire() {
   return allValid;
 }
 
+function taskReturnFocusTarget(assignmentId) {
+  if (!assignmentId || typeof document === "undefined") return null;
+  const escaped =
+    typeof CSS !== "undefined" && typeof CSS.escape === "function"
+      ? CSS.escape(String(assignmentId))
+      : String(assignmentId).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+  return () =>
+    document.querySelector(
+      `#task-card-${escaped} .btn-start-task:not([disabled])`
+    );
+}
+
 // Back button: preserves partial answers as an encrypted draft and marks the task for resumption.
 export async function saveAndLeaveQuestionnaire() {
+  const assignmentId = state.activeQuestionnaire?.assignment?.id || null;
   let saved = false;
   if (state.activeQuestionnaire && state.activeQuestionnaire.assignment) {
     try {
@@ -384,7 +397,9 @@ export async function saveAndLeaveQuestionnaire() {
   if (saved) {
     showToast("Draft saved — resume anytime from My Tasks");
   }
-  showView("view-tasks");
+  showView("view-tasks", {
+    focusTarget: taskReturnFocusTarget(assignmentId),
+  });
 }
 
 export async function leaveQuestionnaire() {
@@ -413,6 +428,8 @@ export function dismissCancelQuestionnaire() {
 }
 
 export async function confirmCancelQuestionnaire() {
+  const returningAssignmentId =
+    state.activeQuestionnaire?.assignment?.id || null;
   if (state.activeQuestionnaire && state.activeQuestionnaire.assignment) {
     const assignmentId = state.activeQuestionnaire.assignment.id;
     try {
@@ -430,7 +447,9 @@ export async function confirmCancelQuestionnaire() {
   state.questionnaireCancelConfirmOpen = false;
   state.activeQuestionnaire = null;
   renderTasks();
-  showView("view-tasks");
+  showView("view-tasks", {
+    focusTarget: taskReturnFocusTarget(returningAssignmentId),
+  });
 }
 
 // Sign and Submit: validates, then asks for the electronic signature.

@@ -1,6 +1,8 @@
 <template>
   <section id="ecrf-form-instance" class="card ecrf-form-panel">
-    <div class="card-title">Case report form</div>
+    <div id="ecrf-form-title" class="card-title" tabindex="-1">
+      Case report form
+    </div>
 
     <!-- Open a new form or reuse one by id (ADR-2622). -->
     <div v-if="!form" class="ecrf-form-open">
@@ -249,7 +251,7 @@
             class="btn btn-secondary"
             type="button"
             :disabled="sdvBusy"
-            @click="selectedSdvItems = []"
+            @click="clearSdvSelection"
           >
             Clear selection
           </button>
@@ -594,7 +596,7 @@
                         class="btn btn-secondary"
                         type="button"
                         :disabled="sdvBusy"
-                        @click="pendingSdv = null"
+                        @click="cancelSdv"
                       >
                         Back
                       </button>
@@ -632,9 +634,10 @@
                         Raise query
                       </button>
                       <button
+                        id="ecrf-raise-cancel"
                         class="btn btn-secondary"
                         type="button"
-                        @click="raising = null"
+                        @click="cancelRaise"
                       >
                         Back
                       </button>
@@ -745,7 +748,7 @@
         aria-labelledby="ecrf-form-queries-title"
         :aria-busy="queries.loading"
       >
-        <h3 id="ecrf-form-queries-title">Queries</h3>
+        <h3 id="ecrf-form-queries-title" tabindex="-1">Queries</h3>
         <p v-if="queries.loading" role="status">Loading queries…</p>
         <p v-else-if="queries.loadError" class="ecrf-form-error" role="alert">
           The queries could not be loaded: {{ queries.loadError }}
@@ -1009,6 +1012,7 @@ import {
   ref,
   watch,
 } from "vue";
+import { handoffFocus } from "ui";
 import type { RouteLocationRaw } from "vue-router";
 import {
   formatObservationValue,
@@ -1255,18 +1259,39 @@ const canOpen = computed(
     collectedAt.value.length > 0
 );
 
-function reuse() {
-  if (reuseId.value) void load(reuseId.value);
+async function reuse() {
+  if (!reuseId.value) return;
+  await load(reuseId.value);
+  if (form.value && !props.highlightItemId) {
+    void handoffFocus([
+      () =>
+        document.querySelector<HTMLElement>(
+          "#ecrf-form-instance input:not([disabled]), #ecrf-form-instance select:not([disabled]), #ecrf-form-instance textarea:not([disabled])"
+        ),
+      "#canvas-form-workspace-title",
+      "#ecrf-form-title",
+    ]);
+  }
 }
 
-function openNew() {
+async function openNew() {
   if (!canOpen.value) return;
-  void open({
+  await open({
     enrollmentId: enrollmentId.value,
     collectionSpecId: collectionSpecId.value,
     plannedActivityId: plannedActivityId.value || null,
     collectedAt: new Date(collectedAt.value).toISOString(),
   });
+  if (form.value && !props.highlightItemId) {
+    void handoffFocus([
+      () =>
+        document.querySelector<HTMLElement>(
+          "#ecrf-form-instance input:not([disabled]), #ecrf-form-instance select:not([disabled]), #ecrf-form-instance textarea:not([disabled])"
+        ),
+      "#canvas-form-workspace-title",
+      "#ecrf-form-title",
+    ]);
+  }
 }
 
 // The form's queries (#5461), read again whenever the form is read, so `value_changed` follows a correction.
@@ -1360,6 +1385,15 @@ function selectAllUnverifiedSdv() {
   selectedSdvItems.value = unverifiedItems.value.map((item) => item.item_id);
 }
 
+function clearSdvSelection() {
+  selectedSdvItems.value = [];
+  void handoffFocus([
+    "#ecrf-sdv-select-all",
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
+}
+
 function beginVerify(item: EcrfFormItem) {
   if (!item.observation_id || !hasRecordedValue(item)) return;
   pendingSdv.value = {
@@ -1370,6 +1404,7 @@ function beginVerify(item: EcrfFormItem) {
   };
   sdvReason.value = "";
   sdvOutcome.value = null;
+  void handoffFocus("#ecrf-sdv-reason", { scrollIfOffscreen: true });
 }
 
 function beginRetract(item: EcrfFormItem, assertion: EcrfFormAssertion) {
@@ -1380,6 +1415,19 @@ function beginRetract(item: EcrfFormItem, assertion: EcrfFormAssertion) {
   };
   sdvReason.value = "";
   sdvOutcome.value = null;
+  void handoffFocus("#ecrf-sdv-reason", { scrollIfOffscreen: true });
+}
+
+function cancelSdv() {
+  const itemId = pendingSdv.value?.item_id ?? null;
+  pendingSdv.value = null;
+  void handoffFocus([
+    itemId ? `#ecrf-verify-${itemId}` : null,
+    itemId ? `#ecrf-unverify-${itemId}` : null,
+    itemId ? `#ecrf-item-${itemId}` : null,
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
 }
 
 async function confirmSdv() {
@@ -1409,6 +1457,13 @@ async function confirmSdv() {
         kind: "done",
         message: `Verified ${current.item_id} (revision ${current.revision}).`,
       };
+      void handoffFocus([
+        `#ecrf-unverify-${current.item_id}`,
+        `#ecrf-verify-${current.item_id}`,
+        `#ecrf-item-${current.item_id}`,
+        "#canvas-form-workspace-title",
+        "#ecrf-form-title",
+      ]);
     } else {
       await kernelApi.retractAssertion({
         assertionRef: `assertion:${current.assertion_id}`,
@@ -1423,6 +1478,13 @@ async function confirmSdv() {
         kind: "done",
         message: `Verification withdrawn on ${current.item_id}.`,
       };
+      void handoffFocus([
+        `#ecrf-verify-${current.item_id}`,
+        `#ecrf-unverify-${current.item_id}`,
+        `#ecrf-item-${current.item_id}`,
+        "#canvas-form-workspace-title",
+        "#ecrf-form-title",
+      ]);
     }
   } catch (error) {
     const code = assertionErrorCode(error);
@@ -1490,6 +1552,17 @@ async function submitBulkSdv() {
       bulkSdvReason.value = "";
     }
     await reload();
+    if (selectedSdvItems.value.length === 0) {
+      void handoffFocus([
+        "#ecrf-sdv-select-all",
+        () =>
+          document.querySelector<HTMLElement>(
+            "#ecrf-form-instance input:not([disabled])"
+          ),
+        "#canvas-form-workspace-title",
+        "#ecrf-form-title",
+      ]);
+    }
   } finally {
     sdvBusy.value = false;
   }
@@ -1521,6 +1594,8 @@ watch(
     ) as HTMLInputElement | null;
     if (input && !input.disabled) {
       input.focus?.();
+    } else {
+      void handoffFocus(["#canvas-form-workspace-title", "#ecrf-form-title"]);
     }
   },
   { immediate: true }
@@ -1542,6 +1617,18 @@ function beginRaise(item: EcrfFormItem) {
     unrecorded,
   };
   raiseText.value = "";
+  void handoffFocus("#ecrf-raise-text", { scrollIfOffscreen: true });
+}
+
+function cancelRaise() {
+  const itemId = raising.value?.item_id ?? null;
+  raising.value = null;
+  void handoffFocus([
+    itemId ? `#ecrf-raise-${itemId}` : null,
+    itemId ? `#ecrf-item-${itemId}` : null,
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
 }
 
 async function confirmRaise() {
@@ -1563,6 +1650,13 @@ async function confirmRaise() {
     if (wasUnaskedWithoutObservation) {
       await reload();
     }
+    void handoffFocus([
+      `#ecrf-raise-${target.item_id}`,
+      `#ecrf-item-${target.item_id}`,
+      "#ecrf-form-queries-title",
+      "#canvas-form-workspace-title",
+      "#ecrf-form-title",
+    ]);
   }
 }
 
@@ -1700,6 +1794,12 @@ function closeForm() {
   clearDraft();
   close();
   emit("closed");
+  void handoffFocus([
+    "#ecrf-form-id",
+    "#ecrf-collection-spec",
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
 }
 
 function formatUnsavedEntry(entry: EcrfUnsavedItem): string {

@@ -8,7 +8,7 @@
     tabindex="0"
   >
     <div class="view-header">
-      <h2>My Daily Questionnaires</h2>
+      <h2 id="tasks-view-heading" tabindex="-1">My Daily Questionnaires</h2>
       <p>
         Please complete your scheduled questionnaires on time to help us ensure
         high data quality.

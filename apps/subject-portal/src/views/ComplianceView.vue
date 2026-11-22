@@ -8,7 +8,7 @@
     tabindex="0"
   >
     <div class="view-header">
-      <h2>My Compliance Overview</h2>
+      <h2 id="compliance-view-heading" tabindex="-1">My Compliance Overview</h2>
       <p>
         Track your scheduled survey progress and overall trial participation
         history.

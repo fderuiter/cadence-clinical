@@ -1293,6 +1293,11 @@ a:focus-visible,
   box-shadow: none !important;
 }
 
+[tabindex="-1"]:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* 3. Color Contrast Adjustments (Requirement 3) */
 .header-title-area p {
   color: var(--semantic-color-primary-light) !important;

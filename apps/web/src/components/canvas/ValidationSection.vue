@@ -7,7 +7,9 @@
   >
     <header class="validation-header">
       <div>
-        <h2 id="study-validation-title">Validation &amp; edit checks</h2>
+        <h2 id="study-validation-title" tabindex="-1">
+          Validation &amp; edit checks
+        </h2>
         <p class="validation-subtitle">
           Governed edit-check rule packs, in-memory study previews, active study
           pins, and post-commit validation findings for {{ studyCode }}.
@@ -171,10 +173,11 @@
                 Confirm
               </button>
               <button
+                :id="`btn-cancel-pin-${pack.key}`"
                 type="button"
                 class="btn btn-secondary"
                 :disabled="busy"
-                @click="pinningPack = null"
+                @click="cancelPinToggle(pack)"
               >
                 Cancel
               </button>
@@ -349,6 +352,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
+import { useInlineFocusHandoff } from "ui";
 import {
   describeKernelError,
   kernelApi,
@@ -388,6 +392,11 @@ const selectedFinding = ref<KernelValidationFindingDetail | null>(null);
 const approvingPack = ref<KernelRulePack | null>(null);
 const pinningPack = ref<KernelRulePack | null>(null);
 const pinReason = ref("");
+const pinHandoff = useInlineFocusHandoff({
+  openTarget: "#validation-pin-reason-input",
+  closeFallback: "#study-validation-title",
+  scrollIfOffscreen: true,
+});
 
 const APPROVE_REASONS = [
   "Rule pack governance approval",
@@ -507,8 +516,22 @@ async function approveWithToken(sigToken: string, reason: string) {
 }
 
 function beginPinToggle(pack: KernelRulePack) {
+  pinHandoff.rememberTrigger(`#btn-pin-pack-${pack.key}-${pack.version}`);
   pinningPack.value = pack;
   pinReason.value = "";
+  void pinHandoff.handoff("#validation-pin-reason-input", {
+    scrollIfOffscreen: true,
+  });
+}
+
+function cancelPinToggle(pack: KernelRulePack) {
+  pinningPack.value = null;
+  pinReason.value = "";
+  void pinHandoff.restoreTrigger([
+    `#btn-pin-pack-${pack.key}-${pack.version}`,
+    `#btn-toggle-rules-${pack.key}-${pack.version}`,
+    "#study-validation-title",
+  ]);
 }
 
 async function confirmPinToggle(pack: KernelRulePack) {
@@ -537,6 +560,11 @@ async function confirmPinToggle(pack: KernelRulePack) {
     actionMessage.value = pack.pinned
       ? `Unpinned ${pack.key} from ${props.studyCode}.`
       : `Pinned ${pack.key} v${pack.version} on ${props.studyCode}.`;
+    void pinHandoff.restoreTrigger([
+      `#btn-pin-pack-${pack.key}-${pack.version}`,
+      `#btn-toggle-rules-${pack.key}-${pack.version}`,
+      "#study-validation-title",
+    ]);
   } catch (error) {
     errorMessage.value = describeKernelError(error);
   } finally {

@@ -29,6 +29,48 @@ function updateDomSyncStatusText(statusMsg) {
   }
 }
 
+function patchActiveSyncCountdownDescriptions() {
+  if (typeof document === "undefined") return;
+  const listEl = document.getElementById("sync-queue-list");
+  if (!listEl) return;
+  const seq = state.syncRetryInfo?.sequenceNumber;
+  Array.from(listEl.querySelectorAll(".task-item[data-sync-item-key]")).forEach(
+    (itemEl) => {
+      const itemSeq = itemEl.getAttribute("data-sync-seq");
+      const matchesTarget =
+        seq === null ||
+        seq === undefined ||
+        (itemSeq !== null && String(itemSeq) === String(seq));
+      if (!matchesTarget) return;
+      const statusKind = itemEl.getAttribute("data-sync-status-kind") || "";
+      if (
+        statusKind === "QUARANTINED" ||
+        statusKind === "DECRYPTION_ERROR" ||
+        statusKind === "MERGED" ||
+        statusKind === "SYNCED" ||
+        statusKind === "COMPLETED"
+      ) {
+        return;
+      }
+      const descEl = itemEl.querySelector("[data-sync-status-desc]");
+      if (descEl) {
+        const syntheticItem = {
+          sequence_number:
+            itemSeq !== null && itemSeq !== "" ? Number(itemSeq) : undefined,
+          status: statusKind || "PENDING",
+        };
+        const nextDesc = getSyncStatusExplanation(
+          syntheticItem,
+          describeQueuedSync(state.syncRetryInfo, syntheticItem)
+        );
+        if (descEl.textContent !== nextDesc) {
+          descEl.textContent = nextDesc;
+        }
+      }
+    }
+  );
+}
+
 function startSyncCountdownTimer() {
   stopSyncCountdownTimer();
   const interval = setInterval(() => {
@@ -48,7 +90,8 @@ function startSyncCountdownTimer() {
       const statusMsg = `Retrying... Attempt ${state.syncRetryInfo.attempt} of ${state.syncRetryInfo.maxRetries} (Next retry in ${remainingSec}s)`;
       state.syncStatusText = statusMsg;
       updateDomSyncStatusText(statusMsg);
-      renderSyncQueueList();
+      patchActiveSyncCountdownDescriptions();
+      void renderSyncQueueList();
     } else {
       stopSyncCountdownTimer();
     }
@@ -168,32 +211,22 @@ function renderAnswerPairsList(heading, pairs) {
   `;
 }
 
-export async function renderSyncQueueList() {
-  const listEl = document.getElementById("sync-queue-list");
-  if (!listEl) return;
-
-  const all = await getAllSubmissions();
-  if (all.length === 0) {
-    listEl.innerHTML = `<div class="loading-state" style="padding: 8px 0; text-align: center; color: var(--text-muted);">No saved surveys waiting to send.</div>`;
-    return;
+function getSyncQueueItemKey(item, fallbackIdx) {
+  if (item?.sequence_number !== undefined && item?.sequence_number !== null) {
+    return `seq:${item.sequence_number}`;
   }
+  if (item?.id) return `id:${item.id}`;
+  if (item?.assignment_id) {
+    return `assign:${item.assignment_id}:${item.device_timestamp || fallbackIdx}`;
+  }
+  return `idx:${fallbackIdx}:${item?.device_timestamp || ""}`;
+}
 
-  const contact = getSiteSupportContact();
-
-  listEl.innerHTML = all
-    .map((item) => {
-      const instName = getInstrumentDisplayName(item.diary_id);
-      const submittedTime = new Date(item.device_timestamp).toLocaleString();
-      const badgeClass = getSyncStatusBadgeClass(item);
-      const statusLabel = getSyncStatusLabel(item);
-      const statusDesc = getSyncStatusExplanation(
-        item,
-        describeQueuedSync(state.syncRetryInfo, item)
-      );
-      let recoveryGuidanceHtml = "";
-
-      if (isQuarantinedSubmission(item)) {
-        recoveryGuidanceHtml = `
+function buildRecoveryGuidanceData(item, contact) {
+  if (isQuarantinedSubmission(item)) {
+    return {
+      signature: `quarantined|${contact.phoneHref}|${contact.phoneDisplay}|${contact.emailHref}`,
+      html: `
           <div class="quarantine-guidance">
             <p>${escapeQueueHtml(COORDINATOR_QUARANTINE_STEPS)}</p>
             <div class="quarantine-contact-links">
@@ -201,54 +234,183 @@ export async function renderSyncQueueList() {
               <a href="${escapeQueueHtml(contact.emailHref)}" class="site-contact-inline-link">Email Coordinator</a>
             </div>
           </div>
-        `;
-      } else if (item.status === "DECRYPTION_ERROR" && item.unrecoverable) {
-        recoveryGuidanceHtml = `
+        `,
+    };
+  }
+  if (item.status === "DECRYPTION_ERROR" && item.unrecoverable) {
+    return {
+      signature: `decryption_unrecoverable|${contact.phoneHref}|${contact.phoneDisplay}|${contact.emailHref}`,
+      html: `
           <div class="quarantine-guidance">
             <div class="quarantine-contact-links">
               <a href="${escapeQueueHtml(contact.phoneHref)}" class="site-contact-inline-link">Call ${escapeQueueHtml(contact.phoneDisplay)}</a>
               <a href="${escapeQueueHtml(contact.emailHref)}" class="site-contact-inline-link">Email Coordinator</a>
             </div>
           </div>
-        `;
-      }
+        `,
+    };
+  }
+  return { signature: "none", html: "" };
+}
 
-      const hideRawAnswers =
-        item.status === "DECRYPTION_ERROR" || isQuarantinedSubmission(item);
-      const recordedPairs = hideRawAnswers
-        ? []
-        : formatAnswerPairs(item.answers, item.diary_id);
-      let answersDetails = renderAnswerPairsList("Your answers", recordedPairs);
+function createOrPatchSyncQueueItem(doc, existingEl, item, key, contact) {
+  const instName = getInstrumentDisplayName(item.diary_id);
+  const submittedTime = new Date(item.device_timestamp).toLocaleString();
+  const savedLabel = `Saved ${submittedTime}`;
+  const badgeClass = `status-pill ${getSyncStatusBadgeClass(item)}`;
+  const statusLabel = getSyncStatusLabel(item);
+  const statusDesc = getSyncStatusExplanation(
+    item,
+    describeQueuedSync(state.syncRetryInfo, item)
+  );
+  const statusKind = isQuarantinedSubmission(item)
+    ? "QUARANTINED"
+    : String(item.status || "PENDING");
+  const seqStr =
+    item.sequence_number !== undefined && item.sequence_number !== null
+      ? String(item.sequence_number)
+      : "";
+  const recovery = buildRecoveryGuidanceData(item, contact);
 
-      if (item.resolved_answers && item.status === "MERGED") {
-        const mergedPairs = formatAnswerPairs(
-          item.resolved_answers,
-          item.diary_id
-        );
-        answersDetails += renderAnswerPairsList(
-          "Combined answers",
-          mergedPairs
-        );
-      }
+  const hideRawAnswers =
+    item.status === "DECRYPTION_ERROR" || isQuarantinedSubmission(item);
+  const recordedPairs = hideRawAnswers
+    ? []
+    : formatAnswerPairs(item.answers, item.diary_id);
+  let answersDetails = renderAnswerPairsList("Your answers", recordedPairs);
 
-      return `
-        <div class="task-item" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; border: 1px solid var(--semantic-color-border); border-radius: 8px; background: var(--semantic-color-surface);">
+  if (item.resolved_answers && item.status === "MERGED") {
+    const mergedPairs = formatAnswerPairs(item.resolved_answers, item.diary_id);
+    answersDetails += renderAnswerPairsList("Combined answers", mergedPairs);
+  }
+
+  if (existingEl) {
+    existingEl.setAttribute("data-sync-seq", seqStr);
+    existingEl.setAttribute("data-sync-status-kind", statusKind);
+
+    const instEl = existingEl.querySelector("[data-sync-inst-name]");
+    if (instEl && instEl.textContent !== instName) {
+      instEl.textContent = instName;
+    }
+    const savedEl = existingEl.querySelector("[data-sync-saved-time]");
+    if (savedEl && savedEl.textContent !== savedLabel) {
+      savedEl.textContent = savedLabel;
+    }
+    const pillEl = existingEl.querySelector("[data-sync-status-pill]");
+    if (pillEl) {
+      if (pillEl.className !== badgeClass) pillEl.className = badgeClass;
+      if (pillEl.textContent !== statusLabel) pillEl.textContent = statusLabel;
+    }
+    const descEl = existingEl.querySelector("[data-sync-status-desc]");
+    if (descEl && descEl.textContent !== statusDesc) {
+      descEl.textContent = statusDesc;
+    }
+    const recoveryEl = existingEl.querySelector("[data-sync-recovery]");
+    if (
+      recoveryEl &&
+      recoveryEl.getAttribute("data-recovery-sig") !== recovery.signature
+    ) {
+      recoveryEl.setAttribute("data-recovery-sig", recovery.signature);
+      recoveryEl.innerHTML = recovery.html;
+    }
+    const answersEl = existingEl.querySelector("[data-sync-answers]");
+    if (
+      answersEl &&
+      answersEl.getAttribute("data-answers-sig") !== answersDetails
+    ) {
+      answersEl.setAttribute("data-answers-sig", answersDetails);
+      answersEl.innerHTML = answersDetails;
+    }
+    return existingEl;
+  }
+
+  const itemEl = doc.createElement("div");
+  itemEl.className = "task-item";
+  itemEl.setAttribute("data-sync-item-key", key);
+  itemEl.setAttribute("data-sync-seq", seqStr);
+  itemEl.setAttribute("data-sync-status-kind", statusKind);
+  itemEl.style.cssText =
+    "flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; border: 1px solid var(--semantic-color-border); border-radius: 8px; background: var(--semantic-color-surface);";
+  itemEl.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; flex-direction: column;">
-              <span style="font-weight: 700; font-size: 14px;">${escapeQueueHtml(instName)}</span>
-              <span style="font-size: 11px; color: var(--text-muted);">Saved ${escapeQueueHtml(submittedTime)}</span>
+              <span data-sync-inst-name style="font-weight: 700; font-size: 14px;">${escapeQueueHtml(instName)}</span>
+              <span data-sync-saved-time style="font-size: 11px; color: var(--text-muted);">${escapeQueueHtml(savedLabel)}</span>
             </div>
-            <span class="status-pill ${badgeClass}">${escapeQueueHtml(statusLabel)}</span>
+            <span data-sync-status-pill class="${badgeClass}">${escapeQueueHtml(statusLabel)}</span>
           </div>
           <div style="font-size: 12px; color: var(--text-muted); border-top: 1px dashed var(--semantic-color-border); padding-top: 6px; margin-top: 4px;">
-            <p style="margin: 0 0 4px 0;">${escapeQueueHtml(statusDesc)}</p>
-            ${recoveryGuidanceHtml}
-            ${answersDetails}
+            <p data-sync-status-desc style="margin: 0 0 4px 0;">${escapeQueueHtml(statusDesc)}</p>
+            <div data-sync-recovery>${recovery.html}</div>
+            <div data-sync-answers>${answersDetails}</div>
           </div>
-        </div>
-      `;
-    })
-    .join("");
+        `;
+  const recoveryEl = itemEl.querySelector("[data-sync-recovery]");
+  if (recoveryEl) {
+    recoveryEl.setAttribute("data-recovery-sig", recovery.signature);
+  }
+  const answersEl = itemEl.querySelector("[data-sync-answers]");
+  if (answersEl) {
+    answersEl.setAttribute("data-answers-sig", answersDetails);
+  }
+  return itemEl;
+}
+
+export async function renderSyncQueueList() {
+  const listEl = document.getElementById("sync-queue-list");
+  if (!listEl) return;
+
+  const all = await getAllSubmissions();
+  // Re-verify listEl after asyncIndexedDB read in case the DOM unmounted
+  const currentListEl = document.getElementById("sync-queue-list");
+  if (!currentListEl) return;
+
+  if (all.length === 0) {
+    currentListEl.innerHTML = `<div class="loading-state" data-sync-empty="true" style="padding: 8px 0; text-align: center; color: var(--text-muted);">No saved surveys waiting to send.</div>`;
+    return;
+  }
+
+  const doc = currentListEl.ownerDocument || document;
+  const contact = getSiteSupportContact();
+  const existingByKey = new Map();
+  Array.from(
+    currentListEl.querySelectorAll(".task-item[data-sync-item-key]")
+  ).forEach((el) => {
+    const key = el.getAttribute("data-sync-item-key");
+    if (key && !existingByKey.has(key)) {
+      existingByKey.set(key, el);
+    }
+  });
+
+  Array.from(currentListEl.children).forEach((child) => {
+    if (!child.hasAttribute("data-sync-item-key")) {
+      child.remove();
+    }
+  });
+
+  const activeKeys = new Set();
+  all.forEach((item, idx) => {
+    const key = getSyncQueueItemKey(item, idx);
+    activeKeys.add(key);
+    const existingEl = existingByKey.get(key) || null;
+    const itemEl = createOrPatchSyncQueueItem(
+      doc,
+      existingEl,
+      item,
+      key,
+      contact
+    );
+    const currentAtIdx = currentListEl.children[idx] || null;
+    if (currentAtIdx !== itemEl) {
+      currentListEl.insertBefore(itemEl, currentAtIdx);
+    }
+  });
+
+  existingByKey.forEach((el, key) => {
+    if (!activeKeys.has(key)) {
+      el.remove();
+    }
+  });
 }
 
 export async function refreshSubmissionsState() {

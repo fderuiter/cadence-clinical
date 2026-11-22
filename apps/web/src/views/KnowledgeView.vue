@@ -42,12 +42,15 @@
 
     <!-- Metric KPI Summary Cards -->
     <div class="stats-grid">
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'ALL' }"
+        role="button"
+        tabindex="0"
+        :aria-pressed="activeStatusFilter === 'ALL'"
         @click="setStatusFilter('ALL')"
+        @keydown.enter.prevent="setStatusFilter('ALL')"
+        @keydown.space.prevent="setStatusFilter('ALL')"
       >
         <div class="stat-icon alert-icon">📚</div>
         <div class="stat-details">
@@ -58,12 +61,15 @@
         </div>
       </div>
 
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'PUBLISHED' }"
+        role="button"
+        tabindex="0"
+        :aria-pressed="activeStatusFilter === 'PUBLISHED'"
         @click="setStatusFilter('PUBLISHED')"
+        @keydown.enter.prevent="setStatusFilter('PUBLISHED')"
+        @keydown.space.prevent="setStatusFilter('PUBLISHED')"
       >
         <div class="stat-icon capa-icon">✅</div>
         <div class="stat-details">
@@ -74,12 +80,15 @@
         </div>
       </div>
 
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'IN_REVIEW' }"
+        role="button"
+        tabindex="0"
+        :aria-pressed="activeStatusFilter === 'IN_REVIEW'"
         @click="setStatusFilter('IN_REVIEW')"
+        @keydown.enter.prevent="setStatusFilter('IN_REVIEW')"
+        @keydown.space.prevent="setStatusFilter('IN_REVIEW')"
       >
         <div class="stat-icon rbqm-icon">🔍</div>
         <div class="stat-details">
@@ -90,12 +99,15 @@
         </div>
       </div>
 
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'DRAFT' }"
+        role="button"
+        tabindex="0"
+        :aria-pressed="activeStatusFilter === 'DRAFT'"
         @click="setStatusFilter('DRAFT')"
+        @keydown.enter.prevent="setStatusFilter('DRAFT')"
+        @keydown.space.prevent="setStatusFilter('DRAFT')"
       >
         <div class="stat-icon breach-icon">📝</div>
         <div class="stat-details">
@@ -207,7 +219,13 @@
           </div>
 
           <!-- Quick Tag Filter Chips -->
-          <div v-if="availableTags.length > 0" class="tag-chips-scroll">
+          <div
+            v-if="availableTags.length > 0"
+            class="tag-chips-scroll"
+            tabindex="0"
+            role="region"
+            aria-label="Filter SOPs by tag"
+          >
             <button
               v-for="tag in availableTags"
               :key="tag"
@@ -247,15 +265,24 @@
           </button>
         </div>
 
-        <div v-else class="articles-stream">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+        <div
+          v-else
+          class="articles-stream"
+          tabindex="0"
+          role="region"
+          aria-label="Standard operating procedure articles"
+        >
           <div
             v-for="art in displayArticles"
             :key="art.id"
             class="article-card"
             :class="{ 'article-card-selected': selectedArticle?.id === art.id }"
+            role="button"
+            tabindex="0"
+            :aria-pressed="selectedArticle?.id === art.id"
             @click="selectArticle(art)"
+            @keydown.enter.prevent="selectArticle(art)"
+            @keydown.space.prevent="selectArticle(art)"
           >
             <div class="article-card-header">
               <span class="status-pill" :class="getStatusPillClass(art.status)">
@@ -510,6 +537,9 @@
             v-if="activeReaderTab === 'content'"
             id="sop-prose-viewer"
             class="reader-body-card"
+            tabindex="0"
+            role="region"
+            aria-label="SOP guidance content"
           >
             <div
               v-if="selectedArticle.body_html"
@@ -532,6 +562,9 @@
             v-else-if="activeReaderTab === 'versions'"
             id="sop-versions-viewer"
             class="reader-body-card"
+            tabindex="0"
+            role="region"
+            aria-label="SOP version history"
           >
             <div class="tab-section-header">
               <h4>Immutable Snapshot Versions</h4>
@@ -605,6 +638,9 @@
             v-else-if="activeReaderTab === 'audit'"
             id="sop-audit-viewer"
             class="reader-body-card"
+            tabindex="0"
+            role="region"
+            aria-label="SOP electronic audit ledger"
           >
             <div class="tab-section-header">
               <h4>21 CFR Part 11 Electronic Audit Ledger</h4>
@@ -1018,11 +1054,14 @@
           />
         </div>
 
-        <div class="form-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-          <label class="form-label"
-            >Persona Visibility (All by default if empty)</label
-          >
+        <div
+          class="form-group"
+          role="group"
+          aria-labelledby="new-cat-persona-visibility-label"
+        >
+          <span id="new-cat-persona-visibility-label" class="form-label">
+            Persona Visibility (All by default if empty)
+          </span>
           <div class="persona-checkbox-grid">
             <label
               v-for="p in PERSONA_PRESETS"
@@ -2123,7 +2162,12 @@ export default {
 
 .btn-clear-search {
   position: absolute;
-  right: 8px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
   background: none;
   border: none;
   cursor: pointer;
@@ -2135,17 +2179,22 @@ export default {
 .tag-chips-scroll {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  max-height: 52px;
+  gap: 6px;
+  max-height: 64px;
   overflow-y: auto;
 }
 
 .tag-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  min-width: 24px;
   background-color: var(--semantic-color-surface-header);
   border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
-  padding: 2px 8px;
-  font-size: 0.7rem;
+  padding: 2px 10px;
+  font-size: 0.72rem;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   transition: all 0.15s;
@@ -2186,6 +2235,15 @@ export default {
 .article-card:hover {
   border-color: var(--accent);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.stat-card:focus-visible,
+.tag-chips-scroll:focus-visible,
+.article-card:focus-visible,
+.articles-stream:focus-visible,
+.reader-body-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .article-card-selected {

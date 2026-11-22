@@ -125,7 +125,7 @@
 
     <template v-if="studyCode">
       <div class="study-header">
-        <h1 id="canvas-study-title">
+        <h1 id="canvas-study-title" tabindex="-1">
           {{ studyCode }}
         </h1>
         <nav aria-label="Lifecycle">
@@ -224,6 +224,7 @@
               id="record-loading"
               class="stage-empty"
               role="status"
+              tabindex="-1"
             >
               Loading participant…
             </p>
@@ -231,6 +232,7 @@
               v-else-if="isNewForm && recordRef && !recordParticipant"
               id="record-not-loaded"
               class="stage-empty"
+              tabindex="-1"
             >
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
@@ -294,10 +296,11 @@
               id="record-loading"
               class="stage-empty"
               role="status"
+              tabindex="-1"
             >
               Loading participant…
             </p>
-            <p v-else id="record-not-loaded" class="stage-empty">
+            <p v-else id="record-not-loaded" class="stage-empty" tabindex="-1">
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
                 :to="
@@ -429,7 +432,7 @@
             class="stage-overview"
             aria-labelledby="stage-overview-title"
           >
-            <h2 id="stage-overview-title">
+            <h2 id="stage-overview-title" tabindex="-1">
               {{ stage.label }}
             </h2>
             <p class="stage-scope">{{ stage.scope }}.</p>
@@ -504,7 +507,7 @@
       :aria-label="inAppShell ? 'Open a study' : undefined"
       tabindex="-1"
     >
-      <h1 id="canvas-study-title">Open a study</h1>
+      <h1 id="canvas-study-title" tabindex="-1">Open a study</h1>
       <form
         id="open-study-form"
         class="open-study-form"
@@ -633,6 +636,7 @@
           id="create-study-success"
           class="inline-banner inline-banner-success"
           role="status"
+          tabindex="-1"
         >
           <span>{{ createStudySuccess }}</span>
           <button
@@ -783,7 +787,7 @@
                   type="button"
                   class="btn btn-secondary"
                   :disabled="creatingStudy"
-                  @click="clearCreateStudyFile"
+                  @click="onClearCreateStudyFileClick"
                 >
                   Remove file
                 </button>
@@ -900,7 +904,7 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
-import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import { SignOutConfirmModal, handoffFocus, useSignOutGuard } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -1091,6 +1095,11 @@ function clearCreateStudyFile() {
   }
 }
 
+function onClearCreateStudyFileClick() {
+  clearCreateStudyFile();
+  void handoffFocus("#create-study-choose-file");
+}
+
 function onCreateStudyFileSelected(event: Event) {
   const input = event.target as HTMLInputElement | null;
   const picked = input?.files?.[0] ?? null;
@@ -1244,6 +1253,11 @@ async function submitCreateStudy() {
     pendingCreatedStudy.value = null;
 
     await loadStudyDirectory();
+    void handoffFocus([
+      "#btn-open-created-study",
+      "#create-study-success",
+      "#create-study-code",
+    ]);
   } catch (err) {
     createStudyError.value = describeKernelError(err);
   } finally {
@@ -2162,8 +2176,337 @@ function onGlobalKeydown(event: KeyboardEvent) {
   }
 }
 
+const SECTION_HEADING_TARGETS: Record<string, string[]> = {
+  participants: ["#participants-title"],
+  "protocol-versions": ["#protocol-versions-title"],
+  "site-activation": ["#site-activation-title"],
+  "startup-greenlight": ["#ctms-greenlight-title"],
+  "site-milestones": ["#ctms-milestones-title"],
+  delegation: ["#ctms-delegation-title"],
+  "monitoring-visits": ["#ctms-monitoring-title"],
+  supply: ["#rtsm-supply-title"],
+  documents: [
+    "#document-grid-heading",
+    "#cra-qc-queue-heading",
+    "#btn-etmf-tab-binder",
+  ],
+  training: ["#study-training-title"],
+  queries: ["#study-queries-title"],
+  locks: ["#study-locks-title"],
+  validation: ["#study-validation-title"],
+  exports: ["#study-exports-title"],
+};
+
+interface WorkspaceBranchSnapshot {
+  key: string;
+  groupKey: string;
+  depth: number;
+  targets: Array<string | (() => HTMLElement | null)>;
+  subjectCode: string;
+  formId: string;
+  isNewForm: boolean;
+  specId: string;
+  visitId: string;
+  highlightItemId: string;
+}
+
+const workspaceBranch = computed<WorkspaceBranchSnapshot>(() => {
+  const code = studyCode.value;
+  const baseContext = {
+    subjectCode: zoomParticipantCode.value,
+    formId: openFormId.value || "",
+    isNewForm: isNewForm.value,
+    specId: initialSpecId.value,
+    visitId: initialVisitId.value,
+    highlightItemId: highlightItemQuery.value,
+  };
+
+  if (!code) {
+    return {
+      key: "open-study",
+      groupKey: "open-study",
+      depth: 0,
+      targets: ["#canvas-study-title", "#open-study-code"],
+      ...baseContext,
+    };
+  }
+
+  if (proposalRef.value) {
+    return {
+      key: `study:${code}:proposal:${proposalRef.value}`,
+      groupKey: `study:${code}:proposal`,
+      depth: 4,
+      targets: ["#proposal-review-title", "#proposal-review-status"],
+      ...baseContext,
+    };
+  }
+
+  if (openObservationRef.value) {
+    return {
+      key: `study:${code}:observation:${openObservationRef.value}`,
+      groupKey: `study:${code}:observation`,
+      depth: 4,
+      targets: ["#observation-view-title"],
+      ...baseContext,
+    };
+  }
+
+  if (hasOpenForm.value) {
+    if (
+      isNewForm.value &&
+      recordRef.value &&
+      !recordParticipant.value &&
+      isRecordParticipantLoading.value
+    ) {
+      return {
+        key: `study:${code}:form:record-loading`,
+        groupKey: `study:${code}:form`,
+        depth: 3,
+        targets: ["#record-loading"],
+        ...baseContext,
+      };
+    }
+    if (isNewForm.value && recordRef.value && !recordParticipant.value) {
+      return {
+        key: `study:${code}:form:record-not-loaded`,
+        groupKey: `study:${code}:form`,
+        depth: 3,
+        targets: ["#record-not-loaded"],
+        ...baseContext,
+      };
+    }
+    const formTargetKey = openFormId.value || "new";
+    return {
+      key: `study:${code}:form:${formTargetKey}`,
+      groupKey: `study:${code}:form`,
+      depth: 3,
+      targets: [
+        ...(highlightItemQuery.value
+          ? [`#ecrf-item-${highlightItemQuery.value}`]
+          : []),
+        "#canvas-form-workspace-title",
+      ],
+      ...baseContext,
+    };
+  }
+
+  if (recordRef.value) {
+    const recId = recordRef.value.id;
+    if (recordParticipant.value) {
+      return {
+        key: `study:${code}:record:${recId}:ready`,
+        groupKey: `study:${code}:record:${recId}`,
+        depth: 2,
+        targets: ["#participant-record-title"],
+        ...baseContext,
+      };
+    }
+    if (isRecordParticipantLoading.value) {
+      return {
+        key: `study:${code}:record:${recId}:loading`,
+        groupKey: `study:${code}:record:${recId}`,
+        depth: 2,
+        targets: ["#record-loading"],
+        ...baseContext,
+      };
+    }
+    return {
+      key: `study:${code}:record:${recId}:missing`,
+      groupKey: `study:${code}:record:${recId}`,
+      depth: 2,
+      targets: ["#record-not-loaded"],
+      ...baseContext,
+    };
+  }
+
+  if (!stage.value) {
+    return {
+      key: `study:${code}:home`,
+      groupKey: `study:${code}:home`,
+      depth: 1,
+      targets: ["#study-pulse-title"],
+      ...baseContext,
+    };
+  }
+
+  if (section.value?.id) {
+    return {
+      key: `study:${code}:section:${section.value.id}`,
+      groupKey: `study:${code}:section:${section.value.id}`,
+      depth: 1,
+      targets: SECTION_HEADING_TARGETS[section.value.id] ?? [
+        "#stage-overview-title",
+      ],
+      ...baseContext,
+    };
+  }
+
+  return {
+    key: `study:${code}:stage:${stage.value.id}`,
+    groupKey: `study:${code}:stage:${stage.value.id}`,
+    depth: 1,
+    targets: ["#stage-overview-title"],
+    ...baseContext,
+  };
+});
+
+const savedBranchTriggers = new Map<string, string>();
+let returnFocusObserver: MutationObserver | null = null;
+let returnFocusTimer: ReturnType<typeof setTimeout> | null = null;
+
+function stopReturnFocusObserver() {
+  if (returnFocusObserver) {
+    returnFocusObserver.disconnect();
+    returnFocusObserver = null;
+  }
+  if (returnFocusTimer) {
+    clearTimeout(returnFocusTimer);
+    returnFocusTimer = null;
+  }
+}
+
+function escapeId(id: string): string {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return `#${CSS.escape(id)}`;
+  }
+  return `#${id.replace(/([^\w-])/g, "\\$1")}`;
+}
+
+function captureElementTriggerSelector(el: Element | null): string | null {
+  if (!el || typeof document === "undefined") return null;
+  const workspace = document.getElementById("canvas-workspace");
+  const interactive = el.closest?.("a, button, [role='button']") ?? el;
+  if (!workspace || !workspace.contains(interactive)) return null;
+  const rawId = interactive.getAttribute("id");
+  if (rawId) {
+    return escapeId(rawId);
+  }
+  const testId = interactive.getAttribute("data-testid");
+  if (testId) {
+    return `[data-testid="${testId.replace(/"/g, '\\"')}"]`;
+  }
+  return null;
+}
+
+function onWorkspaceInteractionCapture(event: Event) {
+  if (
+    event.type === "keydown" &&
+    event instanceof KeyboardEvent &&
+    event.key !== "Enter" &&
+    event.key !== " "
+  ) {
+    return;
+  }
+  const target = event.target instanceof Element ? event.target : null;
+  const selector = captureElementTriggerSelector(target);
+  if (selector) {
+    savedBranchTriggers.set(workspaceBranch.value.groupKey, selector);
+  }
+}
+
+watch(
+  workspaceBranch,
+  (next, prev) => {
+    if (!prev || next.key === prev.key) return;
+    stopReturnFocusObserver();
+
+    if (typeof document !== "undefined") {
+      const activeSelector = captureElementTriggerSelector(
+        document.activeElement
+      );
+      if (activeSelector) {
+        savedBranchTriggers.set(prev.groupKey, activeSelector);
+      }
+    }
+
+    // Opening a new form inside CanvasFormWorkspace replaces ?form=new with ?form=collection_instance:...
+    if (
+      prev.groupKey === next.groupKey &&
+      prev.isNewForm &&
+      Boolean(next.formId)
+    ) {
+      void handoffFocus([
+        ...(next.highlightItemId ? [`#ecrf-item-${next.highlightItemId}`] : []),
+        () =>
+          document.querySelector<HTMLElement>(
+            "#ecrf-form-page input:not([disabled])"
+          ),
+        "#canvas-form-workspace-title",
+      ]);
+      return;
+    }
+
+    const isZoomOut = next.depth < prev.depth;
+    const returnSelectors: string[] = [];
+    if (isZoomOut) {
+      const saved = savedBranchTriggers.get(next.groupKey);
+      if (saved) returnSelectors.push(saved);
+      if (prev.formId) {
+        returnSelectors.push(`#record-form-link-${prev.formId}`);
+      }
+      if (prev.specId && prev.visitId) {
+        returnSelectors.push(`#matrix-open-${prev.specId}-${prev.visitId}`);
+      } else if (prev.specId) {
+        returnSelectors.push(`#unscheduled-open-${prev.specId}`);
+      }
+      if (prev.highlightItemId && prev.depth === 4) {
+        returnSelectors.push(
+          `#ecrf-item-observation-${prev.highlightItemId}`,
+          `#ecrf-item-${prev.highlightItemId}`
+        );
+      }
+      if (prev.subjectCode) {
+        returnSelectors.push(`#participant-${prev.subjectCode}`);
+      }
+    }
+
+    void (async () => {
+      const focused = await handoffFocus([...returnSelectors, ...next.targets]);
+      if (
+        !isZoomOut ||
+        returnSelectors.length === 0 ||
+        !focused ||
+        typeof MutationObserver === "undefined" ||
+        typeof document === "undefined"
+      ) {
+        return;
+      }
+      const matchedReturnImmediately = returnSelectors.some(
+        (sel) => document.querySelector(sel) === focused
+      );
+      if (matchedReturnImmediately) return;
+
+      const workspace = document.getElementById("canvas-workspace");
+      if (!workspace) return;
+
+      returnFocusObserver = new MutationObserver(() => {
+        if (document.activeElement !== focused) {
+          stopReturnFocusObserver();
+          return;
+        }
+        for (const sel of returnSelectors) {
+          const candidate = document.querySelector<HTMLElement>(sel);
+          if (candidate && !candidate.hasAttribute("disabled")) {
+            stopReturnFocusObserver();
+            void handoffFocus(candidate, { awaitNextTick: false });
+            return;
+          }
+        }
+      });
+      returnFocusObserver.observe(workspace, {
+        childList: true,
+        subtree: true,
+      });
+      returnFocusTimer = setTimeout(() => stopReturnFocusObserver(), 1500);
+    })();
+  },
+  { flush: "sync" }
+);
+
 onMounted(() => {
   window.addEventListener("beforeunload", handleBeforeUnload);
+  document.addEventListener("click", onWorkspaceInteractionCapture, true);
+  document.addEventListener("keydown", onWorkspaceInteractionCapture, true);
   if (!inAppShell) {
     document.addEventListener("keydown", onGlobalKeydown);
   }
@@ -2177,7 +2520,10 @@ onMounted(() => {
   }
 });
 onUnmounted(() => {
+  stopReturnFocusObserver();
   window.removeEventListener("beforeunload", handleBeforeUnload);
+  document.removeEventListener("click", onWorkspaceInteractionCapture, true);
+  document.removeEventListener("keydown", onWorkspaceInteractionCapture, true);
   document.removeEventListener("keydown", onGlobalKeydown);
   if (topbarResizeObserver) {
     topbarResizeObserver.disconnect();

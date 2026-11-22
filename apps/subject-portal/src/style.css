@@ -265,6 +265,11 @@ body {
   margin-bottom: 4px;
 }
 
+[tabindex="-1"]:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 .view-header p {
   color: var(--text-muted);
   font-size: 14px;

@@ -44,7 +44,12 @@
       >
         Add participant
       </button>
-      <button type="button" class="btn btn-secondary" @click="emit('close')">
+      <button
+        id="btn-cancel-add-participant"
+        type="button"
+        class="btn btn-secondary"
+        @click="emit('close')"
+      >
         Cancel
       </button>
     </div>
@@ -52,7 +57,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
+import { handoffFocus } from "ui";
 import type { SubjectSummary } from "../../api/executionApi";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 
@@ -71,6 +77,10 @@ const subjectCode = ref("");
 const siteId = ref(props.defaultSiteId);
 const reason = ref("");
 const busy = ref(false);
+
+onMounted(() => {
+  void handoffFocus("#add-participant-code", { scrollIfOffscreen: true });
+});
 
 async function submit() {
   const code = subjectCode.value.trim();

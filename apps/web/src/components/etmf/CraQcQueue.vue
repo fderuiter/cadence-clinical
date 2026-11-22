@@ -3,7 +3,11 @@
   <div class="qc-queue-container">
     <div class="qc-queue-header">
       <div>
-        <h3 style="margin: 0; font-size: 16px; font-weight: 700">
+        <h3
+          id="cra-qc-queue-heading"
+          tabindex="-1"
+          style="margin: 0; font-size: 16px; font-weight: 700"
+        >
           🛡️ CRA Quality Control Review Queue
         </h3>
         <p

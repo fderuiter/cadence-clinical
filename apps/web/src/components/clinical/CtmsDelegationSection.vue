@@ -6,7 +6,9 @@
   >
     <div class="section-header-row">
       <div>
-        <h3 id="ctms-delegation-title" class="card-title">Delegation log</h3>
+        <h3 id="ctms-delegation-title" class="card-title" tabindex="-1">
+          Delegation log
+        </h3>
         <p class="section-subtitle">
           Site staff duty delegations, Principal Investigator Part 11 sign-off,
           revocations, and compliant PDF export.

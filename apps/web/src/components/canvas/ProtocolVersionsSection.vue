@@ -5,7 +5,7 @@
     aria-labelledby="protocol-versions-title"
     :aria-busy="loading"
   >
-    <h2 id="protocol-versions-title">Protocol versions</h2>
+    <h2 id="protocol-versions-title" tabindex="-1">Protocol versions</h2>
     <div
       v-if="error"
       id="protocol-versions-status"

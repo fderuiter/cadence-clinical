@@ -6,7 +6,7 @@
   >
     <div class="section-header-row">
       <div>
-        <h3 id="rtsm-supply-title" class="card-title">
+        <h3 id="rtsm-supply-title" class="card-title" tabindex="-1">
           Investigational supply
         </h3>
         <p class="section-subtitle">

@@ -6,7 +6,7 @@
     :aria-busy="studyLoading || streaming"
   >
     <header class="study-exports-header">
-      <h2 id="study-exports-title">Exports</h2>
+      <h2 id="study-exports-title" tabindex="-1">Exports</h2>
       <p class="study-exports-subtitle">
         Stream reproducible clinical snapshots in CSV, CDISC ODM v1.3.2 XML, or
         CDISC Dataset-JSON.

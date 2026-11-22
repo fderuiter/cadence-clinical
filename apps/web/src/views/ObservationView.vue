@@ -11,7 +11,7 @@
     </component>
 
     <div class="card">
-      <h2>Observation</h2>
+      <h2 id="observation-view-title" tabindex="-1">Observation</h2>
 
       <p v-if="loading && !observation" role="status">Loading observation…</p>
       <p v-else-if="loadError" class="observation-error" role="alert">

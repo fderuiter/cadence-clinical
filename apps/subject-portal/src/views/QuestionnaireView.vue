@@ -14,7 +14,7 @@
       >
         ← Back to My Tasks
       </button>
-      <h2 id="questionnaire-title">Questionnaire</h2>
+      <h2 id="questionnaire-title" tabindex="-1">Questionnaire</h2>
       <p id="questionnaire-desc">Please answer all questions accurately.</p>
     </div>
 

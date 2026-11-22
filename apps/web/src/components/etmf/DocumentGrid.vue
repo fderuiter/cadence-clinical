@@ -2,7 +2,9 @@
   <div class="document-grid-container">
     <div class="grid-header">
       <div class="header-titles">
-        <h2>Artifact Documents Registry</h2>
+        <h2 id="document-grid-heading" tabindex="-1">
+          Artifact Documents Registry
+        </h2>
         <p v-if="selectedArtifactCode" class="active-artifact-subtitle">
           Showing documents for Artifact:
           <strong>{{ selectedArtifactCode }}</strong>

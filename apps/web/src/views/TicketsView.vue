@@ -45,9 +45,15 @@
 
     <!-- KRI Metric Cards Grid -->
     <div class="stats-grid">
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="stat-card" @click="filterStatus = 'ALL'">
+      <div
+        class="stat-card"
+        role="button"
+        tabindex="0"
+        :aria-pressed="filterStatus === 'ALL'"
+        @click="filterStatus = 'ALL'"
+        @keydown.enter.prevent="filterStatus = 'ALL'"
+        @keydown.space.prevent="filterStatus = 'ALL'"
+      >
         <div class="stat-icon alert-icon">🎫</div>
         <div class="stat-details">
           <div class="stat-value">
@@ -56,9 +62,15 @@
           <div class="stat-label">Active Clinical Issues</div>
         </div>
       </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="stat-card" @click="filterSeverity = 'CRITICAL'">
+      <div
+        class="stat-card"
+        role="button"
+        tabindex="0"
+        :aria-pressed="filterSeverity === 'CRITICAL'"
+        @click="filterSeverity = 'CRITICAL'"
+        @keydown.enter.prevent="filterSeverity = 'CRITICAL'"
+        @keydown.space.prevent="filterSeverity = 'CRITICAL'"
+      >
         <div class="stat-icon capa-icon">🚨</div>
         <div class="stat-details">
           <div class="stat-value text-danger">
@@ -85,9 +97,15 @@
           <div class="stat-label">Mean Resolution Time (MTTR)</div>
         </div>
       </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="stat-card" @click="filterStatus = 'WAITING_ON_SITE'">
+      <div
+        class="stat-card"
+        role="button"
+        tabindex="0"
+        :aria-pressed="filterStatus === 'WAITING_ON_SITE'"
+        @click="filterStatus = 'WAITING_ON_SITE'"
+        @keydown.enter.prevent="filterStatus = 'WAITING_ON_SITE'"
+        @keydown.space.prevent="filterStatus = 'WAITING_ON_SITE'"
+      >
         <div class="stat-icon breach-icon">⏸</div>
         <div class="stat-details">
           <div class="stat-value">
@@ -102,18 +120,21 @@
     <div class="controls-card">
       <div class="search-box">
         <span class="search-icon">🔍</span>
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           v-model="searchQuery"
           type="text"
           class="search-input"
+          aria-label="Search clinical issues by reference, title, subject ID, or site"
           placeholder="Search by ref #, title, subject ID, or site..."
         />
       </div>
 
       <div class="filter-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="filterCategory" class="filter-select">
+        <select
+          v-model="filterCategory"
+          class="filter-select"
+          aria-label="Filter clinical issues by category"
+        >
           <option value="ALL">All Categories</option>
           <option value="PROTOCOL_DEVIATION">Protocol Deviation</option>
           <option value="DATA_QUERY">Data Query / Discrepancy</option>
@@ -124,16 +145,22 @@
           <option value="TECHNICAL_SYSTEM">Technical / Bug</option>
         </select>
 
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="filterSeverity" class="filter-select">
+        <select
+          v-model="filterSeverity"
+          class="filter-select"
+          aria-label="Filter clinical issues by severity"
+        >
           <option value="ALL">All Severities</option>
           <option value="CRITICAL">Critical</option>
           <option value="MAJOR">Major</option>
           <option value="MINOR">Minor</option>
         </select>
 
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="filterStatus" class="filter-select">
+        <select
+          v-model="filterStatus"
+          class="filter-select"
+          aria-label="Filter clinical issues by status"
+        >
           <option value="ALL">All Statuses</option>
           <option value="OPEN">Open</option>
           <option value="IN_PROGRESS">In Progress</option>
@@ -174,8 +201,11 @@
 
       <div class="bulk-actions">
         <div class="bulk-action-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-          <select v-model="batchStatus" class="filter-select batch-select">
+          <select
+            v-model="batchStatus"
+            class="filter-select batch-select"
+            aria-label="Batch change ticket status"
+          >
             <option value="" disabled>Change Status...</option>
             <option value="OPEN">Open</option>
             <option value="IN_PROGRESS">In Progress</option>
@@ -194,8 +224,11 @@
         </div>
 
         <div class="bulk-action-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-          <select v-model="batchSeverity" class="filter-select batch-select">
+          <select
+            v-model="batchSeverity"
+            class="filter-select batch-select"
+            aria-label="Batch change ticket severity"
+          >
             <option value="" disabled>Change Severity...</option>
             <option value="CRITICAL">Critical</option>
             <option value="MAJOR">Major</option>
@@ -217,7 +250,13 @@
     </div>
 
     <!-- MAIN WORKSPACE: KANBAN VIEW -->
-    <div v-if="viewMode === 'kanban'" class="kanban-board">
+    <div
+      v-if="viewMode === 'kanban'"
+      class="kanban-board"
+      tabindex="0"
+      role="region"
+      aria-label="Support tickets kanban board"
+    >
       <!-- Column 1: OPEN -->
       <div class="kanban-column">
         <div class="column-header">
@@ -229,14 +268,21 @@
             getColumnTickets("OPEN").length
           }}</span>
         </div>
-        <div class="column-cards">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+        <div
+          class="column-cards"
+          tabindex="0"
+          role="region"
+          aria-label="Open and triage tickets"
+        >
           <div
             v-for="t in getColumnTickets('OPEN')"
             :key="t.id"
             class="ticket-card"
+            role="button"
+            tabindex="0"
             @click="openTicketDetail(t)"
+            @keydown.enter.prevent="openTicketDetail(t)"
+            @keydown.space.prevent="openTicketDetail(t)"
           >
             <div class="card-meta">
               <span class="ref-tag">{{
@@ -278,14 +324,21 @@
             getColumnTickets("IN_PROGRESS").length
           }}</span>
         </div>
-        <div class="column-cards">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+        <div
+          class="column-cards"
+          tabindex="0"
+          role="region"
+          aria-label="Investigation tickets"
+        >
           <div
             v-for="t in getColumnTickets('IN_PROGRESS')"
             :key="t.id"
             class="ticket-card"
+            role="button"
+            tabindex="0"
             @click="openTicketDetail(t)"
+            @keydown.enter.prevent="openTicketDetail(t)"
+            @keydown.space.prevent="openTicketDetail(t)"
           >
             <div class="card-meta">
               <span class="ref-tag">{{
@@ -331,9 +384,12 @@
             ]).length
           }}</span>
         </div>
-        <div class="column-cards">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+        <div
+          class="column-cards"
+          tabindex="0"
+          role="region"
+          aria-label="Awaiting action tickets"
+        >
           <div
             v-for="t in getColumnTickets([
               'WAITING_ON_SITE',
@@ -342,7 +398,11 @@
             ])"
             :key="t.id"
             class="ticket-card paused-card"
+            role="button"
+            tabindex="0"
             @click="openTicketDetail(t)"
+            @keydown.enter.prevent="openTicketDetail(t)"
+            @keydown.space.prevent="openTicketDetail(t)"
           >
             <div class="card-meta">
               <span class="ref-tag">{{
@@ -376,14 +436,21 @@
             getColumnTickets("RESOLVED").length
           }}</span>
         </div>
-        <div class="column-cards">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+        <div
+          class="column-cards"
+          tabindex="0"
+          role="region"
+          aria-label="Resolved tickets"
+        >
           <div
             v-for="t in getColumnTickets('RESOLVED')"
             :key="t.id"
             class="ticket-card resolved-card"
+            role="button"
+            tabindex="0"
             @click="openTicketDetail(t)"
+            @keydown.enter.prevent="openTicketDetail(t)"
+            @keydown.space.prevent="openTicketDetail(t)"
           >
             <div class="card-meta">
               <span class="ref-tag">{{
@@ -422,14 +489,21 @@
             getColumnTickets("CLOSED").length
           }}</span>
         </div>
-        <div class="column-cards">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+        <div
+          class="column-cards"
+          tabindex="0"
+          role="region"
+          aria-label="Closed and archived tickets"
+        >
           <div
             v-for="t in getColumnTickets('CLOSED')"
             :key="t.id"
             class="ticket-card closed-card"
+            role="button"
+            tabindex="0"
             @click="openTicketDetail(t)"
+            @keydown.enter.prevent="openTicketDetail(t)"
+            @keydown.space.prevent="openTicketDetail(t)"
           >
             <div class="card-meta">
               <span class="ref-tag">{{
@@ -456,10 +530,10 @@
         <thead>
           <tr>
             <th class="checkbox-cell">
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 type="checkbox"
                 class="ticket-checkbox"
+                aria-label="Select all filtered clinical issues"
                 :checked="isAllSelected"
                 :indeterminate="isSomeSelected"
                 @change="toggleSelectAll"
@@ -486,10 +560,10 @@
             @click="openTicketDetail(t)"
           >
             <td class="checkbox-cell" @click.stop>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 type="checkbox"
                 class="ticket-checkbox"
+                :aria-label="`Select issue ${t.reference || t.title}`"
                 :checked="selectedTicketIds.has(t.id)"
                 @change="toggleSelectTicket(t.id)"
               />
@@ -1410,6 +1484,13 @@ const exportAuditTrail = (format) => {
   transform: translateY(-2px);
   border-color: var(--semantic-color-interactive-primary);
   box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.1);
+}
+
+.ticket-card:focus-visible,
+.kanban-board:focus-visible,
+.column-cards:focus-visible {
+  outline: 2px solid var(--semantic-color-interactive-primary);
+  outline-offset: 2px;
 }
 
 .card-meta {

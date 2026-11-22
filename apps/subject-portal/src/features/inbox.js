@@ -1,4 +1,5 @@
 // 4. My Inbox: notifications, reminders and their acknowledgement.
+import { handoffFocus } from "ui";
 import {
   dispatchApi,
   fetchNotifications,
@@ -9,6 +10,23 @@ import { isDemoModeActive } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { logAuditRecord } from "./audit.js";
 import { openReconsentModal } from "./reconsent.js";
+
+function bindKeyboardAndClickActivation(el, callback) {
+  el.addEventListener("click", callback);
+  el.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      callback();
+    }
+  });
+}
+
+function escapeNotificationId(id) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(String(id));
+  }
+  return String(id).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+}
 
 // 4. My Inbox (Notifications & Reminders)
 export function renderInbox() {
@@ -53,6 +71,8 @@ export function renderInbox() {
     badge.style.display = unread.length > 0 ? "inline-block" : "none";
   }
 
+  container.style.display = "block";
+
   if (state.notifications.length === 0) {
     const emptyMsg =
       !isAuthenticatedSession() && !isDemoModeActive() && !state.session.userId
@@ -92,7 +112,7 @@ export function renderInbox() {
       }
 
       return `
-        <div class="inbox-item ${unreadClass}" id="notif-card-${notif.id}">
+        <div class="inbox-item ${unreadClass}" id="notif-card-${notif.id}" tabindex="-1">
           <div class="inbox-meta">
             <span class="inbox-name">${notif.message_content || notif.message || `Scheduled trial survey reminder (channel: ${notif.channel})`}</span>
             <span class="inbox-due">Timestamp: ${dueText} (Channel: ${notif.channel || "IN_APP"})</span>
@@ -105,22 +125,45 @@ export function renderInbox() {
     })
     .join("");
 
-  // Attach acknowledgment click events
+  // Attach acknowledgment click & keyboard (Enter / Space) events
   container.querySelectorAll(".btn-acknowledge").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    bindKeyboardAndClickActivation(btn, () => {
       const id = btn.getAttribute("data-id");
       acknowledgeNotification(id);
     });
   });
 
-  // Attach reconsent action click events
+  // Attach reconsent action click & keyboard (Enter / Space) events
   container.querySelectorAll(".btn-reconsent-action").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    bindKeyboardAndClickActivation(btn, () => {
       const id = btn.getAttribute("data-id");
       acknowledgeNotification(id);
       openReconsentModal();
     });
   });
+}
+
+function handoffInboxAfterAcknowledge(notificationId) {
+  if (typeof document === "undefined") return;
+  if (state.reconsentModalOpen) return;
+  if (state.notificationsError) {
+    void handoffFocus([
+      "#btn-retry-inbox",
+      "#inbox-view-heading",
+      "#main-content",
+    ]);
+    return;
+  }
+  const escapedId = escapeNotificationId(notificationId);
+  void handoffFocus([
+    () =>
+      document.querySelector(
+        "#inbox-container .btn-acknowledge, #inbox-container .btn-reconsent-action"
+      ),
+    `#notif-card-${escapedId}`,
+    "#inbox-view-heading",
+    "#main-content",
+  ]);
 }
 
 export async function acknowledgeNotification(notificationId) {
@@ -160,10 +203,12 @@ export async function acknowledgeNotification(notificationId) {
       // Reset any notification error if successful
       state.notificationsError = null;
       renderInbox();
+      handoffInboxAfterAcknowledge(notificationId);
     } catch (err) {
       // Keep the notification unread and render the visible actionable failure state with retry
       state.notificationsError = err.message || err;
       renderInbox();
+      handoffInboxAfterAcknowledge(notificationId);
     }
   } else if (allowUnbackedAction("Acknowledge study notification")) {
     // Explicit demo mode optimistic flow
@@ -190,10 +235,12 @@ export async function acknowledgeNotification(notificationId) {
 
     // Refresh inbox & count badges
     renderInbox();
+    handoffInboxAfterAcknowledge(notificationId);
   } else {
     state.notificationsError =
       "Cannot acknowledge notification while offline or unauthenticated. Please sign in and retry.";
     renderInbox();
+    handoffInboxAfterAcknowledge(notificationId);
   }
 }
 

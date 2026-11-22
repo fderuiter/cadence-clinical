@@ -8,7 +8,9 @@
     tabindex="0"
   >
     <div class="view-header">
-      <h2>Plain-Language Clinical Trial Results</h2>
+      <h2 id="lay-summaries-view-heading" tabindex="-1">
+        Plain-Language Clinical Trial Results
+      </h2>
       <p>
         Easy-to-read summaries of what this study found, including potential
         benefits and side effects.

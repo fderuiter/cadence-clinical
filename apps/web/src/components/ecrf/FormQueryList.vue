@@ -35,7 +35,7 @@
           type="button"
           class="btn btn-secondary"
           :disabled="busy"
-          @click="selectedQueryIds = []"
+          @click="clearSelectedQueries"
         >
           Clear selection
         </button>
@@ -224,6 +224,7 @@
 <script setup lang="ts">
 import { computed, getCurrentInstance, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
+import { handoffFocus } from "ui";
 import type {
   FormQueryAction,
   FormQueryResponse,
@@ -449,6 +450,11 @@ function selectAllEligible() {
   selectedQueryIds.value = eligibleQueries.value.map((q) => q.query_id);
 }
 
+function clearSelectedQueries() {
+  selectedQueryIds.value = [];
+  void handoffFocus(["#btn-select-eligible-queries", "#query-bulk-action"]);
+}
+
 function defaultFormLocation(query: FormQueryResponse): RouteLocationRaw {
   const routeQuery: Record<string, string> = {};
   if (props.studyCode) routeQuery.studyId = props.studyCode;
@@ -460,21 +466,58 @@ function defaultFormLocation(query: FormQueryResponse): RouteLocationRaw {
   return { path: "/ecrf", query: routeQuery };
 }
 
+function restoreQueryActionFocus(
+  queryId: string | undefined,
+  preferredAction?: FormQueryAction
+) {
+  void handoffFocus([
+    queryId && preferredAction ? `#btn-${preferredAction}-${queryId}` : null,
+    queryId
+      ? () => {
+          const row = document.getElementById(`query-${queryId}`);
+          return (
+            row?.querySelector<HTMLElement>(
+              ".form-query-buttons button:not([disabled])"
+            ) ?? null
+          );
+        }
+      : null,
+    queryId ? `#query-open-form-${queryId}` : null,
+    "#btn-select-eligible-queries",
+    "#query-bulk-action",
+    () =>
+      document.querySelector<HTMLElement>(
+        '[data-testid="form-query-list"] button:not([disabled])'
+      ),
+    "#ecrf-form-queries-title",
+    "#study-queries-title",
+  ]);
+}
+
 function begin(query: FormQueryResponse, action: FormQueryAction) {
   pendingAction.value = { queryId: query.query_id, action };
   actionText.value = "";
+  void handoffFocus(`#query-text-${query.query_id}`, {
+    scrollIfOffscreen: true,
+  });
 }
 
 function dismiss() {
+  const previous = pendingAction.value;
   pendingAction.value = null;
   actionText.value = "";
+  restoreQueryActionFocus(previous?.queryId, previous?.action);
 }
 
 async function confirm(query: FormQueryResponse) {
   const current = pendingAction.value;
   const text = actionText.value.trim();
   if (!current || !text) return;
-  if (await props.act(query, current.action, text)) dismiss();
+  if (await props.act(query, current.action, text)) {
+    pendingAction.value = null;
+    actionText.value = "";
+    restoreQueryActionFocus(current.queryId, current.action);
+  }
 }
 
 async function confirmBulk() {
@@ -490,6 +533,18 @@ async function confirmBulk() {
   );
   if (failedIds.size === 0) {
     bulkReason.value = "";
+  }
+  if (selectedEligibleQueries.value.length === 0) {
+    void handoffFocus([
+      "#btn-select-eligible-queries",
+      "#query-bulk-action",
+      () =>
+        document.querySelector<HTMLElement>(
+          '[data-testid="form-query-list"] button:not([disabled])'
+        ),
+      "#ecrf-form-queries-title",
+      "#study-queries-title",
+    ]);
   }
 }
 </script>
