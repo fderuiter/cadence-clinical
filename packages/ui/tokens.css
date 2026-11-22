@@ -66,7 +66,8 @@
   --breakpoint-tablet: 768px;
   --breakpoint-desktop: 1024px;
 
-  /* Touch Target Minimums */
+  /* Touch & Pointer Target Minimums */
+  --target-size-min: 24px;
   --touch-target-min: 48px;
 
   /* Drawer Width Tier Tokens */
@@ -83,6 +84,7 @@
   --semantic-color-accent: var(--color-accent);
   --semantic-color-accent-light: var(--color-primary-light);
   --semantic-color-accent-bg: var(--color-primary-light);
+  --semantic-color-focus-ring: var(--color-accent);
 
   /* Semantic Colors - Neutral & Layout */
   --semantic-color-text: var(--color-text);
@@ -225,8 +227,10 @@
   --semantic-spacing-3xl: var(--spacing-3xl);
   --semantic-spacing-4xl: var(--spacing-4xl);
 
-  /* Touch Target */
+  /* Target Size & Disabled State */
+  --semantic-target-size-min: var(--target-size-min);
   --semantic-touch-target-min: var(--touch-target-min);
+  --semantic-opacity-disabled: 0.55;
 
   /* Semantic Drawer Width Tiers */
   --semantic-drawer-width-sm: var(--drawer-width-sm);
@@ -266,6 +270,7 @@
   --semantic-color-accent: var(--color-accent);
   --semantic-color-accent-light: #1e1b4b;
   --semantic-color-accent-bg: #1e1b4b;
+  --semantic-color-focus-ring: var(--semantic-color-accent-inverse);
 
   --semantic-color-text: var(--color-text);
   --semantic-color-text-muted: var(--color-text-muted);
@@ -352,6 +357,7 @@
     --semantic-color-border-control: var(--color-border-control);
     --semantic-color-accent-light: #1e1b4b;
     --semantic-color-accent-bg: #1e1b4b;
+    --semantic-color-focus-ring: var(--semantic-color-accent-inverse);
     --semantic-color-ai: #c4b5fd;
     --semantic-color-ai-bg: #2e1065;
     --semantic-color-ai-border: #7c3aed;
@@ -385,6 +391,14 @@
     --semantic-color-surface-sunken: #0b1120;
     --semantic-color-divider-accent: #38bdf8;
   }
+}
+
+/* Inverse / Dark Chrome Surface Focus Ring Contract (WCAG 2.2 AA >= 3:1) */
+[data-surface="inverse"],
+.surface-inverse,
+.overview-header-card,
+.portal-footer {
+  --semantic-color-focus-ring: var(--semantic-color-accent-inverse);
 }
 
 /* Tabular Numerals Everywhere Numbers Align (CLINICAL_CANVAS.md §2.13) */
@@ -466,9 +480,9 @@ td,
 .clinical-input select:focus-visible,
 .clinical-input textarea:focus-visible,
 .clinical-input .clinical-input-control:focus-visible {
-  outline: 3px solid var(--semantic-color-accent) !important;
+  outline: 3px solid var(--semantic-color-focus-ring) !important;
   outline-offset: 2px !important;
-  border-color: var(--semantic-color-accent) !important;
+  border-color: var(--semantic-color-focus-ring) !important;
 }
 
 /* Form validation states use unified error variables */
@@ -590,6 +604,21 @@ textarea[aria-invalid="true"]:focus-visible {
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   border: 1px solid var(--semantic-color-border-control);
+}
+
+/* Centralized Disabled Control State & Programmatic Landmark Focus Contract (ADR-2552 / PRD-CRF-015) */
+button:disabled,
+.btn:disabled,
+button[aria-disabled="true"],
+.btn[aria-disabled="true"],
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed !important;
+  opacity: var(--semantic-opacity-disabled, 0.55);
+}
+
+[tabindex="-1"]:focus,
+[tabindex="-1"]:focus-visible {
+  outline: none;
 }
 
 /* Global Reduced Motion Support (WCAG 2.1 AA / Crafted Execution) */

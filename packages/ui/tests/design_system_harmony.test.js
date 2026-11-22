@@ -826,4 +826,187 @@ const open = ref(true);
       expect(compliantErrors).toEqual([]);
     });
   });
+
+  describe("Requirement 8: Centralized UI State, Surface-Aware Focus Ring, and Target-Size CSS Rules (ADR-2552)", () => {
+    it("imports packages/ui/dist/index.css alongside tokens.css and responsive.css in both apps/web and apps/subject-portal", () => {
+      const webLines = fs
+        .readFileSync(path.join(webSrcDir, "style.css"), "utf-8")
+        .split(/\r?\n/)
+        .slice(0, 3);
+      const portalLines = fs
+        .readFileSync(path.join(portalSrcDir, "style.css"), "utf-8")
+        .split(/\r?\n/)
+        .slice(0, 3);
+
+      expect(portalLines).toEqual([
+        '@import "../../../packages/ui/tokens.css";',
+        '@import "../../../packages/ui/responsive.css";',
+        '@import "../../../packages/ui/dist/index.css";',
+      ]);
+      expect(portalLines).toEqual(webLines);
+    });
+
+    it("defines surface-aware --semantic-color-focus-ring with >= 3:1 contrast across light, dark, and inverse surfaces", () => {
+      const tokensCss = fs.readFileSync(
+        path.join(uiDir, "tokens.css"),
+        "utf-8"
+      );
+      const rootVars = parseCssBlockVars(tokensCss, /:root\s*\{/);
+      const darkVars = {
+        ...rootVars,
+        ...parseCssBlockVars(tokensCss, /:root\[data-theme="dark"\]/),
+      };
+      const inverseVars = {
+        ...rootVars,
+        ...parseCssBlockVars(tokensCss, /\[data-surface="inverse"\]/),
+      };
+
+      const lightFocusHex = resolveVar("--semantic-color-focus-ring", rootVars);
+      const darkFocusHex = resolveVar("--semantic-color-focus-ring", darkVars);
+      const inverseFocusHex = resolveVar(
+        "--semantic-color-focus-ring",
+        inverseVars
+      );
+
+      expect(lightFocusHex?.toLowerCase()).toBe("#4338ca");
+      expect(darkFocusHex?.toLowerCase()).toBe("#38bdf8");
+      expect(inverseFocusHex?.toLowerCase()).toBe("#38bdf8");
+
+      expect(contrastRatio(lightFocusHex, "#ffffff")).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(lightFocusHex, "#f8fafc")).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(darkFocusHex, "#0f172a")).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(darkFocusHex, "#1e293b")).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(inverseFocusHex, "#0f172a")).toBeGreaterThanOrEqual(
+        3
+      );
+      expect(tokensCss).toMatch(
+        /:root\[data-theme="auto"\][\s\S]*?--semantic-color-focus-ring:\s*var\(--semantic-color-accent-inverse\)/
+      );
+    });
+
+    it("excludes programmatic tabindex='-1' landmarks from :focus-visible outlines and uses --semantic-color-focus-ring", () => {
+      const webCss = fs.readFileSync(
+        path.join(webSrcDir, "style.css"),
+        "utf-8"
+      );
+      const portalCss = fs.readFileSync(
+        path.join(portalSrcDir, "style.css"),
+        "utf-8"
+      );
+
+      for (const [label, css] of [
+        ["apps/web/src/style.css", webCss],
+        ["apps/subject-portal/src/style.css", portalCss],
+      ]) {
+        expect(
+          css,
+          `${label} must use [tabindex]:not([tabindex="-1"]):focus-visible`
+        ).toContain('[tabindex]:not([tabindex="-1"]):focus-visible');
+        expect(
+          /(?:^|[,\s])\[tabindex\]:focus-visible/m.test(css),
+          `${label} must not match bare [tabindex]:focus-visible`
+        ).toBe(false);
+        expect(css).toContain("var(--semantic-color-focus-ring)");
+      }
+    });
+
+    it("applies centralized disabled cursor/opacity styles and :not(:disabled) hover guards across shared modal and app stylesheets", () => {
+      const tokensCss = fs.readFileSync(
+        path.join(uiDir, "tokens.css"),
+        "utf-8"
+      );
+      const modalVue = fs.readFileSync(
+        path.join(uiDir, "src/components/clinical/ClinicalModal.vue"),
+        "utf-8"
+      );
+      const webCss = fs.readFileSync(
+        path.join(webSrcDir, "style.css"),
+        "utf-8"
+      );
+      const portalCss = fs.readFileSync(
+        path.join(portalSrcDir, "style.css"),
+        "utf-8"
+      );
+
+      expect(tokensCss).toContain("cursor: not-allowed !important;");
+      expect(modalVue).toContain(".btn:disabled");
+      expect(modalVue).toContain(
+        '.btn-primary:hover:not(:disabled):not([aria-disabled="true"])'
+      );
+      expect(modalVue).toContain(
+        '.btn-secondary:hover:not(:disabled):not([aria-disabled="true"])'
+      );
+      expect(modalVue).toContain(
+        '.modal-close-btn:hover:not(:disabled):not([aria-disabled="true"])'
+      );
+      expect(webCss).toContain(
+        '.can-hover .btn-primary:hover:not(:disabled):not([aria-disabled="true"])'
+      );
+      expect(
+        /(?:^|\s)\.can-hover\s+\.btn-primary:hover\s*\{/m.test(webCss)
+      ).toBe(false);
+      expect(portalCss).toContain(
+        '.can-hover .btn-primary:hover:not(:disabled):not([aria-disabled="true"])'
+      );
+      expect(portalCss).toContain(
+        '.can-hover .btn-secondary:hover:not(:disabled):not([aria-disabled="true"])'
+      );
+      expect(portalCss).toContain(
+        '.can-hover .btn-back:hover:not(:disabled):not([aria-disabled="true"])'
+      );
+    });
+
+    it("enforces 24px desktop and 48px coarse-pointer target floors while preserving 48px subject-portal touch targets", () => {
+      const responsiveCss = fs.readFileSync(
+        path.join(uiDir, "responsive.css"),
+        "utf-8"
+      );
+      const portalCss = fs.readFileSync(
+        path.join(portalSrcDir, "style.css"),
+        "utf-8"
+      );
+      const targetFiles = [
+        path.join(webSrcDir, "components/canvas/ParticipantsSection.vue"),
+        path.join(webSrcDir, "components/canvas/CanvasInspector.vue"),
+        path.join(webSrcDir, "views/CtmsView.vue"),
+        path.join(webSrcDir, "components/AppShell.vue"),
+        path.join(webSrcDir, "components/OnboardingTour.vue"),
+      ];
+
+      expect(responsiveCss).toContain("--semantic-target-size-min");
+      expect(responsiveCss).toMatch(/@media\s*\(\s*pointer:\s*coarse\s*\)/);
+
+      for (const filePath of targetFiles) {
+        const content = fs.readFileSync(filePath, "utf-8");
+        expect(
+          content,
+          `${path.relative(repoRoot, filePath)} must include @media (pointer: coarse) 48px target rules`
+        ).toMatch(/@media\s*\(\s*pointer:\s*coarse\s*\)/);
+      }
+
+      for (const preservedSelector of [
+        ".btn-sync-status",
+        ".vas-slider-input",
+        "label.radio-option",
+        "#consent-lang-selector",
+      ]) {
+        expect(portalCss).toContain(preservedSelector);
+      }
+    });
+
+    it("includes wcag22aa in accessibility-matcher.js and retains tour focus across anchored OnboardingTour steps", () => {
+      const matcherJs = fs.readFileSync(
+        path.join(uiDir, "accessibility-matcher.js"),
+        "utf-8"
+      );
+      const tourVue = fs.readFileSync(
+        path.join(webSrcDir, "components/OnboardingTour.vue"),
+        "utf-8"
+      );
+
+      expect(matcherJs).toContain('"wcag22aa"');
+      expect(tourVue).toContain("restoreFocus:");
+      expect(tourVue).toContain("isTourOpen.value ? false");
+    });
+  });
 });

@@ -720,6 +720,74 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
       expect(pushSpy).not.toHaveBeenCalled();
       wrapper.unmount();
     });
+
+    it("retains keyboard focus inside popoverRef when advancing from modal Step 1 to anchored Step 2 and restores trigger focus on close", async () => {
+      await router.push("/overview");
+      await flushPromises();
+
+      const triggerBtn = document.createElement("button");
+      triggerBtn.id = "test-tour-trigger";
+      triggerBtn.textContent = "Start Guided Tour";
+      document.body.appendChild(triggerBtn);
+
+      const targetStudies = document.createElement("a");
+      targetStudies.id = "nav-studies";
+      targetStudies.getBoundingClientRect = () => ({
+        top: 100,
+        left: 200,
+        bottom: 140,
+        right: 300,
+        width: 100,
+        height: 40,
+        x: 200,
+        y: 100,
+        toJSON: () => ({}),
+      });
+      document.body.appendChild(targetStudies);
+
+      try {
+        const store = useOnboardingStore();
+        signInAs(useAuthStore(), ["Sponsor Admin"]);
+
+        const wrapper = mount(OnboardingTour, {
+          attachTo: document.body,
+          global: { plugins: [router] },
+        });
+        await flushPromises();
+
+        triggerBtn.focus();
+        expect(document.activeElement).toBe(triggerBtn);
+
+        store.startTour();
+        await flushPromises();
+
+        const popoverEl = wrapper.find(".onboarding-popover-card").element;
+        expect(popoverEl.getAttribute("aria-modal")).toBe("true");
+        expect(popoverEl.contains(document.activeElement)).toBe(true);
+
+        // Focus Dismiss on Step 1 (which unmounts on Step 2) and advance to anchored Step 2 (#nav-studies)
+        wrapper.find(".btn-tour-dismiss").element.focus();
+        await wrapper.find(".btn-tour-next").trigger("click");
+        await flushPromises();
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        await flushPromises();
+
+        expect(store.currentStep).toBe(2);
+        expect(popoverEl.getAttribute("aria-modal")).toBeNull();
+        expect(document.activeElement).not.toBe(triggerBtn);
+        expect(popoverEl.contains(document.activeElement)).toBe(true);
+
+        // Dismissing from anchored Step 2 restores focus back to triggerBtn
+        store.dismissTour();
+        await flushPromises();
+        expect(document.activeElement).toBe(triggerBtn);
+
+        wrapper.unmount();
+      } finally {
+        triggerBtn.remove();
+        targetStudies.remove();
+      }
+    });
   });
 
   describe("AppShell.vue clean shell & opt-in onboarding integration", () => {

@@ -818,7 +818,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
 
       const panelAudit = await new AxeBuilder({ page })
         .include(`#${current.panel}`)
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+        .withTags(WCAG_AA_TAGS)
         .analyze();
       expect(panelAudit.violations).toEqual([]);
 
@@ -878,5 +878,166 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(motionStyles.animationIterationCount).toBe("1");
     expect(motionStyles.animSeconds).toBeLessThanOrEqual(0.001);
     expect(motionStyles.drawerTransitionSec).toBeLessThanOrEqual(0.001);
+  });
+
+  test("enforces shared UI CSS import, disabled cursor/hover guards, >= 3:1 dark & footer focus-ring contrast, tabindex=-1 landmark outline suppression, and 48px portal touch targets", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_UI_CSS_SCREENSHOTS === "1";
+    await page.goto("");
+    await completeInitialPinSetupIfOpen(page);
+
+    // 1. Skip-link activation focuses main#main-content[tabindex="-1"] with zero visible outline
+    const skipLink = page.locator("#app .skip-link");
+    await skipLink.focus();
+    await page.keyboard.press("Enter");
+    const mainOutline = await page
+      .locator("main#main-content")
+      .evaluate((el) => {
+        const s = window.getComputedStyle(el);
+        return {
+          isActive: document.activeElement === el,
+          tabIndex: el.getAttribute("tabindex"),
+          outlineStyle: s.outlineStyle,
+          outlineWidth: s.outlineWidth,
+        };
+      });
+    expect(mainOutline.isActive).toBe(true);
+    expect(mainOutline.tabIndex).toBe("-1");
+    expect(
+      mainOutline.outlineStyle === "none" || mainOutline.outlineWidth === "0px"
+    ).toBe(true);
+
+    // 2. Shared packages/ui/dist/index.css rules, inverse .portal-footer focus ring >= 3:1, and dark theme focus ring >= 3:1
+    const cssAudit = await page.evaluate(() => {
+      function parseHexOrRgb(raw) {
+        const clean = raw.trim();
+        if (clean.startsWith("#")) {
+          const h = clean.slice(1);
+          const full =
+            h.length === 3
+              ? h
+                  .split("")
+                  .map((c) => c + c)
+                  .join("")
+              : h;
+          return [
+            parseInt(full.slice(0, 2), 16),
+            parseInt(full.slice(2, 4), 16),
+            parseInt(full.slice(4, 6), 16),
+          ];
+        }
+        const m = clean.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+        return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [255, 255, 255];
+      }
+      function luminance([r, g, b]) {
+        const [rl, gl, bl] = [r, g, b].map((v) => {
+          const s = v / 255;
+          return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+      }
+      function ratio(a, b) {
+        const l1 = luminance(a);
+        const l2 = luminance(b);
+        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+      }
+
+      // Verify shared ClinicalModal CSS from packages/ui/dist/index.css is loaded in document.styleSheets
+      let hasSharedModalBackdropRule = false;
+      for (const sheet of Array.from(document.styleSheets)) {
+        let rules;
+        try {
+          rules = Array.from(sheet.cssRules || []);
+        } catch {
+          continue;
+        }
+        for (const rule of rules) {
+          if (
+            rule.selectorText &&
+            rule.selectorText.includes(".clinical-modal-backdrop") &&
+            rule.style &&
+            rule.style.position === "fixed"
+          ) {
+            hasSharedModalBackdropRule = true;
+            break;
+          }
+        }
+        if (hasSharedModalBackdropRule) break;
+      }
+
+      const footer = document.querySelector(".portal-footer");
+      const footerFocus = window
+        .getComputedStyle(footer)
+        .getPropertyValue("--semantic-color-focus-ring");
+      const footerBg = window.getComputedStyle(footer).backgroundColor;
+
+      const prevTheme = document.documentElement.getAttribute("data-theme");
+      document.documentElement.setAttribute("data-theme", "dark");
+      const darkFocus = window
+        .getComputedStyle(document.documentElement)
+        .getPropertyValue("--semantic-color-focus-ring");
+      const darkSurface = window
+        .getComputedStyle(document.documentElement)
+        .getPropertyValue("--semantic-color-surface");
+      if (prevTheme === null) {
+        document.documentElement.removeAttribute("data-theme");
+      } else {
+        document.documentElement.setAttribute("data-theme", prevTheme);
+      }
+
+      // Probe disabled .btn-primary cursor and hover guard
+      document.documentElement.classList.add("can-hover");
+      const disabledBtn = document.createElement("button");
+      disabledBtn.id = "probe-disabled-portal-btn";
+      disabledBtn.className = "btn btn-primary";
+      disabledBtn.disabled = true;
+      disabledBtn.textContent = "Disabled Action";
+      document.body.appendChild(disabledBtn);
+      const disabledStyle = window.getComputedStyle(disabledBtn);
+
+      return {
+        hasSharedModalBackdropRule,
+        footerRatio: ratio(parseHexOrRgb(footerFocus), parseHexOrRgb(footerBg)),
+        darkRatio: ratio(parseHexOrRgb(darkFocus), parseHexOrRgb(darkSurface)),
+        disabledCursor: disabledStyle.cursor,
+        disabledBgBefore: disabledStyle.backgroundColor,
+      };
+    });
+
+    expect(cssAudit.hasSharedModalBackdropRule).toBe(true);
+    expect(cssAudit.footerRatio).toBeGreaterThanOrEqual(3);
+    expect(cssAudit.darkRatio).toBeGreaterThanOrEqual(3);
+    expect(cssAudit.disabledCursor).toBe("not-allowed");
+
+    const probeBtn = page.locator("#probe-disabled-portal-btn");
+    await probeBtn.hover({ force: true });
+    const disabledBgAfter = await probeBtn.evaluate((el) => {
+      const bg = window.getComputedStyle(el).backgroundColor;
+      el.remove();
+      return bg;
+    });
+    expect(disabledBgAfter).toBe(cssAudit.disabledBgBefore);
+
+    // 3. Preserved 48px touch targets on .btn-sync-status and questionnaire radio options
+    const syncBox = await page.locator("#btn-global-sync-drawer").boundingBox();
+    expect(syncBox).not.toBeNull();
+    expect(syncBox.height).toBeGreaterThanOrEqual(48);
+
+    await page.locator("#task-card-assign_01 .btn-start-task").click();
+    const radioOption = page.locator("label.radio-option").first();
+    await expect(radioOption).toBeVisible();
+    const radioBox = await radioOption.boundingBox();
+    expect(radioBox).not.toBeNull();
+    expect(radioBox.height).toBeGreaterThanOrEqual(48);
+
+    const wcagResults = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(wcagResults.violations).toEqual([]);
+
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/portal-questionnaire-wcag22aa.png" });
+    }
   });
 });

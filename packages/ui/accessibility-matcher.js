@@ -95,16 +95,18 @@ export async function toBeAccessible(received, customOptions = {}) {
   };
 
   // Merge default rules with user-provided options
+  const { strictLayoutMode: _strictLayoutMode, ...axeCustomOptions } =
+    customOptions;
   const finalOptions = {
+    ...axeCustomOptions,
     runOnly: customOptions.runOnly || {
       type: "tag",
-      values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+      values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
     },
     rules: {
       ...defaultRules,
       ...(customOptions.rules || {}),
     },
-    ...customOptions,
   };
 
   try {

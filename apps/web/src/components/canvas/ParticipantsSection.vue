@@ -333,7 +333,14 @@ function onSiteChange(event: Event) {
 }
 
 .filter-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--semantic-target-size-min, 24px);
+  min-height: var(--semantic-target-size-min, 24px);
+  padding: 2px 6px;
   border: 0;
+  border-radius: 999px;
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -368,12 +375,25 @@ function onSiteChange(event: Event) {
 }
 
 .row-select {
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-target-size-min, 24px);
+  min-width: var(--semantic-target-size-min, 24px);
+  padding: 2px 6px;
   border: 0;
+  border-radius: 4px;
   background: transparent;
   color: var(--accent);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .filter-chip button,
+  .row-select {
+    min-height: var(--semantic-touch-target-min, 48px);
+    min-width: var(--semantic-touch-target-min, 48px);
+  }
 }
 
 .numeric {

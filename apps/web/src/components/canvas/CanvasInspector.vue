@@ -835,7 +835,7 @@ watch(aiEnabled, (on) => {
   cursor: pointer;
 }
 
-.inspector-toggle:hover {
+.inspector-toggle:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--neutral-light);
   color: var(--primary);
 }
@@ -879,6 +879,10 @@ watch(aiEnabled, (on) => {
 }
 
 .inspector-ref-summary {
+  min-height: var(--semantic-target-size-min, 24px);
+  min-width: var(--semantic-target-size-min, 24px);
+  padding: 4px 2px;
+  line-height: 1.4;
   cursor: pointer;
   user-select: none;
 }
@@ -892,7 +896,12 @@ watch(aiEnabled, (on) => {
 }
 
 .btn-copy-ref {
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-target-size-min, 24px);
+  min-width: var(--semantic-target-size-min, 24px);
+  padding: 4px 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: transparent;
@@ -908,6 +917,11 @@ watch(aiEnabled, (on) => {
 }
 
 .verb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-target-size-min, 24px);
+  min-width: var(--semantic-target-size-min, 24px);
   padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -917,9 +931,22 @@ watch(aiEnabled, (on) => {
   cursor: pointer;
 }
 
-.verb[aria-disabled="true"] {
+.verb[aria-disabled="true"],
+.verb:disabled {
   color: var(--neutral-dark);
   border-style: dashed;
+  cursor: not-allowed;
+  opacity: var(--semantic-opacity-disabled, 0.55);
+}
+
+@media (pointer: coarse) {
+  .inspector-toggle,
+  .inspector-ref-summary,
+  .btn-copy-ref,
+  .verb {
+    min-height: var(--semantic-touch-target-min, 48px);
+    min-width: var(--semantic-touch-target-min, 48px);
+  }
 }
 
 .verb-current {

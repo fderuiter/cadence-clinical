@@ -1,5 +1,6 @@
 @import "../../../packages/ui/tokens.css";
 @import "../../../packages/ui/responsive.css";
+@import "../../../packages/ui/dist/index.css";
 
 /* eCOA Subject Portal styles */
 
@@ -170,7 +171,7 @@ body {
   transition: all 0.2s ease;
 }
 
-.can-hover .nav-item button:hover {
+.can-hover .nav-item button:hover:not(:disabled):not([aria-disabled="true"]) {
   background-color: var(--bg-main);
   color: var(--text-main);
 }
@@ -366,12 +367,24 @@ body {
   transition: all 0.2s ease;
 }
 
+.btn:disabled,
+.btn[aria-disabled="true"],
+.btn-back:disabled,
+.btn-back[aria-disabled="true"],
+.btn-sync-status:disabled,
+.btn-sync-status[aria-disabled="true"],
+.btn-close-drawer:disabled,
+.btn-close-drawer[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: var(--semantic-opacity-disabled, 0.55);
+}
+
 .btn-primary {
   background-color: var(--primary);
   color: var(--semantic-color-text-on-primary);
 }
 
-.can-hover .btn-primary:hover {
+.can-hover .btn-primary:hover:not(:disabled):not([aria-disabled="true"]) {
   background-color: var(--primary-dark);
 }
 
@@ -381,7 +394,7 @@ body {
   border: 1px solid var(--semantic-color-border-control);
 }
 
-.can-hover .btn-secondary:hover {
+.can-hover .btn-secondary:hover:not(:disabled):not([aria-disabled="true"]) {
   background-color: var(--semantic-color-border);
 }
 
@@ -396,7 +409,7 @@ body {
   display: inline-block;
 }
 
-.can-hover .btn-back:hover {
+.can-hover .btn-back:hover:not(:disabled):not([aria-disabled="true"]) {
   text-decoration: underline;
 }
 
@@ -643,9 +656,9 @@ body {
 .form-group textarea:focus-visible,
 .form-group input:focus-visible,
 .clinical-input input:focus-visible {
-  outline: 2px solid var(--color-accent) !important;
+  outline: 2px solid var(--semantic-color-focus-ring) !important;
   outline-offset: 2px !important;
-  border-color: var(--color-accent) !important;
+  border-color: var(--semantic-color-focus-ring) !important;
 }
 
 /* Hide query flags and panels in subject portal as these are staff console concepts */
@@ -656,6 +669,7 @@ body {
 
 /* Footer & Activity Log */
 .portal-footer {
+  --semantic-color-focus-ring: var(--semantic-color-accent-inverse);
   background-color: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-text-inverse-muted);
   padding: 24px;
@@ -749,7 +763,7 @@ body {
 .skip-link:focus-visible {
   top: 0;
   left: 0;
-  outline: 3px solid var(--semantic-color-accent) !important;
+  outline: 3px solid var(--semantic-color-focus-ring) !important;
   outline-offset: 2px !important;
 }
 
@@ -770,19 +784,24 @@ body {
 
 .dropzone-upload:focus,
 .dropzone-upload:focus-visible {
-  outline: 3px solid var(--semantic-color-accent) !important;
+  outline: 3px solid var(--semantic-color-focus-ring) !important;
   outline-offset: 2px !important;
 }
 
 /* 2. Keyboard Navigation Focus Indicators (Requirement 2) */
+[tabindex="-1"]:focus,
+[tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 a:focus-visible,
 [role="button"]:focus-visible,
-[tabindex]:focus-visible {
-  outline: 3px solid var(--semantic-color-accent) !important;
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 3px solid var(--semantic-color-focus-ring) !important;
   outline-offset: 2px !important;
   box-shadow: none !important;
 }
@@ -826,7 +845,7 @@ a:focus-visible,
   min-height: var(--touch-target-min);
 }
 
-.can-hover .btn-sync-status:hover {
+.can-hover .btn-sync-status:hover:not(:disabled):not([aria-disabled="true"]) {
   background-color: var(--border);
 }
 
@@ -949,7 +968,7 @@ a:focus-visible,
   transition: background-color 0.2s;
 }
 
-.can-hover .btn-close-drawer:hover {
+.can-hover .btn-close-drawer:hover:not(:disabled):not([aria-disabled="true"]) {
   background-color: var(--bg-main);
   color: var(--text-main);
 }

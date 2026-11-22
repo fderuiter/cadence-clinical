@@ -339,7 +339,10 @@ export interface FocusTrapOptions {
   escapeDeactivates?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   initialFocus?:
     import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null) | string;
-  restoreFocus?: boolean | (() => HTMLElement | null);
+  restoreFocus?:
+    | import("vue").Ref<boolean | HTMLElement | null>
+    | (() => boolean | HTMLElement | null)
+    | boolean;
 }
 
 export function useFocusTrap(

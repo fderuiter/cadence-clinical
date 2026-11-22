@@ -648,6 +648,49 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     expect(dom.doc.activeElement).toBe(emptyModal);
   });
 
+  it("skips background focus restoration when restoreFocus getter or ref resolves to false and restores custom target on final close", async () => {
+    const launchBtn = dom.body.appendChild(
+      new MockElement("button", { id: "tour-launch-btn" })
+    );
+    const popover = dom.body.appendChild(
+      new MockElement("div", { id: "tour-popover", tabindex: "-1" })
+    );
+    const nextBtn = popover.appendChild(
+      new MockElement("button", { id: "tour-next-btn" })
+    );
+
+    launchBtn.focus();
+    expect(dom.doc.activeElement).toBe(launchBtn);
+
+    const isTourOpen = ref(true);
+    const isModalStep = ref(true);
+
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(popover), {
+        isOpen: isModalStep,
+        restoreFocus: () => (isTourOpen.value ? false : launchBtn),
+      });
+    });
+
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(nextBtn);
+
+    // Transitioning from modal Step 1 to anchored Step 2 keeps isTourOpen=true while isModalStep=false
+    isModalStep.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(nextBtn);
+
+    // Re-entering a final modal step and closing the tour restores focus to launchBtn
+    isModalStep.value = true;
+    await nextTick();
+    isTourOpen.value = false;
+    isModalStep.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(launchBtn);
+  });
+
   it("defines prefers-reduced-motion rules in tokens.css while keeping default tokens intact", () => {
     const tokensCss = fs.readFileSync(
       path.resolve(__dirname, "../tokens.css"),

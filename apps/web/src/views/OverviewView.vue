@@ -641,6 +641,7 @@ function startGuidedTour() {
 }
 
 .overview-header-card {
+  --semantic-color-focus-ring: var(--semantic-color-accent-inverse);
   background: linear-gradient(
     135deg,
     var(--semantic-color-surface-inverse) 0%,

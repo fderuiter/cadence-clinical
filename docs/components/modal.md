@@ -4,21 +4,21 @@ The `ClinicalModal` and `ClinicalDrawer` primitives render accessible modal over
 
 ## ClinicalModal Props
 
-| Prop                                        | Type                  | Default                    | Description                                                                   |
-| :------------------------------------------ | :-------------------- | :------------------------- | :---------------------------------------------------------------------------- |
-| `modelValue` / `open` / `isOpen`            | `Boolean`             | `false`                    | Controls open/close visibility across `v-model` and prop bindings.            |
-| `title`                                     | `String`              | `'Clinical Action Dialog'` | Dialog header title and programmatic accessible name (`aria-labelledby`).     |
-| `size`                                      | `String`              | `'md'`                     | Dialog width (`sm`, `md`, `lg`, `xl`).                                        |
-| `role`                                      | `String`              | `'dialog'`                 | Dialog ARIA role (`dialog`, `alertdialog`).                                   |
-| `dismissible`                               | `Boolean`             | `true`                     | When `false`, locks `Escape`, close button, and backdrop dismissal.           |
-| `closeOnBackdrop`                           | `Boolean`             | `true`                     | Whether clicking the backdrop dismisses an unlocked modal.                    |
-| `overlayId`                                 | `String`              | `undefined`                | Optional `id` attribute applied to the `.clinical-modal-backdrop` container.  |
-| `ariaLabel` / `ariaLabelledby`              | `String`              | `undefined`                | Explicit accessible name or heading ID override when `showHeader` is `false`. |
-| `showHeader` / `showFooter`                 | `Boolean`             | `true`                     | Toggles built-in header or footer chrome when custom slot markup is used.     |
-| `headerClass` / `bodyClass` / `footerClass` | `String`              | `''`                       | Optional custom CSS classes appended to header, body, or footer containers.   |
-| `initialFocus`                              | `String \| Object`    | `null`                     | Optional CSS selector, ref, or getter for initial focus target on open.       |
-| `restoreFocus`                              | `Boolean \| Function` | `true`                     | Restores focus to the triggering element on close.                            |
-| `teleport`                                  | `Boolean`             | `true`                     | Teleports the overlay to `document.body` when `true`.                         |
+| Prop                                        | Type                         | Default                    | Description                                                                                                                                                |
+| :------------------------------------------ | :--------------------------- | :------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `modelValue` / `open` / `isOpen`            | `Boolean`                    | `false`                    | Controls open/close visibility across `v-model` and prop bindings.                                                                                         |
+| `title`                                     | `String`                     | `'Clinical Action Dialog'` | Dialog header title and programmatic accessible name (`aria-labelledby`).                                                                                  |
+| `size`                                      | `String`                     | `'md'`                     | Dialog width (`sm`, `md`, `lg`, `xl`).                                                                                                                     |
+| `role`                                      | `String`                     | `'dialog'`                 | Dialog ARIA role (`dialog`, `alertdialog`).                                                                                                                |
+| `dismissible`                               | `Boolean`                    | `true`                     | When `false`, locks `Escape`, close button, and backdrop dismissal.                                                                                        |
+| `closeOnBackdrop`                           | `Boolean`                    | `true`                     | Whether clicking the backdrop dismisses an unlocked modal.                                                                                                 |
+| `overlayId`                                 | `String`                     | `undefined`                | Optional `id` attribute applied to the `.clinical-modal-backdrop` container.                                                                               |
+| `ariaLabel` / `ariaLabelledby`              | `String`                     | `undefined`                | Explicit accessible name or heading ID override when `showHeader` is `false`.                                                                              |
+| `showHeader` / `showFooter`                 | `Boolean`                    | `true`                     | Toggles built-in header or footer chrome when custom slot markup is used.                                                                                  |
+| `headerClass` / `bodyClass` / `footerClass` | `String`                     | `''`                       | Optional custom CSS classes appended to header, body, or footer containers.                                                                                |
+| `initialFocus`                              | `String \| Object`           | `null`                     | Optional CSS selector, ref, or getter for initial focus target on open.                                                                                    |
+| `restoreFocus`                              | `Boolean \| Ref \| Function` | `true`                     | Restores focus to the triggering element (or returned element) on close; skips restoration when `false` or when a reactive ref/getter resolves to `false`. |
+| `teleport`                                  | `Boolean`                    | `true`                     | Teleports the overlay to `document.body` when `true`.                                                                                                      |
 
 ## ClinicalDrawer Props
 

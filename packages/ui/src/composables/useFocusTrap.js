@@ -563,10 +563,16 @@ export function useFocusTrap(
 
     reconcileBackgroundInert();
 
-    if (options.restoreFocus !== false && typeof document !== "undefined") {
+    const resolvedRestore =
+      options.restoreFocus === undefined
+        ? true
+        : resolveOption(options.restoreFocus);
+    if (resolvedRestore !== false && typeof document !== "undefined") {
       const customRestore =
-        typeof options.restoreFocus === "function"
-          ? options.restoreFocus()
+        resolvedRestore &&
+        typeof resolvedRestore === "object" &&
+        typeof resolvedRestore.focus === "function"
+          ? resolvedRestore
           : null;
       const targetToFocus = customRestore || previousActiveElement;
       if (

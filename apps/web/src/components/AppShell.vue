@@ -3,7 +3,9 @@
     class="app-shell"
     :style="{ '--shell-header-height': `${headerHeight}px` }"
   >
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a href="#main-content" class="skip-link" @click.prevent="focusMainContent">
+      Skip to main content
+    </a>
 
     <header ref="headerRef" class="app-header">
       <div class="header-left">
@@ -452,6 +454,13 @@ const {
   },
 });
 
+function focusMainContent() {
+  const mainEl = document.getElementById("main-content");
+  if (mainEl) {
+    mainEl.focus();
+  }
+}
+
 function handleGlobalKeydown(event) {
   if (!authStore.isAuthenticated) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -589,6 +598,8 @@ onUnmounted(() => {
 .primary-nav-link {
   display: inline-flex;
   align-items: center;
+  min-height: 32px;
+  min-width: var(--semantic-target-size-min, 24px);
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.9rem;
@@ -596,6 +607,7 @@ onUnmounted(() => {
   color: var(--semantic-color-text-body);
   text-decoration: none;
   border: 1px solid transparent;
+  box-sizing: border-box;
   transition:
     background-color 0.15s ease,
     color 0.15s ease,
@@ -624,6 +636,8 @@ onUnmounted(() => {
 .plan-status-badge {
   display: inline-flex;
   align-items: center;
+  min-height: 28px;
+  min-width: var(--semantic-target-size-min, 24px);
   padding: 5px 10px;
   border-radius: 999px;
   font-size: 0.78rem;
@@ -633,6 +647,7 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-info-border);
   color: var(--semantic-color-info);
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .plan-status-badge:hover {
@@ -673,13 +688,28 @@ onUnmounted(() => {
 }
 
 .shell-expired-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  min-width: var(--semantic-target-size-min, 24px);
   text-decoration: none;
   white-space: nowrap;
+}
+
+.app-header .btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  min-width: var(--semantic-target-size-min, 24px);
 }
 
 .command-palette-trigger {
   display: inline-flex;
   align-items: center;
+  min-height: 32px;
+  min-width: var(--semantic-target-size-min, 24px);
   gap: 10px;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
@@ -689,9 +719,10 @@ onUnmounted(() => {
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
-.command-palette-trigger:hover {
+.command-palette-trigger:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--semantic-color-surface-header);
   border-color: var(--semantic-color-border-control);
   color: var(--semantic-color-text);
@@ -720,6 +751,8 @@ onUnmounted(() => {
 }
 
 .persona-select {
+  min-height: 32px;
+  min-width: var(--semantic-target-size-min, 24px);
   padding: 5px 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -727,11 +760,14 @@ onUnmounted(() => {
   color: var(--semantic-color-text);
   font-size: 0.83rem;
   max-width: 220px;
+  box-sizing: border-box;
 }
 
 .shell-control-btn {
   display: inline-flex;
   align-items: center;
+  min-height: 32px;
+  min-width: var(--semantic-target-size-min, 24px);
   gap: 6px;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
@@ -741,9 +777,10 @@ onUnmounted(() => {
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
-.shell-control-btn:hover {
+.shell-control-btn:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--semantic-color-surface-header);
   border-color: var(--semantic-color-border-control);
 }
@@ -791,6 +828,8 @@ onUnmounted(() => {
   display: none;
   align-items: center;
   justify-content: center;
+  min-height: 32px;
+  min-width: var(--semantic-target-size-min, 24px);
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -798,6 +837,7 @@ onUnmounted(() => {
   color: var(--semantic-color-text);
   font-size: 1rem;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .mobile-nav-drawer {
@@ -844,6 +884,21 @@ onUnmounted(() => {
 
   .mobile-menu-toggle {
     display: inline-flex;
+  }
+}
+
+@media (pointer: coarse) {
+  .primary-nav-link,
+  .plan-status-badge,
+  .command-palette-trigger,
+  .persona-select,
+  .shell-control-btn,
+  .mobile-menu-toggle,
+  .mobile-nav-link,
+  .app-header .btn-sm,
+  .shell-expired-cta {
+    min-height: var(--semantic-touch-target-min, 48px);
+    min-width: var(--semantic-touch-target-min, 48px);
   }
 }
 </style>

@@ -120,15 +120,17 @@
 
       <!-- Popover Action Buttons -->
       <div
+        class="onboarding-tour-actions"
         style="
           display: flex;
           justify-content: space-between;
           align-items: center;
+          flex-wrap: wrap;
           gap: 8px;
         "
       >
         <!-- Left buttons -->
-        <div>
+        <div class="onboarding-tour-actions-left">
           <button
             v-if="currentStep === 1"
             class="btn btn-secondary btn-tour-dismiss"
@@ -164,7 +166,10 @@
         </div>
 
         <!-- Right/Middle buttons -->
-        <div style="display: flex; gap: 6px; align-items: center">
+        <div
+          class="onboarding-tour-actions-right"
+          style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center"
+        >
           <button
             class="btn btn-tour-disable"
             style="
@@ -222,9 +227,9 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, watch } from "vue";
+import { computed, nextTick, ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { useFocusTrap, useEscapeClose } from "ui";
+import { getFocusableElements, useFocusTrap, useEscapeClose } from "ui";
 import {
   isTourRouteAuthorized,
   useOnboardingStore,
@@ -331,6 +336,7 @@ const stepTargetDescription = computed(
 
 const hasTargetElement = ref(false);
 const popoverRef = ref(null);
+const tourTriggerRef = ref(null);
 
 const isTourOpen = computed(() =>
   Boolean(onboardingStore.isActive && !onboardingStore.disabled)
@@ -343,14 +349,105 @@ const isModalStep = computed(
       !hasTargetElement.value)
 );
 
+function resolveTourRestoreTarget() {
+  if (typeof document === "undefined") return null;
+  if (tourTriggerRef.value && document.contains(tourTriggerRef.value)) {
+    return tourTriggerRef.value;
+  }
+  const checklistTrigger = document.getElementById(
+    "btn-onboarding-checklist-trigger"
+  );
+  if (checklistTrigger && document.contains(checklistTrigger)) {
+    return checklistTrigger;
+  }
+  return null;
+}
+
+function focusPopoverControl() {
+  if (
+    isDisposed ||
+    typeof document === "undefined" ||
+    !isTourOpen.value ||
+    !popoverRef.value
+  ) {
+    return;
+  }
+  const activeEl = document.activeElement;
+  if (
+    activeEl &&
+    popoverRef.value.contains(activeEl) &&
+    activeEl !== popoverRef.value
+  ) {
+    return;
+  }
+  const preferred = popoverRef.value.querySelector(
+    ".btn-tour-next:not([disabled]), .btn-tour-complete:not([disabled])"
+  );
+  if (preferred && typeof preferred.focus === "function") {
+    preferred.focus();
+    return;
+  }
+  const focusables = getFocusableElements(popoverRef.value);
+  if (focusables.length > 0 && typeof focusables[0].focus === "function") {
+    focusables[0].focus();
+    return;
+  }
+  if (typeof popoverRef.value.focus === "function") {
+    popoverRef.value.focus();
+  }
+}
+
+watch(
+  isTourOpen,
+  (open, prevOpen) => {
+    if (typeof document === "undefined") return;
+    if (open && !prevOpen) {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        activeEl !== document.body &&
+        (!popoverRef.value || !popoverRef.value.contains(activeEl))
+      ) {
+        tourTriggerRef.value = activeEl;
+      }
+    } else if (!open && prevOpen) {
+      const restoreTarget = resolveTourRestoreTarget();
+      tourTriggerRef.value = null;
+      if (restoreTarget && typeof restoreTarget.focus === "function") {
+        nextTick(() => {
+          if (
+            !isTourOpen.value &&
+            document.contains(restoreTarget) &&
+            document.activeElement !== restoreTarget
+          ) {
+            restoreTarget.focus();
+          }
+        });
+      }
+    }
+  },
+  { flush: "sync", immediate: true }
+);
+
 useFocusTrap(popoverRef, {
   isOpen: isModalStep,
+  restoreFocus: () => (isTourOpen.value ? false : resolveTourRestoreTarget()),
   onEscape: () => onboardingStore.dismissTour(),
 });
 
 useEscapeClose(() => onboardingStore.dismissTour(), {
   isOpen: () => isTourOpen.value && !isModalStep.value,
 });
+
+watch(
+  [currentStep, isModalStep],
+  async () => {
+    if (!isTourOpen.value) return;
+    await nextTick();
+    focusPopoverControl();
+  },
+  { flush: "post" }
+);
 
 const popoverStyle = ref({
   position: "fixed",
@@ -606,3 +703,27 @@ onUnmounted(() => {
   cancelPendingRaf();
 });
 </script>
+
+<style scoped>
+.onboarding-popover-card {
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  outline: none;
+}
+
+.onboarding-tour-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-target-size-min, 24px);
+  min-width: var(--semantic-target-size-min, 24px);
+  box-sizing: border-box;
+}
+
+@media (pointer: coarse) {
+  .onboarding-tour-actions .btn {
+    min-height: var(--semantic-touch-target-min, 48px);
+    min-width: var(--semantic-touch-target-min, 48px);
+  }
+}
+</style>

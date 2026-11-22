@@ -184,9 +184,43 @@
 }
 
 .btn-sm {
+  min-height: var(--semantic-target-size-min, 24px);
+  min-width: var(--semantic-target-size-min, 24px);
   padding: var(--spacing-2xs, 4px) var(--spacing-xs, 8px) !important;
   font-size: 0.8rem !important;
+  line-height: 1.25;
   border-radius: 4px !important;
+  box-sizing: border-box;
+}
+
+/* Centralized Pointer Target Floors (WCAG 2.2 SC 2.5.8 >= 24px desktop, >= 48px coarse touch) */
+:where(
+  button:not([hidden]),
+  .btn:not([hidden]),
+  .btn-sm:not([hidden]),
+  [role="button"]:not([hidden])
+) {
+  min-height: var(--semantic-target-size-min, 24px);
+  min-width: var(--semantic-target-size-min, 24px);
+  box-sizing: border-box;
+}
+
+:where(a.btn:not([hidden]), a.btn-sm:not([hidden])) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (pointer: coarse) {
+  button:not([hidden]),
+  .btn:not([hidden]),
+  .btn-sm:not([hidden]),
+  [role="button"]:not([hidden]),
+  select:not([hidden]),
+  summary:not([hidden]) {
+    min-height: var(--semantic-touch-target-min, 48px);
+    min-width: var(--semantic-touch-target-min, 48px);
+  }
 }
 
 /* 7. Mobile Breakpoint Drawer Rules (Requirement 2) */

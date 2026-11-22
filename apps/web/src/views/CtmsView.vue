@@ -4829,16 +4829,36 @@ textarea {
 }
 
 .btn {
+  min-height: var(--semantic-target-size-min, 24px);
+  min-width: var(--semantic-target-size-min, 24px);
   padding: 6px 12px;
   font-size: 0.82rem;
   cursor: pointer;
   border-radius: 6px;
   font-weight: 500;
+  box-sizing: border-box;
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: var(--semantic-opacity-disabled, 0.55);
 }
 
 .btn-sm {
-  padding: 3px 8px;
+  min-height: var(--semantic-target-size-min, 24px);
+  min-width: var(--semantic-target-size-min, 24px);
+  padding: 4px 8px;
   font-size: 11px;
+  line-height: 1.3;
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .btn-sm {
+    min-height: var(--semantic-touch-target-min, 48px);
+    min-width: var(--semantic-touch-target-min, 48px);
+  }
 }
 
 .btn-cancel {

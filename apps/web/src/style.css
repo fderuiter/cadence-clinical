@@ -357,7 +357,7 @@ body {
   justify-content: center;
 }
 
-.btn-logout-action:hover {
+.btn-logout-action:hover:not(:disabled):not([aria-disabled="true"]) {
   background-color: var(--semantic-color-error-text-dark);
 }
 
@@ -934,13 +934,19 @@ main {
   transition: all 0.2s;
 }
 
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: var(--semantic-opacity-disabled, 0.55);
+}
+
 .btn-primary {
   background-color: var(--primary);
   color: var(--semantic-color-text-on-primary);
   border-color: var(--primary);
 }
 
-.can-hover .btn-primary:hover {
+.can-hover .btn-primary:hover:not(:disabled):not([aria-disabled="true"]) {
   background-color: var(--primary-dark);
   border-color: var(--primary-dark);
 }
@@ -1076,9 +1082,15 @@ main {
   border-radius: 6px;
 }
 
-.btn-close:hover {
+.btn-close:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--semantic-color-border);
   color: var(--semantic-color-text);
+}
+
+.btn-close:disabled,
+.btn-close[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .error-banner {
@@ -1281,14 +1293,19 @@ main {
 }
 
 /* 2. Keyboard Navigation Focus Indicators (Requirement 2) */
+[tabindex="-1"]:focus,
+[tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 a:focus-visible,
 [role="button"]:focus-visible,
-[tabindex]:focus-visible {
-  outline: 3px solid var(--semantic-color-accent) !important;
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 3px solid var(--semantic-color-focus-ring) !important;
   outline-offset: 2px !important;
   box-shadow: none !important;
 }
@@ -1317,7 +1334,7 @@ a:focus-visible,
   border-color: var(--semantic-color-success) !important;
 }
 
-.can-hover .btn-primary:hover {
+.can-hover .btn-primary:hover:not(:disabled):not([aria-disabled="true"]) {
   background-color: var(--semantic-color-primary-dark) !important;
   border-color: var(--semantic-color-primary-dark) !important;
   color: var(--semantic-color-text-on-primary) !important;
@@ -1357,7 +1374,7 @@ a:focus-visible,
   box-shadow:
     0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-  outline: 3px solid var(--semantic-color-accent) !important;
+  outline: 3px solid var(--semantic-color-focus-ring) !important;
   outline-offset: 2px !important;
 }
 
@@ -1442,7 +1459,7 @@ a:focus-visible,
   gap: 6px;
 }
 
-.btn-viewport:hover {
+.btn-viewport:hover:not(:disabled):not([aria-disabled="true"]) {
   color: var(--semantic-color-text);
 }
 
@@ -1608,7 +1625,7 @@ a:focus-visible,
   transition: all 0.15s;
 }
 
-.btn-add-field:hover {
+.btn-add-field:hover:not(:disabled):not([aria-disabled="true"]) {
   background-color: var(--semantic-color-info-light);
   color: var(--semantic-color-primary-dark);
 }
@@ -1817,7 +1834,7 @@ a:focus-visible,
   transition: all 0.15s;
 }
 
-.btn-compile-schema:hover {
+.btn-compile-schema:hover:not(:disabled):not([aria-disabled="true"]) {
   background-color: var(--semantic-color-primary-dark);
 }
 

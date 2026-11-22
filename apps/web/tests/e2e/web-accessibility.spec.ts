@@ -341,4 +341,210 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await page.keyboard.press("Escape");
     await expect(dataLockModal).toBeHidden();
   });
+
+  test("enforces disabled button cursors, >= 3:1 dark/inverse focus-ring contrast, tabindex=-1 landmark outline suppression, 24px/48px target sizes, and Step 2 OnboardingTour focus retention", async ({
+    page,
+    browser,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_UI_CSS_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await gotoHashRoute(page, "/overview");
+    await expect(page.locator("#overview-hub-root")).toBeVisible();
+
+    // 1. Skip-link activation focuses main#main-content[tabindex="-1"] with zero visible outline
+    const skipLink = page.locator("a.skip-link");
+    await skipLink.focus();
+    await page.keyboard.press("Enter");
+    const mainOutline = await page
+      .locator("main#main-content")
+      .evaluate((el) => {
+        const s = window.getComputedStyle(el);
+        return {
+          isActive: document.activeElement === el,
+          tabIndex: el.getAttribute("tabindex"),
+          outlineStyle: s.outlineStyle,
+          outlineWidth: s.outlineWidth,
+        };
+      });
+    expect(mainOutline.isActive).toBe(true);
+    expect(mainOutline.tabIndex).toBe("-1");
+    expect(
+      mainOutline.outlineStyle === "none" || mainOutline.outlineWidth === "0px"
+    ).toBe(true);
+
+    // 2. Inverse header card (.overview-header-card) and [data-theme="dark"] focus ring >= 3:1 contrast
+    const inverseFocusContrast = await page
+      .locator(".overview-header-card")
+      .evaluate((card) => {
+        function parseHexOrRgb(raw: string): [number, number, number] {
+          const clean = raw.trim();
+          if (clean.startsWith("#")) {
+            const h = clean.slice(1);
+            const full =
+              h.length === 3
+                ? h
+                    .split("")
+                    .map((c) => c + c)
+                    .join("")
+                : h;
+            return [
+              parseInt(full.slice(0, 2), 16),
+              parseInt(full.slice(2, 4), 16),
+              parseInt(full.slice(4, 6), 16),
+            ];
+          }
+          const m = clean.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+          return m
+            ? [Number(m[1]), Number(m[2]), Number(m[3])]
+            : [255, 255, 255];
+        }
+        function luminance([r, g, b]: [number, number, number]) {
+          const [rl, gl, bl] = [r, g, b].map((v) => {
+            const s = v / 255;
+            return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+        }
+        function ratio(
+          a: [number, number, number],
+          b: [number, number, number]
+        ) {
+          const l1 = luminance(a);
+          const l2 = luminance(b);
+          return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+        }
+
+        const cardFocusToken = window
+          .getComputedStyle(card)
+          .getPropertyValue("--semantic-color-focus-ring");
+        const prevTheme = document.documentElement.getAttribute("data-theme");
+        document.documentElement.setAttribute("data-theme", "dark");
+        const darkFocusToken = window
+          .getComputedStyle(document.documentElement)
+          .getPropertyValue("--semantic-color-focus-ring");
+        const darkSurface = window
+          .getComputedStyle(document.documentElement)
+          .getPropertyValue("--semantic-color-surface");
+        if (prevTheme === null) {
+          document.documentElement.removeAttribute("data-theme");
+        } else {
+          document.documentElement.setAttribute("data-theme", prevTheme);
+        }
+
+        return {
+          inverseRatio: ratio(parseHexOrRgb(cardFocusToken), [15, 23, 42]),
+          darkRatio: ratio(
+            parseHexOrRgb(darkFocusToken),
+            parseHexOrRgb(darkSurface)
+          ),
+        };
+      });
+    expect(inverseFocusContrast.inverseRatio).toBeGreaterThanOrEqual(3);
+    expect(inverseFocusContrast.darkRatio).toBeGreaterThanOrEqual(3);
+
+    const bypassCheckbox = page.locator("#toggle-bypass-overview");
+    await bypassCheckbox.focus();
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/web-dark-focus-ring.png" });
+    }
+
+    // 3. Desktop target sizes >= 24px across AppShell header controls
+    for (const sel of [
+      "#btn-open-palette",
+      "#persona-select",
+      "#btn-onboarding-checklist-trigger",
+      "#btn-contextual-help-trigger",
+      "#btn-logout",
+    ]) {
+      const box = await page.locator(sel).boundingBox();
+      expect(box, `${sel} bounding box on desktop`).not.toBeNull();
+      expect(box!.height).toBeGreaterThanOrEqual(24);
+      expect(box!.width).toBeGreaterThanOrEqual(24);
+    }
+
+    // 4. OnboardingTour Step 1 -> anchored Step 2 retains focus inside popoverRef and restores trigger on close
+    await page.locator("#btn-onboarding-checklist-trigger").click();
+    await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
+    await page.locator("#btn-drawer-start-tour").click();
+
+    const tourPopover = page.locator(".onboarding-popover-card");
+    await expect(tourPopover).toBeVisible();
+    await expect(tourPopover).toHaveAttribute("aria-modal", "true");
+
+    await tourPopover.locator(".btn-tour-next").click();
+    await expect(tourPopover).toBeVisible();
+
+    const step2FocusState = await tourPopover.evaluate((popoverEl) => ({
+      ariaModal: popoverEl.getAttribute("aria-modal"),
+      focusInsidePopover: popoverEl.contains(document.activeElement),
+      activeClass: document.activeElement?.className || "",
+    }));
+    expect(step2FocusState.focusInsidePopover).toBe(true);
+
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/web-onboarding-tour-step2-focus.png",
+      });
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(tourPopover).toBeHidden();
+    await expect(
+      page.locator("#btn-onboarding-checklist-trigger")
+    ).toBeFocused();
+
+    // 5. Disabled button cursor: not-allowed and unchanged background on hover (/data-lock modal)
+    await gotoHashRoute(page, "/data-lock");
+    const lockTrigger = page
+      .locator(".btn-mini-lock, .btn-mini-freeze, .btn-mini-unlock")
+      .first();
+    await expect(lockTrigger).toBeVisible();
+    await lockTrigger.click();
+
+    const disabledConfirmBtn = page
+      .locator('[role="dialog"] button:disabled')
+      .first();
+    await expect(disabledConfirmBtn).toBeVisible();
+    const beforeHover = await disabledConfirmBtn.evaluate((el) => {
+      document.documentElement.classList.add("can-hover");
+      const s = window.getComputedStyle(el);
+      return { cursor: s.cursor, bg: s.backgroundColor };
+    });
+    expect(beforeHover.cursor).toBe("not-allowed");
+
+    await disabledConfirmBtn.hover({ force: true });
+    const afterHoverBg = await disabledConfirmBtn.evaluate(
+      (el) => window.getComputedStyle(el).backgroundColor
+    );
+    expect(afterHoverBg).toBe(beforeHover.bg);
+
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/web-disabled-modal-button.png" });
+    }
+    await page.keyboard.press("Escape");
+
+    // 6. Coarse pointer (@media (pointer: coarse)) expands header and compact controls to >= 48px
+    const touchContext = await browser.newContext({
+      viewport: { width: 1024, height: 768 },
+      hasTouch: true,
+      isMobile: true,
+    });
+    const touchPage = await touchContext.newPage();
+    try {
+      await touchPage.goto(page.url().split("#")[0] + "#/overview");
+      await expect(touchPage.locator("#overview-hub-root")).toBeVisible();
+      for (const sel of [
+        "#btn-open-palette",
+        "#btn-onboarding-checklist-trigger",
+        "#btn-logout",
+      ]) {
+        const box = await touchPage.locator(sel).boundingBox();
+        expect(box, `${sel} coarse pointer box`).not.toBeNull();
+        expect(box!.height).toBeGreaterThanOrEqual(48);
+        expect(box!.width).toBeGreaterThanOrEqual(48);
+      }
+    } finally {
+      await touchContext.close();
+    }
+  });
 });

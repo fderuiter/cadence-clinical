@@ -6,7 +6,7 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 - **Zero Tailwind Dependency**: Standard Vanilla CSS scoped styling using centralized CSS Custom Properties (`tokens.css`) across paired light and dark themes (`[data-theme="dark"]`).
 - **Full-Width Authoring Workspaces**: High-density clinical tables and matrices occupy full viewport width with `font-variant-numeric: tabular-nums` digit alignment.
-- **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus management (`useFocusTrap`, `getFocusableElements`, `useEscapeClose`), live regions for terminology lookup feedback, 48px touch targets, `>= 4.5:1` AA semantic text/status token contrast, and `>= 3:1` interactive control boundary contrast (`--semantic-color-border-control`).
+- **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus management (`useFocusTrap`, `getFocusableElements`, `useEscapeClose`), surface-aware focus rings (`--semantic-color-focus-ring` >= 3:1 across light, dark, and inverse surfaces), non-outline programmatic `tabindex="-1"` landmarks, centralized disabled control states (`cursor: not-allowed`), live regions for terminology lookup feedback, `24px` desktop (`--semantic-target-size-min`) and `48px` coarse-pointer (`--semantic-touch-target-min`) target floors, `>= 4.5:1` AA semantic text/status token contrast, and `>= 3:1` interactive control boundary contrast (`--semantic-color-border-control`).
 - **Multi-Persona Testing**: Built-in Persona Switcher for verifying RBAC roles across clinical workflows.
 
 ---

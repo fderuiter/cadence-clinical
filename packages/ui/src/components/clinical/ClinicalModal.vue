@@ -267,6 +267,11 @@ useFocusTrap(dialogRef, {
 }
 
 .modal-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--semantic-target-size-min, 24px);
+  min-height: var(--semantic-target-size-min, 24px);
   background: transparent;
   border: none;
   font-size: 18px;
@@ -276,9 +281,21 @@ useFocusTrap(dialogRef, {
   border-radius: var(--radius-xs);
 }
 
-.modal-close-btn:hover {
+.modal-close-btn:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);
+}
+
+.modal-close-btn:disabled,
+.modal-close-btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal-close-btn:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid var(--semantic-color-focus-ring);
+  outline-offset: 2px;
 }
 
 .modal-body {
@@ -300,6 +317,8 @@ useFocusTrap(dialogRef, {
 }
 
 .btn {
+  min-height: var(--semantic-target-size-min, 24px);
+  min-width: var(--semantic-target-size-min, 24px);
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 500;
@@ -309,13 +328,19 @@ useFocusTrap(dialogRef, {
   transition: all 0.15s ease;
 }
 
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-secondary {
   background: var(--semantic-color-surface);
   border-color: var(--semantic-color-border-control);
   color: var(--semantic-color-text);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--semantic-color-surface-header);
 }
 
@@ -325,8 +350,16 @@ useFocusTrap(dialogRef, {
   color: var(--semantic-color-surface);
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--semantic-color-primary-dark);
+}
+
+@media (pointer: coarse) {
+  .modal-close-btn,
+  .btn {
+    min-height: var(--semantic-touch-target-min, 48px);
+    min-width: var(--semantic-touch-target-min, 48px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
