@@ -49,7 +49,7 @@
     <PackageVersion Include="System.CommandLine" Version="2.0.12" />
 
     <!-- Validation & Security -->
-    <PackageVersion Include="Fluid.Core" Version="2.40.0" />
+    <PackageVersion Include="Fluid.Core" Version="3.0.0" />
     <PackageVersion Include="FluentValidation" Version="$(FluentValidationVersion)" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="$(FluentValidationVersion)" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="$(IdentityModelVersion)" />
