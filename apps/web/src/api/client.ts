@@ -17,9 +17,14 @@ export function getBaseUrl(): string {
   const env = import.meta.env as Record<string, string | undefined> | undefined;
   const configured = env?.VITE_API_BASE_URL;
   if (configured) return configured;
-  const isDemo = env?.MODE === "demo" || env?.VITE_DEMO_MODE === "true";
+  if (import.meta.env?.MODE === "demo") {
+    return typeof globalThis.location?.origin === "string" &&
+      globalThis.location.origin.startsWith("http")
+      ? globalThis.location.origin
+      : "/";
+  }
   if (
-    isDemo &&
+    env?.VITE_DEMO_MODE === "true" &&
     typeof globalThis.location?.origin === "string" &&
     globalThis.location.origin.startsWith("http")
   ) {

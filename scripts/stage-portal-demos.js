@@ -1,6 +1,7 @@
 const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const { buildVitePressEnv } = require("./build-docs.js");
 
 const repoRoot = path.resolve(__dirname, "..");
 
@@ -13,6 +14,7 @@ function normalizeRootBase(rawBase) {
 function stagePortalDemos({
   rootDir = repoRoot,
   portalBase = process.env.VITEPRESS_BASE || "/cadence-clinical/",
+  baseEnv = process.env,
 } = {}) {
   const normalizedBase = normalizeRootBase(portalBase);
   const docsDistDir = path.join(rootDir, "docs", ".vitepress", "dist");
@@ -55,7 +57,7 @@ function stagePortalDemos({
       cwd: rootDir,
       stdio: "inherit",
       env: {
-        ...process.env,
+        ...buildVitePressEnv(baseEnv),
         VITE_BASE_PATH: target.basePath,
       },
     });

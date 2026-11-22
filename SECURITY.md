@@ -22,7 +22,7 @@ Do **NOT** file public GitHub issues, discussions, or pull requests for suspecte
 ### Private Reporting Channels
 
 - **GitHub Advisory:** Submit a report privately through [GitHub Private Vulnerability Reporting](https://github.com/fderuiter/cadence-clinical/security/advisories/new).
-- **Dedicated Security Mailbox:** Email **security@cadenceclinical.org** (or your organization's designated security alias).
+- **Dedicated Security Mailbox:** Email **security@cadence.clinical** (or your organization's designated security alias).
 
 ### Information to Include
 
