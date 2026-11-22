@@ -30,12 +30,18 @@ public static class DuplicationDetectorService
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Scanning codebase for duplicated code blocks (>15 lines)...");
 
+        if (targetFiles is { Length: 0 })
+        {
+            Console.WriteLine("✔ No target files to scan for code duplication.");
+            return 0;
+        }
+
         int windowSize = 15;
         var scanDirs = new[] { Path.Combine(repoRoot, "apps"), Path.Combine(repoRoot, "packages") };
         var allFiles = new List<string>();
 
-        HashSet<string>? targetSet = targetFiles != null && targetFiles.Length > 0
-            ? new HashSet<string>(targetFiles.Select(f => Path.GetRelativePath(repoRoot, f).Replace('\\', '/')), StringComparer.OrdinalIgnoreCase)
+        HashSet<string>? targetSet = targetFiles is { Length: > 0 }
+            ? new HashSet<string>(targetFiles.Select(f => Path.GetRelativePath(repoRoot, Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Replace('\\', '/')), StringComparer.OrdinalIgnoreCase)
             : null;
 
         foreach (var dir in scanDirs)

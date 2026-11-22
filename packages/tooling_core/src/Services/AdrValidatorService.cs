@@ -137,21 +137,7 @@ public static class AdrValidatorService
         "## 6. Implementation & Verification"
     ];
 
-    public static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
+    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 
     public static bool ValidateAdrs(
         bool checkGitDiff = true,
@@ -253,6 +239,71 @@ public static class AdrValidatorService
         }
 
         return allPassed;
+    }
+
+    /// <summary>
+    /// Appends any unlisted numbered ADR markdown files in <c>docs/adr/</c> to <c>docs/adr/index.md</c>.
+    /// </summary>
+    public static int SyncAdrIndex(string? repoRoot = null)
+    {
+        repoRoot ??= FindRepoRoot();
+        string adrDir = Path.Combine(repoRoot, "docs", "adr");
+        string indexFile = Path.Combine(adrDir, "index.md");
+        if (!Directory.Exists(adrDir) || !File.Exists(indexFile))
+        {
+            return 0;
+        }
+
+        string[] indexLines = File.ReadAllLines(indexFile);
+        var listed = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string line in indexLines)
+        {
+            var entry = IndexEntryPattern.Match(line);
+            if (entry.Success)
+            {
+                listed.Add(entry.Groups[1].Value.Split('#')[0]);
+            }
+        }
+
+        var adrFiles = Directory.GetFiles(adrDir, "*.md", SearchOption.TopDirectoryOnly)
+            .Select(Path.GetFileName)
+            .OfType<string>()
+            .Where(name => !IgnoreFiles.Contains(name) && FilenamePattern.IsMatch(name) && !listed.Contains(name))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        if (adrFiles.Count == 0)
+        {
+            return 0;
+        }
+
+        string indexContent = File.ReadAllText(indexFile);
+        var additions = new List<string>();
+        foreach (string name in adrFiles)
+        {
+            string firstLine = File.ReadLines(Path.Combine(adrDir, name)).FirstOrDefault()?.TrimEnd('\r') ?? "";
+            int? number = ParseAdrNumber(firstLine);
+            if (number is null)
+            {
+                continue;
+            }
+
+            int colonIdx = firstLine.IndexOf(':', StringComparison.Ordinal);
+            string title = colonIdx >= 0 ? firstLine[(colonIdx + 1)..].Trim() : name;
+            string datePart = name.Length >= 10 ? name[..10] : "";
+            additions.Add(string.IsNullOrEmpty(datePart)
+                ? $"- [ADR-{number.Value}: {title}]({name})"
+                : $"- [ADR-{number.Value}: {title}]({name}) ({datePart})");
+        }
+
+        if (additions.Count > 0)
+        {
+            string separator = indexContent.EndsWith('\n') ? "" : "\n";
+            File.AppendAllText(indexFile, $"{separator}{string.Join('\n', additions)}\n");
+            AnsiConsole.MarkupLine($"  [green][[OK]] Added {additions.Count} missing ADR entry(ies) to docs/adr/index.md.[/]");
+        }
+
+        return 0;
     }
 
     /// <summary>
@@ -363,6 +414,11 @@ public static class AdrValidatorService
         return errors;
     }
 
+    private static readonly HashSet<string> FrontendExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".vue", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".css", ".scss", ".html",
+    };
+
     private static bool CheckArchitecturalChangesRequireAdr(
         string repoRoot,
         bool preCommit,
@@ -370,7 +426,7 @@ public static class AdrValidatorService
         string? pushBefore)
     {
         var (changedFiles, adrCandidateFiles, compareBase) = ResolveChangedAndAdrFiles(repoRoot, preCommit, baseRef, pushBefore);
-        var architecturalChanges = changedFiles.Where(f => IsArchitecturalFile(f, repoRoot, compareBase, preCommit)).ToList();
+        var architecturalChanges = changedFiles.Where(f => IsArchitecturalFile(f, repoRoot, preCommit, compareBase)).ToList();
         if (architecturalChanges.Count == 0) return true;
 
         bool newAdrAdded = adrCandidateFiles.Any(f => IsExistingAdrFile(f, repoRoot, preCommit));
@@ -410,7 +466,7 @@ public static class AdrValidatorService
         return File.Exists(normalized) || File.Exists(Path.Combine(repoRoot, normalized));
     }
 
-    private static bool IsArchitecturalFile(string filepath, string repoRoot, string? compareBase, bool preCommit)
+    public static bool IsArchitecturalFile(string filepath, string repoRoot, bool preCommit = false, string? compareBase = null)
     {
         string normalized = filepath.Replace('\\', '/');
         if (normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
@@ -436,6 +492,13 @@ public static class AdrValidatorService
             normalized.StartsWith("packages/ui/", StringComparison.OrdinalIgnoreCase))
         {
             return true;
+        }
+
+        if (normalized.StartsWith("apps/web/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("apps/subject-portal/", StringComparison.OrdinalIgnoreCase) ||
+            FrontendExtensions.Contains(Path.GetExtension(normalized)))
+        {
+            return false;
         }
 
         if (normalized.StartsWith("apps/", StringComparison.OrdinalIgnoreCase) &&

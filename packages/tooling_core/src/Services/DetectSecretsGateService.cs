@@ -75,6 +75,11 @@ public static class DetectSecretsGateService
         string? baseRef = null,
         string? pushBefore = null)
     {
+        if (targetFiles is { Length: 0 })
+        {
+            return 0;
+        }
+
         repoRoot ??= FindRepoRoot();
         getEnvironmentVariable ??= Environment.GetEnvironmentVariable;
 
@@ -177,7 +182,7 @@ public static class DetectSecretsGateService
         string? pushBefore = null)
     {
         IEnumerable<string> rawCandidates;
-        if (!preCommit && targetFiles is { Length: 0 })
+        if (targetFiles is { Length: 0 })
         {
             rawCandidates = [];
         }

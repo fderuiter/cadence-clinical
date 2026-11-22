@@ -93,7 +93,13 @@ public static partial class DeidComplianceService
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Executing DEID compliance scan...");
 
-        bool updateBaseline = files is not { Length: > 0 } &&
+        if (files is { Length: 0 })
+        {
+            Console.WriteLine("✔ DEID compliance scan passed cleanly (0 files; 0 baselined findings).");
+            return 0;
+        }
+
+        bool updateBaseline = files is null &&
                               !preCommit &&
                               Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE") == "1";
 
@@ -367,7 +373,7 @@ public static partial class DeidComplianceService
         bool forceTrackedScan = false)
     {
         IEnumerable<string> relative;
-        if (files is { Length: > 0 })
+        if (files is not null)
         {
             relative = files.Select(f => Path.GetRelativePath(repoRoot, Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)));
         }
@@ -404,18 +410,7 @@ public static partial class DeidComplianceService
         GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-files", "-z")
         ?? throw new InvalidOperationException($"git ls-files failed in {repoRoot}; the DEID scan needs git to list files.");
 
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
+    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 
     [GeneratedRegex(@"\d+\.\d+")]
     private static partial Regex DecimalNumberRegex();

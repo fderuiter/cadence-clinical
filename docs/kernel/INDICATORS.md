@@ -31,18 +31,18 @@ An indicator set is a JSON object, stored as the content of a library item of ki
 }
 ```
 
-| Property | Rule |
-| --- | --- |
-| `authority` | `Sponsor` or `Study` |
-| `id` | Letters, digits, `.`, `_`, `-`; up to 64 characters; unique in the set |
-| `version` | 1 or more; raise it whenever the indicator's meaning changes |
-| `area` | `Enrollment`, `Data`, `Safety`, `Sites`, `Quality`, `Supply`, `Tmf` or `Submission` |
-| `kind` | `Pulse`, `Kri` or `Qtl`; a `Kri` or `Qtl` needs a threshold |
-| `population` | The record type counted, as its source names it; same characters as `id` |
-| `counts` | An expression that is `true` for each record counted; unknown does not count |
-| `measure` | `Count`, or `Percent` of the population (two decimals, no value for an empty population) |
-| `threshold` | Optional: `direction` `Above` or `Below`, a numeric `limit`, and a `severity` (`Error`, `Warning`, `Notice`); breached when the value is strictly beyond the limit |
-| `effective` | Optional; `from` inclusive and `until` exclusive, compared with the as-of date |
+| Property     | Rule                                                                                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `authority`  | `Sponsor` or `Study`                                                                                                                                               |
+| `id`         | Letters, digits, `.`, `_`, `-`; up to 64 characters; unique in the set                                                                                             |
+| `version`    | 1 or more; raise it whenever the indicator's meaning changes                                                                                                       |
+| `area`       | `Enrollment`, `Data`, `Safety`, `Sites`, `Quality`, `Supply`, `Tmf` or `Submission`                                                                                |
+| `kind`       | `Pulse`, `Kri` or `Qtl`; a `Kri` or `Qtl` needs a threshold                                                                                                        |
+| `population` | The record type counted, as its source names it; same characters as `id`                                                                                           |
+| `counts`     | An expression that is `true` for each record counted; unknown does not count                                                                                       |
+| `measure`    | `Count`, or `Percent` of the population (two decimals, no value for an empty population)                                                                           |
+| `threshold`  | Optional: `direction` `Above` or `Below`, a numeric `limit`, and a `severity` (`Error`, `Warning`, `Notice`); breached when the value is strictly beyond the limit |
+| `effective`  | Optional; `from` inclusive and `until` exclusive, compared with the as-of date                                                                                     |
 
 Unknown properties, duplicate IDs, blank or padded text and more than 200 indicators are rejected with the problems
 listed.
@@ -95,10 +95,10 @@ more than 10,000 records (`K.Indicators.PopulationTooLarge`).
 A population is read by an `IIndicatorPopulationSource` registered under its name. Values are text; numbers use the
 invariant culture and compare numerically. The kernel provides:
 
-| Population | Object | Variables | As-of |
-| --- | --- | --- | --- |
-| `enrollments` | Enrollment | `STATUS` (an `EnrollmentStatus` name), `STUDY_SITE` (study site id), `ENROLLMENT_NUMBER` (null before enrollment) | The status valid at the as-of, as recorded then; enrollments with no status then are not in it |
-| `validation_findings` | ValidationFinding | `STATUS`, `SEVERITY`, `STAGE`, `PACK`, `RULE`, `DATASET`, `CLASSIFICATION`, `BLOCKS` (`true` or `false`) | As currently known; findings have no bitemporal history |
+| Population            | Object            | Variables                                                                                                         | As-of                                                                                          |
+| --------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `enrollments`         | Enrollment        | `STATUS` (an `EnrollmentStatus` name), `STUDY_SITE` (study site id), `ENROLLMENT_NUMBER` (null before enrollment) | The status valid at the as-of, as recorded then; enrollments with no status then are not in it |
+| `validation_findings` | ValidationFinding | `STATUS`, `SEVERITY`, `STAGE`, `PACK`, `RULE`, `DATASET`, `CLASSIFICATION`, `BLOCKS` (`true` or `false`)          | As currently known; findings have no bitemporal history                                        |
 
 An application adds a population by registering its own source with
 `services.TryAddEnumerable(ServiceDescriptor.Singleton<IIndicatorPopulationSource, MySource>())`.

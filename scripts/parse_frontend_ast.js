@@ -82,7 +82,6 @@ function parseFile(filePath) {
   }
   const ext = path.extname(filePath);
 
-
   const plugins = ["typescript"];
   if (ext === ".tsx" || ext === ".jsx") {
     plugins.push("jsx");
@@ -166,7 +165,10 @@ function parseFile(filePath) {
               propName === "device_timestamp"
             ) {
               propType = "string";
-            } else if (propName === "sequence_number" || propName === "version_index") {
+            } else if (
+              propName === "sequence_number" ||
+              propName === "version_index"
+            ) {
               propType = "number";
             }
           }

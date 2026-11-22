@@ -397,6 +397,26 @@ public partial class LocalCiPlanTests
         CiPlan.AotRuntimeIdentifier.Should().MatchRegex("^(linux|osx|win)-(x64|arm64|x86|arm)$");
     }
 
+    [Fact]
+    public void LintAndStaticAndSecuritySteps_UseUnifiedPrettierIgnoreAndNonMutatingSecretGates()
+    {
+        var lintJob = CiPlan.Jobs.Single(j => j.Key == "lint-and-static");
+        var styleStep = lintJob.Steps.Single(s => s.Name == "Run frontend style and lint");
+        styleStep.Commands[0].Arguments.Should().Equal(
+            "exec",
+            "prettier",
+            "--check",
+            "--ignore-path",
+            ".prettierignore",
+            "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}");
+
+        var securityJob = CiPlan.Jobs.Single(j => j.Key == "security");
+        var secretStep = securityJob.Steps.Single(s => s.Name == "Run secret detection");
+        secretStep.Commands.Select(c => c.Display).Should().Equal(
+            "node scripts/run-cli.js check clean-secrets",
+            "node scripts/run-cli.js check security");
+    }
+
     private static IEnumerable<(CiJob Job, CiStep Step, WorkflowStep WorkflowStep)> PlanStepsWithWorkflowSteps() =>
         CiPlan.Jobs.SelectMany(job => job.Steps.Select(step =>
             (job, step, WorkflowJobFor(job).Steps.Single(s => s.Name == step.Name))));

@@ -138,7 +138,7 @@ public static class GitRevisionScopeService
 
         if (preCommit)
         {
-            var stagedFiles = explicitFiles is { Length: > 0 }
+            var stagedFiles = explicitFiles is not null
                 ? NormalizeExplicitPaths(repoRoot, explicitFiles)
                 : GetStagedFiles(repoRoot, includeDeletions: false);
             return new GitRevisionScope(
@@ -149,11 +149,11 @@ public static class GitRevisionScopeService
                 stagedFiles);
         }
 
-        if (explicitFiles is { Length: > 0 })
+        if (explicitFiles is not null)
         {
             return new GitRevisionScope(
                 GitScopeKind.ExplicitFiles,
-                 null,
+                null,
                 TryResolveCommitSha(repoRoot, "HEAD"),
                 effectiveBaseRef,
                 NormalizeExplicitPaths(repoRoot, explicitFiles));

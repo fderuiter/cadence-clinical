@@ -46,13 +46,9 @@ public static class QualityGateOrchestrator
         }
 
         repoRoot ??= FindRepoRoot();
-        if (preCommit && (targetFiles == null || targetFiles.Length == 0))
+        if (preCommit && targetFiles is null)
         {
-            var staged = PreCommitOpenApiService.GetStagedFiles(repoRoot);
-            if (staged.Count > 0)
-            {
-                targetFiles = staged.ToArray();
-            }
+            targetFiles = [.. PreCommitOpenApiService.GetStagedFiles(repoRoot)];
         }
 
         var context = new GateContext(repoRoot, targetFiles, preCommit, baseRef, pushBefore);
@@ -118,19 +114,5 @@ public static class QualityGateOrchestrator
         return 0;
     }
 
-    public static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
+    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }

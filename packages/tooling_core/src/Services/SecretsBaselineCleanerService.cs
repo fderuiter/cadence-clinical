@@ -29,7 +29,7 @@ public static partial class SecretsBaselineCleanerService
         return ExcludePatternRegex().IsMatch(normalized);
     }
 
-    public static int CleanSecretsBaseline(string? customPath = null, string? repoRoot = null)
+    public static int CleanSecretsBaseline(string? customPath = null, string? repoRoot = null, bool check = false)
     {
         repoRoot ??= FindRepoRoot();
         string filepath = customPath ?? Path.Combine(repoRoot, ".secrets.baseline");
@@ -86,8 +86,22 @@ public static partial class SecretsBaselineCleanerService
             }
 
             var options = new JsonSerializerOptions { WriteIndented = true };
-            string formatted = obj.ToJsonString(options);
-            File.WriteAllText(filepath, formatted + "\n");
+            string expected = obj.ToJsonString(options).ReplaceLineEndings("\n") + "\n";
+            string actual = jsonText.ReplaceLineEndings("\n");
+
+            if (check)
+            {
+                if (!string.Equals(actual, expected, StringComparison.Ordinal))
+                {
+                    Console.WriteLine($"[ERROR] Secrets baseline at {filepath} is not normalized. Run 'pnpm cadence clean-secrets-baseline' or 'pnpm cadence fix' to normalize it.");
+                    return 1;
+                }
+
+                Console.WriteLine($"✔ Secrets baseline at {filepath} is normalized.");
+                return 0;
+            }
+
+            File.WriteAllText(filepath, expected);
 
             Console.WriteLine($"✔ Successfully cleaned secrets baseline at {filepath}");
             return 0;
@@ -136,25 +150,5 @@ public static partial class SecretsBaselineCleanerService
         }
     }
 
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current)
-            {
-                break;
-            }
-
-            current = parent ?? "";
-        }
-
-        return Directory.GetCurrentDirectory();
-    }
+    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }
