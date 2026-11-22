@@ -254,6 +254,10 @@ fi
 # --------------------------------------------------------------------------
 stage ".NET 10 SDK" "Installing/validating the .NET 10 SDK, global tools, and dev certs..."
 bash "$REPO_ROOT/scripts/setup_dotnet_env.sh" || warn_failed ".NET SDK setup step failed — see output above. Continuing with remaining stages."
+CADENCE_RESOLVE_REPO_ROOT="$REPO_ROOT"
+# shellcheck source=scripts/resolve_dotnet_env.sh
+. "$REPO_ROOT/scripts/resolve_dotnet_env.sh"
+unset CADENCE_RESOLVE_REPO_ROOT
 if [[ "$MINIMAL" == "1" ]]; then
   info "Skipped HTTPS dev-cert trust prompt handling (--minimal)."
 fi
