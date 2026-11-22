@@ -13,16 +13,17 @@ Turns unresolved clinical, regulatory, or technical questions into a clear, stru
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Interactive Prompt**| `ask_question` | `questions=[{"question": "...", "options": [...]}]` | Prompt stakeholder with interactive modal directly |
-| **Questionnaire Artifact**| `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/questionnaire.md` with `ArtifactMetadata` | Emit complete questionnaire artifact for offline review |
+| Phase                      | Antigravity Tool | Invocation Pattern                                                                      | Objective                                               |
+| :------------------------- | :--------------- | :-------------------------------------------------------------------------------------- | :------------------------------------------------------ |
+| **Interactive Prompt**     | `ask_question`   | `questions=[{"question": "...", "options": [...]}]`                                     | Prompt stakeholder with interactive modal directly      |
+| **Questionnaire Artifact** | `write_to_file`  | Target: `<appDataDir>/brain/<conversation-id>/questionnaire.md` with `ArtifactMetadata` | Emit complete questionnaire artifact for offline review |
 
 ---
 
 ## 1. Questionnaire Structure
 
 Group questions by domain area and provide clear context:
+
 1. **Background & Clinical Context**: Why this decision is open.
 2. **Options & Regulatory Trade-offs**: Concrete choices with pros/cons and GxP implications.
 3. **Recommended Default**: What the engineering team recommends.
@@ -31,6 +32,7 @@ Group questions by domain area and provide clear context:
 ### MANDATORY TOOL INVOCATION (`ask_question`)
 
 When administering the questionnaire interactively, you **MUST** call `ask_question`:
+
 ```json
 {
   "questions": [
@@ -51,5 +53,3 @@ When administering the questionnaire interactively, you **MUST** call `ask_quest
 ## 2. Output as Antigravity Artifact
 
 Write the full questionnaire document to `<appDataDir>/brain/<conversation-id>/questionnaire.md` with `ArtifactMetadata` (`UserFacing: true`, `RequestFeedback: true`).
-
-

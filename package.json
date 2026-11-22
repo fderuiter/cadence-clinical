@@ -12,7 +12,7 @@
     "test:all": "pnpm -r test && node scripts/run-cli.js test",
     "check-docs-drift": "node scripts/run-cli.js validate-architecture-drift",
     "lint": "node scripts/run-cli.js validate-path-patterns && pnpm -r lint",
-    "format": "pnpm -r format && pnpm exec prettier --write \"**/*.{js,jsx,ts,tsx,vue,json,css,md,yaml,yml}\"",
+    "format": "pnpm exec prettier --write --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}\"",
     "fix": "node scripts/run-cli.js fix",
     "cadence": "node scripts/run-cli.js",
     "doctor": "node scripts/run-cli.js doctor",
