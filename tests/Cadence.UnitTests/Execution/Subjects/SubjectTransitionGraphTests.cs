@@ -31,7 +31,7 @@ public class SubjectTransitionGraphTests
     private static readonly IReadOnlyDictionary<SubjectState, HashSet<SubjectState>> Allowed = new Dictionary<SubjectState, HashSet<SubjectState>>
     {
         [SubjectState.Screening] = [SubjectState.ScreenFailed, SubjectState.Enrolled, SubjectState.Withdrawn, SubjectState.ReconsentRequired],
-        [SubjectState.Enrolled] = [SubjectState.Randomized, SubjectState.Withdrawn, SubjectState.ReconsentRequired],
+        [SubjectState.Enrolled] = [SubjectState.Randomized, SubjectState.Active, SubjectState.Withdrawn, SubjectState.ReconsentRequired],
         [SubjectState.Randomized] = [SubjectState.Active, SubjectState.Withdrawn, SubjectState.Unblinded, SubjectState.ReconsentRequired],
         [SubjectState.Active] = [SubjectState.Completed, SubjectState.Withdrawn, SubjectState.Unblinded, SubjectState.ReconsentRequired],
         [SubjectState.Unblinded] = [SubjectState.Withdrawn, SubjectState.Completed, SubjectState.ReconsentRequired],

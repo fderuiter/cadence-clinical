@@ -2582,7 +2582,27 @@ export function createWebDemoStore() {
         });
         found = state.subjects.find((s) => s.id === created.id);
       }
+      if (
+        nextStatus === "ENROLLED" &&
+        (found.enrollment_number === null ||
+          found.enrollment_number === undefined)
+      ) {
+        const maxNum = state.subjects
+          .filter((s) => s.study_id === found.study_id)
+          .reduce(
+            (max, s) =>
+              typeof s.enrollment_number === "number" &&
+              s.enrollment_number > max
+                ? s.enrollment_number
+                : max,
+            0
+          );
+        found.enrollment_number = maxNum + 1;
+      }
       found.status = nextStatus;
+      if (nextStatus === "WITHDRAWN" && body?.withdrawal_kind) {
+        found.withdrawal_kind = String(body.withdrawal_kind);
+      }
       recordActivity(
         "execution.subject.state_changed",
         "execution",
@@ -2598,6 +2618,55 @@ export function createWebDemoStore() {
         status: found.status,
         active_protocol_version: found.active_protocol_version,
         encrypted_demographics: null,
+      };
+    },
+
+    getEnrollmentBySubject(studyCode, subjectCode) {
+      const normalizedSubject = String(subjectCode || "")
+        .trim()
+        .toUpperCase();
+      const normalizedStudy = String(studyCode || "")
+        .trim()
+        .toUpperCase();
+      const found = state.subjects.find(
+        (s) =>
+          s.subject_id.toUpperCase() === normalizedSubject &&
+          (!normalizedStudy || s.study_id.toUpperCase() === normalizedStudy)
+      );
+      if (!found) {
+        return null;
+      }
+      const statusMap = {
+        SCREENING: "Screening",
+        SCREEN_FAILED: "ScreenFailed",
+        ENROLLED: "Enrolled",
+        RANDOMIZED: "Randomized",
+        ACTIVE: "Active",
+        COMPLETED: "Completed",
+        WITHDRAWN: "Withdrawn",
+      };
+      const isPostScreening =
+        found.status !== "SCREENING" && found.status !== "SCREEN_FAILED";
+      const enrollmentNumber =
+        typeof found.enrollment_number === "number"
+          ? found.enrollment_number
+          : isPostScreening &&
+              typeof found.enrollment_index === "number" &&
+              found.enrollment_index > 0
+            ? found.enrollment_index
+            : null;
+      return {
+        ref: `enrollment:${found.id}`,
+        enrollment_id: found.id,
+        participant_id: found.id,
+        study_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a001",
+        study_site_id: "0192f3c4-5e6a-7b8c-9d0e-00000000c001",
+        subject_code: found.subject_id,
+        enrollment_status: statusMap[found.status] || "Active",
+        status_since: "2026-09-30T12:00:00Z",
+        enrollment_number: enrollmentNumber,
+        content_hash:
+          "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
       };
     },
 

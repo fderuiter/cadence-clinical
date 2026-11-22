@@ -32,7 +32,10 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `GET` | `/api/v1/kernel/activity` | KernelActivity | What happened in a scope, newest first. |
 | `POST` | `/api/v1/kernel/assertions/{assertionRef}/retraction` | KernelRetractAssertion | Retracts a verification, answer or query assertion with the signed reason for change (assertion.retract). |
 | `GET` | `/api/v1/kernel/authorization/can-i` | KernelCanI | Whether the caller may exercise a capability on an object now, and why. |
+| `GET` | `/api/v1/kernel/enrollments/by-subject` | KernelGetEnrollmentBySubject | Resolves a study code and subject code to its kernel enrollment state when visible to the caller (K-AUTH-4). |
 | `POST` | `/api/v1/kernel/enrollments/screen` | KernelScreenEnrollment | Registers a pseudonymous participant when needed and starts a screening enrollment at a study site (participant.screen). |
+| `POST` | `/api/v1/kernel/enrollments/status` | KernelChangeEnrollmentStatus | Transitions an enrollment along EnrollmentTransitions and allocates a gap-free study enrollment number on entering Enrolled (enrollment.change_status). |
+| `POST` | `/api/v1/kernel/enrollments/withdraw` | KernelWithdrawEnrollment | Verifies a 60-second single-use X-Sig-Token, records a Withdrawn attestation over the enrollment's current content hash, and withdraws the participant (participant.withdraw). |
 | `GET` | `/api/v1/kernel/enrollments/{enrollmentRef}/casebook` | KernelExportEnrollmentCasebook | Streams a participant casebook with revisions, queries, verifications, attestations and SHA-256 digests. |
 | `GET` | `/api/v1/kernel/entitlements` | KernelGetEntitlements | The caller's tenant commercial subscription tier, trial state, and enabled product families. |
 | `POST` | `/api/v1/kernel/entitlements/activate` | KernelActivateSubscription | Activates a Trialing or Expired commercial subscription after validating study scoping and billing confirmation. |

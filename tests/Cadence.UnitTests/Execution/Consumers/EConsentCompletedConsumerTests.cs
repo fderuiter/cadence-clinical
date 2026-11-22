@@ -6,11 +6,14 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Consumers;
 using Cadence.Apps.Execution.Infrastructure.Security;
+using Cadence.Core.Domain;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.UnitTests.Fixtures.Execution;
@@ -176,7 +179,10 @@ public class EConsentCompletedConsumerTests
     // ---- Harness plumbing ------------------------------------------------------------------------------
 
     private static async Task<ServiceProvider> StartHarnessAsync(
-        FakeUnitOfWork unitOfWork, RecordingAuditLogWriter auditWriter, IClock clock)
+        FakeUnitOfWork unitOfWork,
+        RecordingAuditLogWriter auditWriter,
+        IClock clock,
+        IKernelEnrollmentSynchronizer? kernelSync = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<ISubjectRepository>(new FakeSubjectRepository(unitOfWork));
@@ -184,6 +190,10 @@ public class EConsentCompletedConsumerTests
         services.AddSingleton<IAuditLogWriter>(auditWriter);
         services.AddScoped<IAuditActorScope>(_ => new AmbientAuditContextAccessor(new HttpContextAccessor()));
         services.AddSingleton(clock);
+        if (kernelSync is not null)
+        {
+            services.AddSingleton(kernelSync);
+        }
 
         // ConcurrentMessageLimit = 1: the redelivery test publishes the same event twice and asserts the
         // second delivery observes what the first one committed. The real, at-most-one-writer guarantee for
@@ -511,5 +521,85 @@ public class EConsentCompletedConsumerTests
         {
             await harness.Stop(ct);
         }
+    }
+
+    [Fact]
+    public async Task Consume_WithSiteIdAndTenantId_SynchronizesScreeningEnrollmentToKernel()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var unitOfWork = new FakeUnitOfWork();
+        var auditWriter = new RecordingAuditLogWriter();
+        var clock = new FakeClock(new DateTimeOffset(2026, 1, 5, 12, 0, 0, TimeSpan.Zero));
+        var sync = new RecordingConsumerKernelSynchronizer();
+
+        await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, clock, sync);
+        var harness = provider.GetRequiredService<ITestHarness>();
+        try
+        {
+            var evt = new EConsentCompletedEvent("SUBJ-KSYNC-01", "STUDY-AUTO", "SITE-101", "v1.0", 1, SignedAt);
+            await harness.Bus.Publish(evt, x => x.Headers.Set(GatewayHeaders.TenantId, "cadence-demo"), ct);
+
+            (await harness.Consumed.Any<EConsentCompletedEvent>(ct)).Should().BeTrue();
+            sync.Calls.Should().ContainSingle().Which.Should().Be(("STUDY-AUTO", "SITE-101", "SUBJ-KSYNC-01", "cadence-demo", "svc:execution-forms"));
+            unitOfWork.Subjects.Should().ContainSingle();
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
+    }
+
+    [Fact]
+    public async Task Consume_WhenKernelSynchronizerFails_FaultsMessageWithoutPersistingSubject()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var unitOfWork = new FakeUnitOfWork();
+        var auditWriter = new RecordingAuditLogWriter();
+        var clock = new FakeClock(new DateTimeOffset(2026, 1, 5, 12, 0, 0, TimeSpan.Zero));
+        var sync = new RecordingConsumerKernelSynchronizer
+        {
+            FailWith = DomainError.Conflict("KERNEL_SYNC_UNAVAILABLE", "Kernel unreachable"),
+        };
+
+        await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, clock, sync);
+        var harness = provider.GetRequiredService<ITestHarness>();
+        try
+        {
+            var evt = new EConsentCompletedEvent("SUBJ-KSYNC-FAIL", "STUDY-AUTO", "SITE-101", "v1.0", 1, SignedAt);
+            await harness.Bus.Publish(evt, x => x.Headers.Set(GatewayHeaders.TenantId, "cadence-demo"), ct);
+
+            (await harness.Published.Any<Fault<EConsentCompletedEvent>>(ct)).Should().BeTrue();
+            unitOfWork.Subjects.Should().BeEmpty();
+            unitOfWork.Consents.Should().BeEmpty();
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
+    }
+
+    private sealed class RecordingConsumerKernelSynchronizer : IKernelEnrollmentSynchronizer
+    {
+        public List<(string Study, string Site, string Subject, string? Tenant, string? Actor)> Calls { get; } = [];
+
+        public DomainError? FailWith { get; set; }
+
+        public Task<Result<Guid>> SynchronizeScreeningEnrollmentAsync(
+            Guid participantId, string studyCode, string siteCode, string subjectCode, DateTimeOffset screenedAt,
+            string changeReason, CancellationToken cancellationToken, string? fallbackTenantId = null, string? fallbackActorId = null)
+        {
+            Calls.Add((studyCode, siteCode, subjectCode, fallbackTenantId, fallbackActorId));
+            return Task.FromResult(FailWith is not null ? Result<Guid>.Failure(FailWith) : Result<Guid>.Success(Guid.NewGuid()));
+        }
+
+        public Task<Result<KernelEnrollmentSyncResult>> SynchronizeStatusChangeAsync(
+            string studyCode, string subjectCode, string targetStatus, DateTimeOffset effectiveAt,
+            string changeReason, CancellationToken cancellationToken, string? idempotencyToken = null) =>
+            throw new NotSupportedException();
+
+        public Task<Result<KernelWithdrawalSyncResult>> SynchronizeWithdrawalAsync(
+            string studyCode, string subjectCode, string withdrawalKind, DateTimeOffset effectiveAt,
+            string changeReason, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 }

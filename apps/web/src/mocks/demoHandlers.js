@@ -472,6 +472,25 @@ export function createWebDemoHandlers(store = webDemoStore) {
         });
       }
     ),
+    http.get("*/api/v1/kernel/enrollments/by-subject", ({ request }) => {
+      const url = new URL(request.url);
+      const found = store.getEnrollmentBySubject(
+        url.searchParams.get("study_code"),
+        url.searchParams.get("subject_code")
+      );
+      if (!found) {
+        return HttpResponse.json(
+          {
+            type: "https://tools.ietf.org/html/rfc9110#section-15.5.5", // deid-ignore: RFC 9110 section URI
+            title: "Not Found",
+            status: 404,
+            code: "K.Aggregate.NotFound",
+          },
+          { status: 404 }
+        );
+      }
+      return HttpResponse.json(found);
+    }),
     http.get(
       "*/api/v1/kernel/enrollments/:enrollmentRef/casebook",
       ({ params, request }) => {

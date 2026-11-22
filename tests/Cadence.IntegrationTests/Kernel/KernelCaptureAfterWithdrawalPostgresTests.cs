@@ -180,6 +180,79 @@ public sealed class KernelCaptureAfterWithdrawalPostgresTests(KernelPostgresFixt
         await AssertNoCaptureAfterWithdrawalAsync(subject, expectedObservations: 1, ct);
     }
 
+    /// <summary>
+    /// After a participant fails screening (<c>EnrollmentStatus.ScreenFailed</c>), recording a new observation, opening
+    /// a new form, or saving a new item on a pre-existing form is refused with 409,
+    /// <c>K.Observation.ParticipantScreenFailed</c>, and a <c>UX-9</c> explanation naming the enrollment, writing only
+    /// audited refusal entries.
+    /// </summary>
+    [Fact(DisplayName = "Capture_AfterScreenFailure_IsRefusedWithAnAuditedRefusal_AndWritesNothingElse")]
+    public async Task CaptureAfterScreenFailureIsRefusedWithAnAuditedRefusalAndWritesNothingElse()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var form = await _forms.NewFormAsync(ct);
+        var subject = form.Subject;
+        var saved = await _forms.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(164))), ct);
+        await _forms.Protocol.OkAsync(
+            new ChangeEnrollmentStatus(subject.Tenant, subject.Enrollment, EnrollmentStatus.ScreenFailed, Tick(), KernelProtocolScenario.Key(), "Exclusion criterion met"),
+            ct);
+        var before = await CountsAsync(subject.Tenant, ct);
+
+        var record = await fixture.Sender.SendAsync(_forms.Observations.Record(subject.Tenant, subject.Enrollment, Mmhg(120)), cancellationToken: ct);
+        var open = await fixture.Sender.SendAsync(Open(subject, CollectionInstanceId.New(), Tick()), cancellationToken: ct);
+        var newValue = await fixture.Sender.SendAsync(Save(form, Value(Diastolic, Mmhg(91))), cancellationToken: ct);
+        var mixed = await fixture.Sender.SendAsync(
+            Save(form, Value(Systolic, Mmhg(158), saved.Values.Single().Revision), Value(Diastolic, Mmhg(91))), cancellationToken: ct);
+
+        foreach (var error in new[] { record.Error, open.Error, newValue.Error, mixed.Error })
+        {
+            error!.Code.Should().Be(ObservationErrors.ParticipantScreenFailed.Code);
+            error.HttpStatus.Should().Be(409);
+            error.Explanation!.Producer.Should().Be(CaptureProducer);
+            var condition = error.Explanation.Conditions.Should().ContainSingle().Which;
+            condition.Met.Should().BeFalse();
+            condition.Code.Should().Be("participation.not-screen-failed");
+            condition.Evidence.Should().ContainSingle().Which.Unversioned().Should().Be(NodeRef.For(subject.Enrollment));
+        }
+
+        var after = await CountsAsync(subject.Tenant, ct);
+        after.Should().Be(
+            (before.Observations, before.Instances, before.Revisions, before.Audit + 4, before.Activities + 4, before.Events, before.Outbox),
+            "a screen-failure refusal writes its audit entry and provenance only");
+    }
+
+    /// <summary>
+    /// Screening observations captured before screen failure remain readable and correctable (<c>K-CONS-2</c>).
+    /// </summary>
+    [Fact(DisplayName = "PreScreenFailureValues_StayReadable_AndCorrectable")]
+    public async Task PreScreenFailureValuesStayReadableAndCorrectable()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var form = await _forms.NewFormAsync(ct);
+        var subject = form.Subject;
+        var recorded = await _forms.Observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(152), ct);
+        var saved = await _forms.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(164)), Value(Diastolic, Mmhg(94))), ct);
+        await _forms.Protocol.OkAsync(
+            new ChangeEnrollmentStatus(subject.Tenant, subject.Enrollment, EnrollmentStatus.ScreenFailed, Tick(), KernelProtocolScenario.Key(), "Exclusion criterion met"),
+            ct);
+
+        var read = await fixture.CollectionInstanceRecords.FindAsync(subject.Tenant, form.Instance, ct);
+        read!.Values.Select(v => (v.ItemId, v.Value)).Should().Equal((Diastolic, (ObservationValue)Mmhg(94)), (Systolic, (ObservationValue)Mmhg(164)));
+
+        Tick();
+        var corrected = await _forms.Protocol.OkAsync(KernelObservationScenario.Correct(subject.Tenant, recorded, Mmhg(150)), ct);
+        corrected.Revision.Should().Be(2);
+        Tick();
+        var page = await _forms.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(160), 1), Value(Diastolic, Mmhg(94), 1)), ct);
+        page.Values.Select(v => (v.ItemId, v.Revision, v.Changed)).Should().Equal((Diastolic, 1, false), (Systolic, 2, true));
+        page.Values[1].ObservationId.Should().Be(saved.Values[1].ObservationId);
+
+        await using var db = fixture.CreateContext(subject.Tenant);
+        (await db.AuditEntries.AsNoTracking().CountAsync(a => a.Action == "Refused", ct)).Should().Be(0);
+    }
+
     private async Task AssertNoCaptureAfterWithdrawalAsync(KernelObservationScenario.Subject subject, int expectedObservations, CancellationToken ct)
     {
         await using var db = fixture.CreateContext(subject.Tenant);

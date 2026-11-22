@@ -42,6 +42,8 @@ export type KernelSoaRow = Schemas["Kernel_KernelSoaRowResponse"];
 export type KernelSoaFootnote = Schemas["Kernel_KernelSoaFootnoteResponse"];
 export type KernelScreenEnrollmentResult =
   Schemas["Kernel_KernelEnrollmentStateResponse"];
+export type KernelEnrollmentState =
+  Schemas["Kernel_KernelEnrollmentStateResponse"];
 export type KernelLineageNode = Schemas["Kernel_KernelLineageNodeResponse"];
 export type KernelLineageEdge = Schemas["Kernel_KernelLineageEdgeResponse"];
 export type KernelLineage = Schemas["Kernel_KernelLineageResponse"];
@@ -650,6 +652,23 @@ export const kernelApi = {
         headers: {
           "X-Change-Reason": encodeChangeReason(reason),
           "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Resolves a study code and subject code to its kernel enrollment state when visible to the caller (GET /api/v1/kernel/enrollments/by-subject). */
+  getEnrollmentBySubject(
+    studyCode: string,
+    subjectCode: string
+  ): Promise<KernelEnrollmentState> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/enrollments/by-subject", {
+        params: {
+          query: {
+            study_code: studyCode,
+            subject_code: subjectCode,
+          },
         },
       })
     );

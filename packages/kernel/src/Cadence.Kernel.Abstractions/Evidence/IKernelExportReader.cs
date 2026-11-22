@@ -71,6 +71,7 @@ public sealed record EnrollmentCasebookSnapshot(
     ParticipantId ParticipantId,
     string SubjectCode,
     EnrollmentStatus? StatusAtCut,
+    int? EnrollmentNumber,
     DateTimeOffset ValidAt,
     DateTimeOffset KnownAt,
     IReadOnlyList<ExportProtocolSnapshot> ProtocolVersions,

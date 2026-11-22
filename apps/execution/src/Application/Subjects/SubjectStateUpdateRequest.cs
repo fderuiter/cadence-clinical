@@ -12,7 +12,7 @@ namespace Cadence.Apps.Execution.Application.Subjects;
 /// <c>update_subject_state_endpoint</c>, <c>"Either status or state must be provided."</c>).
 /// @req:PRD-SUB-001
 /// </summary>
-public sealed record SubjectStateUpdateRequest(string? Status, string? State)
+public sealed record SubjectStateUpdateRequest(string? Status, string? State, string? WithdrawalKind = null)
 {
     /// <summary>
     /// Resolves the two alternative property names to the single target state string. Uses <c>??</c>

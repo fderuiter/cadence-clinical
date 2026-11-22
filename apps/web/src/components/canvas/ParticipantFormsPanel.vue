@@ -9,7 +9,7 @@
       <h3 id="record-forms-title">{{ matrixActive ? "Casebook" : "Forms" }}</h3>
       <div class="forms-head-actions">
         <router-link
-          v-if="enrollmentId && newFormLocation"
+          v-if="enrollmentId && newFormLocation && !isTerminal"
           id="record-open-form"
           class="btn btn-secondary forms-open-btn"
           :to="newFormLocation"
@@ -27,6 +27,17 @@
         </router-link>
       </div>
     </div>
+
+    <p
+      v-if="enrollmentId && isTerminal"
+      id="record-forms-terminal-note"
+      data-testid="record-forms-terminal-note"
+      class="status-line"
+    >
+      New forms cannot be opened because {{ subjectCode }} is
+      {{ terminalStateLabel }}; existing forms remain available for review and
+      correction.
+    </p>
 
     <p v-if="!enrollmentId" id="record-forms-no-enrollment" class="status-line">
       There is no enrollment for {{ subjectCode }} visible to your account, so
@@ -201,7 +212,10 @@
                     Not started
                   </span>
                   <router-link
-                    v-if="cellNewLocation(row.collectionSpecId, col.activityId)"
+                    v-if="
+                      !isTerminal &&
+                      cellNewLocation(row.collectionSpecId, col.activityId)
+                    "
                     :id="`matrix-open-${row.collectionSpecId}-${col.activityId}`"
                     :data-testid="`matrix-open-${row.collectionSpecId}-${col.activityId}`"
                     class="matrix-open-link"
@@ -277,6 +291,7 @@
                   </div>
                   <router-link
                     v-if="
+                      !isTerminal &&
                       cellNewLocation(row.collectionSpecId, col.activityId) &&
                       canAddRepeat(
                         cellForms(row.collectionSpecId, col.activityId)
@@ -310,7 +325,7 @@
         <div class="unscheduled-head">
           <h4 id="casebook-unscheduled-title">Unscheduled &amp; log forms</h4>
           <div
-            v-if="activeSchedule.unscheduledRows.length > 0"
+            v-if="!isTerminal && activeSchedule.unscheduledRows.length > 0"
             class="unscheduled-triggers"
           >
             <router-link
@@ -504,6 +519,10 @@ import {
   type StudyScheduleOptions,
   type StudyScheduleRow,
 } from "../../canvas/kernelStudy";
+import {
+  isTerminalParticipantState,
+  participantStateLabel,
+} from "../../canvas/lifecycle";
 import { seedNodeSummary } from "../../canvas/nodeResolver";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import SupportDetails from "./SupportDetails.vue";
@@ -532,6 +551,7 @@ interface LifecycleBadge {
 const props = defineProps<{
   studyCode?: string;
   subjectCode: string;
+  participantStatus?: string | null;
   enrollmentId: string | null;
   schedule?: StudyScheduleOptions | null;
   formLocation: (formId: string) => RouteLocationRaw;
@@ -542,6 +562,16 @@ const props = defineProps<{
   ) => RouteLocationRaw;
   handoffLocation?: RouteLocationRaw | null;
 }>();
+
+const isTerminal = computed(() =>
+  isTerminalParticipantState(props.participantStatus)
+);
+
+const terminalStateLabel = computed(() =>
+  props.participantStatus
+    ? participantStateLabel(props.participantStatus).toLowerCase()
+    : "closed"
+);
 
 const emit = defineEmits<{
   (e: "forms-loaded", forms: EcrfFormSummary[]): void;

@@ -172,6 +172,220 @@ public sealed class HttpKernelEnrollmentSynchronizerTests
         httpCalls.Should().Be(0);
     }
 
+    [Fact]
+    public async Task SynchronizeStatusChangeAsync_SignsGatewayHeadersAndReturnsEnrollmentNumber()
+    {
+        var now = new DateTimeOffset(2026, 4, 19, 12, 30, 0, TimeSpan.Zero);
+        var clock = new FakeClock(now);
+        var enrollmentId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid().ToString();
+
+        HttpRequestMessage? captured = null;
+        string? capturedBody = null;
+        using var handler = new StubHttpMessageHandler(async (req, ct) =>
+        {
+            captured = req;
+            capturedBody = await req.Content!.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    JsonSerializer.Serialize(new
+                    {
+                        enrollment_id = enrollmentId,
+                        enrollment_status = "Enrolled",
+                        enrollment_number = 7,
+                    }),
+                    Encoding.UTF8,
+                    "application/json"),
+            };
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://kernel.internal") };
+
+        var context = BuildHttpContext(
+            tenantId: tenantId,
+            userId: "crc.site101",
+            roles: ["crc"],
+            sites: ["SITE-101"],
+            studies: ["CADENCE-101"]);
+
+        var synchronizer = new HttpKernelEnrollmentSynchronizer(
+            client,
+            new HttpContextAccessor { HttpContext = context },
+            new StaticOptionsMonitor<GatewayAuthenticationOptions>(new GatewayAuthenticationOptions { GatewaySecret = GatewaySigningKey }),
+            clock);
+
+        var result = await synchronizer.SynchronizeStatusChangeAsync(
+            "CADENCE-101",
+            "SUBJ-101-099",
+            "Enrolled",
+            now,
+            "Eligible at site 101",
+            TestContext.Current.CancellationToken,
+            idempotencyToken: "v2");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.EnrollmentId.Should().Be(enrollmentId);
+        result.Value.Status.Should().Be("Enrolled");
+        result.Value.EnrollmentNumber.Should().Be(7);
+
+        captured.Should().NotBeNull();
+        captured!.RequestUri!.PathAndQuery.Should().Be("/api/v1/kernel/enrollments/status");
+        captured.Headers.GetValues("Idempotency-Key").Should().ContainSingle("execution-subject-status:CADENCE-101:SUBJ-101-099:Enrolled:v2");
+        captured.Headers.GetValues(GatewayHeaders.ChangeReason).Should().ContainSingle("Eligible at site 101");
+        captured.Headers.Contains(GatewayHeaders.Signature).Should().BeTrue();
+
+        using var payload = JsonDocument.Parse(capturedBody!);
+        payload.RootElement.GetProperty("study_code").GetString().Should().Be("CADENCE-101");
+        payload.RootElement.GetProperty("subject_code").GetString().Should().Be("SUBJ-101-099");
+        payload.RootElement.GetProperty("to_status").GetString().Should().Be("Enrolled");
+    }
+
+    [Fact]
+    public async Task SynchronizeWithdrawalAsync_ForwardsSignedSigTokenAndWithdrawalKind()
+    {
+        var now = new DateTimeOffset(2026, 4, 19, 13, 0, 0, TimeSpan.Zero);
+        var clock = new FakeClock(now);
+        var enrollmentId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid().ToString();
+
+        HttpRequestMessage? captured = null;
+        string? capturedBody = null;
+        using var handler = new StubHttpMessageHandler(async (req, ct) =>
+        {
+            captured = req;
+            capturedBody = await req.Content!.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    JsonSerializer.Serialize(new
+                    {
+                        enrollment_id = enrollmentId,
+                        enrollment_status = "Withdrawn",
+                        enrollment_number = 3,
+                    }),
+                    Encoding.UTF8,
+                    "application/json"),
+            };
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://kernel.internal") };
+
+        var context = BuildHttpContext(
+            tenantId: tenantId,
+            userId: "pi.site101",
+            roles: ["Site Investigator"],
+            sites: ["SITE-101"],
+            studies: ["CADENCE-101"]);
+        context.Request.Headers[GatewayHeaders.SigToken] = "step-up-sig-token-123";
+
+        var synchronizer = new HttpKernelEnrollmentSynchronizer(
+            client,
+            new HttpContextAccessor { HttpContext = context },
+            new StaticOptionsMonitor<GatewayAuthenticationOptions>(new GatewayAuthenticationOptions { GatewaySecret = GatewaySigningKey }),
+            clock);
+
+        var result = await synchronizer.SynchronizeWithdrawalAsync(
+            "CADENCE-101",
+            "SUBJ-101-099",
+            "WithdrawalBySubject",
+            now,
+            "Participant withdrew consent",
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.EnrollmentId.Should().Be(enrollmentId);
+        result.Value.Status.Should().Be("Withdrawn");
+        result.Value.WithdrawalKind.Should().Be("WithdrawalBySubject");
+
+        captured.Should().NotBeNull();
+        captured!.RequestUri!.PathAndQuery.Should().Be("/api/v1/kernel/enrollments/withdraw");
+        captured.Headers.GetValues(GatewayHeaders.SigToken).Should().ContainSingle("step-up-sig-token-123");
+        captured.Headers.GetValues("Idempotency-Key").Should().ContainSingle("execution-subject-withdraw:CADENCE-101:SUBJ-101-099");
+
+        using var payload = JsonDocument.Parse(capturedBody!);
+        payload.RootElement.GetProperty("withdrawal_kind").GetString().Should().Be("WithdrawalBySubject");
+    }
+
+    [Fact]
+    public async Task SynchronizeWithdrawalAsync_WithoutSigTokenHeader_ReturnsUnauthorized()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 4, 19, 13, 0, 0, TimeSpan.Zero));
+        int httpCalls = 0;
+        using var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            httpCalls++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://kernel.internal") };
+
+        var context = BuildHttpContext(
+            tenantId: Guid.NewGuid().ToString(),
+            userId: "pi.site101",
+            roles: ["Site Investigator"],
+            sites: ["SITE-101"],
+            studies: ["CADENCE-101"]);
+
+        var synchronizer = new HttpKernelEnrollmentSynchronizer(
+            client,
+            new HttpContextAccessor { HttpContext = context },
+            new StaticOptionsMonitor<GatewayAuthenticationOptions>(new GatewayAuthenticationOptions { GatewaySecret = GatewaySigningKey }),
+            clock);
+
+        var result = await synchronizer.SynchronizeWithdrawalAsync(
+            "CADENCE-101",
+            "SUBJ-101-099",
+            "WithdrawalBySubject",
+            clock.UtcNow,
+            "Participant withdrew consent",
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Type.Should().Be(ErrorType.Unauthorized);
+        httpCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task SynchronizeScreeningEnrollmentAsync_UsesFallbackTenantAndActorWhenHttpContextIsAbsent()
+    {
+        var now = new DateTimeOffset(2026, 4, 19, 14, 0, 0, TimeSpan.Zero);
+        var clock = new FakeClock(now);
+        var enrollmentId = Guid.NewGuid();
+        HttpRequestMessage? captured = null;
+        using var handler = new StubHttpMessageHandler((req, _) =>
+        {
+            captured = req;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent(
+                    JsonSerializer.Serialize(new { enrollment_id = enrollmentId }),
+                    Encoding.UTF8,
+                    "application/json"),
+            });
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://kernel.internal") };
+
+        var synchronizer = new HttpKernelEnrollmentSynchronizer(
+            client,
+            new HttpContextAccessor(),
+            new StaticOptionsMonitor<GatewayAuthenticationOptions>(new GatewayAuthenticationOptions { GatewaySecret = GatewaySigningKey }),
+            clock);
+
+        var result = await synchronizer.SynchronizeScreeningEnrollmentAsync(
+            Guid.NewGuid(),
+            "CADENCE-101",
+            "SITE-101",
+            "SUBJ-ECONSENT-01",
+            now,
+            "eConsent completed",
+            TestContext.Current.CancellationToken,
+            fallbackTenantId: "cadence-demo",
+            fallbackActorId: "system_econsent_consumer");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(enrollmentId);
+        captured!.Headers.GetValues(GatewayHeaders.TenantId).Should().ContainSingle("cadence-demo");
+        captured.Headers.GetValues(GatewayHeaders.UserId).Should().ContainSingle("system_econsent_consumer");
+    }
+
     private static DefaultHttpContext BuildHttpContext(
         string tenantId,
         string userId,

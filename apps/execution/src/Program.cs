@@ -193,6 +193,7 @@ if (builder.Configuration[HttpKernelEnrollmentSynchronizer.ConfigurationKey] is 
     });
 }
 
+builder.Services.AddScoped<IWithdrawalSignatureVerifier, HttpWithdrawalSignatureVerifier>();
 builder.Services.AddScoped<ISubjectApplicationService, SubjectApplicationService>();
 builder.Services.AddScoped<IRandomizationApplicationService, RandomizationApplicationService>();
 builder.Services.AddScoped<ISiteComplianceApplicationService, SiteComplianceApplicationService>();

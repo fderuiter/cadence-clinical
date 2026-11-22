@@ -28,7 +28,8 @@ namespace Cadence.Kernel.Commands;
     nameof(ObservationErrors.ValueInvalid),
     nameof(ObservationErrors.ObservedAtInvalid),
     nameof(ObservationErrors.Locked),
-    nameof(ObservationErrors.ParticipantWithdrawn))]
+    nameof(ObservationErrors.ParticipantWithdrawn),
+    nameof(ObservationErrors.ParticipantScreenFailed))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RecordObservation(
     TenantId TenantId,
@@ -113,7 +114,15 @@ public static class ObservationErrors
     public static readonly KernelError ParticipantWithdrawn =
         new("K.Observation.ParticipantWithdrawn", 409, "The participant is withdrawn; no new data is captured for this enrollment.");
 
+    /// <summary>
+    /// New capture for a participant who failed screening: recording an observation, opening a form or saving a new value
+    /// in one. Values captured during screening stay readable and can still be corrected (spec §7.4, K-CONS-2). The
+    /// refusal is audited with the evaluated condition and the enrollment it was decided on.
+    /// </summary>
+    public static readonly KernelError ParticipantScreenFailed =
+        new("K.Observation.ParticipantScreenFailed", 409, "The participant failed screening; no new data is captured for this enrollment.");
+
     /// <summary>Every observation error, for the API's documented problem set.</summary>
     public static IReadOnlyList<KernelError> All { get; } =
-        [ValueInvalid, ObservedAtInvalid, EnrollmentUnknown, ValueUnchanged, VersionStale, Locked, ParticipantWithdrawn];
+        [ValueInvalid, ObservedAtInvalid, EnrollmentUnknown, ValueUnchanged, VersionStale, Locked, ParticipantWithdrawn, ParticipantScreenFailed];
 }

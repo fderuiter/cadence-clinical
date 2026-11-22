@@ -743,16 +743,24 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     async changeParticipantState(
       participant: SubjectSummary,
       state: string,
-      reason: string
+      reason: string,
+      options?: { withdrawalKind?: string | null; sigToken?: string | null }
     ): Promise<boolean> {
       const toasts = useToastStore();
       const label = participantStateLabel(state);
       try {
-        const updated = await executionApi.changeSubjectState(
-          participant.id,
-          state,
-          reason
-        );
+        const updated = options
+          ? await executionApi.changeSubjectState(
+              participant.id,
+              state,
+              reason,
+              options
+            )
+          : await executionApi.changeSubjectState(
+              participant.id,
+              state,
+              reason
+            );
         const changed = { ...participant, status: updated.status };
         this.rememberParticipants([changed]);
         const index = this.participants.findIndex(

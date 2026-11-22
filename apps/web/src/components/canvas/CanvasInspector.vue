@@ -301,8 +301,8 @@
             <dt>Protocol version</dt>
             <dd>{{ participant.active_protocol_version || "Not recorded" }}</dd>
             <dt>Enrollment number</dt>
-            <dd class="numeric">
-              {{ participant.enrollment_index }}
+            <dd id="inspector-enrollment-number" class="numeric">
+              {{ enrollmentNumberDisplay }}
             </dd>
           </dl>
 
@@ -433,6 +433,7 @@ import SupportDetails from "./SupportDetails.vue";
 import {
   kernelApi,
   type KernelCommand,
+  type KernelEnrollmentState,
   type KernelNode,
   type KernelProtocolDraftSummary,
   type KernelProtocolVersion,
@@ -653,6 +654,66 @@ const simulationError = ref("");
 let simulationRequest = 0;
 const designSummary = ref<KernelProtocolDraftSummary | null>(null);
 let designSummaryReq = 0;
+
+const kernelEnrollment = ref<KernelEnrollmentState | null>(null);
+const kernelEnrollmentLoaded = ref(false);
+let kernelEnrollmentReq = 0;
+
+watch(
+  () =>
+    [
+      props.studyCode,
+      props.participant?.subject_id ?? "",
+      props.participant?.status ?? "",
+    ] as const,
+  async ([studyCode, subjectCode]) => {
+    const req = ++kernelEnrollmentReq;
+    kernelEnrollment.value = null;
+    kernelEnrollmentLoaded.value = false;
+    if (
+      !studyCode ||
+      !subjectCode ||
+      typeof kernelApi.getEnrollmentBySubject !== "function"
+    ) {
+      return;
+    }
+    try {
+      const state = await kernelApi.getEnrollmentBySubject(
+        studyCode,
+        subjectCode
+      );
+      if (req === kernelEnrollmentReq) {
+        kernelEnrollment.value = state;
+        kernelEnrollmentLoaded.value = true;
+      }
+    } catch {
+      if (req === kernelEnrollmentReq) {
+        kernelEnrollment.value = null;
+        kernelEnrollmentLoaded.value = true;
+      }
+    }
+  },
+  { immediate: true }
+);
+
+const enrollmentNumberDisplay = computed(() => {
+  if (!props.participant) return "Not assigned";
+  if (kernelEnrollmentLoaded.value && kernelEnrollment.value) {
+    return kernelEnrollment.value.enrollment_number !== null &&
+      kernelEnrollment.value.enrollment_number !== undefined
+      ? String(kernelEnrollment.value.enrollment_number)
+      : "Not assigned";
+  }
+  if (
+    props.participant.status === "SCREENING" ||
+    props.participant.status === "SCREEN_FAILED"
+  ) {
+    return "Not assigned";
+  }
+  return props.participant.enrollment_index != null
+    ? String(props.participant.enrollment_index)
+    : "Not assigned";
+});
 
 watch(
   () => props.protocolVersion?.ref,

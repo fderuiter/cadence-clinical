@@ -11,6 +11,9 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Time;
 
+using KernelEnrollmentStatus = Cadence.Kernel.Execution.EnrollmentStatus;
+using KernelWithdrawalKind = Cadence.Kernel.Execution.WithdrawalKind;
+
 namespace Cadence.Apps.Execution.Application.Subjects;
 
 /// <summary>
@@ -65,7 +68,8 @@ public sealed class SubjectApplicationService(
     ICurrentAuditContextAccessor auditContext,
     Func<ClinicalSubject, CancellationToken, Task<bool>>? screeningEligibility = null,
     IClock? clock = null,
-    IKernelEnrollmentSynchronizer? kernelEnrollmentSynchronizer = null) : ISubjectApplicationService
+    IKernelEnrollmentSynchronizer? kernelEnrollmentSynchronizer = null,
+    IWithdrawalSignatureVerifier? withdrawalSignatureVerifier = null) : ISubjectApplicationService
 {
     private readonly IClock _clock = clock ?? SystemClock.Instance;
 
@@ -234,7 +238,7 @@ public sealed class SubjectApplicationService(
             return SubjectErrors.InvalidStateTransition(SubjectStateCodec.ToCode(subject.Status), request.Target ?? "");
         }
 
-        return await TransitionSubjectAsync(subject, target, changeReason, ct).ConfigureAwait(false);
+        return await TransitionSubjectAsync(subject, target, changeReason, request.WithdrawalKind, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -493,14 +497,15 @@ public sealed class SubjectApplicationService(
         bool eligible = await evaluateEligibility(subject, ct).ConfigureAwait(false);
         var target = eligible ? SubjectState.Enrolled : SubjectState.ScreenFailed;
 
-        return await TransitionSubjectAsync(subject, target, auditContext.ChangeReason, ct).ConfigureAwait(false);
+        return await TransitionSubjectAsync(subject, target, auditContext.ChangeReason, withdrawalKind: null, ct).ConfigureAwait(false);
     }
 
     // ---- Shared helpers -------------------------------------------------------------------------------
 
     /// <summary>
     /// Rule 2 sovereign-site-activation gate (enforced only when <paramref name="target"/> is
-    /// <see cref="SubjectState.Enrolled"/>) + <see cref="ClinicalSubject.TransitionTo"/> + the semantic
+    /// <see cref="SubjectState.Enrolled"/>) + kernel enrollment synchronization + <see cref="ClinicalSubject.TransitionTo"/>
+    /// / <see cref="ClinicalSubject.Unblind"/> / <see cref="ClinicalSubject.Withdraw"/> + the semantic
     /// <c>TRANSITION_&lt;STATE&gt;</c> audit write + the response built from the aggregate — shared by
     /// <see cref="AdvanceStateAsync"/> and <see cref="EvaluateAndTransitionScreeningAsync"/> so a subject
     /// targeting <see cref="SubjectState.Enrolled"/> at a non-compliant site is blocked, and a
@@ -510,25 +515,13 @@ public sealed class SubjectApplicationService(
     /// its own acting user the same way, so that argument is not threaded through as a parameter.
     /// </summary>
     private async Task<Result<SubjectResponse>> TransitionSubjectAsync(
-        ClinicalSubject subject, SubjectState target, string changeReason, CancellationToken ct)
+        ClinicalSubject subject, SubjectState target, string changeReason, string? withdrawalKind, CancellationToken ct)
     {
         if (target == SubjectState.Enrolled)
         {
             var gate = await compliance.GetAsync(subject.StudyCode, subject.SiteCode, "SITE_ACTIVATION", ct).ConfigureAwait(false);
             if (gate is not { IsComplete: true })
             {
-                // MIG-SUBJ-026 fix: this audit write was never committed. IAuditLogWriter.WriteAsync only
-                // stages the entry on the shared DbContext's ChangeTracker (see its own doc comment: "commits
-                // inside the same SaveChangesAsync call") -- without an explicit SaveChangesAsync before
-                // returning, the pending entry was silently discarded the moment this scope's DbContext was
-                // disposed, so no BLOCKED_ENROLLMENT row was ever actually persisted. Confirmed independently
-                // two ways: (1) MIG-SUBJ-026's golden-master replay of INV-014/INV-015 (both exercise this
-                // exact blocked-enrollment branch, one via a direct service call, one via a real HTTP PATCH)
-                // found zero matching audit rows in either case; (2) SiteComplianceApplicationService
-                // .ActivateSiteAsync's own analogous blocked-activation branch (MIG-SUBJ-020) already calls
-                // `compliance.SaveChangesAsync(ct)` right after its own audit write, matching this method's
-                // own doc comment's claim that the blocked path is audited "before returning the failure
-                // result" -- this one call site just never actually added the save that claim depends on.
                 await auditLog.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), "BLOCKED_ENROLLMENT",
                     auditContext.UserId, changeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
                 await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
@@ -549,14 +542,92 @@ public sealed class SubjectApplicationService(
             return SubjectErrors.UnblindingReasonTooShort(SubjectAuthority.MinimumUnblindingReasonLength);
         }
 
-        // Unblinding records who broke the blind, why and when on the subject itself, not only in the audit
-        // entry (#4951); every other target is a plain transition.
-        DomainError? transitionError = target == SubjectState.Unblinded
-            ? subject.Unblind(auditContext.UserId, changeReason, _clock).Error
-            : subject.TransitionTo(target).Error;
-        if (transitionError is not null)
+        // Same-state transitions (including terminal WITHDRAWN -> WITHDRAWN) remain silent no-ops per Rule 9.
+        if (subject.Status == target)
         {
-            return Result<SubjectResponse>.Failure(transitionError);
+            subject.ReasonForChange = changeReason;
+            await auditLog.WriteAsync(nameof(ClinicalSubject), subject.Id.ToString(), $"TRANSITION_{SubjectStateCodec.ToCode(target)}",
+                auditContext.UserId, changeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
+            await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
+            return SubjectResponse.FromAggregate(subject);
+        }
+
+        var guardResult = SubjectTransitionGraph.Guard(subject.Status, target);
+        if (guardResult.IsFailure)
+        {
+            return Result<SubjectResponse>.Failure(guardResult.Error!);
+        }
+
+        DateTimeOffset now = _clock.UtcNow;
+
+        if (target == SubjectState.Withdrawn)
+        {
+            if (string.IsNullOrWhiteSpace(withdrawalKind)
+                || !Enum.TryParse<KernelWithdrawalKind>(withdrawalKind.Trim(), ignoreCase: true, out var parsedKind)
+                || !Enum.IsDefined(parsedKind))
+            {
+                return SubjectErrors.InvalidWithdrawalKind(withdrawalKind);
+            }
+
+            bool verifiedByKernel = false;
+            if (kernelEnrollmentSynchronizer is not null)
+            {
+                var withdrawSync = await kernelEnrollmentSynchronizer.SynchronizeWithdrawalAsync(
+                    subject.StudyCode.Value,
+                    subject.SubjectCode.Value,
+                    parsedKind.ToString(),
+                    now,
+                    changeReason,
+                    ct).ConfigureAwait(false);
+                if (withdrawSync.IsFailure)
+                {
+                    return Result<SubjectResponse>.Failure(withdrawSync.Error!);
+                }
+
+                verifiedByKernel = withdrawSync.Value!.EnrollmentId != Guid.Empty;
+            }
+
+            if (!verifiedByKernel && withdrawalSignatureVerifier is not null)
+            {
+                var verifyResult = await withdrawalSignatureVerifier.VerifyAndConsumeIfHttpAsync(ct).ConfigureAwait(false);
+                if (verifyResult.IsFailure)
+                {
+                    return Result<SubjectResponse>.Failure(verifyResult.Error!);
+                }
+            }
+
+            var withdrawResult = subject.Withdraw(changeReason, _clock);
+            if (withdrawResult.IsFailure)
+            {
+                return Result<SubjectResponse>.Failure(withdrawResult.Error!);
+            }
+        }
+        else
+        {
+            // Execution-only operational states (RECONSENT_REQUIRED, UNBLINDED) do not mutate canonical kernel EnrollmentStatus.
+            string? kernelTargetStatus = MapToKernelEnrollmentStatus(target);
+            if (kernelTargetStatus is not null && kernelEnrollmentSynchronizer is not null)
+            {
+                var statusSync = await kernelEnrollmentSynchronizer.SynchronizeStatusChangeAsync(
+                    subject.StudyCode.Value,
+                    subject.SubjectCode.Value,
+                    kernelTargetStatus,
+                    now,
+                    changeReason,
+                    ct).ConfigureAwait(false);
+                if (statusSync.IsFailure)
+                {
+                    return Result<SubjectResponse>.Failure(statusSync.Error!);
+                }
+            }
+
+            DomainError? transitionError = target == SubjectState.Unblinded
+                ? subject.Unblind(auditContext.UserId, changeReason, _clock).Error
+                : subject.TransitionTo(target).Error;
+            if (transitionError is not null)
+            {
+                return Result<SubjectResponse>.Failure(transitionError);
+            }
         }
 
         subject.ReasonForChange = changeReason;
@@ -566,6 +637,16 @@ public sealed class SubjectApplicationService(
 
         return SubjectResponse.FromAggregate(subject);
     }
+
+    private static string? MapToKernelEnrollmentStatus(SubjectState target) => target switch
+    {
+        SubjectState.Screening => nameof(KernelEnrollmentStatus.Screening),
+        SubjectState.Enrolled => nameof(KernelEnrollmentStatus.Enrolled),
+        SubjectState.Active => nameof(KernelEnrollmentStatus.Active),
+        SubjectState.Completed => nameof(KernelEnrollmentStatus.Completed),
+        SubjectState.ScreenFailed => nameof(KernelEnrollmentStatus.ScreenFailed),
+        _ => null,
+    };
 
     /// <summary>
     /// Rule 9 dual-lookup: try the surrogate PK first, then the domain code — shared by

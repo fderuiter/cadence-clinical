@@ -2203,6 +2203,7 @@ export interface components {
     Execution_SubjectStateUpdateRequest: {
       status: null | string;
       state: null | string;
+      withdrawal_kind?: null | string;
       target?: null | string;
     };
     Execution_SubjectSummaryResponse: {
@@ -2559,6 +2560,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
       /** @description Forbidden */
       403: {
         headers: {
@@ -2570,6 +2580,15 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

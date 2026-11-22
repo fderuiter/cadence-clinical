@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Randomization;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -14,6 +15,8 @@ using Cadence.Apps.Execution.Domain.Supply;
 using Cadence.Core.Domain;
 using Cadence.Core.Domain.Randomization;
 using Cadence.Kernel.Time;
+
+using KernelEnrollmentStatus = Cadence.Kernel.Execution.EnrollmentStatus;
 
 namespace Cadence.Apps.Execution.Application.Randomization;
 
@@ -33,7 +36,8 @@ public sealed class RandomizationApplicationService(
     IAllocationProtector protector,
     IAuditLogWriter auditLog,
     ICurrentAuditContextAccessor auditContext,
-    IClock clock) : IRandomizationApplicationService
+    IClock clock,
+    IKernelEnrollmentSynchronizer? kernelEnrollmentSynchronizer = null) : IRandomizationApplicationService
 {
     private const string SiteActivationMilestone = "SITE_ACTIVATION";
 
@@ -232,6 +236,22 @@ public sealed class RandomizationApplicationService(
                 if (kit is null)
                 {
                     return RandomizationErrors.KitUnavailable(subject.SiteCode?.Value);
+                }
+            }
+
+            if (kernelEnrollmentSynchronizer is not null)
+            {
+                var syncResult = await kernelEnrollmentSynchronizer.SynchronizeStatusChangeAsync(
+                    studyCode.Value,
+                    subject.SubjectCode.Value,
+                    nameof(KernelEnrollmentStatus.Randomized),
+                    now,
+                    changeReason,
+                    token,
+                    "randomize").ConfigureAwait(false);
+                if (syncResult.IsFailure)
+                {
+                    return syncResult.Error!;
                 }
             }
 

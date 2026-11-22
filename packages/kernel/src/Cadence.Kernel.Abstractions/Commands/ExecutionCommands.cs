@@ -57,6 +57,12 @@ public sealed record ScreenParticipant(
 /// </remarks>
 [KernelCapability("enrollment.change_status", VerbClass.Execute, Resource = nameof(ChangeEnrollmentStatus.EnrollmentId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.ConcurrencyConflict))]
+[RaisesKernelErrors(
+    typeof(ExecutionErrors),
+    nameof(ExecutionErrors.WithdrawalRequiresCommand),
+    nameof(ExecutionErrors.InvalidTransition),
+    nameof(ExecutionErrors.TransitionTimeInvalid))]
 public sealed record ChangeEnrollmentStatus(
     TenantId TenantId,
     EnrollmentId EnrollmentId,
@@ -72,6 +78,13 @@ public sealed record ChangeEnrollmentStatus(
 /// </summary>
 [KernelCapability("participant.withdraw", VerbClass.Execute, Resource = nameof(WithdrawParticipant.EnrollmentId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.ConcurrencyConflict))]
+[RaisesKernelErrors(
+    typeof(ExecutionErrors),
+    nameof(ExecutionErrors.WithdrawalKindInvalid),
+    nameof(ExecutionErrors.InvalidTransition),
+    nameof(ExecutionErrors.TransitionTimeInvalid),
+    nameof(ExecutionErrors.AttestationRejected))]
 public sealed record WithdrawParticipant(
     TenantId TenantId,
     EnrollmentId EnrollmentId,

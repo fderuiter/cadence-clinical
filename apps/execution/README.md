@@ -16,9 +16,9 @@ eCRF queries no longer live here either. A query is raised on a form value (or o
   Times the service stamps (a toxicity review's decision) are `DateTimeOffset` values taken from `Cadence.Kernel.Time.IClock`. The project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784).
 - `Application/`: application services per slice, audit-context abstractions, validators, and snake_case JSON settings (`Serialization/`).
 - `Infrastructure/Persistence/`: `ExecutionDbContext`, design-time factory, Fluent API `Configurations/`, `Repositories/`, `EfAuditLogWriter`, concurrency interceptor, seeder, and `Migrations/`.
-- `Infrastructure/Consumers/`: `EConsentCompletedConsumer` (MassTransit).
-- `Infrastructure/Kernel/`: `HttpKernelEnrollmentSynchronizer`, synchronizing newly registered subjects with kernel `RegisterParticipant` and `ScreenParticipant` via `POST /api/v1/kernel/enrollments/screen` over gateway-signed HTTP (`KERNEL_SERVICE_URL`).
-- `Infrastructure/Normalization/`, `Infrastructure/Security/`: UCUM normalization service, demographics normalization and AES-GCM encryption.
+- `Infrastructure/Consumers/`: `EConsentCompletedConsumer` (MassTransit; synchronizes newly auto-created site-assigned subjects to the Clinical Kernel before commit when a tenant header is present).
+- `Infrastructure/Kernel/`: `HttpKernelEnrollmentSynchronizer`, synchronizing newly registered subjects (`POST /api/v1/kernel/enrollments/screen`), enrollment status transitions (`ENROLLED`, `RANDOMIZED`, `ACTIVE`, `COMPLETED`, `SCREEN_FAILED` via `POST /api/v1/kernel/enrollments/status`), and Part 11 signed withdrawals (`WITHDRAWN` with `withdrawal_kind` and forwarded `X-Sig-Token` via `POST /api/v1/kernel/enrollments/withdraw`) over gateway-signed HTTP (`KERNEL_SERVICE_URL`).
+- `Infrastructure/Normalization/`, `Infrastructure/Security/`: UCUM normalization service, demographics normalization and AES-GCM encryption, and `HttpWithdrawalSignatureVerifier` (verifying single-use `X-Sig-Token` for withdrawals in standalone HTTP mode).
 - `Endpoints/`: Minimal API route groups, `ExecutionScopeGuard` (study and site scope enforcement), and `Filters/` (`ValidationFilter<T>`, `ChangeReasonHeaderFilter`).
 
 ## HTTP surface

@@ -83,9 +83,16 @@ Applying or releasing a clinical lock requires an `Idempotency-Key`, a signed `X
 | `GET studies/{studyRef}/exports?format=&lock_filter=&as_of=` | Streams a bitemporal study snapshot as `csv`, `odm_xml` (ODM v1.3.2 `MetaDataVersion` + `ClinicalData`), or `dataset_json` (Dataset-JSON v1.1.0), filtered by lock state and masked per caller visibility. |
 | `GET enrollments/{enrollmentRef}/casebook?format=&as_of=`    | Streams a participant casebook (`json`, `odm_xml`, or printable `html`) with revisions, queries, verifications, `Attestation` signatures, and `X-Content-Sha256` digests.                                  |
 
-### Execution forms (ADR-2622)
+### Execution forms and enrollment synchronization (ADR-2622, K-TRUTH-1)
 
 `POST /api/v1/execution/forms`, `GET /api/v1/execution/forms/{formId}` and `PUT /api/v1/execution/forms/{formId}/values` open, read and save eCRF forms; the [Execution module README](../execution/module/README.md) describes them.
+
+| Route (`/api/v1/kernel/…`)                             | Does                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST enrollments/screen`                              | Registers a participant and screens an enrollment at a study site (`participant.register`, `participant.screen`).                                                                                                                                                    |
+| `GET enrollments/by-subject?study_code=&subject_code=` | Resolves the canonical kernel enrollment (`enrollment_id`, `enrollment_status`, gap-free `enrollment_number`) for a visible study site (`404` when absent, `403` when outside the caller's read visibility).                                                         |
+| `POST enrollments/status`                              | Advances canonical enrollment status (`Enrolled`, `Randomized`, `Active`, `Completed`, `ScreenFailed` via `ChangeEnrollmentStatus`), assigning the gap-free per-study `enrollment_number` on entering `Enrolled`.                                                    |
+| `POST enrollments/withdraw`                            | Withdraws a participant (`WithdrawParticipant` with `WithdrawalKind`) after verifying a fresh single-use 60-second `X-Sig-Token` (`kernel.enrollment.withdraw`) and recording a 21 CFR Part 11 `Attest` (`AttestationMeaning.Withdrawn`) over the enrollment's hash. |
 
 ### Proposals (ADR-2635)
 

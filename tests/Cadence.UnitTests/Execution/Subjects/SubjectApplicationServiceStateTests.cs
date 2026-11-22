@@ -7,6 +7,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Core.Domain;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
@@ -45,8 +46,58 @@ public class SubjectApplicationServiceStateTests
 
         public FakeClock Clock { get; } = new(new DateTimeOffset(2026, 9, 30, 6, 0, 0, TimeSpan.Zero));
 
+        public FakeKernelSynchronizer? KernelSync { get; set; }
+
+        public IWithdrawalSignatureVerifier? SignatureVerifier { get; set; }
+
         public SubjectApplicationService Service =>
-            new(Subjects, Consents, Compliance, Encryption, AuditLog, AuditContext, ScreeningEligibility, Clock);
+            new(Subjects, Consents, Compliance, Encryption, AuditLog, AuditContext, ScreeningEligibility, Clock, KernelSync, SignatureVerifier);
+    }
+
+    private sealed class FakeKernelSynchronizer : IKernelEnrollmentSynchronizer
+    {
+        public List<(string Study, string Subject, string TargetStatus, string Reason)> StatusCalls { get; } = [];
+
+        public List<(string Study, string Subject, string WithdrawalKind, string Reason)> WithdrawalCalls { get; } = [];
+
+        public DomainError? FailWith { get; set; }
+
+        public Task<Result<Guid>> SynchronizeScreeningEnrollmentAsync(
+            Guid participantId, string studyCode, string siteCode, string subjectCode, DateTimeOffset screenedAt,
+            string changeReason, CancellationToken cancellationToken, string? fallbackTenantId = null, string? fallbackActorId = null) =>
+            Task.FromResult(FailWith is not null ? Result<Guid>.Failure(FailWith) : Result<Guid>.Success(Guid.NewGuid()));
+
+        public Task<Result<KernelEnrollmentSyncResult>> SynchronizeStatusChangeAsync(
+            string studyCode, string subjectCode, string targetStatus, DateTimeOffset effectiveAt,
+            string changeReason, CancellationToken cancellationToken, string? idempotencyToken = null)
+        {
+            StatusCalls.Add((studyCode, subjectCode, targetStatus, changeReason));
+            int? enrollmentNumber = targetStatus == "Enrolled" ? 1 : null;
+            return Task.FromResult(FailWith is not null
+                ? Result<KernelEnrollmentSyncResult>.Failure(FailWith)
+                : Result<KernelEnrollmentSyncResult>.Success(new KernelEnrollmentSyncResult(Guid.NewGuid(), targetStatus, enrollmentNumber)));
+        }
+
+        public Task<Result<KernelWithdrawalSyncResult>> SynchronizeWithdrawalAsync(
+            string studyCode, string subjectCode, string withdrawalKind, DateTimeOffset effectiveAt,
+            string changeReason, CancellationToken cancellationToken)
+        {
+            WithdrawalCalls.Add((studyCode, subjectCode, withdrawalKind, changeReason));
+            return Task.FromResult(FailWith is not null
+                ? Result<KernelWithdrawalSyncResult>.Failure(FailWith)
+                : Result<KernelWithdrawalSyncResult>.Success(new KernelWithdrawalSyncResult(Guid.NewGuid(), Guid.NewGuid(), "Withdrawn", withdrawalKind)));
+        }
+    }
+
+    private sealed class StubWithdrawalSignatureVerifier(Result<bool> outcome) : IWithdrawalSignatureVerifier
+    {
+        public int Calls { get; private set; }
+
+        public Task<Result<bool>> VerifyAndConsumeIfHttpAsync(CancellationToken cancellationToken)
+        {
+            Calls++;
+            return Task.FromResult(outcome);
+        }
     }
 
     private static readonly StudyCode Study = new("STUDY-001");
@@ -361,10 +412,116 @@ public class SubjectApplicationServiceStateTests
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", siteCode);
 
         var result = await harness.Service.AdvanceStateAsync(subject.SubjectCode.Value,
-            new SubjectStateUpdateRequest(Status: "WITHDRAWN", State: null), "Subject withdrew consent",
+            new SubjectStateUpdateRequest(Status: "WITHDRAWN", State: null, WithdrawalKind: "WithdrawalBySubject"), "Subject withdrew consent",
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
+        subject.WithdrawalReason.Should().Be("Subject withdrew consent");
+        subject.WithdrawnAt.Should().Be(harness.Clock.UtcNow);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SUB-001")]
+    public async Task AdvanceStateAsync_EnrolledToActive_SucceedsAndSynchronizesKernelStatus()
+    {
+        var sync = new FakeKernelSynchronizer();
+        var harness = new Harness { KernelSync = sync };
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-SINGLE-ARM", status: SubjectState.Enrolled);
+
+        var result = await harness.Service.AdvanceStateAsync("SUBJ-SINGLE-ARM",
+            new SubjectStateUpdateRequest(Status: "ACTIVE", State: null), "Single-arm protocol treatment started",
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Status.Should().Be("ACTIVE");
+        subject.Status.Should().Be(SubjectState.Active);
+        sync.StatusCalls.Should().ContainSingle().Which.Should().Be(("STUDY-001", "SUBJ-SINGLE-ARM", "Active", "Single-arm protocol treatment started"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("NotARealDisposition")]
+    public async Task AdvanceStateAsync_ToWithdrawn_WithoutValidWithdrawalKind_ReturnsInvalidWithdrawalKindAndLeavesStateUnchanged(string? withdrawalKind)
+    {
+        var sync = new FakeKernelSynchronizer();
+        var harness = new Harness { KernelSync = sync };
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-WD-BAD");
+
+        var result = await harness.Service.AdvanceStateAsync("SUBJ-WD-BAD",
+            new SubjectStateUpdateRequest(Status: "WITHDRAWN", State: null, WithdrawalKind: withdrawalKind), "Withdrew consent",
+            TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("INVALID_WITHDRAWAL_KIND");
+        subject.Status.Should().Be(SubjectState.Screening);
+        subject.WithdrawnAt.Should().BeNull();
+        sync.WithdrawalCalls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task AdvanceStateAsync_ToWithdrawn_WithoutStepUpSignatureWhenKernelSkipped_ReturnsUnauthorized()
+    {
+        var verifier = new StubWithdrawalSignatureVerifier(
+            Result<bool>.Failure(DomainError.Unauthorized("Step-up electronic signature required.", "Step-up electronic signature required.")));
+        var harness = new Harness { SignatureVerifier = verifier };
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-WD-NOSIG");
+
+        var result = await harness.Service.AdvanceStateAsync("SUBJ-WD-NOSIG",
+            new SubjectStateUpdateRequest(Status: "WITHDRAWN", State: null, WithdrawalKind: "AdverseEvent"), "Discontinued due to AE",
+            TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Type.Should().Be(ErrorType.Unauthorized);
+        verifier.Calls.Should().Be(1);
+        subject.Status.Should().Be(SubjectState.Screening);
+        subject.WithdrawnAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AdvanceStateAsync_WhenKernelRefusesTransition_DoesNotMutateLocalSubjectOrAudit()
+    {
+        var sync = new FakeKernelSynchronizer
+        {
+            FailWith = DomainError.Forbidden("K.Authorization.Denied", "Caller lacks enrollment.change_status."),
+        };
+        var harness = new Harness { KernelSync = sync };
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-KSYNC-FAIL", status: SubjectState.Enrolled);
+
+        var result = await harness.Service.AdvanceStateAsync("SUBJ-KSYNC-FAIL",
+            new SubjectStateUpdateRequest(Status: "ACTIVE", State: null), "Attempt active",
+            TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("K.Authorization.Denied");
+        subject.Status.Should().Be(SubjectState.Enrolled);
+        harness.AuditLog.Calls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task AdvanceStateAsync_ExecutionOnlyStates_DoNotMutateKernelEnrollmentStatus()
+    {
+        var sync = new FakeKernelSynchronizer();
+        var harness = new Harness
+        {
+            KernelSync = sync,
+            AuditContext = new FakeCurrentAuditContextAccessor { UserId = "pi-1" },
+        };
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-EXEC-ONLY", status: SubjectState.Enrolled);
+        subject.TransitionTo(SubjectState.Randomized).IsSuccess.Should().BeTrue();
+
+        var reconsent = await harness.Service.AdvanceStateAsync("SUBJ-EXEC-ONLY",
+            new SubjectStateUpdateRequest(Status: "RECONSENT_REQUIRED", State: null), "Protocol amendment requires re-consent",
+            TestContext.Current.CancellationToken);
+        reconsent.IsSuccess.Should().BeTrue();
+
+        var unblind = await harness.Service.AdvanceStateAsync("SUBJ-EXEC-ONLY",
+            new SubjectStateUpdateRequest(Status: "UNBLINDED", State: null), UnblindingReason,
+            TestContext.Current.CancellationToken);
+        unblind.IsSuccess.Should().BeTrue();
+
+        sync.StatusCalls.Should().BeEmpty();
+        sync.WithdrawalCalls.Should().BeEmpty();
     }
 
     // -- EvaluateAndTransitionScreeningAsync: not-found ------------------------------------------

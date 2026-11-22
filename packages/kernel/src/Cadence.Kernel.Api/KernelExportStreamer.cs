@@ -369,6 +369,7 @@ internal static class KernelExportStreamer
                 EnrollmentRef: "masked",
                 SubjectCode: "masked",
                 EnrollmentStatus: null,
+                EnrollmentNumber: null,
                 Masked: true,
                 Mask: maskedReasonText,
                 Forms: maskedForms,
@@ -559,6 +560,7 @@ internal static class KernelExportStreamer
             EnrollmentRef: NodeRef.For(snapshot.EnrollmentId).ToString(),
             SubjectCode: snapshot.SubjectCode,
             EnrollmentStatus: snapshot.StatusAtCut?.ToString(),
+            EnrollmentNumber: snapshot.EnrollmentNumber,
             Masked: false,
             Mask: null,
             Forms: forms,
@@ -613,6 +615,18 @@ internal static class KernelExportStreamer
         {
             await xml.WriteAttributeStringAsync("cadence", "Masked", CadenceNamespace, "true").ConfigureAwait(false);
             await xml.WriteAttributeStringAsync("cadence", "MaskReason", CadenceNamespace, casebook.Mask ?? "NotPermitted").ConfigureAwait(false);
+        }
+        else
+        {
+            if (casebook.EnrollmentStatus is not null)
+            {
+                await xml.WriteAttributeStringAsync("cadence", "EnrollmentStatus", CadenceNamespace, casebook.EnrollmentStatus).ConfigureAwait(false);
+            }
+
+            if (casebook.EnrollmentNumber is { } enrollmentNumber)
+            {
+                await xml.WriteAttributeStringAsync("cadence", "EnrollmentNumber", CadenceNamespace, enrollmentNumber.ToString(CultureInfo.InvariantCulture)).ConfigureAwait(false);
+            }
         }
 
         await xml.WriteStartElementAsync(null, "SiteRef", OdmNamespace).ConfigureAwait(false);
@@ -684,7 +698,10 @@ internal static class KernelExportStreamer
         sb.AppendLine("</head>");
         sb.AppendLine($"<body data-casebook-sha256=\"{Html(casebook.CasebookDigestSha256)}\">");
         sb.AppendLine($"  <h1>Participant Casebook: {Html(casebook.SubjectCode)}</h1>");
-        sb.AppendLine($"  <p><strong>Study:</strong> {Html(casebook.StudyCode)} ({Html(casebook.StudyTitle)}) | <strong>Site:</strong> {Html(casebook.SiteCode)} | <strong>As Of:</strong> {Html(FormatInstant(casebook.KnownAt))} | <strong>Generated:</strong> {Html(FormatInstant(casebook.GeneratedAt))}</p>");
+        var enrollmentSummary = casebook.Masked
+            ? string.Empty
+            : $" | <strong>Status:</strong> {Html(casebook.EnrollmentStatus ?? "Unknown")} | <strong>Enrollment #:</strong> {Html(casebook.EnrollmentNumber?.ToString(CultureInfo.InvariantCulture) ?? "Not assigned")}";
+        sb.AppendLine($"  <p><strong>Study:</strong> {Html(casebook.StudyCode)} ({Html(casebook.StudyTitle)}) | <strong>Site:</strong> {Html(casebook.SiteCode)}{enrollmentSummary} | <strong>As Of:</strong> {Html(FormatInstant(casebook.KnownAt))} | <strong>Generated:</strong> {Html(FormatInstant(casebook.GeneratedAt))}</p>");
         sb.AppendLine($"  <p><strong>Producer:</strong> {Html(casebook.Producer)} | <strong>Canonical SHA-256:</strong> <code>{Html(casebook.CasebookDigestSha256)}</code></p>");
 
         if (casebook.Masked)

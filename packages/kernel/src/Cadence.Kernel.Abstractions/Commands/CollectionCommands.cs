@@ -28,7 +28,11 @@ namespace Cadence.Kernel.Commands;
     nameof(CollectionErrors.CollectedAtInvalid),
     nameof(CollectionErrors.NoGoverningVersion),
     nameof(CollectionErrors.SpecUnknown))]
-[RaisesKernelErrors(typeof(ObservationErrors), nameof(ObservationErrors.Locked), nameof(ObservationErrors.ParticipantWithdrawn))]
+[RaisesKernelErrors(
+    typeof(ObservationErrors),
+    nameof(ObservationErrors.Locked),
+    nameof(ObservationErrors.ParticipantWithdrawn),
+    nameof(ObservationErrors.ParticipantScreenFailed))]
 public sealed record OpenCollectionInstance(
     TenantId TenantId,
     CollectionInstanceId CollectionInstanceId,
@@ -57,7 +61,11 @@ public sealed record OpenCollectionInstance(
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists))]
 [RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.ValuesInvalid), nameof(CollectionErrors.RevisionStale))]
 [RaisesKernelErrors(
-    typeof(ObservationErrors), nameof(ObservationErrors.Locked), nameof(ObservationErrors.ObservedAtInvalid), nameof(ObservationErrors.ParticipantWithdrawn))]
+    typeof(ObservationErrors),
+    nameof(ObservationErrors.Locked),
+    nameof(ObservationErrors.ObservedAtInvalid),
+    nameof(ObservationErrors.ParticipantWithdrawn),
+    nameof(ObservationErrors.ParticipantScreenFailed))]
 public sealed record RecordCollectedValues(
     TenantId TenantId,
     CollectionInstanceId CollectionInstanceId,

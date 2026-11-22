@@ -55,12 +55,30 @@
       <ParticipantFormsPanel
         v-if="!formId && enrollmentId"
         :subject-code="participant?.subject_id || 'participant'"
+        :participant-status="participant?.status ?? null"
         :enrollment-id="enrollmentId"
         :form-location="formLocation"
         :new-form-location="null"
       />
 
+      <p
+        v-if="!formId && isTerminalParticipant"
+        id="canvas-form-terminal-blocked"
+        data-testid="canvas-form-terminal-blocked"
+        class="status-line"
+        role="status"
+      >
+        New forms cannot be opened because
+        {{ participant?.subject_id || "this participant" }} is
+        {{
+          participant?.status
+            ? participantStateLabel(participant.status).toLowerCase()
+            : "closed"
+        }}. Select an existing form above to review or correct recorded values.
+      </p>
+
       <EcrfFormPanel
+        v-else
         :form-id="formId"
         :collection-spec-id="collectionSpecId"
         :planned-activity-id="plannedActivityId"
@@ -87,6 +105,10 @@ import { computed, onUnmounted, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
 import type { SubjectSummary } from "../../api/executionApi";
+import {
+  isTerminalParticipantState,
+  participantStateLabel,
+} from "../../canvas/lifecycle";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import EcrfFormPanel, {
@@ -144,6 +166,10 @@ const workspaceTitle = computed(() => {
   if (props.formLabel) return props.formLabel;
   return props.formId ? "Case report form" : "Forms";
 });
+
+const isTerminalParticipant = computed(() =>
+  isTerminalParticipantState(props.participant?.status)
+);
 
 const scheduleForStudy = computed(() =>
   Object.prototype.hasOwnProperty.call(

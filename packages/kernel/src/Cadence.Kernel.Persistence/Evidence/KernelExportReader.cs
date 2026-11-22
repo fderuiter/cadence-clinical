@@ -95,7 +95,7 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
                 siteCodeByStudySite.GetValueOrDefault(e.StudySiteId, e.StudySiteId.ToString()),
                 e.SubjectCode.Value,
                 statusAtCut,
-                e.EnrollmentNumber));
+                EnrollmentNumberAtCut(e, statusAtCut)));
         }
 
         var includedEnrollmentIds = studySiteByEnrollment.Keys.ToHashSet();
@@ -307,6 +307,7 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             foundEnrollment.ParticipantId,
             foundEnrollment.SubjectCode.Value,
             statusAtCut,
+            EnrollmentNumberAtCut(foundEnrollment, statusAtCut),
             validAt,
             knownAt,
             protocols,
@@ -317,6 +318,11 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             attestations,
             audit);
     }
+
+    private static int? EnrollmentNumberAtCut(Enrollment enrollment, Cadence.Kernel.Execution.EnrollmentStatus? statusAtCut) =>
+        statusAtCut is null or Cadence.Kernel.Execution.EnrollmentStatus.Screening or Cadence.Kernel.Execution.EnrollmentStatus.ScreenFailed
+            ? null
+            : enrollment.EnrollmentNumber;
 
     private static async Task<IReadOnlyList<ExportProtocolSnapshot>> ReadProtocolsAsync(
         KernelDbContext db,

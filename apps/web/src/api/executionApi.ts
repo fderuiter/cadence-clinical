@@ -114,6 +114,11 @@ export interface ListSubjectsQuery {
   offset?: number;
 }
 
+export interface ChangeSubjectStateOptions {
+  withdrawalKind?: string | null;
+  sigToken?: string | null;
+}
+
 const client = createOpenApiClient<paths>();
 
 export const executionApi = {
@@ -179,13 +184,26 @@ export const executionApi = {
   changeSubjectState(
     subjectId: string,
     state: string,
-    reason: string
+    reason: string,
+    options?: ChangeSubjectStateOptions
   ): Promise<Subject> {
+    const headers: Record<string, string> = {
+      "X-Change-Reason": encodeChangeReason(reason),
+    };
+    if (options?.sigToken) {
+      headers["X-Sig-Token"] = options.sigToken;
+    }
     return unwrapResponse(
       client.PATCH("/api/v1/execution/subjects/{subjectId}/state", {
         params: { path: { subjectId } },
-        body: { status: state, state: null },
-        headers: { "X-Change-Reason": encodeChangeReason(reason) },
+        body: {
+          status: state,
+          state: null,
+          ...(options?.withdrawalKind
+            ? { withdrawal_kind: options.withdrawalKind }
+            : {}),
+        },
+        headers,
       })
     );
   },

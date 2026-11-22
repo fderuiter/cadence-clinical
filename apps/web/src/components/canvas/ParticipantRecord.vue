@@ -103,6 +103,7 @@
       <ParticipantFormsPanel
         :study-code="canvas.studyCode"
         :subject-code="participant.subject_id"
+        :participant-status="participant.status"
         :enrollment-id="record.enrollmentId"
         :form-location="formLocation"
         :new-form-location="newFormLocation"

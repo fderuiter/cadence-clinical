@@ -52,6 +52,7 @@ vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
 
 vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: {
+    getEnrollmentBySubject: vi.fn(async () => null),
     listProposals: vi.fn(async () => []),
     search: vi.fn(async () => []),
     getChildren: vi.fn(async () => []),
@@ -1055,5 +1056,88 @@ describe("Clinical Canvas: a participant's data", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("suppresses new form actions on terminal participants while keeping previously opened forms accessible", async () => {
+    const withdrawnParticipant = {
+      ...PARTICIPANT,
+      status: "WITHDRAWN",
+    };
+    vi.mocked(executionApi.listSubjects).mockResolvedValue({
+      items: [withdrawnParticipant],
+      total: 1,
+      limit: 50,
+      offset: 0,
+    });
+    vi.mocked(findStudyScheduleOptions).mockResolvedValue({
+      protocolVersionRef:
+        "protocol_version:0192f3c4-5e6a-7b8c-9d0e-00000000b001@1",
+      collectionSpecs: [
+        {
+          id: "VS",
+          name: "Vital Signs",
+          plannedActivityIds: ["WEEK2", "WEEK4"],
+          repeating: true,
+        },
+        {
+          id: "AE",
+          name: "Adverse Events",
+          plannedActivityIds: [],
+          unscheduled: true,
+        },
+      ],
+      plannedActivities: [
+        { id: "WEEK2", name: "Week 2", studyDay: 14 },
+        { id: "WEEK4", name: "Week 4", studyDay: 28 },
+      ],
+    });
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue({
+      form_id: FORM_ID,
+      enrollment_id: ENROLLMENT_ID,
+      participant_id: PARTICIPANT_ID,
+      protocol_version_id: "0192f3c4-5e6a-7b8c-9d0e-00000000b001",
+      collection_spec_id: "VS",
+      collection_title: "Vital Signs",
+      planned_activity_id: "WEEK2",
+      collected_at: "2027-03-14T09:00:00Z",
+      opened_at: "2027-03-14T09:00:00Z",
+      opened_by: "crc1",
+      complete: false,
+      missing_required: [],
+      content_hash: "sha256:abc",
+      version: 1,
+      locks: [],
+      assertions: [],
+      signatures: [],
+      items: [],
+    });
+    vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([]);
+
+    await openRecord();
+
+    expect(wrapper.find("#record-forms-terminal-note").text()).toContain(
+      "New forms cannot be opened because 017-0001 is withdrawn"
+    );
+    expect(wrapper.find("#record-open-form").exists()).toBe(false);
+    expect(
+      wrapper.find("#record-forms").findAll('a[href*="form=new"]')
+    ).toHaveLength(0);
+    expect(wrapper.find(`#record-form-link-${FORM_ID}`).exists()).toBe(true);
+
+    // Direct navigation to ?form=new shows the terminal guard instead of the form launcher.
+    await router.push(
+      `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=new`
+    );
+    await flushPromises();
+    expect(wrapper.find("#canvas-form-terminal-blocked").exists()).toBe(true);
+    expect(wrapper.find("#ecrf-form-new").exists()).toBe(false);
+
+    // Existing forms remain accessible for reading and pre-withdrawal data correction.
+    await router.push(
+      `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${FORM_ID}`
+    );
+    await flushPromises();
+    expect(wrapper.find("#canvas-form-terminal-blocked").exists()).toBe(false);
+    expect(wrapper.find("#zoom-form").text()).toBe("Vital Signs · WEEK2");
   });
 });

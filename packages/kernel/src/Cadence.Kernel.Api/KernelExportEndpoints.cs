@@ -642,6 +642,7 @@ internal sealed record ProjectedObservationRow(
 /// <param name="EnrollmentRef">Enrollment NodeRef, or <c>masked</c> when hidden.</param>
 /// <param name="SubjectCode">Pseudonymous subject code (never a direct identifier), or <c>masked</c> when hidden.</param>
 /// <param name="EnrollmentStatus">Enrollment status at the evaluated coordinate, or null when masked.</param>
+/// <param name="EnrollmentNumber">Gap-free study enrollment number once enrolled at the evaluated coordinate, or null before enrollment or when masked.</param>
 /// <param name="Masked">True when the enrollment itself is masked for the caller.</param>
 /// <param name="Mask">Why the enrollment is masked, or null when visible.</param>
 /// <param name="Forms">Form instances collected for the participant.</param>
@@ -666,6 +667,7 @@ public sealed record KernelCasebookResponse(
     string EnrollmentRef,
     string SubjectCode,
     string? EnrollmentStatus,
+    int? EnrollmentNumber,
     bool Masked,
     string? Mask,
     IReadOnlyList<KernelCasebookFormView> Forms,

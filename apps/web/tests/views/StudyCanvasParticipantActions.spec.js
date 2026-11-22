@@ -17,6 +17,52 @@ vi.mock("../../src/api/executionApi", () => ({
   },
 }));
 
+vi.mock("../../src/api/kernelApi", () => ({
+  kernelApi: {
+    getEnrollmentBySubject: vi.fn(async () => null),
+    listProposals: vi.fn(async () => []),
+    search: vi.fn(async () => []),
+    getChildren: vi.fn(async () => []),
+    getCommands: vi.fn(),
+    getObservation: vi.fn(),
+    getZoomPath: vi.fn(async () => []),
+  },
+}));
+
+vi.mock("../../src/components/SignatureCaptureModal.vue", () => ({
+  default: {
+    name: "SignatureCaptureModal",
+    props: [
+      "isOpen",
+      "username",
+      "signerName",
+      "reasons",
+      "actionUrl",
+      "semanticAction",
+      "onSign",
+    ],
+    emits: ["cancel", "success"],
+    template: `
+      <div
+        v-if="isOpen"
+        data-testid="mock-sig-modal"
+        :data-action-url="actionUrl"
+        :data-semantic="semanticAction"
+      >
+        <button type="button" data-testid="confirm-step-up" @click="confirm">
+          Confirm signature
+        </button>
+      </div>
+    `,
+    methods: {
+      async confirm() {
+        await this.onSign("sig-tok-withdraw", "Withdrawn");
+        this.$emit("success");
+      },
+    },
+  },
+}));
+
 const IDS = [
   "0192f3c4-5e6a-7b8c-9d0e-000000000001",
   "0192f3c4-5e6a-7b8c-9d0e-000000000002",
@@ -317,5 +363,78 @@ describe("Clinical Canvas: adding participants and changing their state", () => 
 
     expect(wrapper.find("#btn-add-participant").exists()).toBe(true);
     expect(wrapper.find("#inspector-state-change").exists()).toBe(true);
+  });
+
+  it("offers Active alongside Randomized from Enrolled for single-arm studies", async () => {
+    participants = [participant(0, { status: "ENROLLED" })];
+    serveParticipants();
+    await open(
+      `/studies/CAD-101?stage=conduct&section=participants&node=participant:${IDS[0]}`
+    );
+
+    const options = wrapper
+      .findAll("#state-change-target option")
+      .filter((o) => o.attributes("value"))
+      .map((o) => o.text());
+    expect(options).toEqual([
+      "Randomized",
+      "Active",
+      "Re-consent required",
+      "Withdrawn",
+    ]);
+  });
+
+  it("collects a withdrawal category and step-up electronic signature before moving a participant to Withdrawn", async () => {
+    vi.mocked(executionApi.changeSubjectState).mockImplementation(
+      async (id, state) => {
+        const target = participants.find((p) => p.id === id);
+        target.status = state;
+        return { ...target };
+      }
+    );
+    await open(
+      `/studies/CAD-101?stage=conduct&section=participants&node=participant:${IDS[0]}`
+    );
+
+    await wrapper.find("#state-change-target").setValue("WITHDRAWN");
+    expect(wrapper.find("#state-change-withdrawal-kind").exists()).toBe(true);
+    expect(wrapper.find("#state-change-withdraw-note").exists()).toBe(true);
+
+    await wrapper
+      .find("#state-change-reason")
+      .setValue("Participant withdrew consent");
+    expect(wrapper.find("#btn-change-state").element.disabled).toBe(true);
+
+    await wrapper
+      .find("#state-change-withdrawal-kind")
+      .setValue("WithdrawalBySubject");
+    expect(wrapper.find("#btn-change-state").element.disabled).toBe(false);
+
+    await wrapper.find("#btn-change-state").trigger("click");
+    await flushPromises();
+
+    expect(executionApi.changeSubjectState).not.toHaveBeenCalled();
+    const modal = wrapper.find('[data-testid="mock-sig-modal"]');
+    expect(modal.exists()).toBe(true);
+    expect(modal.attributes("data-action-url")).toBe(
+      "/api/v1/kernel/enrollments/withdraw"
+    );
+    expect(modal.attributes("data-semantic")).toBe(
+      "kernel.enrollment.withdraw"
+    );
+
+    await wrapper.find('[data-testid="confirm-step-up"]').trigger("click");
+    await flushPromises();
+
+    expect(executionApi.changeSubjectState).toHaveBeenCalledWith(
+      IDS[0],
+      "WITHDRAWN",
+      "Participant withdrew consent",
+      {
+        withdrawalKind: "WithdrawalBySubject",
+        sigToken: "sig-tok-withdraw",
+      }
+    );
+    expect(wrapper.find("#inspector-state").text()).toBe("Withdrawn");
   });
 });

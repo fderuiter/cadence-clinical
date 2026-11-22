@@ -15,6 +15,7 @@ import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
 vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: {
+    getEnrollmentBySubject: vi.fn(async () => null),
     listProposals: vi.fn(async () => []),
     search: vi.fn(async () => []),
     getChildren: vi.fn(async () => []),
@@ -822,6 +823,54 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       expect(wrapper.find("#canvas-inspector-title").text()).toBe("Site 017");
       expect(wrapper.find("#canvas-inspector-ref").text()).toContain(
         `study_site:${siteUuid}@1`
+      );
+    });
+
+    it("displays the canonical kernel enrollment number in the participant inspector when enrolled and Not assigned in screening", async () => {
+      vi.mocked(kernelApi.getEnrollmentBySubject).mockImplementation(
+        async (_studyCode, subjectCode) => {
+          if (subjectCode === "017-0001") {
+            return {
+              ref: "enrollment:0192f3c4-5e6a-7b8c-9d0e-000000009991",
+              enrollment_id: "0192f3c4-5e6a-7b8c-9d0e-000000009991",
+              participant_id: IDS[0],
+              study_id: "0192f3c4-5e6a-7b8c-9d0e-000000009990",
+              study_site_id: "0192f3c4-5e6a-7b8c-9d0e-000000009992",
+              subject_code: "017-0001",
+              enrollment_status: "Active",
+              enrollment_number: 7,
+              status_since: "2027-01-10T09:00:00Z",
+              masked: false,
+              mask: null,
+            };
+          }
+          return {
+            ref: "enrollment:0192f3c4-5e6a-7b8c-9d0e-000000009993",
+            enrollment_id: "0192f3c4-5e6a-7b8c-9d0e-000000009993",
+            participant_id: IDS[1],
+            study_id: "0192f3c4-5e6a-7b8c-9d0e-000000009990",
+            study_site_id: "0192f3c4-5e6a-7b8c-9d0e-000000009994",
+            subject_code: "017-0002",
+            enrollment_status: "Screening",
+            enrollment_number: null,
+            status_since: "2027-01-10T09:00:00Z",
+            masked: false,
+            mask: null,
+          };
+        }
+      );
+
+      await open(
+        `/studies/CAD-101?stage=conduct&section=participants&node=participant:${IDS[0]}`
+      );
+      expect(wrapper.find("#inspector-enrollment-number").text()).toBe("7");
+
+      await router.push(
+        `/studies/CAD-101?stage=conduct&section=participants&node=participant:${IDS[1]}`
+      );
+      await flushPromises();
+      expect(wrapper.find("#inspector-enrollment-number").text()).toBe(
+        "Not assigned"
       );
     });
   });

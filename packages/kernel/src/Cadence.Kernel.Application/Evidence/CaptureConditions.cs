@@ -29,36 +29,64 @@ internal static class CaptureConditions
     /// <summary>Code of the condition that the participant takes part in the study.</summary>
     public const string NotWithdrawn = "participation.not-withdrawn";
 
+    /// <summary>Code of the condition that the participant has not failed screening.</summary>
+    public const string NotScreenFailed = "participation.not-screen-failed";
+
     /// <summary>
-    /// Reads the enrollment and returns <see cref="ObservationErrors.ParticipantWithdrawn"/>, with its explanation, when
-    /// the participant is withdrawn; null when capture may go on. Call it after sharing the scope locks that cover the
-    /// write (<see cref="IKernelUnitOfWork.ShareScopesAsync"/>, which includes the enrollment's): a withdrawal takes the
+    /// Reads the enrollment and returns <see cref="ObservationErrors.ParticipantWithdrawn"/> or
+    /// <see cref="ObservationErrors.ParticipantScreenFailed"/>, with its explanation, when the participant is withdrawn
+    /// or failed screening; null when capture may go on. Call it after sharing the scope locks that cover the write
+    /// (<see cref="IKernelUnitOfWork.ShareScopesAsync"/>, which includes the enrollment's): a status transition takes the
     /// enrollment's scope lock exclusively, so it either commits before this read and is seen, or waits for the capture.
     /// </summary>
     public static async Task<KernelError?> RefusalAsync(
         IKernelUnitOfWork work, EnrollmentId enrollmentId, string commandType, CancellationToken cancellationToken)
     {
-        if (await work.ReadAsync<Enrollment>(enrollmentId, cancellationToken).ConfigureAwait(false) is not { } enrollment
-            || enrollment.Status != EnrollmentStatus.Withdrawn)
+        if (await work.ReadAsync<Enrollment>(enrollmentId, cancellationToken).ConfigureAwait(false) is not { } enrollment)
         {
             return null;
         }
 
-        var evidence = NodeRef.For(enrollment.Id, enrollment.VersionIndex);
-        var condition = EvaluatedCondition.Unsatisfied(
-            NotWithdrawn,
-            $"The participant takes part in the study; enrollment {enrollment.Id} was withdrawn at {enrollment.StatusSince:O}.",
-            evidence);
-        var reason = ObservationErrors.ParticipantWithdrawn.Message;
-        return ObservationErrors.ParticipantWithdrawn with
+        if (enrollment.Status == EnrollmentStatus.Withdrawn)
         {
-            Explanation = new Explanation(
-                evidence,
-                $"{commandType} is not permitted.",
-                ExplanationProducer,
-                [new ExplanationStep(reason, [evidence])],
-                [condition],
-                [new NextAction("Correct a value captured before the withdrawal, or capture data for an enrollment that is not withdrawn.")]),
-        };
+            var evidence = NodeRef.For(enrollment.Id, enrollment.VersionIndex);
+            var condition = EvaluatedCondition.Unsatisfied(
+                NotWithdrawn,
+                $"The participant takes part in the study; enrollment {enrollment.Id} was withdrawn at {enrollment.StatusSince:O}.",
+                evidence);
+            var reason = ObservationErrors.ParticipantWithdrawn.Message;
+            return ObservationErrors.ParticipantWithdrawn with
+            {
+                Explanation = new Explanation(
+                    evidence,
+                    $"{commandType} is not permitted.",
+                    ExplanationProducer,
+                    [new ExplanationStep(reason, [evidence])],
+                    [condition],
+                    [new NextAction("Correct a value captured before the withdrawal, or capture data for an enrollment that is not withdrawn.")]),
+            };
+        }
+
+        if (enrollment.Status == EnrollmentStatus.ScreenFailed)
+        {
+            var evidence = NodeRef.For(enrollment.Id, enrollment.VersionIndex);
+            var condition = EvaluatedCondition.Unsatisfied(
+                NotScreenFailed,
+                $"The participant is eligible to continue screening or enrollment; enrollment {enrollment.Id} failed screening at {enrollment.StatusSince:O}.",
+                evidence);
+            var reason = ObservationErrors.ParticipantScreenFailed.Message;
+            return ObservationErrors.ParticipantScreenFailed with
+            {
+                Explanation = new Explanation(
+                    evidence,
+                    $"{commandType} is not permitted.",
+                    ExplanationProducer,
+                    [new ExplanationStep(reason, [evidence])],
+                    [condition],
+                    [new NextAction("Correct a value captured during screening, or capture data for an active enrollment.")]),
+            };
+        }
+
+        return null;
     }
 }

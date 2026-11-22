@@ -216,10 +216,33 @@ public class SubjectApplicationServiceCreateTests
             string subjectCode,
             DateTimeOffset screenedAt,
             string changeReason,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            string? fallbackTenantId = null,
+            string? fallbackActorId = null)
         {
             Calls.Add((participantId, studyCode, siteCode, subjectCode));
             return Task.FromResult(NextResult);
         }
+
+        public Task<Cadence.Core.Domain.Result<KernelEnrollmentSyncResult>> SynchronizeStatusChangeAsync(
+            string studyCode,
+            string subjectCode,
+            string targetStatus,
+            DateTimeOffset effectiveAt,
+            string changeReason,
+            CancellationToken cancellationToken,
+            string? idempotencyToken = null) =>
+            Task.FromResult(Cadence.Core.Domain.Result<KernelEnrollmentSyncResult>.Success(
+                new KernelEnrollmentSyncResult(Guid.NewGuid(), targetStatus, null)));
+
+        public Task<Cadence.Core.Domain.Result<KernelWithdrawalSyncResult>> SynchronizeWithdrawalAsync(
+            string studyCode,
+            string subjectCode,
+            string withdrawalKind,
+            DateTimeOffset effectiveAt,
+            string changeReason,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(Cadence.Core.Domain.Result<KernelWithdrawalSyncResult>.Success(
+                new KernelWithdrawalSyncResult(Guid.NewGuid(), Guid.NewGuid(), "Withdrawn", withdrawalKind)));
     }
 }

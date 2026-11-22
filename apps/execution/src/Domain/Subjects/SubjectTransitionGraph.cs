@@ -14,7 +14,7 @@ public static class SubjectTransitionGraph
         new Dictionary<SubjectState, IReadOnlySet<SubjectState>>
         {
             [SubjectState.Screening] = new HashSet<SubjectState> { SubjectState.ScreenFailed, SubjectState.Enrolled, SubjectState.Withdrawn, SubjectState.ReconsentRequired },
-            [SubjectState.Enrolled] = new HashSet<SubjectState> { SubjectState.Randomized, SubjectState.Withdrawn, SubjectState.ReconsentRequired },
+            [SubjectState.Enrolled] = new HashSet<SubjectState> { SubjectState.Randomized, SubjectState.Active, SubjectState.Withdrawn, SubjectState.ReconsentRequired },
             [SubjectState.Randomized] = new HashSet<SubjectState> { SubjectState.Active, SubjectState.Withdrawn, SubjectState.Unblinded, SubjectState.ReconsentRequired },
             [SubjectState.Active] = new HashSet<SubjectState> { SubjectState.Completed, SubjectState.Withdrawn, SubjectState.Unblinded, SubjectState.ReconsentRequired },
             [SubjectState.Unblinded] = new HashSet<SubjectState> { SubjectState.Withdrawn, SubjectState.Completed, SubjectState.ReconsentRequired },

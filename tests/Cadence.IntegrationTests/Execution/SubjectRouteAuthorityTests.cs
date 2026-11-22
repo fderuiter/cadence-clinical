@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Randomization;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
@@ -91,12 +92,44 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Screening);
-        using var client = factory.CreateSignedClient(Caller("crc", "crc"));
+        var caller = Caller("crc", "crc");
+        using var client = factory.CreateSignedClient(caller);
+        using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/execution/subjects/{subject}/state")
+        {
+            Content = JsonContent.Create(new { status = "WITHDRAWN", withdrawal_kind = "WithdrawalBySubject" }),
+        };
+        request.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(caller.UserId, IWithdrawalSignatureVerifier.Action, IWithdrawalSignatureVerifier.SemanticAction, caller.Roles));
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "WITHDRAWN" }, Ct);
+        var state = await client.SendAsync(request, Ct);
 
         state.StatusCode.Should().Be(HttpStatusCode.OK, await state.Content.ReadAsStringAsync(Ct));
-        (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Withdrawn);
+        var stored = await ReadSubjectAsync(subject);
+        stored.Status.Should().Be(SubjectState.Withdrawn);
+        stored.WithdrawalReason.Should().Be(Reason);
+        stored.WithdrawnAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Withdrawal_WithoutWithdrawalKindOrStepUpToken_IsRefusedAndLeavesParticipantUnchanged()
+    {
+        factory.SkipIfUnavailable();
+        string subject = await SeedAsync(SubjectState.Screening);
+        var caller = Caller("crc-wd-guard", "crc");
+        using var client = factory.CreateSignedClient(caller);
+
+        var missingKind = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "WITHDRAWN" }, Ct);
+        missingKind.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await missingKind.Content.ReadAsStringAsync(Ct)).Should().Contain("INVALID_WITHDRAWAL_KIND");
+
+        var missingSig = await client.PatchAsJsonAsync(
+            $"/api/v1/execution/subjects/{subject}/state",
+            new { status = "WITHDRAWN", withdrawal_kind = "WithdrawalBySubject" },
+            Ct);
+        missingSig.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Screening);
     }
 
     /// <summary>

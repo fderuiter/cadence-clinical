@@ -615,6 +615,197 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         System.Text.Encoding.UTF8.GetString(pharmCasebookBytes).Should().Contain("Active Drug 100mg");
     }
 
+    /// <summary>
+    /// Exercises <c>GET /api/v1/kernel/enrollments/by-subject</c> (including <c>K-AUTH-4</c> site masking),
+    /// <c>POST /api/v1/kernel/enrollments/status</c> (allocating canonical <c>EnrollmentNumber</c> on <c>Enrolled</c> and
+    /// surfacing it in JSON, ODM XML, and HTML casebooks), and <c>POST /api/v1/kernel/enrollments/withdraw</c> (enforcing
+    /// single-use <c>X-Sig-Token</c> step-up signatures and writing zero orphan <c>Attestation</c> rows when the caller
+    /// lacks <c>participant.withdraw</c>).
+    /// </summary>
+    [Fact(DisplayName = "HostExecutionEndpoints_TransitionStatus_WithdrawWithStepUpSignature_MaskBySubject_AndExportEnrollmentNumber")]
+    public async Task HostExecutionEndpointsTransitionStatusWithdrawWithStepUpSignatureMaskBySubjectAndExportEnrollmentNumber()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, code, study, studyCode, _, _, enrollmentA, enrollmentB, _, _) = await SeedStudyAsync(ct);
+        var enrollmentARef = NodeRef.For(enrollmentA).ToString();
+        var enrollmentBRef = NodeRef.For(enrollmentB).ToString();
+
+        using var dm = Client(code, DataManager);
+        using var siteACrc = Client(code, SiteACoordinator);
+        using var stranger = Client(code, Stranger);
+
+        // 1. GET /api/v1/kernel/enrollments/by-subject enforces K-AUTH-4 visibility and returns null enrollment_number in Screening.
+        using (var screeningRes = await siteACrc.GetAsync(
+            new Uri($"/api/v1/kernel/enrollments/by-subject?study_code={Uri.EscapeDataString(studyCode)}&subject_code=SUBJ-A", UriKind.Relative), ct))
+        {
+            string body = await screeningRes.Content.ReadAsStringAsync(ct);
+            screeningRes.StatusCode.Should().Be(HttpStatusCode.OK, body);
+            using var doc = JsonDocument.Parse(body);
+            doc.RootElement.GetProperty("enrollment_id").GetGuid().Should().Be(enrollmentA.Value);
+            doc.RootElement.GetProperty("enrollment_status").GetString().Should().Be("Screening");
+            doc.RootElement.GetProperty("enrollment_number").ValueKind.Should().Be(JsonValueKind.Null);
+        }
+
+        // Site A coordinator querying Site B's participant is refused with 403 NotVisible without leaking SUBJ-B's id or status.
+        using (var maskedRes = await siteACrc.GetAsync(
+            new Uri($"/api/v1/kernel/enrollments/by-subject?study_code={Uri.EscapeDataString(studyCode)}&subject_code=SUBJ-B", UriKind.Relative), ct))
+        {
+            string body = await maskedRes.Content.ReadAsStringAsync(ct);
+            maskedRes.StatusCode.Should().Be(HttpStatusCode.Forbidden, body);
+            body.Should().NotContain("SUBJ-B").And.NotContain(enrollmentB.Value.ToString());
+        }
+
+        (await stranger.GetAsync(
+            new Uri($"/api/v1/kernel/enrollments/by-subject?study_code={Uri.EscapeDataString(studyCode)}&subject_code=SUBJ-A", UriKind.Relative), ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        // 2. POST /api/v1/kernel/enrollments/status requires enrollment.change_status, allocates EnrollmentNumber=1 on Enrolled, and moves Enrolled -> Active.
+        using (var forbiddenStatus = await siteACrc.SendAsync(BuildRequest(
+            HttpMethod.Post,
+            "enrollments/status",
+            "Attempted status change without grant",
+            token: null,
+            KernelProtocolScenario.Key(),
+            new { study_code = studyCode, subject_code = "SUBJ-A", to_status = "Enrolled", effective_at = Tick() }), ct))
+        {
+            forbiddenStatus.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            (await ProblemCodeAsync(forbiddenStatus, ct)).Should().Be(KernelErrors.AuthorizationDenied.Code);
+        }
+
+        await IssueAsync(tenant, DataManager, "enrollment.change_status", AuthorityScope.Study(study), ct);
+
+        var enrolledState = await SendAsync<KernelEnrollmentStateResponse>(
+            dm,
+            BuildRequest(
+                HttpMethod.Post,
+                "enrollments/status",
+                "Eligible and consented",
+                token: null,
+                KernelProtocolScenario.Key(),
+                new { study_code = studyCode, subject_code = "SUBJ-A", to_status = "Enrolled", effective_at = Tick() }),
+            HttpStatusCode.OK,
+            ct);
+        enrolledState.EnrollmentStatus.Should().Be("Enrolled");
+        enrolledState.EnrollmentNumber.Should().Be(1);
+
+        // Casebook exports include EnrollmentNumber=1 for enrolled SUBJ-A and null for screening SUBJ-B.
+        var (enrolledCasebookBytes, _) = await GetBytesWithShaHeaderAsync(dm, $"enrollments/{enrollmentARef}/casebook?format=json", "application/json", ct);
+        var enrolledCasebook = JsonSerializer.Deserialize<KernelCasebookResponse>(enrolledCasebookBytes, Json)!;
+        enrolledCasebook.EnrollmentNumber.Should().Be(1);
+
+        var (enrolledHtmlBytes, _) = await GetBytesWithShaHeaderAsync(dm, $"enrollments/{enrollmentARef}/casebook?format=html", "text/html", ct);
+        System.Text.Encoding.UTF8.GetString(enrolledHtmlBytes).Should().Contain("<strong>Enrollment #:</strong> 1");
+
+        var (enrolledOdmBytes, _) = await GetBytesWithShaHeaderAsync(dm, $"enrollments/{enrollmentARef}/casebook?format=odm_xml", "application/xml", ct);
+        System.Text.Encoding.UTF8.GetString(enrolledOdmBytes).Should().Contain("EnrollmentNumber=\"1\"");
+
+        var (screeningCasebookBytes, _) = await GetBytesWithShaHeaderAsync(dm, $"enrollments/{enrollmentBRef}/casebook?format=json", "application/json", ct);
+        var screeningCasebook = JsonSerializer.Deserialize<KernelCasebookResponse>(screeningCasebookBytes, Json)!;
+        screeningCasebook.EnrollmentNumber.Should().BeNull();
+
+        var activeState = await SendAsync<KernelEnrollmentStateResponse>(
+            dm,
+            BuildRequest(
+                HttpMethod.Post,
+                "enrollments/status",
+                "Single-arm treatment initiated",
+                token: null,
+                KernelProtocolScenario.Key(),
+                new { study_code = studyCode, subject_code = "SUBJ-A", to_status = "Active", effective_at = Tick() }),
+            HttpStatusCode.OK,
+            ct);
+        activeState.EnrollmentStatus.Should().Be("Active");
+        activeState.EnrollmentNumber.Should().Be(1);
+
+        // 3. POST /api/v1/kernel/enrollments/withdraw enforces step-up X-Sig-Token and writes zero orphan Attestations when unauthorized.
+        var withdrawBody = new
+        {
+            study_code = studyCode,
+            subject_code = "SUBJ-A",
+            withdrawal_kind = "WithdrawalBySubject",
+            effective_at = Tick(),
+        };
+
+        using (var noSigToken = await dm.SendAsync(BuildRequest(
+            HttpMethod.Post, "enrollments/withdraw", "Participant withdrew consent", token: null, KernelProtocolScenario.Key(), withdrawBody), ct))
+        {
+            noSigToken.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await noSigToken.Content.ReadAsStringAsync(ct)).Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+        }
+
+        // DataManager has attestation.sign, but lacks participant.withdraw: must return 403 and leave zero orphan Attestations!
+        int attestationsBefore;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            attestationsBefore = await db.Attestations.CountAsync(ct);
+        }
+
+        var forbiddenWithdrawToken = TestSecurityContext.CreateSigToken(
+            DataManager,
+            KernelExecutionEndpoints.WithdrawAction,
+            KernelExecutionEndpoints.WithdrawSemanticAction);
+        using (var forbiddenWithdraw = await dm.SendAsync(BuildRequest(
+            HttpMethod.Post,
+            "enrollments/withdraw",
+            "Participant withdrew consent",
+            forbiddenWithdrawToken,
+            KernelProtocolScenario.Key(),
+            withdrawBody), ct))
+        {
+            forbiddenWithdraw.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            (await ProblemCodeAsync(forbiddenWithdraw, ct)).Should().Be(KernelErrors.AuthorizationDenied.Code);
+        }
+
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            (await db.Attestations.CountAsync(ct)).Should().Be(attestationsBefore, "a refused withdrawal must not leave an orphan Attestation");
+        }
+
+        // Grant participant.withdraw and complete signed withdrawal; verify Attestation(Withdrawn) and single-use token replay failure.
+        await IssueAsync(tenant, DataManager, "participant.withdraw", AuthorityScope.Study(study), ct);
+        var validWithdrawToken = TestSecurityContext.CreateSigToken(
+            DataManager,
+            KernelExecutionEndpoints.WithdrawAction,
+            KernelExecutionEndpoints.WithdrawSemanticAction);
+        var withdrawnState = await SendAsync<KernelEnrollmentStateResponse>(
+            dm,
+            BuildRequest(
+                HttpMethod.Post,
+                "enrollments/withdraw",
+                "Participant withdrew consent",
+                validWithdrawToken,
+                KernelProtocolScenario.Key(),
+                new
+                {
+                    study_code = studyCode,
+                    subject_code = "SUBJ-A",
+                    withdrawal_kind = "WithdrawalBySubject",
+                    effective_at = Tick(),
+                }),
+            HttpStatusCode.OK,
+            ct);
+        withdrawnState.EnrollmentStatus.Should().Be("Withdrawn");
+        withdrawnState.EnrollmentNumber.Should().Be(1);
+
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var withdrawalAttestations = await db.Attestations.AsNoTracking()
+                .Where(a => a.Meaning == Cadence.Kernel.Trust.AttestationMeaning.Withdrawn)
+                .ToListAsync(ct);
+            withdrawalAttestations.Should().ContainSingle(a => a.ActorId == DataManager && a.TargetId == enrollmentA.Value);
+        }
+
+        using var replayWithdraw = await dm.SendAsync(BuildRequest(
+            HttpMethod.Post,
+            "enrollments/withdraw",
+            "Replay withdrawal attempt",
+            validWithdrawToken,
+            KernelProtocolScenario.Key(),
+            withdrawBody), ct);
+        replayWithdraw.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     private static string ApplyToken(string signer) =>
         TestSecurityContext.CreateSigToken(signer, KernelLockEndpoints.ApplyLockAction, KernelLockEndpoints.ApplyLockSemanticAction);
 

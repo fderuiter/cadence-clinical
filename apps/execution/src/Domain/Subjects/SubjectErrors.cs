@@ -59,4 +59,12 @@ public static class SubjectErrors
     public static DomainError SignedConsentDateRequired() =>
         DomainError.Validation("ICF_SIGNED_DATE_REQUIRED",
             "icf_signed_date is required when icf_signed is true and no signed date is on file for this consent version.");
+
+    /// <summary>Transitioning a participant to <c>WITHDRAWN</c> requires a valid canonical <c>withdrawal_kind</c>.</summary>
+    public static DomainError InvalidWithdrawalKind(string? supplied) =>
+        DomainError.Validation(
+            "INVALID_WITHDRAWAL_KIND",
+            string.IsNullOrWhiteSpace(supplied)
+                ? "withdrawal_kind is required when transitioning a subject to WITHDRAWN."
+                : $"'{supplied}' is not a valid withdrawal_kind.");
 }

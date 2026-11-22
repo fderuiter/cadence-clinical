@@ -1,8 +1,11 @@
+using System;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Security.Authentication;
 
 using MassTransit;
 
@@ -76,7 +79,8 @@ public sealed class EConsentCompletedConsumer(
     IConsentRepository consents,
     IAuditLogWriter auditLog,
     IAuditActorScope actorScope,
-    ILogger<EConsentCompletedConsumer>? logger = null)
+    ILogger<EConsentCompletedConsumer>? logger = null,
+    IKernelEnrollmentSynchronizer? kernelEnrollmentSynchronizer = null)
     : IConsumer<EConsentCompletedEvent>
 {
     public async Task Consume(ConsumeContext<EConsentCompletedEvent> context)
@@ -137,6 +141,27 @@ public sealed class EConsentCompletedConsumer(
                 SiteCode? siteCode = msg.SiteId is { Length: > 0 } site ? new SiteCode(site) : null;
                 var created = ClinicalSubject.Create(subjectCode, studyCode, siteCode, nextIndex,
                     encryptedDemographics: null, stratFactors: null);
+
+                if (kernelEnrollmentSynchronizer is not null && siteCode is { } assignedSite)
+                {
+                    string? tenantId = context.Headers.Get<string>(GatewayHeaders.TenantId);
+                    var syncResult = await kernelEnrollmentSynchronizer.SynchronizeScreeningEnrollmentAsync(
+                        created.Id.Value,
+                        studyCode.Value,
+                        assignedSite.Value,
+                        subjectCode.Value,
+                        signedAt,
+                        account.ChangeReason,
+                        token,
+                        fallbackTenantId: tenantId,
+                        fallbackActorId: "svc:execution-forms").ConfigureAwait(false);
+                    if (syncResult.IsFailure)
+                    {
+                        throw new InvalidOperationException(
+                            $"Failed to synchronize kernel screening enrollment for subject '{msg.SubjectId}' in study '{msg.StudyId}': [{syncResult.Error!.Code}] {syncResult.Error.Description}");
+                    }
+                }
+
                 created.ReasonForChange = account.ChangeReason;
                 await subjects.AddAsync(created, token).ConfigureAwait(false);
                 await auditLog.WriteAsync(nameof(ClinicalSubject), created.Id.ToString(), "INSERT",
