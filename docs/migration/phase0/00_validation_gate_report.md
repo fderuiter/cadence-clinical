@@ -9,13 +9,13 @@
 
 ## Audit Summary Scorecard
 
-| Quality Gate | Status | Critical Findings / Metrics |
-|---|---|---|
-| Gate 1: Artifact Completeness | **PASS** | All 5 required files present, executable bit set on `04_scaffold_solution.sh`, zero placeholder tokens (`TODO`/`TBD`/`<replace_me>`/etc.) found in any of the 5 documents |
-| Gate 2: Zero-Orphan Math Test | **PASS** (bucket-level) / **caveat** | 1,675/1,675 `.py` files independently re-enumerated and reconciled to a bounded context or cross-cutting bucket with an exact, reproducible sum match. The *literal* per-file `comm -23` this prompt specifies reports 1,652 "orphans" because the source documents map coverage at directory-bucket granularity, not per-file — see §2 for why that is not a real gap |
-| Gate 3: Dynamic Surface & Secrets | **FAIL (partial)** | Dynamic-loading (`importlib`) and background/concurrency surfaces are thoroughly documented with real mitigation notes. Environment-variable parity is **not**: only 93/180 (52%) of environment variable names actually read by the Python codebase appear anywhere in `01_system_topology.md`, including 4 credential/key-bearing variables and 10 regulatory AS2-gateway endpoint/certificate variables that are undocumented outright |
-| Gate 4: Topological DAG & Slice 01 | **FAIL** | Static Python-import graph is acyclic (0 cross-app imports in production code — confirmed). But at the **runtime dependency** level (the level that actually determines deployability), Slice 01 (`Cadence.Apps.Execution`) has a confirmed **bidirectional, same-tier** HTTP dependency cycle with Slice 02 (`Cadence.Apps.Designer`). Slice 01 is not a true leaf; the migration plan documents this (MIG-03) but does not resolve it |
-| Gate 5: .NET 10 Build & Standards | **FAIL** | `dotnet build Cadence.sln --configuration Release` fails with **13 errors, 0 warnings** — every one of the 10 restorable projects fails to restore. Root cause: `Directory.Packages.props` pins exact preview package versions (`10.0.0-preview.1.25120.13`) that no longer exist on nuget.org, plus one package (`ArchUnitNET.xUnit 0.11.1`) that does not exist on nuget.org at all, plus a known high-severity vulnerability advisory on a transitive package, all promoted to build errors by this repo's own `TreatWarningsAsErrors=true` policy. `Directory.Build.props` and Central Package Management configuration are themselves correct |
+| Quality Gate                       | Status                               | Critical Findings / Metrics                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate 1: Artifact Completeness      | **PASS**                             | All 5 required files present, executable bit set on `04_scaffold_solution.sh`, zero placeholder tokens (`TODO`/`TBD`/`<replace_me>`/etc.) found in any of the 5 documents                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Gate 2: Zero-Orphan Math Test      | **PASS** (bucket-level) / **caveat** | 1,675/1,675 `.py` files independently re-enumerated and reconciled to a bounded context or cross-cutting bucket with an exact, reproducible sum match. The _literal_ per-file `comm -23` this prompt specifies reports 1,652 "orphans" because the source documents map coverage at directory-bucket granularity, not per-file — see §2 for why that is not a real gap                                                                                                                                                                                                                                                                             |
+| Gate 3: Dynamic Surface & Secrets  | **FAIL (partial)**                   | Dynamic-loading (`importlib`) and background/concurrency surfaces are thoroughly documented with real mitigation notes. Environment-variable parity is **not**: only 93/180 (52%) of environment variable names actually read by the Python codebase appear anywhere in `01_system_topology.md`, including 4 credential/key-bearing variables and 10 regulatory AS2-gateway endpoint/certificate variables that are undocumented outright                                                                                                                                                                                                          |
+| Gate 4: Topological DAG & Slice 01 | **FAIL**                             | Static Python-import graph is acyclic (0 cross-app imports in production code — confirmed). But at the **runtime dependency** level (the level that actually determines deployability), Slice 01 (`Cadence.Apps.Execution`) has a confirmed **bidirectional, same-tier** HTTP dependency cycle with Slice 02 (`Cadence.Apps.Designer`). Slice 01 is not a true leaf; the migration plan documents this (MIG-03) but does not resolve it                                                                                                                                                                                                            |
+| Gate 5: .NET 10 Build & Standards  | **FAIL**                             | `dotnet build Cadence.sln --configuration Release` fails with **13 errors, 0 warnings** — every one of the 10 restorable projects fails to restore. Root cause: `Directory.Packages.props` pins exact preview package versions (`10.0.0-preview.1.25120.13`) that no longer exist on nuget.org, plus one package (`ArchUnitNET.xUnit 0.11.1`) that does not exist on nuget.org at all, plus a known high-severity vulnerability advisory on a transitive package, all promoted to build errors by this repo's own `TreatWarningsAsErrors=true` policy. `Directory.Build.props` and Central Package Management configuration are themselves correct |
 
 **Overall verdict: PHASE 1 BLOCKED.** See §6 for the full blocker list and exact remediation.
 
@@ -70,12 +70,14 @@ Taken at face value, this looks like a catastrophic 98.6% coverage failure. **It
 $ awk -F/ '{ if ($1=="apps" || $1=="packages") print $1"/"$2; else print $1 }' \
     all_python_files.txt | sort | uniq -c
 ```
+
 Reproduced independently in this session — **identical** to the table in `05_orphan_audit_gate.md` §2, bucket-for-bucket and count-for-count. Sum = 1,675, matching the raw `find` count exactly.
 
 ```
 $ comm -23 <(reproduced bucket list) <(buckets named in §2/§3 of 05_orphan_audit_gate.md)
 (empty)
 ```
+
 Every one of the ~38 buckets that exists on disk is named and assigned to a context or cross-cutting concern in the document. No bucket is missing.
 
 **Conclusion:** at the granularity the source documents actually use and disclose, coverage is exact and mechanically verified — 1,675/1,675, 0 orphaned buckets. **Gate 2: PASS**, with the above caveat recorded so a future reviewer does not misread the literal-script result as a real gap.
@@ -116,9 +118,9 @@ Filtering out variables whose only usages are in `scripts/` (explicitly out-of-m
 - **Operational tuning knobs with GxP process implications:** `OUTBOX_ATTEMPT_CAP`, `OUTBOX_BATCH_SIZE`, `OUTBOX_MAX_CONCURRENCY`, `OUTBOX_POLL_INTERVAL_SECONDS`, `SEALER_INTERVAL_SECONDS`, `ETMF_SEALER_INTERVAL_SECONDS`, `ETMF_STRICT_ARCHIVAL`, `ECONSENT_ARCHIVAL_ATTEMPT_CAP`, `ETMF_EXPIRATION_SCANNER_INTERVAL_SECONDS`, `ETMF_EXPIRATION_WARNING_WINDOWS`, `QUERY_ESCALATION_INTERVAL_SECONDS`, `QUERY_ESCALATION_DIGEST_SECONDS`, `TICKETS_ESCALATION_INTERVAL_SECONDS`, `NOTIFICATION_MAX_ATTEMPTS`/`NOTIFICATION_RETRY_BASE_DELAY`/`NOTIFICATION_RETRY_MAX_DELAY`
 - **AI-tier model routing:** `AI_TIER_1_MODEL`, `AI_TIER_2_MODEL`, `AI_TIER_3_MODEL`, `AI_TIER_1_EMBED_MODEL` (`apps/ai_gateway`)
 - **Storage/cloud config:** `AWS_REGION`, `STORAGE_REGION`, `STORAGE_SSE_ALGORITHM`, `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_DRIVE_FOLDER_ID`, `GOOGLE_DRIVE_SERVICE_ACCOUNT_PATH`
-- **Other API-surface config:** `ALLOWED_ORIGINS`, `RATE_LIMIT_MAX_REQUESTS`, `RATE_LIMIT_WINDOW`, `WEBHOOK_SIGNATURE_HEADER`, `SMTP_PORT`/`SMTP_USERNAME`/`SMTP_SENDER`/`SMTP_USE_TLS`/`SMTP_USE_SSL` (this last group is *partially* addressed — the doc documents `SMTP_HOST`/`PASSWORD` individually but collapses the rest into a `SMTP_HOST/PORT/USERNAME/...` shorthand that a strict per-name check does not credit), `NCI_EVS_TIMEOUT_CONNECT`/`_POOL`/`_READ`/`_WRITE`, `CODING_CACHE_TTL`, `LAB_RANGE_CACHE_TTL`, `STUDY_REGISTRY_URL`, `SAFETY_DB_INGESTION_ENDPOINT`, `SAFETY_DB_TRANSMISSION_ENDPOINT`, `ETMF_FORWARDING_ENABLED`, `ETMF_NOTIFICATIONS_CLIENT_TIMEOUT`, `ANOMALY_WORKER_POLL_INTERVAL_SECONDS`, `ALLOW_MOCK_SIGNATURES`
+- **Other API-surface config:** `ALLOWED_ORIGINS`, `RATE_LIMIT_MAX_REQUESTS`, `RATE_LIMIT_WINDOW`, `WEBHOOK_SIGNATURE_HEADER`, `SMTP_PORT`/`SMTP_USERNAME`/`SMTP_SENDER`/`SMTP_USE_TLS`/`SMTP_USE_SSL` (this last group is _partially_ addressed — the doc documents `SMTP_HOST`/`PASSWORD` individually but collapses the rest into a `SMTP_HOST/PORT/USERNAME/...` shorthand that a strict per-name check does not credit), `NCI_EVS_TIMEOUT_CONNECT`/`_POOL`/`_READ`/`_WRITE`, `CODING_CACHE_TTL`, `LAB_RANGE_CACHE_TTL`, `STUDY_REGISTRY_URL`, `SAFETY_DB_INGESTION_ENDPOINT`, `SAFETY_DB_TRANSMISSION_ENDPOINT`, `ETMF_FORWARDING_ENABLED`, `ETMF_NOTIFICATIONS_CLIENT_TIMEOUT`, `ANOMALY_WORKER_POLL_INTERVAL_SECONDS`, `ALLOW_MOCK_SIGNATURES`
 
-For context: `01_system_topology.md` §3.5.6 does separately catalog "37 live variables absent from `.env.example`" — a real and useful piece of forensic work — but that list is a *different* set from the 65 above (checked: all 37 already appear as documented text in the doc itself). The 65 above are variables missing from the environment-variable dictionary altogether, not just from `.env.example`.
+For context: `01_system_topology.md` §3.5.6 does separately catalog "37 live variables absent from `.env.example`" — a real and useful piece of forensic work — but that list is a _different_ set from the 65 above (checked: all 37 already appear as documented text in the doc itself). The 65 above are variables missing from the environment-variable dictionary altogether, not just from `.env.example`.
 
 **Environment variable parity sub-check: FAIL.** ~52% documented, with security-sensitive and regulatory-integration variables among the gaps.
 
@@ -145,19 +147,21 @@ Cross-referenced against `01_system_topology.md` §2.2 (asynchronous/background 
 $ for each apps/<context>/: rg "^(from|import) apps\.<other-context>" --type py -g '!*/tests/*'
 (zero matches, all contexts)
 ```
-Confirmed independently: **zero cross-app Python `import` statements exist in production code anywhere in the repository.** (32 cross-app imports were found in total, but every single one is confined to a `tests/` directory — test fixtures importing another service's DB models/app object for integration test setup, not production coupling.) This matches `01_system_topology.md` and `05_orphan_audit_gate.md`'s own claim and is the correct basis for treating the *static* dependency graph as acyclic.
+
+Confirmed independently: **zero cross-app Python `import` statements exist in production code anywhere in the repository.** (32 cross-app imports were found in total, but every single one is confined to a `tests/` directory — test fixtures importing another service's DB models/app object for integration test setup, not production coupling.) This matches `01_system_topology.md` and `05_orphan_audit_gate.md`'s own claim and is the correct basis for treating the _static_ dependency graph as acyclic.
 
 ### 4b. The runtime dependency graph is not acyclic — and this is where the real risk is
 
 A DAG built only from `import` statements is the wrong instrument for this codebase: every cross-service coupling in this system is a runtime HTTP call (`os.getenv("X_URL")` + `httpx`), not a Python import, precisely because these are independently deployable FastAPI services today. `02_bounded_contexts.md` §4.2 already identifies this and finds **three bidirectional service pairs**, reproduced and confirmed in this session by direct inspection:
 
-| Pair | Forward edge | Reverse edge | Tier relationship | Risk |
-|---|---|---|---|---|
-| Execution ↔ CTMS | `apps/execution/greenlight_gating.py:77` (`CTMS_SERVICE_URL`) | `apps/ctms/application/doa_service.py:15` etc. (`EXECUTION_URL`) | Different tiers (2 vs 3) | Lower — later tier can build against a frozen contract |
-| Execution ↔ Etmf | `apps/execution/workers/outbox_worker.py:132` (`ETMF_URL`) | `apps/etmf/adapters/lock_client.py:60` (`EXECUTION_URL`) | Different tiers (2 vs 3) | Lower — same reasoning |
-| **Execution ↔ Designer** | `apps/execution/designer_client.py:31` (`os.getenv("DESIGNER_URL")`), consumed by `apps/execution/eligibility_service.py` | `apps/designer/presentation/routers/designer_routes.py:2618` (`os.getenv("EXECUTION_SERVICE_URL")`) | **Both Tier 1/2 — same tier** | **Genuine cycle** |
+| Pair                     | Forward edge                                                                                                              | Reverse edge                                                                                        | Tier relationship             | Risk                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------ |
+| Execution ↔ CTMS         | `apps/execution/greenlight_gating.py:77` (`CTMS_SERVICE_URL`)                                                             | `apps/ctms/application/doa_service.py:15` etc. (`EXECUTION_URL`)                                    | Different tiers (2 vs 3)      | Lower — later tier can build against a frozen contract |
+| Execution ↔ Etmf         | `apps/execution/workers/outbox_worker.py:132` (`ETMF_URL`)                                                                | `apps/etmf/adapters/lock_client.py:60` (`EXECUTION_URL`)                                            | Different tiers (2 vs 3)      | Lower — same reasoning                                 |
+| **Execution ↔ Designer** | `apps/execution/designer_client.py:31` (`os.getenv("DESIGNER_URL")`), consumed by `apps/execution/eligibility_service.py` | `apps/designer/presentation/routers/designer_routes.py:2618` (`os.getenv("EXECUTION_SERVICE_URL")`) | **Both Tier 1/2 — same tier** | **Genuine cycle**                                      |
 
 Confirmed directly in this session:
+
 ```
 $ rg -n 'os.getenv("DESIGNER_URL"' apps/execution/designer_client.py
 31:    self.base_url = (base_url or os.getenv("DESIGNER_URL") or "http://localhost:8001").rstrip("/")
@@ -195,6 +199,7 @@ Build FAILED.
 All 10 restorable `.csproj` files in the solution fail to restore. Root causes, all confirmed by direct inspection of `Directory.Packages.props`:
 
 1. **NU1603 (Warning-as-error) — stale exact preview pins, 4 packages:**
+
    ```
    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0-preview.1.25120.13" />
    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.0-preview.1.25120.13" />
@@ -202,12 +207,15 @@ All 10 restorable `.csproj` files in the solution fail to restore. Root causes, 
    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.0-preview.1.25120.13" />
    <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="10.0.0-preview.1.25120.13" />
    ```
+
    None of these exact builds exist on nuget.org any longer (`preview.2.25163.x`/`preview.2.25164.x` builds are what's actually live). NuGet resolves the nearest available version and, under this repo's `TreatWarningsAsErrors=true`, that resolution-mismatch warning becomes a hard error — 6 of the 13 errors are this.
 
 2. **NU1101 — nonexistent package:**
+
    ```
    <PackageVersion Include="ArchUnitNET.xUnit" Version="0.11.1" />
    ```
+
    `tests/Cadence.ArchitectureTests.csproj : error NU1101: Unable to find package ArchUnitNET.xUnit. No packages exist with this id in source(s): nuget.org` — this package/version does not exist on nuget.org under this exact ID at all (the correct package id at the time of this audit is `ArchUnitNET.xUnitV3` or `ArchUnitNET` + a separate xUnit adapter, depending on target xUnit version — needs a maintainer decision, not a version bump).
 
 3. **NU1903 (Warning-as-error) — known vulnerability:**
@@ -229,6 +237,7 @@ $ cat Directory.Build.props
 <TreatWarningsAsErrors>true</TreatWarningsAsErrors> ✓
 <AnalysisLevel>latest-recommended</AnalysisLevel>   ✓
 ```
+
 All five required global rules are present and correctly set.
 
 ### 5c. Central Package Management — PASS
@@ -241,7 +250,7 @@ $ grep -rn 'PackageReference.*Version=' --include="*.csproj" .
 (no matches — zero hardcoded versions in any .csproj)                   ✓
 ```
 
-**Gate 5 verdict: FAIL**, but narrowly and mechanically — the *standards enforcement machinery* (TFM, nullable, warnings-as-errors, analyzer level, CPM) is all correctly wired. The failure is entirely in the specific package version pins, which is a small, well-scoped fix (see §6).
+**Gate 5 verdict: FAIL**, but narrowly and mechanically — the _standards enforcement machinery_ (TFM, nullable, warnings-as-errors, analyzer level, CPM) is all correctly wired. The failure is entirely in the specific package version pins, which is a small, well-scoped fix (see §6).
 
 ---
 
@@ -265,6 +274,7 @@ $ grep -rn 'PackageReference.*Version=' --include="*.csproj" .
 **PHASE 1 BLOCKED.**
 
 Remaining blockers, in the order they should be closed:
+
 1. `Directory.Packages.props` package-version fixes + a clean `dotnet build` with 0 warnings/0 errors (Gate 5).
 2. An explicit, recorded MIG-03 sequencing decision for the Execution↔Designer same-tier cycle before Slice 01 work is staffed (Gate 4).
 3. Environment-variable dictionary backfill for the 65 undocumented in-scope variables, particularly the credential and regulatory-gateway ones (Gate 3).

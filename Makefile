@@ -41,8 +41,8 @@ dev: ## Start all local services and datastores via the .NET Aspire AppHost
 
 ##@ Code Quality
 
-fix: ## Auto-fix all C# code formatting, ADRs, and schemas
-	$(CADENCE_CLI) fix
+fix: ## Auto-fix C# & Prettier formatting, secrets baseline, doc/ADR indexes, and changed schemas/OpenAPI client types (pass ARGS="--full" or "--openapi" to force)
+	$(CADENCE_CLI) fix $(ARGS)
 
 lint-paths: ## Run the path-pattern boundary linter
 	$(CADENCE_CLI) validate-path-patterns

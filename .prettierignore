@@ -16,6 +16,10 @@ playwright-report/
 **/playwright-report*.xml
 test-results/
 **/test-results/
+coverage/
+**/coverage/
+TestResults/
+**/TestResults/
 pnpm-lock.yaml
 uv.lock
 
@@ -37,3 +41,10 @@ docs/DOCUMENTATION_INDEX.md
 
 # Keep CDASH type definition pristine to prevent ADR gating
 **/cdash.ts
+
+# Checksum-verified standards blocks/seeds and System.Text.Json golden test fixtures compared byte-for-byte by unit tests
+packages/kernel/src/Cadence.Standards/Blocks/*.json
+packages/kernel/src/Cadence.Standards/Seed/*.json
+tests/fixtures/soa/*.json
+tests/fixtures/usdm/*.json
+docs/migration/slices/**/fixtures/*.json
