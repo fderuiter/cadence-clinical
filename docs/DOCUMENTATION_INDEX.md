@@ -745,7 +745,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 ## Documentation site
 
 `pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (validating
-`rtm` on every run, plus `openapi`, `schema-doc` and `markdown` when `CADENCE_DOCS_SKIP_CHECKS` is unset), and
+`rtm`, `openapi`, `schema-doc` and `markdown` on every run), and
 `pnpm docs:stage-demos` stages the interactive staff (`/demo/`) and participant (`/subject-portal/`) demos into
 `docs/.vitepress/dist`. `docs/index.md` serves as the site's home page, sidebar navigation is synthesized from
 this index (`docs/.vitepress/sidebar.mjs`), and the root guides (`README.md`, `ARCHITECTURE.md`, `AGENTS.md`,

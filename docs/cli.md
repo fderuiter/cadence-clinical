@@ -234,10 +234,8 @@ Where it differs from CI:
   `Run Cadence quality sentinels` (the static security audit, secrets and DEID) are reported as _covered_ when
   `Run Cadence quality sentinels` passed; if that step failed, each runs on its own so the summary shows which gate
   failed. The Node install and UI build in later jobs are covered by earlier jobs.
-  The documentation build (`pnpm docs:build`) also runs the read-only `openapi`, `schema-doc`, `markdown` and `rtm`
-  checks; after `Run Cadence quality sentinels` passed it runs with `CADENCE_DOCS_SKIP_CHECKS=1`, which skips the
-  duplicate `openapi`, `schema-doc` and `markdown` gates while keeping `check rtm`, saving several minutes without
-  touching `docs/SDLC` or `docs/schema`.
+  The documentation build (`pnpm docs:build`) runs the read-only `openapi`, `schema-doc`, `markdown` and `rtm`
+  checks unconditionally on every build without touching `docs/SDLC` or `docs/schema`.
 - **The tests run once.** The .NET test step writes its TRX files to `TestResults/gxp`, and the compliance job's
   `Generate Compliance Reports` step builds the RTM and IQ/OQ/PQ report from them instead of running `gxp sync`, which
   would run every test again. It writes them to `TestResults/gxp/preview/` (to `docs/SDLC` only with
