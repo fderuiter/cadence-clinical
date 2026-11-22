@@ -2,14 +2,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createSSRApp, h } from "vue";
 import { renderToString } from "vue/server-renderer";
 import {
+  AiActionButton,
   AuditLogViewer,
   ClinicalDataTable,
   ClinicalDrawer,
+  ClinicalDropzone,
   ClinicalFieldLayout,
+  ClinicalIconButton,
   ClinicalModal,
+  ClinicalQueryFlag,
   EmptyState,
   MediaPlayer,
   PersonaSwitcher,
+  createSrOnlyActionButton,
 } from "../index.js";
 
 async function mountSetupSSR(Component, props = {}, emit = vi.fn()) {
@@ -190,6 +195,9 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       );
       expect(html).toContain("CRA Monitor");
       expect(html).toContain("Monitor");
+      expect(html).toContain('class="sr-only"');
+      expect(html).toContain("Switch User Persona or Role");
+      expect(html).not.toContain('aria-label="Switch User Persona / Role"');
 
       const emit = vi.fn();
       const { state } = await mountSetupSSR(
@@ -494,6 +502,161 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       );
       state.closeDrawer();
       expect(emit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("ClinicalIconButton, ClinicalDropzone, & Label-in-Name Helpers (ADR-2822)", () => {
+    it("renders ClinicalIconButton with required aria-label, aria-hidden glyph wrapper, and disabled click guard", async () => {
+      expect(ClinicalIconButton.props.label.validator("Remove row")).toBe(true);
+      expect(ClinicalIconButton.props.label.validator("   ")).toBe(false);
+
+      const html = await renderToString(
+        createSSRApp({
+          render: () =>
+            h(
+              ClinicalIconButton,
+              {
+                label: "Remove study arm 1",
+                variant: "danger",
+                size: "sm",
+              },
+              { default: () => "🗑️" }
+            ),
+        })
+      );
+      expect(html).toContain('aria-label="Remove study arm 1"');
+      expect(html).toContain('class="clinical-icon-btn-glyph"');
+      expect(html).toContain('aria-hidden="true"');
+
+      const emit = vi.fn();
+      const { state } = await mountSetupSSR(
+        ClinicalIconButton,
+        { label: "Close drawer", disabled: false },
+        emit
+      );
+      const clickEvt = { preventDefault: vi.fn() };
+      state.handleClick(clickEvt);
+      expect(emit).toHaveBeenCalledWith("click", clickEvt);
+
+      const disabledEmit = vi.fn();
+      const { state: disabledState } = await mountSetupSSR(
+        ClinicalIconButton,
+        { label: "Locked action", disabled: true },
+        disabledEmit
+      );
+      const blockedEvt = { preventDefault: vi.fn() };
+      disabledState.handleClick(blockedEvt);
+      expect(blockedEvt.preventDefault).toHaveBeenCalled();
+      expect(disabledEmit).not.toHaveBeenCalled();
+    });
+
+    it("renders ClinicalDropzone with native browse button, non-hidden status slot, sibling remove button, and drag/input handlers", async () => {
+      const html = await renderToString(
+        createSSRApp({
+          render: () =>
+            h(
+              ClinicalDropzone,
+              {
+                inputId: "test-upload-input",
+                hasSelection: true,
+                removable: true,
+                buttonLabel: "Choose Receipt File",
+                buttonContext: "for travel reimbursement",
+                removeLabel: "Remove file",
+                removeContext: "receipt.pdf",
+                describedBy: "upload-hint-id",
+              },
+              {
+                selected: () =>
+                  h("span", { id: "selected-file" }, "receipt.pdf (42 KB)"),
+              }
+            ),
+        })
+      );
+      expect(html).not.toContain('role="button"');
+      expect(html).toContain('id="test-upload-input"');
+      expect(html).toContain('type="button"');
+      expect(html).toContain("Choose Receipt File");
+      expect(html).toContain("for travel reimbursement");
+      expect(html).toContain('role="status"');
+      expect(html).toContain("receipt.pdf (42 KB)");
+      expect(html).toContain("Remove file");
+
+      const emit = vi.fn();
+      const { state } = await mountSetupSSR(
+        ClinicalDropzone,
+        {
+          inputId: "drop-input",
+          hasSelection: true,
+          removable: true,
+        },
+        emit
+      );
+      const mockFile = { name: "protocol.pdf", size: 1024 };
+      state.onDragEnter({ preventDefault: vi.fn() });
+      expect(state.isDragging.value).toBe(true);
+      state.onDragLeave({ preventDefault: vi.fn() });
+      expect(state.isDragging.value).toBe(false);
+      state.onDrop({
+        preventDefault: vi.fn(),
+        dataTransfer: { files: [mockFile] },
+      });
+      expect(emit).toHaveBeenCalledWith("files-selected", [mockFile]);
+      expect(emit).toHaveBeenCalledWith("file-selected", mockFile);
+
+      const inputEvt = {
+        target: { files: [mockFile], value: "C:\\fakepath\\protocol.pdf" },
+      };
+      state.onInputChange(inputEvt);
+      expect(inputEvt.target.value).toBe("");
+      expect(emit).toHaveBeenCalledWith("change", inputEvt);
+
+      state.onRemove();
+      expect(emit).toHaveBeenCalledWith("remove");
+    });
+
+    it("keeps visible text first in AiActionButton, includes fieldLabel in ClinicalQueryFlag, and escapes HTML in createSrOnlyActionButton", async () => {
+      const { state: aiState } = await mountSetupSSR(AiActionButton, {
+        label: "Generate Draft",
+        loadingText: "Synthesizing...",
+        requiredRoles: ["study_designer"],
+        userRoles: [],
+        unauthorizedTooltip: "Requires Study Designer role",
+      });
+      expect(aiState.computedAriaLabel.value).toBe(
+        "Generate Draft — Requires Study Designer role"
+      );
+
+      const { state: loadingAiState } = await mountSetupSSR(AiActionButton, {
+        label: "Generate Draft",
+        loading: true,
+        loadingText: "Synthesizing...",
+        requiredRoles: ["study_designer"],
+        userRoles: ["study_designer"],
+      });
+      expect(loadingAiState.computedAriaLabel.value).toBe("Synthesizing...");
+
+      const queryHtml = await renderToString(
+        createSSRApp(ClinicalQueryFlag, {
+          id: "VS.SYSBP",
+          query: { status: "OPEN" },
+          fieldLabel: "Systolic Blood Pressure",
+        })
+      );
+      expect(queryHtml).toContain(
+        'aria-label="Query status for Systolic Blood Pressure: OPEN"'
+      );
+      expect(queryHtml).toContain('aria-hidden="true"');
+
+      const btnHtml = createSrOnlyActionButton({
+        label: "Start Survey",
+        srContext: "Daily Health & Vital <Diary>",
+        className: "btn-primary btn-start-task",
+        dataId: "assign_01",
+      });
+      expect(btnHtml).toBe(
+        '<button type="button" class="btn-primary btn-start-task" data-id="assign_01">Start Survey<span class="sr-only">: Daily Health &amp; Vital &lt;Diary&gt;</span></button>'
+      );
     });
   });
 });

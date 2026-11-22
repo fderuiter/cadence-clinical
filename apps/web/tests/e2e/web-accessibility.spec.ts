@@ -341,4 +341,130 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await page.keyboard.press("Escape");
     await expect(dataLockModal).toBeHidden();
   });
+
+  test("Live /etmf, BatchUploadDrawer, single-document upload modal, /training, and /ssu pass WCAG 2.2 AA and SC 2.5.3 Label in Name", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    // 1. /etmf initial binder & toolbar buttons (Export Zip, Batch Ingestion, Upload Single Document)
+    await gotoHashRoute(page, "/etmf");
+    await expect(page.locator(".document-manager-layout")).toBeVisible();
+    await expect(page.locator(".btn-export-full-binder")).toBeVisible();
+    await expect(page.locator(".batch-upload-trigger-btn")).toBeVisible();
+    await expectNoWcagViolations(page, "DocumentManagerView (/etmf)");
+
+    // 2. BatchUploadDrawer dropzone & queued file state
+    await page.locator(".batch-upload-trigger-btn").click();
+    const batchDrawer = page.locator('.batch-drawer[role="dialog"]');
+    await expect(batchDrawer).toBeVisible();
+
+    const batchDropzone = batchDrawer.locator(".clinical-dropzone");
+    await expect(batchDropzone).toBeVisible();
+    await expect(batchDropzone.locator('[role="button"]')).toHaveCount(0);
+    await expect(
+      batchDropzone.locator(
+        "button.clinical-dropzone-browse-btn[type='button']"
+      )
+    ).toBeVisible();
+
+    await batchDropzone.locator('input[type="file"]').setInputFiles({
+      name: "site-101-fda-1572.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4\n% Regulatory test document\n"),
+    });
+    await expect(batchDrawer.locator(".queue-section")).toBeVisible();
+    await expectNoWcagViolations(
+      page,
+      "BatchUploadDrawer with queued file (/etmf)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/etmf-batch-dropzone-a11y.png" });
+    }
+
+    await batchDrawer.locator(".btn-close-batch-drawer").click();
+    await expect(batchDrawer).toBeHidden();
+
+    // 3. Single-document upload modal on /etmf with ClinicalDropzone & selected file
+    const zoneWithDocs = page
+      .locator(".zone-header")
+      .filter({ has: page.locator(".zone-badge") })
+      .first();
+    await zoneWithDocs.click();
+
+    const sectionWithDocs = page
+      .locator(".section-header")
+      .filter({ has: page.locator(".section-badge") })
+      .first();
+    await sectionWithDocs.click();
+
+    const artifactNode = page.locator(".artifact-node").first();
+    await expect(artifactNode).toBeVisible();
+    await artifactNode.click();
+
+    const uploadSingleBtn = page.locator(".upload-trigger-btn");
+    await expect(uploadSingleBtn).toBeEnabled();
+    await uploadSingleBtn.click();
+
+    const uploadModal = page.locator(".upload-modal");
+    await expect(
+      page.locator('[role="dialog"][aria-label="Document Ingestion Modal"]')
+    ).toBeVisible();
+    await expect(uploadModal).toBeVisible();
+    const modalDropzone = uploadModal.locator(".clinical-dropzone");
+    await expect(modalDropzone.locator('[role="button"]')).toHaveCount(0);
+    await expect(
+      modalDropzone.locator(
+        "button.clinical-dropzone-browse-btn[type='button']"
+      )
+    ).toBeVisible();
+
+    await modalDropzone.locator('input[type="file"]').setInputFiles({
+      name: "investigator-brochure-v3.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4\n% IB v3\n"),
+    });
+
+    const selectedDetails = uploadModal.locator(".selected-file-details");
+    await expect(selectedDetails).toBeVisible();
+    const isHiddenFromAt = await selectedDetails.evaluate(
+      (el) => el.closest('[aria-hidden="true"]') !== null
+    );
+    expect(isHiddenFromAt).toBe(false);
+    await expect(
+      modalDropzone.locator(
+        "button.clinical-dropzone-remove-btn[type='button']"
+      )
+    ).toBeVisible();
+    await expectNoWcagViolations(
+      page,
+      "Regulated Document Upload Modal with selected file (/etmf)"
+    );
+
+    await page.keyboard.press("Escape");
+    await expect(uploadModal).toBeHidden();
+
+    // 4. /training default workspace state
+    await gotoHashRoute(page, "/training");
+    await expect(page.locator("#section-study-training")).toBeVisible();
+    await expect(
+      page.locator(
+        "#section-study-training .header-actions > .btn.btn-secondary"
+      )
+    ).toBeEnabled();
+    await expectNoWcagViolations(
+      page,
+      "StudyTrainingView default workspace (/training)"
+    );
+
+    // 5. /ssu dedicated Study Startup route
+    await gotoHashRoute(page, "/ssu");
+    await expect(page.locator(".ssu-greenlight-console")).toBeVisible();
+    await expectNoWcagViolations(
+      page,
+      "SsuGreenlightConsole dedicated route (/ssu)"
+    );
+  });
 });

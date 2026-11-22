@@ -1195,9 +1195,13 @@
       <div class="modal-box modal-lg">
         <div class="modal-header">
           <h3>Ingest Laboratory Batch Feed</h3>
-          <button class="close-btn" @click="showIngestModal = false">
+          <ClinicalIconButton
+            class="close-btn"
+            label="Close ingest laboratory batch dialog"
+            @click="showIngestModal = false"
+          >
             &times;
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -1307,9 +1311,13 @@
             Investigator Sign-off: Grade
             {{ selectedReview.ctcae_grade }} Toxicity
           </h3>
-          <button class="close-btn" @click="showActionModal = false">
+          <ClinicalIconButton
+            class="close-btn"
+            label="Close investigator sign-off dialog"
+            @click="showActionModal = false"
+          >
             &times;
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="review-summary-card">
@@ -1404,9 +1412,13 @@
       <div class="modal-box modal-lg">
         <div class="modal-header">
           <h3>Bulk Laboratory Reference Range Import (CSV / XLSX)</h3>
-          <button class="close-btn" @click="closeBulkImportModal">
+          <ClinicalIconButton
+            class="close-btn"
+            label="Close bulk reference range import dialog"
+            @click="closeBulkImportModal"
+          >
             &times;
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="form-row">
@@ -1615,7 +1627,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 
 // Active Tab State
 const activeTab = ref("ranges");

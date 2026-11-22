@@ -1318,9 +1318,13 @@
           <h3 id="dossier-modal-title">
             21 CFR Part 11 Centralized Monitoring Inspection Snapshot
           </h3>
-          <button class="close-btn" @click="showDossierModal = false">
+          <ClinicalIconButton
+            class="close-btn"
+            label="Close centralized monitoring inspection snapshot dialog"
+            @click="showDossierModal = false"
+          >
             &times;
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="seal-badge">
@@ -1375,7 +1379,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 
 const availableStudies = ref([
   "STUDY-ONC-2026",

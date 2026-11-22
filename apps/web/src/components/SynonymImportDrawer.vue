@@ -163,72 +163,53 @@
               2. Select Synonym Dictionary File
             </h3>
 
-            <div
-              class="dropzone border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer"
-              :class="[
-                isDragging
-                  ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20'
-                  : selectedFile
-                    ? 'border-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/10'
-                    : 'border-slate-300 hover:border-slate-400 dark:border-slate-700',
-                !isAuthorized || codingStore.synonymImportLoading
-                  ? 'opacity-60 cursor-not-allowed'
-                  : '',
-              ]"
-              role="button"
-              tabindex="0"
-              aria-label="Select synonym dictionary file"
-              @dragover.prevent="isDragging = true"
-              @dragleave.prevent="isDragging = false"
-              @drop.prevent="handleFileDrop"
-              @click="triggerFileInput"
-              @keydown.enter.prevent="triggerFileInput"
-              @keydown.space.prevent="triggerFileInput"
+            <ClinicalDropzone
+              class="dropzone border-2 border-dashed rounded-xl p-6 text-center transition-colors"
+              accept=".csv,.xlsx"
+              :disabled="!isAuthorized || codingStore.synonymImportLoading"
+              :has-selection="!!selectedFile"
+              :icon="selectedFile ? '📄' : '📤'"
+              :button-label="
+                selectedFile
+                  ? 'Replace Synonym File'
+                  : 'Select Synonym Dictionary File'
+              "
+              input-aria-label="Synonym dictionary file"
+              removable
+              remove-label="Remove File"
+              :remove-context="selectedFile ? selectedFile.name : ''"
+              @file-selected="onSynonymFileSelected"
+              @remove="clearSelectedFile"
             >
-              <input
-                ref="fileInputRef"
-                type="file"
-                aria-label="Synonym dictionary file"
-                accept=".csv,.xlsx"
-                class="hidden"
-                :disabled="!isAuthorized || codingStore.synonymImportLoading"
-                @change="handleFileSelect"
-              />
-
-              <div v-if="selectedFile" class="space-y-2">
-                <div class="text-2xl">📄</div>
+              <template #prompt>
                 <div
-                  class="text-xs font-bold text-slate-800 dark:text-slate-200"
-                >
-                  {{ selectedFile.name }}
-                </div>
-                <div class="text-[11px] text-slate-500">
-                  {{ formatFileSize(selectedFile.size) }}
-                </div>
-                <button
-                  type="button"
-                  class="text-xs text-rose-600 hover:underline dark:text-rose-400 mt-2"
-                  @click.stop="clearSelectedFile"
-                >
-                  Remove File
-                </button>
-              </div>
-
-              <div v-else class="space-y-2">
-                <div class="text-2xl text-slate-400">📤</div>
-                <div
+                  v-if="!selectedFile"
                   class="text-xs font-medium text-slate-700 dark:text-slate-300"
                 >
                   Drag and drop a <strong>.csv</strong> or
                   <strong>.xlsx</strong> synonym dictionary file here
                 </div>
-                <div class="text-[11px] text-slate-400">
+              </template>
+              <template #hint>
+                <span v-if="!selectedFile" class="text-[11px] text-slate-400">
                   Must include headers: <code>verbatim_text</code>,
                   <code>dictionary_type</code>, <code>dictionary_version</code>,
                   <code>target_code</code>, <code>target_term</code>
+                </span>
+              </template>
+              <template #selected>
+                <div v-if="selectedFile" class="space-y-1">
+                  <div
+                    class="text-xs font-bold text-slate-800 dark:text-slate-200"
+                  >
+                    {{ selectedFile.name }}
+                  </div>
+                  <div class="text-[11px] text-slate-500">
+                    {{ formatFileSize(selectedFile.size) }}
+                  </div>
                 </div>
-              </div>
-            </div>
+              </template>
+            </ClinicalDropzone>
 
             <div class="flex justify-end">
               <button
@@ -670,7 +651,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalDropzone, useFocusTrap } from "ui";
 import { useCodingStore } from "../stores/coding.js";
 import { useAuthStore } from "../stores/auth.js";
 
@@ -682,8 +663,6 @@ const activeTab = ref("import"); // 'import' | 'history' | 'rules'
 const scope = ref("STUDY");
 const studyId = ref("STUDY-101");
 const selectedFile = ref(null);
-const isDragging = ref(false);
-const fileInputRef = ref(null);
 const reasonForChange = ref("");
 
 const isAuthorized = computed(() => {
@@ -706,33 +685,15 @@ useFocusTrap(drawerRef, {
   onEscape: close,
 });
 
-function triggerFileInput() {
-  if (!isAuthorized.value || codingStore.synonymImportLoading) return;
-  fileInputRef.value?.click();
-}
-
-function handleFileSelect(event) {
-  const files = event.target.files;
-  if (files && files.length > 0) {
-    selectedFile.value = files[0];
-    codingStore.synonymPreflightReport = null;
-  }
-}
-
-function handleFileDrop(event) {
-  isDragging.value = false;
-  if (!isAuthorized.value || codingStore.synonymImportLoading) return;
-  const files = event.dataTransfer?.files;
-  if (files && files.length > 0) {
-    selectedFile.value = files[0];
-    codingStore.synonymPreflightReport = null;
-  }
+function onSynonymFileSelected(file) {
+  if (!isAuthorized.value || codingStore.synonymImportLoading || !file) return;
+  selectedFile.value = file;
+  codingStore.synonymPreflightReport = null;
 }
 
 function clearSelectedFile() {
   selectedFile.value = null;
   codingStore.synonymPreflightReport = null;
-  if (fileInputRef.value) fileInputRef.value.value = "";
 }
 
 async function runPreflightValidation() {

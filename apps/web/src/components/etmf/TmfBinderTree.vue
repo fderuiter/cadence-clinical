@@ -3,25 +3,32 @@
   <div class="tmf-binder-tree-container">
     <div class="binder-export-header">
       <button
+        type="button"
         class="btn-export-full-binder"
-        aria-label="Export complete eTMF study binder"
         @click="exportFullBinder"
       >
-        <span>📦</span> Export Complete Study Binder
+        <span aria-hidden="true">📦</span> Export Complete Study Binder<span
+          class="sr-only"
+        >
+          (eTMF)</span
+        >
       </button>
     </div>
 
     <div class="tree-search-bar">
-      <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
       <input
         v-model="searchQuery"
         type="text"
+        aria-label="Search zones, sections, or artifacts"
         placeholder="Search zones, sections, or artifacts..."
         class="search-input"
       />
       <div class="filter-controls">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="selectedZoneFilter" class="zone-filter-select">
+        <select
+          v-model="selectedZoneFilter"
+          aria-label="Filter binder by zone"
+          class="zone-filter-select"
+        >
           <option value="">All Zones</option>
           <option v-for="node in tree" :key="node.id" :value="node.code">
             Zone {{ node.code }}: {{ node.name }}
@@ -527,6 +534,11 @@ function getUnreadBadgeCount(node) {
 }
 
 .btn-node-export {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
   background: transparent;
   border: none;
   font-size: 0.85rem;

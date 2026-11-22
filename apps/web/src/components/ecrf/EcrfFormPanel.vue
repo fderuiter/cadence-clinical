@@ -504,7 +504,9 @@
                             :disabled="sdvBusy || assertionsLocked"
                             @click="beginVerify(item)"
                           >
-                            Verify
+                            Verify<span class="sr-only">
+                              {{ item.item_id }}</span
+                            >
                           </button>
                         </template>
                         <button
@@ -515,7 +517,9 @@
                           :disabled="sdvBusy || assertionsLocked"
                           @click="beginRetract(item, activeVerification(item)!)"
                         >
-                          Withdraw verification
+                          Withdraw verification<span class="sr-only">
+                            for {{ item.item_id }}</span
+                          >
                         </button>
                       </div>
                     </div>
@@ -545,7 +549,9 @@
                         :disabled="queries.busy || assertionsLocked"
                         @click="beginRaise(item)"
                       >
-                        Raise query
+                        Raise query<span class="sr-only">
+                          on {{ item.item_id }}</span
+                        >
                       </button>
                     </div>
                   </td>
