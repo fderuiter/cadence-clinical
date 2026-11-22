@@ -49,6 +49,14 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("SiteId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("StudyId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
@@ -70,6 +78,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SiteId");
+
+                    b.HasIndex("StudyId");
 
                     b.HasIndex("TenantId");
 
@@ -362,6 +374,11 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<string>("TaskCodes")
                         .IsRequired()
                         .HasColumnType("jsonb");
@@ -378,6 +395,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId");
 
                     b.HasIndex("StaffUserId");
+
+                    b.HasIndex("StudyId");
 
                     b.HasIndex("TenantId");
 
@@ -438,10 +457,20 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.Property<string>("SignatureManifestation")
                         .HasColumnType("jsonb");
 
+                    b.Property<string>("SiteId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -456,6 +485,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(36)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SiteId");
+
+                    b.HasIndex("StudyId");
 
                     b.HasIndex("TenantId");
 
