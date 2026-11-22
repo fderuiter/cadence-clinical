@@ -248,6 +248,7 @@ const KIND_LABELS: Record<string, string> = {
   form_version_snapshot: "Form snapshot",
   subscription: "Subscription",
   product_entitlement: "Product entitlement",
+  task_configuration: "Task configuration",
 };
 
 /** Human-readable singular noun phrase for a `NodeRef` kind (`study_site` -> `"Study site"`). */
