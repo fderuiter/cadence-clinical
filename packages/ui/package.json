@@ -7,6 +7,10 @@
   "exports": {
     ".": "./index.js",
     "./testing": "./mockGateway.js",
+    "./vitest": {
+      "types": "./accessibility-matcher.d.ts",
+      "default": "./accessibility-matcher.js"
+    },
     "./tokens.css": "./tokens.css",
     "./responsive.css": "./responsive.css",
     "./package.json": "./package.json"
@@ -21,15 +25,13 @@
   "author": "",
   "license": "UNLICENSED",
   "type": "module",
-  "dependencies": {
-    "axe-core": "catalog:"
-  },
   "peerDependencies": {
     "vue": "catalog:"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "axe-core": "catalog:",
     "pinia": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

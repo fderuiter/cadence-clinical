@@ -808,8 +808,6 @@ export function createClinicalVisitMatrix(visitsOrSoa, forms = []) {
   return tableHtml;
 }
 
-export { toBeAccessible } from "./accessibility-matcher.js";
-
 import {
   AiActionButton,
   AiSuggestionDrawer,

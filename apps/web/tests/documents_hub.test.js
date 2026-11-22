@@ -234,6 +234,7 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
 
       const previewBtn = wrapper.find(".btn-preview-action");
       await previewBtn.trigger("click");
+      await flushPromises();
 
       const mediaModal = wrapper.findComponent(MediaPreviewModal);
       expect(mediaModal.exists()).toBe(true);

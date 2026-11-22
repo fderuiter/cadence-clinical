@@ -264,10 +264,6 @@ importers:
   packages/demo-fixtures: {}
 
   packages/ui:
-    dependencies:
-      axe-core:
-        specifier: 'catalog:'
-        version: 4.14.1
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
@@ -275,6 +271,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 5.1.0(vitest@5.1.0)
+      axe-core:
+        specifier: 'catalog:'
+        version: 4.14.1
       pinia:
         specifier: 'catalog:'
         version: 4.1.0(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.45(typescript@6.0.3))
