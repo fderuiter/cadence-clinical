@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 using Cadence.Cli.Services;
 using Cadence.ToolingCore.OpenApi;
+using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
@@ -15,12 +18,16 @@ using Xunit;
 namespace Cadence.UnitTests.Testing;
 
 /// <summary>
-/// Keeps container base image pins, non-root <c>USER</c> rules, <c>APP_NAME</c> targets, Hadolint discovery, and
-/// Dependabot rules aligned with <c>global.json</c>, <c>Directory.Build.props</c>, and ADR-2233.
+/// Keeps container base image pins, non-root <c>USER</c> rules, <c>APP_NAME</c> targets, Hadolint discovery, CLI tool
+/// manifests, MSBuild cohort properties and skew targets, <c>pnpm</c> workspace catalog references,
+/// <see cref="DependencyValidatorService"/>, and Dependabot rules aligned with <c>global.json</c>,
+/// <c>Directory.Build.props</c>, ADR-2233, ADR-2327, and ADR-2527.
 /// </summary>
 public sealed partial class ContainerImagePinTests
 {
     private static readonly string Root = OpenApiToolingService.FindRepoRoot();
+    private static readonly string[] PackageDependencySections =
+        ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
 
     [Fact]
     public void DotnetDockerfile_MatchesGlobalJsonAndDirectoryBuildPropsMajor()
@@ -45,6 +52,54 @@ public sealed partial class ContainerImagePinTests
         }
 
         DotnetEfVersionMajor().Match(dockerfile).Groups[1].Value.Should().Be(expectedMajor);
+    }
+
+    [Fact]
+    public void DotnetToolsAndDockerfile_AlignDotnetEfWithDotNetServicingVersion()
+    {
+        var propsDoc = XDocument.Load(Path.Combine(Root, "Directory.Build.props"));
+        string servicingVersion = ReadMsBuildProperty(propsDoc, "DotNetServicingVersion");
+        servicingVersion.Should().StartWith("10.0.");
+
+        using var toolsJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(Root, ".config", "dotnet-tools.json")));
+        var dotnetEf = toolsJson.RootElement.GetProperty("tools").GetProperty("dotnet-ef");
+        dotnetEf.GetProperty("version").GetString().Should().Be(servicingVersion,
+            ".config/dotnet-tools.json must align dotnet-ef with $(DotNetServicingVersion)");
+        dotnetEf.GetProperty("rollForward").GetBoolean().Should().BeFalse(
+            "dotnet-ef must disable rollForward for deterministic CLI execution");
+
+        string dockerfile = File.ReadAllText(Path.Combine(Root, "docker", "Dockerfile.dotnet"));
+        string dockerfileEfVersion = DotnetEfExactVersion().Match(dockerfile).Groups["version"].Value;
+        dockerfileEfVersion.Should().Be(servicingVersion,
+            "docker/Dockerfile.dotnet must install the same dotnet-ef version as .config/dotnet-tools.json and $(DotNetServicingVersion)");
+    }
+
+    [Fact]
+    public void SceDockerfiles_MatchOpenApiAndAdr2327RuntimeBaselines()
+    {
+        using var interopSpec = JsonDocument.Parse(
+            File.ReadAllText(Path.Combine(Root, "docs", "openapi", "interop_openapi.json")));
+        var sceProperties = interopSpec.RootElement
+            .GetProperty("components")
+            .GetProperty("schemas")
+            .GetProperty("Interop_ExecutionSandboxConfigDto")
+            .GetProperty("properties");
+
+        string expectedPython = sceProperties.GetProperty("python_version").GetProperty("default").GetString()!;
+        string expectedR = sceProperties.GetProperty("r_version").GetProperty("default").GetString()!;
+        expectedPython.Should().Be("3.14.0", "ADR-2327 and interop_openapi.json lock the GxP Python statistical runtime baseline to 3.14.0");
+        expectedR.Should().Be("4.4.2", "interop_openapi.json locks the GxP R statistical runtime baseline to 4.4.2");
+
+        string expectedPythonMajorMinor = string.Join('.', expectedPython.Split('.')[..2]);
+        string pythonDockerfile = File.ReadAllText(Path.Combine(Root, "docker", "sce", "python", "Dockerfile"));
+        var pythonMatch = ScePythonBaseImage().Match(pythonDockerfile);
+        pythonMatch.Success.Should().BeTrue("docker/sce/python/Dockerfile must pin python:<major.minor>-slim@sha256:<digest>");
+        pythonMatch.Groups["version"].Value.Should().Be(expectedPythonMajorMinor);
+
+        string rDockerfile = File.ReadAllText(Path.Combine(Root, "docker", "sce", "r", "Dockerfile"));
+        var rMatch = SceRBaseImage().Match(rDockerfile);
+        rMatch.Success.Should().BeTrue("docker/sce/r/Dockerfile must pin r-base:<version>@sha256:<digest>");
+        rMatch.Groups["version"].Value.Should().Be(expectedR);
     }
 
     [Fact]
@@ -150,11 +205,182 @@ public sealed partial class ContainerImagePinTests
     }
 
     [Fact]
-    public void Dependabot_CoversAllDockerDirectoriesAndBlocksDotnetMajorBumps()
+    public void MsBuildPropsAndPackages_EliminateDuplicateCohortLiteralsAndAlignAppHost()
+    {
+        var propsDoc = XDocument.Load(Path.Combine(Root, "Directory.Build.props"));
+        ReadMsBuildProperty(propsDoc, "DotNetServicingVersion").Should().Be("10.0.15");
+        ReadMsBuildProperty(propsDoc, "AspireHostingVersion").Should().Be("13.6.5");
+        ReadMsBuildProperty(propsDoc, "IdentityModelVersion").Should().Be("8.23.0");
+        ReadMsBuildProperty(propsDoc, "DotNetAiVersion").Should().Be("10.11.0");
+
+        var appHostDoc = XDocument.Load(Path.Combine(Root, "apps", "apphost", "src", "Cadence.AppHost.csproj"));
+        string? appHostSdkVersion = appHostDoc.Descendants("Sdk")
+            .FirstOrDefault(e => e.Attribute("Name")?.Value == "Aspire.AppHost.Sdk")
+            ?.Attribute("Version")?.Value;
+        appHostSdkVersion.Should().Be("$(AspireHostingVersion)",
+            "Cadence.AppHost.csproj must inherit Aspire.AppHost.Sdk version from $(AspireHostingVersion)");
+
+        var packagesDoc = XDocument.Load(Path.Combine(Root, "Directory.Packages.props"));
+        var packageVersions = packagesDoc.Descendants("PackageVersion")
+            .Select(e => (
+                Id: e.Attribute("Include")?.Value ?? string.Empty,
+                Version: e.Attribute("Version")?.Value ?? string.Empty))
+            .ToList();
+
+        packageVersions.Should().NotBeEmpty();
+
+        foreach (var (id, version) in packageVersions)
+        {
+            if (id.StartsWith("Microsoft.Extensions.AI", StringComparison.Ordinal))
+            {
+                version.Should().Be("$(DotNetAiVersion)", $"{id} must reference $(DotNetAiVersion)");
+            }
+            else if (id.StartsWith("Microsoft.AspNetCore.", StringComparison.Ordinal) ||
+                     id.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal) ||
+                     id.StartsWith("Microsoft.Extensions.", StringComparison.Ordinal) ||
+                     string.Equals(id, "System.Security.Cryptography.Pkcs", StringComparison.Ordinal))
+            {
+                version.Should().Be("$(DotNetServicingVersion)", $"{id} must reference $(DotNetServicingVersion)");
+            }
+            else if (id.StartsWith("Aspire.Hosting.", StringComparison.Ordinal))
+            {
+                version.Should().Be("$(AspireHostingVersion)", $"{id} must reference $(AspireHostingVersion)");
+            }
+            else if (id.StartsWith("Microsoft.IdentityModel.", StringComparison.Ordinal) ||
+                     id.StartsWith("System.IdentityModel.", StringComparison.Ordinal))
+            {
+                version.Should().Be("$(IdentityModelVersion)", $"{id} must reference $(IdentityModelVersion)");
+            }
+        }
+
+        var literalVersions = packageVersions
+            .Where(p => !p.Version.StartsWith("$(", StringComparison.Ordinal))
+            .Select(p => p.Version)
+            .ToList();
+        literalVersions.Should().OnlyHaveUniqueItems(
+            "shared NuGet cohorts must use MSBuild properties in Directory.Build.props instead of repeating literal versions");
+    }
+
+    [Fact]
+    public void DirectoryBuildTargets_FailsCompilationOnDotNet11OrSplitIdentityModelOrAspireSkew()
+    {
+        var (dotNet11Exit, dotNet11Out) = RunSkewProbeBuild(
+            """<ResolvedCompileFileDefinitions Include="Microsoft.Extensions.Logging.Abstractions.dll" NuGetPackageId="Microsoft.Extensions.Logging.Abstractions" NuGetPackageVersion="11.0.0" />""");
+        dotNet11Exit.Should().NotBe(0, "resolving a .NET 11.0.0 framework package on net10.0 must fail compilation");
+        dotNet11Out.Should().Contain("CADDEP001");
+
+        var (identityExit, identityOut) = RunSkewProbeBuild(
+            """
+            <ResolvedCompileFileDefinitions Include="Microsoft.IdentityModel.Tokens.dll" NuGetPackageId="Microsoft.IdentityModel.Tokens" NuGetPackageVersion="8.23.0" />
+            <ResolvedCompileFileDefinitions Include="Microsoft.IdentityModel.Protocols.dll" NuGetPackageId="Microsoft.IdentityModel.Protocols" NuGetPackageVersion="8.19.2" />
+            """);
+        identityExit.Should().NotBe(0, "splitting IdentityModel package versions must fail compilation");
+        identityOut.Should().Contain("CADDEP002");
+
+        var (aspireExit, aspireOut) = RunSkewProbeBuild(
+            """<_PackageDependenciesDesignTime Include="Aspire.Hosting.AppHost/13.5.4" Name="Aspire.Hosting.AppHost" />""");
+        aspireExit.Should().NotBe(0, "resolving an Aspire package version mismatched with $(AspireHostingVersion) must fail compilation");
+        aspireOut.Should().Contain("CADDEP003");
+    }
+
+    [Fact]
+    public void PnpmWorkspaceCatalog_GovernsAllSharedFrontendPackagesWithoutDuplicateLiterals()
+    {
+        var catalog = ReadPnpmCatalog(Path.Combine(Root, "pnpm-workspace.yaml"));
+        catalog.Should().ContainKeys(
+            "@axe-core/playwright",
+            "@playwright/test",
+            "@typescript-eslint/eslint-plugin",
+            "@typescript-eslint/parser",
+            "@vitejs/plugin-vue",
+            "@vitest/coverage-v8",
+            "axe-core",
+            "eslint-plugin-vue",
+            "pinia",
+            "typescript",
+            "typescript-eslint",
+            "vite",
+            "vitest",
+            "vue",
+            "vue-router");
+
+        catalog["@typescript-eslint/eslint-plugin"].Should().Be("^8.73.0");
+        catalog["@typescript-eslint/parser"].Should().Be("^8.73.0");
+        catalog["typescript-eslint"].Should().Be("^8.73.0");
+
+        var manifestPaths = DiscoverWorkspacePackageJsonPaths();
+        manifestPaths.Should().HaveCountGreaterThanOrEqualTo(5);
+
+        var literalByPackage = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var allRawLiterals = new List<string>();
+
+        foreach (string manifestPath in manifestPaths)
+        {
+            string relative = Path.GetRelativePath(Root, manifestPath).Replace('\\', '/');
+            using var doc = JsonDocument.Parse(File.ReadAllText(manifestPath));
+
+            foreach (string section in PackageDependencySections)
+            {
+                if (!doc.RootElement.TryGetProperty(section, out var deps))
+                {
+                    continue;
+                }
+
+                foreach (var dep in deps.EnumerateObject())
+                {
+                    string spec = dep.Value.GetString()!;
+                    if (catalog.ContainsKey(dep.Name))
+                    {
+                        spec.Should().Be("catalog:",
+                            $"{relative} ({section}) must reference '{dep.Name}' via 'catalog:' instead of repeating a literal version");
+                        continue;
+                    }
+
+                    if (spec.StartsWith("workspace:", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    if (!literalByPackage.TryGetValue(dep.Name, out var owners))
+                    {
+                        owners = [];
+                        literalByPackage[dep.Name] = owners;
+                    }
+
+                    owners.Add(relative);
+                    allRawLiterals.Add(spec);
+                }
+            }
+        }
+
+        literalByPackage.Where(kvp => kvp.Value.Count > 1).Should().BeEmpty(
+            "every npm package referenced by more than one workspace package.json must live in pnpm-workspace.yaml catalog:");
+        allRawLiterals.Should().OnlyHaveUniqueItems(
+            "workspace package.json manifests should not duplicate version literals");
+
+        string lockfile = File.ReadAllText(Path.Combine(Root, "pnpm-lock.yaml"));
+        lockfile.Should().Contain("catalogs:")
+            .And.Contain("'@typescript-eslint/eslint-plugin':")
+            .And.Contain("specifier: ^8.73.0");
+    }
+
+    [Fact]
+    public void Dependabot_CoversAllDockerDirectoriesAndEnforcesGroupsAndRuntimeIgnores()
     {
         string dependabot = File.ReadAllText(Path.Combine(Root, ".github", "dependabot.yml"));
 
-        dependabot.Should().Contain("package-ecosystem: \"docker\"")
+        dependabot.Should().Contain("package-ecosystem: \"nuget\"")
+            .And.Contain("dotnet-10-servicing:")
+            .And.Contain("dotnet-ai:")
+            .And.Contain("aspire:")
+            .And.Contain("identitymodel:")
+            .And.Contain("package-ecosystem: \"npm\"")
+            .And.Contain("typescript-eslint:")
+            .And.Contain("vitest:")
+            .And.Contain("playwright:")
+            .And.Contain("vue-vite:")
+            .And.Contain("package-ecosystem: \"docker\"")
+            .And.Contain("dotnet-containers:")
             .And.Contain("directory: \"/docker\"")
             .And.Contain("directory: \"/docker/sce/python\"")
             .And.Contain("directory: \"/docker/sce/r\"")
@@ -162,6 +388,185 @@ public sealed partial class ContainerImagePinTests
 
         DotnetMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore version-update:semver-major for mcr.microsoft.com/dotnet/*");
+        NugetAspNetMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore version-update:semver-major for Microsoft.AspNetCore.*");
+        NugetEfCoreMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore version-update:semver-major for Microsoft.EntityFrameworkCore*");
+        NugetDotnetEfMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore version-update:semver-major for dotnet-ef");
+        ScePythonIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore semver-major and semver-minor bumps on python in /docker/sce/python (ADR-2327)");
+        SceRIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore semver-major, semver-minor, and semver-patch bumps on r-base in /docker/sce/r");
+    }
+
+    [Fact]
+    public void DependencyValidatorService_FailsClosedOnMalformedJsonAndPassesOnCleanWorkspace()
+    {
+        DependencyValidatorService.ValidateDependencies(Root).Should().Be(0,
+            "HEAD manifests must pass JSON validation and client crypto checks");
+
+        string emptyTemp = CreateTempDir();
+        try
+        {
+            DependencyValidatorService.ValidateDependencies(emptyTemp).Should().Be(0,
+                "isolated temporary fixtures without manifests must skip cleanly");
+        }
+        finally
+        {
+            Directory.Delete(emptyTemp, recursive: true);
+        }
+
+        AssertMalformedManifestFails("package.json", "{ \"devDependencies\": { ");
+        AssertMalformedManifestFails("apps/web/package.json", "{ invalid json ");
+        AssertMalformedManifestFails("packages/ui/package.json", """{ "dependencies": ["not-an-object"] }""");
+        AssertMalformedManifestFails(".config/dotnet-tools.json", "{ \"tools\": ");
+        AssertMalformedManifestFails(".config/dotnet-tools.json", """{ "version": 1, "isRoot": true }""");
+        AssertMalformedManifestFails("packages/ui/package.json", """{ "dependencies": { "jose": "^5.0.0" } }""");
+    }
+
+    private static void AssertMalformedManifestFails(string relativePath, string content)
+    {
+        string tempDir = CreateTempDir();
+        try
+        {
+            string fullPath = Path.Combine(tempDir, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+            File.WriteAllText(fullPath, content);
+
+            DependencyValidatorService.ValidateDependencies(tempDir).Should().Be(1,
+                $"DependencyValidatorService must fail closed on invalid manifest '{relativePath}'");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    private static (int ExitCode, string Output) RunSkewProbeBuild(string injectedItemsXml)
+    {
+        string tempDir = CreateTempDir();
+        try
+        {
+            string propsPath = Path.Combine(Root, "Directory.Build.props");
+            string targetsPath = Path.Combine(Root, "Directory.Build.targets");
+            string csproj = $"""
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <Import Project="{propsPath}" />
+                  <PropertyGroup>
+                    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+                    <RunAnalyzers>false</RunAnalyzers>
+                    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+                  </PropertyGroup>
+                  <ItemGroup>
+                    <PackageReference Remove="Microsoft.CodeAnalysis.NetAnalyzers" />
+                    <PackageReference Remove="SonarAnalyzer.CSharp" />
+                    <PackageReference Remove="Microsoft.CodeAnalysis.BannedApiAnalyzers" />
+                  </ItemGroup>
+                  <Import Project="{targetsPath}" />
+                  <Target Name="InjectSkewFixture" BeforeTargets="ValidateDependencyAlignment">
+                    <ItemGroup>
+                      {injectedItemsXml}
+                    </ItemGroup>
+                  </Target>
+                </Project>
+                """;
+
+            File.WriteAllText(Path.Combine(tempDir, "Directory.Build.props"), "<Project />");
+            File.WriteAllText(Path.Combine(tempDir, "Directory.Build.targets"), "<Project />");
+            File.WriteAllText(Path.Combine(tempDir, "Directory.Packages.props"), "<Project />");
+            string projectFile = Path.Combine(tempDir, "SkewProbe.csproj");
+            File.WriteAllText(projectFile, csproj);
+            File.WriteAllText(Path.Combine(tempDir, "Probe.cs"), "namespace SkewProbe; public static class Probe { }\n");
+
+            var psi = new ProcessStartInfo("dotnet")
+            {
+                WorkingDirectory = tempDir,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+            psi.ArgumentList.Add("msbuild");
+            psi.ArgumentList.Add(projectFile);
+            psi.ArgumentList.Add("-t:ValidateDependencyAlignment");
+            psi.ArgumentList.Add("-nologo");
+
+            using var process = Process.Start(psi)!;
+            string stdout = process.StandardOutput.ReadToEnd();
+            string stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            return (process.ExitCode, stdout + "\n" + stderr);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    private static string CreateTempDir()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"cadence-dep-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    private static string ReadMsBuildProperty(XDocument doc, string propertyName) =>
+        doc.Descendants(propertyName).FirstOrDefault()?.Value
+        ?? throw new InvalidOperationException($"Missing MSBuild property '{propertyName}' in Directory.Build.props.");
+
+    private static Dictionary<string, string> ReadPnpmCatalog(string workspaceYamlPath)
+    {
+        var entries = new Dictionary<string, string>(StringComparer.Ordinal);
+        bool inCatalog = false;
+
+        foreach (string line in File.ReadAllLines(workspaceYamlPath))
+        {
+            if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith('#'))
+            {
+                continue;
+            }
+
+            if (!char.IsWhiteSpace(line[0]))
+            {
+                inCatalog = string.Equals(line.Trim(), "catalog:", StringComparison.Ordinal);
+                continue;
+            }
+
+            if (!inCatalog)
+            {
+                continue;
+            }
+
+            int colonIndex = line.IndexOf(':', StringComparison.Ordinal);
+            if (colonIndex <= 0)
+            {
+                continue;
+            }
+
+            string key = line[..colonIndex].Trim().Trim('"', '\'');
+            string value = line[(colonIndex + 1)..].Trim().Trim('"', '\'');
+            entries[key] = value;
+        }
+
+        return entries;
+    }
+
+    private static List<string> DiscoverWorkspacePackageJsonPaths()
+    {
+        var result = new List<string> { Path.Combine(Root, "package.json") };
+        foreach (string container in new[] { "apps", "packages" })
+        {
+            foreach (string dir in Directory.GetDirectories(Path.Combine(Root, container)).OrderBy(d => d, StringComparer.Ordinal))
+            {
+                string pkg = Path.Combine(dir, "package.json");
+                if (File.Exists(pkg))
+                {
+                    result.Add(pkg);
+                }
+            }
+        }
+
+        return result;
     }
 
     [GeneratedRegex(@"<TargetFramework>net(\d+)\.\d+</TargetFramework>")]
@@ -172,6 +577,15 @@ public sealed partial class ContainerImagePinTests
 
     [GeneratedRegex(@"dotnet-ef --version (\d+)\.")]
     private static partial Regex DotnetEfVersionMajor();
+
+    [GeneratedRegex(@"dotnet-ef --version (?<version>\d+\.\d+\.\d+)\b")]
+    private static partial Regex DotnetEfExactVersion();
+
+    [GeneratedRegex(@"^FROM python:(?<version>\d+\.\d+)-slim@sha256:[0-9a-f]{64}\s*$", RegexOptions.Multiline)]
+    private static partial Regex ScePythonBaseImage();
+
+    [GeneratedRegex(@"^FROM r-base:(?<version>\d+\.\d+\.\d+)@sha256:[0-9a-f]{64}\s*$", RegexOptions.Multiline)]
+    private static partial Regex SceRBaseImage();
 
     [GeneratedRegex(@"^\s*FROM\s+(?:--platform=\S+\s+)?(?<image>\S+)(?:\s+AS\s+(?<alias>\S+))?\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex FromInstruction();
@@ -199,4 +613,19 @@ public sealed partial class ContainerImagePinTests
 
     [GeneratedRegex(@"dependency-name:\s*""mcr\.microsoft\.com/dotnet/\*""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
     private static partial Regex DotnetMajorIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""Microsoft\.AspNetCore\.\*""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
+    private static partial Regex NugetAspNetMajorIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""Microsoft\.EntityFrameworkCore\*""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
+    private static partial Regex NugetEfCoreMajorIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""dotnet-ef""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
+    private static partial Regex NugetDotnetEfMajorIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""python""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major"",\s*""version-update:semver-minor""\]")]
+    private static partial Regex ScePythonIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""r-base""\s*\r?\n\s*update-types:\s*\[\s*""version-update:semver-major"",\s*""version-update:semver-minor"",\s*""version-update:semver-patch"",?\s*\]")]
+    private static partial Regex SceRIgnoreRule();
 }

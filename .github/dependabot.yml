@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # .NET dependencies (Central Package Management: Directory.Packages.props)
+  # .NET dependencies (Central Package Management: Directory.Build.props + Directory.Packages.props)
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:
@@ -9,12 +9,59 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
+    groups:
+      dotnet-10-servicing:
+        patterns:
+          - "Microsoft.AspNetCore.*"
+          - "Microsoft.EntityFrameworkCore*"
+          - "Microsoft.Extensions.*"
+          - "System.Security.Cryptography.*"
+          - "System.IO.*"
+        exclude-patterns:
+          - "Microsoft.Extensions.AI*"
+      dotnet-ai:
+        patterns:
+          - "Microsoft.Extensions.AI*"
+      aspire:
+        patterns:
+          - "Aspire.*"
+      identitymodel:
+        patterns:
+          - "Microsoft.IdentityModel.*"
+          - "System.IdentityModel.*"
+      opentelemetry:
+        patterns:
+          - "OpenTelemetry*"
+      masstransit:
+        patterns:
+          - "MassTransit*"
+      fluentvalidation:
+        patterns:
+          - "FluentValidation*"
     ignore:
       # MassTransit 9 is commercial and needs a license key; 8.x stays under Apache 2.0 (#5520, ADR-2524).
       - dependency-name: "MassTransit*"
         update-types: ["version-update:semver-major"]
+      # .NET major versions are locked to .NET 10 across global.json and Directory.Build.props (ADR-2233, ADR-2527).
+      - dependency-name: "Microsoft.AspNetCore.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.EntityFrameworkCore*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Extensions.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "System.Security.Cryptography.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "System.IO.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "dotnet-ef"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Aspire.*"
+        update-types: ["version-update:semver-major"]
+      # AWSSDK.Core >= 4.1.0 pulls System.IO.Hashing 11.0.0; stay on 4.0.x while targeting net10.0.
+      - dependency-name: "AWSSDK.*"
+        versions: [">= 4.1.0"]
 
-  # Node.js workspace dependency updates (pnpm / package.json)
+  # Node.js workspace dependency updates (pnpm / package.json / pnpm-workspace.yaml catalog)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -24,6 +71,35 @@ updates:
     labels:
       - "dependencies"
       - "nodejs"
+    groups:
+      typescript-eslint:
+        patterns:
+          - "@typescript-eslint/*"
+          - "typescript-eslint"
+          - "eslint*"
+          - "@eslint/*"
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+      playwright:
+        patterns:
+          - "@playwright/*"
+          - "playwright*"
+          - "@axe-core/playwright"
+      vue-vite:
+        patterns:
+          - "vue"
+          - "vue-*"
+          - "@vue/*"
+          - "pinia"
+          - "vite"
+          - "@vitejs/*"
+          - "vitepress*"
+    ignore:
+      # Node runtime baseline is pinned via package.json engines (ADR-2508).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   # Container base images, pinned by version and digest (docker/Dockerfile.dotnet)
   - package-ecosystem: "docker"
@@ -34,6 +110,11 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    groups:
+      dotnet-containers:
+        patterns:
+          - "mcr.microsoft.com/dotnet/*"
+          - "dotnet/*"
     ignore:
       # .NET major versions are pinned by global.json and Directory.Build.props (ADR-2233).
       - dependency-name: "mcr.microsoft.com/dotnet/*"
@@ -50,6 +131,11 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      # GxP SCE Python baseline is locked to Python 3.14 (ADR-2327, interop_openapi.json); allow 3.14 digest updates only.
+      - dependency-name: "python"
+        update-types:
+          ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "docker"
     directory: "/docker/sce/r"
@@ -59,6 +145,15 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      # GxP SCE R baseline is locked to R 4.4.2 (interop_openapi.json); allow 4.4.2 digest updates only.
+      - dependency-name: "r-base"
+        update-types:
+          [
+            "version-update:semver-major",
+            "version-update:semver-minor",
+            "version-update:semver-patch",
+          ]
 
   # Local stack images, pinned by digest (docker/docker-compose.yml)
   - package-ecosystem: "docker-compose"
