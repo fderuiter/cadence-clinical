@@ -18,7 +18,7 @@ caller's identity to backend services as HMAC-signed headers.
    ([ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md)). The tenant is the token's `tenant_id` claim, which the
    realm maps from each user's `tenant_id` attribute. A token without one forwards no `X-Tenant-Id`, and a kernel host
    refuses the caller: there is no fallback tenant
-   ([ADR-2514](../../docs/adr/2026-09-30-the-tenant-comes-from-sign-in-with-no-fallback.md), #5038).
+   ([ADR-2514](../../docs/adr/2026-09-30-the-tenant-comes-from-sign-in-with-no-fallback.md), #5038). When `tenant_id` is present, `GatewayTenantEntitlementCache` resolves the tenant's commercial read-only posture from `GET /api/v1/kernel/entitlements` with a 30-second `IClock`-backed TTL, evicts the entry immediately after `/api/v1/kernel/entitlements/tier`, `/api/v1/kernel/entitlements/activate`, or `/api/v1/kernel/onboarding/trial`, strips any client-supplied `X-Tenant-Read-Only`, and signs `X-Tenant-Read-Only` (`true` or `false`) inside `X-Gateway-Signature` ([ADR-2604](../../docs/adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md)).
 3. Each backend service (`AddCadenceSecurity`/`UseCadenceSecurity` in `packages/security`) accepts a
    request only with a valid signature inside a two-minute window, and requires an authenticated caller on
    every endpoint except health, status and development API docs. `ArchitectureSentinelTests` fails the

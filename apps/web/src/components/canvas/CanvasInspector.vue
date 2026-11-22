@@ -26,24 +26,28 @@
       v-show="!isCollapsed"
       class="inspector-body"
     >
-      <template v-if="participant || protocolVersion">
-        <header v-if="participant" class="inspector-header">
-          <span class="inspector-kind">Participant</span>
+      <template v-if="hasSelection">
+        <header class="inspector-header">
+          <span class="inspector-kind">{{ headerKind }}</span>
           <h2 id="canvas-inspector-title" class="inspector-title">
-            {{ participant.subject_id }}
+            {{ headerTitle }}
           </h2>
-          <code id="canvas-inspector-ref" class="inspector-ref">{{
-            nodeRef
-          }}</code>
-        </header>
-        <header v-else-if="protocolVersion" class="inspector-header">
-          <span class="inspector-kind">Protocol version</span>
-          <h2 id="canvas-inspector-title" class="inspector-title">
-            Version {{ protocolVersion.number }}
-          </h2>
-          <code id="canvas-inspector-ref" class="inspector-ref">{{
-            protocolVersion.ref
-          }}</code>
+          <details v-if="activeNodeRef" class="inspector-ref-details">
+            <summary class="inspector-ref-summary">Record reference</summary>
+            <div class="inspector-ref-row">
+              <code id="canvas-inspector-ref" class="inspector-ref">{{
+                activeNodeRef
+              }}</code>
+              <button
+                id="btn-copy-inspector-ref"
+                type="button"
+                class="btn-copy-ref"
+                @click="copyInspectorRef"
+              >
+                {{ copiedRef ? "Copied" : "Copy" }}
+              </button>
+            </div>
+          </details>
         </header>
 
         <div class="verbs" role="toolbar" aria-label="Verbs">
@@ -117,15 +121,19 @@
           aria-labelledby="kernel-explain-title"
         >
           <h3 id="kernel-explain-title">
-            {{ explained ? `Why: ${explained.command}` : "Explain" }}
+            {{
+              explained
+                ? `Why: ${formatCommandTitle(explained.command)}`
+                : "Explain"
+            }}
           </h3>
           <KernelExplanation
             v-if="explained"
             :explanation="explained.decision.explanation"
           />
           <p v-else id="kernel-explain-empty" class="inspector-empty">
-            Choose Explain beside a command under Act to see the kernel's
-            reasons for its decision.
+            Choose Explain beside an action under Act to see why it is permitted
+            or blocked.
           </p>
         </section>
 
@@ -135,36 +143,22 @@
           class="sdv"
           aria-labelledby="kernel-simulate-title"
         >
-          <h3 id="kernel-simulate-title">Simulation & Matrix Gap Analysis</h3>
+          <h3 id="kernel-simulate-title">Schedule gap check</h3>
           <p v-if="simulationLoading" class="inspector-empty">
-            Running pure in-memory evaluation and matrix gap analysis...
+            Checking schedule matrix and visit windows…
           </p>
-          <p
-            v-else-if="simulationError"
-            id="kernel-simulate-error"
-            class="inspector-empty"
-            role="alert"
-            style="color: var(--semantic-color-error)"
-          >
-            {{ simulationError }}
-          </p>
+          <div v-else-if="simulationError" class="inspector-empty" role="alert">
+            <p class="sdv-status">Schedule check couldn't be completed.</p>
+            <details class="inspector-ref-details">
+              <summary class="inspector-ref-summary">Technical details</summary>
+              <code id="kernel-simulate-error" class="inspector-ref">{{
+                simulationError
+              }}</code>
+            </details>
+          </div>
           <div v-else-if="simulationResult" class="simulation-details">
-            <div
-              id="kernel-simulate-hashes"
-              class="seal-container reasoning-modal-s-1"
-            >
-              <div>
-                <strong>Input Hash Seal:</strong>
-                {{ simulationResult.input_hash }}
-              </div>
-              <div>
-                <strong>Result Hash Seal:</strong>
-                {{ simulationResult.result_hash }}
-              </div>
-            </div>
-
-            <h4 style="margin-top: 12px; margin-bottom: 6px">
-              Schedule Matrix Gap Findings
+            <h4 style="margin-top: 4px; margin-bottom: 6px">
+              Schedule findings
             </h4>
             <div
               v-if="
@@ -181,8 +175,10 @@
               >
                 <div style="font-weight: 600; font-size: 0.85rem">
                   <span class="gap-badge">{{ gap.severity }}</span>
-                  {{ gap.kind }} (<code>{{ gap.json_pointer_path }}</code
-                  >)
+                  {{ formatCommandTitle(String(gap.kind || "Finding")) }}
+                  <span v-if="gap.json_pointer_path">
+                    ({{ formatFieldPath(String(gap.json_pointer_path)) }})
+                  </span>
                 </div>
                 <div style="font-size: 0.8rem; margin-top: 2px">
                   {{ gap.description }}
@@ -195,7 +191,7 @@
                     margin-top: 2px;
                   "
                 >
-                  <em>Rec: {{ gap.recommendation }}</em>
+                  <em>Recommended next step: {{ gap.recommendation }}</em>
                 </div>
               </div>
             </div>
@@ -205,6 +201,25 @@
             >
               ✓ No schedule matrix gaps detected.
             </p>
+            <details
+              v-if="simulationResult.input_hash || simulationResult.result_hash"
+              id="kernel-simulate-hashes"
+              class="inspector-ref-details"
+            >
+              <summary class="inspector-ref-summary">
+                Verification checksums
+              </summary>
+              <div class="reasoning-modal-s-1">
+                <div v-if="simulationResult.input_hash">
+                  <strong>Input digest:</strong>
+                  {{ simulationResult.input_hash }}
+                </div>
+                <div v-if="simulationResult.result_hash">
+                  <strong>Result digest:</strong>
+                  {{ simulationResult.result_hash }}
+                </div>
+              </div>
+            </details>
           </div>
         </section>
 
@@ -215,28 +230,39 @@
           </dd>
           <dt>Amends</dt>
           <dd>
-            {{
-              protocolVersion.parent_version
-                ? protocolVersion.parent_version
-                : "Nothing: this is the study's first version"
-            }}
+            <NodeRefChip
+              v-if="protocolVersion.parent_version"
+              :node-ref="protocolVersion.parent_version"
+            />
+            <template v-else
+              >Nothing: this is the study's first version</template
+            >
           </dd>
           <dt>Amendment intent</dt>
           <dd>{{ protocolVersion.amendment_intent || "None recorded" }}</dd>
-          <dt>Content hash</dt>
-          <dd class="inspector-ref">
-            {{ protocolVersion.content_hash || "Not sealed yet" }}
-          </dd>
           <template v-if="protocolVersion.approval_attestation">
             <dt>Approved by</dt>
-            <dd class="inspector-ref">
-              {{ protocolVersion.approval_attestation }}
+            <dd>
+              <NodeRefChip :node-ref="protocolVersion.approval_attestation" />
             </dd>
           </template>
           <template v-if="protocolVersion.withdrawal_reason">
             <dt>Withdrawn because</dt>
             <dd>{{ protocolVersion.withdrawal_reason }}</dd>
           </template>
+          <dt>Verification</dt>
+          <dd>
+            <details
+              v-if="protocolVersion.content_hash"
+              class="inspector-ref-details"
+            >
+              <summary class="inspector-ref-summary">Content digest</summary>
+              <code class="inspector-ref">{{
+                protocolVersion.content_hash
+              }}</code>
+            </details>
+            <template v-else>Not sealed yet</template>
+          </dd>
           <template v-if="designSummary">
             <dt>Design forms</dt>
             <dd id="inspector-version-forms">
@@ -311,15 +337,61 @@
             Open standalone form view
           </router-link>
         </template>
+
+        <template v-else-if="genericDisplay">
+          <p
+            v-if="genericNodeLoading"
+            id="inspector-generic-loading"
+            class="inspector-empty"
+            role="status"
+          >
+            Loading record details…
+          </p>
+          <p
+            v-else-if="genericDisplay.masked"
+            id="inspector-generic-masked"
+            class="inspector-empty"
+          >
+            Details for this {{ genericDisplay.kindLabel.toLowerCase() }} are
+            hidden ({{ genericDisplay.maskReason }}).
+          </p>
+          <dl v-else id="inspector-generic" class="details">
+            <dt>Record type</dt>
+            <dd id="inspector-generic-kind">{{ genericDisplay.kindLabel }}</dd>
+            <template v-if="genericDisplay.code">
+              <dt>Code</dt>
+              <dd id="inspector-generic-code">{{ genericDisplay.code }}</dd>
+            </template>
+            <template
+              v-if="
+                genericDisplay.title &&
+                genericDisplay.title !== genericDisplay.code
+              "
+            >
+              <dt>Title</dt>
+              <dd id="inspector-generic-title">{{ genericDisplay.title }}</dd>
+            </template>
+            <template v-if="genericDisplay.status">
+              <dt>Status</dt>
+              <dd id="inspector-generic-status">{{ genericDisplay.status }}</dd>
+            </template>
+            <dt>Study</dt>
+            <dd>{{ studyCode }}</dd>
+          </dl>
+        </template>
       </template>
 
       <template v-else-if="protocolVersionError">
         <h2 id="canvas-inspector-title" class="inspector-title">
           Protocol version
         </h2>
-        <p id="inspector-version-error" class="inspector-empty" role="alert">
-          The kernel couldn't answer: {{ protocolVersionError }}
-        </p>
+        <div id="inspector-version-error" class="inspector-empty" role="alert">
+          <p class="sdv-status">
+            This protocol version couldn't be loaded. Check that it exists and
+            is visible to your account.
+          </p>
+          <SupportDetails :detail="protocolVersionError" />
+        </div>
       </template>
 
       <template v-else-if="missing">
@@ -335,7 +407,7 @@
       <template v-else>
         <h2 id="canvas-inspector-title" class="inspector-title">Inspector</h2>
         <p class="inspector-empty">
-          Select a participant to see its details here.
+          Select a participant or study record to see its details here.
         </p>
         <AssistPanel
           v-if="assistPrompt && aiEnabled"
@@ -356,24 +428,29 @@ import ParticipantStateChange from "./ParticipantStateChange.vue";
 import KernelActPanel from "./KernelActPanel.vue";
 import KernelExplanation from "./KernelExplanation.vue";
 import KernelLineagePanel from "./KernelLineagePanel.vue";
+import NodeRefChip from "./NodeRefChip.vue";
+import SupportDetails from "./SupportDetails.vue";
 import {
   kernelApi,
   type KernelCommand,
+  type KernelNode,
   type KernelProtocolDraftSummary,
   type KernelProtocolVersion,
   type KernelSimulationResult,
 } from "../../api/kernelApi";
 import { parseNodeRef } from "../../canvas/nodeRef";
+import {
+  formatCommandTitle,
+  formatFieldPath,
+  getNodeDisplay,
+} from "../../canvas/nodeResolver";
 import { useAiAssistance } from "../../ai/aiAssistance";
 import AssistPanel from "../ai/AssistPanel.vue";
 
 /**
- * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): the selected object's kind,
- * title and node reference, its verbs and its details. Trace, Impact, Act and Explain read the kernel's lineage,
- * dependents, command catalogue and explanations for a selected participant or protocol version (ADR-2540); on an
- * amendment, Impact is the amendment's impact (K-PROT-2). Simulate runs evaluate-only simulation and matrix gap
- * analysis on a selected protocol version, while participant simulation stays disabled naming #4888. Nothing here is
- * computed in the browser (§6.1).
+ * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): displays the selected object's
+ * human-readable kind and code/title first, with the canonical NodeRef tucked inside a copyable secondary disclosure,
+ * and exposes Trace, Impact, Explain, Simulate, Act, and Assist verbs for the active selection.
  */
 const props = defineProps<{
   studyCode: string;
@@ -387,6 +464,12 @@ const props = defineProps<{
   protocolVersion?: KernelProtocolVersion | null;
   /** Why the selected protocol version couldn't be read. */
   protocolVersionError?: string;
+  /** Canonical NodeRef when another study object (site, enrollment, grant, etc.) is selected. */
+  genericNodeRef?: string;
+  /** Resolved node summary for a generic selection, when loaded. */
+  genericNode?: KernelNode | null;
+  /** True while resolving a generic node selection. */
+  genericNodeLoading?: boolean;
   /** Where the participant's record opens; absent when it is already open. */
   recordLocation?: RouteLocationRaw | null;
   /** Where the participant's forms workspace opens inside Clinical Canvas; absent when already open. */
@@ -405,10 +488,51 @@ const emit = defineEmits<{
 
 const { enabled: aiEnabled } = useAiAssistance();
 
+const genericDisplay = computed(() => {
+  if (!props.genericNodeRef || props.missing) return null;
+  return getNodeDisplay(props.genericNodeRef, props.genericNode?.title ?? null);
+});
+
+const hasSelection = computed(() =>
+  Boolean(props.participant || props.protocolVersion || genericDisplay.value)
+);
+
+const headerKind = computed(() => {
+  if (props.participant) return "Participant";
+  if (props.protocolVersion) return "Protocol version";
+  return genericDisplay.value?.kindLabel ?? "Record";
+});
+
+const headerTitle = computed(() => {
+  if (props.participant) return props.participant.subject_id;
+  if (props.protocolVersion) return `Version ${props.protocolVersion.number}`;
+  return genericDisplay.value?.label ?? "Record";
+});
+
+const activeNodeRef = computed(() => {
+  if (props.participant) return props.nodeRef;
+  if (props.protocolVersion?.ref) return props.protocolVersion.ref;
+  if (props.genericNode?.ref) return props.genericNode.ref;
+  return genericDisplay.value?.ref ?? "";
+});
+
+const copiedRef = ref(false);
+async function copyInspectorRef() {
+  if (!activeNodeRef.value) return;
+  try {
+    await globalThis.navigator?.clipboard?.writeText?.(activeNodeRef.value);
+    copiedRef.value = true;
+    setTimeout(() => {
+      copiedRef.value = false;
+    }, 1500);
+  } catch {
+    copiedRef.value = false;
+  }
+}
+
 const hasActiveContent = computed(() =>
   Boolean(
-    props.participant ||
-    props.protocolVersion ||
+    hasSelection.value ||
     props.protocolVersionError ||
     props.missing ||
     (props.assistPrompt && aiEnabled.value)
@@ -430,15 +554,24 @@ function expand() {
 
 defineExpose({ expand });
 
-const NO_KERNEL_REF =
-  "this selection has no kernel reference, so the kernel can't answer for it.";
+const NO_RECORD_REF =
+  "this selection doesn't have a linked study reference yet.";
 
-/** The selection's kernel reference, when the kernel can answer for it: a participant or protocol version. */
+/** The selection's canonical reference when Trace, Impact, Explain, Act, and Assist can query it. */
 const kernelRef = computed(() => {
-  if (props.participant)
+  if (props.participant) {
     return parseNodeRef(props.nodeRef) ? props.nodeRef : "";
+  }
   const version = props.protocolVersion?.ref;
-  return version && parseNodeRef(version) ? version : "";
+  if (version && parseNodeRef(version)) return version;
+  if (
+    genericDisplay.value &&
+    !genericDisplay.value.masked &&
+    parseNodeRef(genericDisplay.value.ref)
+  ) {
+    return genericDisplay.value.ref;
+  }
+  return "";
 });
 
 /** Impact on an amendment is the amendment's impact (K-PROT-2); on anything else, what depends on it. */
@@ -470,40 +603,39 @@ const verbs = computed<Verb[]>(() => [
     id: "trace",
     label: "Trace",
     live: Boolean(kernelRef.value),
-    note: `Trace walks the kernel's lineage (ADR-2471), but ${NO_KERNEL_REF}`,
+    note: `Trace shows upstream source records, when available — ${NO_RECORD_REF}`,
   },
   {
     id: "impact",
     label: "Impact",
     live: Boolean(kernelRef.value),
-    note: `Impact counts what depends on this in the kernel's lineage (Canvas D2), but ${NO_KERNEL_REF}`,
+    note: `Impact shows downstream dependent records, when available — ${NO_RECORD_REF}`,
   },
   {
     id: "explain",
     label: "Explain",
     live: Boolean(kernelRef.value),
-    note: `Explain shows the kernel's reasons (ADR-2482), but ${NO_KERNEL_REF}`,
+    note: `Explain shows why an action is permitted or blocked, when available — ${NO_RECORD_REF}`,
   },
   {
     id: "simulate",
     label: "Simulate",
     live: canSimulate.value,
-    note: "Simulate evaluates protocol versions; participant simulation waits on engine simulation endpoints (#4888).",
+    note: "Participant simulation isn't available in this workspace yet; select a protocol version to check its schedule.",
   },
   {
     id: "act",
     label: "Act",
     live: Boolean(kernelRef.value),
-    note: `Act offers the kernel's commands with your dry-run decisions (ADR-2483), but ${NO_KERNEL_REF}`,
+    note: `Act previews available actions and eligibility, when available — ${NO_RECORD_REF}`,
   },
-  // Assist exists only while the viewer has AI assistance on; off, the inspector is exactly as before (ADR-2635).
   ...(aiEnabled.value
     ? [
         {
           id: "assist" as const,
           label: "Assist",
           live: Boolean(kernelRef.value),
-          note: `Assist reads about this object in the kernel (ADR-2635), but ${NO_KERNEL_REF}`,
+          note: `Assist reviews related proposals for this record, when available — ${NO_RECORD_REF}`,
         },
       ]
     : []),
@@ -589,12 +721,13 @@ function explainCommand(command: KernelCommand) {
 }
 
 watch(
-  () => [props.nodeRef, props.protocolVersion?.ref],
+  () => [props.nodeRef, props.protocolVersion?.ref, props.genericNodeRef],
   () => {
     simulationRequest++;
     shownVerb.value = null;
     currentVerb.value = "details";
     explained.value = null;
+    copiedRef.value = false;
     simulationResult.value = null;
     simulationLoading.value = false;
     simulationError.value = "";
@@ -603,7 +736,12 @@ watch(
 
 // A question from the palette opens Assist on the selection; this runs after the reset above.
 watch(
-  () => [props.assistPrompt, props.nodeRef, props.protocolVersion?.ref],
+  () => [
+    props.assistPrompt,
+    props.nodeRef,
+    props.protocolVersion?.ref,
+    props.genericNodeRef,
+  ],
   () => {
     if (props.assistPrompt && aiEnabled.value && kernelRef.value) {
       choose("assist");
@@ -618,6 +756,7 @@ watch(
     props.participant?.id ?? "",
     props.protocolVersion?.ref ?? "",
     props.protocolVersionError ?? "",
+    props.genericNodeRef ?? "",
     props.missing,
     props.assistPrompt ?? "",
     aiEnabled.value,
@@ -731,6 +870,35 @@ watch(aiEnabled, (on) => {
   font-size: 0.75rem;
   color: var(--neutral-dark);
   overflow-wrap: anywhere;
+}
+
+.inspector-ref-details {
+  margin-top: 2px;
+  font-size: 0.78rem;
+  color: var(--neutral-dark);
+}
+
+.inspector-ref-summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.inspector-ref-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.btn-copy-ref {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
 }
 
 .verbs {

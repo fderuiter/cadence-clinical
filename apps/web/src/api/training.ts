@@ -1,50 +1,36 @@
-import { openApiClient, unwrapResponse } from "./client";
-import type { paths } from "./types";
+import { encodeChangeReason } from "./changeReason";
+import { createOpenApiClient, unwrapResponse } from "./client";
+import type { components, paths } from "./generated/knowledge";
+
+type Schemas = components["schemas"];
+
+export type TrainingCurriculum = Schemas["Knowledge_TrainingCurriculumDto"];
+export type TrainingAssignment = Schemas["Knowledge_TrainingAssignmentDto"];
+export type DelegationSummary = Schemas["Knowledge_DelegationSummaryDto"];
+export type BatchAssignmentResponse =
+  Schemas["Knowledge_BatchAssignmentResponse"];
+export type BulkDelegationSignOffResponse =
+  Schemas["Knowledge_BulkDelegationSignOffResponse"];
 
 export interface CurriculumQueryParams {
   study_id?: string;
-  protocol_version_id?: string;
+  protocol_version?: string;
 }
 
 export interface AssignmentQueryParams {
-  user_id?: string;
+  study_id?: string;
   site_id?: string;
-  study_id?: string;
-}
-
-export interface GatingStatusQueryParams {
-  study_id?: string;
-  protocol_version?: string;
-  protocol_version_id?: string;
   user_id?: string;
-  site_id?: string | null;
-  user_role?: string | null;
+  status?: string;
 }
 
 export interface BatchAssignCurriculumPayload {
   curriculum_id: string;
   study_id: string;
-  site_ids?: string[];
-  roles?: string[];
-  target_personnel_ids?: string[];
-  reason_for_change?: string;
-}
-
-export interface BatchAssignmentResponse {
-  batch_transaction_id: string;
-  curriculum_id: string;
-  study_id: string;
-  total_eligible: number;
-  total_assigned: number;
-  total_skipped: number;
-  assignments: Array<any>;
-  skipped_items: Array<{
-    user_id: string;
-    site_id: string;
-    user_role: string;
-    reason: string;
-  }>;
-  executed_at: string;
+  site_ids?: string[] | null;
+  roles?: string[] | null;
+  target_personnel_ids?: string[] | null;
+  reason_for_change?: string | null;
 }
 
 export interface DelegationQueryParams {
@@ -55,205 +41,34 @@ export interface DelegationQueryParams {
 
 export interface BulkDelegationSignOffPayload {
   delegation_ids: string[];
-  study_id?: string;
-  site_id?: string;
+  study_id?: string | null;
+  site_id?: string | null;
   /** The signer is the signed-in user; the credential check is the step-up token (ADR-2515). */
   signature_payload: {
     meaning: string;
-    reason_for_change?: string;
+    reason_for_change?: string | null;
   };
 }
 
-export interface BulkDelegationSignOffResponse {
-  batch_transaction_id: string;
-  total_requested: number;
-  total_signed: number;
-  total_failed: number;
-  signed_delegations: Array<any>;
-  failed_items: Array<{ delegation_id: string; reason: string }>;
-  sha256_seal: string;
-  etmf_artifact_id: string;
-  executed_at: string;
-}
+const client = createOpenApiClient<paths>();
 
+/**
+ * Typed client for the .NET Knowledge training & delegation service,
+ * generated from docs/openapi/knowledge_openapi.json.
+ */
 export const trainingApi = {
   /**
-   * Fetch active training curricula for a study and protocol version.
+   * Fetch active training curricula for a study and protocol version (GET /api/v1/training/curricula).
    */
-  listCurricula(params: CurriculumQueryParams = {}) {
+  listCurricula(
+    params: CurriculumQueryParams = {}
+  ): Promise<TrainingCurriculum[]> {
     return unwrapResponse(
-      openApiClient.GET("/api/v1/training/curricula", {
-        params: { query: params },
-      })
-    );
-  },
-
-  /**
-   * Synchronous batch assignment of curriculum to site personnel.
-   */
-  batchAssignCurriculum(payload: BatchAssignCurriculumPayload) {
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/training/curricula/batch-assign" as any, {
-        body: payload as any,
-      })
-    );
-  },
-
-  /**
-   * List site delegation records.
-   */
-  listDelegations(params: DelegationQueryParams = {}) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/training/delegations" as any, {
-        params: { query: params },
-      })
-    );
-  },
-
-  /**
-   * Execute 21 CFR Part 11 bulk delegation sign-off.
-   */
-  bulkSignOffDelegations(
-    payload: BulkDelegationSignOffPayload,
-    sigToken: string
-  ) {
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/training/delegations/bulk-signoff" as any, {
-        body: payload as any,
-        headers: { "X-Sig-Token": sigToken },
-      })
-    );
-  },
-
-  /**
-   * Fetch specific curriculum details including modules and quiz questions.
-   */
-  getCurriculum(curriculumId: string) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/training/curricula/{curriculum_id}", {
-        params: { path: { curriculum_id: curriculumId } },
-      })
-    );
-  },
-
-  /**
-   * Generate delta-training curriculum upon protocol amendment publication.
-   */
-  generateAmendmentCurriculum(payload: unknown) {
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/training/curricula/generate-amendment", {
-        body: payload as paths["/api/v1/training/curricula/generate-amendment"]["post"]["requestBody"]["content"]["application/json"],
-      })
-    );
-  },
-
-  /**
-   * Assign a curriculum to a clinical site user.
-   */
-  assignCurriculum(curriculumId: string, payload: unknown) {
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/training/curricula/{curriculum_id}/assign", {
-        params: { path: { curriculum_id: curriculumId } },
-        body: payload as paths["/api/v1/training/curricula/{curriculum_id}/assign"]["post"]["requestBody"]["content"]["application/json"],
-      })
-    );
-  },
-
-  /**
-   * List training assignments for a user, site, or study.
-   */
-  listAssignments(params: AssignmentQueryParams = {}) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/training/assignments", {
-        params: { query: params },
-      })
-    );
-  },
-
-  /**
-   * Retrieve full details of an assignment including modules and quiz questions.
-   */
-  getAssignmentDetail(assignmentId: string) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/training/assignments/{assignment_id}", {
-        params: { path: { assignment_id: assignmentId } },
-      })
-    );
-  },
-
-  /**
-   * Record time-on-page reading duration progress.
-   */
-  recordProgress(assignmentId: string, payload: unknown) {
-    return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/training/assignments/{assignment_id}/progress",
-        {
-          params: { path: { assignment_id: assignmentId } },
-          body: payload as paths["/api/v1/training/assignments/{assignment_id}/progress"]["post"]["requestBody"]["content"]["application/json"],
-        }
-      )
-    );
-  },
-
-  /**
-   * Submit comprehension quiz answers and receive score evaluation (>= 80% passing).
-   */
-  submitQuiz(assignmentId: string, payload: unknown) {
-    return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/training/assignments/{assignment_id}/submit-quiz",
-        {
-          params: { path: { assignment_id: assignmentId } },
-          body: payload as paths["/api/v1/training/assignments/{assignment_id}/submit-quiz"]["post"]["requestBody"]["content"]["application/json"],
-        }
-      )
-    );
-  },
-
-  /**
-   * Capture 21 CFR Part 11 electronic signature, generate sealed PDF certificate, and push to eTMF & eISF.
-   */
-  signOffTraining(assignmentId: string, payload: unknown) {
-    return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/training/assignments/{assignment_id}/sign-off",
-        {
-          params: { path: { assignment_id: assignmentId } },
-          body: payload as paths["/api/v1/training/assignments/{assignment_id}/sign-off"]["post"]["requestBody"]["content"]["application/json"],
-        }
-      )
-    );
-  },
-
-  /**
-   * Retrieve generated completion certificate and SHA-256 seal for an assignment.
-   */
-  getCertificate(assignmentId: string) {
-    return unwrapResponse(
-      openApiClient.GET(
-        "/api/v1/training/assignments/{assignment_id}/certificate",
-        {
-          params: { path: { assignment_id: assignmentId } },
-        }
-      )
-    );
-  },
-
-  /**
-   * Check whether a user is qualified for EDC write permissions on a protocol version.
-   */
-  checkGatingStatus(params: GatingStatusQueryParams = {}) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/training/gating-status", {
+      client.GET("/api/v1/training/curricula", {
         params: {
           query: {
-            user_id: params.user_id || "",
-            study_id: params.study_id || "",
-            protocol_version:
-              params.protocol_version || params.protocol_version_id || "",
-            site_id: params.site_id,
-            user_role: params.user_role,
+            study_id: params.study_id,
+            protocol_version: params.protocol_version,
           },
         },
       })
@@ -261,12 +76,123 @@ export const trainingApi = {
   },
 
   /**
-   * Programmatically verify qualification gate.
+   * Fetch specific curriculum details (GET /api/v1/training/curricula/{curriculum_id}).
    */
-  verifyGate(payload: unknown) {
+  getCurriculum(curriculumId: string): Promise<TrainingCurriculum> {
     return unwrapResponse(
-      openApiClient.POST("/api/v1/training/verify-gate", {
-        body: payload as paths["/api/v1/training/verify-gate"]["post"]["requestBody"]["content"]["application/json"],
+      client.GET("/api/v1/training/curricula/{curriculum_id}", {
+        params: { path: { curriculum_id: curriculumId } },
+      })
+    );
+  },
+
+  /**
+   * Synchronous batch assignment of curriculum to site personnel (POST /api/v1/training/curricula/batch-assign).
+   */
+  batchAssignCurriculum(
+    payload: BatchAssignCurriculumPayload
+  ): Promise<BatchAssignmentResponse> {
+    const headers: Record<string, string> = {};
+    if (payload.reason_for_change) {
+      headers["X-Change-Reason"] = encodeChangeReason(
+        payload.reason_for_change
+      );
+    }
+
+    return unwrapResponse(
+      client.POST("/api/v1/training/curricula/batch-assign", {
+        body: {
+          curriculum_id: payload.curriculum_id,
+          study_id: payload.study_id,
+          site_ids: payload.site_ids ?? null,
+          roles: payload.roles ?? null,
+          target_personnel_ids: payload.target_personnel_ids ?? null,
+          reason_for_change: payload.reason_for_change ?? null,
+        },
+        headers,
+      })
+    );
+  },
+
+  /**
+   * List training assignments for a user, site, or study (GET /api/v1/training/assignments).
+   */
+  listAssignments(
+    params: AssignmentQueryParams = {}
+  ): Promise<TrainingAssignment[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/training/assignments", {
+        params: {
+          query: {
+            study_id: params.study_id,
+            site_id: params.site_id,
+            user_id: params.user_id,
+            status: params.status,
+          },
+        },
+      })
+    );
+  },
+
+  /**
+   * Retrieve details of a training assignment (GET /api/v1/training/assignments/{assignment_id}).
+   */
+  getAssignmentDetail(assignmentId: string): Promise<TrainingAssignment> {
+    return unwrapResponse(
+      client.GET("/api/v1/training/assignments/{assignment_id}", {
+        params: { path: { assignment_id: assignmentId } },
+      })
+    );
+  },
+
+  /**
+   * List site delegation records (GET /api/v1/training/delegations).
+   */
+  listDelegations(
+    params: DelegationQueryParams = {}
+  ): Promise<DelegationSummary[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/training/delegations", {
+        params: {
+          query: {
+            study_id: params.study_id,
+            site_id: params.site_id,
+            status: params.status,
+          },
+        },
+      })
+    );
+  },
+
+  /**
+   * Execute 21 CFR Part 11 bulk delegation sign-off (POST /api/v1/training/delegations/bulk-signoff).
+   */
+  bulkSignOffDelegations(
+    payload: BulkDelegationSignOffPayload,
+    sigToken: string
+  ): Promise<BulkDelegationSignOffResponse> {
+    const headers: Record<string, string> = {
+      "X-Sig-Token": sigToken,
+    };
+    if (payload.signature_payload.reason_for_change) {
+      headers["X-Change-Reason"] = encodeChangeReason(
+        payload.signature_payload.reason_for_change
+      );
+    }
+
+    return unwrapResponse(
+      client.POST("/api/v1/training/delegations/bulk-signoff", {
+        body: {
+          delegation_ids: payload.delegation_ids,
+          study_id: payload.study_id ?? null,
+          site_id: payload.site_id ?? null,
+          signature_payload: {
+            meaning: payload.signature_payload.meaning,
+            reason_for_change:
+              payload.signature_payload.reason_for_change ?? null,
+          },
+        },
+        headers,
       })
     );
   },

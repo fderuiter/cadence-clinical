@@ -1,6 +1,9 @@
+using System;
+
 using Cadence.Apps.Etmf.Endpoints;
 using Cadence.Apps.Etmf.Infrastructure.Consumers;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
+using Cadence.Apps.Etmf.Services;
 using Cadence.Apps.Etmf.Workers;
 using Cadence.Database;
 using Cadence.Kernel.Time;
@@ -11,6 +14,7 @@ using MassTransit;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
@@ -19,6 +23,18 @@ builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<EtmfDbContext>();
 builder.Services.AddSingleton<EtmfExportQueue>();
 builder.Services.AddHostedService<EtmfExportWorker>();
+builder.Services.AddHttpClient<IEtmfCompletenessWebhookPublisher, HttpEtmfCompletenessWebhookPublisher>(client =>
+{
+    string? executionUrl = builder.Configuration["EXECUTION_SERVICE_URL"];
+    if (!string.IsNullOrWhiteSpace(executionUrl) && Uri.TryCreate(executionUrl, UriKind.Absolute, out var configuredUri))
+    {
+        client.BaseAddress = configuredUri;
+    }
+    else if (builder.Environment.IsDevelopment())
+    {
+        client.BaseAddress = new UriBuilder(Uri.UriSchemeHttp, "localhost", 8002).Uri;
+    }
+});
 
 builder.Services.AddMassTransit(x =>
 {

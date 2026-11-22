@@ -16,9 +16,8 @@
         </div>
         <div class="modal-body">
           <p>
-            To secure your offline clinical data, please choose a numeric local
-            security PIN. This PIN will wrap and encrypt your offline database
-            encryption key.
+            Choose a numeric security PIN to keep your saved survey answers
+            private on this device, even when you are offline.
           </p>
           <div
             v-if="sessionStore.pinSetup.error"

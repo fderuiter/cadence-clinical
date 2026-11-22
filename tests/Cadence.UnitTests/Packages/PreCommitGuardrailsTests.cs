@@ -464,6 +464,294 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
+    public void GitIndexReader_StreamsStagedBlobsViaCatFileBatch_WithoutIndexLock_AndMaterializesWorkspace()
+    {
+        InitGitRepo();
+        Write("src/App.cs", "namespace Demo;\npublic static class App { public const int Version = 1; }\n");
+        string scriptDiskPath = Write("scripts/run.sh", "#!/bin/sh\necho staged-v1\n");
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(scriptDiskPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+
+        RunGit("add", ".");
+
+        // Mutate working tree and delete script on disk to verify reader serves strictly from the Git index.
+        Write("src/App.cs", "namespace Demo;\npublic static class App { public const int Version = 999; }\n");
+        File.Delete(scriptDiskPath);
+
+        string workspaceRoot;
+        using (var reader = GitIndexReader.TryOpen(_tempDir))
+        {
+            reader.Should().NotBeNull();
+            reader!.HasAuthoritativeIndex.Should().BeTrue();
+            File.Exists(Path.Combine(_tempDir, ".git", "index.lock")).Should().BeFalse(
+                "GitIndexReader must use --no-optional-locks without acquiring .git/index.lock");
+
+            reader.FileExists("src/App.cs").Should().BeTrue();
+            reader.FileExists("scripts/run.sh").Should().BeTrue("deleted working-tree file remains staged in index");
+            reader.DirectoryExists("scripts").Should().BeTrue();
+
+            reader.TryReadText("src/App.cs", out string appText).Should().BeTrue();
+            appText.Should().Contain("Version = 1").And.NotContain("999");
+
+            reader.TryReadLines("scripts/run.sh", out string[] scriptLines).Should().BeTrue();
+            scriptLines.Should().Equal("#!/bin/sh", "echo staged-v1");
+
+            using var workspace = reader.Materialize(["src/App.cs", "scripts/run.sh"], createGitMarker: true);
+            workspaceRoot = workspace.RootPath;
+            Directory.Exists(Path.Combine(workspaceRoot, ".git")).Should().BeTrue();
+            File.ReadAllText(Path.Combine(workspaceRoot, "src", "App.cs")).Should().Contain("Version = 1");
+            File.ReadAllText(Path.Combine(workspaceRoot, "scripts", "run.sh")).Should().Contain("staged-v1");
+        }
+
+        Directory.Exists(workspaceRoot).Should().BeFalse("StagedBlobWorkspace.Dispose must remove temporary files");
+    }
+
+    [Fact]
+    public void FileScopedPreCommitGates_BlockStagedViolations_WhenUnstagedWorkingTreeEditsMaskThem()
+    {
+        InitGitRepo();
+
+        const string baselineJson =
+            "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": [],\n  \"results\": {}\n}\n";
+        string dupBody = string.Join("\n", Enumerable.Range(1, 20).Select(i => $"        int item{i} = Calculate({i}, {i + 3});"));
+        string boolLiteralExpr = "== " + "true";
+
+        Write(".secrets.baseline", baselineJson);
+        Write(".deid-baseline.txt", "# empty baseline\n");
+        Write("docs/trailing.txt", "staged trailing space   \n");
+        Write("docs/no-eof.txt", "staged missing newline");
+        Write(".github/workflows/ci.yml",
+            "name: \"unterminated\non: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n");
+        Write("config/secret.txt", $"{PrivateKeyHeader}\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n");
+        Write("apps/alpha/src/Phi.cs", "namespace Alpha;\npublic static class Phi { public static string Ssn => \"000-12-3456\"; }\n");
+        Write("apps/alpha/src/Query.cs", $"namespace Alpha;\npublic static class Query {{ public static bool Bad(bool x) => x {boolLiteralExpr}; }}\n");
+        Write("apps/alpha/src/DupOne.cs", $"namespace Alpha;\nclass DupOne {{\n    void Run() {{\n{dupBody}\n    }}\n}}\n");
+        Write("apps/beta/src/DupTwo.cs", $"namespace Beta;\nclass DupTwo {{\n    void Go() {{\n{dupBody}\n    }}\n}}\n");
+        Write("tmp/forbidden.txt", "staged forbidden path\n");
+        string reqDocPath = Write("docs/req.md", "# Requirements\n\nCovers @req:prd-sys-001 and [missing](nope.md).\n");
+
+        RunGit("add", ".");
+
+        // Now overwrite EVERY working-tree file with completely clean content (and delete tmp/forbidden.txt from disk)!
+        const string cleanWorkingTreeReqDoc = "# Requirements\n\nCovers @req:PRD-SYS-001 cleanly.\n";
+        Write("docs/trailing.txt", "clean working tree\n");
+        Write("docs/no-eof.txt", "clean working tree\n");
+        Write(".github/workflows/ci.yml",
+            "name: CI\non: push\npermissions:\n  contents: read\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\n        with:\n          persist-credentials: false\n");
+        Write("config/secret.txt", "clean placeholder\n");
+        Write("apps/alpha/src/Phi.cs", "namespace Alpha;\npublic static class Phi { public static string Safe => \"ok\"; }\n");
+        Write("apps/alpha/src/Query.cs", "namespace Alpha;\npublic static class Query { public static bool Ok(bool x) => x; }\n");
+        Write("apps/alpha/src/DupOne.cs", "namespace Alpha;\nclass DupOne { }\n");
+        Write("apps/beta/src/DupTwo.cs", "namespace Beta;\nclass DupTwo { }\n");
+        Write("docs/req.md", cleanWorkingTreeReqDoc);
+        File.Delete(Path.Combine(_tempDir, "tmp", "forbidden.txt"));
+        Directory.Delete(Path.Combine(_tempDir, "tmp"));
+
+        string stubBinDir = CreateDetectSecretsHookStub();
+        string systemPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var stubEnv = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["PATH"] = string.IsNullOrEmpty(systemPath) ? stubBinDir : $"{stubBinDir}{Path.PathSeparator}{systemPath}",
+            [DetectSecretsGateService.DisableUvxFallbackEnvVar] = "1",
+        };
+
+        string[] stagedFiles = [.. PreCommitOpenApiService.GetStagedFiles(_tempDir)];
+        using var reader = GitIndexReader.TryOpen(_tempDir);
+        reader.Should().NotBeNull();
+        var ctx = new GateContext(_tempDir, stagedFiles, PreCommit: true, IndexReader: reader);
+
+        QualityGates.Find("trailing-whitespace")!.Run(ctx).Should().BeFalse();
+        QualityGates.Find("end-of-file")!.Run(ctx).Should().BeFalse();
+        QualityGates.Find("yaml")!.Run(ctx).Should().BeFalse();
+        QualityGates.Find("workflow-security")!.Run(ctx).Should().BeFalse();
+        QualityGates.Find("security")!.Run(ctx).Should().BeFalse();
+        QualityGates.Find("deid")!.Run(ctx).Should().BeFalse();
+        QualityGates.Find("query-linter")!.Run(ctx).Should().BeFalse();
+        QualityGates.Find("duplication")!.Run(ctx).Should().BeFalse();
+        QualityGates.Find("path-patterns")!.Run(ctx).Should().BeFalse();
+        QualityGates.Find("markdown")!.Run(ctx).Should().BeFalse();
+        QualityGates.Find("sanitizer")!.Run(ctx).Should().BeFalse();
+        DetectSecretsGateService.Scan(_tempDir, stagedFiles, preCommit: true, key => stubEnv.GetValueOrDefault(key), reader)
+            .Should().Be(1, "detect-secrets must scan materialized staged blobs rather than masked working-tree files");
+
+        File.ReadAllText(reqDocPath).Should().Be(cleanWorkingTreeReqDoc,
+            "sanitizer in pre-commit mode must report lowercase requirement tags without mutating working-tree Markdown");
+    }
+
+    [Fact]
+    public void DeletionOnlyAndCleanMergeCommits_PreserveEmptyTargetFiles_AndLeaveUnstagedDocsUntouched()
+    {
+        InitGitRepo();
+        Write("obsolete.txt", "delete me\n");
+        string guidePath = Write("docs/guide.md", "# Guide\n\nClean committed doc.\n");
+        RunGit("add", ".");
+        RunGit("commit", "-q", "-m", "initial");
+
+        // Create an upstream branch commit for a clean merge test later.
+        RunGit("checkout", "-q", "-b", "upstream");
+        Write("upstream-note.txt", "from upstream\n");
+        RunGit("add", "upstream-note.txt");
+        RunGit("commit", "-q", "-m", "upstream addition");
+
+        // Back on main: stage only a deletion (`git rm`), while leaving unstaged lowercase @req tag in docs/guide.md.
+        RunGit("checkout", "-q", "main");
+        RunGit("rm", "-q", "obsolete.txt");
+        const string dirtyUnstagedDoc = "# Guide\n\nUnstaged draft tag @req:prd-sys-001   \n";
+        File.WriteAllText(guidePath, dirtyUnstagedDoc);
+
+        PreCommitOpenApiService.GetStagedFiles(_tempDir).Should().BeEmpty();
+        QualityGateOrchestrator.RunQualityGates(gateName: "sanitizer", preCommit: true, repoRoot: _tempDir).Should().Be(0);
+        QualityGateOrchestrator.RunQualityGates(gateName: "path-patterns", preCommit: true, repoRoot: _tempDir).Should().Be(0);
+        QualityGateOrchestrator.RunQualityGates(gateName: "markdown", preCommit: true, repoRoot: _tempDir).Should().Be(0);
+        File.ReadAllText(guidePath).Should().Be(dirtyUnstagedDoc,
+            "git rm commits must not scan or rewrite unstaged docs/**/*.md files");
+
+        // Commit the deletion and start a clean --no-commit merge (`MERGE_HEAD` with only verbatim upstream changes).
+        File.WriteAllText(guidePath, "# Guide\n\nClean committed doc.\n");
+        RunGit("commit", "-q", "-m", "remove obsolete");
+        RunGit("merge", "--no-commit", "--no-ff", "upstream");
+        File.Exists(Path.Combine(_tempDir, ".git", "MERGE_HEAD")).Should().BeTrue();
+
+        File.WriteAllText(guidePath, dirtyUnstagedDoc);
+        PreCommitOpenApiService.GetStagedFiles(_tempDir).Should().BeEmpty();
+        QualityGateOrchestrator.RunQualityGates(gateName: "sanitizer", preCommit: true, repoRoot: _tempDir).Should().Be(0);
+        QualityGateOrchestrator.RunQualityGates(gateName: "trailing-whitespace", preCommit: true, repoRoot: _tempDir).Should().Be(0);
+        File.ReadAllText(guidePath).Should().Be(dirtyUnstagedDoc,
+            "clean merge commits must treat empty staged file list as a no-op and leave unstaged docs untouched");
+    }
+
+    [Fact]
+    public void ActionlintAndHadolintGates_FailClosedWhenMissing_AndValidateStagedBlobsFromCadenceBin()
+    {
+        InitGitRepo();
+        Write(".github/workflows/ci.yml", "name: CI\non: INVALID_WORKFLOW_MARKER\n");
+        Write("docker/Dockerfile.api", "FROM ubuntu:24.04\n# INVALID_DOCKERFILE_MARKER\n");
+        RunGit("add", ".");
+
+        // Mask both files on disk with clean content so only staged index inspection catches them.
+        Write(".github/workflows/ci.yml", "name: CI\non: push\n");
+        Write("docker/Dockerfile.api", "FROM ubuntu:24.04\n");
+
+        var emptyPathEnv = new Dictionary<string, string?>(StringComparer.Ordinal) { ["PATH"] = _tempDir };
+        CliLinterGateService.RunActionlint(_tempDir, [".github/workflows/ci.yml"], preCommit: true, getEnvironmentVariable: k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(1, "actionlint gate must fail closed when binary is missing");
+        CliLinterGateService.RunHadolint(_tempDir, ["docker/Dockerfile.api"], preCommit: true, getEnvironmentVariable: k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(1, "hadolint gate must fail closed when binary is missing");
+
+        CreateCadenceBinLinterStubs();
+        using var reader = GitIndexReader.TryOpen(_tempDir);
+        CliLinterGateService.RunActionlint(_tempDir, [".github/workflows/ci.yml"], preCommit: true, reader, k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(1, "actionlint must validate staged workflow blob even when working tree is clean");
+        CliLinterGateService.RunHadolint(_tempDir, ["docker/Dockerfile.api"], preCommit: true, reader, k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(1, "hadolint must validate staged Dockerfile blob even when working tree is clean");
+
+        // Now stage the clean versions and verify both pass.
+        RunGit("add", ".");
+        using var cleanReader = GitIndexReader.TryOpen(_tempDir);
+        CliLinterGateService.RunActionlint(_tempDir, [".github/workflows/ci.yml"], preCommit: true, cleanReader, k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(0);
+        CliLinterGateService.RunHadolint(_tempDir, ["docker/Dockerfile.api"], preCommit: true, cleanReader, k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(0);
+    }
+
+    [Fact]
+    public void PreCommitHook_GuardsDotnetRootWhenDotnetHomeHasOnlySentinels_AndPreservesDotnetToolsOnPath()
+    {
+        if (OperatingSystem.IsWindows() || !File.Exists("/bin/sh"))
+        {
+            return;
+        }
+
+        string hookPath = Path.Combine(QualityGateOrchestrator.FindRepoRoot(), ".githooks", "pre-commit");
+        string mockUsrBin = Path.Combine(_tempDir, "usr-bin");
+        string sentinelHome = Path.Combine(_tempDir, "sentinel-home");
+        Directory.CreateDirectory(mockUsrBin);
+        Directory.CreateDirectory(Path.Combine(sentinelHome, ".dotnet", "tools"));
+        File.WriteAllText(Path.Combine(sentinelHome, ".dotnet", "10.0.100.dotnetFirstUseSentinel"), "");
+        File.WriteAllText(Path.Combine(sentinelHome, ".dotnet", "tools", "dotnet-cadence"), "#!/bin/sh\nexit 0\n");
+
+        string envCaptureFile = Path.Combine(_tempDir, "captured-env.txt");
+        string fakeDotnet = Path.Combine(mockUsrBin, "dotnet");
+        File.WriteAllText(fakeDotnet, "#!/bin/sh\nexit 0\n");
+        File.SetUnixFileMode(fakeDotnet, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        string fakeNode = Path.Combine(mockUsrBin, "node");
+        File.WriteAllText(
+            fakeNode,
+            $"#!/bin/sh\nprintf 'DOTNET_ROOT=%s\\nPATH=%s\\n' \"${{DOTNET_ROOT:-<unset>}}\" \"$PATH\" > '{envCaptureFile}'\nexit 0\n");
+        File.SetUnixFileMode(fakeNode, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        (int exitCode, string stderr) = RunHook(hookPath, mockUsrBin, sentinelHome);
+        exitCode.Should().Be(0, stderr);
+        string captured = File.ReadAllText(envCaptureFile);
+        captured.Should().Contain("DOTNET_ROOT=<unset>",
+            "DOTNET_ROOT must not be pointed at ~/.dotnet when dotnet is already on PATH and ~/.dotnet lacks host/fxr");
+        captured.Should().Contain($"{Path.Combine(sentinelHome, ".dotnet", "tools")}",
+            "~/.dotnet/tools must remain on PATH");
+
+        // Now remove system dotnet and populate a complete local ~/.dotnet runtime (dotnet + host/fxr).
+        File.Delete(fakeDotnet);
+        string localDotnetDir = Path.Combine(sentinelHome, ".dotnet");
+        Directory.CreateDirectory(Path.Combine(localDotnetDir, "host", "fxr", "10.0.0"));
+        string localDotnetExe = Path.Combine(localDotnetDir, "dotnet");
+        File.WriteAllText(localDotnetExe, "#!/bin/sh\nexit 0\n");
+        File.SetUnixFileMode(localDotnetExe, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        (int localExit, string localErr) = RunHook(hookPath, mockUsrBin, sentinelHome);
+        localExit.Should().Be(0, localErr);
+        string localCaptured = File.ReadAllText(envCaptureFile);
+        localCaptured.Should().Contain($"DOTNET_ROOT={localDotnetDir}");
+        localCaptured.Should().Contain($"{localDotnetDir}:");
+    }
+
+    private void CreateCadenceBinLinterStubs()
+    {
+        string binDir = Path.Combine(_tempDir, ".cadence", "bin");
+        Directory.CreateDirectory(binDir);
+
+        if (OperatingSystem.IsWindows())
+        {
+            File.WriteAllText(
+                Path.Combine(binDir, "actionlint.exe"),
+                "stub");
+            File.WriteAllText(
+                Path.Combine(binDir, "hadolint.exe"),
+                "stub");
+            return;
+        }
+
+        string actionlintPath = Path.Combine(binDir, "actionlint");
+        File.WriteAllText(
+            actionlintPath,
+            "#!/bin/sh\n" +
+            "if [ \"${1:-}\" = \"-version\" ]; then echo '1.7.12'; exit 0; fi\n" +
+            "for f in \"$@\"; do\n" +
+            "  if grep -q 'INVALID_WORKFLOW_MARKER' \"$f\" 2>/dev/null; then\n" +
+            "    echo \"$f:1:1: invalid workflow marker\"\n" +
+            "    exit 1\n" +
+            "  fi\n" +
+            "done\n" +
+            "exit 0\n");
+        File.SetUnixFileMode(actionlintPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        string hadolintPath = Path.Combine(binDir, "hadolint");
+        File.WriteAllText(
+            hadolintPath,
+            "#!/bin/sh\n" +
+            "if [ \"${1:-}\" = \"--version\" ]; then echo 'Haskell Dockerfile Linter 2.15.1'; exit 0; fi\n" +
+            "for f in \"$@\"; do\n" +
+            "  if [ -f \"$f\" ] && grep -q 'INVALID_DOCKERFILE_MARKER' \"$f\" 2>/dev/null; then\n" +
+            "    echo \"$f:2 DL3000 error: invalid dockerfile marker\"\n" +
+            "    exit 1\n" +
+            "  fi\n" +
+            "done\n" +
+            "exit 0\n");
+        File.SetUnixFileMode(hadolintPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+    }
+
+    [Fact]
     public void SecretsBaselineCleaner_CheckMode_DetectsUnnormalizedBaselineWithoutMutatingDisk()
     {
         const string unnormalized =
@@ -645,6 +933,9 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             "    echo \"1.5.0\"\n" +
             "    exit 0\n" +
             "fi\n" +
+            "if command -v git >/dev/null 2>&1; then\n" +
+            "    git diff --name-only >/dev/null\n" +
+            "fi\n" +
             "baseline=\"\"\n" +
             "while [ \"$#\" -gt 0 ]; do\n" +
             "    case \"$1\" in\n" +
@@ -670,5 +961,92 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             "exit 3\n");
         File.SetUnixFileMode(shPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         return binDir;
+    }
+
+    [Fact]
+    public void SetupWizard_LintersOnly_VerifiesSha256ChecksumsAndRejectsTamperedPayloads()
+    {
+        if (OperatingSystem.IsWindows() || !File.Exists("/bin/bash"))
+        {
+            return;
+        }
+
+        string wizardPath = Path.Combine(QualityGateOrchestrator.FindRepoRoot(), "scripts", "setup_wizard.sh");
+        string payloadDir = Path.Combine(_tempDir, "payloads");
+        string binOut = Path.Combine(_tempDir, "cadence-bin");
+        Directory.CreateDirectory(payloadDir);
+
+        string fakeActionlint = Path.Combine(payloadDir, "actionlint");
+        File.WriteAllText(fakeActionlint, "#!/bin/sh\necho '1.7.12'\n");
+        File.SetUnixFileMode(fakeActionlint, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        string tarPath = Path.Combine(payloadDir, "actionlint.tar.gz");
+        var tarPsi = new ProcessStartInfo("tar")
+        {
+            WorkingDirectory = payloadDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        tarPsi.ArgumentList.Add("-czf");
+        tarPsi.ArgumentList.Add(tarPath);
+        tarPsi.ArgumentList.Add("actionlint");
+        using (var tarProc = Process.Start(tarPsi)!)
+        {
+            tarProc.WaitForExit();
+            tarProc.ExitCode.Should().Be(0);
+        }
+
+        string hadolintPayload = Path.Combine(payloadDir, "hadolint-bin");
+        File.WriteAllText(hadolintPayload, "#!/bin/sh\necho 'Haskell Dockerfile Linter 2.15.1'\n");
+        File.SetUnixFileMode(hadolintPayload, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        string alSha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(tarPath)));
+        string hlSha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(hadolintPayload)));
+        string zeroSha = new('0', 64);
+
+        (int badExit, string badOut) = RunWizardLintersOnly(wizardPath, binOut, $"file://{tarPath}", zeroSha, $"file://{hadolintPayload}", zeroSha);
+        badExit.Should().Be(1);
+        badOut.Should().Contain("Checksum verification failed for actionlint");
+        badOut.Should().Contain("Checksum verification failed for hadolint");
+        File.Exists(Path.Combine(binOut, "actionlint")).Should().BeFalse();
+        File.Exists(Path.Combine(binOut, "hadolint")).Should().BeFalse();
+
+        (int okExit, string okOut) = RunWizardLintersOnly(wizardPath, binOut, $"file://{tarPath}", alSha, $"file://{hadolintPayload}", hlSha);
+        okExit.Should().Be(0, okOut);
+        okOut.Should().Contain("actionlint 1.7.12 SHA-256 verified");
+        okOut.Should().Contain("hadolint 2.15.1 SHA-256 verified");
+        File.Exists(Path.Combine(binOut, "actionlint")).Should().BeTrue();
+        File.Exists(Path.Combine(binOut, "hadolint")).Should().BeTrue();
+    }
+
+    private static (int ExitCode, string CombinedOutput) RunWizardLintersOnly(
+        string wizardPath,
+        string cadenceBinDir,
+        string actionlintUrl,
+        string actionlintSha,
+        string hadolintUrl,
+        string hadolintSha)
+    {
+        var psi = new ProcessStartInfo("/bin/bash")
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        psi.ArgumentList.Add(wizardPath);
+        psi.ArgumentList.Add("--linters-only");
+        psi.Environment["CADENCE_BIN_DIR"] = cadenceBinDir;
+        psi.Environment["ACTIONLINT_DOWNLOAD_URL"] = actionlintUrl;
+        psi.Environment["ACTIONLINT_SHA256"] = actionlintSha;
+        psi.Environment["HADOLINT_DOWNLOAD_URL"] = hadolintUrl;
+        psi.Environment["HADOLINT_SHA256"] = hadolintSha;
+
+        using var proc = Process.Start(psi)!;
+        var stderrTask = proc.StandardError.ReadToEndAsync();
+        string stdout = proc.StandardOutput.ReadToEnd();
+        proc.WaitForExit();
+        string stderr = stderrTask.GetAwaiter().GetResult();
+        return (proc.ExitCode, stdout + stderr);
     }
 }

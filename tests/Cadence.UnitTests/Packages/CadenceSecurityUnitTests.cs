@@ -184,6 +184,124 @@ public class CadenceSecurityUnitTests
     }
 
     [Fact]
+    public async Task ExpiredSubscriptionWriteGuard_BlocksMutationsWith403ProblemDetails_AndExemptsReadsExportsSignaturesAndActivation()
+    {
+        var middleware = new ExpiredSubscriptionWriteGuardMiddleware();
+        var expiredPrincipal = new Principal
+        {
+            UserId = "sponsor-admin-01",
+            Roles = ["sponsor_dm"],
+            TenantId = "trial-expired-01",
+            TenantReadOnly = true,
+        };
+
+        // 1. Safe GET/HEAD requests pass through unimpeded.
+        foreach (string safeMethod in new[] { HttpMethods.Get, HttpMethods.Head })
+        {
+            var safeContext = new DefaultHttpContext();
+            safeContext.Request.Method = safeMethod;
+            safeContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = expiredPrincipal;
+            bool safeExecuted = false;
+            await middleware.InvokeAsync(safeContext, _ =>
+            {
+                safeExecuted = true;
+                return Task.CompletedTask;
+            });
+            safeExecuted.Should().BeTrue();
+        }
+
+        // 2. Standard clinical POST/PUT/PATCH/DELETE mutations fail with 403 application/problem+json (K.Subscription.Expired).
+        foreach (string writeMethod in new[] { HttpMethods.Post, HttpMethods.Put, HttpMethods.Patch, HttpMethods.Delete })
+        {
+            var writeContext = new DefaultHttpContext();
+            writeContext.Request.Method = writeMethod;
+            writeContext.Request.Path = "/api/v1/ctms/site-milestones";
+            writeContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = expiredPrincipal;
+            writeContext.Response.Body = new MemoryStream();
+
+            bool writeExecuted = false;
+            await middleware.InvokeAsync(writeContext, _ =>
+            {
+                writeExecuted = true;
+                return Task.CompletedTask;
+            });
+
+            writeExecuted.Should().BeFalse();
+            writeContext.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+            writeContext.Response.ContentType.Should().StartWith("application/problem+json");
+            writeContext.Response.Body.Position = 0;
+            using var doc = await JsonDocument.ParseAsync(writeContext.Response.Body, cancellationToken: TestContext.Current.CancellationToken);
+            doc.RootElement.GetProperty("code").GetString().Should().Be(ExpiredSubscriptionWriteGuardMiddleware.SubscriptionExpiredCode);
+            doc.RootElement.GetProperty("status").GetInt32().Should().Be(403);
+        }
+
+        // 3. Regulated eTMF export (Permission:etmf_document:export), Part 11 step-up signatures (ElectronicSignatureRequired),
+        //    and explicit commercial activation endpoints (AllowExpiredTenantWriteMetadata) are exempted.
+        Endpoint[] exemptedEndpoints =
+        [
+            new(_ => Task.CompletedTask, new EndpointMetadataCollection(new Microsoft.AspNetCore.Authorization.AuthorizeAttribute($"{PermissionPolicyProvider.PolicyPrefix}etmf_document:export")), "etmf-export"),
+            new(_ => Task.CompletedTask, new EndpointMetadataCollection(ElectronicSignatureRequired.Instance), "part11-sign"),
+            new(_ => Task.CompletedTask, new EndpointMetadataCollection(AllowExpiredTenantWriteMetadata.Instance), "activate-subscription"),
+        ];
+
+        foreach (var endpoint in exemptedEndpoints)
+        {
+            var exemptContext = new DefaultHttpContext();
+            exemptContext.Request.Method = HttpMethods.Post;
+            exemptContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = expiredPrincipal;
+            exemptContext.SetEndpoint(endpoint);
+
+            bool exemptExecuted = false;
+            await middleware.InvokeAsync(exemptContext, _ =>
+            {
+                exemptExecuted = true;
+                return Task.CompletedTask;
+            });
+
+            exemptExecuted.Should().BeTrue($"endpoint '{endpoint.DisplayName}' must remain available when a workspace trial is expired");
+        }
+    }
+
+    [Fact]
+    public void HmacSigner_BindsTenantReadOnlyIntoCanonicalSignature_AndRejectsTampering()
+    {
+        byte[] secret = GatewayIdentity.EncodeSecret(TestSecret);
+        var issuedAt = new DateTimeOffset(2026, 11, 21, 12, 0, 0, TimeSpan.Zero);
+
+        var readOnlyIdentity = new GatewayIdentity(
+            UserId: "usr-exp-01",
+            Roles: ["Sponsor Admin"],
+            SiteIds: [],
+            TenantId: "trial-exp-tenant",
+            StudyIds: ["*"],
+            TenantReadOnly: true);
+
+        var headers = readOnlyIdentity.ToSignedHeaders(issuedAt, secret);
+        headers[GatewayHeaders.TenantReadOnly].Should().Be("true");
+
+        HmacSigner.VerifyGatewaySignature(
+            userId: headers[GatewayHeaders.UserId],
+            roles: headers[GatewayHeaders.Roles],
+            timestamp: headers[GatewayHeaders.Timestamp],
+            signature: headers[GatewayHeaders.Signature],
+            secret: secret,
+            studyIds: headers[GatewayHeaders.StudyIds],
+            tenantId: headers[GatewayHeaders.TenantId],
+            tenantReadOnly: true).Should().BeTrue();
+
+        // Tampering or stripping X-Tenant-Read-Only (true -> false) fails HMAC verification immediately.
+        HmacSigner.VerifyGatewaySignature(
+            userId: headers[GatewayHeaders.UserId],
+            roles: headers[GatewayHeaders.Roles],
+            timestamp: headers[GatewayHeaders.Timestamp],
+            signature: headers[GatewayHeaders.Signature],
+            secret: secret,
+            studyIds: headers[GatewayHeaders.StudyIds],
+            tenantId: headers[GatewayHeaders.TenantId],
+            tenantReadOnly: false).Should().BeFalse();
+    }
+
+    [Fact]
     public void HmacSigner_GeneratesAndVerifiesGatewaySignatures()
     {
         byte[] secret = Encoding.UTF8.GetBytes(TestSecret);

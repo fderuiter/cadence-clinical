@@ -4,8 +4,8 @@ import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth";
 import { useClinicalStore } from "../src/stores/clinical";
 import { useToastStore } from "../src/stores/toasts.js";
-import { executionApi } from "../src/api/executionApi";
 import { ctmsApi } from "../src/api/ctmsApi";
+import { executionApi } from "../src/api/executionApi";
 import apiClient from "../src/services/api";
 import CtmsView from "../src/views/CtmsView.vue";
 
@@ -34,6 +34,7 @@ vi.mock("../src/api/ctmsApi", () => ({
   ctmsApi: {
     evaluateSiteGreenlight: vi.fn(),
     getCountryGreenlightMatrix: vi.fn().mockResolvedValue([]),
+    getCountryMatrix: vi.fn().mockResolvedValue([]),
     certifySiteGreenlight: vi.fn(),
     batchCertifyCountrySites: vi.fn(),
     listSiteMilestones: vi.fn().mockResolvedValue([]),
@@ -44,6 +45,9 @@ vi.mock("../src/api/ctmsApi", () => ({
     completeMonitoringVisit: vi.fn(),
     signOffMonitoringVisit: vi.fn(),
     listMonitoringVisitLetters: vi.fn().mockResolvedValue([]),
+    getMonitoringVisitLetters: vi.fn().mockResolvedValue([]),
+    compileVisitLetter: vi.fn(),
+    downloadVisitLetterPdf: vi.fn(),
     getSiteDoaLog: vi.fn().mockResolvedValue({
       site_id: "SITE-7",
       delegated_staff: [],
@@ -51,7 +55,7 @@ vi.mock("../src/api/ctmsApi", () => ({
     }),
     delegateSiteTasks: vi.fn(),
     revokeSiteTasks: vi.fn(),
-    signOffDoaTasks: vi.fn(),
+    signOffDelegation: vi.fn(),
     exportSiteDoaPdf: vi.fn(),
   },
 }));
@@ -90,6 +94,10 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     useAuthStore().rawRoles = ["Data Manager"];
     vi.mocked(executionApi.getSiteComplianceStatus).mockReset();
     vi.mocked(executionApi.activateSite).mockReset();
+    vi.mocked(ctmsApi.listSiteMilestones).mockReset();
+    vi.mocked(ctmsApi.listSiteMilestones).mockResolvedValue([]);
+    vi.mocked(ctmsApi.listMonitoringVisits).mockReset();
+    vi.mocked(ctmsApi.listMonitoringVisits).mockResolvedValue([]);
     vi.spyOn(apiClient, "get");
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -110,6 +118,7 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
 
     expect(wrapper.find("#ctms-live-workspace").exists()).toBe(true);
     expect(wrapper.find("#site-activation-panel").exists()).toBe(true);
+    expect(wrapper.find("#site-activation-site-picker").exists()).toBe(true);
     expect(wrapper.find("#ctms-tab-startup").exists()).toBe(true);
     expect(wrapper.find("#ctms-tab-milestones").exists()).toBe(true);
     expect(wrapper.find("#ctms-tab-monitoring").exists()).toBe(true);
@@ -117,14 +126,19 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     expect(wrapper.find("#ctms-tab-supply").exists()).toBe(true);
     expect(wrapper.find("#tab-operations").exists()).toBe(false);
     expect(wrapper.find("#kpi-total-subjects").exists()).toBe(false);
+    expect(wrapper.find("#ctms-workload-container").exists()).toBe(false);
+    expect(wrapper.find("#ctms-recruitment-container").exists()).toBe(false);
     expect(apiClient.get).not.toHaveBeenCalled();
     expect(executionApi.getSiteComplianceStatus).not.toHaveBeenCalled();
+    expect(ctmsApi.listSiteMilestones).not.toHaveBeenCalled();
     expect(wrapper.find("#site-compliance-status").text()).toContain(
       "Enter a study and site"
     );
     expect(
       wrapper.find("#btn-check-site-compliance").attributes()
     ).toHaveProperty("disabled");
+    expect(wrapper.text()).toContain("aren't available yet");
+    expect(wrapper.text()).not.toContain("#4829");
     expect(wrapper.find("#ctms-unbacked-scope-note").text()).toContain(
       "Orbit and Allocate roadmap"
     );
@@ -151,6 +165,7 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
       "SITE-7",
       "CAD-101"
     );
+    expect(apiClient.get).not.toHaveBeenCalled();
     expect(wrapper.find("#site-compliance-status").text()).toContain(
       "Complete: eTMF reports every activation document for site SITE-7 in CAD-101 approved."
     );
@@ -179,6 +194,10 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
         wrapper.find("#site-activation-readonly-note").exists(),
         role
       ).toBe(true);
+      expect(
+        wrapper.find("#site-activation-readonly-note").text(),
+        role
+      ).toContain("site_compliance:activate");
       wrapper.unmount();
     }
   });
@@ -296,29 +315,29 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     );
   });
 
-  it("checks a study and site the user enters", async () => {
+  it("checks a study and site selected via the site picker or custom input", async () => {
     vi.mocked(executionApi.getSiteComplianceStatus).mockResolvedValueOnce(
-      status()
+      status({ site_id: "SITE-101" })
     );
     const wrapper = await mountView();
 
     await wrapper.find("#site-activation-study").setValue(" CAD-101 ");
-    await wrapper.find("#site-activation-site").setValue("SITE-7");
+    await wrapper.find("#site-activation-site-picker").setValue("SITE-101");
     await wrapper.find("#site-activation-scope").trigger("submit");
     await flushPromises();
 
     expect(executionApi.getSiteComplianceStatus).toHaveBeenCalledWith(
-      "SITE-7",
+      "SITE-101",
       "CAD-101"
     );
     const store = useClinicalStore();
     expect(store.activeStudyId).toBe("CAD-101");
-    expect(store.activeSiteId).toBe("SITE-7");
+    expect(store.activeSiteId).toBe("SITE-101");
   });
 
   it("lists the missing documents and offers no activation for an incomplete site", async () => {
     routeQuery.value = { studyId: "CAD-101", siteId: "SITE-7" };
-    vi.mocked(executionApi.getSiteComplianceStatus).mockResolvedValueOnce(
+    vi.mocked(executionApi.getSiteComplianceStatus).mockResolvedValue(
       status({
         is_complete: false,
         missing_documents: ["IRB approval", "Signed 1572"],
@@ -338,7 +357,7 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
 
   it("says eTMF has not confirmed a site it reported nothing for", async () => {
     routeQuery.value = { studyId: "CAD-101", siteId: "SITE-7" };
-    vi.mocked(executionApi.getSiteComplianceStatus).mockResolvedValueOnce(
+    vi.mocked(executionApi.getSiteComplianceStatus).mockResolvedValue(
       status({ is_complete: false })
     );
 
@@ -352,7 +371,7 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
 
   it("reports a failed status check instead of calling the site non-compliant", async () => {
     routeQuery.value = { studyId: "CAD-101", siteId: "SITE-7" };
-    vi.mocked(executionApi.getSiteComplianceStatus).mockRejectedValueOnce(
+    vi.mocked(executionApi.getSiteComplianceStatus).mockRejectedValue(
       httpError(503)
     );
 
@@ -362,10 +381,13 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     expect(text).toContain("couldn't be loaded");
     expect(text).not.toContain("Incomplete");
     expect(wrapper.find("#btn-activate-site").exists()).toBe(false);
-    expect(useToastStore().toasts[0]).toMatchObject({
-      tone: "error",
-      title: "Couldn't load the site's eTMF status",
-    });
+    expect(
+      useToastStore().toasts.some(
+        (t) =>
+          t.tone === "error" &&
+          t.title === "Couldn't load the site's eTMF status"
+      )
+    ).toBe(true);
   });
 
   it("activates a complete site with the reason given and transitions to persistent Activated state", async () => {
@@ -410,9 +432,7 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
 
   it("reports a refused activation and keeps the reason", async () => {
     routeQuery.value = { studyId: "CAD-101", siteId: "SITE-7" };
-    vi.mocked(executionApi.getSiteComplianceStatus).mockResolvedValueOnce(
-      status()
-    );
+    vi.mocked(executionApi.getSiteComplianceStatus).mockResolvedValue(status());
     vi.mocked(executionApi.activateSite).mockRejectedValueOnce(
       httpError(400, "Site SITE-7 is not compliant for SITE_ACTIVATION.")
     );
@@ -433,7 +453,7 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     );
   });
 
-  it("keeps the full CTMS workspace in a demo build", async () => {
+  it("keeps demo-only tabs and KPIs in a demo build", async () => {
     vi.stubEnv("VITE_DEMO_MODE", "true");
     pinia = createPinia();
     setActivePinia(pinia);
@@ -443,5 +463,7 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
 
     expect(wrapper.find("#site-activation-panel").exists()).toBe(false);
     expect(wrapper.find("#tab-operations").exists()).toBe(true);
+    expect(wrapper.find("#tab-financials").exists()).toBe(true);
+    expect(wrapper.find("#tab-rtsm").exists()).toBe(true);
   });
 });

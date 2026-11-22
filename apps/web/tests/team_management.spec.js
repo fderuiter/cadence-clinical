@@ -309,30 +309,43 @@ describe("TeamManagementView & CTMS Email Delegation", () => {
     vi.stubEnv("VITE_DEMO_MODE", "true");
     const pinia = createPinia();
     setActivePinia(pinia);
+    const authStore = useAuthStore();
+    authStore.rawRoles = ["Site Investigator"];
+    authStore.assignedSites = ["SITE-101"];
 
-    vi.spyOn(apiClient, "get").mockImplementation((url) => {
-      if (url.includes("/doa/sites/")) {
-        return Promise.resolve({ delegated_staff: [], pi_name: "PI Lead" });
-      }
-      return Promise.resolve([]);
+    vi.spyOn(apiClient, "get").mockResolvedValue([]);
+    vi.spyOn(ctmsApi, "getSiteDoaLog").mockResolvedValue({
+      site_id: "SITE-101",
+      delegated_staff: [],
+      audit_history: [],
+      pi_name: "PI Lead",
     });
 
-    const postSpy = vi.spyOn(apiClient, "post").mockRejectedValueOnce(
-      new ApiError("Delegation exceeds held authority", 422, "Unprocessable", {
-        title: "Delegation exceeds held authority",
-        explanation: {
-          claim: "Requested duty capability exceeds parent grant.",
-          conditions: [
-            {
-              code: "parent_grant_capabilities",
-              description: "Parent grant must hold observation.lock.",
-              met: false,
+    const delegateSpy = vi
+      .spyOn(ctmsApi, "delegateSiteTasks")
+      .mockRejectedValueOnce(
+        new ApiError(
+          "Delegation exceeds held authority",
+          422,
+          "Unprocessable",
+          {
+            title: "Delegation exceeds held authority",
+            explanation: {
+              claim: "Requested duty capability exceeds parent grant.",
+              conditions: [
+                {
+                  code: "parent_grant_capabilities",
+                  description: "Parent grant must hold observation.lock.",
+                  met: false,
+                },
+              ],
+              next_actions: [
+                { action: "Select only duties held at SITE-101." },
+              ],
             },
-          ],
-          next_actions: [{ action: "Select only duties held at SITE-101." }],
-        },
-      })
-    );
+          }
+        )
+      );
 
     const wrapper = mount(CtmsView, { global: { plugins: [pinia] } });
     await flushPromises();
@@ -353,15 +366,13 @@ describe("TeamManagementView & CTMS Email Delegation", () => {
       .trigger("click");
     await flushPromises();
 
-    expect(postSpy).toHaveBeenCalledWith(
-      "/api/v1/ctms/doa/delegate",
+    expect(delegateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         staff_email: "crc.new@example.com", // deid-ignore
         staff_user_id: null,
+        reason_for_change: "Delegate screening duties to new coordinator",
       }),
-      expect.objectContaining({
-        changeReason: "Delegate screening duties to new coordinator",
-      })
+      "Delegate screening duties to new coordinator"
     );
 
     const refusal = wrapper.get('[data-testid="ctms-refusal-explanation"]');

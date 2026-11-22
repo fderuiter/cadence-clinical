@@ -66,6 +66,7 @@ internal sealed class KernelTenantEntitlementReader(KernelTenantDbContextFactory
             subscription.StartedAt,
             subscription.TrialEndsAt,
             IsReadOnly: isExpired,
-            ProductFamilies: families);
+            ProductFamilies: families,
+            Scoping: subscription.GetScoping());
     }
 }

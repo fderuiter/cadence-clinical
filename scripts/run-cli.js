@@ -48,16 +48,58 @@ const buildConfigFiles = [
   "BannedSymbols.txt",
 ];
 
-// Ensure local .NET installation is available in PATH
+function isExecutableOnPath(exeName, pathEnv) {
+  if (!pathEnv) return false;
+  const pathSep = isWin ? ";" : ":";
+  for (const rawEntry of pathEnv.split(pathSep)) {
+    const entry = rawEntry.trim();
+    if (!entry) continue;
+    const candidate = path.join(entry, exeName);
+    try {
+      if (fs.statSync(candidate).isFile()) {
+        if (!isWin) {
+          fs.accessSync(candidate, fs.constants.X_OK);
+        }
+        return true;
+      }
+    } catch {
+      // Continue scanning PATH entries
+    }
+  }
+  return false;
+}
+
+// Preserve ~/.dotnet/tools on PATH and only set DOTNET_ROOT when PATH lacks dotnet
+// and ~/.dotnet contains an actual .NET host runtime (dotnet + host/fxr).
 const homeDir = process.env.HOME || process.env.USERPROFILE;
 if (homeDir) {
   const dotnetHome = path.join(homeDir, ".dotnet");
-  if (fs.existsSync(dotnetHome)) {
+  const dotnetTools = path.join(dotnetHome, "tools");
+  const pathSep = isWin ? ";" : ":";
+
+  if (fs.existsSync(dotnetTools)) {
+    const currentEntries = (process.env.PATH || "").split(pathSep);
+    if (!currentEntries.includes(dotnetTools)) {
+      process.env.PATH = process.env.PATH
+        ? `${dotnetTools}${pathSep}${process.env.PATH}`
+        : dotnetTools;
+    }
+  }
+
+  const dotnetExeName = isWin ? "dotnet.exe" : "dotnet";
+  const localDotnetExe = path.join(dotnetHome, dotnetExeName);
+  const localHostFxr = path.join(dotnetHome, "host", "fxr");
+  if (
+    !isExecutableOnPath(dotnetExeName, process.env.PATH) &&
+    fs.existsSync(localDotnetExe) &&
+    fs.existsSync(localHostFxr)
+  ) {
     process.env.DOTNET_ROOT = process.env.DOTNET_ROOT || dotnetHome;
-    const dotnetTools = path.join(dotnetHome, "tools");
-    const pathSep = isWin ? ";" : ":";
-    if (!process.env.PATH || !process.env.PATH.includes(dotnetHome)) {
-      process.env.PATH = `${dotnetHome}${pathSep}${dotnetTools}${pathSep}${process.env.PATH || ""}`;
+    const currentEntries = (process.env.PATH || "").split(pathSep);
+    if (!currentEntries.includes(dotnetHome)) {
+      process.env.PATH = process.env.PATH
+        ? `${dotnetHome}${pathSep}${process.env.PATH}`
+        : dotnetHome;
     }
   }
 }

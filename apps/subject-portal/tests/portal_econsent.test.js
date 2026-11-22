@@ -221,11 +221,13 @@ describe("eConsent Patient Portal - Workflow and Gating Integration Tests", () =
     expect(portal.state.consentLivenessToken).toContain("mock_liveness_token");
     expect(portal.state.consentLivenessToken).toContain("camera");
 
+    const metadataDisplay = document.getElementById("consent-metadata-display");
+    expect(metadataDisplay.textContent).toContain("Document Version:");
+    expect(metadataDisplay.textContent).not.toContain("Version Index:");
+
     const livenessBanner = document.getElementById("liveness-status-banner");
     expect(livenessBanner.style.display).toBe("block");
-    expect(livenessBanner.textContent).toContain(
-      "Liveness Verification Successful"
-    );
+    expect(livenessBanner.textContent).toContain("Camera check complete");
   });
 
   it("supports study coordinator video fallback for liveness verification", async () => {
@@ -240,7 +242,9 @@ describe("eConsent Patient Portal - Workflow and Gating Integration Tests", () =
 
     const livenessBanner = document.getElementById("liveness-status-banner");
     expect(livenessBanner.style.display).toBe("block");
-    expect(livenessBanner.textContent).toContain("Coordinator Fallback Mode");
+    expect(livenessBanner.textContent).toContain(
+      "Identity confirmed with your study coordinator"
+    );
   });
 
   it("verifies strict credential hygiene: cleans PIN/password inputs immediately on submit or cancel", async () => {

@@ -8,10 +8,10 @@
     <h3 id="ai-assist-title">Assist</h3>
     <p class="assist-scope">
       About
-      <code v-if="nodeRef">{{ nodeRef }}</code><template v-else>{{
+      <NodeRefChip v-if="nodeRef" :node-ref="nodeRef" /><template v-else>{{
         studyCode
       }}</template
-      >. An agent reads and proposes; a person decides, and nothing changes
+      >. An assistant reads and proposes; a person decides, and nothing changes
       until they do.
     </p>
 
@@ -34,10 +34,8 @@
         Ask
       </button>
       <p id="ai-assist-unavailable" class="assist-note">
-        No agent runs in this study yet: agents arrive with the Intelligence
-        module (#5374) and its first agents (#5547). Until then, Act shows each
-        command you may run on a selected object with the kernel's dry-run
-        decision.
+        Interactive AI drafting isn't enabled in this study yet. Until then, Act
+        shows each action you may run on a selected record and why.
       </p>
       <button
         v-if="nodeRef"
@@ -53,8 +51,12 @@
     <h4 id="ai-assist-proposals-title">
       {{ nodeRef ? "Proposals about this" : "Proposals in this study" }}
     </h4>
+    <div v-if="error" id="ai-assist-status" class="assist-note" role="alert">
+      <p class="assist-note">Proposals couldn't be loaded right now.</p>
+      <SupportDetails :detail="error" />
+    </div>
     <p
-      v-if="statusLine"
+      v-else-if="statusLine"
       id="ai-assist-status"
       class="assist-note"
       role="status"
@@ -93,6 +95,8 @@ import { kernelApi, type KernelProposal } from "../../api/kernelApi";
 import { isAgentProposal, proposalSources } from "../../ai/proposals";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
+import NodeRefChip from "../canvas/NodeRefChip.vue";
+import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
 /**
@@ -139,8 +143,7 @@ const related = computed(() =>
 );
 
 const statusLine = computed(() => {
-  if (loading.value) return "Reading proposals from the kernel...";
-  if (error.value) return `The kernel couldn't answer: ${error.value}`;
+  if (loading.value) return "Loading proposals…";
   if (!related.value.length) {
     return props.nodeRef
       ? "No proposal names this yet."

@@ -206,6 +206,147 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
         start.Should().Throw<InvalidOperationException>().WithMessage("*OIDC_AUTHORITY*");
     }
 
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task ProxiedRoute_SignsTenantReadOnlyFromKernelEntitlementCache_StripsClientForgery_ExpiresAt30s_AndEvictsOnActivation()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var clock = new Cadence.Testing.Time.FakeClock(SystemClock.Instance.UtcNow);
+        var kernelHandler = new StubKernelEntitlementsHandler { IsReadOnly = true };
+
+        using var gateway = fixture.Gateway.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddSingleton<IClock>(clock);
+                services.AddHttpClient(Cadence.Apps.Gateway.GatewayTenantEntitlementCache.HttpClientName)
+                    .ConfigurePrimaryHttpMessageHandler(() => kernelHandler);
+            }));
+
+        using var client = gateway.CreateClient();
+        string token = GatewayFixture.CreateToken("admin-01", ["Sponsor Admin"], tenant: "trial-tenant-77");
+
+        // 1. Client attempts to forge X-Tenant-Read-Only: false, but gateway overwrites with signed X-Tenant-Read-Only: true.
+        using (var req1 = new HttpRequestMessage(HttpMethod.Get, ProxiedPath))
+        {
+            req1.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            req1.Headers.Add(GatewayHeaders.TenantReadOnly, "false");
+            using var resp1 = await client.SendAsync(req1, ct);
+            resp1.StatusCode.Should().Be(HttpStatusCode.OK);
+            var headers1 = new Dictionary<string, string>(
+                (await resp1.Content.ReadFromJsonAsync<Dictionary<string, string>>(ct))!,
+                StringComparer.OrdinalIgnoreCase);
+
+            headers1[GatewayHeaders.TenantReadOnly].Should().Be("true");
+            kernelHandler.EntitlementLookupCount.Should().Be(1);
+
+            HmacSigner.VerifyGatewaySignature(
+                userId: headers1[GatewayHeaders.UserId],
+                roles: headers1[GatewayHeaders.Roles],
+                timestamp: headers1[GatewayHeaders.Timestamp],
+                signature: headers1[GatewayHeaders.Signature],
+                secret: GatewayIdentity.EncodeSecret(TestSecurityContext.GatewaySecret),
+                tenantId: headers1[GatewayHeaders.TenantId],
+                tenantReadOnly: true).Should().BeTrue();
+        }
+
+        // 2. Within the 30-second TTL, flip upstream IsReadOnly -> false; gateway serves cached value without re-querying.
+        kernelHandler.IsReadOnly = false;
+        clock.Advance(TimeSpan.FromSeconds(20));
+
+        using (var reqCached = new HttpRequestMessage(HttpMethod.Get, ProxiedPath))
+        {
+            reqCached.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var respCached = await client.SendAsync(reqCached, ct);
+            respCached.StatusCode.Should().Be(HttpStatusCode.OK);
+            var headersCached = new Dictionary<string, string>(
+                (await respCached.Content.ReadFromJsonAsync<Dictionary<string, string>>(ct))!,
+                StringComparer.OrdinalIgnoreCase);
+
+            headersCached[GatewayHeaders.TenantReadOnly].Should().Be("true", "30-second entitlement cache entry is still fresh at +20s");
+            kernelHandler.EntitlementLookupCount.Should().Be(1);
+        }
+
+        // 3. Advancing past the 30-second TTL (+15s => +35s total) expires the cache entry and refreshes from kernel.
+        clock.Advance(TimeSpan.FromSeconds(15));
+        using (var reqRefreshed = new HttpRequestMessage(HttpMethod.Get, ProxiedPath))
+        {
+            reqRefreshed.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var respRefreshed = await client.SendAsync(reqRefreshed, ct);
+            respRefreshed.StatusCode.Should().Be(HttpStatusCode.OK);
+            var headersRefreshed = new Dictionary<string, string>(
+                (await respRefreshed.Content.ReadFromJsonAsync<Dictionary<string, string>>(ct))!,
+                StringComparer.OrdinalIgnoreCase);
+
+            headersRefreshed[GatewayHeaders.TenantReadOnly].Should().Be("false");
+            HmacSigner.VerifyGatewaySignature(
+                userId: headersRefreshed[GatewayHeaders.UserId],
+                roles: headersRefreshed[GatewayHeaders.Roles],
+                timestamp: headersRefreshed[GatewayHeaders.Timestamp],
+                signature: headersRefreshed[GatewayHeaders.Signature],
+                secret: GatewayIdentity.EncodeSecret(TestSecurityContext.GatewaySecret),
+                tenantId: headersRefreshed[GatewayHeaders.TenantId],
+                tenantReadOnly: false).Should().BeTrue();
+            kernelHandler.EntitlementLookupCount.Should().Be(2);
+        }
+
+        // 4. Seed read-only = true into cache, then POST /api/v1/kernel/entitlements/activate -> immediate eviction without waiting 30s!
+        kernelHandler.IsReadOnly = true;
+        clock.Advance(TimeSpan.FromSeconds(31));
+        using (var primeReq = new HttpRequestMessage(HttpMethod.Get, ProxiedPath))
+        {
+            primeReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var primeResp = await client.SendAsync(primeReq, ct);
+            primeResp.StatusCode.Should().Be(HttpStatusCode.OK);
+            kernelHandler.EntitlementLookupCount.Should().Be(3);
+        }
+
+        kernelHandler.IsReadOnly = false;
+        using (var activateReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/entitlements/activate")
+        {
+            Content = JsonContent.Create(new { tier = "Select" }),
+        })
+        {
+            activateReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var activateResp = await client.SendAsync(activateReq, ct);
+            activateResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        // Immediately (0s elapsed) the next proxied call re-queries kernel entitlements and sees TenantReadOnly == false!
+        using var postActivateReq = new HttpRequestMessage(HttpMethod.Get, ProxiedPath);
+        postActivateReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var postActivateResp = await client.SendAsync(postActivateReq, ct);
+        postActivateResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var headersAfterActivate = new Dictionary<string, string>(
+            (await postActivateResp.Content.ReadFromJsonAsync<Dictionary<string, string>>(ct))!,
+            StringComparer.OrdinalIgnoreCase);
+
+        headersAfterActivate[GatewayHeaders.TenantReadOnly].Should().Be("false");
+        kernelHandler.EntitlementLookupCount.Should().Be(4);
+    }
+
+    private sealed class StubKernelEntitlementsHandler : HttpMessageHandler
+    {
+        public bool IsReadOnly { get; set; }
+
+        public int EntitlementLookupCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            System.Threading.CancellationToken cancellationToken)
+        {
+            EntitlementLookupCount++;
+            string readOnlyLiteral = IsReadOnly ? "true" : "false";
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    $$"""{"is_read_only":{{readOnlyLiteral}},"status":"{{(IsReadOnly ? "Expired" : "Active")}}"}""",
+                    Encoding.UTF8,
+                    "application/json"),
+            };
+            return Task.FromResult(response);
+        }
+    }
+
     /// <summary>
     /// The gateway under test plus a real Kestrel downstream that answers every request with the headers it
     /// received, standing in for the execution service.
@@ -253,6 +394,7 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
             Gateway = new WebApplicationFactory<Cadence.Apps.Gateway.Program>().WithWebHostBuilder(host => host
                 .UseSetting("OIDC_AUTHORITY", Issuer)
                 .UseSetting("EXECUTION_SERVICE_URL", downstreamUrl)
+                .UseSetting("KERNEL_SERVICE_URL", downstreamUrl)
                 .UseTestGatewaySecret()
                 .ConfigureTestServices(services =>
                     services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>

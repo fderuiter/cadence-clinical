@@ -6,10 +6,21 @@
 
 set -eu
 
-if [ -d "${HOME:-}/.dotnet" ]; then
+if [ -n "${HOME:-}" ] && [ -d "$HOME/.dotnet/tools" ]; then
+    case ":${PATH:-}:" in
+        *":$HOME/.dotnet/tools:"*) ;;
+        *) PATH="$HOME/.dotnet/tools${PATH:+:$PATH}" ;;
+    esac
+    export PATH
+fi
+
+if ! command -v dotnet >/dev/null 2>&1 &&
+   [ -n "${HOME:-}" ] &&
+   [ -x "$HOME/.dotnet/dotnet" ] &&
+   [ -d "$HOME/.dotnet/host/fxr" ]; then
     DOTNET_ROOT="${DOTNET_ROOT:-$HOME/.dotnet}"
     export DOTNET_ROOT
-    PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
+    PATH="$HOME/.dotnet${PATH:+:$PATH}"
     export PATH
 fi
 

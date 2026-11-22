@@ -66,7 +66,11 @@ public static class DoctorCommand
         // 4. detect-secrets guardrail tool (.cadence/venv, PATH, or uvx)
         bool detectSecretsOk = CheckDetectSecrets();
 
-        // 5. PostgreSQL connectivity
+        // 5. CLI linters (.cadence/bin or PATH)
+        bool actionlintOk = CheckActionlint();
+        bool hadolintOk = CheckHadolint();
+
+        // 6. PostgreSQL connectivity
         try
         {
             using var client = new TcpClient();
@@ -82,7 +86,7 @@ public static class DoctorCommand
             AnsiConsole.MarkupLine("  PostgreSQL (5432): [grey]Unreachable[/]");
         }
 
-        return dotnetOk && pnpmOk && detectSecretsOk ? 0 : 1;
+        return dotnetOk && pnpmOk && detectSecretsOk && actionlintOk && hadolintOk ? 0 : 1;
     }
 
     private static bool CheckDetectSecrets()
@@ -96,6 +100,40 @@ public static class DoctorCommand
 
         AnsiConsole.MarkupLine(
             $"  detect-secrets: [red]Missing[/] (run './scripts/setup_wizard.sh --minimal' or 'python3 -m venv .cadence/venv && .cadence/venv/bin/python -m pip install --upgrade pip detect-secrets=={DetectSecretsGateService.PinnedVersion}')");
+        return false;
+    }
+
+    private static bool CheckActionlint()
+    {
+        var tool = CliLinterGateService.ResolveActionlint(QualityGateOrchestrator.FindRepoRoot());
+        if (tool is not null)
+        {
+            AnsiConsole.MarkupLine($"  actionlint: [green]{Markup.Escape(tool.VersionOutput)} ({Markup.Escape(tool.SourceLabel)})[/]");
+            return true;
+        }
+
+        string wizardHint = OperatingSystem.IsWindows()
+            ? "pwsh scripts/setup_wizard.ps1 -NonInteractive -Minimal"
+            : "./scripts/setup_wizard.sh --minimal";
+        AnsiConsole.MarkupLine(
+            $"  actionlint: [red]Missing[/] (run '{wizardHint}' to provision actionlint v{CliLinterGateService.ActionlintVersion} in .cadence/bin)");
+        return false;
+    }
+
+    private static bool CheckHadolint()
+    {
+        var tool = CliLinterGateService.ResolveHadolint(QualityGateOrchestrator.FindRepoRoot());
+        if (tool is not null)
+        {
+            AnsiConsole.MarkupLine($"  hadolint: [green]{Markup.Escape(tool.VersionOutput)} ({Markup.Escape(tool.SourceLabel)})[/]");
+            return true;
+        }
+
+        string wizardHint = OperatingSystem.IsWindows()
+            ? "pwsh scripts/setup_wizard.ps1 -NonInteractive -Minimal"
+            : "./scripts/setup_wizard.sh --minimal";
+        AnsiConsole.MarkupLine(
+            $"  hadolint: [red]Missing[/] (run '{wizardHint}' to provision hadolint v{CliLinterGateService.HadolintVersion} in .cadence/bin)");
         return false;
     }
 

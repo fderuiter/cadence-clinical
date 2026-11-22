@@ -1,4 +1,8 @@
-import { getBearerToken } from "./authorization.js";
+import {
+  getBearerToken,
+  notifySubscriptionExpiredIfNeeded,
+  SUBSCRIPTION_EXPIRED_GUIDANCE,
+} from "./authorization.js";
 import { encodeChangeReason } from "./changeReason";
 import {
   ApiError,
@@ -98,12 +102,16 @@ export type KernelValidationFindingPage =
 export type KernelValidationFindingDetail =
   Schemas["Kernel_KernelValidationFindingDetailResponse"];
 export type KernelEntitlements = Schemas["Kernel_KernelEntitlementsResponse"];
+export type KernelSubscriptionScoping =
+  Schemas["Kernel_KernelSubscriptionScopingResponse"];
 export type KernelTrialOnboardingRequest =
   Schemas["Kernel_KernelTrialOnboardingRequest"];
 export type KernelTrialOnboardingResponse =
   Schemas["Kernel_KernelTrialOnboardingResponse"];
 export type KernelUpgradeSubscriptionRequest =
   Schemas["Kernel_KernelUpgradeSubscriptionRequest"];
+export type KernelActivateSubscriptionRequest =
+  Schemas["Kernel_KernelActivateSubscriptionRequest"];
 export type { KernelObservationValue };
 
 export interface KernelCreateStudyRequest {
@@ -135,6 +143,42 @@ export const ASSERTION_REVISION_STALE = "K.Assertion.RevisionStale";
 export const ASSERTION_ALREADY_RETRACTED = "K.Assertion.AlreadyRetracted";
 export const KERNEL_AUTHORIZATION_DENIED = "K.Authorization.Denied";
 export const KERNEL_SUBSCRIPTION_EXPIRED = "K.Subscription.Expired";
+export const KERNEL_COMMERCIAL_SCOPING_INVALID = "K.Commercial.ScopingInvalid";
+export { SUBSCRIPTION_EXPIRED_GUIDANCE };
+
+/** True when a thrown error carries `code === "K.Subscription.Expired"`. */
+export function isSubscriptionExpiredError(error: unknown): boolean {
+  return assertionErrorCode(error) === KERNEL_SUBSCRIPTION_EXPIRED;
+}
+
+/** Extracts structured field validation errors (`Record<string, string[]>`) from RFC 9457 ProblemDetails. */
+export function extractKernelFieldErrors(
+  error: unknown
+): Record<string, string[]> {
+  if (!error || typeof error !== "object") return {};
+  const data = (error as { data?: unknown }).data;
+  if (!data || typeof data !== "object") return {};
+  const rawErrors = (data as Record<string, unknown>).errors;
+  if (!rawErrors || typeof rawErrors !== "object" || Array.isArray(rawErrors)) {
+    return {};
+  }
+  const normalized: Record<string, string[]> = {};
+  for (const [field, messages] of Object.entries(
+    rawErrors as Record<string, unknown>
+  )) {
+    if (Array.isArray(messages)) {
+      const clean = messages.filter(
+        (msg): msg is string => typeof msg === "string" && msg.trim().length > 0
+      );
+      if (clean.length > 0) {
+        normalized[field] = clean;
+      }
+    } else if (typeof messages === "string" && messages.trim().length > 0) {
+      normalized[field] = [messages.trim()];
+    }
+  }
+  return normalized;
+}
 
 /** Gateway step-up target URL for `POST /api/v1/kernel/locks`. */
 export const RULE_PACK_APPROVE_SEMANTIC_ACTION = "kernel.library_item.approve";
@@ -240,6 +284,13 @@ export interface KernelStreamedArtifact {
 export function describeLockError(error: unknown): string {
   const code = assertionErrorCode(error);
   const status = (error as { status?: number | null } | null)?.status ?? null;
+  if (code === KERNEL_SUBSCRIPTION_EXPIRED) {
+    notifySubscriptionExpiredIfNeeded(
+      status ?? 403,
+      (error as { data?: unknown } | null)?.data
+    );
+    return SUBSCRIPTION_EXPIRED_GUIDANCE;
+  }
   if (code === ASSERTION_ALREADY_LOCKED || status === 409) {
     return "That lock state already changed; reload and inspect the current locks.";
   }
@@ -362,6 +413,13 @@ export function assertionErrorCode(error: unknown): string | null {
 export function describeAssertionError(error: unknown): string {
   const code = assertionErrorCode(error);
   const status = (error as { status?: number | null } | null)?.status ?? null;
+  if (code === KERNEL_SUBSCRIPTION_EXPIRED) {
+    notifySubscriptionExpiredIfNeeded(
+      status ?? 403,
+      (error as { data?: unknown } | null)?.data
+    );
+    return SUBSCRIPTION_EXPIRED_GUIDANCE;
+  }
   if (code === ASSERTION_LOCKED || status === 423) {
     return "This scope is locked (Locked), so verifications cannot be recorded or withdrawn until the lock is released.";
   }
@@ -464,8 +522,15 @@ function unversioned(nodeRef: string): string {
   return at < 0 ? nodeRef : nodeRef.slice(0, at);
 }
 
-/** Extracts an actionable error string from RFC 9457 ProblemDetails (including validation/import `errors[]`). */
+/** Extracts an actionable error string from RFC 9457 ProblemDetails (including validation/import `errors[]` or field `errors` maps). */
 export function describeKernelError(error: unknown): string {
+  if (assertionErrorCode(error) === KERNEL_SUBSCRIPTION_EXPIRED) {
+    notifySubscriptionExpiredIfNeeded(
+      (error as { status?: number | null } | null)?.status ?? 403,
+      (error as { data?: unknown } | null)?.data
+    );
+    return SUBSCRIPTION_EXPIRED_GUIDANCE;
+  }
   if (error && typeof error === "object") {
     const data = (error as { data?: unknown }).data;
     if (data && typeof data === "object") {
@@ -474,12 +539,15 @@ export function describeKernelError(error: unknown): string {
         typeof record.detail === "string" && record.detail.trim()
           ? record.detail.trim()
           : "";
-      const problems = Array.isArray(record.errors)
+      const arrayProblems = Array.isArray(record.errors)
         ? record.errors.filter(
             (item): item is string =>
               typeof item === "string" && item.trim().length > 0
           )
         : [];
+      const fieldErrors = extractKernelFieldErrors(error);
+      const fieldProblems = Object.values(fieldErrors).flat();
+      const problems = [...arrayProblems, ...fieldProblems];
       if (detail && problems.length > 0) {
         const extra = problems.filter((p) => p !== detail);
         return extra.length > 0 ? `${detail} (${extra.join("; ")})` : detail;
@@ -984,7 +1052,7 @@ export const kernelApi = {
     );
   },
 
-  /** Activates or upgrades the caller's tenant commercial subscription tier in place. */
+  /** Switches the caller's tenant commercial subscription tier in place while preserving an active trial window (POST /api/v1/kernel/entitlements/tier). */
   upgradeSubscriptionTier({
     tier,
     idempotencyKey,
@@ -1001,6 +1069,50 @@ export const kernelApi = {
           "X-Change-Reason": encodeChangeReason(reason),
         },
         body: { tier },
+      })
+    );
+  },
+
+  /** Activates or upgrades the caller's tenant commercial subscription with validated study scoping and billing confirmation (POST /api/v1/kernel/entitlements/activate). */
+  activateSubscription({
+    tier,
+    studyPhase,
+    studyDurationMonths,
+    countries,
+    siteCount,
+    participantCount,
+    activeStudyCount,
+    billingConfirmation,
+    idempotencyKey,
+    reason = "Activate scoped commercial subscription in workspace",
+  }: {
+    tier: string;
+    studyPhase?: string | null;
+    studyDurationMonths?: number | null;
+    countries?: string[] | null;
+    siteCount?: number | null;
+    participantCount?: number | null;
+    activeStudyCount?: number | null;
+    billingConfirmation?: string | null;
+    idempotencyKey: string;
+    reason?: string;
+  }): Promise<KernelEntitlements> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/entitlements/activate", {
+        headers: {
+          "Idempotency-Key": idempotencyKey,
+          "X-Change-Reason": encodeChangeReason(reason),
+        },
+        body: {
+          tier,
+          study_phase: studyPhase ?? null,
+          study_duration_months: studyDurationMonths ?? null,
+          countries: countries ?? null,
+          site_count: siteCount ?? null,
+          participant_count: participantCount ?? null,
+          active_study_count: activeStudyCount ?? null,
+          billing_confirmation: billingConfirmation ?? null,
+        },
       })
     );
   },

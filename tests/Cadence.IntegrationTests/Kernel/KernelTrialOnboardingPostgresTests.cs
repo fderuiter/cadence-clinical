@@ -223,7 +223,11 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             ct);
         registered.IsSuccess.Should().BeTrue();
 
-        // Multi-step commercial tier transitions in place: Individual -> Select -> Complete -> Select -> Complete
+        string originalTrialEndsAt = onboardJson.GetProperty("entitlements").GetProperty("trial_ends_at").GetString()!;
+        originalTrialEndsAt.Should().NotBeNullOrWhiteSpace();
+
+        // Multi-step commercial tier transitions during an active trial preserve Status == Trialing and original trial_ends_at:
+        // Individual -> Select -> Complete -> Select -> Complete
         foreach (var (stepKey, targetTier, expectedFamilyCount) in new (string Key, string Tier, int Count)[]
         {
             ("idem-upgrade-select-1", "Select", 5),
@@ -243,7 +247,8 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             upgradeResp.StatusCode.Should().Be(HttpStatusCode.OK, upgradeBody);
             var upgraded = JsonDocument.Parse(upgradeBody).RootElement;
             upgraded.GetProperty("tier").GetString().Should().Be(targetTier);
-            upgraded.GetProperty("status").GetString().Should().Be("Active");
+            upgraded.GetProperty("status").GetString().Should().Be("Trialing", "switching tiers on an active trial must not bypass scoping intake");
+            upgraded.GetProperty("trial_ends_at").GetString().Should().Be(originalTrialEndsAt, "switching trial tiers preserves the original 30-day trial end timestamp");
             upgraded.GetProperty("product_families").GetArrayLength().Should().Be(expectedFamilyCount);
         }
 
@@ -356,6 +361,96 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
                 "Sign study review record for regulatory export"),
             ct);
         attestationResult.IsSuccess.Should().BeTrue(attestationResult.Error?.Message);
+
+        // 3. Direct trial tier switching (POST /api/v1/kernel/entitlements/tier) is refused with 403 K.Subscription.Expired once expired,
+        //    so an expired workspace can never reactivate without completing structured study scoping.
+        using (var blockedTierSwitchReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/entitlements/tier")
+        {
+            Content = JsonContent.Create(new { tier = "Select" }),
+        })
+        {
+            blockedTierSwitchReq.Headers.Add("Idempotency-Key", "idem-expired-tier-switch-blocked");
+            blockedTierSwitchReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Attempt tier switch after trial expiry"));
+            using var blockedTierSwitchResp = await founderClient.SendAsync(blockedTierSwitchReq, ct);
+            string blockedTierSwitchBody = await blockedTierSwitchResp.Content.ReadAsStringAsync(ct);
+            blockedTierSwitchResp.StatusCode.Should().Be(HttpStatusCode.Forbidden, blockedTierSwitchBody);
+            JsonDocument.Parse(blockedTierSwitchBody).RootElement.GetProperty("code").GetString().Should().Be("K.Subscription.Expired");
+        }
+
+        // 4. Scoped activation without required scoping fields fails validation with 422 K.Commercial.ScopingInvalid and field errors.
+        using (var invalidActivateReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/entitlements/activate")
+        {
+            Content = JsonContent.Create(new { tier = "Select" }),
+        })
+        {
+            invalidActivateReq.Headers.Add("Idempotency-Key", "idem-activate-missing-scoping");
+            invalidActivateReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Attempt activation without scoping fields"));
+            using var invalidActivateResp = await founderClient.SendAsync(invalidActivateReq, ct);
+            string invalidActivateBody = await invalidActivateResp.Content.ReadAsStringAsync(ct);
+            invalidActivateResp.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity, invalidActivateBody);
+            var invalidDoc = JsonDocument.Parse(invalidActivateBody).RootElement;
+            invalidDoc.GetProperty("code").GetString().Should().Be("K.Commercial.ScopingInvalid");
+            var fieldErrors = invalidDoc.GetProperty("errors");
+            fieldErrors.TryGetProperty("study_phase", out _).Should().BeTrue();
+            fieldErrors.TryGetProperty("study_duration_months", out _).Should().BeTrue();
+            fieldErrors.TryGetProperty("countries", out _).Should().BeTrue();
+            fieldErrors.TryGetProperty("site_count", out _).Should().BeTrue();
+            fieldErrors.TryGetProperty("participant_count", out _).Should().BeTrue();
+            fieldErrors.TryGetProperty("active_study_count", out _).Should().BeTrue();
+            fieldErrors.TryGetProperty("billing_confirmation", out _).Should().BeTrue();
+        }
+
+        // 5. Scoped activation with valid study scoping and PO/quote confirmation transitions Expired -> Active, clears read-only,
+        //    persists scoping metadata, restores study mutations, and still enforces clinical Grant boundaries!
+        using (var validActivateReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/entitlements/activate")
+        {
+            Content = JsonContent.Create(new
+            {
+                tier = "Select",
+                study_phase = "Phase II",
+                study_duration_months = 24,
+                countries = new[] { "US", "DE", "NL" },
+                site_count = 12,
+                participant_count = 240,
+                active_study_count = 2,
+                billing_confirmation = "PO-HELIOS-2026-441",
+            }),
+        })
+        {
+            validActivateReq.Headers.Add("Idempotency-Key", "idem-activate-valid-scoping");
+            validActivateReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Activate Select subscription with validated study scoping"));
+            using var validActivateResp = await founderClient.SendAsync(validActivateReq, ct);
+            string validActivateBody = await validActivateResp.Content.ReadAsStringAsync(ct);
+            validActivateResp.StatusCode.Should().Be(HttpStatusCode.OK, validActivateBody);
+            var activated = JsonDocument.Parse(validActivateBody).RootElement;
+            activated.GetProperty("tier").GetString().Should().Be("Select");
+            activated.GetProperty("status").GetString().Should().Be("Active");
+            activated.GetProperty("is_read_only").GetBoolean().Should().BeFalse();
+            var scopingJson = activated.GetProperty("scoping");
+            scopingJson.GetProperty("study_phase").GetString().Should().Be("Phase II");
+            scopingJson.GetProperty("study_duration_months").GetInt32().Should().Be(24);
+            scopingJson.GetProperty("countries").EnumerateArray().Select(c => c.GetString()).Should().Equal("US", "DE", "NL");
+            scopingJson.GetProperty("site_count").GetInt32().Should().Be(12);
+            scopingJson.GetProperty("participant_count").GetInt32().Should().Be(240);
+            scopingJson.GetProperty("active_study_count").GetInt32().Should().Be(2);
+            scopingJson.GetProperty("billing_confirmation").GetString().Should().Be("PO-HELIOS-2026-441");
+        }
+
+        // Clinical study mutation succeeds again now that the workspace is Active
+        var restoredStudy = await SendAsPersonAsync(
+            host.Services,
+            founderSub,
+            new RegisterStudy(
+                tenantId,
+                StudyId.New(clock.UtcNow),
+                sponsorId,
+                "HELIOS-203",
+                "Restored Study After Scoped Activation",
+                "Phase II",
+                "idem-helios-restored-203",
+                "Register study after scoped subscription activation"),
+            ct);
+        restoredStudy.IsSuccess.Should().BeTrue(restoredStudy.Error?.Message);
     }
 
     private WebApplicationFactory<Cadence.Kernel.Host.Program> CreateHost(

@@ -51,7 +51,8 @@ public static class QualityGateOrchestrator
             targetFiles = [.. PreCommitOpenApiService.GetStagedFiles(repoRoot)];
         }
 
-        var context = new GateContext(repoRoot, targetFiles, preCommit, baseRef, pushBefore);
+        using var indexReader = preCommit ? GitIndexReader.TryOpen(repoRoot) : null;
+        var context = new GateContext(repoRoot, targetFiles, preCommit, indexReader, baseRef, pushBefore);
 
         if (!string.IsNullOrEmpty(gateName))
         {

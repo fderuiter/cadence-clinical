@@ -1,6 +1,6 @@
 # eTMF service
 
-Electronic trial master file scaffold. It holds the TMF document, expected-document, QC transition, expiration alert and audit ledger model; no business endpoints are mapped yet.
+Electronic trial master file service. It hosts TMF document ingestion, intelligence classification, CRA/Sponsor QC staging and review, study binder export jobs, taxonomy lookup, and signed `SITE_ACTIVATION` completeness webhook notifications to `apps/execution`.
 
 **Status:** a standalone ASP.NET Core 10 scaffold service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) it becomes an application module over the clinical kernel. The disposition of the scaffold services is tracked in issue #4787.
 
@@ -17,6 +17,8 @@ Electronic trial master file scaffold. It holds the TMF document, expected-docum
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `EtmfDbContext`.
 - `GET /api/v1/etmf/status` (anonymous status payload).
+- `POST /api/v1/etmf/intelligence/classify`, `POST /api/v1/etmf/intelligence/stage-qc`, `GET /api/v1/etmf/intelligence/qc-queue`, `POST /api/v1/etmf/intelligence/qc-review/{doc_id}`: document intelligence classification, QC staging, and 21 CFR Part 11 clinical QC transitions. When site startup artifacts are staged or reviewed, `HttpEtmfCompletenessWebhookPublisher` evaluates `SITE_ACTIVATION` completeness and posts a gateway-signed `svc:etmf` (`etmf_service`) webhook to `EXECUTION_SERVICE_URL` (`POST /api/v1/execution/webhooks/etmf`).
+- `GET /api/v1/etmf/documents`, `GET /api/v1/etmf/documents/{document_id}`, `POST /api/v1/etmf/documents/export`, `GET /api/v1/etmf/export-jobs`, `GET /api/v1/etmf/export-jobs/{job_id}`, `GET /api/v1/etmf/export-jobs/{job_id}/download`, `POST /api/v1/etmf/ingest`, `GET /api/v1/etmf/taxonomy`.
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/etmf/**` to this service. Compose publishes host port 8003 (container port 8080).
 
