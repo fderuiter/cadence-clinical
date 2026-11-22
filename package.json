@@ -8,8 +8,8 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "pnpm -r test && pnpm exec vitest run --config vitest.config.mjs",
-    "test:all": "pnpm -r test && pnpm exec vitest run --config vitest.config.mjs && node scripts/run-cli.js test",
+    "test": "pnpm --filter ui build && pnpm -r test && pnpm exec vitest run --config vitest.config.mjs",
+    "test:all": "pnpm test && node scripts/run-cli.js test",
     "check-docs-drift": "node scripts/run-cli.js validate-architecture-drift",
     "lint": "node scripts/run-cli.js validate-path-patterns && pnpm -r lint",
     "format": "pnpm exec prettier --write --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}\"",
@@ -18,7 +18,7 @@
     "doctor": "node scripts/run-cli.js doctor",
     "db:reset": "node scripts/run-cli.js db reset",
     "check": "node scripts/run-cli.js check",
-    "verify": "pnpm check && pnpm test",
+    "verify": "pnpm --filter ui build && node scripts/run-cli.js check --exclude public-bundle && pnpm test",
     "rtm": "node scripts/run-cli.js generate-rtm --validate",
     "sync-gxp": "node scripts/run-cli.js gxp sync",
     "setup:dev": "dotnet restore Cadence.sln",

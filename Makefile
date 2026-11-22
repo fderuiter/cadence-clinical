@@ -66,7 +66,7 @@ verify: ## Run the quality gates and .NET test suites
 	$(CADENCE_CLI) check
 	$(CADENCE_CLI) test
 
-ci: ## Run the CI workflow's jobs locally (GitHub Actions is off until 2027; needs PostgreSQL)
+ci: ## Run the CI workflow's jobs locally (mirrors .github/workflows/ci.yml; needs PostgreSQL)
 	$(CADENCE_CLI) ci
 
 test: ## Run the .NET test suites

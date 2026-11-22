@@ -311,15 +311,25 @@ public sealed class RulesetServiceTests : IDisposable
         RulesetService.Validate(_root, validWriter).Should().Be(0, validWriter.ToString());
         validWriter.ToString().Should().Contain("Validated CI Gate workflow coverage");
 
+        using var dryRunWriter = new StringWriter();
+        RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: dryRunWriter)
+            .Should().Be(0, dryRunWriter.ToString());
+        dryRunWriter.ToString().Should().Contain("Dry-run validated CI Gate workflow coverage");
+
         using var syncWriter = new StringWriter();
-        RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: syncWriter)
-            .Should().Be(1, "cadence rulesets sync requires declarative ruleset files");
+        RulesetService.Sync(repoRoot: _root, dryRun: false, repoOverride: "owner/repo", output: syncWriter)
+            .Should().Be(1, "non-dry-run cadence rulesets sync requires declarative ruleset files");
         syncWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
 
         WriteCiWorkflow(ciGateNeeds: "[unit-tests]", ciGateIf: "always()", checkComplianceResult: false);
         using var brokenCiWriter = new StringWriter();
         RulesetService.Validate(_root, brokenCiWriter).Should().Be(1);
         brokenCiWriter.ToString().Should().Contain("compliance");
+
+        using var brokenDryRunWriter = new StringWriter();
+        RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: brokenDryRunWriter)
+            .Should().Be(1);
+        brokenDryRunWriter.ToString().Should().Contain("compliance");
     }
 
     private void SeedValidFixture()

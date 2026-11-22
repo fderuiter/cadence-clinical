@@ -8,28 +8,35 @@ fail. The decisions behind it are [ADR-2247](adr/2026-09-29-clinical-kernel-sing
 ## Layout
 
 Every service connects to the same database, `cadence`, through `ConnectionStrings__cadence` (or the legacy
-`POSTGRES_CONNECTION_STRING`; see [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)). Each service owns exactly one
-schema, including its own `__EFMigrationsHistory` table.
+`POSTGRES_CONNECTION_STRING`; see [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)). Eighteen EF Core module models
+own dedicated schemas in `cadence` (each with its own `__EFMigrationsHistory` table): each standalone service owns one
+schema, and the `kernel` composition host (`apps/kernel-api`) composes `kernel`, `intelligence`, and `execution`
+(`executionmodule`). `public` holds only PostgreSQL extensions.
 
-| Service       | Schema          | DbContext                |
-| ------------- | --------------- | ------------------------ |
-| ctms          | `ctms`          | `CtmsDbContext`          |
-| econsent      | `econsent`      | `EconsentDbContext`      |
-| eisf          | `eisf`          | `EisfDbContext`          |
-| etmf          | `etmf`          | `EtmfDbContext`          |
-| execution     | `edc`           | `ExecutionDbContext`     |
-| fileshare     | `fileshare`     | `FileshareDbContext`     |
-| imaging       | `imaging`       | `ImagingDbContext`       |
-| interop       | `interop`       | `InteropDbContext`       |
-| knowledge     | `knowledge`     | `KnowledgeDbContext`     |
-| notifications | `notifications` | `NotificationsDbContext` |
-| org           | `org`           | `OrgDbContext`           |
-| payments      | `payments`      | `PaymentsDbContext`      |
-| quality       | `quality`       | `QualityDbContext`       |
-| safety        | `safety`        | `SafetyDbContext`        |
-| tickets       | `tickets`       | `TicketsDbContext`       |
+<!-- database-module-schemas:begin (generated from docs/schema/README.md by `pnpm cadence generate-cli-docs`; do not edit) -->
 
-The kernel packages qualify their own tables with the `kernel` schema. `public` holds only extensions.
+| Module                                       | Host                         | Schema          | DbContext                  | Tables |
+| -------------------------------------------- | ---------------------------- | --------------- | -------------------------- | ------ |
+| [ctms](schema/ctms.md)                       | `ctms`                       | `ctms`          | `CtmsDbContext`            | 19     |
+| [econsent](schema/econsent.md)               | `econsent`                   | `econsent`      | `EconsentDbContext`        | 20     |
+| [eisf](schema/eisf.md)                       | `eisf`                       | `eisf`          | `EisfDbContext`            | 5      |
+| [etmf](schema/etmf.md)                       | `etmf`                       | `etmf`          | `EtmfDbContext`            | 11     |
+| [execution](schema/execution.md)             | `execution`                  | `edc`           | `ExecutionDbContext`       | 29     |
+| [executionmodule](schema/executionmodule.md) | `kernel` (`apps/kernel-api`) | `execution`     | `ExecutionModuleDbContext` | 3      |
+| [fileshare](schema/fileshare.md)             | `fileshare`                  | `fileshare`     | `FileshareDbContext`       | 6      |
+| [imaging](schema/imaging.md)                 | `imaging`                    | `imaging`       | `ImagingDbContext`         | 9      |
+| [intelligence](schema/intelligence.md)       | `kernel` (`apps/kernel-api`) | `intelligence`  | `IntelligenceDbContext`    | 4      |
+| [interop](schema/interop.md)                 | `interop`                    | `interop`       | `InteropDbContext`         | 19     |
+| [kernel](schema/kernel.md)                   | `kernel` (`apps/kernel-api`) | `kernel`        | `KernelDbContext`          | 62     |
+| [knowledge](schema/knowledge.md)             | `knowledge`                  | `knowledge`     | `KnowledgeDbContext`       | 13     |
+| [notifications](schema/notifications.md)     | `notifications`              | `notifications` | `NotificationsDbContext`   | 7      |
+| [org](schema/org.md)                         | `org`                        | `org`           | `OrgDbContext`             | 5      |
+| [payments](schema/payments.md)               | `payments`                   | `payments`      | `PaymentsDbContext`        | 17     |
+| [quality](schema/quality.md)                 | `quality`                    | `quality`       | `QualityDbContext`         | 5      |
+| [safety](schema/safety.md)                   | `safety`                     | `safety`        | `SafetyDbContext`          | 16     |
+| [tickets](schema/tickets.md)                 | `tickets`                    | `tickets`       | `TicketsDbContext`         | 5      |
+
+<!-- database-module-schemas:end -->
 
 The schema is applied by setting the connection's search path to `<schema>,public`
 (`CadenceDatabaseExtensions.WithModuleSchema`), so services and `dotnet ef` never need schema-qualified SQL. When you
@@ -45,7 +52,8 @@ query by hand, set it yourself: `SET search_path TO ctms, public;`.
 
 A migrate-only job runs the normal service image with the same connection string and secrets as the service.
 Services refuse to start without their required settings (`GATEWAY_SECRET`, `AUDIT_LOG_SECRET_KEY` and, for
-execution, `DemographicsEncryption__KeyBase64`; see [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)):
+execution, `DemographicsEncryption__KeyBase64` and `RANDOMIZATION_ALLOCATION_KEY`; see
+[ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)):
 
 ```bash
 docker run --rm \

@@ -49,8 +49,8 @@ public static class Program
         AddCommand(root, "doctor", "Validates system dependencies and local datastores", DoctorCommand.Configure);
         AddCommand(root, "check", "Runs architecture sentinels and quality gates", CheckCommand.Configure);
         AddCommand(root, "test", "Runs fast unit tests or testcontainer integration suites", TestCommand.Configure);
-        AddCommand(root, "ci", "Runs the jobs of .github/workflows/ci.yml on this machine while GitHub Actions is off", LocalCiCommand.Configure);
-        AddCommand(root, "rulesets", "Validates and synchronizes .github/rulesets/*.json to GitHub via gh api", RulesetsCommand.Configure);
+        AddCommand(root, "ci", "Runs the pull-request jobs of .github/workflows/ci.yml locally for pre-push CI parity", LocalCiCommand.Configure);
+        AddCommand(root, "rulesets", "Validates CI Gate coverage and .github/rulesets/*.json (when present) and syncs rulesets via gh api", RulesetsCommand.Configure);
         AddCommand(root, "dev", "Starts the .NET Aspire AppHost with all local services and datastores", DevCommand.Execute);
         AddCommand(root, "fix", "Executes self-healing formatting, index sync, schema and OpenAPI pipeline", ToolCommands.ConfigureFix);
 
@@ -63,19 +63,19 @@ public static class Program
         AddCommand(root, "validate-workflow-security", "Checks GitHub Actions SHA pinning, checkout credentials and least-privilege permissions", () => WorkflowSecurityValidatorService.ValidateWorkflowSecurity());
         AddCommand(root, "validate-markdown", "Checks Markdown formatting and workspace links", () => MarkdownValidatorService.ValidateMarkdown());
         AddCommand(root, "query-linter", "Lints database and ORM query statements", () => QueryLinterService.LintQueries());
-        AddCommand(root, "extract-env-vars", "Checks that environment variables read in code are documented", ToolCommands.ConfigureExtractEnvVars);
+        AddCommand(root, "extract-env-vars", "Verifies bidirectional parity and file citations between code, .env.example and docs/ENVIRONMENT_VARIABLES.md", ToolCommands.ConfigureExtractEnvVars);
         AddCommand(root, "audit-security", "Scans for hardcoded secrets", () => SecurityAuditorService.AuditSecurity());
         AddCommand(root, "validate-public-bundle", "Verifies built VitePress and demo web bundles with zero comment exemptions", () => PublicBundleValidatorService.ValidatePublicBundles());
         AddCommand(root, "validate-vulnerabilities", "Audits dependency vulnerabilities against the exclusions ledger", () => VulnerabilityAuditorService.AuditVulnerabilities());
         AddCommand(root, "clean-secrets-baseline", "Normalizes or checks the detect-secrets baseline", ToolCommands.ConfigureCleanSecretsBaseline);
-        AddCommand(root, "validate-architecture-drift", "Checks that compose services are described in the architecture docs", () => ArchitectureDriftValidatorService.ValidateArchitectureDrift());
+        AddCommand(root, "validate-architecture-drift", "Verifies compose, topology, database schema, electronic signature and audit-host parity across architecture docs", () => ArchitectureDriftValidatorService.ValidateArchitectureDrift());
         AddCommand(root, "sync-openapi-spec", "Exports each service's OpenAPI document into docs/openapi", ToolCommands.ConfigureSyncOpenApiSpec);
         AddCommand(root, "validate-openapi-drift", "Compares docs/openapi with the services", () => OpenApiDriftValidatorService.ValidateDrift());
         AddCommand(root, "generate-api-docs", "Renders docs/api from docs/openapi", ToolCommands.ConfigureGenerateApiDocs);
         AddCommand(root, "generate-schema-doc", "Renders docs/schema from the EF Core models", ToolCommands.ConfigureGenerateSchemaDoc);
         AddCommand(root, "pre-commit-openapi", "Runs the quick OpenAPI check used by the pre-commit hook", () => PreCommitOpenApiService.ExecutePreCommitOpenApi());
         AddCommand(root, "validate-api-clients", "Typechecks the web API clients against their OpenAPI types", () => ApiClientValidatorService.ValidateApiClients());
-        AddCommand(root, "generate-cli-docs", "Writes the quality gate tables in docs/cli.md and docs/CI.md; --check verifies them and that every command is documented", ToolCommands.ConfigureGenerateCliDocs);
+        AddCommand(root, "generate-cli-docs", "Synthesizes generated doc regions in CLI, CI, dev-env, architecture, database and signature guides; --check verifies parity", ToolCommands.ConfigureGenerateCliDocs);
         AddCommand(root, "generate-doc-index", "Synchronizes docs/DOCUMENTATION_INDEX.md with all repository markdown documents", ToolCommands.ConfigureGenerateDocIndex);
         AddCommand(root, "generate-demo-manifest", "Exports the canonical synthetic demo study manifest into packages/demo-fixtures; --check verifies parity", ToolCommands.ConfigureGenerateDemoManifest);
         AddCommand(root, "generate-rtm", "Regenerates the Requirements Traceability Matrix", ToolCommands.ConfigureGenerateRtm);

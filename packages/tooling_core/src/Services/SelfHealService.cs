@@ -35,7 +35,14 @@ public static class SelfHealService
             Console.WriteLine($"     Cadence.sln not found in '{repoRoot}', skipping C# format.");
         }
 
-        Console.WriteLine("\n  2. Auto-formatting Prettier Workspace Files...");
+        Console.WriteLine("\n  2. Synchronizing Synthesized Documentation Regions...");
+        if (syncCliDocs is not null &&
+            File.Exists(Path.Combine(repoRoot, "docs", "cli.md")))
+        {
+            ok &= syncCliDocs(repoRoot) == 0;
+        }
+
+        Console.WriteLine("\n  3. Auto-formatting Prettier Workspace Files...");
         if (File.Exists(Path.Combine(repoRoot, "package.json")))
         {
             ok &= FrontendQualityGateService.FormatPrettier(repoRoot) == 0;
@@ -45,7 +52,7 @@ public static class SelfHealService
             Console.WriteLine($"     package.json not found in '{repoRoot}', skipping Prettier.");
         }
 
-        Console.WriteLine("\n  3. Normalizing Secrets Baseline & Requirement Tags...");
+        Console.WriteLine("\n  4. Normalizing Secrets Baseline & Requirement Tags...");
         ok &= SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: repoRoot, check: false) == 0;
         if (Directory.Exists(Path.Combine(repoRoot, "docs")))
         {
@@ -53,18 +60,11 @@ public static class SelfHealService
             Console.WriteLine($"✔ Requirement tags verified ({sanitized} Markdown file(s) updated).");
         }
 
-        Console.WriteLine("\n  4. Synchronizing Documentation, CLI, Demo & ADR Indexes...");
+        Console.WriteLine("\n  5. Synchronizing Documentation, Demo & ADR Indexes...");
         if (Directory.Exists(Path.Combine(repoRoot, "docs", "adr")))
         {
             ok &= AdrValidatorService.SyncAdrIndex(repoRoot) == 0;
             ok &= AdrValidatorService.ValidateAdrs(checkGitDiff: false, repoRoot: repoRoot);
-        }
-
-        if (syncCliDocs is not null &&
-            File.Exists(Path.Combine(repoRoot, "docs", "cli.md")) &&
-            File.Exists(Path.Combine(repoRoot, "docs", "CI.md")))
-        {
-            ok &= syncCliDocs(repoRoot) == 0;
         }
 
         if (Directory.Exists(Path.Combine(repoRoot, "docs")))
@@ -79,7 +79,7 @@ public static class SelfHealService
             ok &= DemoManifestGeneratorService.GenerateDemoManifest(validateOnly: false, repoRoot: repoRoot) == 0;
         }
 
-        Console.WriteLine("\n  5. Synchronizing EF Core Schema Documentation...");
+        Console.WriteLine("\n  6. Synchronizing EF Core Schema Documentation...");
         bool shouldExportSchemaDocs = full || changedFiles.Any(PreCommitOpenApiService.AffectsEfCoreSchema);
         if (shouldExportSchemaDocs)
         {
@@ -90,7 +90,7 @@ public static class SelfHealService
             Console.WriteLine("     No EF Core entity, configuration, or migration changes detected; skipping schema export (pass --full to force).");
         }
 
-        Console.WriteLine("\n  6. Synchronizing OpenAPI Specifications, API Docs & Web Client Types...");
+        Console.WriteLine("\n  7. Synchronizing OpenAPI Specifications, API Docs & Web Client Types...");
         var (backendContractsChanged, targetServices, _) = PreCommitOpenApiService.AnalyzeBackendContractChanges(changedFiles);
         bool openApiSpecsChangedOnDisk = changedFiles.Any(f =>
             f.StartsWith("docs/openapi/", StringComparison.OrdinalIgnoreCase) &&

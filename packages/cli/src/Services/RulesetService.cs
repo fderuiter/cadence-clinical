@@ -101,6 +101,10 @@ public static partial class RulesetService
 
             ValidateCiGateCoverage(workflowJobs, errors);
         }
+        else if (File.Exists(Path.Combine(repoRoot, ".github", "workflows", "ci.yml")))
+        {
+            errors.Add(".github/workflows/ci.yml: contains no workflow jobs.");
+        }
 
         if (errors.Count > 0)
         {
@@ -125,7 +129,8 @@ public static partial class RulesetService
     }
 
     /// <summary>
-    /// Validates declarative rulesets and either previews (<paramref name="dryRun"/>) or reconciles them to GitHub
+    /// Validates declarative rulesets (or <c>CI Gate</c> workflow coverage when <c>.github/rulesets</c> is absent in
+    /// <paramref name="dryRun"/> mode) and either previews (<paramref name="dryRun"/>) or reconciles them to GitHub
     /// Repository Rulesets using <c>gh api</c>. Fails with exit code <c>1</c> on validation or API errors.
     /// </summary>
     public static int Sync(
@@ -142,7 +147,7 @@ public static partial class RulesetService
         output ??= Console.Out;
 
         var errors = new List<string>();
-        var definitions = LoadAndValidateRulesetFiles(repoRoot, errors, requireRulesetsDirectory: true);
+        var definitions = LoadAndValidateRulesetFiles(repoRoot, errors, requireRulesetsDirectory: !dryRun);
         var workflowJobs = LoadAndValidateWorkflows(repoRoot, errors);
         if (workflowJobs.Count > 0)
         {
@@ -153,6 +158,10 @@ public static partial class RulesetService
 
             ValidateCiGateCoverage(workflowJobs, errors);
         }
+        else if (File.Exists(Path.Combine(repoRoot, ".github", "workflows", "ci.yml")))
+        {
+            errors.Add(".github/workflows/ci.yml: contains no workflow jobs.");
+        }
 
         if (errors.Count > 0)
         {
@@ -162,6 +171,18 @@ public static partial class RulesetService
             }
 
             return 1;
+        }
+
+        if (dryRun && definitions.Count == 0)
+        {
+            if (!string.IsNullOrWhiteSpace(repoOverride) && !TryParseRepository(repoOverride, out _))
+            {
+                output.WriteLine($"{Tag} [ERROR] Could not determine target GitHub repository (expected 'owner/repo' via --repo, GITHUB_REPOSITORY, or git remote origin).");
+                return 1;
+            }
+
+            output.WriteLine($"{Tag} ✔ Dry-run validated CI Gate workflow coverage (no declarative .github/rulesets directory present; nothing to sync).");
+            return 0;
         }
 
         string? repo = ResolveRepository(repoRoot, repoOverride, runner, environment);
