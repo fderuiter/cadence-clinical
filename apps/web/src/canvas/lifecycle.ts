@@ -11,6 +11,8 @@ export type SectionId =
   | "protocol-versions"
   | "site-activation"
   | "startup-greenlight"
+  | "documents"
+  | "training"
   | "site-milestones"
   | "delegation"
   | "participants"
@@ -68,6 +70,18 @@ export const STAGES: readonly Stage[] = [
           "Six-facet country and site readiness gates and Part 11 certification",
       },
       {
+        id: "documents",
+        label: "Documents",
+        description:
+          "Study and site essential document binder, intelligence staging, and clinical QC approval",
+      },
+      {
+        id: "training",
+        label: "Training",
+        description:
+          "Protocol curricula, personnel training assignments, and site delegation logs",
+      },
+      {
         id: "site-milestones",
         label: "Site milestones",
         description:
@@ -95,7 +109,7 @@ export const STAGES: readonly Stage[] = [
         id: "monitoring-visits",
         label: "Monitoring visits",
         description:
-          "Site monitoring visit schedules, trip findings, letters, and supervisory sign-off",
+          "Site monitoring visit schedules, trip findings, compiled letters, and supervisory sign-off",
       },
       {
         id: "supply",

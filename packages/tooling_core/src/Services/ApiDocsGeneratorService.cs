@@ -15,30 +15,136 @@ public static class ApiDocsGeneratorService
 {
     private static readonly string[] HttpMethods = ["get", "put", "post", "delete", "options", "head", "patch", "trace"];
 
-    public static int GenerateApiDocs(bool validate = false, string? repoRoot = null)
+    public static int GenerateApiDocs(
+        bool validate = false,
+        string? repoRoot = null,
+        bool preCommit = false,
+        GitIndexReader? indexReader = null)
     {
         repoRoot ??= FindRepoRoot();
         string specDir = Path.Combine(repoRoot, "docs", "openapi");
         string docsDir = Path.Combine(repoRoot, "docs", "api");
 
-        var expected = RenderAll(specDir);
+        GitIndexReader? ownedReader = null;
+        GitIndexReader? reader = validate
+            ? GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out ownedReader)
+            : null;
+        using (ownedReader)
+        {
+            if (validate && reader is { HasAuthoritativeIndex: true })
+            {
+                return ValidateIndexedApiDocs(reader);
+            }
+
+            var expected = RenderAll(specDir);
+            var drift = new List<string>();
+            foreach (var (name, content) in expected)
+            {
+                string path = Path.Combine(docsDir, name);
+                if (!File.Exists(path))
+                {
+                    drift.Add($"{name} (missing)");
+                }
+                else if (File.ReadAllText(path).ReplaceLineEndings("\n") != content)
+                {
+                    drift.Add($"{name} (out of date)");
+                }
+            }
+
+            var stale = Directory.Exists(docsDir)
+                ? Directory.GetFiles(docsDir, "*.md").Select(f => Path.GetFileName(f)).Where(n => !expected.ContainsKey(n)).OrderBy(n => n, StringComparer.Ordinal).ToList()
+                : [];
+            drift.AddRange(stale.Select(n => $"{n} (no spec in docs/openapi)"));
+
+            if (drift.Count == 0)
+            {
+                Console.WriteLine("✔ docs/api matches docs/openapi.");
+                return 0;
+            }
+
+            if (validate)
+            {
+                Console.WriteLine("[ERROR] docs/api differs from docs/openapi:");
+                foreach (string line in drift)
+                {
+                    Console.WriteLine($"  - {line}");
+                }
+
+                Console.WriteLine("Run 'pnpm cadence generate-api-docs' and commit docs/api.");
+                return 1;
+            }
+
+            Directory.CreateDirectory(docsDir);
+            foreach (var (name, content) in expected)
+            {
+                File.WriteAllText(Path.Combine(docsDir, name), content);
+            }
+
+            foreach (string name in stale)
+            {
+                File.Delete(Path.Combine(docsDir, name));
+            }
+
+            Console.WriteLine($"✔ docs/api regenerated ({drift.Count} file(s) changed).");
+            return 0;
+        }
+    }
+
+    private static int ValidateIndexedApiDocs(GitIndexReader reader)
+    {
+        var expected = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        var services = new List<(string Name, int Operations)>();
+
+        var indexedSpecs = reader.Paths
+            .Where(p => p.StartsWith("docs/openapi/", StringComparison.OrdinalIgnoreCase) &&
+                        !p["docs/openapi/".Length..].Contains('/') &&
+                        p.EndsWith("_openapi.json", StringComparison.OrdinalIgnoreCase))
+            .Order(StringComparer.Ordinal);
+
+        foreach (string specRel in indexedSpecs)
+        {
+            string name = Path.GetFileName(specRel)[..^"_openapi.json".Length];
+            if (name == "cdisc")
+            {
+                continue;
+            }
+
+            if (!reader.TryReadText(specRel, out string specJson))
+            {
+                continue;
+            }
+
+            var spec = JsonNode.Parse(specJson) as JsonObject ?? new JsonObject();
+            var operations = Operations(spec);
+            services.Add((name, operations.Count));
+            expected[$"{name}.md"] = RenderService(name, operations);
+        }
+
+        expected["index.md"] = RenderIndex(services);
+
         var drift = new List<string>();
         foreach (var (name, content) in expected)
         {
-            string path = Path.Combine(docsDir, name);
-            if (!File.Exists(path))
+            string docRel = $"docs/api/{name}";
+            if (!reader.TryReadText(docRel, out string docText))
             {
                 drift.Add($"{name} (missing)");
             }
-            else if (File.ReadAllText(path).ReplaceLineEndings("\n") != content)
+            else if (docText.ReplaceLineEndings("\n") != content)
             {
                 drift.Add($"{name} (out of date)");
             }
         }
 
-        var stale = Directory.Exists(docsDir)
-            ? Directory.GetFiles(docsDir, "*.md").Select(f => Path.GetFileName(f)).Where(n => !expected.ContainsKey(n)).OrderBy(n => n, StringComparer.Ordinal).ToList()
-            : [];
+        var stale = reader.Paths
+            .Where(p => p.StartsWith("docs/api/", StringComparison.OrdinalIgnoreCase) &&
+                        !p["docs/api/".Length..].Contains('/') &&
+                        p.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+            .Select(Path.GetFileName)
+            .Where(n => !string.IsNullOrEmpty(n) && !expected.ContainsKey(n!))
+            .Select(n => n!)
+            .OrderBy(n => n, StringComparer.Ordinal)
+            .ToList();
         drift.AddRange(stale.Select(n => $"{n} (no spec in docs/openapi)"));
 
         if (drift.Count == 0)
@@ -47,28 +153,14 @@ public static class ApiDocsGeneratorService
             return 0;
         }
 
-        if (validate)
+        Console.WriteLine("[ERROR] docs/api differs from docs/openapi:");
+        foreach (string line in drift)
         {
-            Console.WriteLine("[ERROR] docs/api differs from docs/openapi:");
-            foreach (string line in drift)
-            {
-                Console.WriteLine($"  - {line}");
-            }
-            Console.WriteLine("Run 'pnpm cadence generate-api-docs' and commit docs/api.");
-            return 1;
+            Console.WriteLine($"  - {line}");
         }
 
-        Directory.CreateDirectory(docsDir);
-        foreach (var (name, content) in expected)
-        {
-            File.WriteAllText(Path.Combine(docsDir, name), content);
-        }
-        foreach (string name in stale)
-        {
-            File.Delete(Path.Combine(docsDir, name));
-        }
-        Console.WriteLine($"✔ docs/api regenerated ({drift.Count} file(s) changed).");
-        return 0;
+        Console.WriteLine("Run 'pnpm cadence generate-api-docs' and commit docs/api.");
+        return 1;
     }
 
     /// <summary>Renders every page keyed by file name. The index is always included.</summary>

@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import CrcFormRenderer from "../../src/components/persona/CrcFormRenderer.vue";
+import * as availability from "../../src/router/availability.js";
 import { useClinicalStore } from "../../src/stores/clinical";
 import { apiClient } from "../../src/api/apiClient";
 
@@ -229,21 +230,27 @@ describe("CrcFormRenderer.vue", () => {
   });
 
   it("guards the /training link behind isScreenAvailable('training')", () => {
-    const nonDemoWrapper = createWrapper({
+    const liveWrapper = createWrapper({
       isTrainingGated: true,
       missingCourses: ["GCP-101"],
     });
-    expect(nonDemoWrapper.find("#training-gating-banner").exists()).toBe(true);
-    expect(nonDemoWrapper.find("#btn-complete-training").exists()).toBe(false);
-    nonDemoWrapper.unmount();
+    expect(liveWrapper.find("#training-gating-banner").exists()).toBe(true);
+    expect(liveWrapper.find("#btn-complete-training").exists()).toBe(true);
+    liveWrapper.unmount();
 
-    vi.stubEnv("VITE_DEMO_MODE", "true");
-    const demoWrapper = createWrapper({
+    vi.spyOn(availability, "isScreenAvailable").mockImplementation(
+      (routeName) => routeName !== "training"
+    );
+    const unavailableWrapper = createWrapper({
       isTrainingGated: true,
       missingCourses: ["GCP-101"],
     });
-    expect(demoWrapper.find("#training-gating-banner").exists()).toBe(true);
-    expect(demoWrapper.find("#btn-complete-training").exists()).toBe(true);
-    demoWrapper.unmount();
+    expect(unavailableWrapper.find("#training-gating-banner").exists()).toBe(
+      true
+    );
+    expect(unavailableWrapper.find("#btn-complete-training").exists()).toBe(
+      false
+    );
+    unavailableWrapper.unmount();
   });
 });

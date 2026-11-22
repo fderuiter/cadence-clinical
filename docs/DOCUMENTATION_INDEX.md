@@ -587,6 +587,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2551: Share Session Resilience, Draft-Safe Sign-Out, and Part 11 Signature Primitives](adr/2026-11-20-share-session-logout-and-signature-primitives.md) | Current | - Status: Accepted |
 | [ADR-2497: Dual-Layer Gates for Source and Public Bundles](adr/2026-11-20-dual-layer-gates-for-source-and-public-bundles.md) | Current | - Status: Accepted |
 | [ADR-2642: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation](adr/2026-11-20-ctms-core-topology-scoped-isolation-and-stateful-site-activation.md) | Current | - Status: Accepted |
+| [ADR-2643: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks](adr/2026-11-20-wire-web-ctms-training-and-etmf-workspaces-and-signed-completeness-webhooks.md) | Current | - Status: Accepted |
 | [ADR-2624: Outbox Collection Edit Checks, Stateless Pre-Commit Form Preview, and ODM Rule Compilation](adr/2026-11-21-outbox-collection-edit-checks-and-pre-commit-preview.md) | Current | - Status: Accepted |
 
 ## Developing and running

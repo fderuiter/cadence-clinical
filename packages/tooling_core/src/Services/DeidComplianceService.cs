@@ -133,6 +133,7 @@ public static partial class DeidComplianceService
         string? repoRoot = null,
         ComplianceProfile profile = ComplianceProfile.HIPAA,
         bool preCommit = false,
+        GitIndexReader? indexReader = null,
         string? baseRef = null,
         string? pushBefore = null)
     {
@@ -149,73 +150,87 @@ public static partial class DeidComplianceService
                               !preCommit &&
                               Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE") == "1";
 
-        var detector = new DeidDetector();
-        var scanned = new List<string>();
-        var findings = new List<(DeidFinding Finding, string Key)>();
-        foreach (string relativePath in CandidateFiles(repoRoot, files, preCommit, baseRef, pushBefore, forceTrackedScan: updateBaseline))
+        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
+        using (ownedReader)
         {
-            string content;
-            try
+            var detector = new DeidDetector();
+            var scanned = new List<string>();
+            var findings = new List<(DeidFinding Finding, string Key)>();
+            foreach (string relativePath in CandidateFiles(repoRoot, files, preCommit, baseRef, pushBefore, forceTrackedScan: updateBaseline, reader: reader))
             {
-                content = File.ReadAllText(Path.Combine(repoRoot, relativePath));
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                Console.WriteLine($"[WARNING] Error reading '{relativePath}': {ex.Message}");
-                continue;
+                string content;
+                if (reader is not null)
+                {
+                    if (!reader.TryReadText(relativePath, out content))
+                    {
+                        continue;
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        content = File.ReadAllText(Path.Combine(repoRoot, relativePath));
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        Console.WriteLine($"[WARNING] Error reading '{relativePath}': {ex.Message}");
+                        continue;
+                    }
+                }
+
+                scanned.Add(relativePath);
+                string[] lines = content.Split('\n');
+                foreach (var finding in ScanText(relativePath, content, detector, profile))
+                {
+                    findings.Add((finding, BaselineKey(finding, lines[finding.Line - 1])));
+                }
             }
 
-            scanned.Add(relativePath);
-            string[] lines = content.Split('\n');
-            foreach (var finding in ScanText(relativePath, content, detector, profile))
+            string baselinePath = Path.Combine(repoRoot, BaselineFile);
+            if (updateBaseline)
             {
-                findings.Add((finding, BaselineKey(finding, lines[finding.Line - 1])));
+                WriteBaseline(baselinePath, findings.Select(f => f.Key));
+                Console.WriteLine($"✔ Wrote {findings.Count} entries to {BaselineFile}.");
+                return 0;
             }
-        }
 
-        string baselinePath = Path.Combine(repoRoot, BaselineFile);
-        if (updateBaseline)
-        {
-            WriteBaseline(baselinePath, findings.Select(f => f.Key));
-            Console.WriteLine($"✔ Wrote {findings.Count} entries to {BaselineFile}.");
+            var scannedSet = scanned.ToHashSet(StringComparer.Ordinal);
+            var baseline = ReadBaseline(baselinePath, reader).Where(k =>
+            {
+                int pipeIdx = k.IndexOf('|', StringComparison.Ordinal);
+                return pipeIdx > 0 && scannedSet.Contains(k[..pipeIdx]);
+            }).ToList();
+            var (newFindings, stale) = CompareWithBaseline(findings, baseline);
+
+            foreach (var finding in newFindings)
+            {
+                Console.WriteLine($"{finding.File}:{finding.Line}:{finding.Column}: [DEID VIOLATION] Category: '{finding.Category}'");
+            }
+
+            foreach (string entry in stale)
+            {
+                Console.WriteLine($"[DEID STALE BASELINE] {entry}");
+            }
+
+            if (newFindings.Count > 0 || stale.Count > 0)
+            {
+                if (newFindings.Count > 0)
+                {
+                    Console.WriteLine($"\n[ERROR] Found {newFindings.Count} DEID compliance violations. Remove the data, or mark a line that is not PHI with `deid-ignore`.");
+                }
+
+                if (stale.Count > 0)
+                {
+                    Console.WriteLine($"\n[ERROR] {stale.Count} {BaselineFile} entries no longer match; the baseline may only shrink. Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` to drop them.");
+                }
+
+                return 1;
+            }
+
+            Console.WriteLine($"✔ DEID compliance scan passed cleanly ({scanned.Count} files; {baseline.Count} baselined findings).");
             return 0;
         }
-
-        var scannedSet = scanned.ToHashSet(StringComparer.Ordinal);
-        var baseline = ReadBaseline(baselinePath).Where(k =>
-        {
-            int pipeIdx = k.IndexOf('|', StringComparison.Ordinal);
-            return pipeIdx > 0 && scannedSet.Contains(k[..pipeIdx]);
-        }).ToList();
-        var (newFindings, stale) = CompareWithBaseline(findings, baseline);
-
-        foreach (var finding in newFindings)
-        {
-            Console.WriteLine($"{finding.File}:{finding.Line}:{finding.Column}: [DEID VIOLATION] Category: '{finding.Category}'");
-        }
-
-        foreach (string entry in stale)
-        {
-            Console.WriteLine($"[DEID STALE BASELINE] {entry}");
-        }
-
-        if (newFindings.Count > 0 || stale.Count > 0)
-        {
-            if (newFindings.Count > 0)
-            {
-                Console.WriteLine($"\n[ERROR] Found {newFindings.Count} DEID compliance violations. Remove the data, or mark a line that is not PHI with `deid-ignore`.");
-            }
-
-            if (stale.Count > 0)
-            {
-                Console.WriteLine($"\n[ERROR] {stale.Count} {BaselineFile} entries no longer match; the baseline may only shrink. Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` to drop them.");
-            }
-
-            return 1;
-        }
-
-        Console.WriteLine($"✔ DEID compliance scan passed cleanly ({scanned.Count} files; {baseline.Count} baselined findings).");
-        return 0;
     }
 
     /// <summary>
@@ -257,10 +272,19 @@ public static partial class DeidComplianceService
         return $"{finding.File}|{finding.Category}|{Convert.ToHexStringLower(hash)[..16]}";
     }
 
-    private static List<string> ReadBaseline(string path) =>
-        File.Exists(path)
+    private static List<string> ReadBaseline(string path, GitIndexReader? reader)
+    {
+        if (reader is not null)
+        {
+            return reader.TryReadLines(BaselineFile, out string[] indexedLines)
+                ? [.. indexedLines.Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))]
+                : [];
+        }
+
+        return File.Exists(path)
             ? [.. File.ReadAllLines(path).Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))]
             : [];
+    }
 
     private static void WriteBaseline(string path, IEnumerable<string> keys)
     {
@@ -497,7 +521,8 @@ public static partial class DeidComplianceService
         bool preCommit = false,
         string? baseRef = null,
         string? pushBefore = null,
-        bool forceTrackedScan = false)
+        bool forceTrackedScan = false,
+        GitIndexReader? reader = null)
     {
         IEnumerable<string> relative;
         if (files is not null)
@@ -524,13 +549,33 @@ public static partial class DeidComplianceService
         return [.. relative
             .Select(p => p.Replace('\\', '/'))
             .Where(p => !p.StartsWith("../", StringComparison.Ordinal) && p != ".." && !IsExcludedPath(p))
-            .Where(p =>
-            {
-                string fullPath = Path.Combine(repoRoot, p);
-                return File.Exists(fullPath) && ShouldScanFile(fullPath);
-            })
+            .Where(p => reader is not null
+                ? reader.FileExists(p) && ShouldScanStagedFile(p, reader)
+                : File.Exists(Path.Combine(repoRoot, p)) && ShouldScanFile(Path.Combine(repoRoot, p)))
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)];
+    }
+
+    private static bool ShouldScanStagedFile(string relativePath, GitIndexReader reader)
+    {
+        if (AlwaysScannedNames.Contains(Path.GetFileName(relativePath)))
+        {
+            return true;
+        }
+
+        string extension = Path.GetExtension(relativePath);
+        if (extension.Length > 0)
+        {
+            return TextExtensions.Contains(extension);
+        }
+
+        if (!reader.TryReadBytes(relativePath, out byte[] bytes))
+        {
+            return false;
+        }
+
+        int probeLen = Math.Min(bytes.Length, 1024);
+        return Array.IndexOf(bytes, (byte)0, 0, probeLen) < 0;
     }
 
     private static IEnumerable<string> TrackedFiles(string repoRoot) =>

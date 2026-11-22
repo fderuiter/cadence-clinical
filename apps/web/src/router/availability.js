@@ -12,17 +12,21 @@ import { isDemoBuild } from "../utils/demoMode";
 
 /** Route names whose screens call endpoints the .NET services serve. */
 export const AVAILABLE_SCREENS = new Set([
-  // Clinical Canvas: participants, protocol versions, site activation, startup readiness, milestones,
-  // delegation logs, monitoring visits, investigational supply, and queries from Kernel, Execution, and CTMS.
+  // Clinical Canvas: participants, protocol versions, site activation, startup readiness, documents,
+  // training, milestones, delegation logs, monitoring visits, investigational supply, and queries.
   "study",
   // Execution: subjects, forms, observations, SDV, queries (#4828).
   "ecrf",
   // Kernel: one observation and its correction (ADR-2620).
   "observation",
-  // CTMS & Execution: site activation, startup greenlight, milestones, monitoring visits, DoA logs, and RTSM supply;
-  // unbacked financials, CRA allocation, recruitment edits, and adaptive dose escalation stay gated to demo builds.
+  // CTMS & Execution: site activation, startup greenlight, milestones, monitoring visits & compiled letters, DoA logs, and RTSM supply;
+  // unbacked financials, CRA allocation, recruitment edits, and adaptive dose escalation stay gated to demo builds (#4829).
   "ctms",
   "ssu",
+  // eTMF: DIA TMF Reference Model binder, intelligence staging, clinical QC review, and binder exports (#4829).
+  "etmf",
+  // Knowledge: protocol training curricula, assignments, and Part 11 delegation sign-off (#4829).
+  "training",
 ]);
 
 /** Routes unlocked in interactive static demo builds backed by stateful MSW handlers. */
