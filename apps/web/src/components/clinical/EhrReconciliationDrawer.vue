@@ -760,12 +760,12 @@ export interface EhrCandidate {
   source_timestamp: string;
   target_domain: string;
   target_variable: string;
-  cdash_testcd?: string;
-  cdash_test?: string;
+  cdash_testcd?: string | null;
+  cdash_test?: string | null;
   candidate_value: any;
-  candidate_unit?: string;
+  candidate_unit?: string | null;
   current_ecrf_value?: any;
-  current_ecrf_updated_at?: string;
+  current_ecrf_updated_at?: string | null;
   discrepancy_type:
     | "NEW_FIELD"
     | "EXACT_MATCH"
@@ -777,14 +777,14 @@ export interface EhrCandidate {
   mapping_provenance: string;
   raw_fhir_resource: Record<string, any>;
   status: "PENDING_REVIEW" | "ACCEPTED" | "REJECTED" | "QUERIED";
-  resolution_action?: string;
-  resolution_reason?: string;
-  resolved_by?: string;
-  resolved_at?: string;
-  electronic_signature?: Record<string, any>;
-  clinical_query_id?: string;
-  created_at?: string;
-  version_index: number;
+  resolution_action?: string | null;
+  resolution_reason?: string | null;
+  resolved_by?: string | null;
+  resolved_at?: string | null;
+  electronic_signature?: Record<string, any> | null;
+  clinical_query_id?: string | null;
+  created_at?: string | null;
+  version_index?: number;
 }
 
 const props = defineProps<{
@@ -908,13 +908,14 @@ async function handleBatchAccept() {
     };
     const resp = await interopService.batchAcceptEhrCandidates(payload);
     if (resp.success && resp.candidates) {
-      resp.candidates.forEach((updated: EhrCandidate) => {
+      const updatedList = resp.candidates as EhrCandidate[];
+      updatedList.forEach((updated: EhrCandidate) => {
         const idx = candidates.value.findIndex((c) => c.id === updated.id);
         if (idx !== -1) {
           candidates.value[idx] = updated;
         }
       });
-      emit("batch-commit", resp.candidates);
+      emit("batch-commit", updatedList);
       clearSelection();
     }
   } catch (err) {
@@ -950,13 +951,14 @@ async function submitBatchReject() {
     };
     const resp = await interopService.batchRejectEhrCandidates(payload);
     if (resp.success && resp.candidates) {
-      resp.candidates.forEach((updated: EhrCandidate) => {
+      const updatedList = resp.candidates as EhrCandidate[];
+      updatedList.forEach((updated: EhrCandidate) => {
         const idx = candidates.value.findIndex((c) => c.id === updated.id);
         if (idx !== -1) {
           candidates.value[idx] = updated;
         }
       });
-      emit("batch-reject", resp.candidates);
+      emit("batch-reject", updatedList);
       clearSelection();
     }
     closeBatchRejectModal();
@@ -1029,7 +1031,7 @@ async function fetchCandidates() {
       params.subjectId = props.subjectPseudonym || props.subjectId;
     }
     const resp = await interopService.listEhrCandidates(params);
-    candidates.value = resp.candidates || [];
+    candidates.value = (resp.candidates || []) as EhrCandidate[];
   } catch (err) {
     console.error("Failed to load eSource candidates:", err);
   } finally {
@@ -1066,12 +1068,13 @@ async function promptAccept(item: EhrCandidate) {
     };
     const resp = await interopService.acceptEhrCandidate(payload);
     if (resp.success && resp.candidate) {
+      const updatedCandidate = resp.candidate as EhrCandidate;
       // Update local state
       const idx = candidates.value.findIndex((c) => c.id === item.id);
       if (idx !== -1) {
-        candidates.value[idx] = resp.candidate;
+        candidates.value[idx] = updatedCandidate;
       }
-      emit("commit", resp.candidate);
+      emit("commit", updatedCandidate);
     }
   } catch (err) {
     console.error("Failed to accept candidate:", err);
@@ -1103,13 +1106,14 @@ async function submitReject() {
     };
     const resp = await interopService.rejectEhrCandidate(payload);
     if (resp.success && resp.candidate) {
+      const updatedCandidate = resp.candidate as EhrCandidate;
       const idx = candidates.value.findIndex(
         (c) => c.id === activeItem.value?.id
       );
       if (idx !== -1) {
-        candidates.value[idx] = resp.candidate;
+        candidates.value[idx] = updatedCandidate;
       }
-      emit("reject", resp.candidate);
+      emit("reject", updatedCandidate);
     }
     closeRejectModal();
   } catch (err) {
@@ -1143,13 +1147,14 @@ async function submitQuery() {
     };
     const resp = await interopService.raiseEhrClinicalQuery(payload);
     if (resp.success && resp.candidate) {
+      const updatedCandidate = resp.candidate as EhrCandidate;
       const idx = candidates.value.findIndex(
         (c) => c.id === activeItem.value?.id
       );
       if (idx !== -1) {
-        candidates.value[idx] = resp.candidate;
+        candidates.value[idx] = updatedCandidate;
       }
-      emit("query", resp.candidate, resp.clinical_query_id || "");
+      emit("query", updatedCandidate, resp.clinical_query_id || "");
     }
     closeQueryModal();
   } catch (err) {
@@ -1175,7 +1180,7 @@ function formatValue(val: any): string {
   return String(val);
 }
 
-function formatDate(dt?: string): string {
+function formatDate(dt?: string | null): string {
   if (!dt) return "";
   try {
     return new Date(dt).toLocaleString();
@@ -1218,7 +1223,7 @@ function formatStatus(st: string): string {
   }
 }
 
-function formatResolutionAction(act?: string): string {
+function formatResolutionAction(act?: string | null): string {
   switch (act) {
     case "ACCEPT_COMMIT":
       return "Committed to eCRF";

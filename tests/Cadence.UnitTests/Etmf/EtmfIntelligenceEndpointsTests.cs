@@ -7,6 +7,7 @@ using Cadence.Testing.Time;
 using FluentAssertions;
 
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 
 using Xunit;
 
@@ -63,5 +64,66 @@ public class EtmfIntelligenceEndpointsTests
             report.PrimaryClassification.Should().BeEquivalentTo(first.PrimaryClassification);
             report.ConfidenceTier.Should().Be(first.ConfidenceTier);
         }
+    }
+
+    [Fact]
+    public async Task StageExistingDocumentForQc_PromotesDraftToTechnicalQc_AllowingQcApproval()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var db = new Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext(options);
+
+        var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        httpContext.Items[Cadence.Security.Authentication.GatewayAuthenticationHandler.PrincipalItemKey] = new Cadence.Security.Rbac.Principal
+        {
+            UserId = "cra-1",
+            Roles = ["cra"],
+            AssignedStudies = ["CADENCE-101"],
+            AssignedSites = ["SITE-101"],
+        };
+
+        var ingestResult = await EtmfIntelligenceEndpoints.IngestDocument(
+            new IngestDocumentRequest(
+                Filename: "IRB_Approval_Letter.pdf",
+                Content: "IRB Approved",
+                StudyId: "CADENCE-101",
+                SiteId: "SITE-101",
+                MimeType: "application/pdf",
+                Zone: 4,
+                Section: "04.02",
+                ArtifactCode: "04.02.01",
+                ArtifactType: "IRB/IEC Approval Notification",
+                TaxonomyVersion: "v3.2.0-complete",
+                ReasonForChange: "Initial site document upload"),
+            db,
+            _clock,
+            httpContext,
+            ct);
+        var createdDoc = ingestResult.Should().BeOfType<Created<Cadence.Apps.Etmf.Domain.TmfDocument>>().Subject.Value!;
+        createdDoc.Status.Should().Be("DRAFT");
+        createdDoc.SiteId.Should().Be("SITE-101");
+
+        var stageResult = await EtmfIntelligenceEndpoints.StageExistingDocumentForQc(
+            createdDoc.Id,
+            new StageExistingDocumentQcRequest("Promote single upload to technical QC queue"),
+            "Promote single upload to technical QC queue",
+            db,
+            _clock,
+            httpContext,
+            ct);
+        var stagedDoc = stageResult.Should().BeOfType<Ok<Cadence.Apps.Etmf.Domain.TmfDocument>>().Subject.Value!;
+        stagedDoc.Status.Should().Be("TECHNICAL_QC");
+
+        var approveResult = await EtmfIntelligenceEndpoints.ReviewQcDocument(
+            createdDoc.Id,
+            new CraqcReviewRequest("ACCEPT", "Verified IRB approval letter during technical QC"),
+            db,
+            _clock,
+            httpContext,
+            ct);
+        var approvedDoc = approveResult.Should().BeOfType<Ok<Cadence.Apps.Etmf.Domain.TmfDocument>>().Subject.Value!;
+        approvedDoc.Status.Should().Be("APPROVED");
     }
 }

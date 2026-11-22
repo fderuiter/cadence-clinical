@@ -13,6 +13,9 @@ using Cadence.Kernel.Time;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Cadence.Apps.Knowledge.Application;
 
@@ -81,13 +84,18 @@ public static class KnowledgeCatalogSeeder
     {
         string tenantSuffix = await ResolveSeedTenantSuffixAsync(db, ct).ConfigureAwait(false);
         string ssuSentinelId = $"art-ssu-sop{tenantSuffix}";
+        string trainingSentinelId = $"curr-cadence-101-v1{tenantSuffix}";
 
-        // Fast path: once our canonical SSU + Studies + eCRF + CTMS SOPs exist for this tenant, skip locking and writes entirely.
+        // Fast path: once canonical SOPs and CADENCE-101 training curricula exist for this tenant, skip locking and writes entirely.
         bool alreadySeeded = await db.KnowledgeArticles
             .AsNoTracking()
             .AnyAsync(a => a.Id == ssuSentinelId, ct)
             .ConfigureAwait(false);
-        if (alreadySeeded)
+        bool trainingAlreadySeeded = await db.TrainingCurricula
+            .AsNoTracking()
+            .AnyAsync(c => c.Id == trainingSentinelId, ct)
+            .ConfigureAwait(false);
+        if (alreadySeeded && trainingAlreadySeeded)
         {
             return;
         }
@@ -95,11 +103,15 @@ public static class KnowledgeCatalogSeeder
         await SeedLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            bool recheck = await db.KnowledgeArticles
+            bool recheckSop = await db.KnowledgeArticles
                 .AsNoTracking()
                 .AnyAsync(a => a.Id == ssuSentinelId, ct)
                 .ConfigureAwait(false);
-            if (recheck)
+            bool recheckTraining = await db.TrainingCurricula
+                .AsNoTracking()
+                .AnyAsync(c => c.Id == trainingSentinelId, ct)
+                .ConfigureAwait(false);
+            if (recheckSop && recheckTraining)
             {
                 return;
             }
@@ -107,59 +119,67 @@ public static class KnowledgeCatalogSeeder
             using var _ = KnowledgeAuditActorScope.Begin(CatalogServiceAccount);
             DateTimeOffset seededAt = clock.UtcNow;
 
-            var categories = BuildCategories(seededAt, tenantSuffix);
-            var existingCategoryIds = await db.KnowledgeCategories
-                .Select(c => c.Id)
-                .ToHashSetAsync(StringComparer.Ordinal, ct)
-                .ConfigureAwait(false);
-
-            foreach (var category in categories.Where(c => !existingCategoryIds.Contains(c.Id)))
+            if (!recheckSop)
             {
-                db.KnowledgeCategories.Add(category);
+                var categories = BuildCategories(seededAt, tenantSuffix);
+                var existingCategoryIds = await db.KnowledgeCategories
+                    .Select(c => c.Id)
+                    .ToHashSetAsync(StringComparer.Ordinal, ct)
+                    .ConfigureAwait(false);
+
+                foreach (var category in categories.Where(c => !existingCategoryIds.Contains(c.Id)))
+                {
+                    db.KnowledgeCategories.Add(category);
+                }
+
+                var seeds = BuildSopSeeds(seededAt, tenantSuffix);
+                var existingArticleIds = await db.KnowledgeArticles
+                    .Select(a => a.Id)
+                    .ToHashSetAsync(StringComparer.Ordinal, ct)
+                    .ConfigureAwait(false);
+                var existingVersionIds = await db.KnowledgeArticleVersions
+                    .Select(v => v.Id)
+                    .ToHashSetAsync(StringComparer.Ordinal, ct)
+                    .ConfigureAwait(false);
+                var existingMappingIds = await db.ContextualHelpMappings
+                    .Select(m => m.Id)
+                    .ToHashSetAsync(StringComparer.Ordinal, ct)
+                    .ConfigureAwait(false);
+
+                foreach (var seed in seeds)
+                {
+                    if (!existingArticleIds.Contains(seed.Article.Id))
+                    {
+                        db.KnowledgeArticles.Add(seed.Article);
+                        AuditActions.Record(db, new AuditAction(
+                            EntityName: nameof(KnowledgeArticle),
+                            EntityId: seed.Article.Id,
+                            Action: "SOP_PUBLISHED",
+                            UserId: CatalogServiceAccount,
+                            ReasonForChange: SeedReason,
+                            ChangesJson: JsonSerializer.Serialize(new
+                            {
+                                slug = seed.Article.Slug,
+                                version_label = seed.Article.VersionLabel,
+                                status = seed.Article.Status,
+                            })));
+                    }
+
+                    if (!existingVersionIds.Contains(seed.Version.Id))
+                    {
+                        db.KnowledgeArticleVersions.Add(seed.Version);
+                    }
+
+                    foreach (var mapping in seed.Mappings.Where(m => !existingMappingIds.Contains(m.Id)))
+                    {
+                        db.ContextualHelpMappings.Add(mapping);
+                    }
+                }
             }
 
-            var seeds = BuildSopSeeds(seededAt, tenantSuffix);
-            var existingArticleIds = await db.KnowledgeArticles
-                .Select(a => a.Id)
-                .ToHashSetAsync(StringComparer.Ordinal, ct)
-                .ConfigureAwait(false);
-            var existingVersionIds = await db.KnowledgeArticleVersions
-                .Select(v => v.Id)
-                .ToHashSetAsync(StringComparer.Ordinal, ct)
-                .ConfigureAwait(false);
-            var existingMappingIds = await db.ContextualHelpMappings
-                .Select(m => m.Id)
-                .ToHashSetAsync(StringComparer.Ordinal, ct)
-                .ConfigureAwait(false);
-
-            foreach (var seed in seeds)
+            if (!recheckTraining)
             {
-                if (!existingArticleIds.Contains(seed.Article.Id))
-                {
-                    db.KnowledgeArticles.Add(seed.Article);
-                    AuditActions.Record(db, new AuditAction(
-                        EntityName: nameof(KnowledgeArticle),
-                        EntityId: seed.Article.Id,
-                        Action: "SOP_PUBLISHED",
-                        UserId: CatalogServiceAccount,
-                        ReasonForChange: SeedReason,
-                        ChangesJson: JsonSerializer.Serialize(new
-                        {
-                            slug = seed.Article.Slug,
-                            version_label = seed.Article.VersionLabel,
-                            status = seed.Article.Status,
-                        })));
-                }
-
-                if (!existingVersionIds.Contains(seed.Version.Id))
-                {
-                    db.KnowledgeArticleVersions.Add(seed.Version);
-                }
-
-                foreach (var mapping in seed.Mappings.Where(m => !existingMappingIds.Contains(m.Id)))
-                {
-                    db.ContextualHelpMappings.Add(mapping);
-                }
+                await SeedCadence101TrainingBaselineAsync(db, seededAt, tenantSuffix, ct).ConfigureAwait(false);
             }
 
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
@@ -643,4 +663,248 @@ public static class KnowledgeCatalogSeeder
             ReasonForChange = SeedReason,
             VersionIndex = 1,
         };
+
+    private static async Task SeedCadence101TrainingBaselineAsync(
+        KnowledgeDbContext db,
+        DateTimeOffset seededAt,
+        string tenantSuffix,
+        CancellationToken ct)
+    {
+        const string studyId = "CADENCE-101";
+        const string trainingReason = "Initial CADENCE-101 protocol training and delegation baseline";
+        string curriculumId = $"curr-cadence-101-v1{tenantSuffix}";
+
+        bool hasCurriculum = await db.TrainingCurricula
+            .AnyAsync(c => c.Id == curriculumId, ct)
+            .ConfigureAwait(false);
+        if (!hasCurriculum)
+        {
+            db.TrainingCurricula.Add(new TrainingCurriculum
+            {
+                Id = curriculumId,
+                StudyId = studyId,
+                ProtocolVersion = "1.0",
+                Title = "CADENCE-101 Protocol v1.0 Site Qualification Curriculum",
+                Description = "Baseline protocol eligibility, Schedule of Activities execution, safety reporting, and 21 CFR Part 11 eCRF data capture procedures for CADENCE-101.",
+                IsActive = true,
+                CreatedAt = seededAt,
+                CreatedBy = CatalogServiceAccount,
+                ReasonForChange = trainingReason,
+            });
+        }
+
+        var existingModuleIds = await db.TrainingCurriculumModules
+            .Where(m => m.CurriculumId == curriculumId)
+            .Select(m => m.Id)
+            .ToHashSetAsync(StringComparer.Ordinal, ct)
+            .ConfigureAwait(false);
+
+        var modules = new[]
+        {
+            new TrainingCurriculumModule
+            {
+                Id = $"mod-cad101-eligibility{tenantSuffix}",
+                CurriculumId = curriculumId,
+                Title = "Section 1: Eligibility Criteria & Informed Consent",
+                ModuleType = "PROTOCOL_DELTA",
+                ContentText = "Verify signed IRB-approved Informed Consent Form prior to any study-specific screening procedures. Confirm inclusion and exclusion criteria on the Screening eCRF before randomization.",
+                SequenceOrder = 1,
+                MinReadingTimeSeconds = 45,
+                CreatedAt = seededAt,
+                CreatedBy = CatalogServiceAccount,
+                ReasonForChange = trainingReason,
+                VersionIndex = 1,
+            },
+            new TrainingCurriculumModule
+            {
+                Id = $"mod-cad101-safety{tenantSuffix}",
+                CurriculumId = curriculumId,
+                Title = "Section 2: Adverse Event & Lab Toxicity Escalation",
+                ModuleType = "SAFETY_PROCEDURE",
+                ContentText = "Report all Serious Adverse Events within 24 hours of site awareness. Review CTCAE Grade 3/4 laboratory alerts promptly and document clinical causality assessments in the eCRF.",
+                SequenceOrder = 2,
+                MinReadingTimeSeconds = 60,
+                CreatedAt = seededAt,
+                CreatedBy = CatalogServiceAccount,
+                ReasonForChange = trainingReason,
+                VersionIndex = 1,
+            },
+            new TrainingCurriculumModule
+            {
+                Id = $"mod-cad101-ecrf-part11{tenantSuffix}",
+                CurriculumId = curriculumId,
+                Title = "Section 3: eCRF Source Verification & Part 11 Sign-Off",
+                ModuleType = "GOVERNANCE",
+                ContentText = "Ensure contemporaneous ALCOA+ source documentation, supply explicit change reasons for every eCRF modification, and complete Principal Investigator electronic signatures.",
+                SequenceOrder = 3,
+                MinReadingTimeSeconds = 45,
+                CreatedAt = seededAt,
+                CreatedBy = CatalogServiceAccount,
+                ReasonForChange = trainingReason,
+                VersionIndex = 1,
+            },
+        };
+
+        foreach (var module in modules.Where(m => !existingModuleIds.Contains(m.Id)))
+        {
+            db.TrainingCurriculumModules.Add(module);
+        }
+
+        var existingDelegationIds = await db.DelegationRecords
+            .Where(d => d.StudyId == studyId)
+            .Select(d => d.Id)
+            .ToHashSetAsync(StringComparer.Ordinal, ct)
+            .ConfigureAwait(false);
+
+        var delegations = new[]
+        {
+            new DelegationRecord
+            {
+                Id = $"del-cad101-s101-crc{tenantSuffix}",
+                StudyId = studyId,
+                SiteId = "SITE-101",
+                StaffUserId = "crc.site101",
+                StaffName = "Elena Vance, RN",
+                Role = "Clinical Research Coordinator",
+                TaskCode = "EDC_DATA_ENTRY",
+                Duties = "Subject screening, eCRF data capture, and query resolution",
+                Status = "PENDING_SIGNOFF",
+                SignedOff = false,
+                CreatedAt = seededAt,
+                CreatedBy = CatalogServiceAccount,
+            },
+            new DelegationRecord
+            {
+                Id = $"del-cad101-s101-pi{tenantSuffix}",
+                StudyId = studyId,
+                SiteId = "SITE-101",
+                StaffUserId = "pi.site101",
+                StaffName = "Dr. Marcus Sterling, MD",
+                Role = "Principal Investigator",
+                TaskCode = "MEDICAL_OVERSIGHT",
+                Duties = "Overall site conduct, eligibility confirmation, and Part 11 sign-off",
+                Status = "PENDING_SIGNOFF",
+                SignedOff = false,
+                CreatedAt = seededAt,
+                CreatedBy = CatalogServiceAccount,
+            },
+            new DelegationRecord
+            {
+                Id = $"del-cad101-s102-crc{tenantSuffix}",
+                StudyId = studyId,
+                SiteId = "SITE-102",
+                StaffUserId = "crc.site102",
+                StaffName = "Clara Lin, BSN",
+                Role = "Clinical Research Coordinator",
+                TaskCode = "EDC_DATA_ENTRY",
+                Duties = "Subject screening, baseline eISF staging, and eCRF data entry",
+                Status = "PENDING_SIGNOFF",
+                SignedOff = false,
+                CreatedAt = seededAt,
+                CreatedBy = CatalogServiceAccount,
+            },
+        };
+
+        foreach (var delegation in delegations.Where(d => !existingDelegationIds.Contains(d.Id)))
+        {
+            db.DelegationRecords.Add(delegation);
+        }
+
+        var existingAssignmentIds = await db.TrainingAssignments
+            .Where(a => a.CurriculumId == curriculumId)
+            .Select(a => a.Id)
+            .ToHashSetAsync(StringComparer.Ordinal, ct)
+            .ConfigureAwait(false);
+
+        var assignments = new[]
+        {
+            new TrainingAssignment
+            {
+                Id = $"asn-cad101-s101-crc{tenantSuffix}",
+                CurriculumId = curriculumId,
+                StudyId = studyId,
+                SiteId = "SITE-101",
+                UserId = "crc.site101",
+                UserName = "Elena Vance, RN",
+                UserRole = "Clinical Research Coordinator",
+                Status = "PENDING",
+                TimeSpentSeconds = 0,
+                CreatedAt = seededAt,
+                CreatedBy = CatalogServiceAccount,
+                ReasonForChange = trainingReason,
+            },
+            new TrainingAssignment
+            {
+                Id = $"asn-cad101-s102-crc{tenantSuffix}",
+                CurriculumId = curriculumId,
+                StudyId = studyId,
+                SiteId = "SITE-102",
+                UserId = "crc.site102",
+                UserName = "Clara Lin, BSN",
+                UserRole = "Clinical Research Coordinator",
+                Status = "PENDING",
+                TimeSpentSeconds = 0,
+                CreatedAt = seededAt,
+                CreatedBy = CatalogServiceAccount,
+                ReasonForChange = trainingReason,
+            },
+        };
+
+        foreach (var assignment in assignments.Where(a => !existingAssignmentIds.Contains(a.Id)))
+        {
+            db.TrainingAssignments.Add(assignment);
+        }
+    }
+}
+
+public sealed class KnowledgeStartupSeederHostedService(
+    IServiceScopeFactory scopeFactory,
+    ILogger<KnowledgeStartupSeederHostedService> logger) : IHostedService
+{
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var probeScope = scopeFactory.CreateAsyncScope();
+            var probeDb = probeScope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+            if (!await probeDb.Database.CanConnectAsync(cancellationToken).ConfigureAwait(false))
+            {
+                return;
+            }
+
+            var tenantResolver = probeScope.ServiceProvider.GetService<ITenantCodeResolver>();
+            var tenantScope = probeScope.ServiceProvider.GetService<ITenantScope>();
+            var tenantAccessor = probeScope.ServiceProvider.GetService<ICurrentTenantAccessor>();
+
+            if (tenantResolver is not null && tenantScope is not null)
+            {
+                var tenantIds = await tenantResolver.ListActiveTenantIdsAsync(cancellationToken).ConfigureAwait(false);
+                if (tenantIds.Count > 0)
+                {
+                    foreach (Guid tenantId in tenantIds)
+                    {
+                        using var bound = tenantScope.Bind(tenantId);
+                        await using var seededScope = scopeFactory.CreateAsyncScope();
+                        var db = seededScope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+                        var clock = seededScope.ServiceProvider.GetRequiredService<IClock>();
+                        await KnowledgeCatalogSeeder.EnsureSeededAsync(db, clock, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    return;
+                }
+            }
+
+            if (tenantAccessor is null || await tenantAccessor.GetCurrentTenantIdAsync(cancellationToken).ConfigureAwait(false) is not null)
+            {
+                var clock = probeScope.ServiceProvider.GetRequiredService<IClock>();
+                await KnowledgeCatalogSeeder.EnsureSeededAsync(probeDb, clock, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Skipping startup Knowledge & Training baseline seed because database is not ready yet.");
+        }
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

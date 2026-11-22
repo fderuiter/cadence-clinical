@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
+using Cadence.Apps.Etmf.Services;
 using Cadence.Contracts;
 
 using MassTransit;
@@ -19,7 +20,8 @@ namespace Cadence.Apps.Etmf.Infrastructure.Consumers;
 /// </summary>
 public sealed class EtmfDocumentFilingRequestedConsumer(
     EtmfDbContext dbContext,
-    ILogger<EtmfDocumentFilingRequestedConsumer>? logger = null) : IConsumer<EtmfDocumentFilingRequested>
+    ILogger<EtmfDocumentFilingRequestedConsumer>? logger = null,
+    IEtmfCompletenessWebhookPublisher? completenessPublisher = null) : IConsumer<EtmfDocumentFilingRequested>
 {
     public async Task Consume(ConsumeContext<EtmfDocumentFilingRequested> context)
     {
@@ -43,6 +45,17 @@ public sealed class EtmfDocumentFilingRequestedConsumer(
 
         int zone = int.TryParse(msg.ZoneCode, out var parsedZone) ? parsedZone : 1;
         var createdBy = string.IsNullOrWhiteSpace(msg.RequestedBy) ? "svc:etmf-outbox" : msg.RequestedBy;
+        string artifactType = msg.ArtifactCode switch
+        {
+            "05.02.06" => "Monitoring Visit Correspondence",
+            "05.02.04" => "Delegation of Authority Log",
+            "05.02.05" => "Informed Consent Form",
+            "01.01.01" => "Clinical Trial Protocol",
+            _ => msg.ArtifactCode,
+        };
+        string sourceSystem = msg.DocumentId.StartsWith("DOC-CTMS-", StringComparison.OrdinalIgnoreCase)
+            ? "CTMS"
+            : "EXECUTION";
 
         var doc = TmfDocument.CreateFiled(
             id: msg.DocumentId,
@@ -55,17 +68,38 @@ public sealed class EtmfDocumentFilingRequestedConsumer(
             zone: zone,
             section: msg.SectionCode,
             artifactCode: msg.ArtifactCode,
-            artifactType: msg.ArtifactCode,
+            artifactType: artifactType,
             content: msg.StoragePath,
             mimeType: "application/pdf",
             objectKey: msg.StoragePath,
             idempotencyKey: msg.DocumentId,
-            sourceSystem: "EXECUTION",
+            sourceSystem: sourceSystem,
             syncStatus: "SYNCHRONIZED"
         );
 
         dbContext.TmfDocuments.Add(doc);
+        dbContext.TmfAuditLogs.Add(new TmfAuditLog
+        {
+            Timestamp = msg.RequestedAt,
+            UserId = createdBy,
+            UserRole = "SYSTEM",
+            Action = "FILE_DOCUMENT_EVENT",
+            DocumentId = msg.DocumentId,
+            Details = $"Filed {msg.DocumentTitle} ({artifactType}) in study {msg.StudyId} Zone {zone}.",
+            ReasonForChange = "eTMF document filing request outbox sync",
+        });
         await dbContext.SaveChangesAsync(context.CancellationToken);
+
+        if (completenessPublisher is not null && !string.IsNullOrWhiteSpace(msg.SiteId))
+        {
+            await completenessPublisher.PublishSiteActivationCompletenessAsync(
+                dbContext: dbContext,
+                studyId: msg.StudyId,
+                siteId: msg.SiteId,
+                tenantId: null,
+                reasonForChange: "eTMF document filing request outbox sync",
+                ct: context.CancellationToken);
+        }
 
         logger?.LogInformation("Successfully filed TmfDocument {DocumentId} in eTMF.", msg.DocumentId);
     }

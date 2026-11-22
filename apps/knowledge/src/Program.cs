@@ -12,6 +12,7 @@ using Cadence.Telemetry;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,8 +29,23 @@ builder.AddCadencePostgresDbContext<KnowledgeDbContext>(configureOptions: static
 });
 // Delegation sign-off is e-signed; each token is single use across instances and restarts (ADR-2515, #5434).
 builder.Services.AddCadenceDurableSigTokenStore<KnowledgeDbContext>();
+if ((builder.Configuration.GetSection(CadenceMigrationOptions.SectionName).Get<CadenceMigrationOptions>() is { MigrateOnStartup: true, MigrateOnly: false })
+    || string.Equals(builder.Configuration["Database:SeedOnStartup"], "true", System.StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddHostedService<KnowledgeStartupSeederHostedService>();
+}
 
 var app = builder.Build();
+if (args.Contains("--seed", System.StringComparer.Ordinal))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+    var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+    await db.Database.MigrateAsync();
+    await KnowledgeCatalogSeeder.EnsureSeededAsync(db, clock);
+    return;
+}
+
 app.UseCadenceWebDefaults();
 app.UseCadenceSecurity();
 app.MapCadenceHealthAndStatusEndpoints(

@@ -810,6 +810,158 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "StartupGreenlightEndpoints"
+        ],
+        "summary": "Initializes a 6-facet startup greenlight gate for a trial site.",
+        "operationId": "InitializeSiteGreenlight",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_SiteGreenlightUpsertRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_SiteGreenlightGateResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "StartupGreenlightEndpoints"
+        ],
+        "summary": "Updates 6-facet startup greenlight readiness flags for a trial site.",
+        "operationId": "UpdateSiteGreenlight",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_SiteGreenlightUpsertRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_SiteGreenlightGateResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/ctms/startup/sites/{siteId}/greenlight/certify": {
@@ -1352,6 +1504,7 @@
         "required": [
           "success",
           "certified_count",
+          "total_certified",
           "study_id",
           "country_code",
           "certified_sites",
@@ -1363,6 +1516,14 @@
             "type": "boolean"
           },
           "certified_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total_certified": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -1428,6 +1589,7 @@
           "end_date",
           "is_active",
           "signed_off",
+          "status",
           "reason_for_change",
           "created_by",
           "version_index"
@@ -1464,6 +1626,9 @@
           "signed_off": {
             "type": "boolean"
           },
+          "status": {
+            "type": "string"
+          },
           "reason_for_change": {
             "type": "string"
           },
@@ -1477,6 +1642,18 @@
               "string"
             ],
             "format": "int64"
+          },
+          "staff_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -1506,6 +1683,18 @@
             "type": "string"
           },
           "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "staff_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role": {
             "type": [
               "null",
               "string"
@@ -1618,7 +1807,16 @@
           "id",
           "visit_id",
           "letter_type",
+          "subject",
+          "body_markdown",
           "rendered_content",
+          "study_id",
+          "site_id",
+          "status",
+          "is_signed",
+          "etmf_document_id",
+          "pdf_sha256_hash",
+          "pdf_access_url",
           "created_at",
           "created_by",
           "reason_for_change",
@@ -1635,7 +1833,40 @@
           "letter_type": {
             "type": "string"
           },
+          "subject": {
+            "type": "string"
+          },
+          "body_markdown": {
+            "type": "string"
+          },
           "rendered_content": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "is_signed": {
+            "type": "boolean"
+          },
+          "etmf_document_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pdf_sha256_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pdf_access_url": {
             "type": "string"
           },
           "created_at": {
@@ -1654,6 +1885,56 @@
               "string"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "Ctms_GreenlightFacetDto": {
+        "required": [
+          "facet_code",
+          "display_name",
+          "evidence_summary",
+          "is_satisfied"
+        ],
+        "type": "object",
+        "properties": {
+          "facet_code": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "evidence_summary": {
+            "type": "string"
+          },
+          "is_satisfied": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Ctms_MonitoringFindingResponseDto": {
+        "required": [
+          "id",
+          "visit_id",
+          "text",
+          "severity",
+          "resolution_status"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "visit_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "resolution_status": {
+            "type": "string"
           }
         }
       },
@@ -1796,6 +2077,15 @@
               "null",
               "string"
             ]
+          },
+          "findings": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Ctms_MonitoringFindingResponseDto"
+            }
           }
         }
       },
@@ -1871,10 +2161,16 @@
           "facet_staff_training",
           "facet_ip_release",
           "is_compliant",
+          "is_ready_for_certification",
           "greenlight_token",
           "greenlight_certified_by",
           "greenlight_certified_at",
+          "certified_by",
+          "certified_at",
+          "evaluated_at",
           "is_overridden",
+          "facets",
+          "blocking_reasons",
           "unfulfilled_reasons"
         ],
         "type": "object",
@@ -1926,6 +2222,9 @@
           "is_compliant": {
             "type": "boolean"
           },
+          "is_ready_for_certification": {
+            "type": "boolean"
+          },
           "greenlight_token": {
             "type": [
               "null",
@@ -1944,8 +2243,35 @@
               "string"
             ]
           },
+          "certified_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "certified_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "evaluated_at": {
+            "type": "string"
+          },
           "is_overridden": {
             "type": "boolean"
+          },
+          "facets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Ctms_GreenlightFacetDto"
+            }
+          },
+          "blocking_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "unfulfilled_reasons": {
             "type": [
@@ -1955,6 +2281,65 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Ctms_SiteGreenlightUpsertRequestDto": {
+        "required": [
+          "study_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "country_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "facet_regulatory_irb": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "facet_cta_budget": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "facet_eisf_baseline": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "facet_doa_log": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "facet_staff_training": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "facet_ip_release": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },

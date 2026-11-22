@@ -260,6 +260,64 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Study Training \u0026 Gating"
+        ],
+        "operationId": "CreateCurriculum",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_CreateTrainingCurriculumRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_TrainingCurriculumDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/training/curricula/{curriculum_id}": {
@@ -494,6 +552,86 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/training/assignments/{assignment_id}/complete": {
+      "post": {
+        "tags": [
+          "Study Training \u0026 Gating"
+        ],
+        "operationId": "CompleteTrainingAssignment",
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_CompleteTrainingAssignmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_TrainingAssignmentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -869,6 +1007,40 @@
           }
         }
       },
+      "Knowledge_CompleteTrainingAssignmentRequest": {
+        "required": [
+          "quiz_score",
+          "time_spent_seconds",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "quiz_score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "time_spent_seconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Knowledge_ContextualHelpMappingDto": {
         "required": [
           "id",
@@ -966,6 +1138,98 @@
             "items": {
               "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
             }
+          }
+        }
+      },
+      "Knowledge_CreateTrainingCurriculumRequest": {
+        "required": [
+          "study_id",
+          "protocol_version",
+          "title",
+          "description",
+          "is_active",
+          "modules",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "protocol_version": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_active": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "modules": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_CreateTrainingModuleRequest"
+            }
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Knowledge_CreateTrainingModuleRequest": {
+        "required": [
+          "title",
+          "module_type",
+          "content_text",
+          "sequence_order",
+          "min_reading_time_seconds"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "module_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "content_text": {
+            "type": "string"
+          },
+          "sequence_order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "min_reading_time_seconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -1423,6 +1687,16 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "curriculum": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Knowledge_TrainingCurriculumDto"
+              }
+            ]
           }
         }
       },
@@ -1462,6 +1736,60 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "modules": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_TrainingModuleDto"
+            }
+          }
+        }
+      },
+      "Knowledge_TrainingModuleDto": {
+        "required": [
+          "id",
+          "curriculum_id",
+          "title",
+          "module_type",
+          "content_text",
+          "sequence_order",
+          "min_reading_time_seconds"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "curriculum_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "module_type": {
+            "type": "string"
+          },
+          "content_text": {
+            "type": "string"
+          },
+          "sequence_order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "min_reading_time_seconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       }

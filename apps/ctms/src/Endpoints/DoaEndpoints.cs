@@ -22,6 +22,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Ctms.Endpoints;
 
@@ -35,6 +37,8 @@ public static class DoaEndpoints
     public const string AssignPermission = "ctms_doa:assign";
     public const string RevokePermission = "ctms_doa:revoke";
     public const string SignOffPermission = "ctms_doa:sign_off";
+    public const string DoaSignOffAction = "/api/v1/ctms/doa/sign-off";
+    public const string DoaSignOffSemanticAction = "ctms.doa.sign_off";
 
     public static RouteGroupBuilder MapDoaEndpoints(this RouteGroupBuilder group)
     {
@@ -143,14 +147,6 @@ public static class DoaEndpoints
             return problem!;
         }
 
-        if (!await SiteExistsAsync(db, request.Site, ct))
-        {
-            return TypedResults.Problem(
-                title: "Site not found",
-                detail: $"Site '{request.Site}' does not exist.",
-                statusCode: StatusCodes.Status404NotFound);
-        }
-
         var now = clock.UtcNow;
         var (user, role) = ResolveCaller(httpContext, "site_coordinator");
 
@@ -158,6 +154,8 @@ public static class DoaEndpoints
         {
             SiteId = request.Site.Trim(),
             StaffUserId = request.StaffUserId.Trim(),
+            StaffName = string.IsNullOrWhiteSpace(request.StaffName) ? null : request.StaffName.Trim(),
+            Role = string.IsNullOrWhiteSpace(request.Role) ? null : request.Role.Trim(),
             TaskCodes = JsonSerializer.Serialize(request.TaskCodes),
             StartDate = request.StartDate.Trim(),
             EndDate = null,
@@ -319,6 +317,36 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
+        if (httpContext.RequestServices?.GetService<SigTokenVerifier>() is { } sigVerifier
+            && httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] is Principal signerPrincipal)
+        {
+            var gatewayOptions = httpContext.RequestServices
+                .GetService<IOptionsMonitor<GatewayAuthenticationOptions>>()
+                ?.Get(GatewayAuthenticationHandler.SchemeName);
+            byte[] secretBytes = gatewayOptions?.GatewaySecret is { Length: > 0 } secret
+                ? Encoding.UTF8.GetBytes(secret)
+                : [];
+            if (string.IsNullOrWhiteSpace(signerPrincipal.UserId) || secretBytes.Length == 0)
+            {
+                return ElectronicSignatureEndpointFilter.ReauthenticationRequired();
+            }
+
+            try
+            {
+                var verifiedToken = await sigVerifier.VerifyAndConsumeAsync(
+                    httpContext.Request.Headers[GatewayHeaders.SigToken].ToString(),
+                    signerPrincipal.UserId,
+                    new SigTokenBinding(DoaSignOffAction, DoaSignOffSemanticAction),
+                    secretBytes,
+                    ct).ConfigureAwait(false);
+                httpContext.Items[ElectronicSignatureEndpointFilter.VerifiedTokenItemKey] = verifiedToken;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return ElectronicSignatureEndpointFilter.ReauthenticationRequired();
+            }
+        }
+
         var (user, role) = ResolveCaller(httpContext, "investigator");
         var now = clock.UtcNow;
 
@@ -356,7 +384,7 @@ public static class DoaEndpoints
             return scopeDenied;
         }
 
-        if (string.IsNullOrWhiteSpace(siteId) || !await SiteExistsAsync(db, siteId, ct))
+        if (string.IsNullOrWhiteSpace(siteId))
         {
             return TypedResults.Problem(
                 title: "Site not found",
@@ -402,7 +430,7 @@ public static class DoaEndpoints
             return scopeDenied;
         }
 
-        if (string.IsNullOrWhiteSpace(siteId) || !await SiteExistsAsync(db, siteId, ct))
+        if (string.IsNullOrWhiteSpace(siteId))
         {
             return TypedResults.Problem(
                 title: "Site not found",
@@ -494,14 +522,6 @@ public static class DoaEndpoints
         return Results.File(signedPdfBytes, "application/pdf", $"DOA_Log_{siteId}.pdf");
     }
 
-    public static async Task<bool> SiteExistsAsync(CtmsDbContext db, string siteId, CancellationToken ct)
-    {
-        return await db.CtmsSiteGreenlightGates.AnyAsync(g => g.SiteId == siteId, ct)
-            || await db.CtmsDelegations.AnyAsync(d => d.SiteId == siteId, ct)
-            || await db.CtmsSiteMilestones.AnyAsync(m => m.SiteId == siteId, ct)
-            || await db.CtmsMonitoringVisits.AnyAsync(v => v.SiteId == siteId, ct);
-    }
-
     public static bool TryExtractReasonForChange(
         HttpContext httpContext,
         string? bodyReason,
@@ -537,6 +557,16 @@ public static class DoaEndpoints
         }
     }
 
+    public static string ResolveDelegationStatus(CtmsDelegation d)
+    {
+        if (!d.IsActive)
+        {
+            return "REVOKED";
+        }
+
+        return d.SignedOff ? "ACTIVE" : "PENDING_PI_SIGNATURE";
+    }
+
     public static DelegationResponseDto ToResponseDto(CtmsDelegation d) =>
         new(
             RecordId: d.Id,
@@ -547,9 +577,12 @@ public static class DoaEndpoints
             EndDate: d.EndDate,
             IsActive: d.IsActive,
             SignedOff: d.SignedOff,
+            Status: ResolveDelegationStatus(d),
             ReasonForChange: d.ReasonForChange,
             CreatedBy: d.CreatedBy,
-            VersionIndex: d.VersionIndex);
+            VersionIndex: d.VersionIndex,
+            StaffName: string.IsNullOrWhiteSpace(d.StaffName) ? d.StaffUserId : d.StaffName,
+            Role: d.Role);
 
     public static DoaAuditHistoryItemDto ToAuditDto(CtmsAuditLog a) =>
         new(
@@ -566,7 +599,9 @@ public record DelegationTaskRequest(
     [property: JsonPropertyName("staff_user_id")] string StaffUserId,
     [property: JsonPropertyName("task_codes")] List<string> TaskCodes,
     [property: JsonPropertyName("start_date")] string StartDate,
-    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange
+    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange,
+    [property: JsonPropertyName("staff_name")] string? StaffName = null,
+    [property: JsonPropertyName("role")] string? Role = null
 );
 
 public record RevokeDelegationRequest(
@@ -588,9 +623,12 @@ public record DelegationResponseDto(
     [property: JsonPropertyName("end_date")] string? EndDate,
     [property: JsonPropertyName("is_active")] bool IsActive,
     [property: JsonPropertyName("signed_off")] bool SignedOff,
+    [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("reason_for_change")] string ReasonForChange,
     [property: JsonPropertyName("created_by")] string CreatedBy,
-    [property: JsonPropertyName("version_index")] long VersionIndex
+    [property: JsonPropertyName("version_index")] long VersionIndex,
+    [property: JsonPropertyName("staff_name")] string? StaffName = null,
+    [property: JsonPropertyName("role")] string? Role = null
 );
 
 public record DoaAuditHistoryItemDto(

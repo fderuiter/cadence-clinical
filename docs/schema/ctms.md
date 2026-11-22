@@ -7,13 +7,14 @@ Generated from the EF Core model of `Cadence.Apps.Ctms.Infrastructure.Persistenc
 | Table | Entity | Columns |
 | --- | --- | --- |
 | [`ctms.audit_log_entries`](#ctmsaudit_log_entries) | `AuditLogEntry` | 12 |
+| [`ctms.consumed_signature_tokens`](#ctmsconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
 | [`ctms.ctms_audit_logs`](#ctmsctms_audit_logs) | `CtmsAuditLog` | 11 |
 | [`ctms.ctms_budget_line_items`](#ctmsctms_budget_line_items) | `CtmsBudgetLineItem` | 10 |
 | [`ctms.ctms_clinical_queries`](#ctmsctms_clinical_queries) | `CtmsClinicalQuery` | 11 |
 | [`ctms.ctms_cra_allocations`](#ctmsctms_cra_allocations) | `CtmsCraAllocation` | 12 |
 | [`ctms.ctms_defeated_monitoring_visits`](#ctmsctms_defeated_monitoring_visits) | `CtmsDefeatedMonitoringVisit` | 12 |
-| [`ctms.ctms_delegations`](#ctmsctms_delegations) | `CtmsDelegation` | 13 |
-| [`ctms.ctms_generated_letters`](#ctmsctms_generated_letters) | `CtmsGeneratedLetter` | 17 |
+| [`ctms.ctms_delegations`](#ctmsctms_delegations) | `CtmsDelegation` | 15 |
+| [`ctms.ctms_generated_letters`](#ctmsctms_generated_letters) | `CtmsGeneratedLetter` | 25 |
 | [`ctms.ctms_investigator_grants`](#ctmsctms_investigator_grants) | `CtmsInvestigatorGrant` | 11 |
 | [`ctms.ctms_investigator_payables`](#ctmsctms_investigator_payables) | `CtmsInvestigatorPayable` | 12 |
 | [`ctms.ctms_monitoring_visit_findings`](#ctmsctms_monitoring_visit_findings) | `CtmsMonitoringVisitFinding` | 12 |
@@ -49,6 +50,20 @@ Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
 - `IX_audit_log_entries_tenant_id`: (`tenant_id`)
+
+## ctms.consumed_signature_tokens
+
+Entity: `ConsumedSignatureToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `TokenId` | `character varying(128)` | no |  | PK |
+| `ConsumedAt` | `timestamp with time zone` | no |  |  |
+| `RetainUntil` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
 
 ## ctms.ctms_audit_logs
 
@@ -187,8 +202,10 @@ Entity: `CtmsDelegation`
 | `EndDate` | `character varying(50)` | yes |  |  |
 | `IsActive` | `boolean` | no |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `Role` | `character varying(255)` | yes |  |  |
 | `SignedOff` | `boolean` | no |  |  |
 | `SiteId` | `character varying(255)` | no |  |  |
+| `StaffName` | `character varying(255)` | yes |  |  |
 | `StaffUserId` | `character varying(255)` | no |  |  |
 | `StartDate` | `character varying(50)` | no |  |  |
 | `TaskCodes` | `jsonb` | no |  |  |
@@ -208,10 +225,12 @@ Entity: `CtmsGeneratedLetter`
 | Column | Type | Null | Default | Key |
 | --- | --- | --- | --- | --- |
 | `Id` | `character varying(36)` | no |  | PK |
+| `ActualDate` | `character varying(50)` | yes |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
 | `DispatchedAt` | `timestamp with time zone` | yes |  |  |
 | `EtmfDocumentId` | `character varying(100)` | yes |  |  |
+| `FindingsJson` | `jsonb` | yes |  |  |
 | `IsSigned` | `boolean` | no |  |  |
 | `LetterType` | `character varying(50)` | no |  |  |
 | `PdfObjectKey` | `character varying(1000)` | yes |  |  |
@@ -219,15 +238,23 @@ Entity: `CtmsGeneratedLetter`
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `RecipientEmail` | `character varying(255)` | yes |  |  |
 | `RenderedContent` | `character varying(100000)` | no |  |  |
+| `ScheduledDate` | `character varying(50)` | yes |  |  |
 | `SignatureManifestation` | `jsonb` | yes |  |  |
+| `SignerName` | `character varying(255)` | yes |  |  |
+| `SigningPurpose` | `character varying(500)` | yes |  |  |
 | `Status` | `character varying(50)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `VisitId` | `character varying(36)` | no |  |  |
+| `VisitType` | `character varying(50)` | no |  |  |
+| `site_code` | `character varying(255)` | no |  |  |
+| `study_code` | `character varying(255)` | no |  |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
 - `IX_ctms_generated_letters_VisitId`: (`VisitId`)
+- `IX_ctms_generated_letters_site_code`: (`site_code`)
+- `IX_ctms_generated_letters_study_code`: (`study_code`)
 - `IX_ctms_generated_letters_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_investigator_grants

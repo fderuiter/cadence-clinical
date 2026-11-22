@@ -24,6 +24,8 @@ Generated from `docs/openapi/ctms_openapi.json` by `pnpm cadence generate-api-do
 | `GET` | `/api/v1/ctms/startup/matrix` | GetCountryGreenlightMatrix | Displays country-level matrix showing 6-facet greenlight readiness for all sites in a selected country. |
 | `POST` | `/api/v1/ctms/startup/matrix/batch-certify` | BatchCertifyCountrySites | Batch-certifies all selected 100% compliant sites in a target country with a single e-signature. |
 | `GET` | `/api/v1/ctms/startup/sites/{siteId}/greenlight` | EvaluateSiteGreenlight | Evaluates 6-facet greenlight readiness for a single trial site. |
+| `PUT` | `/api/v1/ctms/startup/sites/{siteId}/greenlight` | UpdateSiteGreenlight | Updates 6-facet startup greenlight readiness flags for a trial site. |
+| `POST` | `/api/v1/ctms/startup/sites/{siteId}/greenlight` | InitializeSiteGreenlight | Initializes a 6-facet startup greenlight gate for a trial site. |
 | `POST` | `/api/v1/ctms/startup/sites/{siteId}/greenlight/certify` | CertifySiteGreenlight | Certifies greenlight activation for a single trial site, issuing an HMAC-SHA256 token. |
 | `GET` | `/api/v1/ctms/status` | CtmsStatus | Returns CTMS operational status. |
 | `GET` | `/healthz` | CtmsHealthCheck | CTMS operations health probe. |

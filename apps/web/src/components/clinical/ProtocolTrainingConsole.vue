@@ -29,6 +29,17 @@
 
       <div class="header-actions">
         <button
+          v-if="canCreateCurriculum"
+          id="btn-open-create-curriculum"
+          type="button"
+          class="btn btn-primary"
+          :disabled="loading"
+          @click="showCreateCurriculumModal = true"
+        >
+          <span class="btn-icon">➕</span> Publish Curriculum
+        </button>
+        <button
+          type="button"
           class="btn btn-secondary"
           :disabled="loading"
           @click="refreshData"
@@ -190,6 +201,7 @@
 
             <div class="reader-footer">
               <button
+                type="button"
                 class="btn btn-secondary"
                 :disabled="selectedModuleIndex <= 0"
                 @click="selectModule(selectedModuleIndex - 1)"
@@ -201,10 +213,76 @@
                   activeCurriculum.modules &&
                   selectedModuleIndex < activeCurriculum.modules.length - 1
                 "
+                type="button"
                 class="btn btn-primary"
                 @click="selectModule(selectedModuleIndex + 1)"
               >
                 Next Section ➡️
+              </button>
+            </div>
+
+            <div
+              v-if="
+                activeAssignment &&
+                activeAssignment.status !== 'COMPLETED' &&
+                canCompleteAssignment
+              "
+              id="training-completion-panel"
+              class="completion-panel"
+            >
+              <h4>Record Training Completion</h4>
+              <p v-if="completionError" class="badge badge-error" role="alert">
+                {{ completionError }}
+              </p>
+              <div class="completion-form-grid">
+                <div class="form-group">
+                  <label for="complete-score-pct">Assessment Score (%):</label>
+                  <input
+                    id="complete-score-pct"
+                    v-model.number="completionForm.scorePercent"
+                    type="number"
+                    min="0"
+                    max="100"
+                    class="text-input"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="complete-time-sec">Reading Time (s):</label>
+                  <input
+                    id="complete-time-sec"
+                    v-model.number="completionForm.timeSpentSeconds"
+                    type="number"
+                    min="1"
+                    class="text-input"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="complete-training-reason"
+                    >Reason for Change:</label
+                  >
+                  <input
+                    id="complete-training-reason"
+                    v-model="completionForm.reasonForChange"
+                    type="text"
+                    class="text-input"
+                    placeholder="Completed procedural training review"
+                  />
+                </div>
+              </div>
+              <button
+                id="btn-complete-training-assignment"
+                type="button"
+                class="btn btn-success"
+                :disabled="
+                  submittingCompletion || !completionForm.reasonForChange.trim()
+                "
+                @click="handleCompleteAssignment"
+              >
+                {{
+                  submittingCompletion
+                    ? "Recording Completion..."
+                    : "✅ Complete Training Assignment"
+                }}
               </button>
             </div>
           </div>
@@ -224,6 +302,46 @@
                 activeCurriculum.description ||
                 "No procedural modules attached to this curriculum."
               }}</pre>
+            </div>
+            <div
+              v-if="
+                activeAssignment &&
+                activeAssignment.status !== 'COMPLETED' &&
+                canCompleteAssignment
+              "
+              id="training-completion-panel-empty"
+              class="completion-panel"
+            >
+              <h4>Record Training Completion</h4>
+              <div class="completion-form-grid">
+                <div class="form-group">
+                  <label for="complete-training-reason-empty"
+                    >Reason for Change:</label
+                  >
+                  <input
+                    id="complete-training-reason-empty"
+                    v-model="completionForm.reasonForChange"
+                    type="text"
+                    class="text-input"
+                    placeholder="Completed protocol curriculum review"
+                  />
+                </div>
+              </div>
+              <button
+                id="btn-complete-training-assignment-empty"
+                type="button"
+                class="btn btn-success"
+                :disabled="
+                  submittingCompletion || !completionForm.reasonForChange.trim()
+                "
+                @click="handleCompleteAssignment"
+              >
+                {{
+                  submittingCompletion
+                    ? "Recording Completion..."
+                    : "✅ Complete Training Assignment"
+                }}
+              </button>
             </div>
           </div>
         </div>
@@ -536,6 +654,125 @@
       </div>
     </div>
 
+    <!-- Publish Curriculum Modal -->
+    <ClinicalModal
+      v-model="showCreateCurriculumModal"
+      :teleport="false"
+      :dismissible="!submittingCurriculum"
+      dialog-class="modal-card"
+      title="Publish Protocol Training Curriculum"
+    >
+      <p v-if="createCurriculumError" class="badge badge-error" role="alert">
+        {{ createCurriculumError }}
+      </p>
+      <div class="form-group">
+        <label for="new-curr-study">Study ID:</label>
+        <input
+          id="new-curr-study"
+          v-model="createCurriculumForm.studyId"
+          type="text"
+          class="text-input"
+          :disabled="submittingCurriculum"
+          placeholder="e.g. CADENCE-101"
+        />
+      </div>
+      <div class="form-group">
+        <label for="new-curr-version">Protocol Version:</label>
+        <input
+          id="new-curr-version"
+          v-model="createCurriculumForm.protocolVersion"
+          type="text"
+          class="text-input"
+          :disabled="submittingCurriculum"
+          placeholder="e.g. 2.1"
+        />
+      </div>
+      <div class="form-group">
+        <label for="new-curr-title">Curriculum Title:</label>
+        <input
+          id="new-curr-title"
+          v-model="createCurriculumForm.title"
+          type="text"
+          class="text-input"
+          :disabled="submittingCurriculum"
+          placeholder="Protocol Amendment Delta Training"
+        />
+      </div>
+      <div class="form-group">
+        <label for="new-curr-desc">Description:</label>
+        <input
+          id="new-curr-desc"
+          v-model="createCurriculumForm.description"
+          type="text"
+          class="text-input"
+          :disabled="submittingCurriculum"
+          placeholder="Summary of protocol updates"
+        />
+      </div>
+      <div class="form-group">
+        <label for="new-mod-title">Initial Module Title:</label>
+        <input
+          id="new-mod-title"
+          v-model="createCurriculumForm.moduleTitle"
+          type="text"
+          class="text-input"
+          :disabled="submittingCurriculum"
+          placeholder="Section 1: Eligibility & Dosing Updates"
+        />
+      </div>
+      <div class="form-group">
+        <label for="new-mod-content">Module Content:</label>
+        <textarea
+          id="new-mod-content"
+          v-model="createCurriculumForm.moduleContent"
+          rows="3"
+          class="text-input"
+          :disabled="submittingCurriculum"
+          placeholder="Procedural guidance for clinical site personnel..."
+        />
+      </div>
+      <div class="form-group">
+        <label for="new-curr-reason">Reason for Change:</label>
+        <input
+          id="new-curr-reason"
+          v-model="createCurriculumForm.reasonForChange"
+          type="text"
+          class="text-input"
+          :disabled="submittingCurriculum"
+          placeholder="Publish amendment training curriculum"
+        />
+      </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="submittingCurriculum"
+          @click="showCreateCurriculumModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          id="btn-confirm-create-curriculum"
+          type="button"
+          class="btn btn-primary"
+          :disabled="
+            submittingCurriculum ||
+            !createCurriculumForm.studyId.trim() ||
+            !createCurriculumForm.protocolVersion.trim() ||
+            !createCurriculumForm.title.trim() ||
+            !createCurriculumForm.reasonForChange.trim()
+          "
+          @click="handleCreateCurriculum"
+        >
+          {{
+            submittingCurriculum
+              ? "Publishing..."
+              : "Confirm & Publish Curriculum"
+          }}
+        </button>
+      </template>
+    </ClinicalModal>
+
     <!-- Batch Assignment Modal -->
     <ClinicalModal
       v-model="showBatchModal"
@@ -681,6 +918,8 @@ import {
   TRAINING_ASSIGN_ROLE_REASON,
   TRAINING_DELEGATION_SIGN_ROLE_REASON,
   canAssignTrainingCurriculum,
+  canCompleteTrainingAssignment,
+  canCreateTrainingCurriculum,
   canSignTrainingDelegations,
 } from "../../canvas/authority";
 import { useAuthStore } from "../../stores/auth";
@@ -707,6 +946,12 @@ const canAssignCurriculum = computed(() =>
 );
 const canSignDelegations = computed(() =>
   canSignTrainingDelegations(authStore)
+);
+const canCreateCurriculum = computed(() =>
+  canCreateTrainingCurriculum(authStore)
+);
+const canCompleteAssignment = computed(() =>
+  canCompleteTrainingAssignment(authStore)
 );
 
 const loading = ref(false);
@@ -753,6 +998,14 @@ async function refreshData() {
 
     if (selectedAssignmentId.value) {
       await loadAssignmentDetails(selectedAssignmentId.value);
+      if (props.studyId) {
+        const curQuery = { study_id: props.studyId };
+        if (props.protocolVersion) {
+          curQuery.protocol_version = props.protocolVersion;
+        }
+        const curList = await trainingApi.listCurricula(curQuery);
+        curricula.value = Array.isArray(curList) ? curList : [];
+      }
     } else if (props.studyId) {
       const curQuery = { study_id: props.studyId };
       if (props.protocolVersion) {
@@ -824,6 +1077,121 @@ watch(
 onMounted(() => {
   refreshData();
 });
+
+// Publish Curriculum & Complete Assignment State
+const showCreateCurriculumModal = ref(false);
+const submittingCurriculum = ref(false);
+const createCurriculumError = ref("");
+const createCurriculumForm = ref({
+  studyId: props.studyId || "",
+  protocolVersion: props.protocolVersion || "1.0",
+  title: "",
+  description: "",
+  moduleTitle: "",
+  moduleContent: "",
+  reasonForChange: "",
+});
+
+const submittingCompletion = ref(false);
+const completionError = ref("");
+const completionForm = ref({
+  scorePercent: 95,
+  timeSpentSeconds: 180,
+  reasonForChange: "",
+});
+
+watch(
+  () => props.studyId,
+  (val) => {
+    if (val) createCurriculumForm.value.studyId = val;
+  }
+);
+
+async function handleCreateCurriculum() {
+  if (!canCreateCurriculum.value) return;
+  submittingCurriculum.value = true;
+  createCurriculumError.value = "";
+  try {
+    const f = createCurriculumForm.value;
+    const modules = f.moduleTitle.trim()
+      ? [
+          {
+            title: f.moduleTitle.trim(),
+            module_type: "PROCEDURE_DELTA",
+            content_text:
+              f.moduleContent.trim() || f.description.trim() || f.title.trim(),
+            sequence_order: 1,
+            min_reading_time_seconds: 60,
+          },
+        ]
+      : [];
+    const created = await trainingApi.createCurriculum({
+      study_id: f.studyId.trim(),
+      protocol_version: f.protocolVersion.trim(),
+      title: f.title.trim(),
+      description: f.description.trim() || null,
+      is_active: true,
+      modules,
+      reason_for_change: f.reasonForChange.trim(),
+    });
+    curricula.value = [
+      created,
+      ...curricula.value.filter((c) => c.id !== created.id),
+    ];
+    selectedCurriculumId.value = created.id;
+    activeCurriculum.value = created;
+    showCreateCurriculumModal.value = false;
+    f.title = "";
+    f.description = "";
+    f.moduleTitle = "";
+    f.moduleContent = "";
+    f.reasonForChange = "";
+  } catch (err) {
+    createCurriculumError.value =
+      err?.message || "Curriculum could not be published.";
+  } finally {
+    submittingCurriculum.value = false;
+  }
+}
+
+async function handleCompleteAssignment() {
+  if (!activeAssignment.value || !canCompleteAssignment.value) return;
+  const reason = completionForm.value.reasonForChange.trim();
+  if (!reason) return;
+  submittingCompletion.value = true;
+  completionError.value = "";
+  try {
+    const normalizedScore = Math.max(
+      0,
+      Math.min(1, Number(completionForm.value.scorePercent || 0) / 100)
+    );
+    const updated = await trainingApi.completeAssignment(
+      activeAssignment.value.id,
+      {
+        quiz_score: normalizedScore,
+        time_spent_seconds: Math.max(
+          1,
+          Number(completionForm.value.timeSpentSeconds || 60)
+        ),
+        reason_for_change: reason,
+      }
+    );
+    activeAssignment.value = updated;
+    if (updated.curriculum) {
+      activeCurriculum.value = updated.curriculum;
+    }
+    isGated.value = updated.status !== "COMPLETED";
+    assignments.value = assignments.value.map((a) =>
+      a.id === updated.id ? updated : a
+    );
+    completionForm.value.reasonForChange = "";
+  } catch (err) {
+    completionError.value =
+      err?.message || "Training completion could not be recorded.";
+  } finally {
+    submittingCompletion.value = false;
+  }
+}
 
 // Batch Curriculum Assignment State. The audience comes from the study's delegation log (#5400): the sites and roles
 // offered are the ones staff actually hold, nothing is pre-selected, and nothing is offered without an active curriculum.
@@ -1242,6 +1610,23 @@ async function handleExecuteBulkSignOff() {
   display: flex;
   justify-content: space-between;
   margin-top: 20px;
+}
+
+.completion-panel {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--semantic-color-surface-header);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.completion-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
 }
 
 /* Quiz Styles */

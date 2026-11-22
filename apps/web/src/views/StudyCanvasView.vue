@@ -1308,12 +1308,19 @@ watch(
       const version = await kernelApi.getProtocolVersion(text);
       if (request === versionRequest) {
         inspectedVersion.value = version;
-        seedNodeSummary(version.ref, {
-          kind: "protocol_version",
-          code: version.version,
-          title: `Protocol ${version.version}`,
-          status: version.status,
-        });
+        if (version.ref) {
+          const rawVersion =
+            version.number ??
+            (version as { version?: string | number | null }).version ??
+            null;
+          const versionCode = rawVersion != null ? String(rawVersion) : null;
+          seedNodeSummary(version.ref, {
+            kind: "protocol_version",
+            code: versionCode,
+            title: versionCode ? `Protocol ${versionCode}` : null,
+            status: version.status,
+          });
+        }
       }
     } catch (e) {
       if (request === versionRequest) {

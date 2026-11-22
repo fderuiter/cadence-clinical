@@ -30,6 +30,36 @@ public sealed record BatchAssignCurriculumRequest(
     [property: JsonPropertyName("target_personnel_ids")] List<string>? TargetPersonnelIds,
     [property: JsonPropertyName("reason_for_change")] string? ReasonForChange);
 
+public sealed record CreateTrainingModuleRequest(
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("module_type")] string? ModuleType,
+    [property: JsonPropertyName("content_text")] string ContentText,
+    [property: JsonPropertyName("sequence_order")] int? SequenceOrder,
+    [property: JsonPropertyName("min_reading_time_seconds")] int? MinReadingTimeSeconds);
+
+public sealed record CreateTrainingCurriculumRequest(
+    [property: JsonPropertyName("study_id")] string StudyCode,
+    [property: JsonPropertyName("protocol_version")] string ProtocolVersion,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("description")] string? Description,
+    [property: JsonPropertyName("is_active")] bool? IsActive,
+    [property: JsonPropertyName("modules")] List<CreateTrainingModuleRequest>? Modules,
+    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange);
+
+public sealed record CompleteTrainingAssignmentRequest(
+    [property: JsonPropertyName("quiz_score")] double? QuizScore,
+    [property: JsonPropertyName("time_spent_seconds")] int? TimeSpentSeconds,
+    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange);
+
+public sealed record TrainingModuleDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("curriculum_id")] string CurriculumId,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("module_type")] string ModuleType,
+    [property: JsonPropertyName("content_text")] string ContentText,
+    [property: JsonPropertyName("sequence_order")] int SequenceOrder,
+    [property: JsonPropertyName("min_reading_time_seconds")] int MinReadingTimeSeconds);
+
 public sealed record TrainingAssignmentDto(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("curriculum_id")] string CurriculumId,
@@ -43,7 +73,8 @@ public sealed record TrainingAssignmentDto(
     [property: JsonPropertyName("quiz_score")] double? QuizScore,
     [property: JsonPropertyName("time_spent_seconds")] int TimeSpentSeconds,
     [property: JsonPropertyName("completed_at")] DateTimeOffset? CompletedAt,
-    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("curriculum")] TrainingCurriculumDto? Curriculum = null);
 
 public sealed record SkippedAssignmentItemDto(
     [property: JsonPropertyName("user_id")] string UserId,
@@ -121,7 +152,8 @@ public sealed record TrainingCurriculumDto(
     [property: JsonPropertyName("title")] string Title,
     [property: JsonPropertyName("description")] string? Description,
     [property: JsonPropertyName("is_active")] bool IsActive,
-    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("modules")] List<TrainingModuleDto>? Modules = null);
 
 /// <summary>
 /// Minimal API endpoints for Batch Curriculum Assignment and Bulk Delegation Sign-Off.
@@ -147,6 +179,15 @@ public static class TrainingEndpoints
             .RequirePermission("training_log:read").RequireCallerStudyScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<List<TrainingCurriculumDto>>(StatusCodes.Status200OK);
+
+        group.MapPost("/curricula", CreateCurriculumAsync)
+            .WithName("CreateCurriculum")
+            .RequirePermission("training_curriculum:create").RequireCallerStudyScope()
+            .AddEndpointFilter(RequireChangeReasonHeaderFilter)
+            .Produces<TrainingCurriculumDto>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapGet("/curricula/{curriculum_id}", GetCurriculumAsync)
             .WithName("GetCurriculum")
@@ -178,6 +219,16 @@ public static class TrainingEndpoints
             .Produces<TrainingAssignmentDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        group.MapPost("/assignments/{assignment_id}/complete", CompleteAssignmentAsync)
+            .WithName("CompleteTrainingAssignment")
+            .RequirePermission("training_log:create").RequireCallerStudyAndSiteScope()
+            .AddEndpointFilter(RequireChangeReasonHeaderFilter)
+            .Produces<TrainingAssignmentDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         group.MapGet("/delegations", ListDelegationsAsync)
             .WithName("ListDelegations")
             .RequirePermission("delegation_log:read").RequireCallerStudyAndSiteScope()
@@ -203,6 +254,141 @@ public static class TrainingEndpoints
             detail: "You are not assigned to this study.",
             statusCode: StatusCodes.Status403Forbidden);
 
+    private static async ValueTask<object?> RequireChangeReasonHeaderFilter(
+        EndpointFilterInvocationContext context,
+        EndpointFilterDelegate next)
+    {
+        if (!context.HttpContext.Request.Headers.TryGetValue(GatewayHeaders.ChangeReason, out var raw)
+            || string.IsNullOrWhiteSpace(raw.ToString())
+            || !ChangeReasonHeader.TryDecode(raw.ToString(), out var decoded)
+            || string.IsNullOrWhiteSpace(decoded))
+        {
+            return TypedResults.Problem(
+                title: "Reason for change required",
+                detail: "21 CFR Part 11 requires a non-empty X-Change-Reason header for training and delegation state mutations.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        return await next(context).ConfigureAwait(false);
+    }
+
+    private static bool TryExtractReasonForChange(
+        HttpContext httpContext,
+        string? bodyReason,
+        bool requireHeaderOrBody,
+        out string reason,
+        out IResult? problem)
+    {
+        reason = string.Empty;
+        problem = null;
+
+        if (httpContext.Request.Headers.TryGetValue(GatewayHeaders.ChangeReason, out var raw)
+            && !string.IsNullOrWhiteSpace(raw.ToString()))
+        {
+            if (!ChangeReasonHeader.TryDecode(raw.ToString(), out var decoded) || string.IsNullOrWhiteSpace(decoded))
+            {
+                problem = TypedResults.Problem(
+                    title: "Invalid change reason",
+                    detail: "X-Change-Reason must be printable ASCII or RFC 8187 \"UTF-8''\" followed by percent-encoded UTF-8.",
+                    statusCode: StatusCodes.Status400BadRequest);
+                return false;
+            }
+
+            reason = decoded.Trim();
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(bodyReason))
+        {
+            reason = bodyReason.Trim();
+            return true;
+        }
+
+        if (!requireHeaderOrBody)
+        {
+            return true;
+        }
+
+        problem = TypedResults.Problem(
+            title: "Reason for change required",
+            detail: "21 CFR Part 11 requires a non-empty X-Change-Reason header or reason_for_change.",
+            statusCode: StatusCodes.Status400BadRequest);
+        return false;
+    }
+
+    private static TrainingModuleDto ToModuleDto(TrainingCurriculumModule m) =>
+        new(
+            m.Id,
+            m.CurriculumId,
+            m.Title,
+            m.ModuleType,
+            m.ContentText,
+            m.SequenceOrder,
+            m.MinReadingTimeSeconds);
+
+    private static TrainingCurriculumDto ToCurriculumDto(
+        TrainingCurriculum c,
+        IReadOnlyDictionary<string, List<TrainingModuleDto>> modulesByCurriculum)
+    {
+        var modules = modulesByCurriculum.TryGetValue(c.Id, out var list) ? list : [];
+        return new TrainingCurriculumDto(
+            c.Id,
+            c.StudyId,
+            c.ProtocolVersion,
+            c.Title,
+            c.Description,
+            c.IsActive,
+            c.CreatedAt,
+            modules);
+    }
+
+    private static async Task<Dictionary<string, List<TrainingModuleDto>>> LoadModulesByCurriculumIdsAsync(
+        KnowledgeDbContext dbContext,
+        IReadOnlyCollection<string> curriculumIds,
+        CancellationToken cancellationToken)
+    {
+        if (curriculumIds.Count == 0)
+        {
+            return new Dictionary<string, List<TrainingModuleDto>>(StringComparer.Ordinal);
+        }
+
+        var modules = await dbContext.TrainingCurriculumModules
+            .AsNoTracking()
+            .Where(m => curriculumIds.Contains(m.CurriculumId))
+            .OrderBy(m => m.SequenceOrder)
+            .ThenBy(m => m.Id)
+            .ToListAsync(cancellationToken);
+
+        return modules
+            .GroupBy(m => m.CurriculumId, StringComparer.Ordinal)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(ToModuleDto).ToList(),
+                StringComparer.Ordinal);
+    }
+
+    private static async Task<Dictionary<string, TrainingCurriculumDto>> LoadCurriculumDtosByIdsAsync(
+        KnowledgeDbContext dbContext,
+        IReadOnlyCollection<string> curriculumIds,
+        CancellationToken cancellationToken)
+    {
+        if (curriculumIds.Count == 0)
+        {
+            return new Dictionary<string, TrainingCurriculumDto>(StringComparer.Ordinal);
+        }
+
+        var curricula = await dbContext.TrainingCurricula
+            .AsNoTracking()
+            .Where(c => curriculumIds.Contains(c.Id))
+            .ToListAsync(cancellationToken);
+
+        var modulesMap = await LoadModulesByCurriculumIdsAsync(dbContext, curriculumIds, cancellationToken);
+        return curricula.ToDictionary(
+            c => c.Id,
+            c => ToCurriculumDto(c, modulesMap),
+            StringComparer.Ordinal);
+    }
+
     private static async Task<IResult> ListCurriculaAsync(
         string? study_id,
         string? protocol_version,
@@ -226,11 +412,144 @@ public static class TrainingEndpoints
         }
 
         // An empty result is an empty list: nothing is invented when no curriculum exists (#5400).
-        var list = await query.ToListAsync(cancellationToken);
-        var dtos = list.Select(c => new TrainingCurriculumDto(
-            c.Id, c.StudyId, c.ProtocolVersion, c.Title, c.Description, c.IsActive, c.CreatedAt)).ToList();
+        var list = await query.OrderByDescending(c => c.CreatedAt).ToListAsync(cancellationToken);
+        var curriculumIds = list.Select(c => c.Id).Distinct(StringComparer.Ordinal).ToList();
+        var modulesMap = await LoadModulesByCurriculumIdsAsync(dbContext, curriculumIds, cancellationToken);
+        var dtos = list.Select(c => ToCurriculumDto(c, modulesMap)).ToList();
 
         return TypedResults.Ok(dtos);
+    }
+
+    private static async Task<IResult> CreateCurriculumAsync(
+        CreateTrainingCurriculumRequest request,
+        KnowledgeDbContext dbContext,
+        HttpContext httpContext,
+        IClock clock,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.StudyCode))
+        {
+            return TypedResults.Problem("study_id is required.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ProtocolVersion))
+        {
+            return TypedResults.Problem("protocol_version is required.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            return TypedResults.Problem("title is required.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string studyId = request.StudyCode.Trim();
+        if (!CallerScope.CanAccessStudy(httpContext, studyId))
+        {
+            return OutsideStudy();
+        }
+
+        if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, requireHeaderOrBody: true, out var reason, out var reasonProblem))
+        {
+            return reasonProblem!;
+        }
+
+        string actorId = CallerScope.UserId(httpContext)
+            ?? throw new InvalidOperationException("An admitted training request has no signed caller.");
+        string actorRole = CallerScope.Roles(httpContext);
+        string protocolVersion = request.ProtocolVersion.Trim();
+        string title = request.Title.Trim();
+
+        bool duplicateExists = await dbContext.TrainingCurricula
+            .AsNoTracking()
+            .AnyAsync(
+                c => c.StudyId == studyId
+                     && c.ProtocolVersion == protocolVersion
+                     && c.Title == title,
+                cancellationToken);
+        if (duplicateExists)
+        {
+            return TypedResults.Problem(
+                $"A training curriculum titled '{title}' for protocol version '{protocolVersion}' already exists in study '{studyId}'.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
+        DateTimeOffset now = clock.UtcNow;
+        var curriculum = new TrainingCurriculum
+        {
+            Id = "curr-" + Guid.NewGuid().ToString("N")[..12],
+            StudyId = studyId,
+            ProtocolVersion = protocolVersion,
+            Title = title,
+            Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
+            IsActive = request.IsActive ?? true,
+            CreatedAt = now,
+            CreatedBy = actorId,
+            ReasonForChange = reason,
+        };
+        dbContext.TrainingCurricula.Add(curriculum);
+
+        var createdModules = new List<TrainingCurriculumModule>();
+        if (request.Modules is { Count: > 0 })
+        {
+            for (int idx = 0; idx < request.Modules.Count; idx++)
+            {
+                var modReq = request.Modules[idx];
+                if (string.IsNullOrWhiteSpace(modReq.Title) || string.IsNullOrWhiteSpace(modReq.ContentText))
+                {
+                    return TypedResults.Problem(
+                        "Each curriculum module requires a non-empty title and content_text.",
+                        statusCode: StatusCodes.Status400BadRequest);
+                }
+
+                var mod = new TrainingCurriculumModule
+                {
+                    Id = "mod-" + Guid.NewGuid().ToString("N")[..12],
+                    CurriculumId = curriculum.Id,
+                    Title = modReq.Title.Trim(),
+                    ModuleType = string.IsNullOrWhiteSpace(modReq.ModuleType)
+                        ? "PROTOCOL_DELTA"
+                        : modReq.ModuleType.Trim().ToUpperInvariant(),
+                    ContentText = modReq.ContentText.Trim(),
+                    SequenceOrder = modReq.SequenceOrder ?? (idx + 1),
+                    MinReadingTimeSeconds = Math.Max(10, modReq.MinReadingTimeSeconds ?? 45),
+                    CreatedAt = now,
+                    CreatedBy = actorId,
+                    ReasonForChange = reason,
+                    VersionIndex = 1,
+                };
+                dbContext.TrainingCurriculumModules.Add(mod);
+                createdModules.Add(mod);
+            }
+        }
+
+        dbContext.OrgAuditLogs.Add(new OrgAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Timestamp = now,
+            ActorId = actorId,
+            ActorRole = actorRole,
+            Action = "training.curriculum.create",
+            Details = $"Published protocol training curriculum '{curriculum.Title}' (v{curriculum.ProtocolVersion}) for study {curriculum.StudyId} with {createdModules.Count} module(s).",
+            ReasonForChange = reason,
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var moduleDtos = createdModules
+            .OrderBy(m => m.SequenceOrder)
+            .Select(ToModuleDto)
+            .ToList();
+        var dto = new TrainingCurriculumDto(
+            curriculum.Id,
+            curriculum.StudyId,
+            curriculum.ProtocolVersion,
+            curriculum.Title,
+            curriculum.Description,
+            curriculum.IsActive,
+            curriculum.CreatedAt,
+            moduleDtos);
+
+        return TypedResults.Created($"/api/v1/training/curricula/{curriculum.Id}", dto);
     }
 
     private static async Task<IResult> GetCurriculumAsync(
@@ -246,8 +565,8 @@ public static class TrainingEndpoints
             return TypedResults.Problem($"Curriculum '{curriculum_id}' not found.", statusCode: StatusCodes.Status404NotFound);
         }
 
-        return TypedResults.Ok(new TrainingCurriculumDto(
-            c.Id, c.StudyId, c.ProtocolVersion, c.Title, c.Description, c.IsActive, c.CreatedAt));
+        var modulesMap = await LoadModulesByCurriculumIdsAsync(dbContext, [c.Id], cancellationToken);
+        return TypedResults.Ok(ToCurriculumDto(c, modulesMap));
     }
 
     private static async Task<IResult> BatchAssignCurriculumAsync(
@@ -279,6 +598,11 @@ public static class TrainingEndpoints
             return TypedResults.Problem(
                 "Name the site_ids, roles or target_personnel_ids to assign; there is no default audience.",
                 statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, requireHeaderOrBody: true, out var effectiveReason, out var reasonProblem))
+        {
+            return reasonProblem!;
         }
 
         // The curriculum must exist in the request's study; another study's curriculum gets the same 404 (#5400).
@@ -394,7 +718,7 @@ public static class TrainingEndpoints
                 TimeSpentSeconds = 0,
                 CreatedAt = now,
                 CreatedBy = actorId,
-                ReasonForChange = request.ReasonForChange ?? "Batch curriculum assignment"
+                ReasonForChange = effectiveReason
             };
 
             dbContext.TrainingAssignments.Add(asn);
@@ -411,15 +735,18 @@ public static class TrainingEndpoints
             Action = "training.curriculum.batch_assign",
             BatchTransactionId = batchTxId,
             Details = $"Batch curriculum assignment for {request.CurriculumId} created {createdAssignments.Count} assignments across {siteCount} sites. {skippedItems.Count} items skipped.",
-            ReasonForChange = request.ReasonForChange ?? "Batch curriculum assignment"
+            ReasonForChange = effectiveReason
         };
         dbContext.OrgAuditLogs.Add(audit);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        var curriculumMap = await LoadCurriculumDtosByIdsAsync(dbContext, [request.CurriculumId], cancellationToken);
+        curriculumMap.TryGetValue(request.CurriculumId, out var curriculumDto);
+
         var assignmentDtos = createdAssignments.Select(a => new TrainingAssignmentDto(
             a.Id, a.CurriculumId, a.StudyId, a.SiteId, a.UserId, a.UserName, a.UserRole,
-            a.Status, a.BatchTransactionId, a.QuizScore, a.TimeSpentSeconds, a.CompletedAt, a.CreatedAt)).ToList();
+            a.Status, a.BatchTransactionId, a.QuizScore, a.TimeSpentSeconds, a.CompletedAt, a.CreatedAt, curriculumDto)).ToList();
 
         var response = new BatchAssignmentResponse(
             batchTxId,
@@ -456,12 +783,18 @@ public static class TrainingEndpoints
         if (!string.IsNullOrEmpty(user_id)) query = query.Where(a => a.UserId == user_id);
         if (!string.IsNullOrEmpty(status)) query = query.Where(a => a.Status == status);
 
-        var list = (await query.ToListAsync(cancellationToken))
+        var list = (await query.OrderByDescending(a => a.CreatedAt).ToListAsync(cancellationToken))
             .Where(a => ClinicalScopeGuard.CanAccessSite(httpContext, a.SiteId))
             .ToList();
-        var dtos = list.Select(a => new TrainingAssignmentDto(
-            a.Id, a.CurriculumId, a.StudyId, a.SiteId, a.UserId, a.UserName, a.UserRole,
-            a.Status, a.BatchTransactionId, a.QuizScore, a.TimeSpentSeconds, a.CompletedAt, a.CreatedAt)).ToList();
+        var curriculumIds = list.Select(a => a.CurriculumId).Distinct(StringComparer.Ordinal).ToList();
+        var curriculumMap = await LoadCurriculumDtosByIdsAsync(dbContext, curriculumIds, cancellationToken);
+        var dtos = list.Select(a =>
+        {
+            curriculumMap.TryGetValue(a.CurriculumId, out var curriculumDto);
+            return new TrainingAssignmentDto(
+                a.Id, a.CurriculumId, a.StudyId, a.SiteId, a.UserId, a.UserName, a.UserRole,
+                a.Status, a.BatchTransactionId, a.QuizScore, a.TimeSpentSeconds, a.CompletedAt, a.CreatedAt, curriculumDto);
+        }).ToList();
 
         return TypedResults.Ok(dtos);
     }
@@ -478,9 +811,105 @@ public static class TrainingEndpoints
             return TypedResults.Problem($"Assignment '{assignment_id}' not found.", statusCode: StatusCodes.Status404NotFound);
         }
 
+        var curriculumMap = await LoadCurriculumDtosByIdsAsync(dbContext, [asn.CurriculumId], cancellationToken);
+        curriculumMap.TryGetValue(asn.CurriculumId, out var curriculumDto);
+
         return TypedResults.Ok(new TrainingAssignmentDto(
             asn.Id, asn.CurriculumId, asn.StudyId, asn.SiteId, asn.UserId, asn.UserName, asn.UserRole,
-            asn.Status, asn.BatchTransactionId, asn.QuizScore, asn.TimeSpentSeconds, asn.CompletedAt, asn.CreatedAt));
+            asn.Status, asn.BatchTransactionId, asn.QuizScore, asn.TimeSpentSeconds, asn.CompletedAt, asn.CreatedAt, curriculumDto));
+    }
+
+    private static async Task<IResult> CompleteAssignmentAsync(
+        string assignment_id,
+        CompleteTrainingAssignmentRequest request,
+        KnowledgeDbContext dbContext,
+        HttpContext httpContext,
+        IClock clock,
+        IOptionsMonitor<GatewayAuthenticationOptions> gatewayAuthentication,
+        CancellationToken cancellationToken)
+    {
+        var asn = await dbContext.TrainingAssignments.FirstOrDefaultAsync(a => a.Id == assignment_id, cancellationToken);
+        if (asn == null || !CallerScope.CanAccessStudy(httpContext, asn.StudyId) || !ClinicalScopeGuard.CanAccessSite(httpContext, asn.SiteId))
+        {
+            return TypedResults.Problem($"Assignment '{assignment_id}' not found.", statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, requireHeaderOrBody: true, out var reason, out var reasonProblem))
+        {
+            return reasonProblem!;
+        }
+
+        double? normalizedScore = null;
+        if (request.QuizScore.HasValue)
+        {
+            double raw = request.QuizScore.Value;
+            if (double.IsNaN(raw) || double.IsInfinity(raw) || raw < 0.0 || raw > 100.0)
+            {
+                return TypedResults.Problem("quiz_score must be between 0.0 and 1.0 (or 0 and 100).", statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            normalizedScore = raw > 1.0 ? Math.Round(raw / 100.0, 4) : raw;
+        }
+
+        if (request.TimeSpentSeconds is < 0)
+        {
+            return TypedResults.Problem("time_spent_seconds cannot be negative.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (string.Equals(asn.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase))
+        {
+            return TypedResults.Problem($"Assignment '{assignment_id}' is already completed.", statusCode: StatusCodes.Status409Conflict);
+        }
+
+        string actorId = CallerScope.UserId(httpContext)
+            ?? throw new InvalidOperationException("An admitted training request has no signed caller.");
+        string actorRole = CallerScope.Roles(httpContext);
+        DateTimeOffset now = clock.UtcNow;
+
+        asn.Status = "COMPLETED";
+        asn.CompletedAt = now;
+        asn.QuizScore = normalizedScore ?? asn.QuizScore ?? 1.0;
+        asn.TimeSpentSeconds = Math.Max(asn.TimeSpentSeconds, request.TimeSpentSeconds ?? 60);
+        asn.ReasonForChange = reason;
+
+        string? secret = gatewayAuthentication.Get(GatewayAuthenticationHandler.SchemeName).GatewaySecret;
+        string certSeal = !string.IsNullOrWhiteSpace(secret)
+            ? HmacSigner.ComputeSignature($"{asn.Id}|{asn.CurriculumId}|{asn.UserId}|{actorId}|{now:O}", secret)
+            : Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes($"{asn.Id}|{asn.CurriculumId}|{asn.UserId}|{actorId}|{now:O}")));
+
+        dbContext.TrainingCertificates.Add(new TrainingCertificate
+        {
+            Id = Guid.NewGuid().ToString(),
+            AssignmentId = asn.Id,
+            BatchTransactionId = asn.BatchTransactionId,
+            SignerName = actorId,
+            SignerRole = actorRole,
+            Meaning = "Protocol Training Completion Recorded",
+            Sha256Seal = certSeal,
+            EtmfArtifactId = "05.02.04",
+            CreatedAt = now,
+        });
+
+        dbContext.OrgAuditLogs.Add(new OrgAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Timestamp = now,
+            ActorId = actorId,
+            ActorRole = actorRole,
+            Action = "training.assignment.complete",
+            BatchTransactionId = asn.BatchTransactionId,
+            Details = $"Completed protocol training assignment {asn.Id} for {asn.UserName} ({asn.UserId}) at site {asn.SiteId} in study {asn.StudyId}.",
+            ReasonForChange = reason,
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var curriculumMap = await LoadCurriculumDtosByIdsAsync(dbContext, [asn.CurriculumId], cancellationToken);
+        curriculumMap.TryGetValue(asn.CurriculumId, out var curriculumDto);
+
+        return TypedResults.Ok(new TrainingAssignmentDto(
+            asn.Id, asn.CurriculumId, asn.StudyId, asn.SiteId, asn.UserId, asn.UserName, asn.UserRole,
+            asn.Status, asn.BatchTransactionId, asn.QuizScore, asn.TimeSpentSeconds, asn.CompletedAt, asn.CreatedAt, curriculumDto));
     }
 
     private static async Task<IResult> ListDelegationsAsync(

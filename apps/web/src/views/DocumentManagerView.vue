@@ -29,14 +29,20 @@
             🛡️ Clinical QC Queue
           </button>
         </div>
-        <span v-if="effectiveStudyId" class="etmf-study-chip">
-          Study: <strong>{{ effectiveStudyId }}</strong>
-        </span>
+        <div style="display: flex; gap: 12px; align-items: center">
+          <span v-if="effectiveStudyId" class="etmf-study-chip">
+            Study: <strong>{{ effectiveStudyId }}</strong>
+          </span>
+          <span v-if="effectiveSiteId" class="etmf-study-chip">
+            Site: <strong>{{ effectiveSiteId }}</strong>
+          </span>
+        </div>
       </div>
 
       <DocumentGrid
         v-if="activeWorkspaceTab === 'binder'"
         :documents="etmfStore.documents"
+        :site-id="effectiveSiteId"
         @preview="handlePreviewDocument"
         @inspect="handleInspectDocument"
       />
@@ -357,6 +363,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  siteId: {
+    type: String,
+    default: "",
+  },
 });
 
 const authStore = useAuthStore();
@@ -374,23 +384,54 @@ const reviewingQc = ref(false);
 const qcReviewError = ref("");
 
 const canReviewQc = computed(() => canReviewEtmfQc(authStore));
+function resolveQueryParam(keys) {
+  if (!route) return "";
+  for (const k of keys) {
+    const qVal = route.query?.[k];
+    if (typeof qVal === "string" && qVal.trim()) return qVal.trim();
+    const pVal = route.params?.[k];
+    if (typeof pVal === "string" && pVal.trim()) return pVal.trim();
+  }
+  return "";
+}
+
 const effectiveStudyId = computed(
-  () => props.studyId || clinicalStore.activeStudyId || etmfStore.currentStudyId
+  () =>
+    props.studyId ||
+    resolveQueryParam(["studyId", "study_id"]) ||
+    clinicalStore.activeStudyId ||
+    etmfStore.currentStudyId
 );
 
-function syncStudyScope(study) {
+const effectiveSiteId = computed(
+  () =>
+    props.siteId ||
+    resolveQueryParam(["siteId", "site_id"]) ||
+    clinicalStore.activeSiteId ||
+    etmfStore.currentSiteId ||
+    ""
+);
+
+function syncStudyAndSiteScope(study, site) {
   if (study) {
     clinicalStore.activeStudyId = study;
     etmfStore.currentStudyId = study;
   }
+  if (site !== undefined) {
+    clinicalStore.activeSiteId = site || null;
+    etmfStore.currentSiteId = site || null;
+  }
 }
 
 watch(
-  () => props.studyId,
-  (val) => {
-    if (val) {
-      syncStudyScope(val);
-      etmfStore.fetchBinderTree();
+  () => [props.studyId, props.siteId],
+  ([newStudy, newSite]) => {
+    if (newStudy || newSite) {
+      syncStudyAndSiteScope(
+        newStudy || effectiveStudyId.value,
+        newSite || effectiveSiteId.value
+      );
+      etmfStore.fetchBinderTree(effectiveStudyId.value);
     }
   }
 );
@@ -540,16 +581,25 @@ async function handleAcceptClassification(doc) {
 }
 
 onMounted(() => {
-  if (props.studyId) {
-    syncStudyScope(props.studyId);
-  } else if (route && route.query) {
-    if (route.query.studyId) syncStudyScope(route.query.studyId);
-    if (route.query.siteId) clinicalStore.activeSiteId = route.query.siteId;
-    if (route.query.subjectId)
-      clinicalStore.activeSubjectId = route.query.subjectId;
-    if (route.query.visitId) clinicalStore.activeVisitId = route.query.visitId;
+  const resolvedStudy =
+    props.studyId ||
+    resolveQueryParam(["studyId", "study_id"]) ||
+    clinicalStore.activeStudyId ||
+    etmfStore.currentStudyId;
+  const resolvedSite =
+    props.siteId ||
+    resolveQueryParam(["siteId", "site_id"]) ||
+    clinicalStore.activeSiteId ||
+    etmfStore.currentSiteId ||
+    "";
+  syncStudyAndSiteScope(resolvedStudy, resolvedSite);
+  if (route && route.query) {
+    const subj = resolveQueryParam(["subjectId", "subject_id"]);
+    const vis = resolveQueryParam(["visitId", "visit_id"]);
+    if (subj) clinicalStore.activeSubjectId = subj;
+    if (vis) clinicalStore.activeVisitId = vis;
   }
-  etmfStore.fetchBinderTree();
+  etmfStore.fetchBinderTree(resolvedStudy);
 });
 
 defineExpose({

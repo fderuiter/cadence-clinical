@@ -21,6 +21,9 @@ type Schemas = components["schemas"];
 
 export type SiteGreenlightGate = Schemas["Ctms_SiteGreenlightGateResponseDto"];
 export type SiteGreenlightGateResponse = SiteGreenlightGate;
+export type GreenlightFacet = Schemas["Ctms_GreenlightFacetDto"];
+export type SiteGreenlightUpsertRequest =
+  Schemas["Ctms_SiteGreenlightUpsertRequestDto"];
 export type BatchCertifyRequest = Schemas["Ctms_BatchCertifyRequestDto"];
 export type BatchCertifyResponse = Schemas["Ctms_BatchCertifyResponseDto"];
 export type CertifiedSiteItem = Schemas["Ctms_CertifiedSiteItemDto"];
@@ -144,6 +147,44 @@ export const ctmsApi = {
             country_code: countryCode || undefined,
           },
         },
+      })
+    );
+  },
+
+  /** Initializes a 6-facet startup greenlight gate for a site with Part 11 change reason. */
+  initializeSiteGreenlight(
+    siteId: string,
+    payload: SiteGreenlightUpsertRequest,
+    changeReason: string
+  ): Promise<SiteGreenlightGate> {
+    const encodedReason = encodeChangeReason(changeReason);
+    return unwrapResponse(
+      client.POST("/api/v1/ctms/startup/sites/{siteId}/greenlight", {
+        params: {
+          path: { siteId },
+          header: { "X-Change-Reason": encodedReason },
+        },
+        body: payload,
+        headers: buildAuditHeaders({ changeReason }),
+      })
+    );
+  },
+
+  /** Updates 6-facet startup greenlight readiness flags for a site with Part 11 change reason. */
+  updateSiteGreenlight(
+    siteId: string,
+    payload: SiteGreenlightUpsertRequest,
+    changeReason: string
+  ): Promise<SiteGreenlightGate> {
+    const encodedReason = encodeChangeReason(changeReason);
+    return unwrapResponse(
+      client.PUT("/api/v1/ctms/startup/sites/{siteId}/greenlight", {
+        params: {
+          path: { siteId },
+          header: { "X-Change-Reason": encodedReason },
+        },
+        body: payload,
+        headers: buildAuditHeaders({ changeReason }),
       })
     );
   },

@@ -555,7 +555,9 @@ if (saved) {
   selectedTemplateId.value = saved.templateId;
 }
 
-const activeConfig = ref<any>(
+const activeConfig = ref<
+  TherapeuticAreaTemplate & { phase?: string; randomizationRatio?: string }
+>(
   saved
     ? saved.config
     : cloneTemplate(THERAPEUTIC_AREA_TEMPLATES[selectedTemplateId.value])

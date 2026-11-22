@@ -1,4 +1,28 @@
-import { DefineComponent } from "vue";
+import {
+  ComponentOptionsMixin,
+  DefineComponent,
+  PublicProps,
+  SlotsType,
+} from "vue";
+
+type UiComponentWithSlots<
+  Props extends Record<string, any>,
+  Slots extends Record<string, any> = Record<string, never>,
+> = DefineComponent<
+  Props,
+  {},
+  {},
+  {},
+  {},
+  ComponentOptionsMixin,
+  ComponentOptionsMixin,
+  {},
+  string,
+  PublicProps,
+  Readonly<Props>,
+  {},
+  SlotsType<Slots>
+>;
 
 // Export generated CDASH types
 export * from "./src/types/cdash.js";
@@ -163,18 +187,20 @@ export const ModalErrorAlert: DefineComponent<
   any
 >;
 
-export const EmptyState: DefineComponent<
+export const EmptyState: UiComponentWithSlots<
   {
     icon?: string;
     title?: string;
     message?: string;
     actionText?: string;
   },
-  {},
-  any
+  {
+    default?: () => any;
+    action?: () => any;
+  }
 >;
 
-export const ClinicalModal: DefineComponent<
+export const ClinicalModal: UiComponentWithSlots<
   {
     modelValue?: boolean;
     isOpen?: boolean;
@@ -204,11 +230,14 @@ export const ClinicalModal: DefineComponent<
     showHeader?: boolean;
     showFooter?: boolean;
   },
-  {},
-  any
+  {
+    default?: () => any;
+    header?: (props: { titleId: string; close: () => void }) => any;
+    footer?: (props: { close: () => void }) => any;
+  }
 >;
 
-export const ClinicalDrawer: DefineComponent<
+export const ClinicalDrawer: UiComponentWithSlots<
   {
     modelValue?: boolean;
     isOpen?: boolean;
@@ -236,8 +265,11 @@ export const ClinicalDrawer: DefineComponent<
     closeLabel?: string;
     showHeader?: boolean;
   },
-  {},
-  any
+  {
+    default?: () => any;
+    header?: (props: { titleId: string; close: () => void }) => any;
+    footer?: (props: { close: () => void }) => any;
+  }
 >;
 
 export const AuditLogViewer: DefineComponent<

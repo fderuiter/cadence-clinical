@@ -233,6 +233,7 @@ export const useEtmfStore = defineStore("etmf", {
     isUploading: false,
     currentStudyId:
       isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : "STUDY-USDM-001",
+    currentSiteId: null,
     batchQueue: [],
     qcQueue: [],
     isBatchUploading: false,
@@ -270,12 +271,11 @@ export const useEtmfStore = defineStore("etmf", {
   },
 
   actions: {
-    async fetchBinderTree(
-      studyId = isDemoBuild() && DEMO_STUDY.code
-        ? DEMO_STUDY.code
-        : "STUDY-USDM-001"
-    ) {
-      this.currentStudyId = studyId;
+    async fetchBinderTree(studyId) {
+      this.currentStudyId =
+        studyId ||
+        this.currentStudyId ||
+        (isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : "STUDY-USDM-001");
 
       // Seed hierarchical DIA TMF Reference Model v3.2.0-complete hierarchy
       this.binderTree = [
@@ -517,6 +517,12 @@ export const useEtmfStore = defineStore("etmf", {
                   id: "05.02.05",
                   name: "Informed Consent Form",
                   code: "05.02.05",
+                  type: "artifact",
+                },
+                {
+                  id: "05.02.06",
+                  name: "Monitoring Visit Correspondence",
+                  code: "05.02.06",
                   type: "artifact",
                 },
               ],
@@ -839,6 +845,7 @@ export const useEtmfStore = defineStore("etmf", {
 
         const allDocs = await etmfService.getDocuments({
           study_id: this.currentStudyId,
+          site_id: this.currentSiteId || undefined,
         });
 
         // Filter by selected artifact ID
@@ -973,7 +980,7 @@ export const useEtmfStore = defineStore("etmf", {
           changeReason = formData.get("reason_for_change") || "Initial upload";
           body = {
             study_id: formData.get("study_id") || this.currentStudyId,
-            site_id: formData.get("site_id") || null,
+            site_id: formData.get("site_id") || this.currentSiteId || null,
             artifact_type:
               formData.get("artifact_type") || "Clinical Trial Protocol",
             filename: formData.get("filename") || "document.pdf",
@@ -993,7 +1000,7 @@ export const useEtmfStore = defineStore("etmf", {
           changeReason = formData.reason_for_change || "Initial upload";
           body = {
             study_id: formData.study_id || this.currentStudyId,
-            site_id: formData.site_id || null,
+            site_id: formData.site_id || this.currentSiteId || null,
             artifact_type: formData.artifact_type || "Clinical Trial Protocol",
             filename: formData.filename || "document.pdf",
             content: formData.content || "Mock base64 or plaintext content",
@@ -1008,6 +1015,21 @@ export const useEtmfStore = defineStore("etmf", {
         }
 
         const res = await etmfService.ingestDocument(body, { changeReason });
+        const ingestedId = res?.id || res?.document_id;
+        if (
+          ingestedId &&
+          (!res?.status || res.status === "DRAFT") &&
+          typeof etmfService.stageExistingDocumentForQc === "function"
+        ) {
+          await etmfService.stageExistingDocumentForQc(ingestedId, {
+            reason_for_change: changeReason,
+          });
+          if (res && typeof res === "object") {
+            res.status = "TECHNICAL_QC";
+            res.approval_status = "TECHNICAL_QC";
+          }
+          await this.fetchQcQueue(body.study_id || this.currentStudyId);
+        }
 
         // Refresh documents for selected artifact after upload
         if (this.selectedArtifactId) {
@@ -1166,6 +1188,17 @@ export const useEtmfStore = defineStore("etmf", {
       const offlineDemo =
         isDemoBuild() && authStore.isDemoMode && !authStore.token;
       try {
+        const existingDoc = this.documentsList.find((d) => d.id === docId);
+        if (
+          existingDoc?.status === "DRAFT" &&
+          typeof etmfService.stageExistingDocumentForQc === "function"
+        ) {
+          await etmfService.stageExistingDocumentForQc(docId, {
+            reason_for_change,
+          });
+          existingDoc.status = "TECHNICAL_QC";
+          existingDoc.approval_status = "TECHNICAL_QC";
+        }
         const res = await etmfService.submitQcReview(docId, {
           decision,
           reason_for_change,

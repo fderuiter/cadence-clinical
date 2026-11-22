@@ -198,6 +198,7 @@ export interface paths {
         query?: {
           study_id?: string;
           zone?: number | string;
+          site_id?: string;
         };
         header?: never;
         path?: never;
@@ -251,6 +252,22 @@ export interface paths {
     };
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/etmf/documents/{document_id}/stage-qc": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["StageExistingDocumentForQc"];
     delete?: never;
     options?: never;
     head?: never;
@@ -532,6 +549,10 @@ export interface components {
       reasonForChange: string;
       assignedCra?: null | string;
     };
+    Etmf_StageExistingDocumentQcRequest: {
+      reason_for_change?: null | string;
+      assigned_cra?: null | string;
+    };
   };
   responses: never;
   parameters: never;
@@ -578,6 +599,33 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["Etmf_AnonymousTypeOfstringAndstring"];
         };
+      };
+    };
+  };
+  StageExistingDocumentForQc: {
+    parameters: {
+      query?: never;
+      header?: {
+        "X-Change-Reason"?: string;
+      };
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          null | components["schemas"]["Etmf_StageExistingDocumentQcRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

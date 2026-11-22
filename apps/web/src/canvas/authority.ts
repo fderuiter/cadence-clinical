@@ -359,7 +359,27 @@ const ETMF_REVIEW_QC_ROLES = new Set([
   "cra",
   "monitor",
 ]);
+const TRAINING_CURRICULUM_CREATE_ROLES = new Set([
+  "sysadmin",
+  "sponsor_dm",
+  "sponsor_designer",
+]);
 const TRAINING_CURRICULUM_ASSIGN_ROLES = new Set(["sysadmin", "sponsor_dm"]);
+const TRAINING_LOG_CREATE_ROLES = new Set([
+  "sysadmin",
+  "sponsor_dm",
+  "sponsor_mm",
+  "sponsor_designer",
+  "sponsor_statistician",
+  "investigator",
+  "principal_investigator",
+  "authorized_er_physician",
+  "lead_investigator",
+  "crc",
+  "cra",
+  "monitor",
+  "pharmacist",
+]);
 const TRAINING_DELEGATION_SIGN_ROLES = new Set([
   "principal_investigator",
   "authorized_er_physician",
@@ -370,6 +390,12 @@ export const SITE_ACTIVATION_ROLE_REASON =
   "Requires Sponsor Data Manager or System Administrator role (site_compliance:activate).";
 export const GREENLIGHT_CERTIFY_ROLE_REASON =
   "Requires Sponsor Data Manager or System Administrator role (ctms_greenlight:certify).";
+export const GREENLIGHT_WRITE_ROLE_REASON =
+  "Requires CRA, Monitor, Sponsor Data Manager, or System Administrator role (ctms_greenlight:write).";
+export const TRAINING_CREATE_ROLE_REASON =
+  "Requires Sponsor Study Designer, Sponsor Data Manager, or System Administrator role (training_curriculum:create).";
+export const TRAINING_COMPLETE_ROLE_REASON =
+  "Requires authorized clinical or site staff role (training_log:create).";
 export const SITE_MILESTONE_ROLE_REASON =
   "Requires CRA, Monitor, Sponsor Data Manager, or System Administrator role (ctms_site_milestone:update).";
 export const MONITORING_VISIT_SCHEDULE_ROLE_REASON =
@@ -482,4 +508,19 @@ export function canAssignTrainingCurriculum(auth: AuthorityAuth): boolean {
 /** Sign Knowledge site delegation logs as Principal Investigator (delegation_log:sign). */
 export function canSignTrainingDelegations(auth: AuthorityAuth): boolean {
   return holdsBackendRole(auth, TRAINING_DELEGATION_SIGN_ROLES);
+}
+
+/** Initialize or update 6-facet startup greenlight gates in CTMS (ctms_greenlight:write). */
+export function canWriteGreenlight(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, MILESTONE_WRITE_ROLES);
+}
+
+/** Publish protocol training curricula in Knowledge (training_curriculum:create). */
+export function canCreateTrainingCurriculum(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, TRAINING_CURRICULUM_CREATE_ROLES);
+}
+
+/** Record completion of an assigned protocol training module/curriculum (training_log:create). */
+export function canCompleteTrainingAssignment(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, TRAINING_LOG_CREATE_ROLES);
 }

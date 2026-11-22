@@ -22,6 +22,7 @@ catalog:
   vitest: "^5.1.0"
   vue: "^3.5.45"
   vue-router: "^5.5.1"
+  vue-tsc: "^3.3.14"
 
 overrides:
   glob: ">=14.0.2"

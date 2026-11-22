@@ -10,15 +10,19 @@ Clinical trial management scaffold. It holds the CTMS persistence model (monitor
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (monitoring visits, site milestones, delegation records, investigator grants, budget line items, audit log).
   Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
-- `Infrastructure/Persistence/`: `CtmsDbContext`, a design-time `CtmsDbContextFactory`, and `Configurations/` (Fluent API mappings).
-- `Infrastructure/Persistence/Migrations/`: `20260924144609_InitialCreate`.
+- `Infrastructure/Persistence/`: `CtmsDbContext`, a design-time `CtmsDbContextFactory`, and `Configurations/` (Fluent API mappings, including `ConsumedSignatureTokenConfiguration`).
+- `Infrastructure/Persistence/Migrations/`: `20260924144609_InitialCreate`, `20261122171244_UnifyCtmsDelegationAndLetterContracts`.
+- `Application/CtmsDbSeeder.cs`: idempotent baseline seeder for `CADENCE-101` site greenlight gates (also invoked via `--seed`).
 - `../Templates/`: Liquid templates (`confirmation_letter.liquid`, `follow_up_letter.liquid`) embedded into the assembly and rendered via `Cadence.Kernel.Templating`.
 
 ## HTTP surface
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `CtmsDbContext`.
 - `GET /api/v1/ctms/status` (anonymous status payload).
-- `POST /api/v1/ctms/letters/render?templateName=...`: renders a `SiteVisitLetterModel` through an embedded Liquid template and returns plain text. Needs `ctms_monitoring_visit:create` (sysadmin, sponsor data manager, CRA); other callers get `403` ([ADR-2511](../../docs/adr/2026-09-30-template-render-routes-need-a-permission.md)).
+- `GET /api/v1/ctms/startup/matrix`, `GET /api/v1/ctms/startup/sites/{siteId}/greenlight`, `POST /api/v1/ctms/startup/sites/{siteId}/greenlight`, `PUT /api/v1/ctms/startup/sites/{siteId}/greenlight`, `POST /api/v1/ctms/startup/sites/{siteId}/certify`, and `POST /api/v1/ctms/startup/batch-certify`: site start-up greenlight readiness initialization, facet updates, and certification.
+- `POST /api/v1/ctms/doa/delegate`, `POST /api/v1/ctms/doa/sign-off`, `POST /api/v1/ctms/doa/{id}/revoke`, `GET /api/v1/ctms/doa/sites/{siteId}`, and `GET /api/v1/ctms/doa/sites/{siteId}/export/pdf`: Delegation of Authority (DoA) log management, 21 CFR Part 11 PI electronic sign-off (`X-Sig-Token`), and PDF export.
+- `POST /api/v1/ctms/visits`, `GET /api/v1/ctms/visits`, `POST /api/v1/ctms/visits/{id}/complete`, `POST /api/v1/ctms/visits/{id}/sign-off`, `POST /api/v1/ctms/visits/{id}/letters`: monitoring visit scheduling, finding persistence, report sign-off, and Liquid letter generation.
+- `POST /api/v1/ctms/letters/render?templateName=...`, `POST /api/v1/ctms/letters/compile`, `GET /api/v1/ctms/letters/{id}/pdf`: Liquid letter rendering, QuestPDF compilation, and MassTransit `EtmfDocumentFilingRequested` publishing into eTMF Zone 5 (`05.02.06`) when finalized.
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/ctms/**` to this service. Compose publishes host port 8007 (container port 8080).
 
@@ -26,13 +30,13 @@ Clinical trial management scaffold. It holds the CTMS persistence model (monitor
 
 `Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route not marked anonymous requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
-Site start-up greenlight routes need `ctms_greenlight:read` or `ctms_greenlight:certify`; the site routes also apply site scope, and every route refuses a study the caller is not assigned to. The certifier is the signed caller, and tokens are sealed with `GATEWAY_SECRET` with no fallback (`PermissionMatrix.Ctms.cs`) ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
+Site start-up greenlight routes need `ctms_greenlight:read`, `ctms_greenlight:write`, or `ctms_greenlight:certify`; the site routes also apply site scope, all state mutations enforce `X-Change-Reason`, and every route refuses a study the caller is not assigned to. The certifier is the signed caller, and tokens are sealed with `GATEWAY_SECRET` with no fallback (`PermissionMatrix.Ctms.cs`) ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)). Part 11 sign-offs (`POST /api/v1/ctms/doa/sign-off` and finalized `POST /api/v1/ctms/letters/compile`) verify single-use `X-Sig-Token` headers against `ctms.consumed_signature_tokens` (`AddCadenceDurableSigTokenStore<CtmsDbContext>`).
 
-Greenlight gates are activation evidence, so the service never invents them (#5433). Every route needs a `study_id`;
+Greenlight gates are activation evidence, so GET routes never invent them (#5433). Every route needs a `study_id`;
 there is no default study. `GET /startup/matrix` only reads, and a study and country with no recorded gates is an empty
 matrix. Reading or certifying a single site with no recorded gate returns `404` and writes nothing. Batch certify
 refuses the whole request with `400` when any named site has no gate in that study and country, and certifies nothing.
-No route records facet evidence yet (#5445), so gates come only from rows already in the database; the CLI has no seed command.
+Authorized callers initialize and update facet evidence explicitly via `POST` and `PUT /api/v1/ctms/startup/sites/{siteId}/greenlight`, and `CtmsDbSeeder` (`--seed`) seeds baseline gates for `CADENCE-101`.
 
 ## Persistence
 

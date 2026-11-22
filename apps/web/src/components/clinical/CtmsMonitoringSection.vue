@@ -87,7 +87,16 @@
                   {{ visit.status }}
                 </span>
               </td>
-              <td>{{ visit.findings?.length ?? 0 }}</td>
+              <td>
+                <span>{{ visit.findings?.length ?? 0 }}</span>
+                <ul v-if="visit.findings?.length" class="finding-inline-list">
+                  <li v-for="(f, fIdx) in visit.findings" :key="fIdx">
+                    <strong>[{{ f.severity }}]</strong> {{ f.text }} ({{
+                      f.resolution_status
+                    }})
+                  </li>
+                </ul>
+              </td>
               <td class="action-cell">
                 <button
                   type="button"
@@ -189,8 +198,27 @@
         </p>
         <ul v-else class="letter-list">
           <li v-for="letter in letters" :key="letter.id" class="letter-item">
-            <strong>{{ letter.letter_type }}</strong> · {{ letter.subject }}
-            <pre class="letter-body">{{ letter.body_markdown }}</pre>
+            <div class="card-subheader">
+              <div>
+                <strong>{{ letter.letter_type }}</strong> ·
+                <span>{{ letter.subject || letter.letter_type }}</span>
+                <span v-if="letter.status"> · {{ letter.status }}</span>
+                <span v-if="letter.etmf_document_id">
+                  · Filed: {{ letter.etmf_document_id }}
+                </span>
+              </div>
+              <button
+                v-if="letter.pdf_access_url"
+                type="button"
+                class="btn btn-secondary btn-sm"
+                @click="downloadGeneratedLetterPdf(letter)"
+              >
+                Download PDF
+              </button>
+            </div>
+            <pre class="letter-body">{{
+              letter.body_markdown || letter.rendered_content
+            }}</pre>
           </li>
         </ul>
       </div>
@@ -827,6 +855,22 @@ async function confirmSignOff() {
   }
 }
 
+async function downloadGeneratedLetterPdf(letter: GeneratedVisitLetter) {
+  try {
+    const blob = await ctmsApi.downloadVisitLetterPdf(letter.id);
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = `${letter.letter_type}_${letter.id}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    toasts.apiError("Visit letter PDF could not be downloaded", err);
+  }
+}
+
 async function viewLetters(visit: MonitoringVisit) {
   selectedLettersVisit.value = visit;
   letters.value = [];
@@ -883,6 +927,13 @@ onMounted(() => {
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
+}
+
+.finding-inline-list {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 0.78rem;
+  color: var(--semantic-color-text-secondary);
 }
 
 .letter-body {

@@ -344,11 +344,19 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<string>("Role")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<bool>("SignedOff")
                         .HasColumnType("boolean");
 
                     b.Property<string>("SiteId")
                         .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("StaffName")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
@@ -390,6 +398,10 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
+                    b.Property<string>("ActualDate")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -404,6 +416,9 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.Property<string>("EtmfDocumentId")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FindingsJson")
+                        .HasColumnType("jsonb");
 
                     b.Property<bool>("IsSigned")
                         .HasColumnType("boolean");
@@ -435,13 +450,37 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100000)
                         .HasColumnType("character varying(100000)");
 
+                    b.Property<string>("ScheduledDate")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("SignatureManifestation")
                         .HasColumnType("jsonb");
+
+                    b.Property<string>("SignerName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SigningPurpose")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("SiteCode")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("site_code");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<string>("StudyCode")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("study_code");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -455,7 +494,16 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
+                    b.Property<string>("VisitType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("SiteCode");
+
+                    b.HasIndex("StudyCode");
 
                     b.HasIndex("TenantId");
 
@@ -1292,6 +1340,25 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasIndex("CreatedAt", "DispatchedAt");
 
                     b.ToTable("transactional_outbox", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Database.Signatures.ConsumedSignatureToken", b =>
+                {
+                    b.Property<string>("TokenId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("RetainUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TokenId");
+
+                    b.HasIndex("RetainUntil");
+
+                    b.ToTable("consumed_signature_tokens", (string)null);
                 });
 
             modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsBudgetLineItem", b =>

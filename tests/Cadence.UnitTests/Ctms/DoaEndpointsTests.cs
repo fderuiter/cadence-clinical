@@ -198,24 +198,29 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
     [Fact]
     [GxPRequirement("PRD-SYS-001")]
-    public async Task DelegateTasks_WithNonExistentSite_Returns404NotFound()
+    public async Task DelegateTasks_WithoutPriorSiteRows_CreatesPendingDelegation()
     {
         var caller = Caller();
         caller.Request.Headers["X-Change-Reason"] = "Delegation test";
 
         var request = new DelegationTaskRequest(
-            Site: "SITE-UNKNOWN",
+            Site: "SITE-NEW-PROVISIONED",
             StaffUserId: "staff-1",
             TaskCodes: ["CRF_DATA_ENTRY"],
             StartDate: "2026-11-15",
-            ReasonForChange: "Delegation test");
+            ReasonForChange: "Delegation test",
+            StaffName: "Dr. Lin Chen",
+            Role: "Sub-Investigator");
 
         var result = await DoaEndpoints.DelegateTasksAsync(
             request, _db, caller, _clock, TestContext.Current.CancellationToken);
 
-        var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
-        problem.StatusCode.Should().Be(StatusCodes.Status404NotFound);
-        problem.ProblemDetails.Detail.Should().Contain("SITE-UNKNOWN");
+        var created = result.Should().BeOfType<Created<DelegationResponseDto>>().Subject;
+        created.Value.Should().NotBeNull();
+        created.Value!.Site.Should().Be("SITE-NEW-PROVISIONED");
+        created.Value.Status.Should().Be("PENDING_PI_SIGNATURE");
+        created.Value.StaffName.Should().Be("Dr. Lin Chen");
+        created.Value.Role.Should().Be("Sub-Investigator");
     }
 
     [Fact]
@@ -480,13 +485,15 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
     [Fact]
     [GxPRequirement("PRD-SYS-001")]
-    public async Task GetSiteDoaLog_WithNonExistentSite_Returns404NotFound()
+    public async Task GetSiteDoaLog_WithoutPriorSiteRows_ReturnsEmptyMatrix()
     {
         var result = await DoaEndpoints.GetSiteDoaLogAsync(
-            "SITE-UNKNOWN", _db, Caller(), TestContext.Current.CancellationToken);
+            "SITE-NEW-PROVISIONED", _db, Caller(), TestContext.Current.CancellationToken);
 
-        var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
-        problem.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+        var ok = result.Should().BeOfType<Ok<DoaLogResponseDto>>().Subject;
+        ok.Value.Should().NotBeNull();
+        ok.Value!.Site.Should().Be("SITE-NEW-PROVISIONED");
+        ok.Value.DelegatedStaff.Should().BeEmpty();
     }
 
     [Fact]
@@ -539,15 +546,94 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
     [Fact]
     [GxPRequirement("PRD-SYS-001")]
-    public async Task ExportSiteDoaPdf_WithNonExistentSite_Returns404NotFound()
+    public async Task ExportSiteDoaPdf_WithoutPriorSiteRows_ExportsSignedPdf()
     {
         var caller = Caller();
 
         var result = await DoaEndpoints.ExportSiteDoaPdfAsync(
-            "SITE-NONEXISTENT", _db, caller, _clock, TestContext.Current.CancellationToken);
+            "SITE-NEW-PROVISIONED", _db, caller, _clock, TestContext.Current.CancellationToken);
 
-        var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
-        problem.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+        var fileResult = result.Should().BeOfType<FileContentHttpResult>().Subject;
+        fileResult.ContentType.Should().Be("application/pdf");
+        fileResult.FileContents.ToArray().Should().NotBeEmpty();
+    }
+
+    [Fact]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task SignOffDelegation_HttpPipeline_EnforcesSingleUseSigTokenAndReturnsSignedStatus()
+    {
+        var delegation = new CtmsDelegation
+        {
+            SiteId = SiteId,
+            StaffUserId = "staff-crc-09",
+            StaffName = "Elena Rostova",
+            Role = "CRC",
+            TaskCodes = JsonSerializer.Serialize(new[] { "CRF_DATA_ENTRY" }),
+            StartDate = "2026-11-15",
+            IsActive = true,
+            SignedOff = false,
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+            CreatedBy = "crc-1",
+            ReasonForChange = "Initial assignment",
+            VersionIndex = 1,
+        };
+        _db.CtmsDelegations.Add(delegation);
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        using var piClient = CreateClient(RoleNormalization.ROLE_INVESTIGATOR, "pi-stepup");
+        var payload = new DoaSignOffRequest(delegation.Id, "PI step-up endorsement");
+
+        // 1. Missing X-Sig-Token -> 401 Unauthorized
+        var missingTokenRes = await piClient.PostAsJsonAsync(
+            "/api/v1/ctms/doa/sign-off", payload, TestContext.Current.CancellationToken);
+        missingTokenRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        // 2. Valid bound X-Sig-Token -> 200 OK and Status == SIGNED
+        string sigToken = TestSecurityContext.CreateSigToken(
+            "pi-stepup",
+            DoaEndpoints.DoaSignOffAction,
+            DoaEndpoints.DoaSignOffSemanticAction,
+            issuedAt: _clock.UtcNow);
+        using var signedReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ctms/doa/sign-off")
+        {
+            Content = JsonContent.Create(payload),
+        };
+        signedReq.Headers.Add(GatewayHeaders.SigToken, sigToken);
+        signedReq.Headers.Add(GatewayHeaders.ChangeReason, "PI step-up endorsement");
+
+        var okRes = await piClient.SendAsync(signedReq, TestContext.Current.CancellationToken);
+        okRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await okRes.Content.ReadFromJsonAsync<DelegationResponseDto>(TestContext.Current.CancellationToken);
+        dto.Should().NotBeNull();
+        dto!.SignedOff.Should().BeTrue();
+        dto.Status.Should().Be("ACTIVE");
+
+        // 3. Replaying the consumed X-Sig-Token -> 401 Unauthorized
+        var secondDelegation = new CtmsDelegation(delegation.Id + "-replay")
+        {
+            SiteId = SiteId,
+            StaffUserId = "staff-crc-10",
+            TaskCodes = JsonSerializer.Serialize(new[] { "CRF_DATA_ENTRY" }),
+            StartDate = "2026-11-15",
+            IsActive = true,
+            SignedOff = false,
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+            CreatedBy = "crc-1",
+            ReasonForChange = "Second assignment",
+            VersionIndex = 1,
+        };
+        _db.CtmsDelegations.Add(secondDelegation);
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        using var replayReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ctms/doa/sign-off")
+        {
+            Content = JsonContent.Create(new DoaSignOffRequest(secondDelegation.Id, "Replay attempt")),
+        };
+        replayReq.Headers.Add(GatewayHeaders.SigToken, sigToken);
+        replayReq.Headers.Add(GatewayHeaders.ChangeReason, "Replay attempt");
+
+        var replayRes = await piClient.SendAsync(replayReq, TestContext.Current.CancellationToken);
+        replayRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]

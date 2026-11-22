@@ -31,7 +31,7 @@ public static class ApiClientValidatorService
             return 1;
         }
 
-        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "exec", "tsc", "--noEmit"], "the web API clients") != 0)
+        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "run", "typecheck"], "the web API clients and Vue templates") != 0)
         {
             return 1;
         }

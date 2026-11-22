@@ -12,6 +12,7 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
@@ -35,6 +36,7 @@ public static class StartupGreenlightEndpoints
 {
     public const string CertifyPermission = "ctms_greenlight:certify";
     public const string ReadPermission = "ctms_greenlight:read";
+    public const string WritePermission = "ctms_greenlight:write";
 
     public static RouteGroupBuilder MapStartupGreenlightEndpoints(this RouteGroupBuilder group)
     {
@@ -48,6 +50,26 @@ public static class StartupGreenlightEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Evaluates 6-facet greenlight readiness for a single trial site.")
             .Produces<SiteGreenlightGateResponseDto>(StatusCodes.Status200OK);
+
+        startup.MapPost("/sites/{siteId}/greenlight", InitializeSiteGreenlightAsync)
+            .WithName("InitializeSiteGreenlight")
+            .RequirePermission(WritePermission)
+            .RequireSiteScope("siteId")
+            .Produces<SiteGreenlightGateResponseDto>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .WithSummary("Initializes a 6-facet startup greenlight gate for a trial site.");
+
+        startup.MapPut("/sites/{siteId}/greenlight", UpdateSiteGreenlightAsync)
+            .WithName("UpdateSiteGreenlight")
+            .RequirePermission(WritePermission)
+            .RequireSiteScope("siteId")
+            .Produces<SiteGreenlightGateResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .WithSummary("Updates 6-facet startup greenlight readiness flags for a trial site.");
 
         startup.MapPost("/sites/{siteId}/greenlight/certify", CertifySiteGreenlightAsync)
             .WithName("CertifySiteGreenlight")
@@ -102,6 +124,210 @@ public static class StartupGreenlightEndpoints
             detail: $"No greenlight gate is recorded for site {siteId} in study {studyId}.",
             statusCode: StatusCodes.Status404NotFound);
 
+    private static bool TryResolveChangeReason(
+        HttpContext httpContext,
+        string? changeReasonHeader,
+        string? fallbackReason,
+        out string reason,
+        out ProblemHttpResult? problem)
+    {
+        reason = string.Empty;
+        problem = null;
+
+        string? rawHeader = changeReasonHeader;
+        if (string.IsNullOrWhiteSpace(rawHeader)
+            && httpContext.Request.Headers.TryGetValue(GatewayHeaders.ChangeReason, out var values))
+        {
+            rawHeader = values.ToString();
+        }
+
+        if (!string.IsNullOrWhiteSpace(rawHeader))
+        {
+            if (!ChangeReasonHeader.TryDecode(rawHeader, out var decoded) || string.IsNullOrWhiteSpace(decoded))
+            {
+                problem = TypedResults.Problem(
+                    title: "Invalid change reason",
+                    detail: "X-Change-Reason must be printable ASCII or RFC 8187 \"UTF-8''\" followed by percent-encoded UTF-8.",
+                    statusCode: StatusCodes.Status400BadRequest);
+                return false;
+            }
+
+            reason = decoded.Trim();
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(fallbackReason))
+        {
+            reason = fallbackReason.Trim();
+            return true;
+        }
+
+        problem = TypedResults.Problem(
+            title: "Reason for change required",
+            detail: "21 CFR Part 11 requires a non-empty X-Change-Reason header for startup greenlight state mutations.",
+            statusCode: StatusCodes.Status400BadRequest);
+        return false;
+    }
+
+    public static async Task<Results<Created<SiteGreenlightGateResponseDto>, ProblemHttpResult>> InitializeSiteGreenlightAsync(
+        string siteId,
+        [FromBody] SiteGreenlightUpsertRequestDto request,
+        [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
+        CtmsDbContext db,
+        HttpContext httpContext,
+        [FromServices] IClock clock,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.StudyCode))
+        {
+            return StudyRequired();
+        }
+
+        string studyId = request.StudyCode.Trim();
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        if (!TryResolveChangeReason(httpContext, changeReasonHeader, fallbackReason: null, out var reason, out var reasonProblem))
+        {
+            return reasonProblem!;
+        }
+
+        string countryCode = string.IsNullOrWhiteSpace(request.CountryCode)
+            ? "US"
+            : request.CountryCode.Trim().ToUpperInvariant();
+
+        var existing = await db.CtmsSiteGreenlightGates
+            .AsNoTracking()
+            .FirstOrDefaultAsync(g => g.StudyId == studyId && g.SiteId == siteId, ct);
+        if (existing is not null)
+        {
+            return TypedResults.Problem(
+                title: "Greenlight gate already exists",
+                detail: $"A startup greenlight gate is already recorded for site {siteId} in study {studyId}. Use PUT to update facet readiness.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
+        string actor = Signer(httpContext);
+        DateTimeOffset now = clock.UtcNow;
+
+        var gate = new CtmsSiteGreenlightGate
+        {
+            StudyId = studyId,
+            SiteId = siteId,
+            SiteName = string.IsNullOrWhiteSpace(request.SiteName) ? $"Site {siteId}" : request.SiteName.Trim(),
+            CountryCode = countryCode,
+            FacetRegulatoryIrb = request.FacetRegulatoryIrb ?? false,
+            FacetCtaBudget = request.FacetCtaBudget ?? false,
+            FacetEisfBaseline = request.FacetEisfBaseline ?? false,
+            FacetDoaLog = request.FacetDoaLog ?? false,
+            FacetStaffTraining = request.FacetStaffTraining ?? false,
+            FacetIpRelease = request.FacetIpRelease ?? false,
+            CreatedAt = now.UtcDateTime,
+            CreatedBy = actor,
+            VersionIndex = 1,
+            ReasonForChange = reason,
+        };
+        SyncGateDerivedSummary(gate);
+
+        db.CtmsSiteGreenlightGates.Add(gate);
+        db.CtmsAuditLogs.Add(new CtmsAuditLog
+        {
+            Timestamp = now,
+            UserId = actor,
+            UserRole = CallerScope.Roles(httpContext),
+            Action = "GREENLIGHT_INITIALIZED",
+            Details = $"Initialized 6-facet startup greenlight gate for site {gate.SiteId} in study {gate.StudyId} ({gate.CountryCode}) at {gate.ReadinessPercentage}% readiness.",
+            ReasonForChange = reason,
+            CreatedAt = now.UtcDateTime,
+            CreatedBy = actor,
+            VersionIndex = 1,
+        });
+
+        await db.SaveChangesAsync(ct);
+
+        string location = $"/api/v1/ctms/startup/sites/{Uri.EscapeDataString(gate.SiteId)}/greenlight?study_id={Uri.EscapeDataString(gate.StudyId)}&country_code={Uri.EscapeDataString(gate.CountryCode)}";
+        return TypedResults.Created(location, ToResponseDto(gate));
+    }
+
+    public static async Task<Results<Ok<SiteGreenlightGateResponseDto>, ProblemHttpResult>> UpdateSiteGreenlightAsync(
+        string siteId,
+        [FromBody] SiteGreenlightUpsertRequestDto request,
+        [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
+        CtmsDbContext db,
+        HttpContext httpContext,
+        [FromServices] IClock clock,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.StudyCode))
+        {
+            return StudyRequired();
+        }
+
+        string studyId = request.StudyCode.Trim();
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        if (!TryResolveChangeReason(httpContext, changeReasonHeader, fallbackReason: null, out var reason, out var reasonProblem))
+        {
+            return reasonProblem!;
+        }
+
+        var gate = await FindGateAsync(db.CtmsSiteGreenlightGates, studyId, siteId, request.CountryCode, ct);
+        if (gate is null)
+        {
+            return NoGate(siteId, studyId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.SiteName))
+        {
+            gate.SiteName = request.SiteName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.CountryCode))
+        {
+            gate.CountryCode = request.CountryCode.Trim().ToUpperInvariant();
+        }
+
+        if (request.FacetRegulatoryIrb.HasValue) gate.FacetRegulatoryIrb = request.FacetRegulatoryIrb.Value;
+        if (request.FacetCtaBudget.HasValue) gate.FacetCtaBudget = request.FacetCtaBudget.Value;
+        if (request.FacetEisfBaseline.HasValue) gate.FacetEisfBaseline = request.FacetEisfBaseline.Value;
+        if (request.FacetDoaLog.HasValue) gate.FacetDoaLog = request.FacetDoaLog.Value;
+        if (request.FacetStaffTraining.HasValue) gate.FacetStaffTraining = request.FacetStaffTraining.Value;
+        if (request.FacetIpRelease.HasValue) gate.FacetIpRelease = request.FacetIpRelease.Value;
+
+        SyncGateDerivedSummary(gate);
+        if (!IsFullyCompliant(gate) && gate.OverallStatus == CtmsGreenlightStatus.Approved)
+        {
+            gate.ResetApproval();
+        }
+
+        string actor = Signer(httpContext);
+        DateTimeOffset now = clock.UtcNow;
+        gate.ReasonForChange = reason;
+        gate.VersionIndex += 1;
+
+        db.CtmsAuditLogs.Add(new CtmsAuditLog
+        {
+            Timestamp = now,
+            UserId = actor,
+            UserRole = CallerScope.Roles(httpContext),
+            Action = "GREENLIGHT_UPDATED",
+            Details = $"Updated 6-facet startup greenlight gate for site {gate.SiteId} in study {gate.StudyId} ({gate.CountryCode}) to {gate.ReadinessPercentage}% readiness.",
+            ReasonForChange = reason,
+            CreatedAt = now.UtcDateTime,
+            CreatedBy = actor,
+            VersionIndex = 1,
+        });
+
+        await db.SaveChangesAsync(ct);
+
+        return TypedResults.Ok(ToResponseDto(gate));
+    }
+
     public static async Task<Results<Ok<SiteGreenlightGateResponseDto>, ProblemHttpResult>> GetSiteGreenlightAsync(
         string siteId,
         [FromQuery(Name = "study_id")] string studyId,
@@ -136,6 +362,11 @@ public static class StartupGreenlightEndpoints
             return scopeDenied;
         }
 
+        if (!TryResolveChangeReason(httpContext, changeReasonHeader, fallbackReason: null, out var reason, out var reasonProblem))
+        {
+            return reasonProblem!;
+        }
+
         var gate = await FindGateAsync(db.CtmsSiteGreenlightGates, studyId, siteId, countryCode, ct);
         if (gate is null)
         {
@@ -162,7 +393,7 @@ public static class StartupGreenlightEndpoints
             gate.SiteId, gate.StudyId, gate.CountryCode, signer, secret, issuedAt, expiresAt, gate.IsOverridden);
 
         gate.Approve(signer, now, token);
-        gate.ReasonForChange = changeReasonHeader ?? "Greenlight activation certified";
+        gate.ReasonForChange = reason;
 
         var auditEntry = new CtmsAuditLog
         {
@@ -170,7 +401,8 @@ public static class StartupGreenlightEndpoints
             UserId = signer,
             UserRole = CallerScope.Roles(httpContext),
             Action = "GREENLIGHT_CERTIFIED",
-            Details = $"Greenlight activation certified for site {gate.SiteId} in study {gate.StudyId} ({gate.CountryCode})"
+            Details = $"Greenlight activation certified for site {gate.SiteId} in study {gate.StudyId} ({gate.CountryCode})",
+            ReasonForChange = reason,
         };
         db.CtmsAuditLogs.Add(auditEntry);
 
@@ -238,6 +470,11 @@ public static class StartupGreenlightEndpoints
             return StudyRequired();
         }
 
+        if (!TryResolveChangeReason(httpContext, changeReasonHeader, fallbackReason: null, out var reason, out var reasonProblem))
+        {
+            return reasonProblem!;
+        }
+
         string countryCode = (request.CountryCode ?? "US").ToUpperInvariant();
         string studyId = request.StudyId;
         var siteIds = request.SiteIds.Distinct(StringComparer.Ordinal).ToList();
@@ -300,7 +537,7 @@ public static class StartupGreenlightEndpoints
                 gate.SiteId, gate.StudyId, gate.CountryCode, signer, secret, issuedAt, expiresAt, gate.IsOverridden);
 
             gate.Approve(signer, now, token);
-            gate.ReasonForChange = changeReasonHeader ?? request.Meaning ?? "21 CFR Part 11 Country-Level Batch Certification";
+            gate.ReasonForChange = reason;
 
             var auditEntry = new CtmsAuditLog
             {
@@ -308,7 +545,8 @@ public static class StartupGreenlightEndpoints
                 UserId = signer,
                 UserRole = role,
                 Action = "BATCH_GREENLIGHT_CERTIFIED",
-                Details = $"21 CFR Part 11 Batch Greenlight Certified for site {gate.SiteId} ({gate.SiteName}) in {gate.CountryCode} for study {gate.StudyId}."
+                Details = $"21 CFR Part 11 Batch Greenlight Certified for site {gate.SiteId} ({gate.SiteName}) in {gate.CountryCode} for study {gate.StudyId}.",
+                ReasonForChange = reason,
             };
             db.CtmsAuditLogs.Add(auditEntry);
 
@@ -327,11 +565,43 @@ public static class StartupGreenlightEndpoints
         return TypedResults.Ok(new BatchCertifyResponseDto(
             Success: true,
             CertifiedCount: certifiedItems.Count,
+            TotalCertified: certifiedItems.Count,
             StudyId: studyId,
             CountryCode: countryCode,
             CertifiedSites: certifiedItems,
             Message: $"Successfully batch-certified {certifiedItems.Count} sites in {countryCode} with single 21 CFR Part 11 electronic signature."
         ));
+    }
+
+    private static void SyncGateDerivedSummary(CtmsSiteGreenlightGate gate)
+    {
+        int passed = 0;
+        if (gate.FacetRegulatoryIrb) passed++;
+        if (gate.FacetCtaBudget) passed++;
+        if (gate.FacetEisfBaseline) passed++;
+        if (gate.FacetDoaLog) passed++;
+        if (gate.FacetStaffTraining) passed++;
+        if (gate.FacetIpRelease) passed++;
+
+        gate.ReadinessPercentage = gate.IsOverridden ? 100 : (int)Math.Round((passed / 6.0) * 100);
+        var unfulfilled = BuildUnfulfilledReasons(gate);
+        gate.UnfulfilledReasons = unfulfilled.Count == 0 ? null : string.Join("; ", unfulfilled);
+    }
+
+    private static List<string> BuildUnfulfilledReasons(CtmsSiteGreenlightGate gate)
+    {
+        var unfulfilled = new List<string>();
+        if (!gate.IsOverridden)
+        {
+            if (!gate.FacetRegulatoryIrb) unfulfilled.Add("Pending IRB/Regulatory Approval");
+            if (!gate.FacetCtaBudget) unfulfilled.Add("Missing Executed CTA & Budget");
+            if (!gate.FacetEisfBaseline) unfulfilled.Add("Incomplete eISF Baseline");
+            if (!gate.FacetDoaLog) unfulfilled.Add("Pending Delegation of Authority Log");
+            if (!gate.FacetStaffTraining) unfulfilled.Add("Incomplete Staff Protocol Training");
+            if (!gate.FacetIpRelease) unfulfilled.Add("Pending Investigational Product Depot Release");
+        }
+
+        return unfulfilled;
     }
 
     private static bool IsFullyCompliant(CtmsSiteGreenlightGate gate)
@@ -357,17 +627,61 @@ public static class StartupGreenlightEndpoints
         if (gate.FacetIpRelease) passed++;
 
         int percentage = gate.IsOverridden ? 100 : (int)Math.Round((passed / 6.0) * 100);
+        var unfulfilled = BuildUnfulfilledReasons(gate);
 
-        var unfulfilled = new List<string>();
-        if (!gate.IsOverridden)
+        var facets = new List<GreenlightFacetDto>
         {
-            if (!gate.FacetRegulatoryIrb) unfulfilled.Add("Pending IRB/Regulatory Approval");
-            if (!gate.FacetCtaBudget) unfulfilled.Add("Missing Executed CTA & Budget");
-            if (!gate.FacetEisfBaseline) unfulfilled.Add("Incomplete eISF Baseline");
-            if (!gate.FacetDoaLog) unfulfilled.Add("Pending Delegation of Authority Log");
-            if (!gate.FacetStaffTraining) unfulfilled.Add("Incomplete Staff Protocol Training");
-            if (!gate.FacetIpRelease) unfulfilled.Add("Pending Investigational Product Depot Release");
-        }
+            new(
+                FacetCode: "REGULATORY_IRB",
+                DisplayName: "IRB / Regulatory Approval",
+                EvidenceSummary: gate.FacetRegulatoryIrb || gate.IsOverridden
+                    ? "IRB/IEC and competent authority approvals verified"
+                    : "Pending IRB/Regulatory Approval",
+                IsSatisfied: gate.FacetRegulatoryIrb || gate.IsOverridden),
+            new(
+                FacetCode: "CTA_BUDGET",
+                DisplayName: "Clinical Trial Agreement & Budget",
+                EvidenceSummary: gate.FacetCtaBudget || gate.IsOverridden
+                    ? "Executed Clinical Trial Agreement and investigator budget on file"
+                    : "Missing Executed CTA & Budget",
+                IsSatisfied: gate.FacetCtaBudget || gate.IsOverridden),
+            new(
+                FacetCode: "EISF_BASELINE",
+                DisplayName: "eISF Baseline Package",
+                EvidenceSummary: gate.FacetEisfBaseline || gate.IsOverridden
+                    ? "Essential baseline site documents QC-approved in eTMF"
+                    : "Incomplete eISF Baseline",
+                IsSatisfied: gate.FacetEisfBaseline || gate.IsOverridden),
+            new(
+                FacetCode: "DOA_LOG",
+                DisplayName: "Delegation of Authority Log",
+                EvidenceSummary: gate.FacetDoaLog || gate.IsOverridden
+                    ? "Principal Investigator Delegation of Authority log active"
+                    : "Pending Delegation of Authority Log",
+                IsSatisfied: gate.FacetDoaLog || gate.IsOverridden),
+            new(
+                FacetCode: "STAFF_TRAINING",
+                DisplayName: "Protocol Staff Training",
+                EvidenceSummary: gate.FacetStaffTraining || gate.IsOverridden
+                    ? "Delegated site staff protocol curriculum completed"
+                    : "Incomplete Staff Protocol Training",
+                IsSatisfied: gate.FacetStaffTraining || gate.IsOverridden),
+            new(
+                FacetCode: "IP_RELEASE",
+                DisplayName: "Investigational Product Release",
+                EvidenceSummary: gate.FacetIpRelease || gate.IsOverridden
+                    ? "Investigational product depot release authorized"
+                    : "Pending Investigational Product Depot Release",
+                IsSatisfied: gate.FacetIpRelease || gate.IsOverridden),
+        };
+
+        string? certifiedAtIso = gate.GreenlightCertifiedAt?.ToString("o");
+        string evaluatedAtIso = gate.GreenlightCertifiedAt?.ToString("o")
+            ?? new DateTimeOffset(DateTime.SpecifyKind(
+                gate.CreatedAt == default ? DateTime.UnixEpoch : gate.CreatedAt,
+                DateTimeKind.Utc)).ToString("o");
+        bool isCertified = gate.OverallStatus == CtmsGreenlightStatus.Approved
+            || !string.IsNullOrWhiteSpace(gate.GreenlightToken);
 
         return new SiteGreenlightGateResponseDto(
             Id: gate.Id,
@@ -384,10 +698,16 @@ public static class StartupGreenlightEndpoints
             FacetStaffTraining: gate.FacetStaffTraining,
             FacetIpRelease: gate.FacetIpRelease,
             IsCompliant: compliant,
+            IsReadyForCertification: compliant && !isCertified,
             GreenlightToken: gate.GreenlightToken,
             GreenlightCertifiedBy: gate.GreenlightCertifiedBy,
-            GreenlightCertifiedAt: gate.GreenlightCertifiedAt?.ToString("o"),
+            GreenlightCertifiedAt: certifiedAtIso,
+            CertifiedBy: gate.GreenlightCertifiedBy,
+            CertifiedAt: certifiedAtIso,
+            EvaluatedAt: evaluatedAtIso,
             IsOverridden: gate.IsOverridden,
+            Facets: facets,
+            BlockingReasons: unfulfilled,
             UnfulfilledReasons: unfulfilled
         );
     }
@@ -446,6 +766,25 @@ public static class GreenlightTokenGenerator
     }
 }
 
+public record GreenlightFacetDto(
+    [property: JsonPropertyName("facet_code")] string FacetCode,
+    [property: JsonPropertyName("display_name")] string DisplayName,
+    [property: JsonPropertyName("evidence_summary")] string EvidenceSummary,
+    [property: JsonPropertyName("is_satisfied")] bool IsSatisfied
+);
+
+public record SiteGreenlightUpsertRequestDto(
+    [property: JsonPropertyName("study_id")] string StudyCode,
+    [property: JsonPropertyName("country_code")] string? CountryCode = null,
+    [property: JsonPropertyName("site_name")] string? SiteName = null,
+    [property: JsonPropertyName("facet_regulatory_irb")] bool? FacetRegulatoryIrb = null,
+    [property: JsonPropertyName("facet_cta_budget")] bool? FacetCtaBudget = null,
+    [property: JsonPropertyName("facet_eisf_baseline")] bool? FacetEisfBaseline = null,
+    [property: JsonPropertyName("facet_doa_log")] bool? FacetDoaLog = null,
+    [property: JsonPropertyName("facet_staff_training")] bool? FacetStaffTraining = null,
+    [property: JsonPropertyName("facet_ip_release")] bool? FacetIpRelease = null
+);
+
 public record SiteGreenlightGateResponseDto(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("study_id")] string StudyId,
@@ -461,10 +800,16 @@ public record SiteGreenlightGateResponseDto(
     [property: JsonPropertyName("facet_staff_training")] bool FacetStaffTraining,
     [property: JsonPropertyName("facet_ip_release")] bool FacetIpRelease,
     [property: JsonPropertyName("is_compliant")] bool IsCompliant,
+    [property: JsonPropertyName("is_ready_for_certification")] bool IsReadyForCertification,
     [property: JsonPropertyName("greenlight_token")] string? GreenlightToken,
     [property: JsonPropertyName("greenlight_certified_by")] string? GreenlightCertifiedBy,
     [property: JsonPropertyName("greenlight_certified_at")] string? GreenlightCertifiedAt,
+    [property: JsonPropertyName("certified_by")] string? CertifiedBy,
+    [property: JsonPropertyName("certified_at")] string? CertifiedAt,
+    [property: JsonPropertyName("evaluated_at")] string EvaluatedAt,
     [property: JsonPropertyName("is_overridden")] bool IsOverridden,
+    [property: JsonPropertyName("facets")] List<GreenlightFacetDto> Facets,
+    [property: JsonPropertyName("blocking_reasons")] List<string> BlockingReasons,
     [property: JsonPropertyName("unfulfilled_reasons")] List<string>? UnfulfilledReasons
 );
 
@@ -487,6 +832,7 @@ public record CertifiedSiteItemDto(
 public record BatchCertifyResponseDto(
     [property: JsonPropertyName("success")] bool Success,
     [property: JsonPropertyName("certified_count")] int CertifiedCount,
+    [property: JsonPropertyName("total_certified")] int TotalCertified,
     [property: JsonPropertyName("study_id")] string StudyId,
     [property: JsonPropertyName("country_code")] string CountryCode,
     [property: JsonPropertyName("certified_sites")] List<CertifiedSiteItemDto> CertifiedSites,

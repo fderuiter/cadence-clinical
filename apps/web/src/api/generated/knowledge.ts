@@ -111,7 +111,7 @@ export interface paths {
     };
     get: operations["ListCurricula"];
     put?: never;
-    post?: never;
+    post: operations["CreateCurriculum"];
     delete?: never;
     options?: never;
     head?: never;
@@ -176,6 +176,22 @@ export interface paths {
     get: operations["GetAssignmentDetail"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/training/assignments/{assignment_id}/complete": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["CompleteTrainingAssignment"];
     delete?: never;
     options?: never;
     head?: never;
@@ -266,6 +282,13 @@ export interface components {
       /** Format: date-time */
       executed_at: string;
     };
+    Knowledge_CompleteTrainingAssignmentRequest: {
+      /** Format: double */
+      quiz_score: null | number | string;
+      /** Format: int32 */
+      time_spent_seconds: null | number | string;
+      reason_for_change: null | string;
+    };
     Knowledge_ContextualHelpMappingDto: {
       id: string;
       route_pattern: string;
@@ -285,6 +308,25 @@ export interface components {
         null | components["schemas"]["Knowledge_KnowledgeArticleVersionDto"];
       section_anchor: null | string;
       related_articles: components["schemas"]["Knowledge_KnowledgeArticleDto"][];
+    };
+    Knowledge_CreateTrainingCurriculumRequest: {
+      study_id: string;
+      protocol_version: string;
+      title: string;
+      description: null | string;
+      is_active: null | boolean;
+      modules:
+        null | components["schemas"]["Knowledge_CreateTrainingModuleRequest"][];
+      reason_for_change: null | string;
+    };
+    Knowledge_CreateTrainingModuleRequest: {
+      title: string;
+      module_type: null | string;
+      content_text: string;
+      /** Format: int32 */
+      sequence_order: null | number | string;
+      /** Format: int32 */
+      min_reading_time_seconds: null | number | string;
     };
     Knowledge_DelegationSummaryDto: {
       id: string;
@@ -391,6 +433,8 @@ export interface components {
       completed_at: null | string;
       /** Format: date-time */
       created_at: string;
+      curriculum?:
+        null | components["schemas"]["Knowledge_TrainingCurriculumDto"];
     };
     Knowledge_TrainingCurriculumDto: {
       id: string;
@@ -401,6 +445,18 @@ export interface components {
       is_active: boolean;
       /** Format: date-time */
       created_at: string;
+      modules?: null | components["schemas"]["Knowledge_TrainingModuleDto"][];
+    };
+    Knowledge_TrainingModuleDto: {
+      id: string;
+      curriculum_id: string;
+      title: string;
+      module_type: string;
+      content_text: string;
+      /** Format: int32 */
+      sequence_order: number | string;
+      /** Format: int32 */
+      min_reading_time_seconds: number | string;
     };
   };
   responses: never;
@@ -584,6 +640,57 @@ export interface operations {
       };
     };
   };
+  CreateCurriculum: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Knowledge_CreateTrainingCurriculumRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Knowledge_TrainingCurriculumDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+    };
+  };
   GetCurriculum: {
     parameters: {
       query?: never;
@@ -758,6 +865,68 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+    };
+  };
+  CompleteTrainingAssignment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Knowledge_CompleteTrainingAssignmentRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Knowledge_TrainingAssignmentDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

@@ -132,7 +132,19 @@ public static class MonitoringVisitEndpoints
             .ToListAsync(ct);
 
         var scopedVisits = CtmsScopeGuard.ApplyFilters(visits, studyFilter, v => v.StudyId, siteFilter, v => v.SiteId);
-        var dtos = scopedVisits.Select(ToResponseDto).ToList();
+        var visitIds = scopedVisits.Select(v => v.Id).ToList();
+        var findingsLookup = visitIds.Count == 0
+            ? new Dictionary<string, List<MonitoringFindingResponseDto>>(StringComparer.Ordinal)
+            : (await db.CtmsMonitoringVisitFindings.AsNoTracking()
+                .Where(f => visitIds.Contains(f.VisitId))
+                .OrderBy(f => f.CreatedAt)
+                .ToListAsync(ct))
+                .GroupBy(f => f.VisitId, StringComparer.Ordinal)
+                .ToDictionary(g => g.Key, g => g.Select(ToFindingResponseDto).ToList(), StringComparer.Ordinal);
+
+        var dtos = scopedVisits
+            .Select(v => ToResponseDto(v, findingsLookup.TryGetValue(v.Id, out var vf) ? vf : []))
+            .ToList();
         return TypedResults.Ok(dtos);
     }
 
@@ -269,10 +281,9 @@ public static class MonitoringVisitEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        int findingsCount = 0;
+        var createdFindings = new List<CtmsMonitoringVisitFinding>();
         if (request.Findings is { Count: > 0 })
         {
-            findingsCount = request.Findings.Count;
             foreach (var finding in request.Findings)
             {
                 var findingEntity = new CtmsMonitoringVisitFinding
@@ -287,9 +298,11 @@ public static class MonitoringVisitEndpoints
                     VersionIndex = 1
                 };
                 db.CtmsMonitoringVisitFindings.Add(findingEntity);
+                createdFindings.Add(findingEntity);
             }
         }
 
+        int findingsCount = createdFindings.Count;
         var auditEntry = new CtmsAuditLog
         {
             Timestamp = now,
@@ -306,7 +319,12 @@ public static class MonitoringVisitEndpoints
 
         await db.SaveChangesAsync(ct);
 
-        return TypedResults.Ok(ToResponseDto(visit));
+        var allFindings = await db.CtmsMonitoringVisitFindings.AsNoTracking()
+            .Where(f => f.VisitId == visit.Id)
+            .OrderBy(f => f.CreatedAt)
+            .ToListAsync(ct);
+
+        return TypedResults.Ok(ToResponseDto(visit, allFindings.Select(ToFindingResponseDto).ToList()));
     }
 
     public static async Task<IResult> SignOffMonitoringVisitAsync(
@@ -401,7 +419,13 @@ public static class MonitoringVisitEndpoints
             }
         }
 
-        return TypedResults.Ok(ToResponseDto(visit));
+        var visitFindings = await db.CtmsMonitoringVisitFindings
+            .AsNoTracking()
+            .Where(f => f.VisitId == visit.Id)
+            .OrderBy(f => f.CreatedAt)
+            .ToListAsync(ct);
+
+        return TypedResults.Ok(ToResponseDto(visit, visitFindings.Select(ToFindingResponseDto).ToList()));
     }
 
     public static async Task<IResult> GetMonitoringVisitLettersAsync(
@@ -434,7 +458,7 @@ public static class MonitoringVisitEndpoints
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
 
-        var dtos = letters.Select(ToLetterResponseDto).ToList();
+        var dtos = letters.Select(l => ToLetterResponseDto(l, visit)).ToList();
         return TypedResults.Ok(dtos);
     }
 
@@ -477,7 +501,7 @@ public static class MonitoringVisitEndpoints
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        return TypedResults.Ok(ToLetterResponseDto(letter));
+        return TypedResults.Ok(ToLetterResponseDto(letter, visit));
     }
 
     public static bool TryExtractReasonForChange(
@@ -532,7 +556,18 @@ public static class MonitoringVisitEndpoints
         return (user, role);
     }
 
-    public static MonitoringVisitResponseDto ToResponseDto(CtmsMonitoringVisit visit) =>
+    public static MonitoringFindingResponseDto ToFindingResponseDto(CtmsMonitoringVisitFinding finding) =>
+        new(
+            Id: finding.Id,
+            VisitId: finding.VisitId,
+            Text: finding.Text,
+            Severity: finding.Severity,
+            ResolutionStatus: finding.ResolutionStatus
+        );
+
+    public static MonitoringVisitResponseDto ToResponseDto(
+        CtmsMonitoringVisit visit,
+        List<MonitoringFindingResponseDto>? findings = null) =>
         new(
             Id: visit.Id,
             Study: visit.StudyId,
@@ -548,21 +583,57 @@ public static class MonitoringVisitEndpoints
             VersionIndex: visit.VersionIndex,
             SignatureManifestation: visit.SignatureManifestation,
             Signer: visit.Signer,
-            SigningTimestamp: visit.SigningTimestamp?.ToString("o")
+            SigningTimestamp: visit.SigningTimestamp?.ToString("o"),
+            Findings: findings ?? []
         );
 
-    public static GeneratedLetterResponseDto ToLetterResponseDto(CtmsGeneratedLetter letter) =>
+    private static string FormatLetterSubject(CtmsGeneratedLetter letter, CtmsMonitoringVisit? visit)
+    {
+        string typeTitle = letter.LetterType switch
+        {
+            "confirmation_letter" => "Confirmation of Clinical Monitoring Visit",
+            "follow_up_letter" => "Clinical Monitoring Visit Follow-Up Letter",
+            _ => letter.LetterType.Replace('_', ' '),
+        };
+        string studyId = !string.IsNullOrWhiteSpace(letter.StudyCode) ? letter.StudyCode : (visit?.StudyId ?? string.Empty);
+        string siteId = !string.IsNullOrWhiteSpace(letter.SiteCode) ? letter.SiteCode : (visit?.SiteId ?? string.Empty);
+        if (!string.IsNullOrWhiteSpace(studyId) && !string.IsNullOrWhiteSpace(siteId))
+        {
+            return $"{typeTitle} — {studyId} / {siteId}";
+        }
+
+        return typeTitle;
+    }
+
+    public static GeneratedLetterResponseDto ToLetterResponseDto(CtmsGeneratedLetter letter, CtmsMonitoringVisit? visit = null) =>
         new(
             Id: letter.Id,
             VisitId: letter.VisitId,
             LetterType: letter.LetterType,
+            Subject: FormatLetterSubject(letter, visit),
+            BodyMarkdown: letter.RenderedContent,
             RenderedContent: letter.RenderedContent,
+            StudyCode: !string.IsNullOrWhiteSpace(letter.StudyCode) ? letter.StudyCode : (visit?.StudyId ?? string.Empty),
+            SiteCode: !string.IsNullOrWhiteSpace(letter.SiteCode) ? letter.SiteCode : (visit?.SiteId ?? string.Empty),
+            Status: letter.Status.ToString().ToUpperInvariant(),
+            IsSigned: letter.IsSigned,
+            EtmfDocumentId: letter.EtmfDocumentId,
+            PdfSha256Hash: letter.PdfSha256Hash,
+            PdfAccessUrl: $"/api/v1/ctms/letters/{letter.Id}/pdf",
             CreatedAt: letter.CreatedAt.ToString("o"),
             CreatedBy: letter.CreatedBy,
             ReasonForChange: letter.ReasonForChange,
             VersionIndex: letter.VersionIndex
         );
 }
+
+public record MonitoringFindingResponseDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("visit_id")] string VisitId,
+    [property: JsonPropertyName("text")] string Text,
+    [property: JsonPropertyName("severity")] string Severity,
+    [property: JsonPropertyName("resolution_status")] string ResolutionStatus
+);
 
 public record MonitoringVisitResponseDto(
     [property: JsonPropertyName("id")] string Id,
@@ -579,7 +650,8 @@ public record MonitoringVisitResponseDto(
     [property: JsonPropertyName("version_index")] long VersionIndex,
     [property: JsonPropertyName("signature_manifestation")] string? SignatureManifestation = null,
     [property: JsonPropertyName("signer")] string? Signer = null,
-    [property: JsonPropertyName("signing_timestamp")] string? SigningTimestamp = null
+    [property: JsonPropertyName("signing_timestamp")] string? SigningTimestamp = null,
+    [property: JsonPropertyName("findings")] List<MonitoringFindingResponseDto>? Findings = null
 );
 
 public record MonitoringVisitCreateDto(
@@ -607,7 +679,16 @@ public record GeneratedLetterResponseDto(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("visit_id")] string VisitId,
     [property: JsonPropertyName("letter_type")] string LetterType,
+    [property: JsonPropertyName("subject")] string Subject,
+    [property: JsonPropertyName("body_markdown")] string BodyMarkdown,
     [property: JsonPropertyName("rendered_content")] string RenderedContent,
+    [property: JsonPropertyName("study_id")] string StudyCode,
+    [property: JsonPropertyName("site_id")] string SiteCode,
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("is_signed")] bool IsSigned,
+    [property: JsonPropertyName("etmf_document_id")] string? EtmfDocumentId,
+    [property: JsonPropertyName("pdf_sha256_hash")] string? PdfSha256Hash,
+    [property: JsonPropertyName("pdf_access_url")] string PdfAccessUrl,
     [property: JsonPropertyName("created_at")] string CreatedAt,
     [property: JsonPropertyName("created_by")] string CreatedBy,
     [property: JsonPropertyName("reason_for_change")] string ReasonForChange,

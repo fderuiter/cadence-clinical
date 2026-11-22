@@ -117,6 +117,21 @@ public class TrainingCurriculum
     public string ReasonForChange { get; set; } = string.Empty;
 }
 
+public class TrainingCurriculumModule
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string CurriculumId { get; set; } = string.Empty;
+    public int SequenceOrder { get; set; } = 1;
+    public string Title { get; set; } = string.Empty;
+    public string ModuleType { get; set; } = "PROTOCOL_DELTA";
+    public string ContentText { get; set; } = string.Empty;
+    public int MinReadingTimeSeconds { get; set; } = 45;
+    public required DateTimeOffset CreatedAt { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+    public int VersionIndex { get; set; } = 1;
+}
+
 public class TrainingAssignment
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();

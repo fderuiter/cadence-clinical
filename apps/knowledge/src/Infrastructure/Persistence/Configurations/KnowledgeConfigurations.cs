@@ -126,3 +126,22 @@ public class ProtocolKnowledgeChunkConfiguration : IEntityTypeConfiguration<Prot
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }
 }
+
+public class TrainingCurriculumModuleConfiguration : IEntityTypeConfiguration<TrainingCurriculumModule>
+{
+    public void Configure(EntityTypeBuilder<TrainingCurriculumModule> builder)
+    {
+        builder.ToTable("training_curriculum_modules");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(100);
+        builder.Property(x => x.CurriculumId).HasMaxLength(100).IsRequired();
+        builder.HasIndex(x => x.CurriculumId);
+        builder.HasIndex(x => new { x.CurriculumId, x.SequenceOrder });
+        builder.Property(x => x.Title).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.ModuleType).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.ContentText).IsRequired();
+        builder.Property(x => x.MinReadingTimeSeconds);
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+    }
+}

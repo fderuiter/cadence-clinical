@@ -377,11 +377,34 @@ public sealed class MonitoringVisitEndpointsTests
         var okList = listResult.Should().BeOfType<Ok<List<GeneratedLetterResponseDto>>>().Subject;
         okList.Value.Should().HaveCount(1);
         okList.Value![0].LetterType.Should().Be("confirmation_letter");
+        okList.Value[0].Subject.Should().Contain("Confirmation of Clinical Monitoring Visit");
+        okList.Value[0].BodyMarkdown.Should().Contain("Confirmation Letter");
 
         var itemResult = await MonitoringVisitEndpoints.GetMonitoringVisitLetterByTypeAsync(
             "VISIT-001", "confirmation_letter", _db, caller, TestContext.Current.CancellationToken);
         var okItem = itemResult.Should().BeOfType<Ok<GeneratedLetterResponseDto>>().Subject;
         okItem.Value!.Id.Should().Be("LTR-001");
+        okItem.Value.StudyCode.Should().Be(StudyId);
+        okItem.Value.SiteCode.Should().Be(SiteId);
+
+        _db.CtmsMonitoringVisitFindings.Add(new CtmsMonitoringVisitFinding
+        {
+            VisitId = "VISIT-001",
+            Text = "ICF version mismatch on Subject 004",
+            Severity = "MAJOR",
+            ResolutionStatus = "OPEN",
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+            CreatedBy = "cra-1",
+            ReasonForChange = "Recorded during IMV",
+            VersionIndex = 1
+        });
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var visitsResult = await MonitoringVisitEndpoints.GetMonitoringVisitsAsync(
+            StudyId, SiteId, null, null, _db, caller, TestContext.Current.CancellationToken);
+        var visitsOk = visitsResult.Should().BeOfType<Ok<List<MonitoringVisitResponseDto>>>().Subject;
+        visitsOk.Value.Should().ContainSingle(v => v.Id == "VISIT-001")
+            .Which.Findings.Should().ContainSingle(f => f.Text == "ICF version mismatch on Subject 004" && f.Severity == "MAJOR");
 
         var missingResult = await MonitoringVisitEndpoints.GetMonitoringVisitLetterByTypeAsync(
             "VISIT-001", "follow_up_letter", _db, caller, TestContext.Current.CancellationToken);

@@ -7,6 +7,7 @@ Generated from `docs/openapi/etmf_openapi.json` by `pnpm cadence generate-api-do
 | `GET` | `/api/v1/etmf/documents` |  |  |
 | `POST` | `/api/v1/etmf/documents/export` |  |  |
 | `GET` | `/api/v1/etmf/documents/{document_id}` |  |  |
+| `POST` | `/api/v1/etmf/documents/{document_id}/stage-qc` | StageExistingDocumentForQc |  |
 | `GET` | `/api/v1/etmf/export-jobs` |  |  |
 | `GET` | `/api/v1/etmf/export-jobs/{job_id}` |  |  |
 | `GET` | `/api/v1/etmf/export-jobs/{job_id}/download` |  |  |

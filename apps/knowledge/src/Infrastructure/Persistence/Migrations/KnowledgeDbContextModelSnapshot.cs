@@ -730,6 +730,68 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                     b.ToTable("TrainingCurricula");
                 });
 
+            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.TrainingCurriculumModule", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ContentText")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("CurriculumId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("MinReadingTimeSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ModuleType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("SequenceOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("VersionIndex")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CurriculumId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("CurriculumId", "SequenceOrder");
+
+                    b.ToTable("training_curriculum_modules", (string)null);
+                });
+
             modelBuilder.Entity("Cadence.Core.Domain.Audit.AuditLogEntry", b =>
                 {
                     b.Property<Guid>("Id")

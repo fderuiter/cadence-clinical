@@ -59,6 +59,8 @@
       <div class="gate-header">
         <div>
           <strong>Site {{ singleGate.site_id }}</strong>
+          <span v-if="singleGate.site_name" class="meta-sep">·</span>
+          <span v-if="singleGate.site_name">{{ singleGate.site_name }}</span>
           <span class="meta-sep">·</span>
           <span>{{ singleGate.country_code }}</span>
         </div>
@@ -95,7 +97,7 @@
       <div
         v-if="
           singleGate.is_ready_for_certification &&
-          singleGate.overall_status !== 'CERTIFIED' &&
+          !isGateCertified(singleGate.overall_status) &&
           canCertify
         "
         class="certify-box"
@@ -122,7 +124,7 @@
       <p
         v-else-if="
           singleGate.is_ready_for_certification &&
-          singleGate.overall_status !== 'CERTIFIED' &&
+          !isGateCertified(singleGate.overall_status) &&
           !canCertify
         "
         id="greenlight-readonly-note"
@@ -132,6 +134,120 @@
         Management or System Administrator authorization.
       </p>
     </div>
+
+    <form
+      v-if="
+        loaded &&
+        siteInput.trim() &&
+        canWrite &&
+        (missingSiteGate ||
+          (singleGate && !isGateCertified(singleGate.overall_status)))
+      "
+      id="greenlight-upsert-form"
+      class="gate-card"
+      @submit.prevent="saveSiteGate"
+    >
+      <h4 class="subsection-title">
+        {{
+          missingSiteGate
+            ? `Initialize startup greenlight gate for ${siteInput.trim()}`
+            : `Update 6-facet readiness for ${siteInput.trim()}`
+        }}
+      </h4>
+      <p v-if="missingSiteGate" class="muted-status">
+        No startup greenlight gate has been initialized yet for
+        {{ siteInput.trim() }} in {{ studyInput.trim() }}.
+      </p>
+      <div class="certify-box">
+        <label for="greenlight-site-name">Site name</label>
+        <input
+          id="greenlight-site-name"
+          v-model="upsertForm.siteName"
+          type="text"
+          placeholder="Clinical research center name"
+        />
+      </div>
+      <div class="facet-toggle-grid">
+        <label for="facet-reg-irb" class="facet-toggle-item">
+          <input
+            id="facet-reg-irb"
+            v-model="upsertForm.facetRegulatoryIrb"
+            type="checkbox"
+          />
+          <span>Regulatory &amp; IRB / Ethics</span>
+        </label>
+        <label for="facet-cta-budget" class="facet-toggle-item">
+          <input
+            id="facet-cta-budget"
+            v-model="upsertForm.facetCtaBudget"
+            type="checkbox"
+          />
+          <span>CTA &amp; Budget Schedule</span>
+        </label>
+        <label for="facet-eisf-baseline" class="facet-toggle-item">
+          <input
+            id="facet-eisf-baseline"
+            v-model="upsertForm.facetEisfBaseline"
+            type="checkbox"
+          />
+          <span>eISF Baseline Documents</span>
+        </label>
+        <label for="facet-doa-log" class="facet-toggle-item">
+          <input
+            id="facet-doa-log"
+            v-model="upsertForm.facetDoaLog"
+            type="checkbox"
+          />
+          <span>Delegation of Authority (DOA) Log</span>
+        </label>
+        <label for="facet-staff-training" class="facet-toggle-item">
+          <input
+            id="facet-staff-training"
+            v-model="upsertForm.facetStaffTraining"
+            type="checkbox"
+          />
+          <span>Protocol &amp; GCP Staff Training</span>
+        </label>
+        <label for="facet-ip-release" class="facet-toggle-item">
+          <input
+            id="facet-ip-release"
+            v-model="upsertForm.facetIpRelease"
+            type="checkbox"
+          />
+          <span>IP Depot Greenlight Release</span>
+        </label>
+      </div>
+      <div class="certify-box">
+        <label for="greenlight-upsert-reason">Reason for change</label>
+        <input
+          id="greenlight-upsert-reason"
+          v-model="upsertForm.reasonForChange"
+          type="text"
+          placeholder="Document evidence justification for startup facet readiness"
+        />
+        <button
+          id="btn-save-site-greenlight"
+          type="submit"
+          class="btn btn-primary"
+          :disabled="!upsertForm.reasonForChange.trim() || savingGate"
+        >
+          {{
+            savingGate
+              ? "Saving..."
+              : missingSiteGate
+                ? `Initialize ${siteInput.trim()}`
+                : `Update ${siteInput.trim()} readiness`
+          }}
+        </button>
+      </div>
+    </form>
+    <p
+      v-else-if="loaded && missingSiteGate && !canWrite"
+      id="greenlight-write-role-note"
+      class="readonly-note"
+    >
+      {{ GREENLIGHT_WRITE_ROLE_REASON }}
+    </p>
 
     <div v-if="loaded" class="matrix-block">
       <h4 class="subsection-title">
@@ -165,7 +281,7 @@
                     :value="row.site_id"
                     :disabled="
                       !row.is_ready_for_certification ||
-                      row.overall_status === 'CERTIFIED'
+                      isGateCertified(row.overall_status)
                     "
                     :aria-label="`Select ${row.site_id} for batch certification`"
                   />
@@ -238,9 +354,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { ctmsApi, type SiteGreenlightGate } from "../../api/ctmsApi";
-import { canCertifyGreenlight } from "../../canvas/authority";
+import {
+  GREENLIGHT_WRITE_ROLE_REASON,
+  canCertifyGreenlight,
+  canWriteGreenlight,
+} from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
@@ -278,13 +398,52 @@ const {
 });
 
 const canCertify = computed(() => canCertifyGreenlight(authStore));
+const canWrite = computed(() => canWriteGreenlight(authStore));
 const countryCode = ref("US");
 const singleGate = ref<SiteGreenlightGate | null>(null);
+const missingSiteGate = ref(false);
 const countryMatrix = ref<SiteGreenlightGate[]>([]);
 const selectedMatrixSites = ref<string[]>([]);
 const certifyReason = ref("");
 const batchReason = ref("");
 const certifying = ref(false);
+const savingGate = ref(false);
+
+const upsertForm = reactive({
+  siteName: "",
+  facetRegulatoryIrb: false,
+  facetCtaBudget: false,
+  facetEisfBaseline: false,
+  facetDoaLog: false,
+  facetStaffTraining: false,
+  facetIpRelease: false,
+  reasonForChange: "",
+});
+
+function isGateCertified(status?: string | null): boolean {
+  const norm = (status || "").toUpperCase();
+  return norm === "APPROVED" || norm === "CERTIFIED" || norm === "OVERRIDDEN";
+}
+
+function syncUpsertForm(gate: SiteGreenlightGate | null, siteCode: string) {
+  if (gate) {
+    upsertForm.siteName = gate.site_name || siteCode;
+    upsertForm.facetRegulatoryIrb = Boolean(gate.facet_regulatory_irb);
+    upsertForm.facetCtaBudget = Boolean(gate.facet_cta_budget);
+    upsertForm.facetEisfBaseline = Boolean(gate.facet_eisf_baseline);
+    upsertForm.facetDoaLog = Boolean(gate.facet_doa_log);
+    upsertForm.facetStaffTraining = Boolean(gate.facet_staff_training);
+    upsertForm.facetIpRelease = Boolean(gate.facet_ip_release);
+  } else {
+    upsertForm.siteName = siteCode ? `Clinical Site ${siteCode}` : "";
+    upsertForm.facetRegulatoryIrb = false;
+    upsertForm.facetCtaBudget = false;
+    upsertForm.facetEisfBaseline = false;
+    upsertForm.facetDoaLog = false;
+    upsertForm.facetStaffTraining = false;
+    upsertForm.facetIpRelease = false;
+  }
+}
 
 function formatUtcDate(iso?: string | null): string {
   if (!iso) return "";
@@ -302,19 +461,38 @@ async function loadReadiness() {
   loadError.value = "";
   scopeGuidance.value = "";
   selectedMatrixSites.value = [];
+  missingSiteGate.value = false;
 
   try {
-    const matrixPromise = ctmsApi.getCountryGreenlightMatrix(
+    const matrix = await ctmsApi.getCountryGreenlightMatrix(
       study,
       countryCode.value
     );
-    const gatePromise = site
-      ? ctmsApi.evaluateSiteGreenlight(site, study, countryCode.value)
-      : Promise.resolve(null);
-
-    const [matrix, gate] = await Promise.all([matrixPromise, gatePromise]);
     countryMatrix.value = matrix || [];
-    singleGate.value = gate;
+
+    if (site) {
+      try {
+        const gate = await ctmsApi.evaluateSiteGreenlight(
+          site,
+          study,
+          countryCode.value
+        );
+        singleGate.value = gate;
+        syncUpsertForm(gate, site);
+      } catch (gateErr) {
+        const status = (gateErr as { status?: number } | null)?.status;
+        if (status === 404) {
+          singleGate.value = null;
+          missingSiteGate.value = true;
+          syncUpsertForm(null, site);
+        } else {
+          throw gateErr;
+        }
+      }
+    } else {
+      singleGate.value = null;
+    }
+
     loaded.value = true;
   } catch (err) {
     singleGate.value = null;
@@ -322,6 +500,48 @@ async function loadReadiness() {
     recordLoadFailure(err, study, site);
   } finally {
     loading.value = false;
+  }
+}
+
+async function saveSiteGate() {
+  const study = studyInput.value.trim();
+  const site = siteInput.value.trim();
+  const reason = upsertForm.reasonForChange.trim();
+  if (!study || !site || !reason || !canWrite.value) {
+    return;
+  }
+
+  savingGate.value = true;
+  try {
+    const payload = {
+      study_id: study,
+      country_code: countryCode.value,
+      site_name: upsertForm.siteName.trim() || `Clinical Site ${site}`,
+      facet_regulatory_irb: upsertForm.facetRegulatoryIrb,
+      facet_cta_budget: upsertForm.facetCtaBudget,
+      facet_eisf_baseline: upsertForm.facetEisfBaseline,
+      facet_doa_log: upsertForm.facetDoaLog,
+      facet_staff_training: upsertForm.facetStaffTraining,
+      facet_ip_release: upsertForm.facetIpRelease,
+    };
+
+    const saved = missingSiteGate.value
+      ? await ctmsApi.initializeSiteGreenlight(site, payload, reason)
+      : await ctmsApi.updateSiteGreenlight(site, payload, reason);
+
+    singleGate.value = saved;
+    missingSiteGate.value = false;
+    upsertForm.reasonForChange = "";
+    toasts.push({
+      tone: "success",
+      title: `Site ${saved.site_id} readiness saved`,
+      message: "Startup greenlight facets recorded.",
+    });
+    await loadReadiness();
+  } catch (err) {
+    toasts.apiError("Startup greenlight update failed", err);
+  } finally {
+    savingGate.value = false;
   }
 }
 
@@ -369,6 +589,7 @@ async function certifyBatch() {
         study_id: study,
         country_code: countryCode.value,
         site_ids: selectedMatrixSites.value,
+        meaning: "Country-level startup greenlight certification",
       },
       batchReason.value.trim()
     );
@@ -424,7 +645,9 @@ onMounted(() => {
   text-transform: uppercase;
 }
 
+.gate-approved,
 .gate-certified,
+.gate-overridden,
 .gate-ready {
   background: var(--semantic-color-success-bg);
   color: var(--semantic-color-success-dark);
@@ -454,6 +677,24 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   font-size: 0.88rem;
+}
+
+.facet-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.facet-toggle-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 6px;
+  font-size: 0.86rem;
+  font-weight: 500;
 }
 
 .facet-name {

@@ -196,6 +196,91 @@ public class TrainingEndpointsTests
     }
 
     [Fact]
+    public async Task CreateCurriculum_BatchAssign_AndCompleteAssignment_UnifiesTrainingLifecycle()
+    {
+        using var db = CreateDbContext(nameof(CreateCurriculum_BatchAssign_AndCompleteAssignment_UnifiesTrainingLifecycle));
+        await SeedStaffAsync(db, ("crc-1", "SITE-101", "Clinical Research Coordinator"));
+
+        var createCaller = Caller(Study);
+        createCaller.Request.Headers["X-Change-Reason"] = "Publish Protocol v4.0 curriculum";
+        var createReq = new CreateTrainingCurriculumRequest(
+            StudyCode: Study,
+            ProtocolVersion: "4.0",
+            Title: "Protocol v4.0 Amendment Training",
+            Description: "Updated eligibility and dosing schedule",
+            IsActive: true,
+            Modules:
+            [
+                new CreateTrainingModuleRequest("Eligibility Updates", "PROTOCOL_DELTA", "Inclusion criteria updated for cohort B.", 1, 60),
+                new CreateTrainingModuleRequest("Safety Reporting", "SAFETY", "Expedited SAE window clarified.", 2, 45),
+            ],
+            ReasonForChange: "Publish Protocol v4.0 curriculum");
+
+        var createRes = await Invoke("CreateCurriculumAsync", createReq, db, createCaller, _clock, Ct);
+        var createdCurr = createRes.Should().BeOfType<Created<TrainingCurriculumDto>>().Which.Value!;
+        createdCurr.StudyId.Should().Be(Study);
+        createdCurr.Modules.Should().HaveCount(2);
+
+        var assignRes = await BatchAssign(
+            db,
+            new BatchAssignCurriculumRequest(createdCurr.Id, Study, ["SITE-101"], null, null, "Assign v4.0 curriculum"),
+            Caller(Study));
+        var assignedBatch = assignRes.Should().BeOfType<Created<BatchAssignmentResponse>>().Which.Value!;
+        assignedBatch.TotalAssigned.Should().Be(1);
+        var assignmentId = assignedBatch.Assignments[0].Id;
+        assignedBatch.Assignments[0].Curriculum.Should().NotBeNull();
+        assignedBatch.Assignments[0].Curriculum!.Title.Should().Be("Protocol v4.0 Amendment Training");
+        assignedBatch.Assignments[0].Curriculum!.Modules.Should().HaveCount(2);
+
+        var siteCaller = SiteCaller("SITE-101");
+        siteCaller.Request.Headers["X-Change-Reason"] = "Completed reading protocol v4.0 modules";
+        var gatewayOptions = new StaticOptionsMonitor<GatewayAuthenticationOptions>(new GatewayAuthenticationOptions
+        {
+            GatewaySecret = "test-gateway-secret-32-chars-long-12345",
+        });
+
+        var completeRes = await Invoke(
+            "CompleteAssignmentAsync",
+            assignmentId,
+            new CompleteTrainingAssignmentRequest(0.95, 180, "Completed reading protocol v4.0 modules"),
+            db,
+            siteCaller,
+            _clock,
+            gatewayOptions,
+            Ct);
+        var completedDto = completeRes.Should().BeOfType<Ok<TrainingAssignmentDto>>().Which.Value!;
+        completedDto.Status.Should().Be("COMPLETED");
+        completedDto.QuizScore.Should().Be(0.95);
+        completedDto.TimeSpentSeconds.Should().Be(180);
+        completedDto.CompletedAt.Should().Be(_clock.UtcNow);
+        completedDto.Curriculum.Should().NotBeNull();
+
+        (await db.TrainingCertificates.CountAsync(c => c.AssignmentId == assignmentId, Ct)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task KnowledgeCatalogSeeder_SeedsCadence101TrainingBaselineIdempotently()
+    {
+        using var db = CreateDbContext(nameof(KnowledgeCatalogSeeder_SeedsCadence101TrainingBaselineIdempotently));
+
+        await Cadence.Apps.Knowledge.Application.KnowledgeCatalogSeeder.EnsureSeededAsync(db, _clock, Ct);
+        await Cadence.Apps.Knowledge.Application.KnowledgeCatalogSeeder.EnsureSeededAsync(db, _clock, Ct);
+
+        var curricula = await db.TrainingCurricula.Where(c => c.StudyId == "CADENCE-101").ToListAsync(Ct);
+        curricula.Should().ContainSingle();
+        (await db.TrainingCurriculumModules.CountAsync(m => m.CurriculumId == curricula[0].Id, Ct)).Should().Be(3);
+        (await db.DelegationRecords.CountAsync(d => d.StudyId == "CADENCE-101", Ct)).Should().BeGreaterThanOrEqualTo(3);
+        (await db.TrainingAssignments.CountAsync(a => a.StudyId == "CADENCE-101", Ct)).Should().BeGreaterThanOrEqualTo(2);
+    }
+
+    private sealed class StaticOptionsMonitor<T>(T value) : Microsoft.Extensions.Options.IOptionsMonitor<T>
+    {
+        public T CurrentValue => value;
+        public T Get(string? name) => value;
+        public IDisposable? OnChange(Action<T, string?> listener) => null;
+    }
+
+    [Fact]
     public async Task BatchAssign_NamingASiteWithNoStaff_IsRefusedAndAssignsNobody()
     {
         using var db = CreateDbContext(nameof(BatchAssign_NamingASiteWithNoStaff_IsRefusedAndAssignsNobody));

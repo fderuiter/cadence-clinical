@@ -98,6 +98,8 @@ public sealed class CtmsDelegationConfiguration : IEntityTypeConfiguration<CtmsD
         builder.Property(x => x.Id).HasMaxLength(36);
         builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.StaffUserId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.StaffName).HasMaxLength(255);
+        builder.Property(x => x.Role).HasMaxLength(255);
         builder.Property(x => x.TaskCodes).HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.StartDate).HasMaxLength(50).IsRequired();
         builder.Property(x => x.EndDate).HasMaxLength(50);
@@ -121,6 +123,14 @@ public sealed class CtmsGeneratedLetterConfiguration : IEntityTypeConfiguration<
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasMaxLength(36);
         builder.Property(x => x.VisitId).HasMaxLength(36).IsRequired();
+        builder.Property(x => x.StudyCode).HasColumnName("study_code").HasMaxLength(255).IsRequired();
+        builder.Property(x => x.SiteCode).HasColumnName("site_code").HasMaxLength(255).IsRequired();
+        builder.Property(x => x.VisitType).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.ScheduledDate).HasMaxLength(50);
+        builder.Property(x => x.ActualDate).HasMaxLength(50);
+        builder.Property(x => x.FindingsJson).HasColumnType("jsonb");
+        builder.Property(x => x.SignerName).HasMaxLength(255);
+        builder.Property(x => x.SigningPurpose).HasMaxLength(500);
         builder.Property(x => x.LetterType).HasMaxLength(50).IsRequired();
         builder.Property(x => x.RenderedContent).HasMaxLength(100000).IsRequired();
         builder.Property(x => x.PdfObjectKey).HasMaxLength(1000);
@@ -136,6 +146,8 @@ public sealed class CtmsGeneratedLetterConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.VersionIndex).IsRequired();
 
         builder.HasIndex(x => x.VisitId);
+        builder.HasIndex(x => x.StudyCode);
+        builder.HasIndex(x => x.SiteCode);
     }
 }
 

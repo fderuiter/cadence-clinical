@@ -385,6 +385,78 @@ public sealed class StartupGreenlightEndpointsTests
         crossSiteRead.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
     }
 
+    [Fact]
+    [GxPRequirement("PRD-SSU-001")]
+    public async Task InitializeAndUpdateSiteGreenlight_PersistsSixFacetsAndAlignedResponseContract()
+    {
+        var initReq = new SiteGreenlightUpsertRequestDto(
+            StudyCode: Study,
+            CountryCode: "US",
+            SiteName: "Metro Boston Clinical Research",
+            FacetRegulatoryIrb: true,
+            FacetCtaBudget: true,
+            FacetEisfBaseline: true,
+            FacetDoaLog: false,
+            FacetStaffTraining: true,
+            FacetIpRelease: false);
+
+        var created = await StartupGreenlightEndpoints.InitializeSiteGreenlightAsync(
+            "SITE-101", initReq, "Initialize startup greenlight gate", _db, Caller(["cra"], [Study], ["SITE-101"]), _clock, TestContext.Current.CancellationToken);
+
+        var createdDto = created.Result.Should().BeOfType<Created<SiteGreenlightGateResponseDto>>().Subject.Value!;
+        createdDto.ReadinessPercentage.Should().Be(67);
+        createdDto.IsReadyForCertification.Should().BeFalse();
+        createdDto.Facets.Should().HaveCount(6);
+        createdDto.BlockingReasons.Should().Equal(
+            "Pending Delegation of Authority Log",
+            "Pending Investigational Product Depot Release");
+        createdDto.EvaluatedAt.Should().NotBeNullOrWhiteSpace();
+
+        var updateReq = new SiteGreenlightUpsertRequestDto(
+            StudyCode: Study,
+            CountryCode: "US",
+            FacetDoaLog: true,
+            FacetIpRelease: true);
+
+        var updated = await StartupGreenlightEndpoints.UpdateSiteGreenlightAsync(
+            "SITE-101", updateReq, "Complete remaining startup facets", _db, Caller(["cra"], [Study], ["SITE-101"]), _clock, TestContext.Current.CancellationToken);
+
+        var updatedDto = updated.Result.Should().BeOfType<Ok<SiteGreenlightGateResponseDto>>().Subject.Value!;
+        updatedDto.ReadinessPercentage.Should().Be(100);
+        updatedDto.IsCompliant.Should().BeTrue();
+        updatedDto.IsReadyForCertification.Should().BeTrue();
+        updatedDto.BlockingReasons.Should().BeEmpty();
+
+        var batchRes = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
+            new BatchCertifyRequestDto(Study, "US", ["SITE-101"], "Certify compliant site"),
+            "Certify compliant site",
+            _db,
+            Caller(),
+            _clock,
+            _config,
+            TestContext.Current.CancellationToken);
+
+        var batchDto = batchRes.Result.Should().BeOfType<Ok<BatchCertifyResponseDto>>().Subject.Value!;
+        batchDto.TotalCertified.Should().Be(1);
+        batchDto.CertifiedCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CtmsDbSeeder_SeedsCadence101GreenlightGatesIdempotently()
+    {
+        await Cadence.Apps.Ctms.Application.CtmsDbSeeder.EnsureSeededAsync(_db, _clock, TestContext.Current.CancellationToken);
+        await Cadence.Apps.Ctms.Application.CtmsDbSeeder.EnsureSeededAsync(_db, _clock, TestContext.Current.CancellationToken);
+
+        var gates = await _db.CtmsSiteGreenlightGates
+            .Where(g => g.StudyId == "CADENCE-101")
+            .OrderBy(g => g.SiteId)
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        gates.Select(g => g.SiteId).Should().Equal("SITE-101", "SITE-102");
+        gates[0].ReadinessPercentage.Should().Be(100);
+        gates[1].ReadinessPercentage.Should().Be(67);
+    }
+
     private async Task AddGatesAsync(params (string SiteId, string Country, bool Compliant)[] sites)
     {
         foreach (var (siteId, country, compliant) in sites)

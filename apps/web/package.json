@@ -27,7 +27,8 @@
     "msw": "catalog:",
     "openapi-typescript": "^7.13.0",
     "typescript": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "vue-tsc": "catalog:"
   },
   "keywords": [],
   "license": "UNLICENSED",
@@ -44,7 +45,7 @@
     "test:e2e": "playwright test --project=accessibility",
     "test:e2e:stack": "playwright test",
     "test:e2e:workflows": "playwright test --project=setup --project=chromium",
-    "typecheck": "node ../../scripts/check_duplicate_identifiers.js && tsc --noEmit"
+    "typecheck": "node ../../scripts/check_duplicate_identifiers.js && vue-tsc --noEmit"
   },
   "type": "module",
   "version": "1.0.0"

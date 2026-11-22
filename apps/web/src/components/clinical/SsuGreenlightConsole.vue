@@ -281,6 +281,7 @@
             <p>
               Batch certified
               {{
+                batchSuccessData.total_certified ??
                 batchSuccessData.certified_count ??
                 batchSuccessData.certifiedCount
               }}

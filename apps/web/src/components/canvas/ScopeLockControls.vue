@@ -157,10 +157,14 @@ const modalOp = ref<ModalOperation | null>(null);
 const signerUsername = computed(
   () => authStore?.user?.email || authStore?.user?.username || "data-manager"
 );
-const signerFullName = computed(
-  () =>
-    authStore?.user?.name || authStore?.user?.full_name || signerUsername.value
-);
+const signerFullName = computed(() => {
+  const user = authStore?.user as
+    | (typeof authStore.user & { name?: string; full_name?: string })
+    | null
+    | undefined;
+  const joined = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
+  return user?.name || user?.full_name || joined || signerUsername.value;
+});
 
 const hasDirectLocked = computed(() =>
   props.directLocks.some((l) => l.kind === "Locked")

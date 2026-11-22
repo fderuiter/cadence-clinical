@@ -1793,6 +1793,16 @@ async function executeQppvSignoff() {
   }
 }
 
+function exportReport(format: "xml" | "html" | "json") {
+  if (!activeReportId.value) return;
+  const encodedId = encodeURIComponent(activeReportId.value);
+  const url =
+    format === "xml"
+      ? `/api/v1/safety/periodic-reports/${encodedId}/xml`
+      : `/api/v1/safety/periodic-reports/${encodedId}/export?format=${encodeURIComponent(format)}`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 // Expedited ICSR Regulatory Clocks & Triage State
 const activeExpeditedCases = ref<any[]>([
   {

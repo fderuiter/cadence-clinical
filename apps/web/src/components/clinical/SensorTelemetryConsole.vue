@@ -1018,6 +1018,18 @@ function formatDate(iso: string | null | undefined): string {
   }
 }
 
+function unwrapApiPayload<T>(res: T | { data?: T }): T {
+  if (
+    res &&
+    typeof res === "object" &&
+    "data" in res &&
+    res.data !== undefined
+  ) {
+    return res.data as T;
+  }
+  return res as T;
+}
+
 async function refreshData() {
   isLoading.value = true;
   fetchError.value = null;
@@ -1035,8 +1047,9 @@ async function refreshData() {
 
     if (devRes.status === "fulfilled") {
       domainErrors.value.devices = null;
-      if (devRes.value?.data?.devices) {
-        devices.value = devRes.value.data.devices;
+      const devPayload = unwrapApiPayload(devRes.value);
+      if (devPayload?.devices) {
+        devices.value = devPayload.devices as DeviceEntity[];
       }
     } else {
       hasError = true;
@@ -1047,8 +1060,9 @@ async function refreshData() {
 
     if (sumRes.status === "fulfilled") {
       domainErrors.value.summaries = null;
-      if (sumRes.value?.data?.summaries) {
-        dailySummaries.value = sumRes.value.data.summaries;
+      const sumPayload = unwrapApiPayload(sumRes.value);
+      if (sumPayload?.summaries) {
+        dailySummaries.value = sumPayload.summaries as DailySummaryEntity[];
       }
     } else {
       hasError = true;
@@ -1059,8 +1073,9 @@ async function refreshData() {
 
     if (alertRes.status === "fulfilled") {
       domainErrors.value.alerts = null;
-      if (alertRes.value?.data?.alerts) {
-        safetyAlerts.value = alertRes.value.data.alerts;
+      const alertPayload = unwrapApiPayload(alertRes.value);
+      if (alertPayload?.alerts) {
+        safetyAlerts.value = alertPayload.alerts as SafetyAlertEntity[];
       }
     } else {
       hasError = true;
@@ -1071,8 +1086,31 @@ async function refreshData() {
 
     if (metricRes.status === "fulfilled") {
       domainErrors.value.metrics = null;
-      if (metricRes.value?.data?.metrics) {
-        metrics.value = { ...metrics.value, ...metricRes.value.data.metrics };
+      const metricPayload = unwrapApiPayload(metricRes.value);
+      if (metricPayload?.metrics) {
+        const nextMetrics = metricPayload.metrics as Record<string, any>;
+        metrics.value = {
+          ...metrics.value,
+          total_streams_ingested:
+            nextMetrics.total_streams_ingested ??
+            metrics.value.total_streams_ingested,
+          total_readings_ingested:
+            nextMetrics.total_readings_ingested ??
+            metrics.value.total_readings_ingested,
+          active_devices_count:
+            nextMetrics.active_devices_count ??
+            metrics.value.active_devices_count,
+          mean_time_in_range_percent:
+            nextMetrics.mean_time_in_range_percent ??
+            metrics.value.mean_time_in_range_percent,
+          mean_daily_steps:
+            nextMetrics.mean_daily_steps ?? metrics.value.mean_daily_steps,
+          mean_resting_hr_bpm:
+            nextMetrics.mean_resting_hr_bpm ??
+            metrics.value.mean_resting_hr_bpm,
+          mean_fev1_liters:
+            nextMetrics.mean_fev1_liters ?? metrics.value.mean_fev1_liters,
+        };
       }
     } else {
       hasError = true;

@@ -82,6 +82,7 @@
               <td class="action-cell">
                 <button
                   v-if="canSignOff && rec.status === 'PENDING_PI_SIGNATURE'"
+                  :data-testid="`btn-doa-signoff-${rec.record_id}`"
                   type="button"
                   class="btn btn-primary btn-sm"
                   @click="prepareSignOff(rec)"
@@ -124,6 +125,13 @@
           }}
         </h4>
         <div class="form-row">
+          <label for="doa-signoff-password">Password (Part 11)</label>
+          <input
+            id="doa-signoff-password"
+            v-model="signOffPassword"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+            placeholder="Re-enter password to sign"
+          />
           <label for="doa-signoff-reason">Part 11 attestation</label>
           <input
             id="doa-signoff-reason"
@@ -135,7 +143,7 @@
             id="btn-confirm-doa-signoff"
             type="button"
             class="btn btn-primary"
-            :disabled="!signOffReason.trim() || saving"
+            :disabled="!signOffReason.trim() || !signOffPassword || saving"
             @click="confirmSignOff"
           >
             {{ saving ? "Signing..." : "Sign delegation" }}
@@ -143,7 +151,7 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="activeSignOffRecord = null"
+            @click="cancelSignOff"
           >
             Cancel
           </button>
@@ -199,6 +207,20 @@
             type="text"
             placeholder="crc_staff_01"
           />
+          <label for="del-staff-name">Staff name</label>
+          <input
+            id="del-staff-name"
+            v-model="newStaffName"
+            type="text"
+            placeholder="Optional full name"
+          />
+          <label for="del-staff-role">Clinical role</label>
+          <input
+            id="del-staff-role"
+            v-model="newStaffRole"
+            type="text"
+            placeholder="e.g. Clinical Research Coordinator"
+          />
           <label for="del-task-select">Primary duty</label>
           <select id="del-task-select" v-model="newTaskCode">
             <option value="SUBJECT_INFORMED_CONSENT">
@@ -240,7 +262,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { SIGNATURE_PASSWORD_INPUT_ATTRS } from "ui";
 import { ctmsApi, type DelegationRecord, type DoaLog } from "../../api/ctmsApi";
+import { etmfService } from "../../api/etmf";
 import { canManageDoa, canSignOffDoa } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
@@ -284,12 +308,15 @@ const exporting = ref(false);
 const doaLog = ref<DoaLog | null>(null);
 
 const newStaffUserId = ref("");
+const newStaffName = ref("");
+const newStaffRole = ref("");
 const newTaskCode = ref("CRF_DATA_ENTRY");
 const newStartDate = ref("");
 const newReason = ref("");
 
 const activeSignOffRecord = ref<DelegationRecord | null>(null);
 const signOffReason = ref("");
+const signOffPassword = ref("");
 
 const activeRevokeRecord = ref<DelegationRecord | null>(null);
 const revokeReason = ref("");
@@ -325,12 +352,15 @@ async function submitDelegation() {
   if (!site || !staff || !newStartDate.value || !reason || !canManage.value) {
     return;
   }
+
   saving.value = true;
   try {
     await ctmsApi.delegateSiteTasks(
       {
         site_id: site,
         staff_user_id: staff,
+        staff_name: newStaffName.value.trim() || null,
+        role: newStaffRole.value.trim() || null,
         task_codes: [newTaskCode.value],
         start_date: newStartDate.value,
         reason_for_change: reason,
@@ -338,6 +368,8 @@ async function submitDelegation() {
       reason
     );
     newStaffUserId.value = "";
+    newStaffName.value = "";
+    newStaffRole.value = "";
     newReason.value = "";
     toasts.push({
       tone: "success",
@@ -355,21 +387,51 @@ async function submitDelegation() {
 function prepareSignOff(rec: DelegationRecord) {
   activeSignOffRecord.value = rec;
   signOffReason.value = "";
+  signOffPassword.value = "";
+}
+
+function cancelSignOff() {
+  signOffPassword.value = "";
+  signOffReason.value = "";
+  activeSignOffRecord.value = null;
 }
 
 async function confirmSignOff() {
   const rec = activeSignOffRecord.value;
   const reason = signOffReason.value.trim();
-  if (!rec || !reason || !canSignOff.value) return;
+  const password = signOffPassword.value;
+  signOffPassword.value = "";
+  if (!rec || !reason || !password || !canSignOff.value) return;
 
   saving.value = true;
   try {
+    const signerUsername =
+      authStore.identity?.username ||
+      authStore.user?.username ||
+      authStore.userId ||
+      "";
+    const verifyRes = (await etmfService.verifySignature({
+      username: signerUsername,
+      password,
+      totp: null,
+      action: "/api/v1/ctms/doa/sign-off",
+      semanticAction: "ctms.doa.sign_off",
+    })) as { sig_token?: string } | null;
+
+    const sigToken = verifyRes?.sig_token;
+    if (!sigToken) {
+      throw new Error(
+        "Signature verification did not return a signature token."
+      );
+    }
+
     await ctmsApi.signOffDelegation(
       {
         record_id: rec.record_id,
         reason_for_change: reason,
       },
-      reason
+      reason,
+      sigToken
     );
     activeSignOffRecord.value = null;
     signOffReason.value = "";

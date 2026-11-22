@@ -11,6 +11,12 @@ export type BatchAssignmentResponse =
   Schemas["Knowledge_BatchAssignmentResponse"];
 export type BulkDelegationSignOffResponse =
   Schemas["Knowledge_BulkDelegationSignOffResponse"];
+export type CreateTrainingCurriculumPayload =
+  Schemas["Knowledge_CreateTrainingCurriculumRequest"];
+export type CreateTrainingModulePayload =
+  Schemas["Knowledge_CreateTrainingModuleRequest"];
+export type CompleteTrainingAssignmentPayload =
+  Schemas["Knowledge_CompleteTrainingAssignmentRequest"];
 
 export interface CurriculumQueryParams {
   study_id?: string;
@@ -71,6 +77,26 @@ export const trainingApi = {
             protocol_version: params.protocol_version,
           },
         },
+      })
+    );
+  },
+
+  /**
+   * Publish a new protocol training curriculum with modules (POST /api/v1/training/curricula).
+   */
+  createCurriculum(
+    payload: CreateTrainingCurriculumPayload
+  ): Promise<TrainingCurriculum> {
+    const headers: Record<string, string> = {};
+    if (payload.reason_for_change) {
+      headers["X-Change-Reason"] = encodeChangeReason(
+        payload.reason_for_change
+      );
+    }
+    return unwrapResponse(
+      client.POST("/api/v1/training/curricula", {
+        body: payload,
+        headers,
       })
     );
   },
@@ -141,6 +167,28 @@ export const trainingApi = {
     return unwrapResponse(
       client.GET("/api/v1/training/assignments/{assignment_id}", {
         params: { path: { assignment_id: assignmentId } },
+      })
+    );
+  },
+
+  /**
+   * Record staff completion of a training assignment (POST /api/v1/training/assignments/{assignment_id}/complete).
+   */
+  completeAssignment(
+    assignmentId: string,
+    payload: CompleteTrainingAssignmentPayload
+  ): Promise<TrainingAssignment> {
+    const headers: Record<string, string> = {};
+    if (payload.reason_for_change) {
+      headers["X-Change-Reason"] = encodeChangeReason(
+        payload.reason_for_change
+      );
+    }
+    return unwrapResponse(
+      client.POST("/api/v1/training/assignments/{assignment_id}/complete", {
+        params: { path: { assignment_id: assignmentId } },
+        body: payload,
+        headers,
       })
     );
   },

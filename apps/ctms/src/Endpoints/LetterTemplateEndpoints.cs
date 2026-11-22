@@ -10,10 +10,14 @@ using System.Threading.Tasks;
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
+using Cadence.Contracts;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 using Cadence.Templating;
+
+using MassTransit;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -22,6 +26,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Ctms.Endpoints;
 
@@ -33,6 +38,12 @@ public static class LetterTemplateEndpoints
 {
     /// <summary>The permission that rendering a visit letter requires.</summary>
     public const string RenderPermission = "ctms_monitoring_visit:create";
+
+    /// <summary>The action path bound to a finalized visit letter electronic signature token.</summary>
+    public const string CompileLetterAction = "/api/v1/ctms/letters/compile";
+
+    /// <summary>The semantic action bound to a finalized visit letter electronic signature token.</summary>
+    public const string CompileLetterSemanticAction = "ctms.letter.compile";
 
     /// <summary>The letters CTMS can render, keyed by the value callers pass as <c>templateName</c>.</summary>
     public static TemplateCatalog Catalog { get; } = new(
@@ -127,7 +138,44 @@ public static class LetterTemplateEndpoints
             return scopeDenied;
         }
 
-        var user = httpContext.User?.Identity?.Name ?? request.CraId;
+        if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var reasonProblem))
+        {
+            return reasonProblem!;
+        }
+
+        if (request.Finalize
+            && httpContext.RequestServices?.GetService<SigTokenVerifier>() is { } sigVerifier
+            && httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] is Principal signerPrincipal)
+        {
+            var gatewayOptions = httpContext.RequestServices
+                .GetService<IOptionsMonitor<GatewayAuthenticationOptions>>()
+                ?.Get(GatewayAuthenticationHandler.SchemeName);
+            byte[] secretBytes = gatewayOptions?.GatewaySecret is { Length: > 0 } secret
+                ? Encoding.UTF8.GetBytes(secret)
+                : [];
+            if (string.IsNullOrWhiteSpace(signerPrincipal.UserId) || secretBytes.Length == 0)
+            {
+                return ElectronicSignatureEndpointFilter.ReauthenticationRequired();
+            }
+
+            try
+            {
+                var verifiedToken = await sigVerifier.VerifyAndConsumeAsync(
+                    httpContext.Request.Headers[GatewayHeaders.SigToken].ToString(),
+                    signerPrincipal.UserId,
+                    new SigTokenBinding(CompileLetterAction, CompileLetterSemanticAction),
+                    secretBytes,
+                    ct).ConfigureAwait(false);
+                httpContext.Items[ElectronicSignatureEndpointFilter.VerifiedTokenItemKey] = verifiedToken;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return ElectronicSignatureEndpointFilter.ReauthenticationRequired();
+            }
+        }
+
+        var user = CallerScope.UserId(httpContext)
+            ?? (httpContext.User?.Identity?.Name is { Length: > 0 } name ? name : request.CraId);
         var now = clock.UtcNow;
 
         var pdfResult = await GxpPdfCompiler.CompileLetterPdfAsync(
@@ -141,15 +189,28 @@ public static class LetterTemplateEndpoints
         var visitId = string.IsNullOrWhiteSpace(request.VisitId) ? ("VISIT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()) : request.VisitId;
         var objectKey = $"letters/{request.StudyId}/{request.SiteId}/{letterId}.pdf";
 
-        // File to eTMF if finalized
+        // File signed letter PDF to eTMF Zone 5 via MassTransit outbox contract
         string? etmfDocId = null;
         if (pdfResult.IsSigned)
         {
-            var etmfDbType = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(a => a.GetTypes())
-                .FirstOrDefault(t => t.FullName == "Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext");
-            var etmfDb = etmfDbType != null ? serviceProvider.GetService(etmfDbType) : null;
-            etmfDocId = await EtmfFilingHelper.FileToEtmfAsync(request, pdfResult, templateName, letterId, etmfDb, clock, user, ct);
+            etmfDocId = "DOC-CTMS-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+            var filename = $"{templateName}_{request.SiteId}_{request.StudyId}_{letterId}.pdf";
+            if (serviceProvider.GetService<IPublishEndpoint>() is { } publishEndpoint)
+            {
+                await publishEndpoint.Publish(
+                    new EtmfDocumentFilingRequested(
+                        DocumentId: etmfDocId,
+                        StudyId: request.StudyId,
+                        SiteId: request.SiteId,
+                        ZoneCode: "5",
+                        SectionCode: "05.02",
+                        ArtifactCode: "05.02.06",
+                        DocumentTitle: filename,
+                        StoragePath: Convert.ToBase64String(pdfResult.PdfBytes),
+                        RequestedBy: user,
+                        RequestedAt: now),
+                    ct);
+            }
         }
 
         // Dispatch Email Notification if finalized
@@ -173,6 +234,14 @@ public static class LetterTemplateEndpoints
         var entity = new CtmsGeneratedLetter(letterId, letterStatus)
         {
             VisitId = visitId,
+            StudyCode = request.StudyId,
+            SiteCode = request.SiteId,
+            VisitType = string.IsNullOrWhiteSpace(request.VisitType) ? "Monitoring" : request.VisitType,
+            ScheduledDate = request.ScheduledDate,
+            ActualDate = request.ActualDate,
+            FindingsJson = request.Findings is { Count: > 0 } ? JsonSerializer.Serialize(request.Findings) : null,
+            SignerName = pdfResult.IsSigned ? (request.SignerName ?? user) : null,
+            SigningPurpose = pdfResult.IsSigned ? (request.SigningPurpose ?? "21 CFR Part 11 Electronic Signature / Visit Letter Approval") : null,
             LetterType = templateName,
             RenderedContent = pdfResult.RenderedHtml,
             PdfObjectKey = objectKey,
@@ -185,7 +254,7 @@ public static class LetterTemplateEndpoints
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
             VersionIndex = 1,
-            ReasonForChange = request.ReasonForChange ?? "Compiled GxP visit letter PDF and executed automated dispatch pipeline."
+            ReasonForChange = reason
         };
 
         dbContext.CtmsGeneratedLetters.Add(entity);
@@ -195,10 +264,10 @@ public static class LetterTemplateEndpoints
         {
             Timestamp = now,
             UserId = user,
-            UserRole = "CRA",
+            UserRole = CallerScope.Roles(httpContext) is { Length: > 0 } callerRoles ? callerRoles : "CRA",
             Action = pdfResult.IsSigned ? "FINALIZE_VISIT_LETTER_PDF" : "GENERATE_VISIT_LETTER_DRAFT_PDF",
             Details = $"Compiled visit letter PDF for {templateName} in study {request.StudyId} site {request.SiteId}. SHA256: {pdfResult.Sha256Hash}. eTMF DocId: {etmfDocId ?? "N/A"}. Status: {entity.Status}.",
-            ReasonForChange = request.ReasonForChange ?? "Visit letter PDF compilation and audit trail persistence."
+            ReasonForChange = reason
         };
 
         dbContext.CtmsAuditLogs.Add(audit);
@@ -240,25 +309,85 @@ public static class LetterTemplateEndpoints
             return TypedResults.NotFound(new { error = $"Letter with ID '{letterId}' not found." });
         }
 
-        if (httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
+        string studyId = letter.StudyCode;
+        string siteId = letter.SiteCode;
+        if (string.IsNullOrWhiteSpace(studyId) || string.IsNullOrWhiteSpace(siteId))
         {
             var parts = (letter.PdfObjectKey ?? string.Empty).Split('/', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length >= 3
-                && string.Equals(parts[0], "letters", StringComparison.Ordinal)
-                && (!ClinicalScopeGuard.CanAccessStudy(httpContext, parts[1])
-                    || !ClinicalScopeGuard.CanAccessSite(httpContext, parts[2])))
+            if (parts.Length >= 3 && string.Equals(parts[0], "letters", StringComparison.Ordinal))
             {
-                return TypedResults.NotFound(new { error = $"Letter with ID '{letterId}' not found." });
+                if (string.IsNullOrWhiteSpace(studyId)) studyId = parts[1];
+                if (string.IsNullOrWhiteSpace(siteId)) siteId = parts[2];
             }
         }
+
+        CtmsMonitoringVisit? visit = null;
+        if (!string.IsNullOrWhiteSpace(letter.VisitId))
+        {
+            visit = await dbContext.CtmsMonitoringVisits
+                .AsNoTracking()
+                .FirstOrDefaultAsync(v => v.Id == letter.VisitId, ct);
+            if (visit is not null)
+            {
+                if (string.IsNullOrWhiteSpace(studyId)) studyId = visit.StudyId;
+                if (string.IsNullOrWhiteSpace(siteId)) siteId = visit.SiteId;
+            }
+        }
+
+        if (httpContext is not null
+            && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
+            && ((!string.IsNullOrWhiteSpace(studyId) && !ClinicalScopeGuard.CanAccessStudy(httpContext, studyId))
+                || (!string.IsNullOrWhiteSpace(siteId) && !ClinicalScopeGuard.CanAccessSite(httpContext, siteId))))
+        {
+            return TypedResults.NotFound(new { error = $"Letter with ID '{letterId}' not found." });
+        }
+
+        IReadOnlyList<SiteVisitFindingModel>? findings = null;
+        if (!string.IsNullOrWhiteSpace(letter.FindingsJson))
+        {
+            try
+            {
+                findings = JsonSerializer.Deserialize<List<SiteVisitFindingModel>>(letter.FindingsJson);
+            }
+            catch
+            {
+                findings = null;
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(letter.VisitId))
+        {
+            var dbFindings = await dbContext.CtmsMonitoringVisitFindings
+                .AsNoTracking()
+                .Where(f => f.VisitId == letter.VisitId)
+                .OrderBy(f => f.CreatedAt)
+                .ToListAsync(ct);
+            if (dbFindings.Count > 0)
+            {
+                findings = dbFindings
+                    .Select(f => new SiteVisitFindingModel(f.Text, f.Severity, f.ResolutionStatus))
+                    .ToList();
+            }
+        }
+
+        string visitType = !string.IsNullOrWhiteSpace(letter.VisitType)
+            ? letter.VisitType
+            : (visit?.VisitType ?? "Monitoring");
+        string? scheduledDate = letter.ScheduledDate ?? visit?.ScheduledDate.ToString("yyyy-MM-dd");
+        string? actualDate = letter.ActualDate ?? visit?.ActualDate?.ToString("yyyy-MM-dd");
 
         var model = new SiteVisitLetterModel(
             CraId: letter.CreatedBy,
             CreatedAt: letter.CreatedAt.ToString("yyyy-MM-dd"),
-            StudyId: "STUDY",
-            SiteId: "SITE",
+            StudyId: studyId,
+            SiteId: siteId,
+            VisitType: visitType,
+            ScheduledDate: scheduledDate,
+            ActualDate: actualDate,
+            Findings: findings,
             VisitId: letter.VisitId,
-            Finalize: letter.IsSigned
+            Finalize: letter.IsSigned,
+            SignerName: letter.SignerName,
+            SigningPurpose: letter.SigningPurpose
         );
 
         var pdfResult = await GxpPdfCompiler.CompileLetterPdfAsync(
@@ -422,97 +551,6 @@ public static class GxpPdfCompiler
             SignatureManifestationJson: signatureManifestationJson,
             RenderedHtml: htmlContent
         );
-    }
-}
-
-/// <summary>
-/// Helper for filing finalized visit letters into the eTMF repository.
-/// </summary>
-public static class EtmfFilingHelper
-{
-    /// <summary>
-    /// Ingests a finalized visit letter PDF into the eTMF repository.
-    /// </summary>
-    public static async Task<string?> FileToEtmfAsync(
-        SiteVisitLetterModel request,
-        GxpPdfResult pdfResult,
-        string templateName,
-        string letterId,
-        object? etmfDb,
-        IClock clock,
-        string user,
-        CancellationToken ct)
-    {
-        if (etmfDb is null) return null;
-
-        var etmfAssembly = etmfDb.GetType().Assembly;
-        var tmfDocType = etmfAssembly.GetType("Cadence.Apps.Etmf.Domain.TmfDocument");
-        var tmfAuditLogType = etmfAssembly.GetType("Cadence.Apps.Etmf.Domain.TmfAuditLog");
-        if (tmfDocType is null || tmfAuditLogType is null) return null;
-
-        var now = clock.UtcNow;
-        var docId = "DOC-CTMS-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
-        var filename = $"{templateName}_{request.SiteId}_{request.StudyId}_{letterId}.pdf";
-
-        var tmfDoc = Activator.CreateInstance(tmfDocType, docId);
-        if (tmfDoc is null) return null;
-
-        SetProp(tmfDoc, "StudyId", request.StudyId);
-        SetProp(tmfDoc, "SiteId", request.SiteId);
-        SetProp(tmfDoc, "Filename", filename);
-        SetProp(tmfDoc, "Content", Convert.ToBase64String(pdfResult.PdfBytes));
-        SetProp(tmfDoc, "MimeType", "application/pdf");
-        SetProp(tmfDoc, "Zone", 5);
-        SetProp(tmfDoc, "Section", "05.02");
-        SetProp(tmfDoc, "ArtifactCode", "05.02.06");
-        SetProp(tmfDoc, "ArtifactType", "Monitoring Visit Correspondence");
-        var reason = request.ReasonForChange ?? "Automated eTMF filing for finalized monitoring visit letter.";
-        var stageMethod = tmfDocType.GetMethod("StageForQc");
-        stageMethod?.Invoke(tmfDoc, [user, "System/CRA", reason, now, 1]);
-        var approveMethod = tmfDocType.GetMethod("Approve");
-        approveMethod?.Invoke(tmfDoc, [user, "System/CRA", reason, now, 2]);
-        SetProp(tmfDoc, "TaxonomyVersion", "v3.2.0-complete");
-        SetProp(tmfDoc, "CreatedAt", now.UtcDateTime);
-        SetProp(tmfDoc, "CreatedBy", user);
-        SetProp(tmfDoc, "VersionIndex", 1);
-        SetProp(tmfDoc, "ReasonForChange", reason);
-        SetProp(tmfDoc, "MetadataJson", JsonSerializer.Serialize(new
-        {
-            source = "CTMS_MONITORING_PIPELINE",
-            letter_type = templateName,
-            is_signed = pdfResult.IsSigned,
-            sha256_hash = pdfResult.Sha256Hash
-        }));
-
-        var dbContextType = etmfDb.GetType();
-        var addMethod = dbContextType.GetMethod("Add", [typeof(object)]) ?? dbContextType.GetMethod("Add");
-        addMethod?.Invoke(etmfDb, [tmfDoc]);
-
-        var auditLog = Activator.CreateInstance(tmfAuditLogType);
-        if (auditLog is not null)
-        {
-            SetProp(auditLog, "Timestamp", now);
-            SetProp(auditLog, "UserId", user);
-            SetProp(auditLog, "UserRole", "System/CRA");
-            SetProp(auditLog, "Action", "INGEST_MONITORING_LETTER");
-            SetProp(auditLog, "DocumentId", docId);
-            SetProp(auditLog, "Details", $"Filed finalized monitoring visit letter {filename} into eTMF Zone 5.");
-            SetProp(auditLog, "ReasonForChange", request.ReasonForChange ?? "Automated visit letter eTMF integration");
-            addMethod?.Invoke(etmfDb, [auditLog]);
-        }
-
-        var saveChangesMethod = dbContextType.GetMethod("SaveChangesAsync", [typeof(CancellationToken)]);
-        if (saveChangesMethod is not null)
-        {
-            await (Task)saveChangesMethod.Invoke(etmfDb, [ct])!;
-        }
-
-        return docId;
-    }
-
-    private static void SetProp(object target, string name, object? value)
-    {
-        target.GetType().GetProperty(name)?.SetValue(target, value);
     }
 }
 

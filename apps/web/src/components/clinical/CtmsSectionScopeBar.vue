@@ -72,7 +72,7 @@ withDefaults(
   defineProps<{
     prefix: string;
     formId: string;
-    ariaLabel: string;
+    ariaLabel?: string;
     showStudyInput?: boolean;
     study?: string;
     site?: string;

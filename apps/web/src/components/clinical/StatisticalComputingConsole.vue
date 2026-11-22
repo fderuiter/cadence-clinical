@@ -1236,6 +1236,18 @@ function openNewProgramModal() {
   activeTab.value = "editor";
 }
 
+function unwrapApiPayload<T>(res: T | { data?: T }): T {
+  if (
+    res &&
+    typeof res === "object" &&
+    "data" in res &&
+    res.data !== undefined
+  ) {
+    return res.data as T;
+  }
+  return res as T;
+}
+
 async function saveProgramDraft() {
   isSaving.value = true;
   try {
@@ -1250,10 +1262,12 @@ async function saveProgramDraft() {
       target_domain: targetDomain.value,
       reason_for_change: "Saved from Statistical Computing Console",
     };
-    const res = await statisticalComputingService.createProgram(payload);
+    const res = unwrapApiPayload(
+      await statisticalComputingService.createProgram(payload)
+    );
     await loadPrograms();
-    if (res.data?.program?.program_id) {
-      selectedProgramId.value = res.data.program.program_id;
+    if (res?.program?.program_id) {
+      selectedProgramId.value = res.program.program_id;
     }
   } catch (err: any) {
     console.error("Failed to save program:", err);
@@ -1271,18 +1285,20 @@ async function dispatchExecution() {
     // 1. Ensure program is registered or save first
     let progId = selectedProgramId.value;
     if (!progId) {
-      const saveRes = await statisticalComputingService.createProgram({
-        study_id: props.studyId,
-        name: scriptName.value,
-        title: scriptTitle.value,
-        description: "Auto-saved program on execution",
-        language: currentLanguage.value,
-        version: "1.0.0",
-        source_code: sourceCode.value,
-        target_domain: targetDomain.value,
-        reason_for_change: "Auto-saved on run execution",
-      });
-      progId = saveRes.data.program.program_id;
+      const saveRes = unwrapApiPayload(
+        await statisticalComputingService.createProgram({
+          study_id: props.studyId,
+          name: scriptName.value,
+          title: scriptTitle.value,
+          description: "Auto-saved program on execution",
+          language: currentLanguage.value,
+          version: "1.0.0",
+          source_code: sourceCode.value,
+          target_domain: targetDomain.value,
+          reason_for_change: "Auto-saved on run execution",
+        })
+      );
+      progId = saveRes.program.program_id || "";
       selectedProgramId.value = progId;
       await loadPrograms();
     }
@@ -1304,9 +1320,11 @@ async function dispatchExecution() {
       reason_for_execution: "Dispatched from Statistical Computing Console",
     };
 
-    const res = await statisticalComputingService.executeProgram(execPayload);
-    latestRun.value = res.data.manifest;
-    selectedRunDetail.value = res.data.manifest;
+    const res = unwrapApiPayload(
+      await statisticalComputingService.executeProgram(execPayload)
+    );
+    latestRun.value = res.manifest;
+    selectedRunDetail.value = res.manifest;
     await loadRuns();
   } catch (err: any) {
     console.error("Execution failed:", err);
@@ -1318,8 +1336,10 @@ async function dispatchExecution() {
 
 async function viewRunDetails(runId: string) {
   try {
-    const res = await statisticalComputingService.getExecutionRun(runId);
-    selectedRunDetail.value = res.data.run;
+    const res = unwrapApiPayload(
+      await statisticalComputingService.getExecutionRun(runId)
+    );
+    selectedRunDetail.value = res.run;
     activeTab.value = "runs";
   } catch (err) {
     console.error("Failed to load run details:", err);
@@ -1328,8 +1348,10 @@ async function viewRunDetails(runId: string) {
 
 async function verifyManifest(runId: string) {
   try {
-    const res = await statisticalComputingService.verifyRunManifest(runId);
-    const vr = res.data.result;
+    const res = unwrapApiPayload(
+      await statisticalComputingService.verifyRunManifest(runId)
+    );
+    const vr = res.result as Record<string, any>;
     if (vr.is_valid) {
       alert(
         `✅ Manifest Verified!\n\nSeal: ${vr.stored_seal}\nSigner: ${vr.signer_id} (${vr.signer_role})\n${vr.details}`
@@ -1347,12 +1369,14 @@ async function assertLockfileIntegrity() {
   if (!testLockContent.value) return;
   isValidatingLock.value = true;
   try {
-    const res = await statisticalComputingService.validateLockfile({
-      lock_type: testLockType.value,
-      content: testLockContent.value,
-      strict_qualification: true,
-    });
-    lockValidationResult.value = res.data.result;
+    const res = unwrapApiPayload(
+      await statisticalComputingService.validateLockfile({
+        lock_type: testLockType.value,
+        content: testLockContent.value,
+        strict_qualification: true,
+      })
+    );
+    lockValidationResult.value = res.result;
   } catch (err: any) {
     alert(`Validation error: ${err?.response?.data?.detail || err.message}`);
   } finally {
@@ -1409,11 +1433,13 @@ async function confirmIssueToken() {
       reason: newTokenReason.value,
       expires_in_hours: newTokenHours.value,
     };
-    const res = await statisticalComputingService.issueLockToken(payload);
+    const res = unwrapApiPayload(
+      await statisticalComputingService.issueLockToken(payload)
+    );
     showIssueTokenModal.value = false;
     await loadTokens();
-    if (res.data?.token?.token_id) {
-      selectedTokenId.value = res.data.token.token_id;
+    if (res?.token?.token_id) {
+      selectedTokenId.value = res.token.token_id;
     }
   } catch (err: any) {
     alert(
@@ -1463,8 +1489,10 @@ function formatDate(isoStr: string) {
 // Data loaders
 async function loadPrograms() {
   try {
-    const res = await statisticalComputingService.getPrograms(props.studyId);
-    programs.value = res.data.programs || [];
+    const res = unwrapApiPayload(
+      await statisticalComputingService.getPrograms(props.studyId)
+    );
+    programs.value = res.programs || [];
   } catch (err) {
     console.error("Failed to load programs:", err);
   }
@@ -1486,10 +1514,10 @@ async function loadSnapshots() {
 
 async function loadRuns() {
   try {
-    const res = await statisticalComputingService.getExecutionRuns(
-      props.studyId
+    const res = unwrapApiPayload(
+      await statisticalComputingService.getExecutionRuns(props.studyId)
     );
-    runs.value = res.data.runs || [];
+    runs.value = res.runs || [];
   } catch (err) {
     console.error("Failed to load runs:", err);
   }
@@ -1497,8 +1525,10 @@ async function loadRuns() {
 
 async function loadTokens() {
   try {
-    const res = await statisticalComputingService.getLockTokens(props.studyId);
-    lockTokens.value = res.data.tokens || [];
+    const res = unwrapApiPayload(
+      await statisticalComputingService.getLockTokens(props.studyId)
+    );
+    lockTokens.value = res.tokens || [];
     const active = lockTokens.value.find(
       (t) => !t.is_revoked && !isTokenExpired(t.expires_at)
     );

@@ -816,6 +816,158 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "StartupGreenlightEndpoints"
+        ],
+        "summary": "Initializes a 6-facet startup greenlight gate for a trial site.",
+        "operationId": "InitializeSiteGreenlight",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_SiteGreenlightUpsertRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_SiteGreenlightGateResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "StartupGreenlightEndpoints"
+        ],
+        "summary": "Updates 6-facet startup greenlight readiness flags for a trial site.",
+        "operationId": "UpdateSiteGreenlight",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_SiteGreenlightUpsertRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_SiteGreenlightGateResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/ctms/startup/sites/{siteId}/greenlight/certify": {
@@ -1984,6 +2136,13 @@
               ],
               "format": "int32"
             }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2008,6 +2167,52 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/stage-qc": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "operationId": "StageExistingDocumentForQc",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Etmf_StageExistingDocumentQcRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -14336,6 +14541,64 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Study Training \u0026 Gating"
+        ],
+        "operationId": "CreateCurriculum",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_CreateTrainingCurriculumRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_TrainingCurriculumDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/training/curricula/{curriculum_id}": {
@@ -14570,6 +14833,86 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/training/assignments/{assignment_id}/complete": {
+      "post": {
+        "tags": [
+          "Study Training \u0026 Gating"
+        ],
+        "operationId": "CompleteTrainingAssignment",
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_CompleteTrainingAssignmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_TrainingAssignmentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -16742,6 +17085,7 @@
         "required": [
           "success",
           "certified_count",
+          "total_certified",
           "study_id",
           "country_code",
           "certified_sites",
@@ -16753,6 +17097,14 @@
             "type": "boolean"
           },
           "certified_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total_certified": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -16818,6 +17170,7 @@
           "end_date",
           "is_active",
           "signed_off",
+          "status",
           "reason_for_change",
           "created_by",
           "version_index"
@@ -16854,6 +17207,9 @@
           "signed_off": {
             "type": "boolean"
           },
+          "status": {
+            "type": "string"
+          },
           "reason_for_change": {
             "type": "string"
           },
@@ -16867,6 +17223,18 @@
               "string"
             ],
             "format": "int64"
+          },
+          "staff_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -16896,6 +17264,18 @@
             "type": "string"
           },
           "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "staff_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role": {
             "type": [
               "null",
               "string"
@@ -17008,7 +17388,16 @@
           "id",
           "visit_id",
           "letter_type",
+          "subject",
+          "body_markdown",
           "rendered_content",
+          "study_id",
+          "site_id",
+          "status",
+          "is_signed",
+          "etmf_document_id",
+          "pdf_sha256_hash",
+          "pdf_access_url",
           "created_at",
           "created_by",
           "reason_for_change",
@@ -17025,7 +17414,40 @@
           "letter_type": {
             "type": "string"
           },
+          "subject": {
+            "type": "string"
+          },
+          "body_markdown": {
+            "type": "string"
+          },
           "rendered_content": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "is_signed": {
+            "type": "boolean"
+          },
+          "etmf_document_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pdf_sha256_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pdf_access_url": {
             "type": "string"
           },
           "created_at": {
@@ -17044,6 +17466,56 @@
               "string"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "Ctms_GreenlightFacetDto": {
+        "required": [
+          "facet_code",
+          "display_name",
+          "evidence_summary",
+          "is_satisfied"
+        ],
+        "type": "object",
+        "properties": {
+          "facet_code": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "evidence_summary": {
+            "type": "string"
+          },
+          "is_satisfied": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Ctms_MonitoringFindingResponseDto": {
+        "required": [
+          "id",
+          "visit_id",
+          "text",
+          "severity",
+          "resolution_status"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "visit_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "resolution_status": {
+            "type": "string"
           }
         }
       },
@@ -17186,6 +17658,15 @@
               "null",
               "string"
             ]
+          },
+          "findings": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Ctms_MonitoringFindingResponseDto"
+            }
           }
         }
       },
@@ -17261,10 +17742,16 @@
           "facet_staff_training",
           "facet_ip_release",
           "is_compliant",
+          "is_ready_for_certification",
           "greenlight_token",
           "greenlight_certified_by",
           "greenlight_certified_at",
+          "certified_by",
+          "certified_at",
+          "evaluated_at",
           "is_overridden",
+          "facets",
+          "blocking_reasons",
           "unfulfilled_reasons"
         ],
         "type": "object",
@@ -17316,6 +17803,9 @@
           "is_compliant": {
             "type": "boolean"
           },
+          "is_ready_for_certification": {
+            "type": "boolean"
+          },
           "greenlight_token": {
             "type": [
               "null",
@@ -17334,8 +17824,35 @@
               "string"
             ]
           },
+          "certified_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "certified_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "evaluated_at": {
+            "type": "string"
+          },
           "is_overridden": {
             "type": "boolean"
+          },
+          "facets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Ctms_GreenlightFacetDto"
+            }
+          },
+          "blocking_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "unfulfilled_reasons": {
             "type": [
@@ -17345,6 +17862,65 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Ctms_SiteGreenlightUpsertRequestDto": {
+        "required": [
+          "study_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "country_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "facet_regulatory_irb": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "facet_cta_budget": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "facet_eisf_baseline": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "facet_doa_log": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "facet_staff_training": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "facet_ip_release": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -18974,6 +19550,23 @@
             "default": "Batch upload AI auto-classification staging for CRA QC"
           },
           "assignedCra": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_StageExistingDocumentQcRequest": {
+        "type": "object",
+        "properties": {
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assigned_cra": {
             "type": [
               "null",
               "string"
@@ -31743,6 +32336,40 @@
           }
         }
       },
+      "Knowledge_CompleteTrainingAssignmentRequest": {
+        "required": [
+          "quiz_score",
+          "time_spent_seconds",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "quiz_score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "time_spent_seconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Knowledge_ContextualHelpMappingDto": {
         "required": [
           "id",
@@ -31840,6 +32467,98 @@
             "items": {
               "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
             }
+          }
+        }
+      },
+      "Knowledge_CreateTrainingCurriculumRequest": {
+        "required": [
+          "study_id",
+          "protocol_version",
+          "title",
+          "description",
+          "is_active",
+          "modules",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "protocol_version": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_active": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "modules": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_CreateTrainingModuleRequest"
+            }
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Knowledge_CreateTrainingModuleRequest": {
+        "required": [
+          "title",
+          "module_type",
+          "content_text",
+          "sequence_order",
+          "min_reading_time_seconds"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "module_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "content_text": {
+            "type": "string"
+          },
+          "sequence_order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "min_reading_time_seconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -32297,6 +33016,16 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "curriculum": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Knowledge_TrainingCurriculumDto"
+              }
+            ]
           }
         }
       },
@@ -32336,6 +33065,60 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "modules": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_TrainingModuleDto"
+            }
+          }
+        }
+      },
+      "Knowledge_TrainingModuleDto": {
+        "required": [
+          "id",
+          "curriculum_id",
+          "title",
+          "module_type",
+          "content_text",
+          "sequence_order",
+          "min_reading_time_seconds"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "curriculum_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "module_type": {
+            "type": "string"
+          },
+          "content_text": {
+            "type": "string"
+          },
+          "sequence_order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "min_reading_time_seconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },

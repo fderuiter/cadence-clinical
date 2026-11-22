@@ -12,8 +12,16 @@ type EtmfSchemas = components["schemas"];
 
 export interface EtmfDocumentParams {
   study_id?: string;
+  site_id?: string | null;
   zone?: string;
   search?: string;
+}
+
+export interface StageExistingDocumentQcPayload {
+  reason_for_change?: string | null;
+  reasonForChange?: string | null;
+  assigned_cra?: string | null;
+  assignedCra?: string | null;
 }
 
 export interface EtmfCompletenessParams {
@@ -262,9 +270,12 @@ export const etmfService = {
     params: EtmfDocumentParams = {},
     options: Record<string, unknown> = {}
   ) {
-    const query: { study_id?: string; zone?: number } = {};
+    const query: { study_id?: string; site_id?: string; zone?: number } = {};
     if (params.study_id) {
       query.study_id = params.study_id;
+    }
+    if (params.site_id) {
+      query.site_id = params.site_id;
     }
     if (params.zone) {
       const parsedZone = parseInt(params.zone, 10);
@@ -492,6 +503,34 @@ export const etmfService = {
       etmfClient.POST("/api/v1/etmf/intelligence/stage-qc", {
         body: wireBody,
         headers,
+        ...options,
+      })
+    );
+    return normalizeQcStagingItem(data);
+  },
+
+  async stageExistingDocumentForQc(
+    documentId: string,
+    body: StageExistingDocumentQcPayload = {},
+    options: Record<string, unknown> = {}
+  ) {
+    const reason =
+      body.reasonForChange ??
+      body.reason_for_change ??
+      "Promote draft document into technical QC review";
+    const encodedReason = encodeChangeReason(reason);
+    const wireBody: EtmfSchemas["Etmf_StageExistingDocumentQcRequest"] = {
+      reason_for_change: reason,
+      assigned_cra: body.assignedCra ?? body.assigned_cra ?? null,
+    };
+    const data = await unwrapResponse(
+      etmfClient.POST("/api/v1/etmf/documents/{document_id}/stage-qc", {
+        params: {
+          path: { document_id: documentId },
+          header: { "X-Change-Reason": encodedReason },
+        },
+        body: wireBody,
+        headers: { "X-Change-Reason": encodedReason },
         ...options,
       })
     );

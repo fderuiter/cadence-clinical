@@ -173,6 +173,13 @@
               ],
               "format": "int32"
             }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -197,6 +204,52 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/stage-qc": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "operationId": "StageExistingDocumentForQc",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Etmf_StageExistingDocumentQcRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -598,6 +651,23 @@
             "default": "Batch upload AI auto-classification staging for CRA QC"
           },
           "assignedCra": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_StageExistingDocumentQcRequest": {
+        "type": "object",
+        "properties": {
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assigned_cra": {
             "type": [
               "null",
               "string"

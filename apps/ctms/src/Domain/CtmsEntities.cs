@@ -180,6 +180,8 @@ public sealed class CtmsDelegation : AggregateRoot<string>
 {
     public string SiteId { get; set; } = string.Empty;
     public string StaffUserId { get; set; } = string.Empty;
+    public string? StaffName { get; set; }
+    public string? Role { get; set; }
     public string TaskCodes { get; set; } = "[]";
     public string StartDate { get; set; } = string.Empty;
     public string? EndDate { get; set; }
@@ -193,6 +195,14 @@ public sealed class CtmsDelegation : AggregateRoot<string>
 public sealed class CtmsGeneratedLetter : AggregateRoot<string>
 {
     public string VisitId { get; set; } = string.Empty;
+    public string StudyCode { get; set; } = string.Empty;
+    public string SiteCode { get; set; } = string.Empty;
+    public string VisitType { get; set; } = "Monitoring";
+    public string? ScheduledDate { get; set; }
+    public string? ActualDate { get; set; }
+    public string? FindingsJson { get; set; }
+    public string? SignerName { get; set; }
+    public string? SigningPurpose { get; set; }
     public string LetterType { get; set; } = string.Empty;
     public string RenderedContent { get; set; } = string.Empty;
     public string? PdfObjectKey { get; set; }
@@ -480,6 +490,14 @@ public sealed class CtmsSiteGreenlightGate : AggregateRoot<string>
         GreenlightCertifiedBy = certifiedBy;
         GreenlightCertifiedAt = certifiedAt;
         GreenlightToken = greenlightToken;
+    }
+
+    public void ResetApproval()
+    {
+        OverallStatus = CtmsGreenlightStatus.Pending;
+        GreenlightCertifiedBy = null;
+        GreenlightCertifiedAt = null;
+        GreenlightToken = null;
     }
 
     public void Override(string sponsorUserId, string medicalUserId, string justification, DateTimeOffset authorizedAt, string greenlightToken)

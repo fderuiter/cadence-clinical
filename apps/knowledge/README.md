@@ -8,17 +8,18 @@ Knowledge base and training service. It serves controlled SOP resolution (`GET /
 
 - Project: `apps/knowledge/src/Cadence.Apps.Knowledge.csproj` (assembly `Cadence.Apps.Knowledge`).
 - `Program.cs`: composition root and route mapping.
-- `Domain/`: EF Core entity classes (knowledge categories, articles and versions, contextual help mappings, protocol knowledge chunks, audit log).
+- `Domain/`: EF Core entity classes (knowledge categories, articles and versions, contextual help mappings, protocol knowledge chunks, training curricula and procedural modules, training assignments and certificates, delegation records, audit log).
   Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `KnowledgeDbContext`, a design-time `KnowledgeDbContextFactory`, and `Configurations/` (Fluent API mappings).
-- `Infrastructure/Persistence/Migrations/`: `20260924145203_InitialCreate`.
+- `Infrastructure/Persistence/Migrations/`: `20260924145203_InitialCreate`, `20261122171250_AddTrainingCurriculumModules`.
+- `Application/KnowledgeCatalogSeeder.cs`: idempotent SOP/help catalog and `CADENCE-101` protocol training curriculum, module, delegation, and assignment seeder (also invoked via `--seed`).
 
 ## HTTP surface
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `KnowledgeDbContext`.
 - `GET /api/v1/knowledge/status` (anonymous status payload).
 - `GET /api/v1/knowledge/contextual-help?route=&persona=`, `GET /api/v1/knowledge/categories`, `GET /api/v1/knowledge/articles`, and `GET /api/v1/knowledge/articles/{article_id}` (`knowledge:read`, staff roles; see [ADR-2641](../../docs/adr/2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md)).
-- Study training curricula, batch assignments, certificates, and delegation log sign-off under `/api/v1/training/**`.
+- Study training curricula (`GET /api/v1/training/curricula`, `POST /api/v1/training/curricula`, `GET /api/v1/training/curricula/{curriculum_id}`), assignments and learner completion (`GET /api/v1/training/assignments`, `GET /api/v1/training/assignments/{assignment_id}`, `POST /api/v1/training/assignments/{assignment_id}/complete`, `POST /api/v1/training/curricula/batch-assign`), certificates, and delegation log sign-off under `/api/v1/training/**`.
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/knowledge/**` and `/api/v1/training/**` to this service. Compose publishes host port 8015 (container port 8080); the gateway's default upstream is `http://localhost:8015` (`KNOWLEDGE_SERVICE_URL`).
 
@@ -26,7 +27,7 @@ Knowledge base and training service. It serves controlled SOP resolution (`GET /
 
 `Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route not marked anonymous requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
-Training reads need `training_log:read` and are narrowed to the caller's studies; rolling a curriculum out needs `training_curriculum:assign` (sysadmin, sponsor data management) and a study the caller is assigned to; the delegation log needs `delegation_log:read`, and its sign-off refuses records outside the signer's studies. The assigning actor is the signed caller (`PermissionMatrix.Knowledge.cs`) ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)). Delegation sign-off needs an e-signature step-up token, and each token is used once across every instance and restart: its id is recorded in `knowledge.consumed_signature_tokens` (`AddCadenceDurableSigTokenStore`, #5434, [ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
+Training reads need `training_log:read` and are narrowed to the caller's studies; publishing a curriculum needs `training_curriculum:create` (sysadmin, sponsor data management, sponsor designer); rolling a curriculum out needs `training_curriculum:assign` (sysadmin, sponsor data management) and a study the caller is assigned to; recording learner completion needs `training_log:create` and site/study scope; the delegation log needs `delegation_log:read`, and its sign-off refuses records outside the signer's studies. Every state mutation requires `X-Change-Reason`, and the acting user is the signed caller (`PermissionMatrix.Knowledge.cs`) ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)). Delegation sign-off needs an e-signature step-up token, and each token is used once across every instance and restart: its id is recorded in `knowledge.consumed_signature_tokens` (`AddCadenceDurableSigTokenStore`, #5434, [ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
 
 Training answers from its own records only (#5400). With no curriculum the list is empty, and a missing curriculum or
 assignment, or one in another study, is a 404; no demo curriculum, investigator or site is invented. Batch assignment

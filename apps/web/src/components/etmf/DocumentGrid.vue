@@ -511,6 +511,7 @@
     <BatchUploadDrawer
       :is-open="isBatchDrawerOpen"
       :study-id="etmfStore.currentStudyId"
+      :site-id="props.siteId || etmfStore.currentSiteId || siteId || null"
       @close="isBatchDrawerOpen = false"
     />
   </div>
@@ -536,6 +537,10 @@ const props = defineProps({
   isLoading: {
     type: Boolean,
     default: false,
+  },
+  siteId: {
+    type: String,
+    default: "",
   },
 });
 
@@ -764,8 +769,15 @@ const fileInputRef = ref(null);
 const uploadModalRef = ref(null);
 
 // Form Fields
-const studyId = ref("STUDY-USDM-001");
-const siteId = ref("");
+const studyId = ref(etmfStore.currentStudyId || "STUDY-USDM-001");
+const siteId = ref(props.siteId || etmfStore.currentSiteId || "");
+
+watch(
+  () => props.siteId,
+  (val) => {
+    if (val) siteId.value = val;
+  }
+);
 const artifactCode = ref("");
 const artifactType = ref("");
 const reasonForChange = ref("");
@@ -884,6 +896,7 @@ function formatDate(dateStr) {
 function openUploadModal() {
   if (!selectedArtifactCode.value) return;
   studyId.value = etmfStore.currentStudyId;
+  siteId.value = props.siteId || etmfStore.currentSiteId || siteId.value || "";
   selectedFile.value = null;
   reasonForChange.value = "";
   uploadError.value = "";

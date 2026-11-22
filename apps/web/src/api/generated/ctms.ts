@@ -219,8 +219,10 @@ export interface paths {
     };
     /** Evaluates 6-facet greenlight readiness for a single trial site. */
     get: operations["EvaluateSiteGreenlight"];
-    put?: never;
-    post?: never;
+    /** Updates 6-facet startup greenlight readiness flags for a trial site. */
+    put: operations["UpdateSiteGreenlight"];
+    /** Initializes a 6-facet startup greenlight gate for a trial site. */
+    post: operations["InitializeSiteGreenlight"];
     delete?: never;
     options?: never;
     head?: never;
@@ -381,6 +383,8 @@ export interface components {
       success: boolean;
       /** Format: int32 */
       certified_count: number | string;
+      /** Format: int32 */
+      total_certified: number | string;
       study_id: string;
       country_code: string;
       certified_sites: components["schemas"]["Ctms_CertifiedSiteItemDto"][];
@@ -403,10 +407,13 @@ export interface components {
       end_date: null | string;
       is_active: boolean;
       signed_off: boolean;
+      status: string;
       reason_for_change: string;
       created_by: string;
       /** Format: int64 */
       version_index: number | string;
+      staff_name?: null | string;
+      role?: null | string;
     };
     Ctms_DelegationTaskRequest: {
       site_id: string;
@@ -414,6 +421,8 @@ export interface components {
       task_codes: string[];
       start_date: string;
       reason_for_change: null | string;
+      staff_name?: null | string;
+      role?: null | string;
     };
     Ctms_DoaAuditHistoryItemDto: {
       id: string;
@@ -443,12 +452,34 @@ export interface components {
       id: string;
       visit_id: string;
       letter_type: string;
+      subject: string;
+      body_markdown: string;
       rendered_content: string;
+      study_id: string;
+      site_id: string;
+      status: string;
+      is_signed: boolean;
+      etmf_document_id: null | string;
+      pdf_sha256_hash: null | string;
+      pdf_access_url: string;
       created_at: string;
       created_by: string;
       reason_for_change: string;
       /** Format: int64 */
       version_index: number | string;
+    };
+    Ctms_GreenlightFacetDto: {
+      facet_code: string;
+      display_name: string;
+      evidence_summary: string;
+      is_satisfied: boolean;
+    };
+    Ctms_MonitoringFindingResponseDto: {
+      id: string;
+      visit_id: string;
+      text: string;
+      severity: string;
+      resolution_status: string;
     };
     Ctms_MonitoringVisitCompleteDto: {
       /** Format: date-time */
@@ -482,6 +513,8 @@ export interface components {
       signature_manifestation?: null | string;
       signer?: null | string;
       signing_timestamp?: null | string;
+      findings?:
+        null | components["schemas"]["Ctms_MonitoringFindingResponseDto"][];
     };
     Ctms_ProblemDetails: {
       type?: null | string;
@@ -511,11 +544,28 @@ export interface components {
       facet_staff_training: boolean;
       facet_ip_release: boolean;
       is_compliant: boolean;
+      is_ready_for_certification: boolean;
       greenlight_token: null | string;
       greenlight_certified_by: null | string;
       greenlight_certified_at: null | string;
+      certified_by: null | string;
+      certified_at: null | string;
+      evaluated_at: string;
       is_overridden: boolean;
+      facets: components["schemas"]["Ctms_GreenlightFacetDto"][];
+      blocking_reasons: string[];
       unfulfilled_reasons: null | string[];
+    };
+    Ctms_SiteGreenlightUpsertRequestDto: {
+      study_id: string;
+      country_code?: null | string;
+      site_name?: null | string;
+      facet_regulatory_irb?: null | boolean;
+      facet_cta_budget?: null | boolean;
+      facet_eisf_baseline?: null | boolean;
+      facet_doa_log?: null | boolean;
+      facet_staff_training?: null | boolean;
+      facet_ip_release?: null | boolean;
     };
     Ctms_SiteMilestoneCreateDto: {
       site_id: string;
@@ -1183,6 +1233,116 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+    };
+  };
+  UpdateSiteGreenlight: {
+    parameters: {
+      query?: never;
+      header?: {
+        "X-Change-Reason"?: string;
+      };
+      path: {
+        siteId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Ctms_SiteGreenlightUpsertRequestDto"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ctms_SiteGreenlightGateResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+    };
+  };
+  InitializeSiteGreenlight: {
+    parameters: {
+      query?: never;
+      header?: {
+        "X-Change-Reason"?: string;
+      };
+      path: {
+        siteId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Ctms_SiteGreenlightUpsertRequestDto"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ctms_SiteGreenlightGateResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

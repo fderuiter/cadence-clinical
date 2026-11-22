@@ -14,6 +14,7 @@ using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Apps.Etmf.Services;
 using Cadence.Apps.Etmf.Workers;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
@@ -40,6 +41,7 @@ public static class EtmfIntelligenceEndpoints
 
         group.MapGet("/documents", GetDocuments).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
         group.MapGet("/documents/{document_id}", GetDocumentById).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
+        group.MapPost("/documents/{document_id}/stage-qc", StageExistingDocumentForQc).WithName("StageExistingDocumentForQc").RequirePermission("etmf_document:create").RequireCallerStudyAndSiteScope();
         group.MapPost("/documents/export", ExportDocuments).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
         group.MapGet("/export-jobs/{job_id}", GetExportJob).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
         group.MapGet("/export-jobs/{job_id}/download", DownloadExportJob).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
@@ -361,7 +363,8 @@ public static class EtmfIntelligenceEndpoints
         [FromQuery] int? zone,
         [FromServices] EtmfDbContext dbContext,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct = default,
+        [FromQuery] string? site_id = null)
     {
         if (!string.IsNullOrWhiteSpace(study_id) && !ClinicalScopeGuard.CanAccessStudy(httpContext, study_id))
         {
@@ -374,7 +377,9 @@ public static class EtmfIntelligenceEndpoints
             return OutsideStudy();
         }
 
-        string? requestedSiteId = httpContext.Request.Query["site_id"].FirstOrDefault();
+        string? requestedSiteId = !string.IsNullOrWhiteSpace(site_id)
+            ? site_id
+            : httpContext.Request.Query["site_id"].FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(requestedSiteId)
             && ClinicalScopeGuard.RequireSite(httpContext, requestedSiteId) is { } siteDenied)
         {
@@ -413,6 +418,108 @@ public static class EtmfIntelligenceEndpoints
         {
             return TypedResults.NotFound(new { error = $"Document '{document_id}' not found." });
         }
+        return TypedResults.Ok(doc);
+    }
+
+    public static async Task<IResult> StageExistingDocumentForQc(
+        [FromRoute] string document_id,
+        [FromBody] StageExistingDocumentQcRequest? request,
+        [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
+        [FromServices] EtmfDbContext dbContext,
+        [FromServices] IClock clock,
+        HttpContext httpContext,
+        CancellationToken ct,
+        [FromServices] IEtmfCompletenessWebhookPublisher? completenessPublisher = null)
+    {
+        string? resolvedReason = null;
+        if (!string.IsNullOrWhiteSpace(changeReasonHeader) && ChangeReasonHeader.TryDecode(changeReasonHeader, out string? decodedHeader) && !string.IsNullOrWhiteSpace(decodedHeader))
+        {
+            resolvedReason = decodedHeader.Trim();
+        }
+        else if (!string.IsNullOrWhiteSpace(request?.ReasonForChange))
+        {
+            resolvedReason = request.ReasonForChange.Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(resolvedReason) || resolvedReason.Length < 10)
+        {
+            return TypedResults.BadRequest(new { error = "21 CFR Part 11 requires a reason_for_change (or X-Change-Reason header) of at least 10 characters." });
+        }
+
+        var doc = await dbContext.TmfDocuments.FirstOrDefaultAsync(d => d.Id == document_id, ct);
+        if (doc == null)
+        {
+            return TypedResults.NotFound(new { error = $"Document '{document_id}' not found." });
+        }
+
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, doc.StudyId, doc.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
+        {
+            return OutsideStudy();
+        }
+
+        if (string.Equals(doc.Status, TmfDocumentLifecycleState.TechnicalQc, StringComparison.OrdinalIgnoreCase))
+        {
+            return TypedResults.Ok(doc);
+        }
+
+        if (!string.Equals(doc.Status, TmfDocumentLifecycleState.Draft, StringComparison.OrdinalIgnoreCase))
+        {
+            var allowed = TmfDocument.GetAllowedTransitions(doc.Status);
+            var allowedStr = allowed.Count > 0 ? string.Join(", ", allowed) : "None";
+            return TypedResults.BadRequest(new
+            {
+                error = $"Cannot stage document with status '{doc.Status}' for QC. Only documents in 'DRAFT' status can be staged. Allowed transitions from '{doc.Status}': {allowedStr}."
+            });
+        }
+
+        var now = clock.UtcNow;
+        var user = Caller(httpContext);
+        var roles = CallerScope.Roles(httpContext);
+        if (string.IsNullOrWhiteSpace(roles))
+        {
+            roles = "USER";
+        }
+
+        if (string.IsNullOrWhiteSpace(doc.MetadataJson))
+        {
+            var report = PerformClassification(doc.Id, doc.Filename, doc.MimeType, doc.Content, doc.ArtifactType, now);
+            doc.MetadataJson = JsonSerializer.Serialize(new
+            {
+                document_intelligence = report,
+                assigned_cra = request?.AssignedCra
+            });
+        }
+
+        var currentSeq = await dbContext.TmfDocumentQcTransitions
+            .Where(t => t.DocumentId == document_id)
+            .MaxAsync(t => (int?)t.TransitionSequence, ct) ?? 0;
+        var transition = doc.StageForQc(user, roles, resolvedReason, now, currentSeq + 1);
+        dbContext.TmfDocumentQcTransitions.Add(transition);
+
+        dbContext.TmfAuditLogs.Add(new TmfAuditLog
+        {
+            Timestamp = now,
+            UserId = user,
+            UserRole = roles,
+            Action = "STAGE_EXISTING_DOCUMENT_QC",
+            DocumentId = doc.Id,
+            Details = $"Promoted ingested document {doc.Filename} from DRAFT to TECHNICAL_QC in study {doc.StudyId}.",
+            ReasonForChange = resolvedReason
+        });
+
+        await dbContext.SaveChangesAsync(ct);
+
+        if (completenessPublisher is not null && !string.IsNullOrWhiteSpace(doc.SiteId))
+        {
+            await completenessPublisher.PublishSiteActivationCompletenessAsync(
+                dbContext: dbContext,
+                studyId: doc.StudyId,
+                siteId: doc.SiteId,
+                tenantId: CallerScope.TenantId(httpContext),
+                reasonForChange: resolvedReason,
+                ct: ct);
+        }
+
         return TypedResults.Ok(doc);
     }
 
@@ -540,6 +647,9 @@ public static class EtmfIntelligenceEndpoints
         if (text.Contains("consent") || text.Contains("icf") || text.Contains("informed"))
             return new TaxonomyMatchCandidate(5, "05.02", "05.02.05", "Informed Consent Form", 0.97);
 
+        if (text.Contains("follow_up_letter") || text.Contains("confirmation_letter") || text.Contains("monitoring visit"))
+            return new TaxonomyMatchCandidate(5, "05.02", "05.02.06", "Monitoring Visit Correspondence", 0.96);
+
         if (text.Contains("brochure") || text.Contains("ib"))
             return new TaxonomyMatchCandidate(2, "02.01", "02.01.01", "Investigator's Brochure", 0.95);
 
@@ -571,6 +681,7 @@ public static class EtmfIntelligenceEndpoints
             "05.02.03" => new TaxonomyMatchCandidate(5, "05.02", "05.02.03", "Investigator CV", 1.0),
             "05.02.04" => new TaxonomyMatchCandidate(5, "05.02", "05.02.04", "Delegation of Authority Log", 1.0),
             "05.02.05" => new TaxonomyMatchCandidate(5, "05.02", "05.02.05", "Informed Consent Form", 1.0),
+            "05.02.06" => new TaxonomyMatchCandidate(5, "05.02", "05.02.06", "Monitoring Visit Correspondence", 1.0),
             "07.01.01" => new TaxonomyMatchCandidate(7, "07.01", "07.01.01", "Serious Adverse Event Report", 1.0),
             "08.01.01" => new TaxonomyMatchCandidate(8, "08.01", "08.01.01", "Central Laboratory Certificate", 1.0),
             "11.01.01" => new TaxonomyMatchCandidate(11, "11.01", "11.01.01", "Statistical Analysis Plan", 1.0),
@@ -597,6 +708,7 @@ public static class EtmfIntelligenceEndpoints
             new { zone = 5, zone_name = "Site Management", section = "05.02", section_name = "Investigator Qualification", artifact_code = "05.02.03", artifact_name = "Investigator CV" },
             new { zone = 5, zone_name = "Site Management", section = "05.02", section_name = "Investigator Qualification", artifact_code = "05.02.04", artifact_name = "Delegation of Authority Log" },
             new { zone = 5, zone_name = "Site Management", section = "05.02", section_name = "Investigator Qualification", artifact_code = "05.02.05", artifact_name = "Informed Consent Form" },
+            new { zone = 5, zone_name = "Site Management", section = "05.02", section_name = "Investigator Qualification", artifact_code = "05.02.06", artifact_name = "Monitoring Visit Correspondence" },
             new { zone = 7, zone_name = "Safety Reporting", section = "07.01", section_name = "Safety Notifications", artifact_code = "07.01.01", artifact_name = "Serious Adverse Event Report" },
             new { zone = 8, zone_name = "Centralized & Local Testing", section = "08.01", section_name = "Lab Documentation", artifact_code = "08.01.01", artifact_name = "Central Laboratory Certificate" },
             new { zone = 11, zone_name = "Statistics", section = "11.01", section_name = "Statistical Analysis", artifact_code = "11.01.01", artifact_name = "Statistical Analysis Plan" }
@@ -853,6 +965,11 @@ public record StageDocumentQCRequest(
     string? TaxonomyVersion = "v3.2.0-complete",
     string ReasonForChange = "Batch upload AI auto-classification staging for CRA QC",
     string? AssignedCra = null
+);
+
+public record StageExistingDocumentQcRequest(
+    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange = null,
+    [property: JsonPropertyName("assigned_cra")] string? AssignedCra = null
 );
 
 public record CraqcReviewRequest(

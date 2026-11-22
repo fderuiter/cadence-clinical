@@ -27,6 +27,7 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
     public DbSet<ContextualHelpMapping> ContextualHelpMappings => Set<ContextualHelpMapping>();
     public DbSet<ProtocolKnowledgeChunk> ProtocolKnowledgeChunks => Set<ProtocolKnowledgeChunk>();
     public DbSet<TrainingCurriculum> TrainingCurricula => Set<TrainingCurriculum>();
+    public DbSet<TrainingCurriculumModule> TrainingCurriculumModules => Set<TrainingCurriculumModule>();
     public DbSet<TrainingAssignment> TrainingAssignments => Set<TrainingAssignment>();
     public DbSet<DelegationRecord> DelegationRecords => Set<DelegationRecord>();
     public DbSet<OrgAuditLog> OrgAuditLogs => Set<OrgAuditLog>();
@@ -45,6 +46,7 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
         modelBuilder.ApplyConfiguration(new KnowledgeArticleAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new ContextualHelpMappingConfiguration());
         modelBuilder.ApplyConfiguration(new ProtocolKnowledgeChunkConfiguration());
+        modelBuilder.ApplyConfiguration(new TrainingCurriculumModuleConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
 

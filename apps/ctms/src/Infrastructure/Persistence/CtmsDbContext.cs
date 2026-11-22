@@ -5,6 +5,7 @@ using Cadence.Apps.Ctms.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Signatures;
 using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
@@ -42,6 +43,7 @@ public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbC
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
 
         modelBuilder.ApplyConfiguration(new CtmsAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new CtmsClinicalQueryConfiguration());

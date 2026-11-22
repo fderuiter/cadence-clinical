@@ -19,6 +19,7 @@ Generated from the EF Core model of `Cadence.Apps.Knowledge.Infrastructure.Persi
 | [`knowledge.knowledge_categories`](#knowledgeknowledge_categories) | `KnowledgeCategory` | 12 |
 | [`knowledge.knowledge_contextual_help_mappings`](#knowledgeknowledge_contextual_help_mappings) | `ContextualHelpMapping` | 12 |
 | [`knowledge.protocol_knowledge_chunks`](#knowledgeprotocol_knowledge_chunks) | `ProtocolKnowledgeChunk` | 18 |
+| [`knowledge.training_curriculum_modules`](#knowledgetraining_curriculum_modules) | `TrainingCurriculumModule` | 12 |
 
 ## knowledge.DelegationRecords
 
@@ -344,3 +345,28 @@ Indexes:
 - `IX_protocol_knowledge_chunks_ProtocolVersion`: (`ProtocolVersion`)
 - `IX_protocol_knowledge_chunks_StudyId`: (`StudyId`)
 - `IX_protocol_knowledge_chunks_tenant_id`: (`tenant_id`)
+
+## knowledge.training_curriculum_modules
+
+Entity: `TrainingCurriculumModule`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(100)` | no |  | PK |
+| `ContentText` | `text` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `CurriculumId` | `character varying(100)` | no |  |  |
+| `MinReadingTimeSeconds` | `integer` | no |  |  |
+| `ModuleType` | `character varying(100)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `SequenceOrder` | `integer` | no |  |  |
+| `Title` | `character varying(500)` | no |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_training_curriculum_modules_CurriculumId`: (`CurriculumId`)
+- `IX_training_curriculum_modules_CurriculumId_SequenceOrder`: (`CurriculumId`, `SequenceOrder`)
+- `IX_training_curriculum_modules_tenant_id`: (`tenant_id`)
