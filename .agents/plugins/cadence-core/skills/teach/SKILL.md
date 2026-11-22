@@ -13,13 +13,14 @@ Teach a technical or clinical concept using concrete mental models, worked examp
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Check Understanding**| `ask_question` | `questions=[{"question": "Quick Check Question", ...}]` | Test comprehension with interactive modal |
+| Phase                   | Antigravity Tool | Invocation Pattern                                      | Objective                                 |
+| :---------------------- | :--------------- | :------------------------------------------------------ | :---------------------------------------- |
+| **Check Understanding** | `ask_question`   | `questions=[{"question": "Quick Check Question", ...}]` | Test comprehension with interactive modal |
 
 ---
 
 ## Process
+
 1. State the core mental model in 1 sentence.
 2. Provide a concrete before/after code or clinical scenario.
 3. Highlight the common pitfalls and why they occur.
@@ -27,6 +28,7 @@ Teach a technical or clinical concept using concrete mental models, worked examp
 ### MANDATORY TOOL INVOCATION (`ask_question`)
 
 You **MUST** call `ask_question` to test comprehension interactively:
+
 ```json
 {
   "questions": [
@@ -41,5 +43,3 @@ You **MUST** call `ask_question` to test comprehension interactively:
   ]
 }
 ```
-
-

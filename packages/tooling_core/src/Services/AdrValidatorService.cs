@@ -137,23 +137,15 @@ public static class AdrValidatorService
         "## 6. Implementation & Verification"
     ];
 
-    public static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
+    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 
-    public static bool ValidateAdrs(bool checkGitDiff = true, string[]? targets = null, string? repoRoot = null)
+    public static bool ValidateAdrs(
+        bool checkGitDiff = true,
+        string[]? targets = null,
+        string? repoRoot = null,
+        bool preCommit = false,
+        string? baseRef = null,
+        string? pushBefore = null)
     {
         repoRoot ??= FindRepoRoot();
         string adrDir = Path.Combine(repoRoot, "docs", "adr");
@@ -236,7 +228,7 @@ public static class AdrValidatorService
             }
         }
 
-        if (checkGitDiff && !CheckArchitecturalChangesRequireAdr(repoRoot))
+        if (checkGitDiff && !CheckArchitecturalChangesRequireAdr(repoRoot, preCommit, baseRef, pushBefore))
         {
             allPassed = false;
         }
@@ -247,6 +239,71 @@ public static class AdrValidatorService
         }
 
         return allPassed;
+    }
+
+    /// <summary>
+    /// Appends any unlisted numbered ADR markdown files in <c>docs/adr/</c> to <c>docs/adr/index.md</c>.
+    /// </summary>
+    public static int SyncAdrIndex(string? repoRoot = null)
+    {
+        repoRoot ??= FindRepoRoot();
+        string adrDir = Path.Combine(repoRoot, "docs", "adr");
+        string indexFile = Path.Combine(adrDir, "index.md");
+        if (!Directory.Exists(adrDir) || !File.Exists(indexFile))
+        {
+            return 0;
+        }
+
+        string[] indexLines = File.ReadAllLines(indexFile);
+        var listed = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string line in indexLines)
+        {
+            var entry = IndexEntryPattern.Match(line);
+            if (entry.Success)
+            {
+                listed.Add(entry.Groups[1].Value.Split('#')[0]);
+            }
+        }
+
+        var adrFiles = Directory.GetFiles(adrDir, "*.md", SearchOption.TopDirectoryOnly)
+            .Select(Path.GetFileName)
+            .OfType<string>()
+            .Where(name => !IgnoreFiles.Contains(name) && FilenamePattern.IsMatch(name) && !listed.Contains(name))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        if (adrFiles.Count == 0)
+        {
+            return 0;
+        }
+
+        string indexContent = File.ReadAllText(indexFile);
+        var additions = new List<string>();
+        foreach (string name in adrFiles)
+        {
+            string firstLine = File.ReadLines(Path.Combine(adrDir, name)).FirstOrDefault()?.TrimEnd('\r') ?? "";
+            int? number = ParseAdrNumber(firstLine);
+            if (number is null)
+            {
+                continue;
+            }
+
+            int colonIdx = firstLine.IndexOf(':', StringComparison.Ordinal);
+            string title = colonIdx >= 0 ? firstLine[(colonIdx + 1)..].Trim() : name;
+            string datePart = name.Length >= 10 ? name[..10] : "";
+            additions.Add(string.IsNullOrEmpty(datePart)
+                ? $"- [ADR-{number.Value}: {title}]({name})"
+                : $"- [ADR-{number.Value}: {title}]({name}) ({datePart})");
+        }
+
+        if (additions.Count > 0)
+        {
+            string separator = indexContent.EndsWith('\n') ? "" : "\n";
+            File.AppendAllText(indexFile, $"{separator}{string.Join('\n', additions)}\n");
+            AnsiConsole.MarkupLine($"  [green][[OK]] Added {additions.Count} missing ADR entry(ies) to docs/adr/index.md.[/]");
+        }
+
+        return 0;
     }
 
     /// <summary>
@@ -357,13 +414,22 @@ public static class AdrValidatorService
         return errors;
     }
 
-    private static bool CheckArchitecturalChangesRequireAdr(string repoRoot)
+    private static readonly HashSet<string> FrontendExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        var changedFiles = GetChangedFiles(repoRoot);
-        var architecturalChanges = changedFiles.Where(f => IsArchitecturalFile(f, repoRoot)).ToList();
+        ".vue", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".css", ".scss", ".html",
+    };
+
+    private static bool CheckArchitecturalChangesRequireAdr(
+        string repoRoot,
+        bool preCommit,
+        string? baseRef,
+        string? pushBefore)
+    {
+        var (changedFiles, adrCandidateFiles, compareBase) = ResolveChangedAndAdrFiles(repoRoot, preCommit, baseRef, pushBefore);
+        var architecturalChanges = changedFiles.Where(f => IsArchitecturalFile(f, repoRoot, preCommit, compareBase)).ToList();
         if (architecturalChanges.Count == 0) return true;
 
-        bool newAdrAdded = changedFiles.Any(f => f.StartsWith("docs/adr/") && FilenamePattern.IsMatch(Path.GetFileName(f)) && (File.Exists(f) || File.Exists(Path.Combine(repoRoot, f))));
+        bool newAdrAdded = adrCandidateFiles.Any(f => IsExistingAdrFile(f, repoRoot, preCommit));
         if (!newAdrAdded)
         {
             AnsiConsole.MarkupLine("[red]Error: Architectural changes detected, but no corresponding ADR found in docs/adr/.[/]");
@@ -378,22 +444,65 @@ public static class AdrValidatorService
         return true;
     }
 
-    private static bool IsArchitecturalFile(string filepath, string repoRoot)
+    private static bool IsExistingAdrFile(string relativePath, string repoRoot, bool preCommit)
     {
-        if (filepath.StartsWith("tests/") || filepath.Contains("/tests/") ||
-            filepath.StartsWith("docs/") || filepath.StartsWith("scripts/") ||
-            filepath.StartsWith(".github/") || filepath.EndsWith(".md") ||
-            filepath.EndsWith(".txt") || (Path.GetFileName(filepath).StartsWith('.') && filepath.EndsWith("ignore")) ||
-            filepath.EndsWith(".d.ts"))
+        string normalized = relativePath.Replace('\\', '/');
+        if (!normalized.StartsWith("docs/adr/", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
 
-        if (filepath == "package.json") return RootPackageJsonDependenciesChanged(repoRoot);
-        if (filepath.StartsWith("apps/gateway/")) return true;
-        if (filepath.StartsWith("packages/security/") || filepath.StartsWith("packages/ui/")) return true;
+        string fileName = Path.GetFileName(normalized);
+        if (!FilenamePattern.IsMatch(fileName))
+        {
+            return false;
+        }
 
-        if (filepath.StartsWith("apps/") && Regex.IsMatch(filepath, @"(?:database|schema|model|migration|\bdb\b)", RegexOptions.IgnoreCase))
+        if (preCommit && GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", normalized) is not null)
+        {
+            return true;
+        }
+
+        return File.Exists(normalized) || File.Exists(Path.Combine(repoRoot, normalized));
+    }
+
+    public static bool IsArchitecturalFile(string filepath, string repoRoot, bool preCommit = false, string? compareBase = null)
+    {
+        string normalized = filepath.Replace('\\', '/');
+        if (normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains("/tests/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("docs/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("scripts/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith(".github/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) ||
+            (Path.GetFileName(normalized).StartsWith('.') && normalized.EndsWith("ignore", StringComparison.OrdinalIgnoreCase)) ||
+            normalized.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (string.Equals(normalized, "package.json", StringComparison.OrdinalIgnoreCase))
+        {
+            return RootPackageJsonDependenciesChanged(repoRoot, compareBase, preCommit);
+        }
+
+        if (normalized.StartsWith("apps/gateway/", StringComparison.OrdinalIgnoreCase)) return true;
+        if (normalized.StartsWith("packages/security/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("packages/ui/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (normalized.StartsWith("apps/web/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("apps/subject-portal/", StringComparison.OrdinalIgnoreCase) ||
+            FrontendExtensions.Contains(Path.GetExtension(normalized)))
+        {
+            return false;
+        }
+
+        if (normalized.StartsWith("apps/", StringComparison.OrdinalIgnoreCase) &&
+            Regex.IsMatch(normalized, @"(?:database|schema|model|migration|\bdb\b)", RegexOptions.IgnoreCase))
         {
             return true;
         }
@@ -427,81 +536,117 @@ public static class AdrValidatorService
         }
     }
 
-    private static bool RootPackageJsonDependenciesChanged(string repoRoot)
+    private static bool RootPackageJsonDependenciesChanged(string repoRoot, string? compareBase, bool preCommit)
     {
-        string workingPath = Path.Combine(repoRoot, "package.json");
-        string? after = File.Exists(workingPath) ? File.ReadAllText(workingPath) : null;
-        return PackageJsonDependenciesChanged(ReadCommittedFile(repoRoot, "package.json"), after);
+        string baselineRevision = string.IsNullOrEmpty(compareBase) ? "HEAD" : compareBase;
+        string? before = GitRevisionScopeService.ReadFileAtRevision(repoRoot, baselineRevision, "package.json");
+        string? after;
+        if (preCommit)
+        {
+            after = GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", "package.json");
+        }
+        else
+        {
+            string workingPath = Path.Combine(repoRoot, "package.json");
+            after = File.Exists(workingPath) ? File.ReadAllText(workingPath) : null;
+        }
+
+        return PackageJsonDependenciesChanged(before, after);
     }
 
-    private static string? ReadCommittedFile(string repoRoot, string relativePath)
-    {
-        try
-        {
-            var psi = new ProcessStartInfo("git", $"show HEAD:{relativePath}")
-            {
-                WorkingDirectory = repoRoot,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            };
-            using var proc = Process.Start(psi);
-            if (proc == null) return null;
-            string output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit();
-            return proc.ExitCode == 0 ? output : null;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Failed to read committed {relativePath}: {ex.Message}");
-            return null;
-        }
-    }
-
-    private static HashSet<string> GetChangedFiles(string repoRoot)
+    private static (HashSet<string> ChangedFiles, HashSet<string> AdrCandidateFiles, string? CompareBase) ResolveChangedAndAdrFiles(
+        string repoRoot,
+        bool preCommit,
+        string? baseRef,
+        string? pushBefore)
     {
         var changed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var adrCandidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         string changedFilesTxt = Path.Combine(repoRoot, "changed_files.txt");
         if (File.Exists(changedFilesTxt))
         {
             foreach (var line in File.ReadAllLines(changedFilesTxt))
             {
-                if (!string.IsNullOrWhiteSpace(line)) changed.Add(line.Trim());
-            }
-            if (changed.Count > 0) return changed;
-        }
-
-        try
-        {
-            var psi = new ProcessStartInfo("git", "status --porcelain")
-            {
-                WorkingDirectory = repoRoot,
-                RedirectStandardOutput = true,
-                UseShellExecute = false
-            };
-            using var proc = Process.Start(psi);
-            if (proc != null)
-            {
-                string output = proc.StandardOutput.ReadToEnd();
-                proc.WaitForExit();
-                foreach (var line in output.Split('\n'))
+                if (!string.IsNullOrWhiteSpace(line))
                 {
-                    if (line.Length > 3)
-                    {
-                        string filepath = line[3..].Trim().Trim('"');
-                        if (filepath.Contains(" -> ")) filepath = filepath.Split(" -> ")[1].Trim();
-                        if (!string.IsNullOrWhiteSpace(filepath)) changed.Add(filepath);
-                    }
+                    string entry = line.Trim().Replace('\\', '/');
+                    changed.Add(entry);
+                    adrCandidates.Add(entry);
                 }
             }
         }
-        catch (Exception ex)
+
+        if (!GitRevisionScopeService.HasGitRepository(repoRoot))
         {
-            Debug.WriteLine($"Failed to retrieve changed files via git: {ex.Message}");
+            return (changed, adrCandidates, null);
         }
 
-        return changed;
+        string effectiveBaseRef = GitRevisionScopeService.NormalizeBaseRef(baseRef);
+        string? headCommit = GitRevisionScopeService.TryResolveCommitSha(repoRoot, "HEAD");
+
+        if (preCommit)
+        {
+            foreach (string staged in GitRevisionScopeService.GetStagedFiles(repoRoot, includeDeletions: false))
+            {
+                changed.Add(staged);
+                adrCandidates.Add(staged);
+            }
+
+            string? branchCompareBase = GitRevisionScopeService.TryResolveBranchCompareBase(repoRoot, effectiveBaseRef);
+            if (!string.IsNullOrEmpty(branchCompareBase) &&
+                !string.IsNullOrEmpty(headCommit) &&
+                !string.Equals(branchCompareBase, headCommit, StringComparison.Ordinal))
+            {
+                foreach (string committed in GitRevisionScopeService.GetChangedFilesBetweenCommits(repoRoot, branchCompareBase, headCommit, includeDeletions: false))
+                {
+                    adrCandidates.Add(committed);
+                }
+            }
+
+            return (changed, adrCandidates, branchCompareBase);
+        }
+
+        string? compareBase = !string.IsNullOrWhiteSpace(pushBefore)
+            ? GitRevisionScopeService.TryResolveValidPushBase(repoRoot, pushBefore, headCommit)
+            : GitRevisionScopeService.TryResolveBranchCompareBase(repoRoot, effectiveBaseRef);
+
+        if (!string.IsNullOrEmpty(compareBase) &&
+            !string.IsNullOrEmpty(headCommit) &&
+            !string.Equals(compareBase, headCommit, StringComparison.Ordinal))
+        {
+            IEnumerable<string> committedChanges = GitRevisionScopeService.GetChangedFilesBetweenCommits(
+                repoRoot,
+                compareBase,
+                headCommit,
+                includeDeletions: false);
+
+            // When comparing against a branch ref (for example after merging origin/main into a feature branch), exclude files
+            // whose content matches baseRef verbatim so upstream architectural commits do not require a second ADR on the branch.
+            if (string.IsNullOrWhiteSpace(pushBefore))
+            {
+                var differsFromBaseRef = GitRevisionScopeService.TryGetPathsDifferingFromRevision(repoRoot, effectiveBaseRef, cached: false);
+                if (differsFromBaseRef is not null)
+                {
+                    var differingSet = new HashSet<string>(differsFromBaseRef, StringComparer.OrdinalIgnoreCase);
+                    committedChanges = committedChanges.Where(differingSet.Contains);
+                }
+            }
+
+            foreach (string file in committedChanges)
+            {
+                changed.Add(file);
+                adrCandidates.Add(file);
+            }
+        }
+
+        foreach (string workingFile in GitRevisionScopeService.GetWorkingTreeChanges(repoRoot, includeDeletions: false, includeUntracked: true))
+        {
+            changed.Add(workingFile);
+            adrCandidates.Add(workingFile);
+        }
+
+        return (changed, adrCandidates, compareBase);
     }
 
     private static HashSet<string> GetValidRequirements(string repoRoot)

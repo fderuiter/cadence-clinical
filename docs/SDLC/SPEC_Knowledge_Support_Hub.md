@@ -8,9 +8,10 @@ Furthermore, operational guidance documents and SOPs in clinical trials are qual
 
 ## Solution
 
-The **Cadence Knowledge & Support Hub** (`apps/knowledge/`) is a dedicated microservice providing an in-app, GxP-compliant, role-aware knowledge base and contextual help system for the Cadence Clinical Research Platform. 
+The **Cadence Knowledge & Support Hub** (`apps/knowledge/`) is a dedicated microservice providing an in-app, GxP-compliant, role-aware knowledge base and contextual help system for the Cadence Clinical Research Platform.
 
 Key capabilities include:
+
 1. **Two-Tier Controlled Document Model**: `KnowledgeArticle` manages operational metadata and active published pointers, while `KnowledgeArticleVersion` stores immutable snapshot content (Markdown source, cached HTML, and full-text search vectors).
 2. **Strict Seven-State GxP Lifecycle**: Enforces `DRAFT` → `IN_REVIEW` → `APPROVED` → `PUBLISHED` → `SUPERSEDED` / `ARCHIVED` (with `REJECTED` reversion) and four-eyes review controls.
 3. **Role-Aware Content & Category Taxonomy**: Hierarchical category tree with persona-level visibility filtering across platform roles.
@@ -42,6 +43,7 @@ Key capabilities include:
 ## Implementation Decisions
 
 ### 1. Two-Tier Controlled Document Data Model
+
 - **`KnowledgeCategory`**: Self-referential hierarchy via `parent_id` (`ondelete="SET NULL"`), unique `slug` and `name`, `persona_visibility` string/JSON array, and standard GxP audit fields.
 - **`KnowledgeArticle`**: Entity head holding UUID, `slug`, `title`, `category_id` (`ondelete="RESTRICT"`), `status`, `version_index`, `version_label`, `current_published_version_id`, `tags` JSON array, authorship fields (`author_user_id`, `last_edited_by`, `approved_by`), and soft-delete flag `is_deleted`.
 - **`KnowledgeArticleVersion`**: Immutable snapshot holding `article_id` (`ondelete="RESTRICT"`), `version_index`, `version_label`, `status_at_snapshot`, `body_markdown`, `body_html`, and `search_vector` (`tsvector`).
@@ -49,15 +51,18 @@ Key capabilities include:
 - **`ContextualHelpMapping`**: Route mapping holding `route_pattern`, `persona`, `article_id` (`ondelete="CASCADE"`), `section_anchor`, `priority`, and `is_active`.
 
 ### 2. Microservice Decoupling
+
 - `apps/knowledge/` owns articles, categories, versions, help mappings, and article audit logs.
 - Operational support ticketing is delegated to `apps/tickets/` via authenticated internal gateway calls, maintaining strict microservice boundaries per `AGENTS.md`.
 
 ### 3. Draft Granularity & Version Immutability
+
 - A single working draft record is updated in `KnowledgeArticleVersion` while the article is in `DRAFT` status.
 - Upon transitioning to `APPROVED`, the version record is permanently locked.
 - Editing an approved or published article increments `version_index` and initiates a new draft record.
 
 ### 4. Contextual Help Matching Algorithm & Specificity Scoring
+
 - In-page help queries filter by route pattern match (exact match, prefix wildcard `/ecrf/*`, or parameter wildcard `/mdr/:studyId/*`) and `(persona = :role OR persona IS NULL)`.
 - Hierarchical Specificity Resolution:
   1. Route pattern specificity (Exact > Parameterized > Longest prefix wildcard > Global `/*`).
@@ -67,17 +72,20 @@ Key capabilities include:
 - Returns 1 primary spotlight article + up to 3 secondary related guides.
 
 ### 5. Frontend Help Panel UX & Fallback Escalation
+
 - Global slide-in right drawer (`width: 420px`) anchored to `AppShell.vue` using Vanilla CSS design tokens.
 - Lazy on-demand fetching when the drawer is toggled, with route+persona in-memory caching.
 - Unmapped fallback pane with instant search, category directory links, and pre-populated ticket escalation to `apps/tickets/`.
 
 ### 6. PostgreSQL Full-Text Search with SQLite Dialect Guard
+
 - `search_vector` on `KnowledgeArticleVersion` indexes `title`, `tags`, and `body_markdown` with a PostgreSQL `GIN` index.
 - SQLAlchemy definitions use conditional dialect guards to allow execution against SQLite in unit test suites.
 
 ## Testing Decisions
 
 ### Test Strategy & Seams
+
 1. **Repository & Service Layer Seam** (`apps/knowledge/application/article_service.py`):
    - Test complete 7-state lifecycle state machine (`DRAFT` → `IN_REVIEW` → `APPROVED` → `PUBLISHED` → `SUPERSEDED`/`ARCHIVED`/`REJECTED`).
    - Test four-eyes approval validation (`last_edited_by != actor_user_id`).
@@ -93,6 +101,7 @@ Key capabilities include:
    - Test 21 CFR Part 11 eSignature validation via `GatewayAuthMiddleware`.
 
 ### Prior Art
+
 - `apps/tickets/tests/test_tickets_service.py`
 - `packages/testing/src/Security/TestSecurityContext.cs` (the Python `packages/testing` factories and security helpers were retired in #4789)
 
@@ -108,4 +117,3 @@ Key capabilities include:
 - Traceable to system requirements `PRD-KNB-001` (Article Lifecycle) and `PRD-KNB-002` (Multi-Channel Notifications).
 - Scaffolds ADR-2188 (`docs/adr/2026-08-21-knowledge-hub-two-tier-immutable-data-model.md`).
 - All test functions must carry `@req:PRD-KNB-001` or `@req:PRD-KNB-002` docstrings for automated RTM sync via `scripts/sync_gxp.py`.
-

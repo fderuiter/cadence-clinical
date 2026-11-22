@@ -28,6 +28,10 @@ import {
   purgeUserScopedStorage,
   storageScopeOf,
 } from "../utils/userScopedStorage.js";
+import {
+  extractAssignedSites,
+  extractAssignedStudies,
+} from "../utils/callerScope";
 
 const EMPTY_DEMO_IDENTITY = Object.freeze({
   username: "",
@@ -339,6 +343,12 @@ function emptyAuthState() {
     user: null,
     /** @type {string[]} Keycloak realm roles from `realm_access.roles` */
     rawRoles: [],
+    /** @type {string[]} Concrete study codes from `study_ids` claim */
+    assignedStudies: [],
+    /** @type {string[]} Assigned site codes from `site_id` / `site_ids` claims */
+    assignedSites: [],
+    /** @type {boolean} True when `study_ids` carries wildcard `*` */
+    hasAllStudiesScope: false,
     /** @type {string | null} */
     currentPersona: null,
     /** @type {string | null} */
@@ -495,6 +505,10 @@ export const useAuthStore = defineStore("auth", {
       this.rawRoles = Array.isArray(claims.realm_access?.roles)
         ? [...claims.realm_access.roles]
         : [];
+      const studyScope = extractAssignedStudies(claims);
+      this.assignedStudies = studyScope.assignedStudies;
+      this.hasAllStudiesScope = studyScope.hasAllStudiesScope;
+      this.assignedSites = extractAssignedSites(claims);
       this.authError = null;
       webSessionCoordinator.markAuthenticated();
 
@@ -541,6 +555,7 @@ export const useAuthStore = defineStore("auth", {
       this.sessionExpired = false;
       this.isLoggingOut = false;
       this.rawRoles = [...DEMO_ROLES];
+      this.hasAllStudiesScope = true;
       const entitled = personasForRoles(this.rawRoles);
       const selectedPersona =
         personaKey && entitled.some((p) => p.key === personaKey)

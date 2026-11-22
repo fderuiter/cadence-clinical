@@ -13,16 +13,17 @@ Records significant, hard-to-reverse architectural decisions with clear rational
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Scaffolding** | `run_command` | `CommandLine="dotnet cadence scaffold adr '<Title>'"` | Generate dated ADR template and auto-index in `docs/adr/index.md` |
-| **Inspection** | `view_file` | `AbsolutePath=".../docs/adr/YYYY-MM-DD-slug.md"` | Inspect scaffolded sections and template comments |
-| **Authoring** | `replace_file_content` | Target: `docs/adr/YYYY-MM-DD-slug.md`, contiguous section edits | Populate Problem Statement, Options, Outcome, and Trade-offs |
-| **Validation** | `run_command` | `CommandLine="dotnet cadence check adrs"` | Verify format, frontmatter, and requirement ID traceability |
+| Phase           | Antigravity Tool       | Invocation Pattern                                              | Objective                                                         |
+| :-------------- | :--------------------- | :-------------------------------------------------------------- | :---------------------------------------------------------------- |
+| **Scaffolding** | `run_command`          | `CommandLine="dotnet cadence scaffold adr '<Title>'"`           | Generate dated ADR template and auto-index in `docs/adr/index.md` |
+| **Inspection**  | `view_file`            | `AbsolutePath=".../docs/adr/YYYY-MM-DD-slug.md"`                | Inspect scaffolded sections and template comments                 |
+| **Authoring**   | `replace_file_content` | Target: `docs/adr/YYYY-MM-DD-slug.md`, contiguous section edits | Populate Problem Statement, Options, Outcome, and Trade-offs      |
+| **Validation**  | `run_command`          | `CommandLine="dotnet cadence check adrs"`                       | Verify format, frontmatter, and requirement ID traceability       |
 
 ## When an ADR is Required
 
 Create an ADR when:
+
 1. Adding a new third-party dependency or database engine.
 2. Modifying inter-service data contracts or introducing new API gateways.
 3. Changing data storage models (Neo4j graph nodes or PostgreSQL schema migrations).
@@ -40,7 +41,6 @@ dotnet cadence scaffold adr "Descriptive Title"
 ```
 
 This creates a dated file under `docs/adr/YYYY-MM-DD-slug.md` and automatically updates the index table in [`docs/adr/index.md`](../../../../docs/adr/index.md).
-
 
 ## ADR Authoring Protocol
 
@@ -64,4 +64,3 @@ This creates a dated file under `docs/adr/YYYY-MM-DD-slug.md` and automatically 
      - `- **Affected Repositories / Services:**`
      - `- **Verification Plan:**`
 3. **Verify Compliance**: Run `dotnet cadence check adrs` to confirm index alignment, top-level section presence, and strict `### Option` subsection formatting.
-

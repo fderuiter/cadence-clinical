@@ -15,8 +15,14 @@ public static class SecurityAuditorService
         Console.WriteLine("Executing hardcoded secret scanner and security audit...");
 
         IEnumerable<string> filesToScan;
-        if (files != null && files.Length > 0)
+        if (files is not null)
         {
+            if (files.Length == 0)
+            {
+                Console.WriteLine("✔ Security audit passed cleanly. Zero high-entropy secrets detected.");
+                return 0;
+            }
+
             filesToScan = files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists);
         }
         else

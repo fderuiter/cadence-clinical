@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -78,20 +77,36 @@ public static partial class DeidComplianceService
     public const string BaselineFile = ".deid-baseline.txt";
 
     /// <summary>
-    /// Scans <paramref name="files"/>, or every file git tracks when none are given, and returns 1 when a finding is
-    /// not in <see cref="BaselineFile"/> or a baseline entry for a scanned file no longer matches. Findings name the
-    /// file, line, column and category, never the matched value. With <c>CADENCE_UPDATE_BASELINE=1</c> and no files,
-    /// the baseline is rewritten from the current findings instead.
+    /// Scans <paramref name="files"/>, or the resolved <see cref="GitRevisionScopeService"/> candidate files when none are
+    /// given, and returns 1 when a finding is not in <see cref="BaselineFile"/> or a baseline entry for a scanned file no
+    /// longer matches. Findings name the file, line, column and category, never the matched value. With
+    /// <c>CADENCE_UPDATE_BASELINE=1</c> and no explicit files, the baseline is rewritten from all tracked findings instead.
     /// </summary>
-    public static int ScanDeidCompliance(string[]? files = null, string? repoRoot = null, ComplianceProfile profile = ComplianceProfile.HIPAA)
+    public static int ScanDeidCompliance(
+        string[]? files = null,
+        string? repoRoot = null,
+        ComplianceProfile profile = ComplianceProfile.HIPAA,
+        bool preCommit = false,
+        string? baseRef = null,
+        string? pushBefore = null)
     {
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Executing DEID compliance scan...");
 
+        if (files is { Length: 0 })
+        {
+            Console.WriteLine("✔ DEID compliance scan passed cleanly (0 files; 0 baselined findings).");
+            return 0;
+        }
+
+        bool updateBaseline = files is null &&
+                              !preCommit &&
+                              Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE") == "1";
+
         var detector = new DeidDetector();
         var scanned = new List<string>();
         var findings = new List<(DeidFinding Finding, string Key)>();
-        foreach (string relativePath in CandidateFiles(files, repoRoot))
+        foreach (string relativePath in CandidateFiles(repoRoot, files, preCommit, baseRef, pushBefore, forceTrackedScan: updateBaseline))
         {
             string content;
             try
@@ -113,8 +128,7 @@ public static partial class DeidComplianceService
         }
 
         string baselinePath = Path.Combine(repoRoot, BaselineFile);
-        bool fullScan = files is not { Length: > 0 };
-        if (fullScan && Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE") == "1")
+        if (updateBaseline)
         {
             WriteBaseline(baselinePath, findings.Select(f => f.Key));
             Console.WriteLine($"✔ Wrote {findings.Count} entries to {BaselineFile}.");
@@ -348,55 +362,55 @@ public static partial class DeidComplianceService
         return (line, offset - lineStart + 1);
     }
 
-    // Explicit files (the changed files CI and the pre-commit hook pass), or every file git tracks, so .gitignore is
-    // honoured by git itself rather than by the Python reference's pattern emulation.
-    private static IEnumerable<string> CandidateFiles(string[]? files, string repoRoot)
+    // Explicit files, GitRevisionScopeService diff scope, or every file git tracks (git ls-files -z), filtered through
+    // IsExcludedPath and ShouldScanFile (all 19 TextExtensions, AlwaysScannedNames, and extensionless NUL-byte sniffing).
+    public static IReadOnlyList<string> CandidateFiles(
+        string repoRoot,
+        string[]? files = null,
+        bool preCommit = false,
+        string? baseRef = null,
+        string? pushBefore = null,
+        bool forceTrackedScan = false)
     {
-        IEnumerable<string> relative = files is { Length: > 0 }
-            ? files.Select(f => Path.GetRelativePath(repoRoot, Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)))
-            : TrackedFiles(repoRoot);
+        IEnumerable<string> relative;
+        if (files is not null)
+        {
+            relative = files.Select(f => Path.GetRelativePath(repoRoot, Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)));
+        }
+        else if (forceTrackedScan)
+        {
+            relative = TrackedFiles(repoRoot);
+        }
+        else
+        {
+            var scope = GitRevisionScopeService.ResolveFileScanScope(
+                repoRoot,
+                explicitFiles: null,
+                preCommit: preCommit,
+                baseRef: baseRef,
+                pushBefore: pushBefore);
+            relative = scope.Kind == GitScopeKind.NonGitDirectory
+                ? TrackedFiles(repoRoot)
+                : scope.Files;
+        }
 
-        return relative
+        return [.. relative
             .Select(p => p.Replace('\\', '/'))
-            .Where(p => !p.StartsWith("../", StringComparison.Ordinal) && !IsExcludedPath(p))
-            .Where(p => File.Exists(Path.Combine(repoRoot, p)) && ShouldScanFile(Path.Combine(repoRoot, p)))
+            .Where(p => !p.StartsWith("../", StringComparison.Ordinal) && p != ".." && !IsExcludedPath(p))
+            .Where(p =>
+            {
+                string fullPath = Path.Combine(repoRoot, p);
+                return File.Exists(fullPath) && ShouldScanFile(fullPath);
+            })
             .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal);
+            .Order(StringComparer.Ordinal)];
     }
 
-    private static IEnumerable<string> TrackedFiles(string repoRoot)
-    {
-        var startInfo = new ProcessStartInfo("git", "ls-files -z")
-        {
-            WorkingDirectory = repoRoot,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        using var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("git ls-files could not be started; the DEID scan needs git to list files.");
-        string output = process.StandardOutput.ReadToEnd();
-        process.WaitForExit();
-        if (process.ExitCode != 0)
-        {
-            throw new InvalidOperationException($"git ls-files failed in {repoRoot}: {process.StandardError.ReadToEnd()}");
-        }
+    private static IEnumerable<string> TrackedFiles(string repoRoot) =>
+        GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-files", "-z")
+        ?? throw new InvalidOperationException($"git ls-files failed in {repoRoot}; the DEID scan needs git to list files.");
 
-        return output.Split('\0', StringSplitOptions.RemoveEmptyEntries);
-    }
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
+    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 
     [GeneratedRegex(@"\d+\.\d+")]
     private static partial Regex DecimalNumberRegex();
