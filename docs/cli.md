@@ -123,7 +123,7 @@ must make it fail.
 | `readmes`             | `validate-readmes`                                                     |                 | Runs                                                                                                                                    |
 | `codeowners`          | `validate-codeowners`                                                  |                 | Runs                                                                                                                                    |
 | `workflow-security`   | `validate-workflow-security`, `action-pinning`, `check-action-pinning` | yes             | Runs on the staged files                                                                                                                |
-| `rulesets`            | `validate-rulesets`                                                    |                 | Runs                                                                                                                                    |
+| `rulesets`            | `validate-rulesets`                                                    |                 | Quick: validates staged `.github/rulesets` and `.github/workflows` blobs                                                                |
 | `imports`             | `validate-imports`                                                     |                 | Runs                                                                                                                                    |
 | `security`            | `audit-security`                                                       | yes             | Runs on the staged files                                                                                                                |
 | `deid`                | `deid-compliance-scan`                                                 | yes             | Runs on the staged files                                                                                                                |
@@ -277,9 +277,11 @@ pnpm cadence rulesets --repo fderuiter/cadence-clinical # target an explicit own
 | `--repo <owner/repo>` | Target GitHub repository (`owner/repo`). Defaults to `GITHUB_REPOSITORY`, then `git remote get-url origin`.                             |
 
 Before making any API request, `cadence rulesets` runs the `rulesets` quality gate (`RulesetService.Validate`): every
-branch ruleset must set `strict_required_status_checks_policy: true`, pin required status checks to GitHub Actions
-(`integration_id: 15368`), require `CI Gate` and `Check for Merge Conflicts`, and match active pull-request workflow
-jobs (`CI Gate` in `.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request validation job).
+branch ruleset must restrict any `bypass_actors` entries to `bypass_mode: "pull_request"` (and tag rulesets must not
+configure `bypass_actors`), set `strict_required_status_checks_policy: true`, pin required status checks to GitHub
+Actions (`integration_id: 15368`), require `CI Gate` and `Check for Merge Conflicts`, and match active pull-request
+workflow jobs (`CI Gate` in `.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request
+validation job).
 
 Without `--dry-run`, it fetches `gh api --paginate repos/<owner>/<repo>/rulesets?per_page=100`, updates existing
 rulesets by `name` (`PUT repos/<owner>/<repo>/rulesets/<id> --input <file>`), and creates missing ones
