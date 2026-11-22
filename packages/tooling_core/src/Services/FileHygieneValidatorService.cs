@@ -14,28 +14,9 @@ public static class FileHygieneValidatorService
 {
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
-    /// <summary>
-    /// Pre-existing clinical specification Markdown files containing Markdown two-space line breaks,
-    /// exempted only on whole-repository scans when no explicit target files are provided.
-    /// </summary>
-    private static readonly HashSet<string> LegacyMarkdownTrailingWhitespaceExemptions = new(StringComparer.Ordinal)
-    {
-        "docs/COMPETITIVE_ANALYSIS_AND_MARKET_SUPERIORITY.md",
-        "docs/FUNCTIONAL_PRODUCT_SPECIFICATION.md",
-        "docs/SDLC/01_Product_Requirements_Document_PRD.md",
-        "docs/SDLC/02_Technical_Design_Document_TDD.md",
-        "docs/SDLC/03_API_Integration_Specification.md",
-        "docs/SDLC/SPEC_Knowledge_Support_Hub.md",
-        "docs/SRS.md",
-        "docs/migration/slices/execution-observations/01_spec.md",
-        "docs/migration/slices/execution-observations/03_tickets.md",
-        "docs/specs/ecrf_designer_ide_spec.md",
-    };
-
     public static int ValidateTrailingWhitespace(string[]? targetFiles = null, string? repoRoot = null, bool preCommit = false)
     {
         repoRoot ??= FindRepoRoot();
-        bool hasExplicitTargets = preCommit || targetFiles is not null;
         var files = ResolveCandidateFiles(repoRoot, targetFiles, preCommit);
         if (files.Count == 0)
         {
@@ -45,11 +26,6 @@ public static class FileHygieneValidatorService
         var errors = new List<string>();
         foreach (var (fullPath, relPath) in files)
         {
-            if (!hasExplicitTargets && LegacyMarkdownTrailingWhitespaceExemptions.Contains(relPath))
-            {
-                continue;
-            }
-
             string? text = TryReadUtf8Text(fullPath);
             if (text is null || text.Length == 0)
             {
@@ -141,7 +117,7 @@ public static class FileHygieneValidatorService
     {
         if (preCommit)
         {
-            var staged = targetFiles is { Length: > 0 }
+            var staged = targetFiles is not null
                 ? (IEnumerable<string>)targetFiles
                 : PreCommitOpenApiService.GetStagedFiles(repoRoot);
             return FilterFiles(repoRoot, staged);

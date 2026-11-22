@@ -42,7 +42,9 @@ function checkDuplicates(filePath) {
   traverse(ast);
 
   if (!ecrfFieldsArray) {
-    console.error("[-] Could not find 'ecrfFields' array in the AST of " + filePath);
+    console.error(
+      "[-] Could not find 'ecrfFields' array in the AST of " + filePath
+    );
     process.exit(1);
   }
 
@@ -77,20 +79,32 @@ function checkDuplicates(filePath) {
 }
 
 function main() {
-  const defaultPath = path.resolve(__dirname, "../apps/web/src/stores/clinical.ts");
-  const filePath = process.argv[2] ? path.resolve(process.argv[2]) : defaultPath;
+  const defaultPath = path.resolve(
+    __dirname,
+    "../apps/web/src/stores/clinical.ts"
+  );
+  const filePath = process.argv[2]
+    ? path.resolve(process.argv[2])
+    : defaultPath;
 
   console.log(`[*] Parsing and linting ecrfFields in: ${filePath}`);
   try {
     const { ids, duplicates } = checkDuplicates(filePath);
     if (duplicates.length > 0) {
-      console.error(`[!] Build Failure: Duplicate eCRF field identifiers detected: ${JSON.stringify(duplicates)}`);
+      console.error(
+        `[!] Build Failure: Duplicate eCRF field identifiers detected: ${JSON.stringify(duplicates)}`
+      );
       process.exit(1);
     }
-    console.log(`[+] Success: Checked ${ids.length} eCRF fields. No duplicate identifiers detected.`);
+    console.log(
+      `[+] Success: Checked ${ids.length} eCRF fields. No duplicate identifiers detected.`
+    );
     process.exit(0);
   } catch (err) {
-    console.error(`[-] Error running check_duplicate_identifiers:`, err.message);
+    console.error(
+      `[-] Error running check_duplicate_identifiers:`,
+      err.message
+    );
     process.exit(1);
   }
 }

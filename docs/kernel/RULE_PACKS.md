@@ -26,10 +26,21 @@ A pack is a JSON object, stored as the content of a library item of kind `RulePa
     {
       "id": "VS-001",
       "version": 1,
-      "citation": { "document": "Sponsor data standards manual", "section": "4.2" },
-      "applicability": { "stage": "Standardization", "standard": "SDTMIG", "standardVersion": "3.4", "dataset": "VS" },
+      "citation": {
+        "document": "Sponsor data standards manual",
+        "section": "4.2"
+      },
+      "applicability": {
+        "stage": "Standardization",
+        "standard": "SDTMIG",
+        "standardVersion": "3.4",
+        "dataset": "VS"
+      },
       "severity": "Error",
-      "condition": { "op": "<", "args": [{ "var": "SYSBP" }, { "var": "DIABP" }] },
+      "condition": {
+        "op": "<",
+        "args": [{ "var": "SYSBP" }, { "var": "DIABP" }]
+      },
       "explanation": "Systolic blood pressure is lower than diastolic.",
       "remediation": "Check the two results against the source.",
       "effective": { "from": "2026-01-01" }
@@ -38,17 +49,17 @@ A pack is a JSON object, stored as the content of a library item of kind `RulePa
 }
 ```
 
-| Property | Rule |
-| --- | --- |
-| `authority` | `CDISC`, `FDA`, `PMDA`, `NMPA`, `EMA`, `Sponsor` or `Study`; a rule without one takes the pack's |
-| `id` | Letters, digits, `.`, `_`, `-`; up to 64 characters; unique in the pack |
-| `version` | 1 or more; raise it whenever the rule's meaning changes |
-| `citation` | `document` required; `section` and an http(s) `uri` optional |
-| `applicability.stage` | `Design`, `Collection`, `Standardization`, `Analysis` or `Submission` (spec §10.2) |
-| `applicability` others | Optional; a rule applies only when each value it names equals the run's value exactly |
-| `severity` | `Error`, `Warning` or `Notice` |
-| `condition` | An expression that is `true` when the record **violates** the rule |
-| `effective` | Optional; `from` is inclusive and `until` exclusive, compared with the run's as-of date |
+| Property               | Rule                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------ |
+| `authority`            | `CDISC`, `FDA`, `PMDA`, `NMPA`, `EMA`, `Sponsor` or `Study`; a rule without one takes the pack's |
+| `id`                   | Letters, digits, `.`, `_`, `-`; up to 64 characters; unique in the pack                          |
+| `version`              | 1 or more; raise it whenever the rule's meaning changes                                          |
+| `citation`             | `document` required; `section` and an http(s) `uri` optional                                     |
+| `applicability.stage`  | `Design`, `Collection`, `Standardization`, `Analysis` or `Submission` (spec §10.2)               |
+| `applicability` others | Optional; a rule applies only when each value it names equals the run's value exactly            |
+| `severity`             | `Error`, `Warning` or `Notice`                                                                   |
+| `condition`            | An expression that is `true` when the record **violates** the rule                               |
+| `effective`            | Optional; `from` is inclusive and `until` exclusive, compared with the run's as-of date          |
 
 Unknown properties, duplicate IDs, blank, padded or over-long text (2,000 characters) and more than 5,000 rules are
 rejected, and the error lists the problems (up to 50).
@@ -58,14 +69,14 @@ rejected, and the error lists the problems (up to 50).
 An expression is a JSON literal (`null`, `true`, `false`, a number or a string), a variable `{"var": "NAME"}`, or an
 operator `{"op": "…", "args": […]}`.
 
-| Operators | Meaning |
-| --- | --- |
-| `and`, `or`, `not` | Three-valued (Kleene) logic; a non-boolean operand counts as unknown |
+| Operators                        | Meaning                                                                                                          |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `and`, `or`, `not`               | Three-valued (Kleene) logic; a non-boolean operand counts as unknown                                             |
 | `==`, `!=`, `<`, `<=`, `>`, `>=` | Numeric when both sides are numbers or numeric text, otherwise ordinal text; booleans support `==` and `!=` only |
-| `+`, `-`, `*`, `/` | Decimal arithmetic; null on a non-number, overflow or division by zero |
-| `is_empty`, `is_not_empty` | Null or blank text is empty |
-| `in`, `not_in` | First argument compared with `==` to each of the others |
-| `length` | Length of the text in Unicode characters |
+| `+`, `-`, `*`, `/`               | Decimal arithmetic; null on a non-number, overflow or division by zero                                           |
+| `is_empty`, `is_not_empty`       | Null or blank text is empty                                                                                      |
+| `in`, `not_in`                   | First argument compared with `==` to each of the others                                                          |
+| `length`                         | Length of the text in Unicode characters                                                                         |
 
 Points that surprise people:
 

@@ -73,6 +73,11 @@ public static class DetectSecretsGateService
         bool preCommit = false,
         Func<string, string?>? getEnvironmentVariable = null)
     {
+        if (targetFiles is { Length: 0 })
+        {
+            return 0;
+        }
+
         repoRoot ??= FindRepoRoot();
         getEnvironmentVariable ??= Environment.GetEnvironmentVariable;
 
@@ -172,7 +177,7 @@ public static class DetectSecretsGateService
         IEnumerable<string> rawCandidates;
         if (preCommit)
         {
-            rawCandidates = targetFiles is { Length: > 0 }
+            rawCandidates = targetFiles is not null
                 ? targetFiles
                 : PreCommitOpenApiService.GetStagedFiles(repoRoot);
         }

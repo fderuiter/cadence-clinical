@@ -25,8 +25,8 @@ public enum PreCommitMode
 /// <summary>What a gate checks: the repository root, the files to limit it to, and whether the pre-commit hook runs it.</summary>
 public sealed record GateContext(string RepoRoot, string[]? TargetFiles = null, bool PreCommit = false)
 {
-    /// <summary>The target files, or <c>null</c> for the whole repository.</summary>
-    public string[]? Files => TargetFiles is { Length: > 0 } ? TargetFiles : null;
+    /// <summary>The target files (empty when a pre-commit change only deletes files), or <c>null</c> for the whole repository.</summary>
+    public string[]? Files => TargetFiles;
 }
 
 /// <summary>
@@ -100,8 +100,8 @@ public static class QualityGates
             ctx => FileHygieneValidatorService.ValidateEndOfFileNewline(ctx.TargetFiles, ctx.RepoRoot, ctx.PreCommit) == 0)
         { TakesFiles = true },
         new("clean-secrets", ["clean-secrets-baseline"],
-            "Normalizes `.secrets.baseline`; fails when it is not valid JSON (CI then checks that it did not change)",
-            ctx => SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: ctx.RepoRoot) == 0),
+            "Verifies `.secrets.baseline` is valid, normalized JSON with the canonical exclusion filter without mutating it",
+            ctx => SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: ctx.RepoRoot, check: true) == 0),
         new("detect-secrets", ["secrets-scan"],
             "Scans changed files against `.secrets.baseline` using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
             ctx => DetectSecretsGateService.Scan(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit) == 0)
@@ -117,7 +117,11 @@ public static class QualityGates
             "`docs/cli.md` documents every command in `Program.cs`, and the gate tables in `docs/cli.md` and `docs/CI.md` match this registry",
             ctx => CheckCliDocs(ctx.RepoRoot)),
         new("adrs", ["validate-adrs"], "ADR schema, `docs/adr/index.md` consistency, and an ADR for architectural changes",
-            ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot)),
+            ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot, preCommit: ctx.PreCommit))
+        {
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "checks staged files for architectural changes instead of the working tree",
+        },
         new("arch-drift", ["validate-architecture-drift"],
             "`docker/docker-compose.yml` exists and declares services; services missing from the architecture docs are warnings",
             ctx => ArchitectureDriftValidatorService.ValidateArchitectureDrift(ctx.RepoRoot) == 0),
@@ -262,7 +266,7 @@ public static class QualityGates
 
         if (ctx.PreCommit || ctx.TargetFiles is not null)
         {
-            var rawFiles = ctx.PreCommit && (ctx.TargetFiles is null || ctx.TargetFiles.Length == 0)
+            var rawFiles = ctx.PreCommit && ctx.TargetFiles is null
                 ? PreCommitOpenApiService.GetStagedFiles(ctx.RepoRoot)
                 : (IReadOnlyList<string>)(ctx.TargetFiles ?? []);
 
@@ -311,28 +315,8 @@ public static class QualityGates
         return RunProcess(ctx.RepoRoot, "dotnet", "format", subcommand, "Cadence.sln", "--verify-no-changes", "--no-restore") == 0;
     }
 
-    private static string? FindNearestCsproj(string repoRoot, string relativeFile)
-    {
-        string fullRepoRoot = Path.GetFullPath(repoRoot);
-        string? dir = Path.GetDirectoryName(Path.GetFullPath(Path.Combine(fullRepoRoot, relativeFile)));
-        while (!string.IsNullOrEmpty(dir) && dir.StartsWith(fullRepoRoot, StringComparison.Ordinal))
-        {
-            string[] projects = Directory.GetFiles(dir, "*.csproj");
-            if (projects.Length == 1)
-            {
-                return Path.GetRelativePath(fullRepoRoot, projects[0]);
-            }
-
-            if (string.Equals(dir, fullRepoRoot, StringComparison.Ordinal))
-            {
-                break;
-            }
-
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        return null;
-    }
+    private static string? FindNearestCsproj(string repoRoot, string relativeFile) =>
+        PreCommitOpenApiService.FindNearestCsproj(repoRoot, relativeFile);
 
     private static bool IsDotnetAvailable() =>
         DetectSecretsGateService.FindExecutableOnPath("dotnet", Environment.GetEnvironmentVariable("PATH")) is not null;
@@ -341,17 +325,17 @@ public static class QualityGates
     {
         if (ctx.PreCommit)
         {
-            var files = ctx.TargetFiles is { Length: > 0 }
+            var files = ctx.TargetFiles is not null
                 ? (IEnumerable<string>)ctx.TargetFiles
                 : PreCommitOpenApiService.GetStagedFiles(ctx.RepoRoot);
 
-            if (!files.Any(AffectsEfCoreSchema))
+            if (!files.Any(PreCommitOpenApiService.AffectsEfCoreSchema))
             {
                 Console.WriteLine("Staged changes do not include Entity Framework entities, migrations, or configurations. Skipping schema documentation check...");
                 return true;
             }
         }
-        else if (ctx.Files is { Length: > 0 } && !ctx.Files.Any(AffectsEfCoreSchema))
+        else if (ctx.Files is not null && !ctx.Files.Any(PreCommitOpenApiService.AffectsEfCoreSchema))
         {
             return true;
         }
@@ -359,41 +343,11 @@ public static class QualityGates
         return SchemaDocGeneratorService.GenerateSchemaDocumentation(validate: true, repoRoot: ctx.RepoRoot) == 0;
     }
 
-    private static bool AffectsEfCoreSchema(string file)
-    {
-        string normalized = file.Replace('\\', '/');
-        if (!normalized.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
-            normalized.StartsWith("docs/", StringComparison.OrdinalIgnoreCase) ||
-            normalized.StartsWith("scripts/", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        string fileName = Path.GetFileNameWithoutExtension(normalized);
-
-        return normalized.Contains("/migrations/", StringComparison.OrdinalIgnoreCase) ||
-               normalized.StartsWith("migrations/", StringComparison.OrdinalIgnoreCase) ||
-               normalized.Contains("/configurations/", StringComparison.OrdinalIgnoreCase) ||
-               normalized.StartsWith("configurations/", StringComparison.OrdinalIgnoreCase) ||
-               normalized.Contains("/entities/", StringComparison.OrdinalIgnoreCase) ||
-               normalized.StartsWith("entities/", StringComparison.OrdinalIgnoreCase) ||
-               fileName.Contains("migration", StringComparison.OrdinalIgnoreCase) ||
-               fileName.Contains("configuration", StringComparison.OrdinalIgnoreCase) ||
-               fileName.Contains("entities", StringComparison.OrdinalIgnoreCase) ||
-               fileName.Contains("entity", StringComparison.OrdinalIgnoreCase) ||
-               fileName.Contains("dbcontext", StringComparison.OrdinalIgnoreCase);
-    }
-
     private static bool CheckDemoManifest(GateContext ctx)
     {
         if (ctx.PreCommit)
         {
-            var files = ctx.TargetFiles is { Length: > 0 }
+            var files = ctx.TargetFiles is not null
                 ? (IEnumerable<string>)ctx.TargetFiles
                 : PreCommitOpenApiService.GetStagedFiles(ctx.RepoRoot);
 
@@ -403,7 +357,7 @@ public static class QualityGates
                 return true;
             }
         }
-        else if (ctx.Files is { Length: > 0 } && !ctx.Files.Any(f => AffectsDemoManifest(ctx.RepoRoot, f)))
+        else if (ctx.Files is not null && !ctx.Files.Any(f => AffectsDemoManifest(ctx.RepoRoot, f)))
         {
             return true;
         }
@@ -500,7 +454,6 @@ public static class QualityGates
             }
         }
     }
-
     private static string Normalize(string name) => name.Trim().ToLowerInvariant().Replace('_', '-');
 
     private static int RunQuietProcess(string workingDirectory, string fileName, params string[] arguments)

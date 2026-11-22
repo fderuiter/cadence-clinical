@@ -62,7 +62,7 @@ public static partial class WorkflowSecurityValidatorService
         explicitFilterEmpty = false;
         var results = new List<(string FullPath, string RelativePath, bool IsWorkflow)>();
 
-        if (files is { Length: > 0 })
+        if (files is not null)
         {
             foreach (string raw in files)
             {

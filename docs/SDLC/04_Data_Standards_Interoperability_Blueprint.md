@@ -290,7 +290,7 @@ The algorithm executes the following sequence:
 
      $$S_{\text{Lev}}(V, D) = 1.0 - \frac{L(V, D)}{\max(|V|, |D|)}$$
 
-   - **Token Cosine Similarity ($S_{\text{Cos}}$):**
+   - **Token Cosine Similarity ($S\_{\text{Cos}}$):**
      For multi-word terms, the text is represented as vector representations of words in an $N$-dimensional space. The similarity is defined by:
 
      $$S_{\text{Cos}}(V, D) = \frac{\mathbf{v} \cdot \mathbf{d}}{\|\mathbf{v}\| \|\mathbf{d}\|} = \frac{\sum_{i=1}^{n} v_i d_i}{\sqrt{\sum_{i=1}^{n} v_i^2} \sqrt{\sum_{i=1}^{n} d_i^2}}$$
