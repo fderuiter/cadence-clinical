@@ -205,4 +205,27 @@ public class SiteComplianceCacheConfigurationTests
         reloaded.MissingDocuments.Should().Equal("Form-C");
         reloaded.IsComplete.Should().BeFalse();
     }
+
+    [Fact]
+    public async Task SiteComplianceCaches_GivenActivatedState_RoundTripsActivationMetadata()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var activatedAt = new DateTimeOffset(2026, 11, 20, 14, 30, 0, TimeSpan.Zero);
+        var original = SiteComplianceCache.Create(Study, Site, Milestone, isComplete: true, Array.Empty<string>());
+        original.MarkActivated(activatedAt, "sponsor-dm-42");
+
+        await using (var writeContext = CreateInMemoryContext(databaseName))
+        {
+            writeContext.SiteComplianceCaches.Add(original);
+            await writeContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var readContext = CreateInMemoryContext(databaseName);
+        var reloaded = await readContext.SiteComplianceCaches.AsNoTracking()
+            .SingleAsync(TestContext.Current.CancellationToken);
+
+        reloaded.IsActivated.Should().BeTrue();
+        reloaded.ActivatedAt.Should().Be(activatedAt);
+        reloaded.ActivatedBy.Should().Be("sponsor-dm-42");
+    }
 }

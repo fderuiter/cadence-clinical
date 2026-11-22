@@ -89,26 +89,39 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         await _db.DisposeAsync();
     }
 
-    private static DefaultHttpContext Caller(string role = RoleNormalization.ROLE_SYSADMIN, string userId = "user-1")
+    private static DefaultHttpContext Caller(
+        string role = RoleNormalization.ROLE_SYSADMIN,
+        string userId = "user-1",
+        string[]? studies = null,
+        string[]? sites = null)
     {
-        bool isSiteRole = SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains(RoleNormalization.NormalizeRole(role));
+        var normalized = RoleNormalization.GetNormalizedRoles([role]);
+        bool siteScoped = normalized.Any(SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains);
         var httpContext = new DefaultHttpContext();
         httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
         {
             UserId = userId,
-            Roles = [role],
-            AssignedStudies = [StudyId],
-            AssignedSites = isSiteRole ? [SiteId] : [],
+            TenantId = TestSecurityContext.TenantCode,
+            Roles = normalized,
+            RawRoles = [role],
+            AssignedStudies = studies ?? [StudyId],
+            AssignedSites = sites ?? (siteScoped ? [SiteId] : []),
         };
         return httpContext;
     }
 
-    private HttpClient CreateClient(string role = RoleNormalization.ROLE_SYSADMIN, string userId = "admin-1")
+    private HttpClient CreateClient(
+        string role = RoleNormalization.ROLE_SYSADMIN,
+        string userId = "admin-1",
+        string[]? studyIds = null,
+        string[]? siteIds = null)
     {
-        bool isSiteRole = SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains(RoleNormalization.NormalizeRole(role));
+        var normalized = RoleNormalization.GetNormalizedRoles([role]);
+        bool siteScoped = normalized.Any(SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains);
         var identity = TestSecurityContext.Identity(userId, role) with
         {
-            SiteIds = isSiteRole ? [SiteId] : [],
+            StudyIds = studyIds ?? [StudyId],
+            SiteIds = siteIds ?? (siteScoped ? [SiteId] : []),
         };
         var handler = new TestSecurityContext.GatewaySigningHandler(identity)
         {
@@ -452,7 +465,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var result = await DoaEndpoints.GetSiteDoaLogAsync(
-            SiteId, _db, TestContext.Current.CancellationToken);
+            SiteId, _db, Caller(), TestContext.Current.CancellationToken);
 
         var okResult = result.Should().BeOfType<Ok<DoaLogResponseDto>>().Subject;
         okResult.Value.Should().NotBeNull();
@@ -470,7 +483,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
     public async Task GetSiteDoaLog_WithNonExistentSite_Returns404NotFound()
     {
         var result = await DoaEndpoints.GetSiteDoaLogAsync(
-            "SITE-UNKNOWN", _db, TestContext.Current.CancellationToken);
+            "SITE-UNKNOWN", _db, Caller(), TestContext.Current.CancellationToken);
 
         var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
         problem.StatusCode.Should().Be(StatusCodes.Status404NotFound);
@@ -559,5 +572,26 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         var piSignOffResponse = await piClient.PostAsJsonAsync(
             "/api/v1/ctms/doa/sign-off", signOffPayload, TestContext.Current.CancellationToken);
         piSignOffResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        // 4. Investigator assigned only to SITE-999 is blocked at route scope middleware on GET /sites/{site_id}/log,
+        // and cross-site body mutations on POST /doa/delegate return 403 FORBIDDEN_SCOPE
+        using var otherSitePiClient = CreateClient(RoleNormalization.ROLE_INVESTIGATOR, "pi-other", [StudyId], ["SITE-999"]);
+        var crossSiteRes = await otherSitePiClient.GetAsync($"/api/v1/ctms/doa/sites/{SiteId}/log", TestContext.Current.CancellationToken);
+        crossSiteRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var crossSiteDelegateRes = await otherSitePiClient.PostAsJsonAsync(
+            "/api/v1/ctms/doa/delegate",
+            new DelegationTaskRequest(SiteId, "staff-99", ["CRF_DATA_ENTRY"], "2026-11-15", "Cross-site attempt"),
+            TestContext.Current.CancellationToken);
+        crossSiteDelegateRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var crossSiteBody = await crossSiteDelegateRes.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        crossSiteBody.GetProperty("code").GetString().Should().Be(CtmsScopeGuard.ForbiddenCode);
+
+        // 5. Sponsor DM assigned only to OTHER-STUDY receives 403 FORBIDDEN_SCOPE when reading SITE-101 bound to STUDY-2026-001
+        using var otherStudyDmClient = CreateClient(RoleNormalization.ROLE_SPONSOR_DM, "dm-other", ["OTHER-STUDY"], []);
+        var crossStudyRes = await otherStudyDmClient.GetAsync($"/api/v1/ctms/doa/sites/{SiteId}/log", TestContext.Current.CancellationToken);
+        crossStudyRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var crossStudyBody = await crossStudyRes.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        crossStudyBody.GetProperty("code").GetString().Should().Be(CtmsScopeGuard.ForbiddenCode);
     }
 }

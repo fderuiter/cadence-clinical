@@ -41,15 +41,22 @@ public sealed class SiteMilestoneEndpointsTests
         _clock = new FakeClock(new DateTimeOffset(2026, 10, 15, 10, 0, 0, TimeSpan.Zero));
     }
 
-    private static DefaultHttpContext Caller(string role = RoleNormalization.ROLE_SYSADMIN, string userId = "manager-1")
+    private static DefaultHttpContext Caller(
+        string role = RoleNormalization.ROLE_SYSADMIN,
+        string userId = "manager-1",
+        string[]? studies = null,
+        string[]? sites = null)
     {
+        var normalized = RoleNormalization.GetNormalizedRoles([role]);
+        bool siteScoped = normalized.Any(SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains);
         var httpContext = new DefaultHttpContext();
         httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
         {
             UserId = userId,
-            Roles = [role],
-            AssignedStudies = [StudyId],
-            AssignedSites = [SiteId],
+            Roles = normalized,
+            RawRoles = [role],
+            AssignedStudies = studies ?? [StudyId],
+            AssignedSites = sites ?? (siteScoped ? [SiteId] : []),
         };
         return httpContext;
     }
@@ -137,7 +144,7 @@ public sealed class SiteMilestoneEndpointsTests
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var result = await SiteMilestoneEndpoints.GetSiteMilestonesAsync(
-            StudyId, SiteId, _db, TestContext.Current.CancellationToken);
+            StudyId, SiteId, _db, Caller(), TestContext.Current.CancellationToken);
 
         var ok = result.Should().BeOfType<Ok<List<SiteMilestoneResponseDto>>>().Subject;
         ok.Value.Should().HaveCount(1);
@@ -203,5 +210,59 @@ public sealed class SiteMilestoneEndpointsTests
 
         result.Should().BeOfType<ProblemHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    public async Task SiteMilestones_EnforcesCallerScopeIsolation()
+    {
+        var ownMilestone = new CtmsSiteMilestone
+        {
+            SiteId = SiteId,
+            StudyId = StudyId,
+            MilestoneType = "IRB_APPROVAL",
+            PlannedDate = _clock.UtcNow.AddDays(3),
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+            CreatedBy = "setup",
+            ReasonForChange = "Initial"
+        };
+        var foreignMilestone = new CtmsSiteMilestone
+        {
+            SiteId = "SITE-999",
+            StudyId = StudyId,
+            MilestoneType = "IRB_APPROVAL",
+            PlannedDate = _clock.UtcNow.AddDays(5),
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+            CreatedBy = "setup",
+            ReasonForChange = "Initial"
+        };
+        _db.CtmsSiteMilestones.AddRange(ownMilestone, foreignMilestone);
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Site-scoped CRA omitting site_id sees only assigned site milestones
+        var scopedCra = Caller("CRA", "cra-1", [StudyId], [SiteId]);
+        var listResult = await SiteMilestoneEndpoints.GetSiteMilestonesAsync(
+            StudyId, null, _db, scopedCra, TestContext.Current.CancellationToken);
+        var okList = listResult.Should().BeOfType<Ok<List<SiteMilestoneResponseDto>>>().Subject;
+        okList.Value!.Select(m => m.Site).Should().Equal(SiteId);
+
+        // Cross-site create & update fail closed with 403 FORBIDDEN_SCOPE
+        scopedCra.Request.Headers["X-Change-Reason"] = "Unauthorized site mutation";
+        var createDenied = await SiteMilestoneEndpoints.CreateSiteMilestoneAsync(
+            new SiteMilestoneCreateDto("SITE-999", StudyId, "SITE_ACTIVATION"),
+            _db, scopedCra, _clock, TestContext.Current.CancellationToken);
+        createDenied.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+
+        var updateDenied = await SiteMilestoneEndpoints.UpdateSiteMilestoneAsync(
+            foreignMilestone.Id, new SiteMilestoneUpdateDto(Status: "ACHIEVED"),
+            _db, scopedCra, _clock, TestContext.Current.CancellationToken);
+        var deniedProblem = updateDenied.Should().BeOfType<ProblemHttpResult>().Subject;
+        deniedProblem.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        deniedProblem.ProblemDetails.Extensions.Should().ContainKey("code").WhoseValue.Should().Be(CtmsScopeGuard.ForbiddenCode);
+
+        // Cross-study read fails closed with 403 FORBIDDEN_SCOPE
+        var crossStudyCaller = Caller(RoleNormalization.ROLE_SPONSOR_DM, "dm-1", ["OTHER-STUDY"], []);
+        var crossStudyRead = await SiteMilestoneEndpoints.GetSiteMilestonesAsync(
+            StudyId, SiteId, _db, crossStudyCaller, TestContext.Current.CancellationToken);
+        crossStudyRead.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
     }
 }
