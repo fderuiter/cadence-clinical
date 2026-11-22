@@ -41,11 +41,43 @@
         class="participant-governance"
         data-testid="participant-governance"
       >
+        <div
+          v-if="coveringParticipantLocks.length > 0"
+          class="participant-locks-banner"
+          data-testid="participant-locks-banner"
+          role="status"
+        >
+          <strong>{{
+            participantAssertionsLocked ? "Locked." : "Frozen."
+          }}</strong>
+          Values cannot be changed while a lock is in force.
+          <span data-testid="participant-lock-scope-note">
+            <template v-if="participantAssertionsLocked">
+              Source verifications, verification withdrawals, and query changes
+              are also blocked while a Locked assertion is in force.
+            </template>
+            <template v-else>
+              Source verification and queries remain available while Frozen.
+            </template>
+          </span>
+          <ul>
+            <li
+              v-for="(held, idx) in coveringParticipantLocks"
+              :key="held.ref ?? `covering-${idx}`"
+            >
+              {{ held.kind }} on {{ held.scope_ref }} by
+              {{ held.locked_by ?? "—" }} at {{ held.locked_at ?? "—" }}:
+              {{ held.reason_for_change ?? "—" }}
+            </li>
+          </ul>
+        </div>
+
         <ScopeLockControls
           :study-ref="studyRef"
           :scope-ref="`enrollment:${record.enrollmentId}`"
           scope-label="participant"
           :direct-locks="directEnrollmentLocks"
+          :covering-locks="ancestorEnrollmentLocks"
           id-prefix="participant-lock"
           @changed="refreshEnrollmentLocks"
         />
@@ -137,10 +169,12 @@ import {
 } from "../../api/kernelApi";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { participantStateLabel } from "../../canvas/lifecycle";
+import { parseNodeRef } from "../../canvas/nodeRef";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import ParticipantFormsPanel from "./ParticipantFormsPanel.vue";
 import QueriesPanel from "./QueriesPanel.vue";
 import ScopeLockControls, {
+  type CoveringScopeLockItem,
   type DirectScopeLockItem,
 } from "./ScopeLockControls.vue";
 
@@ -183,6 +217,7 @@ function onFormsLoaded(summaries: EcrfFormSummary[]) {
 }
 
 const studyRef = ref<string | null>(null);
+const zoomStudySiteRef = ref<string | null>(null);
 const activeStudyLocks = ref<KernelLock[]>([]);
 const casebookFormat = ref<CasebookExportFormat>("html");
 const casebookBusy = ref(false);
@@ -192,16 +227,61 @@ const casebookOutcome = ref<{
   sha256?: string | null;
 } | null>(null);
 
+function stripNodeVersion(refText: string | null | undefined): string | null {
+  if (!refText) return null;
+  const parsed = parseNodeRef(refText);
+  if (parsed) return `${parsed.kind}:${parsed.id}`;
+  const at = refText.indexOf("@");
+  return at < 0 ? refText : refText.slice(0, at);
+}
+
+const enrollmentRef = computed(() =>
+  record.value.enrollmentId ? `enrollment:${record.value.enrollmentId}` : ""
+);
+
+const effectiveStudySiteRef = computed(() => {
+  if (zoomStudySiteRef.value) return zoomStudySiteRef.value;
+  if (!enrollmentRef.value) return null;
+  for (const lock of activeStudyLocks.value) {
+    if (
+      !lock.masked &&
+      lock.study_site_ref &&
+      (lock.enrollment_ref === enrollmentRef.value ||
+        lock.scope_ref === enrollmentRef.value)
+    ) {
+      return stripNodeVersion(lock.study_site_ref);
+    }
+  }
+  return null;
+});
+
+const coveringParticipantLocks = computed<KernelLock[]>(() => {
+  if (!enrollmentRef.value) return [];
+  const siteRef = effectiveStudySiteRef.value;
+  return activeStudyLocks.value.filter((l) => {
+    if (l.masked || l.released || !l.scope_ref) return false;
+    if (studyRef.value && l.scope_ref === studyRef.value) return true;
+    if (siteRef && l.scope_ref === siteRef) return true;
+    return l.scope_ref === enrollmentRef.value;
+  });
+});
+
+const participantAssertionsLocked = computed(() =>
+  coveringParticipantLocks.value.some((l) => l.kind === "Locked")
+);
+
 const directEnrollmentLocks = computed<DirectScopeLockItem[]>(() => {
-  const enrollmentRef = record.value.enrollmentId
-    ? `enrollment:${record.value.enrollmentId}`
-    : "";
-  if (!enrollmentRef) return [];
-  return activeStudyLocks.value
-    .filter(
-      (l) => !l.masked && !l.released && l.ref && l.scope_ref === enrollmentRef
-    )
+  if (!enrollmentRef.value) return [];
+  return coveringParticipantLocks.value
+    .filter((l) => l.ref && l.scope_ref === enrollmentRef.value)
     .map((l) => ({ lockRef: l.ref as string, kind: l.kind }));
+});
+
+const ancestorEnrollmentLocks = computed<CoveringScopeLockItem[]>(() => {
+  if (!enrollmentRef.value) return [];
+  return coveringParticipantLocks.value
+    .filter((l) => l.scope_ref && l.scope_ref !== enrollmentRef.value)
+    .map((l) => ({ kind: l.kind, scope: l.scope_ref as string }));
 });
 
 async function refreshEnrollmentLocks() {
@@ -226,14 +306,28 @@ watch(
   async ([code, enrollmentId]) => {
     const seq = ++lookupSeq;
     casebookOutcome.value = null;
+    zoomStudySiteRef.value = null;
     if (!code || !enrollmentId) {
       studyRef.value = null;
       activeStudyLocks.value = [];
       return;
     }
     try {
-      const resolved = await findKernelStudyRef(code);
+      const zoomTask =
+        typeof kernelApi.getZoomPath === "function"
+          ? Promise.resolve()
+              .then(() => kernelApi.getZoomPath(`enrollment:${enrollmentId}`))
+              .catch(() => [])
+          : Promise.resolve([]);
+      const [resolved, zoomSteps] = await Promise.all([
+        findKernelStudyRef(code),
+        zoomTask,
+      ]);
       if (seq !== lookupSeq) return;
+      const siteStep = (zoomSteps ?? []).find(
+        (step) => step.level === "study_site" && !step.mask && step.node
+      );
+      zoomStudySiteRef.value = stripNodeVersion(siteStep?.node ?? null);
       studyRef.value = resolved;
       if (resolved) {
         await refreshEnrollmentLocks();
@@ -305,6 +399,19 @@ async function exportCasebook() {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.participant-locks-banner {
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+.participant-locks-banner ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
 }
 
 .casebook-bar {

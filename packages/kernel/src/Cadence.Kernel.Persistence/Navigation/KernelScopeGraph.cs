@@ -6,12 +6,17 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Simulation;
+using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Domain.Standards;
 using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Navigation;
+using Cadence.Kernel.Persistence.Evidence;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Validation;
@@ -104,6 +109,12 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                     : new ScopeNode(
                         EnrollmentSummary(enrollmentId, enrollment.SubjectCode, enrollment.Status, enrollment.VersionIndex),
                         ZoomRules.EnrollmentParent(enrollment.StudyId, enrollment.StudySiteId));
+
+            case NodeKinds.CollectionInstance:
+                return await CollectionInstanceNodeAsync(db, tenant, CollectionInstanceId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false);
+
+            case NodeKinds.Observation:
+                return await ObservationNodeAsync(db, tenant, ObservationId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false);
 
             case NodeKinds.ProtocolVersion:
                 var protocolVersionId = ProtocolVersionId.FromGuid(node.Id);
@@ -263,6 +274,12 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                         .Select(e => new ScopeChild(EnrollmentSummary(e.Id, e.SubjectCode, e.Status, e.VersionIndex), ChildCount: null)),
                 ];
 
+            case NodeKinds.Enrollment:
+                return await EnrollmentChildrenAsync(db, tenant, EnrollmentId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false);
+
+            case NodeKinds.CollectionInstance:
+                return await CollectionInstanceChildrenAsync(db, tenant, CollectionInstanceId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false);
+
             case NodeKinds.Organization:
                 var organizationId = OrganizationId.FromGuid(node.Id);
                 var sites = await db.Sites.AsNoTracking()
@@ -275,6 +292,294 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
             default:
                 return [];
         }
+    }
+
+    public async Task<IReadOnlyDictionary<NodeRef, EnrollmentId>> EnrollmentsOfAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        var collectionRefs = nodes.Where(n => n.Kind == NodeKinds.CollectionInstance).Distinct().ToList();
+        var obsRefs = nodes.Where(n => n.Kind == NodeKinds.Observation).Distinct().ToList();
+        if (collectionRefs.Count == 0 && obsRefs.Count == 0)
+        {
+            return new Dictionary<NodeRef, EnrollmentId>();
+        }
+
+        await using var db = contexts.Create(tenant);
+        var enrollmentByCollectionId = new Dictionary<Guid, EnrollmentId>();
+        if (collectionRefs.Count > 0)
+        {
+            var collectionIds = collectionRefs.Select(n => CollectionInstanceId.FromGuid(n.Id)).Distinct().ToList();
+            var rows = await db.CollectionInstances.AsNoTracking()
+                .Where(c => c.TenantId == tenant && collectionIds.Contains(c.Id))
+                .Select(c => new { c.Id, c.EnrollmentId })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var row in rows)
+            {
+                enrollmentByCollectionId[row.Id.Value] = row.EnrollmentId;
+            }
+        }
+
+        var enrollmentByObsId = new Dictionary<Guid, EnrollmentId>();
+        if (obsRefs.Count > 0)
+        {
+            var obsIds = obsRefs.Select(n => ObservationId.FromGuid(n.Id)).Distinct().ToList();
+            var rows = await db.Observations.AsNoTracking()
+                .Where(o => o.TenantId == tenant && obsIds.Contains(o.Id))
+                .Select(o => new { o.Id, o.EnrollmentId })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var row in rows)
+            {
+                enrollmentByObsId[row.Id.Value] = row.EnrollmentId;
+            }
+        }
+
+        var result = new Dictionary<NodeRef, EnrollmentId>();
+        foreach (var nodeRef in collectionRefs)
+        {
+            if (enrollmentByCollectionId.TryGetValue(nodeRef.Id, out var enrollmentId))
+            {
+                result[nodeRef] = enrollmentId;
+            }
+        }
+
+        foreach (var nodeRef in obsRefs)
+        {
+            if (enrollmentByObsId.TryGetValue(nodeRef.Id, out var enrollmentId))
+            {
+                result[nodeRef] = enrollmentId;
+            }
+        }
+
+        return result;
+    }
+
+    public async Task<IReadOnlyDictionary<NodeRef, EnrollmentId>> BlindedObservationsAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        var obsRefs = nodes.Where(n => n.Kind == NodeKinds.Observation).Distinct().ToList();
+        if (obsRefs.Count == 0)
+        {
+            return new Dictionary<NodeRef, EnrollmentId>();
+        }
+
+        var obsIds = obsRefs.Select(n => ObservationId.FromGuid(n.Id)).Distinct().ToList();
+        await using var db = contexts.Create(tenant);
+        var observations = await db.Observations.AsNoTracking()
+            .Where(o => o.TenantId == tenant && obsIds.Contains(o.Id))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (observations.Count == 0)
+        {
+            return new Dictionary<NodeRef, EnrollmentId>();
+        }
+
+        var enrollmentByObsId = observations.ToDictionary(o => o.Id.Value, o => o.EnrollmentId);
+        var blindedIds = new HashSet<Guid>();
+        foreach (var byStudy in observations.GroupBy(o => o.StudyId))
+        {
+            var studyBlinded = await KernelLockRecords.ResolveBlindedObservationsAsync(
+                    db,
+                    byStudy.Key,
+                    byStudy,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var blindedId in studyBlinded)
+            {
+                blindedIds.Add(blindedId.Value);
+            }
+        }
+
+        if (blindedIds.Count == 0)
+        {
+            return new Dictionary<NodeRef, EnrollmentId>();
+        }
+
+        var result = new Dictionary<NodeRef, EnrollmentId>();
+        foreach (var nodeRef in obsRefs)
+        {
+            if (blindedIds.Contains(nodeRef.Id) && enrollmentByObsId.TryGetValue(nodeRef.Id, out var enrollmentId))
+            {
+                result[nodeRef] = enrollmentId;
+            }
+        }
+
+        return result;
+    }
+
+    private static async Task<ScopeNode?> CollectionInstanceNodeAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        CollectionInstanceId instanceId,
+        CancellationToken cancellationToken)
+    {
+        var instance = await db.CollectionInstances.AsNoTracking()
+            .Where(c => c.TenantId == tenant && c.Id == instanceId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (instance is null)
+        {
+            return null;
+        }
+
+        var content = await db.ProtocolVersions.AsNoTracking()
+            .Where(p => p.TenantId == tenant && p.Id == instance.ProtocolVersionId)
+            .Select(p => p.Content)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var design = content is null ? null : ProtocolDesignDocument.Read(content).Design;
+        return new ScopeNode(
+            CollectionInstanceSummary(instance, design),
+            NodeRef.For(instance.EnrollmentId));
+    }
+
+    private static async Task<ScopeNode?> ObservationNodeAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        ObservationId observationId,
+        CancellationToken cancellationToken)
+    {
+        var observation = await db.Observations.AsNoTracking()
+            .Where(o => o.TenantId == tenant && o.Id == observationId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (observation is null)
+        {
+            return null;
+        }
+
+        var concept = await db.Concepts.AsNoTracking()
+            .Where(c => c.TenantId == tenant && c.Id == observation.ConceptId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var parentInstance = await db.CollectionInstances.AsNoTracking()
+            .Where(c => c.TenantId == tenant && c.EnrollmentId == observation.EnrollmentId && c.Members.Any(m => m.ObservationId == observationId))
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var itemId = parentInstance?.Members.FirstOrDefault(m => m.ObservationId == observationId)?.ItemId;
+        var zoomParent = parentInstance is not null
+            ? NodeRef.For(parentInstance.Id)
+            : NodeRef.For(observation.EnrollmentId);
+
+        return new ScopeNode(
+            ObservationSummary(observation, concept, itemId),
+            zoomParent);
+    }
+
+    private static async Task<IReadOnlyList<ScopeChild>> EnrollmentChildrenAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        EnrollmentId enrollmentId,
+        CancellationToken cancellationToken)
+    {
+        var instances = await db.CollectionInstances.AsNoTracking()
+            .Where(c => c.TenantId == tenant && c.EnrollmentId == enrollmentId)
+            .OrderBy(c => c.CollectedAt)
+            .ThenBy(c => c.OpenedAt)
+            .ThenBy(c => c.CollectionSpecId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (instances.Count == 0)
+        {
+            return [];
+        }
+
+        var protocolIds = instances.Select(c => c.ProtocolVersionId).Distinct().ToList();
+        var designsByVersion = (await db.ProtocolVersions.AsNoTracking()
+                .Where(p => p.TenantId == tenant && protocolIds.Contains(p.Id))
+                .Select(p => new { p.Id, p.Content })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false))
+            .ToDictionary(p => p.Id, p => ProtocolDesignDocument.Read(p.Content).Design);
+
+        return
+        [
+            .. instances.Select(c =>
+                new ScopeChild(
+                    CollectionInstanceSummary(c, designsByVersion.GetValueOrDefault(c.ProtocolVersionId)),
+                    ChildCount: c.Members.Count)),
+        ];
+    }
+
+    private static async Task<IReadOnlyList<ScopeChild>> CollectionInstanceChildrenAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        CollectionInstanceId instanceId,
+        CancellationToken cancellationToken)
+    {
+        var instance = await db.CollectionInstances.AsNoTracking()
+            .Where(c => c.TenantId == tenant && c.Id == instanceId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (instance is null || instance.Members.Count == 0)
+        {
+            return [];
+        }
+
+        var obsIds = instance.Members.Select(m => m.ObservationId).Distinct().ToList();
+        var observations = await db.Observations.AsNoTracking()
+            .Where(o => o.TenantId == tenant && obsIds.Contains(o.Id))
+            .ToDictionaryAsync(o => o.Id, cancellationToken)
+            .ConfigureAwait(false);
+        if (observations.Count == 0)
+        {
+            return [];
+        }
+
+        var conceptIds = observations.Values.Select(o => o.ConceptId).Distinct().ToList();
+        var concepts = conceptIds.Count == 0
+            ? new Dictionary<ConceptId, Concept>()
+            : await db.Concepts.AsNoTracking()
+                .Where(c => c.TenantId == tenant && conceptIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+        var children = new List<ScopeChild>(instance.Members.Count);
+        foreach (var member in instance.Members.OrderBy(m => m.JoinedAt).ThenBy(m => m.ItemId, StringComparer.Ordinal))
+        {
+            if (observations.TryGetValue(member.ObservationId, out var obs))
+            {
+                concepts.TryGetValue(obs.ConceptId, out var concept);
+                children.Add(new ScopeChild(ObservationSummary(obs, concept, member.ItemId), ChildCount: 0));
+            }
+        }
+
+        return children;
+    }
+
+    private static NodeSummary CollectionInstanceSummary(CollectionInstance instance, ProtocolDesign? design)
+    {
+        var specName = design?.CollectionSpecs
+            .FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal))
+            ?.Name;
+        var baseTitle = string.IsNullOrWhiteSpace(specName) ? instance.CollectionSpecId : specName;
+        var title = string.IsNullOrWhiteSpace(instance.PlannedActivityId)
+            ? baseTitle
+            : $"{baseTitle} · {instance.PlannedActivityId}";
+        return new NodeSummary(
+            NodeRef.For(instance.Id, instance.Saves + 1L),
+            title,
+            instance.CollectionSpecId);
+    }
+
+    private static NodeSummary ObservationSummary(Observation observation, Concept? concept, string? itemId)
+    {
+        var label = concept?.Revisions.FirstOrDefault(r => r.Version == observation.ConceptVersion)?.PreferredLabel
+            ?? concept?.PreferredLabel
+            ?? itemId
+            ?? observation.ConceptId.ToString();
+        var code = itemId ?? concept?.ExternalCode;
+        return new NodeSummary(
+            NodeRef.For(observation.Id, observation.Revision),
+            label,
+            code);
     }
 
     /// <summary>

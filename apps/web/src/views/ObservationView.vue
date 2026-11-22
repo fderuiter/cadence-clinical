@@ -58,6 +58,7 @@
           :scope-ref="cleanObservationRef"
           scope-label="observation"
           :direct-locks="directObservationLocks"
+          :covering-locks="ancestorObservationLocks"
           id-prefix="observation-lock"
           @changed="load"
         />
@@ -201,6 +202,7 @@
 import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
 import type { RouteLocationRaw, Router } from "vue-router";
 import ScopeLockControls, {
+  type CoveringScopeLockItem,
   type DirectScopeLockItem,
 } from "../components/canvas/ScopeLockControls.vue";
 import ReasonForChangeModal from "../components/ReasonForChangeModal.vue";
@@ -313,6 +315,17 @@ const directObservationLocks = computed<DirectScopeLockItem[]>(() => {
         kind: held.kind,
       };
     });
+});
+
+const ancestorObservationLocks = computed<CoveringScopeLockItem[]>(() => {
+  const current = observation.value;
+  if (!current) return [];
+  return current.locks
+    .filter((held) => String(held.scope) !== cleanObservationRef.value)
+    .map((held) => ({
+      kind: held.kind,
+      scope: String(held.scope),
+    }));
 });
 
 let studyLookupSeq = 0;

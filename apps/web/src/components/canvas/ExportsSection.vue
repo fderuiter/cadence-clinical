@@ -22,7 +22,18 @@
       class="status-line error-banner"
       role="alert"
     >
-      <p class="status-line">{{ studyCode }}'s exports couldn't be prepared.</p>
+      <p class="status-line">
+        {{ studyCode }}'s exports couldn't be prepared.
+        <button
+          id="btn-retry-study-exports"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="studyLoading"
+          @click="loadStudyExportsContext(studyCode)"
+        >
+          Try again
+        </button>
+      </p>
       <SupportDetails :detail="studyError" />
     </div>
     <p v-else-if="!studyRef" id="study-exports-no-study" class="status-line">
@@ -176,33 +187,37 @@ function onPresetChange() {
 
 let loadSeq = 0;
 
+async function loadStudyExportsContext(code: string) {
+  const seq = ++loadSeq;
+  studyRef.value = null;
+  studyError.value = null;
+  knownLocks.value = [];
+  outcome.value = null;
+  if (!code) return;
+
+  studyLoading.value = true;
+  try {
+    const resolved = await findKernelStudyRef(code);
+    if (seq !== loadSeq) return;
+    studyRef.value = resolved;
+    if (resolved && typeof kernelApi.listStudyLocks === "function") {
+      const list = await kernelApi.listStudyLocks(resolved).catch(() => null);
+      if (seq === loadSeq && list?.locks) {
+        knownLocks.value = list.locks;
+      }
+    }
+  } catch (err) {
+    if (seq !== loadSeq) return;
+    studyError.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    if (seq === loadSeq) studyLoading.value = false;
+  }
+}
+
 watch(
   () => props.studyCode,
-  async (code) => {
-    const seq = ++loadSeq;
-    studyRef.value = null;
-    studyError.value = null;
-    knownLocks.value = [];
-    outcome.value = null;
-    if (!code) return;
-
-    studyLoading.value = true;
-    try {
-      const resolved = await findKernelStudyRef(code);
-      if (seq !== loadSeq) return;
-      studyRef.value = resolved;
-      if (resolved && typeof kernelApi.listStudyLocks === "function") {
-        const list = await kernelApi.listStudyLocks(resolved).catch(() => null);
-        if (seq === loadSeq && list?.locks) {
-          knownLocks.value = list.locks;
-        }
-      }
-    } catch (err) {
-      if (seq !== loadSeq) return;
-      studyError.value = err instanceof Error ? err.message : String(err);
-    } finally {
-      if (seq === loadSeq) studyLoading.value = false;
-    }
+  (code) => {
+    void loadStudyExportsContext(code);
   },
   { immediate: true }
 );

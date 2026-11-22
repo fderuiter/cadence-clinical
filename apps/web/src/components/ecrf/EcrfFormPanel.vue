@@ -220,6 +220,7 @@
         :scope-ref="`collection_instance:${form.form_id}`"
         scope-label="form"
         :direct-locks="directFormLocks"
+        :covering-locks="ancestorFormLocks"
         id-prefix="ecrf-lock"
         @changed="reloadAfterLockChange"
       />
@@ -1049,6 +1050,7 @@ import {
 import { isLiveQuery, useFormQueries } from "../../composables/useFormQueries";
 import { useAuthStore } from "../../stores/auth.js";
 import ScopeLockControls, {
+  type CoveringScopeLockItem,
   type DirectScopeLockItem,
 } from "../canvas/ScopeLockControls.vue";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
@@ -1577,6 +1579,18 @@ const directFormLocks = computed<DirectScopeLockItem[]>(() => {
         ? held.lock_id
         : `assertion:${held.lock_id}`,
       kind: held.kind,
+    }));
+});
+
+const ancestorFormLocks = computed<CoveringScopeLockItem[]>(() => {
+  const current = form.value;
+  if (!current) return [];
+  const targetScope = `collection_instance:${current.form_id}`;
+  return current.locks
+    .filter((held) => held.scope !== targetScope)
+    .map((held) => ({
+      kind: held.kind,
+      scope: held.scope,
     }));
 });
 

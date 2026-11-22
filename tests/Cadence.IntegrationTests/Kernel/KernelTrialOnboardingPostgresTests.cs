@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.IntegrationTests.Execution;
 using Cadence.Kernel;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Authorization;
@@ -41,7 +42,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// clinical Grant isolation, and expired-trial read/export preservation (<c>403 K.Subscription.Expired</c>).
 /// </summary>
 [Trait("Category", "Integration")]
-public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>
+public sealed class KernelTrialOnboardingPostgresTests(ExecutionFormModulePostgresFixture fixture) : IClassFixture<ExecutionFormModulePostgresFixture>
 {
     [Fact(DisplayName = "SelfRegisteredCallerWithoutTenant_BootstrapsTrialIdempotently_SyncsKeycloak_AndIsolatesUnderPostgresRls")]
     public async Task SelfRegisteredCallerWithoutTenantBootstrapsTrialIdempotentlySyncsKeycloakAndIsolatesUnderPostgresRls()
@@ -159,6 +160,86 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
 
         var searchOne = await GetJsonAsync(refreshedOne, "/api/v1/kernel/search?q=MERIDIAN-101", ct);
         searchOne.EnumerateArray().Should().ContainSingle(hit => hit.GetProperty("code").GetString() == "MERIDIAN-101");
+
+        // 3b. Verify TRIAL_DATA_MANAGER role template is defined on bootstrap, and Sponsor Admin can delegate it at Study scope to a colleague who signs locks.
+        Guid sponsorAdminGrantGuid;
+        Guid trialDataManagerRoleGuid;
+        await using (var conn = new NpgsqlConnection(fixture.AdminConnectionString))
+        {
+            await conn.OpenAsync(ct);
+            (await ScalarLongAsync(conn, "SELECT count(*) FROM kernel.roles WHERE tenant_id = @tid AND code = 'TRIAL_DATA_MANAGER'", ("tid", tenantId)))
+                .Should().Be(1L);
+            sponsorAdminGrantGuid = Guid.Parse((await ScalarStringAsync(
+                conn,
+                "SELECT g.id::text FROM kernel.grants g JOIN kernel.roles r ON r.id = g.role_id WHERE g.tenant_id = @tid AND r.code = 'SPONSOR_ADMIN' AND g.grantee_id = @sub",
+                ("tid", tenantId),
+                ("sub", subjectOne)))!);
+            trialDataManagerRoleGuid = Guid.Parse((await ScalarStringAsync(
+                conn,
+                "SELECT id::text FROM kernel.roles WHERE tenant_id = @tid AND code = 'TRIAL_DATA_MANAGER'",
+                ("tid", tenantId)))!);
+        }
+
+        string dmColleagueSub = Guid.CreateVersion7(clock.UtcNow.AddSeconds(5)).ToString();
+        clock.Advance(TimeSpan.FromSeconds(1));
+        var delegateResult = await SendAsPersonAsync(
+            host.Services,
+            subjectOne,
+            new DelegateGrant(
+                TenantId.FromGuid(tenantId),
+                GrantId.New(clock.UtcNow),
+                GrantId.FromGuid(sponsorAdminGrantGuid),
+                Actor.Person(dmColleagueSub),
+                Capability: null,
+                RoleId.FromGuid(trialDataManagerRoleGuid),
+                AuthorityScope.Study(studyOneId),
+                clock.UtcNow,
+                ValidTo: null,
+                WithGrantOption: false,
+                "idem-delegate-trial-dm",
+                "Delegate study data manager authority"),
+            ct);
+        delegateResult.IsSuccess.Should().BeTrue(delegateResult.Error?.Message);
+
+        var studyOneRef = NodeRef.For(studyOneId).ToString();
+        using var dmColleagueClient = host.CreateSignedClient(
+            new GatewayIdentity(dmColleagueSub, ["Data Manager"], ["*"], TenantId: tenantCode));
+        var dmApplyToken = TestSecurityContext.CreateSigToken(
+            dmColleagueSub,
+            Cadence.Kernel.Api.KernelLockEndpoints.ApplyLockAction,
+            Cadence.Kernel.Api.KernelLockEndpoints.ApplyLockSemanticAction,
+            issuedAt: clock.UtcNow);
+        clock.Advance(TimeSpan.FromSeconds(1));
+        using (var applyReq = new HttpRequestMessage(HttpMethod.Post, new Uri("/api/v1/kernel/locks", UriKind.Relative))
+        {
+            Content = JsonContent.Create(new { study_ref = studyOneRef, scope_ref = studyOneRef, kind = "Frozen", meaning = "Approved" }),
+        })
+        {
+            applyReq.Headers.Add("Idempotency-Key", "idem-trial-dm-lock-1");
+            applyReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Trial DM study freeze"));
+            applyReq.Headers.Add(GatewayHeaders.SigToken, dmApplyToken);
+            using var applyResp = await dmColleagueClient.SendAsync(applyReq, ct);
+            string applyBody = await applyResp.Content.ReadAsStringAsync(ct);
+            applyResp.StatusCode.Should().Be(HttpStatusCode.Created, applyBody);
+            string lockRef = JsonDocument.Parse(applyBody).RootElement.GetProperty("ref").GetString()!;
+
+            var dmReleaseToken = TestSecurityContext.CreateSigToken(
+                dmColleagueSub,
+                Cadence.Kernel.Api.KernelLockEndpoints.ReleaseLockAction(lockRef),
+                Cadence.Kernel.Api.KernelLockEndpoints.ReleaseLockSemanticAction,
+                issuedAt: clock.UtcNow);
+            clock.Advance(TimeSpan.FromSeconds(1));
+            using var releaseReq = new HttpRequestMessage(HttpMethod.Post, new Uri($"/api/v1/kernel/locks/{lockRef}/release", UriKind.Relative))
+            {
+                Content = JsonContent.Create(new { study_ref = studyOneRef, meaning = "Responsibility" }),
+            };
+            releaseReq.Headers.Add("Idempotency-Key", "idem-trial-dm-unlock-1");
+            releaseReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Trial DM study unfreeze"));
+            releaseReq.Headers.Add(GatewayHeaders.SigToken, dmReleaseToken);
+            using var releaseResp = await dmColleagueClient.SendAsync(releaseReq, ct);
+            string releaseBody = await releaseResp.Content.ReadAsStringAsync(ct);
+            releaseResp.StatusCode.Should().Be(HttpStatusCode.OK, releaseBody);
+        }
 
         // 4. Onboard a second independent OIDC user -> receives separate tenant, isolated by PostgreSQL RLS.
         using var unprovisionedTwo = host.CreateSignedClient(new GatewayIdentity(subjectTwo, [], [], TenantId: null));

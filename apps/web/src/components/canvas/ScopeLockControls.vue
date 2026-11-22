@@ -20,7 +20,7 @@
       />
 
       <button
-        v-if="canApply && !hasDirectFrozenOrLocked"
+        v-if="canFreeze"
         :id="`${prefix}-freeze`"
         type="button"
         class="btn btn-secondary"
@@ -31,7 +31,7 @@
       </button>
 
       <button
-        v-if="canApply && !hasDirectLocked"
+        v-if="canLock"
         :id="`${prefix}-lock`"
         type="button"
         class="btn btn-primary"
@@ -106,6 +106,11 @@ export interface DirectScopeLockItem {
   kind: string;
 }
 
+export interface CoveringScopeLockItem {
+  kind: string;
+  scope: string;
+}
+
 const LOCK_SIGNING_REASONS = ["Approved", "Responsibility"];
 
 const props = withDefaults(
@@ -114,10 +119,12 @@ const props = withDefaults(
     scopeRef: string;
     scopeLabel: string;
     directLocks?: DirectScopeLockItem[];
+    coveringLocks?: CoveringScopeLockItem[];
     idPrefix?: string;
   }>(),
   {
     directLocks: () => [],
+    coveringLocks: () => [],
     idPrefix: "scope-lock",
   }
 );
@@ -155,12 +162,17 @@ type ModalOperation =
 const modalOp = ref<ModalOperation | null>(null);
 
 const signerUsername = computed(
-  () => authStore?.user?.email || authStore?.user?.username || "data-manager"
+  () => authStore?.identity?.username ?? authStore?.user?.username ?? ""
 );
-const signerFullName = computed(
-  () =>
-    authStore?.user?.name || authStore?.user?.full_name || signerUsername.value
-);
+const signerFullName = computed(() => {
+  const identity = authStore?.identity ?? authStore?.user;
+  if (!identity) return "";
+  const fullName = [identity.firstName, identity.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return fullName || identity.username || "";
+});
 
 const hasDirectLocked = computed(() =>
   props.directLocks.some((l) => l.kind === "Locked")
@@ -168,13 +180,31 @@ const hasDirectLocked = computed(() =>
 const hasDirectFrozenOrLocked = computed(() =>
   props.directLocks.some((l) => l.kind === "Frozen" || l.kind === "Locked")
 );
+const coveredByLocked = computed(() =>
+  props.coveringLocks.some((l) => l.kind === "Locked")
+);
+const coveredByFrozenOrLocked = computed(() =>
+  props.coveringLocks.some((l) => l.kind === "Frozen" || l.kind === "Locked")
+);
+const canFreeze = computed(
+  () =>
+    canApply.value &&
+    !hasDirectFrozenOrLocked.value &&
+    !coveredByFrozenOrLocked.value
+);
+const canLock = computed(
+  () => canApply.value && !hasDirectLocked.value && !coveredByLocked.value
+);
 const releasableLocks = computed(() =>
   canRelease.value ? props.directLocks : []
 );
 
 const showControls = computed(
   () =>
-    canApply.value || releasableLocks.value.length > 0 || outcome.value !== null
+    canFreeze.value ||
+    canLock.value ||
+    releasableLocks.value.length > 0 ||
+    outcome.value !== null
 );
 
 const modalActionUrl = computed(() => {

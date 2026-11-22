@@ -9595,7 +9595,7 @@
             }
           },
           "404": {
-            "description": "Not Found. Kernel errors: \u0060K.Assertion.ScopeUnknown\u0060, \u0060K.Trust.TargetUnknown\u0060.",
+            "description": "Not Found. Kernel errors: \u0060K.Assertion.ScopeUnknown\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -9605,7 +9605,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Assertion.AlreadyLocked\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Trust.TargetContentChanged\u0060, \u0060K.Trust.TargetNotSignable\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Assertion.AlreadyLocked\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -9615,7 +9615,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity. Kernel errors: \u0060K.Assertion.AttestationRejected\u0060, \u0060K.Assertion.ScopeInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Trust.MethodRequired\u0060, \u0060K.Trust.TargetKindUnsupported\u0060.",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Assertion.AttestationRejected\u0060, \u0060K.Assertion.ScopeInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Trust.MethodRequired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -9651,10 +9651,6 @@
             "status": 404
           },
           {
-            "code": "K.Trust.TargetUnknown",
-            "status": 404
-          },
-          {
             "code": "K.Aggregate.AlreadyExists",
             "status": 409
           },
@@ -9668,14 +9664,6 @@
           },
           {
             "code": "K.Command.IdempotencyConflict",
-            "status": 409
-          },
-          {
-            "code": "K.Trust.TargetContentChanged",
-            "status": 409
-          },
-          {
-            "code": "K.Trust.TargetNotSignable",
             "status": 409
           },
           {
@@ -9704,10 +9692,6 @@
           },
           {
             "code": "K.Trust.MethodRequired",
-            "status": 422
-          },
-          {
-            "code": "K.Trust.TargetKindUnsupported",
             "status": 422
           }
         ]
@@ -9788,7 +9772,7 @@
             }
           },
           "404": {
-            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060, \u0060K.Trust.TargetUnknown\u0060.",
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -9798,7 +9782,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Assertion.AlreadyRetracted\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Trust.TargetContentChanged\u0060, \u0060K.Trust.TargetNotSignable\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Assertion.AlreadyRetracted\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -9808,7 +9792,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity. Kernel errors: \u0060K.Assertion.AttestationRejected\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Trust.MethodRequired\u0060, \u0060K.Trust.TargetKindUnsupported\u0060.",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Assertion.AttestationRejected\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Trust.MethodRequired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -9844,10 +9828,6 @@
             "status": 404
           },
           {
-            "code": "K.Trust.TargetUnknown",
-            "status": 404
-          },
-          {
             "code": "K.Aggregate.AlreadyExists",
             "status": 409
           },
@@ -9861,14 +9841,6 @@
           },
           {
             "code": "K.Command.IdempotencyConflict",
-            "status": 409
-          },
-          {
-            "code": "K.Trust.TargetContentChanged",
-            "status": 409
-          },
-          {
-            "code": "K.Trust.TargetNotSignable",
             "status": 409
           },
           {
@@ -9893,10 +9865,6 @@
           },
           {
             "code": "K.Trust.MethodRequired",
-            "status": 422
-          },
-          {
-            "code": "K.Trust.TargetKindUnsupported",
             "status": 422
           }
         ]
@@ -28265,6 +28233,8 @@
           "study_ref",
           "scope_ref",
           "scope_kind",
+          "study_site_ref",
+          "enrollment_ref",
           "subject_code",
           "kind",
           "attestation_ref",
@@ -28299,6 +28269,18 @@
           },
           "scope_kind": {
             "type": "string"
+          },
+          "study_site_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "enrollment_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "subject_code": {
             "type": [

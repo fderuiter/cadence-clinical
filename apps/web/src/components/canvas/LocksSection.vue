@@ -53,7 +53,18 @@
       class="status-line error-banner"
       role="alert"
     >
-      <p class="status-line">{{ studyCode }}'s locks couldn't be loaded.</p>
+      <p class="status-line">
+        {{ studyCode }}'s locks couldn't be loaded.
+        <button
+          id="btn-retry-study-locks"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="studyLoading"
+          @click="loadStudyLocksContext(studyCode)"
+        >
+          Try again
+        </button>
+      </p>
       <SupportDetails :detail="studyError" />
     </div>
     <p v-else-if="!studyRef" id="study-locks-no-study" class="status-line">
@@ -83,6 +94,103 @@
               <option value="enrollment">Participant enrollment</option>
               <option value="collection_instance">Form instance</option>
               <option value="observation">Observation</option>
+            </select>
+          </div>
+
+          <div v-if="needsSitePicker" class="field-group">
+            <label for="lock-apply-site">Study site</label>
+            <select
+              id="lock-apply-site"
+              v-model="selectedSiteRef"
+              @change="onSitePickerChange"
+            >
+              <option value="">Select study site…</option>
+              <option
+                v-for="opt in studySiteOptions"
+                :key="opt.key"
+                :value="opt.value"
+                :disabled="opt.disabled"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
+
+          <div v-if="needsEnrollmentPicker" class="field-group">
+            <label for="lock-apply-enrollment">Participant enrollment</label>
+            <select
+              id="lock-apply-enrollment"
+              v-model="selectedEnrollmentRef"
+              :disabled="!selectedSiteRef || siteChildrenLoading"
+              @change="onEnrollmentPickerChange"
+            >
+              <option value="">
+                {{
+                  siteChildrenLoading
+                    ? "Loading enrollments…"
+                    : "Select participant…"
+                }}
+              </option>
+              <option
+                v-for="opt in enrollmentOptions"
+                :key="opt.key"
+                :value="opt.value"
+                :disabled="opt.disabled"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
+
+          <div v-if="needsCollectionPicker" class="field-group">
+            <label for="lock-apply-collection">Form instance</label>
+            <select
+              id="lock-apply-collection"
+              v-model="selectedCollectionRef"
+              :disabled="!selectedEnrollmentRef || enrollmentChildrenLoading"
+              @change="onCollectionPickerChange"
+            >
+              <option value="">
+                {{
+                  enrollmentChildrenLoading
+                    ? "Loading forms…"
+                    : "Select form instance…"
+                }}
+              </option>
+              <option
+                v-for="opt in collectionOptions"
+                :key="opt.key"
+                :value="opt.value"
+                :disabled="opt.disabled"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
+
+          <div v-if="needsObservationPicker" class="field-group">
+            <label for="lock-apply-observation">Observation</label>
+            <select
+              id="lock-apply-observation"
+              v-model="selectedObservationRef"
+              :disabled="!selectedCollectionRef || collectionChildrenLoading"
+              @change="onObservationPickerChange"
+            >
+              <option value="">
+                {{
+                  collectionChildrenLoading
+                    ? "Loading observations…"
+                    : "Select observation…"
+                }}
+              </option>
+              <option
+                v-for="opt in observationOptions"
+                :key="opt.key"
+                :value="opt.value"
+                :disabled="opt.disabled"
+              >
+                {{ opt.label }}
+              </option>
             </select>
           </div>
 
@@ -174,7 +282,18 @@
         class="status-line error-banner"
         role="alert"
       >
-        <p class="status-line">{{ studyCode }}'s locks couldn't be loaded.</p>
+        <p class="status-line">
+          {{ studyCode }}'s locks couldn't be loaded.
+          <button
+            id="btn-retry-locks-list"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="locksLoading"
+            @click="reloadLocks"
+          >
+            Try again
+          </button>
+        </p>
         <SupportDetails :detail="locksError" />
       </div>
       <p
@@ -355,6 +474,17 @@ const asOfInput = ref("");
 const canApply = ref(false);
 const canRelease = ref(false);
 const studyChildren = ref<KernelChild[]>([]);
+const siteChildren = ref<KernelChild[]>([]);
+const siteChildrenLoading = ref(false);
+const enrollmentChildren = ref<KernelChild[]>([]);
+const enrollmentChildrenLoading = ref(false);
+const collectionChildren = ref<KernelChild[]>([]);
+const collectionChildrenLoading = ref(false);
+
+const selectedSiteRef = ref("");
+const selectedEnrollmentRef = ref("");
+const selectedCollectionRef = ref("");
+const selectedObservationRef = ref("");
 
 const applyScopeKind = ref<string>("study");
 const applyScopeRef = ref<string>("");
@@ -383,11 +513,109 @@ type ModalOperation =
 const modalOp = ref<ModalOperation | null>(null);
 
 const signerUsername = computed(
-  () => authStore?.user?.email || authStore?.user?.username || "data-manager"
+  () => authStore?.identity?.username ?? authStore?.user?.username ?? ""
 );
-const signerFullName = computed(
+const signerFullName = computed(() => {
+  const identity = authStore?.identity ?? authStore?.user;
+  if (!identity) return "";
+  const fullName = [identity.firstName, identity.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return fullName || identity.username || "";
+});
+
+interface ScopePickerOption {
+  key: string;
+  value: string;
+  label: string;
+  disabled: boolean;
+}
+
+function unversionedNodeRef(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const parsed = parseNodeRef(raw);
+  if (parsed) return `${parsed.kind}:${parsed.id}`;
+  const at = raw.indexOf("@");
+  return at < 0 ? raw : raw.slice(0, at);
+}
+
+function seedVisibleChildren(children: KernelChild[]) {
+  for (const child of children) {
+    if (child.node.ref && !child.node.mask) {
+      const summary = {
+        kind: child.node.kind,
+        code: child.node.code,
+        title: child.node.title,
+        status: child.node.status,
+      };
+      seedNodeSummary(child.node.ref, summary);
+      const unversioned = unversionedNodeRef(child.node.ref);
+      if (unversioned && unversioned !== child.node.ref) {
+        seedNodeSummary(unversioned, summary);
+      }
+    }
+  }
+}
+
+function buildPickerOptions(
+  children: KernelChild[],
+  expectedKind: string
+): ScopePickerOption[] {
+  return children
+    .filter((child) => child.node.kind === expectedKind)
+    .map((child, idx) => {
+      if (child.node.mask || !child.node.ref) {
+        return {
+          key: `masked-${expectedKind}-${idx}`,
+          value: "",
+          label: `Masked (${child.node.mask ?? "Restricted"}): ${scopeLabel(expectedKind)}`,
+          disabled: true,
+        };
+      }
+      const cleanRef = unversionedNodeRef(child.node.ref);
+      const code = child.node.code?.trim();
+      const title = child.node.title?.trim();
+      const label =
+        code && title && code !== title
+          ? `${code} — ${title}`
+          : code || title || cleanRef;
+      return {
+        key: cleanRef,
+        value: cleanRef,
+        label,
+        disabled: false,
+      };
+    });
+}
+
+const needsSitePicker = computed(() => applyScopeKind.value !== "study");
+const needsEnrollmentPicker = computed(
   () =>
-    authStore?.user?.name || authStore?.user?.full_name || signerUsername.value
+    applyScopeKind.value === "enrollment" ||
+    applyScopeKind.value === "collection_instance" ||
+    applyScopeKind.value === "observation"
+);
+const needsCollectionPicker = computed(
+  () =>
+    applyScopeKind.value === "collection_instance" ||
+    applyScopeKind.value === "observation"
+);
+const needsObservationPicker = computed(
+  () => applyScopeKind.value === "observation"
+);
+
+const studySiteOptions = computed(() =>
+  buildPickerOptions(studyChildren.value, "study_site")
+);
+const enrollmentOptions = computed(() =>
+  buildPickerOptions(siteChildren.value, "enrollment")
+);
+const collectionOptions = computed(() =>
+  buildPickerOptions(enrollmentChildren.value, "collection_instance")
+);
+const observationOptions = computed(() =>
+  buildPickerOptions(collectionChildren.value, "observation")
 );
 
 const scopeSuggestions = computed(() => {
@@ -395,12 +623,15 @@ const scopeSuggestions = computed(() => {
   if (studyRef.value) {
     items.push({ ref: studyRef.value, label: `Study ${props.studyCode}` });
   }
-  for (const child of studyChildren.value) {
-    if (child.node.ref && !child.node.mask) {
-      items.push({
-        ref: child.node.ref,
-        label: child.node.code || child.node.title || child.node.ref,
-      });
+  const allOptions = [
+    ...studySiteOptions.value,
+    ...enrollmentOptions.value,
+    ...collectionOptions.value,
+    ...observationOptions.value,
+  ];
+  for (const opt of allOptions) {
+    if (!opt.disabled && opt.value) {
+      items.push({ ref: opt.value, label: opt.label });
     }
   }
   return items.filter((item) =>
@@ -425,13 +656,204 @@ function scopeLabel(kind: string): string {
   return SCOPE_LABELS[kind] ?? kind;
 }
 
-function onScopeKindChange() {
-  if (applyScopeKind.value === "study" && studyRef.value) {
-    applyScopeRef.value = studyRef.value;
-  } else {
-    const first = scopeSuggestions.value[0];
-    applyScopeRef.value = first ? first.ref : "";
+let siteLoadSeq = 0;
+let enrollmentLoadSeq = 0;
+let collectionLoadSeq = 0;
+
+async function loadSiteChildren(siteRef: string) {
+  const seq = ++siteLoadSeq;
+  siteChildren.value = [];
+  selectedEnrollmentRef.value = "";
+  enrollmentChildren.value = [];
+  selectedCollectionRef.value = "";
+  collectionChildren.value = [];
+  selectedObservationRef.value = "";
+  if (!siteRef || typeof kernelApi.getChildren !== "function") return;
+
+  siteChildrenLoading.value = true;
+  try {
+    const children = await kernelApi.getChildren(siteRef);
+    if (seq !== siteLoadSeq) return;
+    siteChildren.value = children ?? [];
+    seedVisibleChildren(siteChildren.value);
+    if (needsEnrollmentPicker.value) {
+      const firstEnrollment = enrollmentOptions.value.find((o) => !o.disabled);
+      selectedEnrollmentRef.value = firstEnrollment?.value ?? "";
+      if (applyScopeKind.value === "enrollment") {
+        applyScopeRef.value = selectedEnrollmentRef.value;
+      } else if (selectedEnrollmentRef.value) {
+        await loadEnrollmentChildren(selectedEnrollmentRef.value);
+      } else {
+        applyScopeRef.value = "";
+      }
+    }
+  } catch {
+    if (seq === siteLoadSeq) siteChildren.value = [];
+  } finally {
+    if (seq === siteLoadSeq) siteChildrenLoading.value = false;
   }
+}
+
+async function loadEnrollmentChildren(enrollmentRef: string) {
+  const seq = ++enrollmentLoadSeq;
+  enrollmentChildren.value = [];
+  selectedCollectionRef.value = "";
+  collectionChildren.value = [];
+  selectedObservationRef.value = "";
+  if (!enrollmentRef || typeof kernelApi.getChildren !== "function") return;
+
+  enrollmentChildrenLoading.value = true;
+  try {
+    const children = await kernelApi.getChildren(enrollmentRef);
+    if (seq !== enrollmentLoadSeq) return;
+    enrollmentChildren.value = children ?? [];
+    seedVisibleChildren(enrollmentChildren.value);
+    if (needsCollectionPicker.value) {
+      const firstCollection = collectionOptions.value.find((o) => !o.disabled);
+      selectedCollectionRef.value = firstCollection?.value ?? "";
+      if (applyScopeKind.value === "collection_instance") {
+        applyScopeRef.value = selectedCollectionRef.value;
+      } else if (selectedCollectionRef.value) {
+        await loadCollectionChildren(selectedCollectionRef.value);
+      } else {
+        applyScopeRef.value = "";
+      }
+    }
+  } catch {
+    if (seq === enrollmentLoadSeq) enrollmentChildren.value = [];
+  } finally {
+    if (seq === enrollmentLoadSeq) enrollmentChildrenLoading.value = false;
+  }
+}
+
+async function loadCollectionChildren(collectionRef: string) {
+  const seq = ++collectionLoadSeq;
+  collectionChildren.value = [];
+  selectedObservationRef.value = "";
+  if (!collectionRef || typeof kernelApi.getChildren !== "function") return;
+
+  collectionChildrenLoading.value = true;
+  try {
+    const children = await kernelApi.getChildren(collectionRef);
+    if (seq !== collectionLoadSeq) return;
+    collectionChildren.value = children ?? [];
+    seedVisibleChildren(collectionChildren.value);
+    if (needsObservationPicker.value) {
+      const firstObs = observationOptions.value.find((o) => !o.disabled);
+      selectedObservationRef.value = firstObs?.value ?? "";
+      applyScopeRef.value = selectedObservationRef.value;
+    }
+  } catch {
+    if (seq === collectionLoadSeq) collectionChildren.value = [];
+  } finally {
+    if (seq === collectionLoadSeq) collectionChildrenLoading.value = false;
+  }
+}
+
+async function onSitePickerChange() {
+  if (applyScopeKind.value === "study_site") {
+    applyScopeRef.value = selectedSiteRef.value;
+    return;
+  }
+  applyScopeRef.value = "";
+  await loadSiteChildren(selectedSiteRef.value);
+}
+
+async function onEnrollmentPickerChange() {
+  if (applyScopeKind.value === "enrollment") {
+    applyScopeRef.value = selectedEnrollmentRef.value;
+    return;
+  }
+  applyScopeRef.value = "";
+  await loadEnrollmentChildren(selectedEnrollmentRef.value);
+}
+
+async function onCollectionPickerChange() {
+  if (applyScopeKind.value === "collection_instance") {
+    applyScopeRef.value = selectedCollectionRef.value;
+    return;
+  }
+  applyScopeRef.value = "";
+  await loadCollectionChildren(selectedCollectionRef.value);
+}
+
+function onObservationPickerChange() {
+  if (applyScopeKind.value === "observation") {
+    applyScopeRef.value = selectedObservationRef.value;
+  }
+}
+
+async function onScopeKindChange() {
+  if (applyScopeKind.value === "study") {
+    applyScopeRef.value = studyRef.value ?? "";
+    return;
+  }
+
+  if (!selectedSiteRef.value) {
+    const firstSite = studySiteOptions.value.find((o) => !o.disabled);
+    selectedSiteRef.value = firstSite?.value ?? "";
+  }
+
+  if (applyScopeKind.value === "study_site") {
+    applyScopeRef.value = selectedSiteRef.value;
+    return;
+  }
+
+  if (!selectedSiteRef.value) {
+    applyScopeRef.value = "";
+    return;
+  }
+
+  if (siteChildren.value.length === 0) {
+    await loadSiteChildren(selectedSiteRef.value);
+    return;
+  }
+
+  if (!selectedEnrollmentRef.value) {
+    const firstEnrollment = enrollmentOptions.value.find((o) => !o.disabled);
+    selectedEnrollmentRef.value = firstEnrollment?.value ?? "";
+  }
+
+  if (applyScopeKind.value === "enrollment") {
+    applyScopeRef.value = selectedEnrollmentRef.value;
+    return;
+  }
+
+  if (!selectedEnrollmentRef.value) {
+    applyScopeRef.value = "";
+    return;
+  }
+
+  if (enrollmentChildren.value.length === 0) {
+    await loadEnrollmentChildren(selectedEnrollmentRef.value);
+    return;
+  }
+
+  if (!selectedCollectionRef.value) {
+    const firstCollection = collectionOptions.value.find((o) => !o.disabled);
+    selectedCollectionRef.value = firstCollection?.value ?? "";
+  }
+
+  if (applyScopeKind.value === "collection_instance") {
+    applyScopeRef.value = selectedCollectionRef.value;
+    return;
+  }
+
+  if (!selectedCollectionRef.value) {
+    applyScopeRef.value = "";
+    return;
+  }
+
+  if (collectionChildren.value.length === 0) {
+    await loadCollectionChildren(selectedCollectionRef.value);
+    return;
+  }
+
+  if (!selectedObservationRef.value) {
+    const firstObs = observationOptions.value.find((o) => !o.disabled);
+    selectedObservationRef.value = firstObs?.value ?? "";
+  }
+  applyScopeRef.value = selectedObservationRef.value;
 }
 
 let loadSeq = 0;
@@ -453,68 +875,72 @@ async function reloadLocks() {
   }
 }
 
+async function loadStudyLocksContext(code: string) {
+  const seq = ++loadSeq;
+  studyRef.value = null;
+  studyError.value = null;
+  locks.value = [];
+  locksError.value = null;
+  outcome.value = null;
+  studyChildren.value = [];
+  siteChildren.value = [];
+  enrollmentChildren.value = [];
+  collectionChildren.value = [];
+  selectedSiteRef.value = "";
+  selectedEnrollmentRef.value = "";
+  selectedCollectionRef.value = "";
+  selectedObservationRef.value = "";
+  if (!code) return;
+
+  studyLoading.value = true;
+  try {
+    const resolved = await findKernelStudyRef(code);
+    if (seq !== loadSeq) return;
+    studyRef.value = resolved;
+    if (!resolved) return;
+    seedNodeSummary(resolved, { kind: "study", code });
+
+    applyScopeKind.value = "study";
+    applyScopeRef.value = resolved;
+
+    const tasks: Promise<unknown>[] = [reloadLocks()];
+    if (typeof kernelApi.canI === "function") {
+      tasks.push(
+        Promise.all([
+          kernelApi.canI("lock.apply", resolved),
+          kernelApi.canI("lock.release", resolved),
+        ]).then(([applyDec, releaseDec]) => {
+          if (seq !== loadSeq) return;
+          canApply.value = Boolean(applyDec?.permitted);
+          canRelease.value = Boolean(releaseDec?.permitted);
+        })
+      );
+    }
+    if (typeof kernelApi.getChildren === "function") {
+      tasks.push(
+        kernelApi
+          .getChildren(resolved)
+          .then((children) => {
+            if (seq !== loadSeq) return;
+            studyChildren.value = children ?? [];
+            seedVisibleChildren(studyChildren.value);
+          })
+          .catch(() => undefined)
+      );
+    }
+    await Promise.all(tasks);
+  } catch (err) {
+    if (seq !== loadSeq) return;
+    studyError.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    if (seq === loadSeq) studyLoading.value = false;
+  }
+}
+
 watch(
   () => props.studyCode,
-  async (code) => {
-    const seq = ++loadSeq;
-    studyRef.value = null;
-    studyError.value = null;
-    locks.value = [];
-    outcome.value = null;
-    if (!code) return;
-
-    studyLoading.value = true;
-    try {
-      const resolved = await findKernelStudyRef(code);
-      if (seq !== loadSeq) return;
-      studyRef.value = resolved;
-      if (!resolved) return;
-      seedNodeSummary(resolved, { kind: "study", code });
-
-      applyScopeKind.value = "study";
-      applyScopeRef.value = resolved;
-
-      const tasks: Promise<unknown>[] = [reloadLocks()];
-      if (typeof kernelApi.canI === "function") {
-        tasks.push(
-          Promise.all([
-            kernelApi.canI("lock.apply", resolved),
-            kernelApi.canI("lock.release", resolved),
-          ]).then(([applyDec, releaseDec]) => {
-            if (seq !== loadSeq) return;
-            canApply.value = Boolean(applyDec?.permitted);
-            canRelease.value = Boolean(releaseDec?.permitted);
-          })
-        );
-      }
-      if (typeof kernelApi.getChildren === "function") {
-        tasks.push(
-          kernelApi
-            .getChildren(resolved)
-            .then((children) => {
-              if (seq !== loadSeq) return;
-              studyChildren.value = children ?? [];
-              for (const child of studyChildren.value) {
-                if (child.node.ref && !child.node.mask) {
-                  seedNodeSummary(child.node.ref, {
-                    kind: child.node.kind,
-                    code: child.node.code,
-                    title: child.node.title,
-                    status: child.node.status,
-                  });
-                }
-              }
-            })
-            .catch(() => undefined)
-        );
-      }
-      await Promise.all(tasks);
-    } catch (err) {
-      if (seq !== loadSeq) return;
-      studyError.value = err instanceof Error ? err.message : String(err);
-    } finally {
-      if (seq === loadSeq) studyLoading.value = false;
-    }
+  (code) => {
+    void loadStudyLocksContext(code);
   },
   { immediate: true }
 );
