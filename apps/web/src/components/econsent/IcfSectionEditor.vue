@@ -110,42 +110,47 @@
     />
 
     <!-- Glossary Term Annotation Dialog/Modal -->
-    <div v-if="showGlossaryModal" class="glossary-modal-overlay">
-      <div class="glossary-modal card">
-        <h4>{{ $t("econsent.editor.annotateSelectedText") }}</h4>
-        <p class="selected-text-preview">
-          {{ $t("econsent.editor.selectedText", { text: selectedText }) }}
-        </p>
-        <div class="form-group">
-          <label for="glossary-definition">{{
-            $t("econsent.editor.termDefinitionLabel")
-          }}</label>
-          <textarea
-            id="glossary-definition"
-            v-model="glossaryDefinition"
-            :placeholder="$t('econsent.editor.termDefinitionPlaceholder')"
-            rows="3"
-            class="form-control"
-          />
-        </div>
-        <div class="modal-actions">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="showGlossaryModal = false"
-          >
-            {{ $t("econsent.editor.cancel") }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            @click="applyGlossaryAnnotation"
-          >
-            {{ $t("econsent.editor.applyAnnotation") }}
-          </button>
-        </div>
+    <ClinicalModal
+      v-model="showGlossaryModal"
+      :teleport="false"
+      size="sm"
+      backdrop-class="glossary-modal-overlay"
+      dialog-class="glossary-modal card"
+      :title="$t('econsent.editor.annotateSelectedText')"
+    >
+      <p class="selected-text-preview">
+        {{ $t("econsent.editor.selectedText", { text: selectedText }) }}
+      </p>
+      <div class="form-group">
+        <label for="glossary-definition">{{
+          $t("econsent.editor.termDefinitionLabel")
+        }}</label>
+        <textarea
+          id="glossary-definition"
+          v-model="glossaryDefinition"
+          :placeholder="$t('econsent.editor.termDefinitionPlaceholder')"
+          rows="3"
+          class="form-control"
+        />
       </div>
-    </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="showGlossaryModal = false"
+        >
+          {{ $t("econsent.editor.cancel") }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          @click="applyGlossaryAnnotation"
+        >
+          {{ $t("econsent.editor.applyAnnotation") }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- Glossary Popover definition -->
     <div
@@ -175,6 +180,7 @@
 </template>
 
 <script setup>
+import { ClinicalModal } from "ui";
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import ReadabilityDrawer from "./ReadabilityDrawer.vue";
 
@@ -589,8 +595,7 @@ const hidePopover = () => {
 .glossary-modal {
   width: 90%;
   max-width: 450px;
-  background-color: white;
-  padding: 20px;
+  background-color: var(--semantic-color-surface);
   border-radius: 8px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }

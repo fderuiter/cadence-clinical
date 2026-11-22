@@ -936,88 +936,82 @@
     </div>
 
     <!-- Modal: Form W-9 Taxpayer Certification -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="showW9Modal"
-      class="modal-backdrop"
-      @click.self="showW9Modal = false"
+    <ClinicalModal
+      :open="showW9Modal"
+      :teleport="false"
+      :dismissible="!isSubmitting"
+      title="IRS Form W-9 Taxpayer Certification"
+      dialog-class="modal-card"
+      @close="showW9Modal = false"
     >
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>IRS Form W-9 Taxpayer Certification</h3>
-          <button class="modal-close-btn" @click="showW9Modal = false">
-            &times;
-          </button>
-        </div>
-        <div class="modal-body">
-          <p class="modal-desc">
-            Under penalties of perjury, certify that the Taxpayer Identification
-            Number (TIN) provided below is accurate.
-          </p>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Legal Taxpayer Name:</label>
-            <input
-              v-model="w9Form.full_legal_name"
-              class="form-input"
-              placeholder="e.g. Jane Doe"
-            />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Last 4 Digits of SSN / ITIN:</label>
-            <input
-              v-model="w9Form.tax_id_last_four"
-              maxlength="4"
-              class="form-input"
-              placeholder="e.g. 1234"
-            />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Mailing Address:</label>
-            <input
-              v-model="w9Form.address"
-              class="form-input"
-              placeholder="123 Clinical Way, City, State"
-            />
-          </div>
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input v-model="w9Form.certify_accurate" type="checkbox" />
-              I certify under penalty of perjury that the TIN entered above is
-              correct.
-            </label>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            :disabled="isSubmitting"
-            @click="showW9Modal = false"
-          >
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="
-              isSubmitting ||
-              !w9Form.certify_accurate ||
-              w9Form.tax_id_last_four.length !== 4
-            "
-            @click="submitW9Form"
-          >
-            Submit W-9 Certification
-          </button>
-        </div>
+      <p class="modal-desc">
+        Under penalties of perjury, certify that the Taxpayer Identification
+        Number (TIN) provided below is accurate.
+      </p>
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label>Legal Taxpayer Name:</label>
+        <input
+          v-model="w9Form.full_legal_name"
+          class="form-input"
+          placeholder="e.g. Jane Doe"
+        />
       </div>
-    </div>
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label>Last 4 Digits of SSN / ITIN:</label>
+        <input
+          v-model="w9Form.tax_id_last_four"
+          maxlength="4"
+          class="form-input"
+          placeholder="e.g. 1234"
+        />
+      </div>
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label>Mailing Address:</label>
+        <input
+          v-model="w9Form.address"
+          class="form-input"
+          placeholder="123 Clinical Way, City, State"
+        />
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input v-model="w9Form.certify_accurate" type="checkbox" />
+          I certify under penalty of perjury that the TIN entered above is
+          correct.
+        </label>
+      </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="showW9Modal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="
+            isSubmitting ||
+            !w9Form.certify_accurate ||
+            w9Form.tax_id_last_four.length !== 4
+          "
+          @click="submitW9Form"
+        >
+          Submit W-9 Certification
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { ClinicalModal } from "ui";
 import { useToastStore } from "../stores/toasts.js";
 import { ensureOk } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";
