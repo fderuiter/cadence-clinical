@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
@@ -7,6 +8,54 @@ import { createDemoFixturesPlugin } from "../../scripts/vite-strip-demo-fixtures
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+function createPortalSwBundleManifestPlugin(appRootDir) {
+  let resolvedOutDir = path.resolve(appRootDir, "dist");
+
+  function collectBundleRelativePaths(rootDir, currentDir = rootDir) {
+    if (!fs.existsSync(currentDir)) return [];
+    const collected = [];
+    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+      const absPath = path.join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        collected.push(...collectBundleRelativePaths(rootDir, absPath));
+      } else if (entry.isFile() && /\.(?:js|css)$/i.test(entry.name)) {
+        const relPath = path
+          .relative(rootDir, absPath)
+          .split(path.sep)
+          .join("/");
+        if (relPath !== "sw.js" && relPath !== "mockServiceWorker.js") {
+          collected.push(relPath);
+        }
+      }
+    }
+    return collected.sort();
+  }
+
+  return {
+    name: "portal-sw-bundle-manifest",
+    apply: "build",
+    enforce: "post",
+    configResolved(resolved) {
+      resolvedOutDir = path.resolve(
+        resolved.root || appRootDir,
+        resolved.build?.outDir || "dist"
+      );
+    },
+    closeBundle() {
+      const swPath = path.join(resolvedOutDir, "sw.js");
+      if (!fs.existsSync(swPath)) return;
+      const bundlePaths = collectBundleRelativePaths(resolvedOutDir);
+      const existingSw = fs.readFileSync(swPath, "utf8");
+      const cleanedSw = existingSw.replace(
+        /^self\.__PORTAL_BUNDLE_MANIFEST__\s*=\s*\[[^\n]*\];\n?/,
+        ""
+      );
+      const manifestBanner = `self.__PORTAL_BUNDLE_MANIFEST__ = ${JSON.stringify(bundlePaths)};\n`;
+      fs.writeFileSync(swPath, `${manifestBanner}${cleanedSw}`, "utf8");
+    },
+  };
+}
 
 const DEV_PORT = 5174;
 // Where the dev server's /api proxy forwards: the API gateway (the AppHost passes its endpoint; docker compose names
@@ -113,6 +162,7 @@ export default defineConfig(({ mode }) => ({
     })(),
     createStripMockWorkerInProdPlugin(__dirname),
     createDemoFixturesPlugin(__dirname),
+    createPortalSwBundleManifestPlugin(__dirname),
   ],
   server: {
     port: DEV_PORT,

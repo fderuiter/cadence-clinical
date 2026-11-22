@@ -15,6 +15,11 @@ const DEMO_SHELL_ASSETS = [
   `${SW_BASE}index.html`,
   `${SW_BASE}manifest.json`,
 ];
+const INJECTED_BUNDLE_ASSETS = Array.isArray(self.__PORTAL_BUNDLE_MANIFEST__)
+  ? self.__PORTAL_BUNDLE_MANIFEST__
+      .filter((entry) => typeof entry === "string" && entry.trim().length > 0)
+      .map((entry) => `${SW_BASE}${entry.replace(/^\/+/, "")}`)
+  : [];
 const IS_MSW_MODE =
   typeof importScripts === "function" &&
   typeof self !== "undefined" &&
@@ -40,9 +45,14 @@ function fetchWithTimeout(request, timeoutMs) {
   });
 }
 
-// Install event: Pre-cache core shell resources
+// Install event: Pre-cache core shell resources and emitted JS/CSS bundle chunks
 self.addEventListener("install", (event) => {
-  const preCacheAssets = IS_MSW_MODE ? DEMO_SHELL_ASSETS : ASSETS;
+  const preCacheAssets =
+    INJECTED_BUNDLE_ASSETS.length > 0
+      ? Array.from(new Set([...DEMO_SHELL_ASSETS, ...INJECTED_BUNDLE_ASSETS]))
+      : IS_MSW_MODE
+        ? DEMO_SHELL_ASSETS
+        : ASSETS;
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log("[Service Worker] Pre-caching offline assets");

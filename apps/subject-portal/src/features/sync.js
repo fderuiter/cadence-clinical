@@ -554,6 +554,9 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
           if (typeof updatedLifetime === "number") {
             state.lifetimeStipends = updatedLifetime;
           }
+          if (Array.isArray(disburseRes?.recentTransactions)) {
+            state.recentTransactions = disburseRes.recentTransactions;
+          }
 
           await logAuditRecord(
             "AUTOMATIC_STIPEND_DISBURSED",

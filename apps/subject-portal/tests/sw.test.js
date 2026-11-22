@@ -385,5 +385,71 @@ describe("Subject Portal Service Worker (sw.js)", () => {
       expect(manifestEvent.respondWith).toHaveBeenCalledTimes(1);
       expect(manifestEvent.stopImmediatePropagation).toHaveBeenCalledTimes(1);
     });
+
+    it("pre-caches injected __PORTAL_BUNDLE_MANIFEST__ hashed JS and CSS chunks alongside shell assets", async () => {
+      const manifestListeners = {};
+      const manifestCache = {
+        put: vi.fn().mockResolvedValue(undefined),
+        match: vi.fn().mockResolvedValue(null),
+        addAll: vi.fn().mockResolvedValue(undefined),
+      };
+      const manifestCaches = {
+        open: vi.fn().mockResolvedValue(manifestCache),
+        keys: vi.fn().mockResolvedValue([]),
+        delete: vi.fn().mockResolvedValue(true),
+        match: vi.fn().mockResolvedValue(null),
+      };
+      const manifestSelf = {
+        location: {
+          origin: "https://fderuiter.github.io",
+          pathname: "/cadence-clinical/subject-portal/sw.js",
+          search: "?msw=1",
+        },
+        __PORTAL_BUNDLE_MANIFEST__: [
+          "assets/index-D9f2k1A0.js",
+          "assets/index-C3a8b2E1.css",
+          "assets/browser-B7e1c4F2.js",
+        ],
+        addEventListener: vi.fn((event, callback) => {
+          manifestListeners[event] = callback;
+        }),
+        skipWaiting: vi.fn(),
+        clients: { claim: vi.fn() },
+      };
+
+      const builtSwCode = `self.__PORTAL_BUNDLE_MANIFEST__ = ${JSON.stringify(
+        manifestSelf.__PORTAL_BUNDLE_MANIFEST__
+      )};\n${swCode}`;
+      const runBuiltSW = new Function(
+        "self",
+        "caches",
+        "Response",
+        "Request",
+        "setTimeout",
+        "clearTimeout",
+        "importScripts",
+        builtSwCode
+      );
+      runBuiltSW(
+        manifestSelf,
+        manifestCaches,
+        globalThis.Response,
+        globalThis.Request,
+        setTimeout,
+        clearTimeout,
+        vi.fn()
+      );
+
+      await manifestListeners["install"]({ waitUntil: vi.fn((p) => p) });
+      expect(manifestCaches.open).toHaveBeenCalledWith("portal-cache-v1");
+      expect(manifestCache.addAll).toHaveBeenCalledWith([
+        "/cadence-clinical/subject-portal/",
+        "/cadence-clinical/subject-portal/index.html",
+        "/cadence-clinical/subject-portal/manifest.json",
+        "/cadence-clinical/subject-portal/assets/index-D9f2k1A0.js",
+        "/cadence-clinical/subject-portal/assets/index-C3a8b2E1.css",
+        "/cadence-clinical/subject-portal/assets/browser-B7e1c4F2.js",
+      ]);
+    });
   });
 });

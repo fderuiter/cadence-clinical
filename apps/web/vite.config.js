@@ -258,6 +258,7 @@ export default defineConfig({
       "**/node_modules/**",
       "**/dist/**",
       "**/tests/e2e/**",
+      "**/tests/e2e-staged/**",
       "**/tests/browser/**",
     ],
   },

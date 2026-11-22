@@ -17,6 +17,7 @@ import {
   buildImportedDraftDesign,
   createInitialDemoStudyDirectoryEntry,
 } from "./demoStudyImport.js";
+import { createDemoGovernanceDomain } from "./demoGovernanceDomain.js";
 import {
   routeDemoTicketQueue,
   validateDemoTicketNoDirectPii,
@@ -472,7 +473,86 @@ export function createWebDemoStore() {
     stipendRules: [],
     expenseClaims: [],
     walletTransactions: [],
+    rulePacks: new Map(),
+    studyStandards: new Map(),
+    validationFindingsByStudy: new Map(),
+    validationFindingsByRef: new Map(),
+    laySummaries: [],
+    laySummaryReceipts: new Map(),
+    ractFactorsByStudy: new Map(),
+    kriDefinitions: [],
+    siteRiskProfilesByStudy: new Map(),
+    csmDossiers: [],
+    safetyReports: new Map(),
   };
+
+  function recordActivity(type, family, subjectKind, subjectRef, actorId) {
+    const idx = nextCounter();
+    const now = demoNowIso(idx);
+    state.activityEntries.unshift({
+      event_id: makeUuidFromIndex("00000900", idx),
+      type,
+      family,
+      recorded: now,
+      occurred_valid: now,
+      actor_id:
+        actorId ||
+        getDemoPersonaForWorkspace("super_admin")?.username ||
+        "designer.lead",
+      subject_kind: subjectKind,
+      subject: subjectRef,
+      mask: null,
+      correlation_id: makeUuidFromIndex("00000990", idx),
+    });
+  }
+
+  function ensureStudyByCode(rawCode) {
+    const code = (rawCode || "DEMO-01").trim() || "DEMO-01";
+    for (const [existingCode, study] of state.studies.entries()) {
+      if (existingCode.toUpperCase() === code.toUpperCase()) {
+        return study;
+      }
+    }
+    const idx = nextCounter();
+    const created = {
+      ref: `study:${makeUuidFromIndex("00000010", idx)}`,
+      kind: "study",
+      code,
+      title: `Synthetic Clinical Study ${code}`,
+      status: "ACTIVE",
+      mask: null,
+    };
+    state.studies.set(code, created);
+    return created;
+  }
+
+  function getStudyByRefOrCode(refOrCode) {
+    const raw = String(refOrCode || "").trim();
+    const unpinned = raw.split("@")[0];
+    for (const study of state.studies.values()) {
+      if (
+        study.ref === raw ||
+        study.ref.split("@")[0] === unpinned ||
+        study.code.toUpperCase() === raw.toUpperCase()
+      ) {
+        return study;
+      }
+    }
+    if (raw.startsWith("study:")) {
+      return state.studies.get("DEMO-01");
+    }
+    return ensureStudyByCode(refOrCode);
+  }
+
+  const governanceDomain = createDemoGovernanceDomain({
+    state,
+    nextCounter,
+    getStudyByRefOrCode,
+    makeUuidFromIndex,
+    recordActivity,
+    cloneJson,
+    computeContentHash,
+  });
 
   function seedInitialState() {
     sequenceCounter = 10;
@@ -1145,72 +1225,17 @@ export function createWebDemoStore() {
       ],
       environment_notice: PRE_RELEASE_ENVIRONMENT_NOTICE,
     };
+
+    governanceDomain.seedGovernanceState();
   }
 
   seedInitialState();
-
-  function recordActivity(type, family, subjectKind, subjectRef, actorId) {
-    const idx = nextCounter();
-    const now = demoNowIso(idx);
-    state.activityEntries.unshift({
-      event_id: makeUuidFromIndex("00000900", idx),
-      type,
-      family,
-      recorded: now,
-      occurred_valid: now,
-      actor_id:
-        actorId ||
-        getDemoPersonaForWorkspace("super_admin")?.username ||
-        "designer.lead",
-      subject_kind: subjectKind,
-      subject: subjectRef,
-      mask: null,
-      correlation_id: makeUuidFromIndex("00000990", idx),
-    });
-  }
-
-  function ensureStudyByCode(rawCode) {
-    const code = (rawCode || "DEMO-01").trim() || "DEMO-01";
-    for (const [existingCode, study] of state.studies.entries()) {
-      if (existingCode.toUpperCase() === code.toUpperCase()) {
-        return study;
-      }
-    }
-    const idx = nextCounter();
-    const created = {
-      ref: `study:${makeUuidFromIndex("00000010", idx)}`,
-      kind: "study",
-      code,
-      title: `Synthetic Clinical Study ${code}`,
-      status: "ACTIVE",
-      mask: null,
-    };
-    state.studies.set(code, created);
-    return created;
-  }
-
-  function getStudyByRefOrCode(refOrCode) {
-    const raw = String(refOrCode || "").trim();
-    const unpinned = raw.split("@")[0];
-    for (const study of state.studies.values()) {
-      if (
-        study.ref === raw ||
-        study.ref.split("@")[0] === unpinned ||
-        study.code.toUpperCase() === raw.toUpperCase()
-      ) {
-        return study;
-      }
-    }
-    if (raw.startsWith("study:")) {
-      return state.studies.get("DEMO-01");
-    }
-    return ensureStudyByCode(refOrCode);
-  }
 
   return {
     reset: seedInitialState,
     state,
     buildDecision,
+    ...governanceDomain,
 
     searchKernel({ q = "", kinds = [], limit = 25 } = {}) {
       const trimmed = String(q || "").trim();
@@ -2761,12 +2786,18 @@ export function createWebDemoStore() {
       const subjMatch = state.subjects.find((s) => s.id === enrollmentId);
       const siteUuid = resolveSiteUuid(subjMatch?.site_id || "SITE-101");
       const collectionTitle = resolveCollectionTitle(collectionSpecId);
+      const matchedStudy = subjMatch?.study_id
+        ? getStudyByRefOrCode(subjMatch.study_id)
+        : null;
+      const resolvedStudyUuid = matchedStudy
+        ? matchedStudy.ref.split("@")[0].replace(/^study:/, "")
+        : STUDY_UUID;
 
       const created = {
         form_id: formId,
         enrollment_id: enrollmentId,
         participant_id: makeUuidFromIndex("00005000", idx),
-        study_id: STUDY_UUID,
+        study_id: resolvedStudyUuid,
         study_site_id: siteUuid,
         protocol_version_id: VERSION_V2_UUID,
         collection_spec_id: collectionSpecId,
@@ -2953,7 +2984,7 @@ export function createWebDemoStore() {
       const form =
         state.forms.get(formId) || state.forms.get(DEFAULT_FORM_UUID);
       const incoming = Array.isArray(body?.values) ? body.values : [];
-      const now = new Date().toISOString();
+      const now = demoNowIso(nextCounter());
       const savedValues = [];
       let anyChanged = false;
 
@@ -3102,6 +3133,7 @@ export function createWebDemoStore() {
         for (const sig of form.signatures) {
           sig.superseded = true;
         }
+        governanceDomain.syncStudyValidationAfterFormChange(form.study_id);
         recordActivity(
           "execution.form.saved",
           "collection",

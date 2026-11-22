@@ -70,6 +70,10 @@ describe("GitHub Pages co-hosted subpath portal configuration (ADR-2550)", () =>
     );
     const docsBuildIdx = workflow.indexOf("pnpm docs:build");
     const stageDemosIdx = workflow.indexOf("pnpm docs:stage-demos");
+    const verifyBundlesIdx = workflow.indexOf(
+      "node scripts/run-cli.js check public-bundle"
+    );
+    const auditDemosIdx = workflow.indexOf("pnpm docs:audit-demos");
     const shaIdx = workflow.indexOf(
       "Generate Documentation Artifact SHA256 Checksums"
     );
@@ -79,7 +83,9 @@ describe("GitHub Pages co-hosted subpath portal configuration (ADR-2550)", () =>
 
     expect(docsBuildIdx).toBeGreaterThan(-1);
     expect(stageDemosIdx).toBeGreaterThan(docsBuildIdx);
-    expect(shaIdx).toBeGreaterThan(stageDemosIdx);
+    expect(verifyBundlesIdx).toBeGreaterThan(stageDemosIdx);
+    expect(auditDemosIdx).toBeGreaterThan(verifyBundlesIdx);
+    expect(shaIdx).toBeGreaterThan(auditDemosIdx);
     expect(slsaIdx).toBeGreaterThan(shaIdx);
   });
 });

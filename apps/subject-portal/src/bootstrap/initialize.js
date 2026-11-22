@@ -101,10 +101,13 @@ export async function initializeApp() {
       console.warn("[Wallet] Initial wallet hydration warning:", err?.message);
     });
   } else if (isDemoModeActive()) {
-    // Explicit demo build: seed synthetic study data
+    // Explicit demo build: seed synthetic study data and hydrate demo wallet via MSW
     state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
     state.notifications = JSON.parse(JSON.stringify(MOCK_NOTIFICATIONS));
     state.instruments = JSON.parse(JSON.stringify(MOCK_INSTRUMENTS));
+    await loadParticipantWallet().catch((err) => {
+      console.warn("[Wallet] Demo wallet hydration warning:", err?.message);
+    });
   } else if (state.session.isOfflineMode && state.session.userId) {
     // Offline recovery for a previously authenticated participant: use cached IndexedDB records only
     const cachedAssignments = await getAssignmentsFromDB();

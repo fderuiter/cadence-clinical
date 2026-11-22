@@ -1,8 +1,16 @@
 import "fake-indexeddb/auto";
+import { createApp, nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setupServer } from "msw/node";
+import App from "../src/App.vue";
 import { getApiBaseUrl } from "../src/api/client.js";
+import { MOCK_ASSIGNMENTS, MOCK_INSTRUMENTS } from "../src/data/mock-data.js";
 import { login, logout } from "../src/features/auth.js";
+import { syncOfflineQueue } from "../src/features/sync.js";
+import {
+  disburseAvailableBalance,
+  loadParticipantWallet,
+} from "../src/features/wallet.js";
 import {
   normalizePortalBasePath,
   resolvePortalServiceWorkerOptions,
@@ -11,7 +19,13 @@ import {
 import { createPortalDemoStore } from "../src/mocks/demoHandlers.js";
 import { buildPortalGatewayHandlers } from "../src/mocks/handlers.js";
 import { createPortalHistory } from "../src/router/index.js";
+import { pinia } from "../src/stores/pinia.js";
 import { state } from "../src/stores/state.js";
+import {
+  initSessionKey,
+  queueSubmission,
+  setActiveUserId,
+} from "../src/sync-queue.js";
 
 const PORTAL_HEADERS = {
   Authorization: "Bearer demo-portal-token",
@@ -218,6 +232,91 @@ describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
         )
       ).json();
       expect(pendingAfter).toEqual([]);
+    });
+
+    it("reconciles queued demo ePRO submissions to SYNCED, promotes assign_01 to COMPLETED, and credits $25.00 diary stipend", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      await login();
+      setActiveUserId("SUBJ-101-001");
+      await initSessionKey("demo-material", "SUBJ-101-001");
+
+      state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
+      state.instruments = JSON.parse(JSON.stringify(MOCK_INSTRUMENTS));
+      await loadParticipantWallet();
+      expect(state.walletBalance).toBe(125.0);
+
+      await queueSubmission({
+        subject_id: "SUBJ-101-001",
+        diary_id: "inst_daily_diary",
+        assignment_id: "assign_01",
+        answers: { vssbp: 120, vsdpb: 78, vshr: 68, pain_scale: 2 },
+        change_reason: "Completed daily symptom diary",
+        username: "SUBJ-101-001",
+      });
+
+      await syncOfflineQueue(false, { autoDisburse: true });
+
+      const syncedEntry = state.submissions.find(
+        (item) => item.assignment_id === "assign_01"
+      );
+      expect(syncedEntry?.status).toBe("SYNCED");
+      expect(
+        state.assignments.find((item) => item.id === "assign_01")?.status
+      ).toBe("COMPLETED");
+      expect(
+        store.state.assignments.find((item) => item.id === "assign_01")?.status
+      ).toBe("COMPLETED");
+      expect(state.walletBalance).toBe(150.0);
+      expect(state.lifetimeStipends).toBe(150.0);
+    });
+
+    it("hydrates demo wallet on WalletView entry ($125.00), enables payout button, and handles idempotent payout submission", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      await login();
+      state.walletLoaded = false;
+      state.walletLoading = false;
+      state.walletBalance = null;
+      state.currentView = "view-wallet";
+
+      document.body.innerHTML = '<div id="app"></div>';
+      const app = createApp(App);
+      app.use(pinia);
+      app.mount("#app");
+
+      try {
+        for (let i = 0; i < 10 && !state.walletLoaded; i += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 25));
+          await nextTick();
+        }
+
+        expect(state.walletLoaded).toBe(true);
+        expect(state.walletBalance).toBe(125.0);
+        expect(
+          document.getElementById("wallet-balance-amount")?.textContent?.trim()
+        ).toBe("$125.00");
+
+        const disburseBtn = document.getElementById("btn-disburse-balance");
+        expect(disburseBtn).not.toBeNull();
+        expect(disburseBtn.disabled).toBe(false);
+
+        const firstPayout = await disburseAvailableBalance("DIRECT_ACH", {
+          amount: 50.0,
+          idempotencyKey: "idem_demo_wallet_payout_01",
+        });
+        expect(firstPayout.referenceNumber).toMatch(/^DISB-ACH-/);
+        expect(firstPayout.remainingBalance).toBe(75.0);
+        expect(state.walletBalance).toBe(75.0);
+
+        const replayPayout = await disburseAvailableBalance("DIRECT_ACH", {
+          amount: 50.0,
+          idempotencyKey: "idem_demo_wallet_payout_01",
+        });
+        expect(replayPayout.id).toBe(firstPayout.id);
+        expect(replayPayout.referenceNumber).toBe(firstPayout.referenceNumber);
+        expect(state.walletBalance).toBe(75.0);
+      } finally {
+        app.unmount();
+      }
     });
   });
 });

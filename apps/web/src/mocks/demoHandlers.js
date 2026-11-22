@@ -102,7 +102,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
         );
       }
       return HttpResponse.json({
-        sig_token: `demo_sig_tok_${Date.now()}`,
+        sig_token: `demo_sig_tok_${demoNowMs(nextDemoStep("sig-token"))}`,
         action: body.action,
         semantic_action: body.semantic_action,
         expires_in: 300,
@@ -331,6 +331,100 @@ export function createWebDemoHandlers(store = webDemoStore) {
     ),
     http.get("*/api/v1/kernel/studies/:studyRef/proposals", () =>
       HttpResponse.json(store.listProposals())
+    ),
+    http.get("*/api/v1/kernel/studies/:studyRef/rule-packs", ({ params }) =>
+      HttpResponse.json(
+        store.listStudyRulePacks(decodeURIComponent(String(params.studyRef)))
+      )
+    ),
+    http.post(
+      "*/api/v1/kernel/studies/:studyRef/rule-packs/:itemRef/preview",
+      ({ params }) => {
+        const outcome = store.previewStudyRulePack(
+          decodeURIComponent(String(params.studyRef)),
+          decodeURIComponent(String(params.itemRef))
+        );
+        if (outcome.error) {
+          return HttpResponse.json(outcome.error.problem, {
+            status: outcome.error.status,
+          });
+        }
+        return HttpResponse.json(outcome.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/library-items/:itemRef/approve",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const reason = readRequiredReasonHeader(request);
+        const sigToken =
+          request.headers.get("X-Sig-Token") ||
+          request.headers.get("x-sig-token") ||
+          request.headers.get("X-Signature-Token") ||
+          "";
+        const outcome = store.approveLibraryItem(
+          decodeURIComponent(String(params.itemRef)),
+          body,
+          { reason, sigToken }
+        );
+        if (outcome.error) {
+          return HttpResponse.json(outcome.error.problem, {
+            status: outcome.error.status,
+          });
+        }
+        return HttpResponse.json(outcome.data);
+      }
+    ),
+    http.put(
+      "*/api/v1/kernel/studies/:studyRef/standards",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const reason = readRequiredReasonHeader(request);
+        const outcome = store.declareStudyRulePacks(
+          decodeURIComponent(String(params.studyRef)),
+          body,
+          { reason }
+        );
+        if (outcome.error) {
+          return HttpResponse.json(outcome.error.problem, {
+            status: outcome.error.status,
+          });
+        }
+        return HttpResponse.json(outcome.data);
+      }
+    ),
+    http.get(
+      "*/api/v1/kernel/studies/:studyRef/validation/findings",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        return HttpResponse.json(
+          store.listStudyValidationFindings(
+            decodeURIComponent(String(params.studyRef)),
+            {
+              stage: url.searchParams.get("stage") || "",
+              status: url.searchParams.get("status") || "",
+              severity: url.searchParams.get("severity") || "",
+              dataset: url.searchParams.get("dataset") || "",
+              pack_key: url.searchParams.get("pack_key") || "",
+              limit: url.searchParams.get("limit"),
+            }
+          )
+        );
+      }
+    ),
+    http.get(
+      "*/api/v1/kernel/validation/findings/:findingRef",
+      ({ params }) => {
+        const outcome = store.getValidationFinding(
+          decodeURIComponent(String(params.findingRef))
+        );
+        if (outcome.error) {
+          return HttpResponse.json(outcome.error.problem, {
+            status: outcome.error.status,
+          });
+        }
+        return HttpResponse.json(outcome.data);
+      }
     ),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/locks",
@@ -784,6 +878,22 @@ export function createWebDemoHandlers(store = webDemoStore) {
           return HttpResponse.json(result.problem, { status: 409 });
         }
         return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/forms/:formId/preview",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const outcome = store.previewFormValues(
+          decodeURIComponent(String(params.formId)),
+          body
+        );
+        if (outcome.error) {
+          return HttpResponse.json(outcome.error.problem, {
+            status: outcome.error.status,
+          });
+        }
+        return HttpResponse.json(outcome.data);
       }
     ),
     http.post(
@@ -1916,8 +2026,8 @@ export function createWebDemoHandlers(store = webDemoStore) {
             Number(wallet.lifetime_stipends || 0) + credited;
           wallet.taxable_ytd = Number(wallet.taxable_ytd || 0) + credited;
           store.state.walletTransactions.unshift({
-            id: `wtx-${Date.now()}`,
-            created_at: new Date().toISOString(),
+            id: `wtx-${demoNowMs(nextDemoStep("wallet-tx"))}`,
+            created_at: demoNowIso(nextDemoStep("wallet-tx-iso")),
             subject_id: wallet.subject_id,
             study_id: wallet.study_id,
             transaction_type: "VISIT_STIPEND",
@@ -1972,7 +2082,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const conf = Number(body?.ocr_confidence ?? body?.ocrConfidence ?? 0);
       const autoApproved = gross > 0 && gross <= 100 && conf >= 0.9;
       const created = {
-        id: `exp-${Date.now()}`,
+        id: `exp-${demoNowMs(nextDemoStep("expense-claim"))}`,
         subject_id: body?.subject_id || body?.subjectId || "SUBJ-1001",
         expense_date: body?.expense_date || body?.expenseDate || "2026-08-01", // deid-ignore
         category: body?.category || "TRANSIT",
@@ -2005,16 +2115,33 @@ export function createWebDemoHandlers(store = webDemoStore) {
       }
     ),
     http.get("*/api/v1/payments/lay-summaries", () =>
-      HttpResponse.json([
-        {
-          id: "lsum-01",
-          study_id: "DEMO-01",
-          title: "Plain-Language Summary of Study DEMO-01",
-          language: "en",
-          reading_grade_level: 6.5,
-          status: "PUBLISHED",
-        },
-      ])
+      HttpResponse.json(store.listLaySummaries())
+    ),
+    http.post("*/api/v1/payments/lay-summaries", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(store.publishLaySummary(body), { status: 201 });
+    }),
+    http.get(
+      "*/api/v1/payments/lay-summaries/:summaryId/receipts",
+      ({ params }) =>
+        HttpResponse.json(
+          store.listLaySummaryReceipts(
+            decodeURIComponent(String(params.summaryId))
+          )
+        )
+    ),
+    http.post(
+      "*/api/v1/payments/lay-summaries/:summaryId/confirm-receipt",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        return HttpResponse.json(
+          store.confirmLaySummaryReceipt(
+            decodeURIComponent(String(params.summaryId)),
+            body
+          ),
+          { status: 201 }
+        );
+      }
     ),
     http.get("*/api/v1/execution/coding/assignments", () =>
       HttpResponse.json([])
@@ -2674,5 +2801,110 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.get("*/api/v1/training/gating-status", () =>
       HttpResponse.json({ is_gated: false })
     ),
+
+    // Quality Management & RBQM (RACT Matrix, KRIs, Site Risk, CSM Dossier)
+    http.get("*/api/v1/quality/audit-logs", () => HttpResponse.json([])),
+    http.get("*/api/v1/quality/rbqm/ract/factors", ({ request }) => {
+      const url = new URL(request.url);
+      const studyId = url.searchParams.get("study_id") || "";
+      return HttpResponse.json(store.listRactFactors(studyId));
+    }),
+    http.post("*/api/v1/quality/rbqm/ract/factors", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(
+        store.createRactFactor(body, decodeReasonHeader(request)),
+        { status: 201 }
+      );
+    }),
+    http.put(
+      "*/api/v1/quality/rbqm/ract/factors/:factorId",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const updated = store.updateRactFactor(
+          decodeURIComponent(String(params.factorId)),
+          body,
+          decodeReasonHeader(request)
+        );
+        if (!updated) {
+          return HttpResponse.json(
+            {
+              title: "RACT factor not found",
+              status: 404,
+              detail: `Risk factor '${params.factorId}' does not exist.`,
+            },
+            { status: 404 }
+          );
+        }
+        return HttpResponse.json(updated);
+      }
+    ),
+    http.delete("*/api/v1/quality/rbqm/ract/factors/:factorId", ({ params }) =>
+      HttpResponse.json(
+        store.deleteRactFactor(decodeURIComponent(String(params.factorId)))
+      )
+    ),
+    http.post("*/api/v1/quality/rbqm/ract/seed-default", ({ request }) => {
+      const url = new URL(request.url);
+      const studyId = url.searchParams.get("study_id") || "";
+      return HttpResponse.json(store.seedDefaultRactFactors(studyId), {
+        status: 201,
+      });
+    }),
+    http.get("*/api/v1/quality/rbqm/kris", () =>
+      HttpResponse.json(store.listKriDefinitions())
+    ),
+    http.get("*/api/v1/quality/rbqm/site-risk-profiles", ({ request }) => {
+      const url = new URL(request.url);
+      const studyId = url.searchParams.get("study_id") || "";
+      return HttpResponse.json(store.listSiteRiskProfiles(studyId));
+    }),
+    http.post(
+      "*/api/v1/quality/rbqm/site-risk-profiles/compute",
+      ({ request }) => {
+        const url = new URL(request.url);
+        const studyId = url.searchParams.get("study_id") || "";
+        return HttpResponse.json(store.computeSiteRiskProfiles(studyId));
+      }
+    ),
+    http.post(
+      "*/api/v1/quality/rbqm/csm/dossiers/compile",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        return HttpResponse.json(store.compileCsmDossier(body), {
+          status: 201,
+        });
+      }
+    ),
+
+    // Aggregate Safety & Pharmacovigilance (Exposure, DSUR, QPPV Sign, Triage Rules)
+    http.post("*/api/v1/safety/exposure/calculate", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(store.calculateSafetyExposure(body));
+    }),
+    http.post(
+      "*/api/v1/safety/periodic-reports/compile",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        return HttpResponse.json(store.compilePeriodicSafetyReport(body), {
+          status: 201,
+        });
+      }
+    ),
+    http.post(
+      "*/api/v1/safety/periodic-reports/:reportId/qppv-sign",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        return HttpResponse.json(
+          store.qppvSignPeriodicSafetyReport(
+            decodeURIComponent(String(params.reportId)),
+            body
+          )
+        );
+      }
+    ),
+    http.post("*/api/v1/safety/rules/evaluate", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(store.evaluateSafetyRules(body));
+    }),
   ];
 }

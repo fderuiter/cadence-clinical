@@ -23,6 +23,15 @@ function clonePortalData(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+const portalStoreResetListeners = new Set();
+
+export function onPortalDemoStoreReset(listener) {
+  if (typeof listener === "function") {
+    portalStoreResetListeners.add(listener);
+  }
+  return () => portalStoreResetListeners.delete(listener);
+}
+
 export function createPortalDemoStore() {
   const state = {
     assignments: [],
@@ -46,6 +55,9 @@ export function createPortalDemoStore() {
     state.walletBalance = 125.0;
     state.complianceScore = 92;
     state.actionSeq = 0;
+    for (const listener of portalStoreResetListeners) {
+      listener();
+    }
   }
 
   reset();
@@ -156,11 +168,81 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
     http.post("*/api/v1/interop/epro/sync", async ({ request }) => {
       const body = await request.json().catch(() => ({}));
       const items = Array.isArray(body?.submissions) ? body.submissions : [];
-      store.state.submissions.push(...items);
+      const syncedAt = demoNowIso(nextSeq());
+      const results = items.map((item, idx) => {
+        const seq = nextSeq();
+        const sequenceNumber =
+          item?.offline_sync_markers?.sequence_number ??
+          item?.sequence_number ??
+          idx + 1;
+        const clientId =
+          item?.offline_sync_markers?.client_id ??
+          item?.client_id ??
+          "portal-demo-client";
+        const conflictStrategy =
+          item?.offline_sync_markers?.conflict_strategy || "CLIENT_WINS";
+        const resolvedAnswers = clonePortalData(
+          item?.answers || item?.responses || {}
+        );
+        const alreadyStored = store.state.submissions.some(
+          (existing) =>
+            (existing?.offline_sync_markers?.sequence_number ??
+              existing?.sequence_number) === sequenceNumber &&
+            (existing?.offline_sync_markers?.client_id ??
+              existing?.client_id) === clientId
+        );
+        if (!alreadyStored) {
+          store.state.submissions.push({
+            ...clonePortalData(item),
+            submission_id: `sub_${demoNowMs(seq)}`,
+            sequence_number: sequenceNumber,
+            client_id: clientId,
+            status: "SYNCED",
+            received_at: syncedAt,
+          });
+          store.state.complianceScore = Math.min(
+            100,
+            store.state.complianceScore + 4
+          );
+        }
+
+        const matchedAssignment = store.state.assignments.find((assignment) => {
+          if (item?.assignment_id && assignment.id === item.assignment_id) {
+            return true;
+          }
+          if (
+            item?.diary_id &&
+            assignment.instrument_id === item.diary_id &&
+            assignment.status !== "COMPLETED"
+          ) {
+            return true;
+          }
+          return false;
+        });
+        if (matchedAssignment) {
+          matchedAssignment.status = "COMPLETED";
+          matchedAssignment.submitted_at = item?.device_timestamp || syncedAt;
+        }
+
+        return {
+          submission_id: `sub_${demoNowMs(seq)}`,
+          sequence_number: sequenceNumber,
+          client_id: clientId,
+          offline_sync_markers: {
+            sequence_number: sequenceNumber,
+            client_id: clientId,
+            conflict_strategy: conflictStrategy,
+          },
+          status: "SYNCED",
+          answers: resolvedAnswers,
+          received_at: syncedAt,
+        };
+      });
       return HttpResponse.json({
-        synced_count: items.length,
+        synced_count: results.length,
         status: "SYNCED",
-        synced_at: demoNowIso(nextSeq()),
+        synced_at: syncedAt,
+        results,
       });
     }),
     http.get("*/api/v1/econsent/templates/:templateId/approved-content", () =>

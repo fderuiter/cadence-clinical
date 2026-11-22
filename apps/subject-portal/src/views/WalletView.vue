@@ -1185,8 +1185,7 @@ function claimStatusClass(claim) {
 function maybeHydrateWallet() {
   if (
     ui.currentView === "view-wallet" &&
-    isAuthenticated.value &&
-    !isDemo.value &&
+    isWalletEnabled.value &&
     !wallet.walletLoaded &&
     !wallet.walletLoading
   ) {
@@ -1199,7 +1198,12 @@ onMounted(() => {
 });
 
 watch(
-  () => [ui.currentView, session.session?.token, session.session?.userId],
+  () => [
+    ui.currentView,
+    session.session?.token,
+    session.session?.userId,
+    session.session?.isDemoMode,
+  ],
   () => {
     maybeHydrateWallet();
   }

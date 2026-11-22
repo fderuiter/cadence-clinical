@@ -6,7 +6,10 @@ import {
 import { http, HttpResponse, passthrough } from "msw";
 import { evaluateDemoBoundaryRequest } from "ui/testing";
 import { demoNowIso, demoNowMs, isDemoBuild } from "../utils/demoMode.js";
-import { createPortalDemoHandlers } from "./demoHandlers.js";
+import {
+  createPortalDemoHandlers,
+  onPortalDemoStoreReset,
+} from "./demoHandlers.js";
 
 // Deterministic mock-sandbox state for explicit demo mode / Vitest MSW tests.
 // Never fabricates fallback merchant/amount/confidence when receipt content is unreadable.
@@ -50,7 +53,22 @@ function getOrCreateMockWallet(subjectId = DEFAULT_MOCK_SUBJECT_ID) {
       achRoutingMask: "*****0021",
       achAccountMask: "ACH-***4321",
       achAccountHolder: `Participant ${subjectId}`,
-      recentTransactions: [],
+      recentTransactions: [
+        {
+          id: `tx_seed_${subjectId}_v2`,
+          transactionType: "STIPEND_CREDIT",
+          description: `${DEFAULT_MOCK_STUDY_ID} Visit 2 Completed Stipend`,
+          amount: 75.0,
+          createdAt: demoNowIso(-24),
+        },
+        {
+          id: `tx_seed_${subjectId}_v1`,
+          transactionType: "STIPEND_CREDIT",
+          description: `${DEFAULT_MOCK_STUDY_ID} Screening & Baseline Stipend`,
+          amount: 50.0,
+          createdAt: demoNowIso(-72),
+        },
+      ],
       expenseClaims: [],
       creditedKeys: new Set(),
       expenseIdempotencyMap: new Map(),
@@ -553,6 +571,14 @@ const sharedPortalActionHandlers = [
         disbursementType === "VIRTUAL_CARD"
           ? wallet.virtualCardMask
           : wallet.achAccountMask;
+      const createdAt = nextMockTimestampIso();
+      wallet.recentTransactions.unshift({
+        id: `disb_${nowMs}`,
+        transactionType: "BALANCE_DISBURSEMENT",
+        description: `${disbursementType === "VIRTUAL_CARD" ? "Virtual card" : "Direct ACH"} payout (${refNum})`,
+        amount: -requestedAmount,
+        createdAt,
+      });
       const responsePayload = {
         id: `disb_${nowMs}`,
         walletId: wallet.id,
@@ -565,7 +591,8 @@ const sharedPortalActionHandlers = [
         destinationMask,
         referenceNumber: refNum,
         status: "DISPATCHED",
-        createdAt: nextMockTimestampIso(),
+        createdAt,
+        recentTransactions: wallet.recentTransactions,
       };
       if (idempotencyKey) {
         wallet.disburseIdempotencyMap.set(idempotencyKey, responsePayload);
@@ -615,16 +642,25 @@ const sharedPortalActionHandlers = [
       const serverRuleAmount = 25.0;
       wallet.currentBalance += serverRuleAmount;
       wallet.lifetimeStipends += serverRuleAmount;
+      const transactionId = `tx_${nextMockTimestampMs()}`;
+      wallet.recentTransactions.unshift({
+        id: transactionId,
+        transactionType: "STIPEND_CREDIT",
+        description: `${DEFAULT_MOCK_STUDY_ID} Synchronized ePRO Diary Stipend`,
+        amount: serverRuleAmount,
+        createdAt: nextMockTimestampIso(),
+      });
       return HttpResponse.json({
         success: true,
         status: "CREDITED",
         creditedAmount: serverRuleAmount,
         currentBalance: wallet.currentBalance,
         lifetimeStipends: wallet.lifetimeStipends,
+        recentTransactions: wallet.recentTransactions,
         walletId: wallet.id,
         subjectId: wallet.subjectId,
         currency: "USD",
-        transactionId: `tx_${nextMockTimestampMs()}`,
+        transactionId,
         referenceNumber: key,
         idempotencyKey: key,
       });
@@ -675,6 +711,9 @@ const sharedPortalActionHandlers = [
 ];
 
 export function buildPortalGatewayHandlers(options = {}) {
+  if (options.store && options.resetWallet !== false) {
+    resetMockWalletLedger();
+  }
   const demoActive =
     options.forceDemo !== undefined
       ? Boolean(options.forceDemo)
@@ -707,5 +746,7 @@ export function resetMockWalletLedger() {
   mockWalletLedger.clear();
   mockActionCounter = 0;
 }
+
+onPortalDemoStoreReset(resetMockWalletLedger);
 
 export const gatewayHandlers = buildPortalGatewayHandlers();

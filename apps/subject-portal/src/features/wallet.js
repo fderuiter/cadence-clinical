@@ -837,6 +837,9 @@ export async function disburseAvailableBalance(
     if (res.currency || res.Currency) {
       state.currency = res.currency || res.Currency;
     }
+    if (Array.isArray(res.recentTransactions)) {
+      state.recentTransactions = res.recentTransactions;
+    }
 
     state.disbursementConfirmation = {
       id: res.id ?? res.Id ?? null,
