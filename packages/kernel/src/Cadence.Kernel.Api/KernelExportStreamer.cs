@@ -186,10 +186,16 @@ internal static class KernelExportStreamer
             snapshot.ProtocolVersions,
             export.Rows.Where(r => !r.Masked || r.SourceObservation is not null).ToList()).ConfigureAwait(false);
 
+        var blindedCollectionIds = export.Rows
+            .Where(r => r.Masked && r.SourceObservation?.CollectionInstanceId is not null)
+            .Select(r => r.SourceObservation!.CollectionInstanceId!.Value)
+            .ToHashSet();
+
         var visibleTargetIds = export.Rows
-            .Where(r => r.SourceObservation is not null)
+            .Where(r => !r.Masked && r.SourceObservation is not null)
             .SelectMany(r => new[] { r.SourceObservation!.ObservationId.Value, r.SourceObservation.EnrollmentId.Value }
-                .Concat(r.SourceObservation.CollectionInstanceId is { } cid ? [cid.Value] : []))
+                .Concat(r.SourceObservation.CollectionInstanceId is { } cid && !blindedCollectionIds.Contains(cid) ? [cid.Value] : []))
+            .Concat(export.Rows.Where(r => r.SourceObservation is not null).Select(r => r.SourceObservation!.EnrollmentId.Value))
             .Append(snapshot.StudyId.Value)
             .ToHashSet();
 
@@ -251,7 +257,10 @@ internal static class KernelExportStreamer
 
                     await xml.WriteEndElementAsync().ConfigureAwait(false);
 
-                    if (sample.SourceObservation?.CollectionInstanceId is { } formInstanceId
+                    if (!sample.Masked
+                        && sample.CollectionInstanceRef is not null
+                        && sample.SourceObservation?.CollectionInstanceId is { } formInstanceId
+                        && !blindedCollectionIds.Contains(formInstanceId)
                         && attestationsByTarget.TryGetValue(formInstanceId.Value, out var formSigs))
                     {
                         foreach (var sig in formSigs)
@@ -352,6 +361,7 @@ internal static class KernelExportStreamer
                 [],
                 [],
                 maskedLocks,
+                [],
                 []);
 
             return new KernelCasebookResponse(
@@ -380,19 +390,9 @@ internal static class KernelExportStreamer
                 AuditTrail: []);
         }
 
-        var forms = snapshot.Collections
-            .Select(c => new KernelCasebookFormView(
-                NodeRef.For(c.CollectionInstanceId).ToString(),
-                c.CollectionSpecId,
-                c.CollectionSpecName,
-                c.PlannedActivityId,
-                c.PlannedActivityName,
-                c.CollectedAt,
-                c.OpenedAt,
-                c.OpenedBy,
-                c.ContentHashAtCut,
-                Masked: false,
-                Mask: null))
+        var designs = snapshot.ProtocolVersions
+            .Where(p => p.Design is not null)
+            .Select(p => p.Design!)
             .ToList();
 
         var blindedObservationIds = new HashSet<ObservationId>();
@@ -418,8 +418,8 @@ internal static class KernelExportStreamer
                     .ToList();
 
                 observations.Add(new KernelCasebookObservationView(
-                    NodeRef.For(obs.ObservationId, obs.CurrentRevision.Number).ToString(),
-                    obs.CollectionInstanceId is { } cid ? NodeRef.For(cid).ToString() : null,
+                    Ref: "masked",
+                    CollectionInstanceRef: null,
                     obs.CollectionSpecId,
                     obs.ItemId,
                     obs.Concept.ToString(),
@@ -479,19 +479,52 @@ internal static class KernelExportStreamer
                 Revisions: revisions));
         }
 
+        var formsWithBlindedObservations = new HashSet<Guid>();
+        var forms = snapshot.Collections
+            .Select(c =>
+            {
+                var hasBlindedObs = !mayUnblind && c.ItemIdsByObservation.Keys.Any(blindedObservationIds.Contains);
+                var isBlindedForm = !mayUnblind
+                    && (BlindedTreatmentClassifier.Instance.IsBlindedCollectionSpec(c.CollectionSpecId, c.CollectionSpecName, designs: designs)
+                        || (c.ItemIdsByObservation.Count > 0 && c.ItemIdsByObservation.Keys.All(blindedObservationIds.Contains)));
+                if (hasBlindedObs || isBlindedForm)
+                {
+                    formsWithBlindedObservations.Add(c.CollectionInstanceId.Value);
+                }
+
+                return new KernelCasebookFormView(
+                    isBlindedForm ? "masked" : NodeRef.For(c.CollectionInstanceId).ToString(),
+                    c.CollectionSpecId,
+                    c.CollectionSpecName,
+                    c.PlannedActivityId,
+                    c.PlannedActivityName,
+                    c.CollectedAt,
+                    c.OpenedAt,
+                    isBlindedForm ? null : c.OpenedBy,
+                    hasBlindedObs || isBlindedForm ? null : c.ContentHashAtCut,
+                    Masked: isBlindedForm,
+                    Mask: isBlindedForm ? MaskReason.Blinded.ToString() : null);
+            })
+            .ToList();
+
         var blindedGuids = blindedObservationIds.Select(id => id.Value).ToHashSet();
+        var blindedQueryGuids = snapshot.Assertions
+            .Where(a => a.Kind == AssertionKind.Queried && a.Target.Kind == NodeKinds.Observation && blindedGuids.Contains(a.Target.Id))
+            .Select(a => a.AssertionId.Value)
+            .ToHashSet();
 
         var queries = snapshot.Assertions
             .Where(a => a.Kind is AssertionKind.Queried or AssertionKind.QueryAnswered)
             .Select(a =>
             {
-                bool targetBlinded = a.Target.Kind == NodeKinds.Observation && blindedGuids.Contains(a.Target.Id);
+                bool targetBlinded = (a.Target.Kind == NodeKinds.Observation && blindedGuids.Contains(a.Target.Id))
+                    || (a.Target.Kind == NodeKinds.Assertion && blindedQueryGuids.Contains(a.Target.Id));
                 return new KernelCasebookQueryView(
-                    NodeRef.For(a.AssertionId).ToString(),
+                    targetBlinded ? "masked" : NodeRef.For(a.AssertionId).ToString(),
                     a.Kind.ToString(),
-                    a.Target.ToString(),
+                    targetBlinded ? "masked" : a.Target.ToString(),
                     targetBlinded ? "masked" : a.Text,
-                    a.AssertedBy,
+                    targetBlinded ? null : a.AssertedBy,
                     a.AssertedAt,
                     targetBlinded ? "masked" : a.ReasonForChange,
                     Closed: a.RetractedBy is not null,
@@ -501,15 +534,19 @@ internal static class KernelExportStreamer
 
         var verifications = snapshot.Assertions
             .Where(a => a.Kind == AssertionKind.Verified)
-            .Select(a => new KernelCasebookVerificationView(
-                NodeRef.For(a.AssertionId).ToString(),
-                a.Target.ToString(),
-                a.Revision,
-                a.AssertedBy,
-                a.AssertedAt,
-                a.ReasonForChange,
-                Retracted: a.RetractedBy is not null,
-                RetractedAt: a.RetractedAt))
+            .Select(a =>
+            {
+                bool targetBlinded = a.Target.Kind == NodeKinds.Observation && blindedGuids.Contains(a.Target.Id);
+                return new KernelCasebookVerificationView(
+                    targetBlinded ? "masked" : NodeRef.For(a.AssertionId).ToString(),
+                    targetBlinded ? "masked" : a.Target.ToString(),
+                    a.Revision,
+                    targetBlinded ? null : a.AssertedBy,
+                    a.AssertedAt,
+                    targetBlinded ? "masked" : a.ReasonForChange,
+                    Retracted: a.RetractedBy is not null,
+                    RetractedAt: a.RetractedAt);
+            })
             .ToList();
 
         var locks = snapshot.Locks
@@ -518,8 +555,15 @@ internal static class KernelExportStreamer
                 : KernelLockResponse.FromVisible(l))
             .ToList();
 
+        var blindedLockGuids = snapshot.Locks
+            .Where(l => l.BlindedScope && !mayUnblind)
+            .SelectMany(l => l.ReleaseAssertionId is { } rel ? new[] { l.LockId.Value, rel.Value } : [l.LockId.Value])
+            .ToHashSet();
+
         var attestations = snapshot.Attestations
-            .Where(a => !(a.TargetKind == NodeKinds.Observation && blindedGuids.Contains(a.TargetId)))
+            .Where(a => !((a.TargetKind == NodeKinds.Observation && blindedGuids.Contains(a.TargetId))
+                || (a.TargetKind == NodeKinds.CollectionInstance && formsWithBlindedObservations.Contains(a.TargetId))
+                || (a.TargetKind == NodeKinds.Assertion && blindedLockGuids.Contains(a.TargetId))))
             .Select(a => new KernelCasebookAttestationView(
                 NodeRef.For(a.AttestationId).ToString(),
                 new NodeRef(a.TargetKind, a.TargetId).ToString(),
@@ -532,6 +576,8 @@ internal static class KernelExportStreamer
                 a.Reason))
             .ToList();
 
+        var auditTrail = ProjectAuditTrail(snapshot, mayUnblind, blindedObservationIds.Count > 0 || formsWithBlindedObservations.Count > 0 || blindedLockGuids.Count > 0);
+
         var canonicalDigest = ComputeCanonicalCasebookDigest(
             snapshot.StudyCode,
             snapshot.SubjectCode,
@@ -542,7 +588,8 @@ internal static class KernelExportStreamer
             queries,
             verifications,
             locks,
-            attestations);
+            attestations,
+            auditTrail);
 
         return new KernelCasebookResponse(
             Producer: ProducerName,
@@ -567,7 +614,7 @@ internal static class KernelExportStreamer
             Verifications: verifications,
             Locks: locks,
             Attestations: attestations,
-            AuditTrail: snapshot.AuditEntries);
+            AuditTrail: auditTrail);
     }
 
     public static Task WriteCasebookJsonAsync(
@@ -1161,6 +1208,37 @@ internal static class KernelExportStreamer
         await xml.WriteEndElementAsync().ConfigureAwait(false);
     }
 
+    private static IReadOnlyList<ObservationAuditView> ProjectAuditTrail(
+        EnrollmentCasebookSnapshot snapshot,
+        bool mayUnblind,
+        bool hasBlindedData)
+    {
+        if (mayUnblind || snapshot.AuditEntries.Count == 0 || !hasBlindedData)
+        {
+            return snapshot.AuditEntries;
+        }
+
+        if (snapshot.BlindedAuditSequences is { } blindedSequences)
+        {
+            if (blindedSequences.Count == 0)
+            {
+                return snapshot.AuditEntries;
+            }
+
+            return snapshot.AuditEntries
+                .Select(entry => blindedSequences.Contains(entry.Sequence)
+                    ? entry with { ActorId = "masked", Action = "masked", ReasonForChange = "masked" }
+                    : entry)
+                .ToList();
+        }
+
+        return snapshot.AuditEntries
+            .Select(entry => string.Equals(entry.Subject, "Enrollment", StringComparison.OrdinalIgnoreCase)
+                ? entry
+                : entry with { ActorId = "masked", Action = "masked", ReasonForChange = "masked" })
+            .ToList();
+    }
+
     private static string ComputeCanonicalCasebookDigest(
         string studyCode,
         string subjectCode,
@@ -1171,7 +1249,8 @@ internal static class KernelExportStreamer
         IReadOnlyList<KernelCasebookQueryView> queries,
         IReadOnlyList<KernelCasebookVerificationView> verifications,
         IReadOnlyList<KernelLockResponse> locks,
-        IReadOnlyList<KernelCasebookAttestationView> attestations)
+        IReadOnlyList<KernelCasebookAttestationView> attestations,
+        IReadOnlyList<ObservationAuditView> auditTrail)
     {
         var canonical = JsonSerializer.Serialize(new
         {
@@ -1185,6 +1264,7 @@ internal static class KernelExportStreamer
             verifications,
             locks,
             attestations,
+            audit_trail = auditTrail,
         }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();

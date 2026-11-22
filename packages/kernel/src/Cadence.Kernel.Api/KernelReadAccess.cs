@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,6 +28,13 @@ public sealed class KernelReadAccess(
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [node], cancellationToken).ConfigureAwait(false);
         return masks.For(node) is null;
     }
+
+    /// <inheritdoc />
+    public ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken) =>
+        KernelReadMasking.MaskAsync(visibility, actor, tenant, nodes, cancellationToken);
 
     /// <inheritdoc />
     public async ValueTask<bool> CanExerciseAsync(

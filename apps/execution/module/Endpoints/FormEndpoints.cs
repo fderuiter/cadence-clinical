@@ -8,7 +8,10 @@ using Cadence.Kernel;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Validation;
@@ -42,6 +45,7 @@ internal static class FormEndpoints
     public const string IdempotencyKeyHeader = "Idempotency-Key";
 
     private static readonly Capability SignFormCapability = new("collection.sign", VerbClass.Execute);
+    private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
 
     public static IEndpointRouteBuilder MapFormEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -185,8 +189,19 @@ internal static class FormEndpoints
             return NotFound(formId);
         }
 
-        // A form is seen by whoever may see its enrollment (ADR-2457), as its values are.
-        if (!await access.CanSeeAsync(tenant, NodeRef.For(record.EnrollmentId), cancellationToken).ConfigureAwait(false))
+        var enrollmentNode = NodeRef.For(record.EnrollmentId);
+        var nodesToCheck = new List<NodeRef> { enrollmentNode };
+        nodesToCheck.AddRange(record.Values.Select(v => NodeRef.For(v.ObservationId)));
+        nodesToCheck.AddRange(record.Attestations
+            .Where(s => s.SignedValues is not null)
+            .SelectMany(s => s.SignedValues!)
+            .Select(sv => NodeRef.For(sv.ObservationId)));
+        nodesToCheck.AddRange(record.Assertions.Where(a => a.Target.Kind == NodeKinds.Observation).Select(a => a.Target));
+        nodesToCheck.AddRange(record.Locks.Where(l => l.Scope.Kind == NodeKinds.Observation).Select(l => l.Scope));
+
+        // A form is seen by whoever may see its enrollment (ADR-2457); blinded observations are masked in place (K-AUTH-4).
+        var masks = await access.MaskAsync(tenant, nodesToCheck, cancellationToken).ConfigureAwait(false);
+        if (masks.ContainsKey(enrollmentNode))
         {
             return TypedResults.Problem(
                 title: "Not visible", detail: $"You may not see form {formId:D}.", statusCode: StatusCodes.Status403Forbidden);
@@ -206,10 +221,79 @@ internal static class FormEndpoints
         var canSign = await access.CanExerciseAsync(
             tenant,
             SignFormCapability,
-            NodeRef.For(record.EnrollmentId),
+            enrollmentNode,
+            cancellationToken).ConfigureAwait(false);
+        var canUnblind = await access.CanExerciseAsync(
+            tenant,
+            EnrollmentUnblindCapability,
+            enrollmentNode,
             cancellationToken).ConfigureAwait(false);
 
-        return TypedResults.Ok(FormResponse.From(record, layout, canSign));
+        var blindedObservationIds = new HashSet<ObservationId>(
+            masks.Keys
+                .Where(n => n.Kind == NodeKinds.Observation)
+                .Select(n => ObservationId.FromGuid(n.Id)));
+        var blindedItemIds = record.Values
+            .Where(recorded => blindedObservationIds.Contains(recorded.ObservationId))
+            .Select(recorded => recorded.ItemId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (!canUnblind)
+        {
+            var classifier = context.RequestServices.GetService<IBlindedTreatmentClassifier>()
+                ?? BlindedTreatmentClassifier.Instance;
+            var designs = await LoadStudyDesignsAsync(tenant, record.StudyId, record.ProtocolVersionId, context.RequestServices, cancellationToken).ConfigureAwait(false);
+            var concepts = await LoadItemConceptsAsync(tenant, record.Items, context.RequestServices, cancellationToken).ConfigureAwait(false);
+            var specById = record.Items.ToDictionary(i => i.Id, StringComparer.Ordinal);
+            var valuesById = record.Values.ToDictionary(v => v.ItemId, StringComparer.Ordinal);
+
+            foreach (var itemId in specById.Keys.Concat(valuesById.Keys).Distinct(StringComparer.Ordinal))
+            {
+                specById.TryGetValue(itemId, out var specItem);
+                valuesById.TryGetValue(itemId, out var recordedValue);
+                BlindedConceptMetadata? conceptMeta = specItem is not null && concepts.TryGetValue(specItem.Concept.ConceptId, out var m)
+                    ? m
+                    : null;
+                if (classifier.IsBlindedCollectionItem(
+                        record.CollectionSpecId,
+                        record.CollectionTitle,
+                        specItem,
+                        recordedValue?.Value,
+                        conceptMeta,
+                        designs))
+                {
+                    blindedItemIds.Add(itemId);
+                    if (recordedValue is not null)
+                    {
+                        blindedObservationIds.Add(recordedValue.ObservationId);
+                    }
+                }
+            }
+
+            foreach (var signedValue in record.Attestations
+                .Where(signature => signature.SignedValues is not null)
+                .SelectMany(signature => signature.SignedValues!))
+            {
+                specById.TryGetValue(signedValue.ItemId, out var specItem);
+                BlindedConceptMetadata? conceptMeta = specItem is not null && concepts.TryGetValue(specItem.Concept.ConceptId, out var m)
+                    ? m
+                    : null;
+                if (blindedItemIds.Contains(signedValue.ItemId)
+                    || classifier.IsBlindedCollectionItem(
+                        record.CollectionSpecId,
+                        record.CollectionTitle,
+                        specItem,
+                        signedValue.Value,
+                        conceptMeta,
+                        designs))
+                {
+                    blindedItemIds.Add(signedValue.ItemId);
+                    blindedObservationIds.Add(signedValue.ObservationId);
+                }
+            }
+        }
+
+        return TypedResults.Ok(FormResponse.From(record, layout, canSign, blindedItemIds, blindedObservationIds));
     }
 
     internal static async Task<Results<Ok<FormPreviewResponse>, ProblemHttpResult>> PreviewAsync(
@@ -233,7 +317,11 @@ internal static class FormEndpoints
             return NotFound(formId);
         }
 
-        if (!await access.CanSeeAsync(tenant, NodeRef.For(record.EnrollmentId), cancellationToken).ConfigureAwait(false))
+        var enrollmentNode = NodeRef.For(record.EnrollmentId);
+        var previewNodes = new List<NodeRef>(1 + record.Values.Count) { enrollmentNode };
+        previewNodes.AddRange(record.Values.Select(v => NodeRef.For(v.ObservationId)));
+        var masks = await access.MaskAsync(tenant, previewNodes, cancellationToken).ConfigureAwait(false);
+        if (masks.ContainsKey(enrollmentNode))
         {
             return TypedResults.Problem(
                 title: "Not visible", detail: $"You may not see form {formId:D}.", statusCode: StatusCodes.Status403Forbidden);
@@ -245,6 +333,13 @@ internal static class FormEndpoints
             return TypedResults.Ok(new FormPreviewResponse(formId, []));
         }
 
+        var canUnblind = await access.CanExerciseAsync(
+            tenant,
+            EnrollmentUnblindCapability,
+            enrollmentNode,
+            cancellationToken).ConfigureAwait(false);
+        var unblinded = canUnblind && !masks.Values.Any(reason => reason == MaskReason.Blinded);
+
         var overlay = new Dictionary<string, ObservationValue?>(StringComparer.Ordinal);
         foreach (var entry in request.Values)
         {
@@ -252,7 +347,7 @@ internal static class FormEndpoints
         }
 
         var asOf = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
-        var warnings = await validation.PreviewFormAsync(tenant, id, overlay, asOf, cancellationToken).ConfigureAwait(false);
+        var warnings = await validation.PreviewFormAsync(tenant, id, overlay, asOf, unblinded, cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok(new FormPreviewResponse(
             formId,
             [.. warnings.Select(FormPreviewWarningResponse.From)]));
@@ -300,6 +395,64 @@ internal static class FormEndpoints
     }
 
     internal static string IdempotencyKey(HttpContext context) => context.Request.Headers[IdempotencyKeyHeader].ToString().Trim();
+
+    private static async Task<IReadOnlyList<ProtocolDesign>> LoadStudyDesignsAsync(
+        TenantId tenant,
+        StudyId studyId,
+        ProtocolVersionId governingVersionId,
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var reader = services.GetService<IProtocolVersionReader>();
+        if (reader is null)
+        {
+            return [];
+        }
+
+        var designs = new List<ProtocolDesign>();
+        if (await reader.GetDesignAsync(tenant, governingVersionId, cancellationToken).ConfigureAwait(false) is { } governing)
+        {
+            designs.Add(governing);
+            return designs;
+        }
+
+        var summaries = await reader.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        foreach (var summaryId in summaries.Select(summary => summary.Id))
+        {
+            if (await reader.GetDesignAsync(tenant, summaryId, cancellationToken).ConfigureAwait(false) is { } design)
+            {
+                designs.Add(design);
+            }
+        }
+
+        return designs;
+    }
+
+    private static async Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadItemConceptsAsync(
+        TenantId tenant,
+        IReadOnlyList<CollectionItem> items,
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var concepts = services.GetService<IConceptRegistry>();
+        if (concepts is null || items.Count == 0)
+        {
+            return new Dictionary<ConceptId, BlindedConceptMetadata>();
+        }
+
+        var resolved = new Dictionary<ConceptId, BlindedConceptMetadata>();
+        foreach (var conceptRef in items.Select(i => i.Concept).Distinct())
+        {
+            var view = await concepts.ResolveAsync(tenant, conceptRef, cancellationToken).ConfigureAwait(false)
+                ?? await concepts.GetCurrentAsync(tenant, conceptRef.ConceptId, cancellationToken).ConfigureAwait(false);
+            if (view is not null)
+            {
+                resolved[conceptRef.ConceptId] = new BlindedConceptMetadata(view.ExternalCode, view.PreferredLabel, view.Definition);
+            }
+        }
+
+        return resolved;
+    }
 
     private static ProblemHttpResult BadRequest(string title, string detail) =>
         TypedResults.Problem(title: title, detail: detail, statusCode: StatusCodes.Status400BadRequest);

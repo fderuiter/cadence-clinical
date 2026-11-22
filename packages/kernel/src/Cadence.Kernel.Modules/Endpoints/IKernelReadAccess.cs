@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,6 +19,27 @@ public interface IKernelReadAccess
     /// masked for any reason, or when the request has no accountable actor.
     /// </summary>
     ValueTask<bool> CanSeeAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Evaluates visibility across <paramref name="nodes"/> in <paramref name="tenant"/> as a single batch, returning
+    /// the <see cref="MaskReason"/> for each masked node (visible nodes are omitted).
+    /// </summary>
+    async ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        var masked = new Dictionary<NodeRef, MaskReason>();
+        foreach (var node in nodes)
+        {
+            if (!await CanSeeAsync(tenant, node, cancellationToken).ConfigureAwait(false))
+            {
+                masked[node] = MaskReason.NotPermitted;
+            }
+        }
+
+        return masked;
+    }
 
     /// <summary>
     /// True when the current caller holds a grant permitting <paramref name="capability"/> on <paramref name="resource"/>
