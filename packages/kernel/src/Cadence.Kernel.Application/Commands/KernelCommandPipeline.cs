@@ -15,10 +15,8 @@ using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Intelligence;
 using Cadence.Kernel.Application.Knowledge;
 using Cadence.Kernel.Application.Protocol;
-using Cadence.Kernel.Application.Standards;
 using Cadence.Kernel.Application.Tenancy;
 using Cadence.Kernel.Application.Trust;
-using Cadence.Kernel.Application.Validation;
 using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
@@ -395,8 +393,6 @@ public static class KernelApplicationServiceCollectionExtensions
         services.AddKernelWorkQueueHandlers();
         services.AddKernelEffectivityHandlers();
         services.AddKernelProposalHandlers();
-        services.AddKernelStandards();
-        services.AddKernelValidation();
         return services;
     }
 }

@@ -10,6 +10,8 @@ using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Search;
 using Cadence.Kernel.Application.Simulation;
+using Cadence.Kernel.Application.Standards;
+using Cadence.Kernel.Application.Validation;
 using Cadence.Kernel.Host;
 using Cadence.Kernel.Host.Onboarding;
 using Cadence.Kernel.Modules;
@@ -87,7 +89,9 @@ builder.Services
 
     // Standards registry, validation findings ledger, and rule evaluation (spec §6.3, §10, K-RULE-3, K-FIND-1)
     .AddKernelStandardsPersistence()
+    .AddKernelStandards()
     .AddKernelValidationPersistence()
+    .AddKernelValidation()
     .AddCadenceRules()
     .AddCadenceCollectionValidation()
 
