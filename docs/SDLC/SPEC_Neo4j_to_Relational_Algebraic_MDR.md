@@ -8,6 +8,7 @@
 Clinical protocol metadata in Cadence Clinical was previously persisted using a Neo4j property graph database. While clinical protocol standards (such as CDISC USDM) refer to study definitions as "protocol graphs," the actual data structure is not an arbitrary-scale graph; it is a **stratified hierarchy (Poset)** coupled with a **bipartite incidence matrix** (Schedule of Activities) and an **acyclic version lineage tree (DAG)**.
 
 Using Neo4j introduced significant architectural, operational, and regulatory friction:
+
 1. **Operational Weight & JVM Overhead:** Running Neo4j alongside PostgreSQL and Redis required a high idle memory footprint (>1.5 GB), added 30–60s startup overhead in local development and CI runners, and complicated multi-database reset and backup/restore scripts.
 2. **Dual-Database Split:** Cadence's execution engine (EDC), CTMS, eTMF, eISF, and Quality modules all run on PostgreSQL / SQLite. The Designer alone required Neo4j, preventing transactional atomicity across study authoring and execution deployment without complex distributed transaction orchestration.
 3. **Weak Schema & Foreign Key Enforcement:** Property graph databases permit dynamic, untyped properties and lack strict 3NF referential integrity cascades. In a GxP (21 CFR Part 11) validated clinical system, missing foreign key constraints or unvalidated node properties create regulatory audit liabilities.
@@ -61,6 +62,7 @@ Decommission Neo4j entirely and replace it with a **Mathematically Rigorous Rela
 ### A. Mathematical Relational Domain Model
 
 #### 1. Poset Hierarchy & Core Entities
+
 - `studies`: `(id, title, protocol_id, phase, therapeutic_area, status, created_at, created_by)`
 - `study_versions`: `(id, study_id, version_tag, version_index, status, parent_version_id, base_version_id, branch_name, signature, raw_usdm_payload, reason_for_change, created_at, created_by)`
 - `study_designs`: `(id, study_version_id, name, design_type)`
@@ -77,6 +79,7 @@ Decommission Neo4j entirely and replace it with a **Mathematically Rigorous Rela
 - `designer_audit_logs`: `(id, study_id, study_version_id, entity_type, entity_id, action, user_id, timestamp, reason_for_change, previous_state_json, new_state_json)`
 
 ### B. Architecture & Codebase Decoupling
+
 1. **Hexagonal Persistence Ports:**
    - `StudyRepositoryPort`, `LibraryRepositoryPort`, and `RulesRepositoryPort` implementations powered by `SQLAlchemy` async sessions.
    - `MockStudyRepository` and `InMemoryRepository[T]` from `packages/testing/fakes` provide in-memory zero-dependency testing.

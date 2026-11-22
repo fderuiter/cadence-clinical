@@ -13,26 +13,29 @@ Reviews changes along two distinct, decoupled axes to ensure full standards adhe
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Diff Inspection** | `run_command` | `CommandLine="git diff <fixed-point>...HEAD"`, `WaitMsBeforeAsync=5000` | Fetch exact unified diff range |
-| **Parallel Review** | `invoke_subagent` | `Subagents=[{"Role": "Standards & GxP Auditor", "Model": "pro"}, {"Role": "Spec Verifier", "Model": "pro"}]` | Launch concurrent decoupled review subagents |
-| **Inter-Agent Comms**| `send_message` | `Recipient="<conversationId>"`, `Message="..."` | Communicate clarifying instructions to subagents |
-| **Remediation Gate** | `ask_question` | `questions=[{"question": "Select Remediation Approach for Critical Review Findings", ...}]` | Present user with interactive choices for high-severity issues |
-| **Artifact Report** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/code_review.md` | Emit side-by-side review report with alerts and file links |
+| Phase                 | Antigravity Tool  | Invocation Pattern                                                                                           | Objective                                                      |
+| :-------------------- | :---------------- | :----------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------- |
+| **Diff Inspection**   | `run_command`     | `CommandLine="git diff <fixed-point>...HEAD"`, `WaitMsBeforeAsync=5000`                                      | Fetch exact unified diff range                                 |
+| **Parallel Review**   | `invoke_subagent` | `Subagents=[{"Role": "Standards & GxP Auditor", "Model": "pro"}, {"Role": "Spec Verifier", "Model": "pro"}]` | Launch concurrent decoupled review subagents                   |
+| **Inter-Agent Comms** | `send_message`    | `Recipient="<conversationId>"`, `Message="..."`                                                              | Communicate clarifying instructions to subagents               |
+| **Remediation Gate**  | `ask_question`    | `questions=[{"question": "Select Remediation Approach for Critical Review Findings", ...}]`                  | Present user with interactive choices for high-severity issues |
+| **Artifact Report**   | `write_to_file`   | Target: `<appDataDir>/brain/<conversation-id>/code_review.md`                                                | Emit side-by-side review report with alerts and file links     |
 
 ---
 
 ## Review Process
 
 ### 1. Identify the Fixed Point & Diff
+
 Determine the target diff:
+
 - For a branch or PR: `git diff <fixed-point>...HEAD`
 - For working tree changes: `git diff HEAD`
 - Check the commit list: `git log <fixed-point>..HEAD --oneline`
 - Confirm the ref resolves (`git rev-parse <fixed-point>`) before launching subagents.
 
 ### 2. Identify Spec & Standards Sources
+
 1. **Spec Source**:
    - Issue reference or PR description
    - Requirement IDs (`PRD-SYS-xxx`, `Trace-x`)
@@ -74,11 +77,13 @@ Write the consolidated review to `<appDataDir>/brain/<conversation-id>/code_revi
 
 - Header with reviewed commit/diff range and spec source.
 - `## Standards & GxP Compliance` section with file links and line numbers.
-- `## Specification Alignment` section citing exact requirement IDs (`@req:PRD-SYS-xxx`).
+- `## Specification Alignment` section citing exact requirement IDs (`@req:PRD-SYS-XXX`).
 - Summary alert box (`[!IMPORTANT]` / `[!TIP]`) with the single most critical finding per axis.
 
 ### 5. Interactive Remediation & Summary
+
 If critical GxP or spec deviations are detected, prompt the user with `ask_question` to determine whether to auto-remediate with `implement` or branch into a refactoring ticket:
+
 ```json
 {
   "questions": [
@@ -93,6 +98,5 @@ If critical GxP or spec deviations are detected, prompt the user with `ask_quest
   ]
 }
 ```
+
 In your final chat response, provide a high-level 2-sentence summary and point the user to the generated `code_review.md` artifact.
-
-
