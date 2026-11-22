@@ -29,28 +29,31 @@
     </div>
 
     <p v-if="!enrollmentId" id="record-forms-no-enrollment" class="status-line">
-      The kernel has no enrollment for {{ subjectCode }} that you may see, so
-      its forms can't be listed or opened here.
+      There is no enrollment for {{ subjectCode }} visible to your account, so
+      forms can't be listed or opened here.
     </p>
     <p v-else-if="loading" class="status-line" role="status">
       Loading {{ subjectCode }}'s forms…
     </p>
-    <p
+    <div
       v-else-if="loadError"
       id="record-forms-error"
       class="status-line"
       role="alert"
     >
-      {{ subjectCode }}'s forms couldn't be loaded: {{ loadError }}
-      <button
-        id="btn-retry-forms"
-        type="button"
-        class="btn btn-secondary"
-        @click="loadFormsAndSchedule"
-      >
-        Try again
-      </button>
-    </p>
+      <p class="status-line">
+        {{ subjectCode }}'s forms couldn't be loaded.
+        <button
+          id="btn-retry-forms"
+          type="button"
+          class="btn btn-secondary"
+          @click="loadFormsAndSchedule"
+        >
+          Try again
+        </button>
+      </p>
+      <SupportDetails :detail="loadError" />
+    </div>
 
     <template v-else-if="matrixActive && activeSchedule">
       <div
@@ -501,7 +504,9 @@ import {
   type StudyScheduleOptions,
   type StudyScheduleRow,
 } from "../../canvas/kernelStudy";
+import { seedNodeSummary } from "../../canvas/nodeResolver";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import SupportDetails from "./SupportDetails.vue";
 
 interface LifecycleBadge {
   key: string;
@@ -538,11 +543,22 @@ const props = defineProps<{
   handoffLocation?: RouteLocationRaw | null;
 }>();
 
+const emit = defineEmits<{
+  (e: "forms-loaded", forms: EcrfFormSummary[]): void;
+}>();
+
 const canvas = useStudyCanvasStore();
 const forms = ref<EcrfFormSummary[]>([]);
 const loading = ref(false);
 const loadError = ref("");
 let requestSeq = 0;
+
+function formDisplayTitle(summary: EcrfFormSummary): string {
+  const base = summary.collection_title || summary.collection_spec_id;
+  return summary.planned_activity_id
+    ? `${base} · ${summary.planned_activity_id}`
+    : base;
+}
 
 const activeSchedule = computed<StudyScheduleOptions | null>(() => {
   if (props.schedule !== undefined) return props.schedule;
@@ -839,6 +855,7 @@ async function loadFormsAndSchedule() {
     forms.value = [];
     loading.value = false;
     loadError.value = "";
+    emit("forms-loaded", []);
     return;
   }
   if (
@@ -850,6 +867,7 @@ async function loadFormsAndSchedule() {
   }
   if (typeof ecrfFormsApi?.listForEnrollment !== "function") {
     forms.value = [];
+    emit("forms-loaded", []);
     return;
   }
   const seq = ++requestSeq;
@@ -859,11 +877,19 @@ async function loadFormsAndSchedule() {
     const result = await ecrfFormsApi.listForEnrollment(enrollmentId);
     if (seq === requestSeq) {
       forms.value = result ?? [];
+      for (const summary of forms.value) {
+        seedNodeSummary(`collection_instance:${summary.form_id}`, {
+          kind: "collection_instance",
+          title: formDisplayTitle(summary),
+        });
+      }
+      emit("forms-loaded", forms.value);
     }
   } catch (err) {
     if (seq === requestSeq) {
       forms.value = [];
       loadError.value = err instanceof Error ? err.message : String(err);
+      emit("forms-loaded", []);
     }
   } finally {
     if (seq === requestSeq) loading.value = false;

@@ -64,12 +64,12 @@
       </div>
 
       <div class="submissions-list-wrapper">
-        <h4 class="submissions-heading">Submissions Status</h4>
+        <h4 class="submissions-heading">Saved &amp; Sent Surveys</h4>
         <div
           v-if="!sync.submissions || sync.submissions.length === 0"
           class="empty-state"
         >
-          No submission history in queue.
+          No saved surveys waiting to send.
         </div>
         <div v-else class="submissions-items-list">
           <div
@@ -80,22 +80,21 @@
           >
             <div class="item-header-row">
               <span class="item-name">{{
-                getInstrumentName(item.diary_id)
+                getInstrumentDisplayName(item.diary_id)
               }}</span>
-              <span class="status-pill" :class="getBadgeClass(item)">
-                {{ getStatusLabel(item) }}
+              <span class="status-pill" :class="getSyncStatusBadgeClass(item)">
+                {{ getSyncStatusLabel(item) }}
               </span>
             </div>
             <div class="item-time">
-              Seq: #{{ item.sequence_number }} | Device Time:
-              {{ formatTime(item.device_timestamp) }}
+              Saved {{ formatTime(item.device_timestamp) }}
             </div>
             <div class="item-details">
               <p class="item-desc">
                 {{ getStatusDescription(item) }}
               </p>
               <div
-                v-if="isQuarantinedItem(item)"
+                v-if="isQuarantinedSubmission(item)"
                 class="quarantine-guidance"
                 role="note"
               >
@@ -103,24 +102,34 @@
                   {{ COORDINATOR_QUARANTINE_STEPS }}
                 </p>
               </div>
-              <div v-if="shouldShowAnswersSummary(item)" class="item-data">
-                <strong>Recorded Values:</strong>
-                <code class="data-code">{{
-                  formatAnswersSummary(item.answers)
-                }}</code>
+              <div v-if="recordedPairs(item).length > 0" class="item-data">
+                <strong>Your answers:</strong>
+                <ul class="answer-summary-list">
+                  <li
+                    v-for="pair in recordedPairs(item)"
+                    :key="pair.key"
+                    class="answer-summary-row"
+                  >
+                    <span class="answer-question">{{ pair.label }}:</span>
+                    <span class="answer-value">{{ pair.value }}</span>
+                  </li>
+                </ul>
               </div>
               <div
-                v-if="
-                  item.resolved_answers &&
-                  item.status === 'MERGED' &&
-                  formatAnswersSummary(item.resolved_answers)
-                "
+                v-if="mergedPairs(item).length > 0"
                 class="item-data merged-data"
               >
-                <strong>Merged Result:</strong>
-                <code class="data-code">{{
-                  formatAnswersSummary(item.resolved_answers)
-                }}</code>
+                <strong>Combined answers:</strong>
+                <ul class="answer-summary-list">
+                  <li
+                    v-for="pair in mergedPairs(item)"
+                    :key="pair.key"
+                    class="answer-summary-row"
+                  >
+                    <span class="answer-question">{{ pair.label }}:</span>
+                    <span class="answer-value">{{ pair.value }}</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
@@ -142,19 +151,21 @@ import { useFocusTrap } from "ui";
 
 import {
   COORDINATOR_QUARANTINE_STEPS,
-  formatAnswersSummary,
-  humanizeValidationError,
+  formatAnswerPairs,
+  getInstrumentDisplayName,
+  getSyncStatusBadgeClass,
+  getSyncStatusExplanation,
+  getSyncStatusLabel,
+  isQuarantinedSubmission,
 } from "../features/site-support.js";
 import { syncOfflineQueue } from "../features/sync.js";
 import { describeQueuedSync } from "../features/sync-status.js";
 import { useSyncStore } from "../stores/sync.js";
-import { useTasksStore } from "../stores/tasks.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
 const drawerRef = ref(null);
 const sync = useSyncStore();
-const tasks = useTasksStore();
 const { toggleSyncDrawer } = sync;
 
 useFocusTrap(drawerRef, {
@@ -170,31 +181,18 @@ function triggerManualSync() {
   syncOfflineQueue(true, { autoDisburse: isDemoModeActive() });
 }
 
-function isQuarantinedItem(item) {
-  return item.status === "QUARANTINED" || item.status === "LOCAL_QUARANTINED";
-}
-
-function shouldShowAnswersSummary(item) {
-  if (
-    item.status === "DECRYPTION_ERROR" ||
-    item.status === "QUARANTINED" ||
-    item.status === "LOCAL_QUARANTINED"
-  ) {
-    return false;
+function recordedPairs(item) {
+  if (item.status === "DECRYPTION_ERROR" || isQuarantinedSubmission(item)) {
+    return [];
   }
-  return Boolean(formatAnswersSummary(item.answers));
+  return formatAnswerPairs(item.answers, item.diary_id);
 }
 
-function getInstrumentName(diaryId) {
-  const fallback = {
-    inst_daily_diary: "Daily Health & Vital Diary",
-    inst_weekly_symptoms: "Weekly Symptoms & eCOA Checklist",
-  };
-  return (
-    (tasks.instruments && tasks.instruments[diaryId]?.name) ||
-    fallback[diaryId] ||
-    diaryId
-  );
+function mergedPairs(item) {
+  if (!item.resolved_answers || item.status !== "MERGED") {
+    return [];
+  }
+  return formatAnswerPairs(item.resolved_answers, item.diary_id);
 }
 
 function formatTime(isoString) {
@@ -209,63 +207,16 @@ function getSubmissionClass(item) {
       item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS",
     "submission-merged": item.status === "MERGED",
     "submission-ignored": item.status === "IGNORED_SERVER_WINS",
-    "submission-quarantined": isQuarantinedItem(item),
+    "submission-quarantined": isQuarantinedSubmission(item),
     "submission-error":
-      item.status === "DECRYPTION_ERROR" || isQuarantinedItem(item),
+      item.status === "DECRYPTION_ERROR" || isQuarantinedSubmission(item),
   };
 }
 
-function getBadgeClass(item) {
-  if (item.status === "QUEUED") return "pending";
-  if (
-    item.status === "CREATED" ||
-    item.status === "UPDATED_CLIENT_WINS" ||
-    item.status === "MERGED"
-  )
-    return "completed";
-  if (
-    item.status === "IGNORED_SERVER_WINS" ||
-    item.status === "DECRYPTION_ERROR" ||
-    isQuarantinedItem(item)
-  )
-    return "overdue";
-  return "pending";
-}
-
-function getStatusLabel(item) {
-  if (item.status === "QUEUED") return "QUEUED";
-  if (item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS")
-    return "SYNCED";
-  if (item.status === "MERGED") return "MERGED";
-  if (item.status === "IGNORED_SERVER_WINS") return "CONFLICT (Ignored)";
-  if (isQuarantinedItem(item)) return "QUARANTINED";
-  if (item.status === "DECRYPTION_ERROR" && item.unrecoverable)
-    return "LOCKED (RESET)";
-  return item.status;
-}
-
 function getStatusDescription(item) {
-  if (item.status === "QUEUED") {
-    return describeQueuedSync(sync.syncRetryInfo, item);
-  }
-  if (item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS") {
-    return "Successfully synchronized with clinical database.";
-  }
-  if (item.status === "MERGED") {
-    return "Conflict resolved: Local and server entries were combined.";
-  }
-  if (item.status === "IGNORED_SERVER_WINS") {
-    return "Conflict resolved: Server data was preserved; local entry archived.";
-  }
-  if (isQuarantinedItem(item)) {
-    return humanizeValidationError(item.error);
-  }
-  if (item.status === "DECRYPTION_ERROR") {
-    if (item.unrecoverable) {
-      return humanizeValidationError(item.error);
-    }
-    return "Locked — enter your security PIN to decrypt queued answers.";
-  }
-  return "";
+  return getSyncStatusExplanation(
+    item,
+    describeQueuedSync(sync.syncRetryInfo, item)
+  );
 }
 </script>

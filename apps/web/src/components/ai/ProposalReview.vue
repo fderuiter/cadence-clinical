@@ -10,7 +10,11 @@
       Back to {{ studyCode }} home
     </router-link>
 
-    <p v-if="statusLine" id="proposal-review-status" role="status">
+    <div v-if="error" id="proposal-review-status" role="alert">
+      <p>This proposal couldn't be loaded right now.</p>
+      <SupportDetails :detail="error" />
+    </div>
+    <p v-else-if="statusLine" id="proposal-review-status" role="status">
       {{ statusLine }}
     </p>
 
@@ -33,8 +37,8 @@
 
       <p id="proposal-review-safety" class="safety">
         Nothing in the study changes until a person approves this proposal, and
-        approving it does not run its plan: whoever carries it out still acts
-        through the kernel as themselves (K-SIM-5).
+        approving it does not run its plan automatically: whoever carries it out
+        still performs each action under their own account.
       </p>
 
       <dl class="details">
@@ -49,8 +53,7 @@
           </dd>
           <dt>Task configuration</dt>
           <dd id="proposal-review-configuration">
-            Not recorded: proposals name their qualified configuration once task
-            configurations exist (#5385).
+            Not recorded for this proposal.
           </dd>
         </template>
         <template v-if="proposal.confidence_score != null">
@@ -61,9 +64,14 @@
         <dd>{{ when(proposal.proposed_at) }}</dd>
         <dt>{{ status === "Open" ? "Expires" : "Expired or expires" }}</dt>
         <dd>{{ when(proposal.expires_at) }}</dd>
-        <dt>Content hash</dt>
-        <dd id="proposal-review-hash" class="mono">
-          {{ proposal.content_hash }}
+        <dt>Verification</dt>
+        <dd>
+          <details class="proposal-hash-details">
+            <summary class="proposal-hash-summary">Content digest</summary>
+            <code id="proposal-review-hash" class="mono">{{
+              proposal.content_hash
+            }}</code>
+          </details>
         </dd>
         <template v-if="proposal.simulated_impact">
           <dt>Simulation result</dt>
@@ -82,13 +90,12 @@
             v-for="token in proposal.requested_capabilities ?? []"
             :key="token"
           >
-            {{ capabilityWords(token) }} <code>{{ token }}</code>
+            {{ capabilityWords(token) }}
           </li>
         </ul>
         <p class="note">
-          The proposal names the kernel capabilities a person would use. The
-          exact commands and their diff are recorded once approval can execute
-          them (K-AI-2, #4783).
+          Actions required when a reviewer carries out this proposal after
+          approval.
         </p>
       </section>
 
@@ -100,13 +107,17 @@
         </p>
         <ol id="proposal-review-source-list" class="sources">
           <li
-            v-for="source in sources"
-            :key="source.ref"
+            v-for="(source, sourceIdx) in sources"
+            :key="source.ref ?? `masked-${sourceIdx}`"
             class="source"
-            :data-opened="opened.has(source.ref)"
+            :data-opened="source.ref ? opened.has(source.ref) : false"
           >
             <span class="source-role">{{
-              source.role === "plan" ? "Plan" : kindWords(source.ref)
+              source.role === "plan"
+                ? "Plan"
+                : source.ref
+                  ? formatKindTitle(source.ref)
+                  : "Affected"
             }}</span>
             <template v-if="source.mask">
               <span class="masked">
@@ -114,7 +125,15 @@
               </span>
             </template>
             <template v-else>
-              <code class="mono source-ref">{{ source.ref }}</code>
+              <span class="source-ref">
+                <NodeRefChip
+                  :node-ref="source.ref"
+                  :fallback-title="
+                    source.role === 'plan' ? proposal.plan?.title : null
+                  "
+                  :resolve-remotely="source.role !== 'plan'"
+                />
+              </span>
               <button
                 :id="`proposal-source-open-${index(source)}`"
                 type="button"
@@ -135,21 +154,36 @@
                     <strong>{{ proposal.plan.title }}</strong>, version
                     {{ proposal.plan.number }} ({{ proposal.plan.media_type }})
                   </p>
-                  <p class="mono">{{ proposal.plan.content_hash }}</p>
+                  <details class="proposal-hash-details">
+                    <summary class="proposal-hash-summary">
+                      Plan verification digest
+                    </summary>
+                    <code class="mono">{{ proposal.plan.content_hash }}</code>
+                  </details>
                   <p class="note">
-                    The plan's bytes are kept in artifact storage; the kernel
-                    holds their hash, so the plan you read is the one proposed.
+                    Verified against the stored plan record so the plan you
+                    review matches the one proposed.
                   </p>
                 </template>
-                <p v-else-if="nodeError[source.ref]" role="alert">
-                  {{ nodeError[source.ref] }}
-                </p>
+                <div v-else-if="nodeError[source.ref]" role="alert">
+                  <p>{{ nodeError[source.ref] }}</p>
+                  <SupportDetails
+                    v-if="nodeErrorDetail[source.ref]"
+                    :detail="nodeErrorDetail[source.ref]"
+                  />
+                </div>
                 <template v-else-if="nodes[source.ref]">
                   <p>
                     <strong>{{
-                      nodes[source.ref]!.title || nodes[source.ref]!.kind
+                      nodes[source.ref]!.title ||
+                      formatKindTitle(nodes[source.ref]!.kind)
                     }}</strong>
-                    <span v-if="nodes[source.ref]!.code">
+                    <span
+                      v-if="
+                        nodes[source.ref]!.code &&
+                        nodes[source.ref]!.code !== nodes[source.ref]!.title
+                      "
+                    >
                       · {{ nodes[source.ref]!.code }}</span
                     >
                     <span v-if="nodes[source.ref]!.status">
@@ -160,10 +194,10 @@
                     v-if="canvasLocation(source.ref)"
                     :to="canvasLocation(source.ref)!"
                   >
-                    Open it in the Canvas
+                    Open in study workspace
                   </router-link>
                 </template>
-                <p v-else>Reading from the kernel...</p>
+                <p v-else>Loading source details…</p>
               </div>
             </template>
           </li>
@@ -220,15 +254,27 @@
           >
             Reject
           </button>
-          <p v-if="decisionError" id="proposal-reject-error" role="alert">
-            {{ decisionError }}
-          </p>
+          <div v-if="decisionError" id="proposal-reject-error" role="alert">
+            <p>Proposal couldn't be rejected right now.</p>
+            <SupportDetails :detail="decisionError" />
+          </div>
         </form>
       </section>
 
       <section v-else class="block" aria-labelledby="proposal-review-decided">
         <h3 id="proposal-review-decided">Decision</h3>
-        <p id="proposal-review-decision-text">{{ decisionWords }}</p>
+        <p id="proposal-review-decision-text">
+          <template
+            v-if="
+              proposal.status === 'Approved' && proposal.approval_attestation
+            "
+          >
+            Approved by {{ proposal.decided_by }} on
+            {{ when(proposal.decided_at) }}, signed with
+            <NodeRefChip :node-ref="proposal.approval_attestation" />.
+          </template>
+          <template v-else>{{ decisionWords }}</template>
+        </p>
       </section>
     </template>
   </section>
@@ -237,7 +283,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
-import { ApiError } from "../../api/client";
 import {
   kernelApi,
   type KernelNode,
@@ -252,20 +297,26 @@ import {
   type ProposalSource,
 } from "../../ai/proposals";
 import { parseNodeRef, formatNodeRef } from "../../canvas/nodeRef";
+import {
+  formatKindInline,
+  formatKindTitle,
+  getCachedNodeEntry,
+  maskReasonWords,
+  resolveNode,
+  seedNodeSummary,
+} from "../../canvas/nodeResolver";
+import NodeRefChip from "../canvas/NodeRefChip.vue";
+import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
 /**
- * The proposal review screen (ADR-2635, docs/ux/CLINICAL_CANVAS.md PX-17): one proposal from the kernel, its intent,
- * proposer and model, the capabilities carrying it out needs, every source it reasoned over (each opened here), and
- * the decision. An AI agent's proposal carries the AI label and is reviewed as high risk until task configurations
- * record a risk class, so each source must be opened before approval is offered. Approval is an electronic signature
- * the kernel cannot take over the web yet (#5552), so it is shown disabled with its reasons (UX-9); rejection sends the
- * kernel's proposal.reject with the reviewer's reason.
+ * The proposal review screen (ADR-2635, docs/ux/CLINICAL_CANVAS.md PX-17): displays a proposal's intent,
+ * proposer, required actions, and referenced study objects with plain clinical explanations.
  */
 const props = defineProps<{
   studyCode: string;
   proposalRef: string;
-  /** The signed-in person's kernel actor id (the sign-in token's subject). */
+  /** The signed-in person's actor id. */
   reviewer: string;
 }>();
 const emit = defineEmits<{ decided: [status: string] }>();
@@ -277,6 +328,7 @@ const opened = reactive(new Set<string>());
 const shown = ref<string | null>(null);
 const nodes = reactive<Record<string, KernelNode>>({});
 const nodeError = reactive<Record<string, string>>({});
+const nodeErrorDetail = reactive<Record<string, string>>({});
 const reason = ref("");
 const busy = ref(false);
 const decisionError = ref("");
@@ -309,8 +361,7 @@ const blockers = computed(() =>
 );
 
 const statusLine = computed(() => {
-  if (loading.value) return "Reading the proposal from the kernel...";
-  if (error.value) return `The kernel couldn't answer: ${error.value}`;
+  if (loading.value) return "Loading proposal…";
   if (proposal.value && !proposal.value.ref) {
     return `You may not see this proposal (${maskWords(proposal.value.mask)}).`;
   }
@@ -321,8 +372,8 @@ const proposerWords = computed(() => {
   const p = proposal.value;
   if (!p) return "";
   if (p.proposed_by_kind === "AutomationAgent") {
-    const agent = `AI agent ${(p.proposed_by ?? "").replace(/^agent:/, "")}`;
-    return p.requested_by ? `${agent}, for ${p.requested_by}` : agent;
+    const agentLabel = `AI agent ${(p.proposed_by ?? "").replace(/^agent:/, "")}`;
+    return p.requested_by ? `${agentLabel}, for ${p.requested_by}` : agentLabel;
   }
   if (p.proposed_by_kind === "Service") return `Service ${p.proposed_by}`;
   return p.proposed_by ?? "";
@@ -338,7 +389,7 @@ const decisionWords = computed(() => {
   if (!p) return "";
   switch (p.status) {
     case "Approved":
-      return `Approved by ${p.decided_by} on ${when(p.decided_at)}, signed with ${p.approval_attestation}.`;
+      return `Approved by ${p.decided_by} on ${when(p.decided_at)}.`;
     case "Rejected":
       return `Rejected by ${p.decided_by} on ${when(p.decided_at)}: ${p.decision_reason}`;
     case "Withdrawn":
@@ -367,13 +418,7 @@ function when(value: string | null | undefined): string {
 }
 
 function maskWords(mask: string | null | undefined): string {
-  return (mask ?? "").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
-}
-
-function kindWords(ref: string): string {
-  const kind = parseNodeRef(ref)?.kind ?? "object";
-  const words = kind.replace(/_/g, " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
+  return maskReasonWords(mask);
 }
 
 function index(source: ProposalSource): number {
@@ -381,8 +426,8 @@ function index(source: ProposalSource): number {
 }
 
 /** Where the Canvas shows the object, for the kinds it can show. */
-function canvasLocation(ref: string): RouteLocationRaw | null {
-  const node = parseNodeRef(ref);
+function canvasLocation(refText: string): RouteLocationRaw | null {
+  const node = parseNodeRef(refText);
   if (!node) return null;
   const text = formatNodeRef({ kind: node.kind, id: node.id });
   if (node.kind === "protocol_version") {
@@ -395,7 +440,11 @@ function canvasLocation(ref: string): RouteLocationRaw | null {
   if (node.kind === "study") {
     return { name: "study", params: { studyCode: props.studyCode } };
   }
-  return null;
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: { node: formatNodeRef(node) },
+  };
 }
 
 async function openSource(source: ProposalSource) {
@@ -406,33 +455,46 @@ async function openSource(source: ProposalSource) {
     return;
   }
   if (nodes[source.ref] || nodeError[source.ref]) return;
-  try {
-    const node = await kernelApi.getNode(source.ref);
-    nodes[source.ref] = node;
+
+  const resolved = await resolveNode(source.ref);
+  if (resolved) {
+    nodes[source.ref] = resolved;
     opened.add(source.ref);
-  } catch (e) {
-    // The kernel answered, but has no view of this kind yet: the reviewer has seen all there is to see.
-    if (e instanceof ApiError && e.status === 404) {
-      nodeError[source.ref] =
-        `The kernel has no view of a ${kindWords(source.ref).toLowerCase()} yet; its reference above is all it holds here.`;
-      opened.add(source.ref);
-    } else {
-      nodeError[source.ref] =
-        `The kernel couldn't answer: ${e instanceof Error ? e.message : String(e)}`;
-    }
+    return;
+  }
+  const entry = getCachedNodeEntry(source.ref);
+  if (entry?.status === "not_found") {
+    nodeError[source.ref] =
+      `Detailed preview isn't available for this ${formatKindInline(source.ref)} yet; you can still review its record link above.`;
+    opened.add(source.ref);
+  } else {
+    nodeError[source.ref] =
+      "Source details couldn't be loaded right now. Try again before approving.";
+    nodeErrorDetail[source.ref] = entry?.error ?? "";
   }
 }
 
-async function load(ref: string) {
+async function load(refText: string) {
   loading.value = true;
   error.value = "";
   proposal.value = null;
   opened.clear();
   shown.value = null;
   reason.value = "";
+  decisionError.value = "";
   rejectionKey = "";
+  for (const key of Object.keys(nodes)) delete nodes[key];
+  for (const key of Object.keys(nodeError)) delete nodeError[key];
+  for (const key of Object.keys(nodeErrorDetail)) delete nodeErrorDetail[key];
   try {
-    proposal.value = await kernelApi.getProposal(ref);
+    const loaded = await kernelApi.getProposal(refText);
+    proposal.value = loaded;
+    if (loaded.plan?.ref && loaded.plan.title) {
+      seedNodeSummary(loaded.plan.ref, {
+        kind: "artifact_version",
+        title: loaded.plan.title,
+      });
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
@@ -455,7 +517,7 @@ async function reject() {
     proposal.value = await kernelApi.getProposal(proposal.value.ref);
     emit("decided", state.status);
   } catch (e) {
-    decisionError.value = `The kernel refused the rejection: ${e instanceof Error ? e.message : String(e)}`;
+    decisionError.value = e instanceof Error ? e.message : String(e);
   } finally {
     busy.value = false;
   }

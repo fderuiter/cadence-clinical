@@ -137,6 +137,8 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     expect(
       wrapper.find("#btn-check-site-compliance").attributes()
     ).toHaveProperty("disabled");
+    expect(wrapper.text()).toContain("aren't available yet");
+    expect(wrapper.text()).not.toContain("#4829");
     expect(wrapper.find("#ctms-unbacked-scope-note").text()).toContain(
       "Orbit and Allocate roadmap"
     );

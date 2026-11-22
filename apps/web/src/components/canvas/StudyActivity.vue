@@ -23,8 +23,14 @@
       </label>
     </div>
 
+    <div v-if="error" id="activity-status" class="activity-status" role="alert">
+      <p class="activity-status">
+        Recent activity couldn't be loaded right now.
+      </p>
+      <SupportDetails :detail="error" />
+    </div>
     <p
-      v-if="statusLine"
+      v-else-if="statusLine"
       id="activity-status"
       class="activity-status"
       role="status"
@@ -46,16 +52,12 @@
         <span v-if="isMasked(entry)" class="activity-subject masked">
           {{ hiddenLabel(entry) }}
         </span>
-        <router-link
-          v-else-if="versionLink(entry)"
+        <NodeRefChip
+          v-else-if="entry.subject"
           class="activity-subject"
-          :to="versionLink(entry)!"
-        >
-          {{ subjectLabel(entry) }}
-        </router-link>
-        <span v-else-if="entry.subject" class="activity-subject">{{
-          subjectLabel(entry)
-        }}</span>
+          :node-ref="entry.subject"
+          :to="subjectLink(entry)"
+        />
         <span class="activity-actor">by {{ entry.actor_id }}</span>
       </li>
     </ol>
@@ -78,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, getCurrentInstance, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   isMasked,
@@ -88,14 +90,28 @@ import {
 } from "../../api/kernelApi";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
+import {
+  ensureNodesResolved,
+  formatMaskedNode,
+} from "../../canvas/nodeResolver";
+import NodeRefChip from "./NodeRefChip.vue";
+import SupportDetails from "./SupportDetails.vue";
 
 /**
  * The study's activity stream on study home (docs/ux/CLINICAL_CANVAS.md PX-11, ADR-2485): what happened under the
- * study, newest first, from the kernel. An entry about something the reader may not see keeps its place with its kind
- * and why it is hidden (Canvas D1); a study the reader may not see is refused by the kernel, and the refusal is shown
- * as it is. A protocol version opens in the Protocol versions section.
+ * study, newest first. Restricted entries keep their place as masked placeholders.
  */
 const props = defineProps<{ studyCode: string }>();
+
+const instance = getCurrentInstance();
+const currentRoute = computed(
+  () =>
+    (
+      instance?.appContext.config.globalProperties as {
+        $route?: { query?: Record<string, unknown> };
+      }
+    )?.$route ?? null
+);
 
 const FAMILIES: KernelEventFamily[] = [
   "Knowledge",
@@ -117,9 +133,8 @@ const noStudy = ref(false);
 
 const statusLine = computed(() => {
   if (loading.value && !entries.value.length) return "Reading activity...";
-  if (error.value) return `The kernel couldn't answer: ${error.value}`;
   if (noStudy.value) {
-    return `The kernel has no study ${props.studyCode} that you may see.`;
+    return `Study ${props.studyCode} wasn't found or isn't visible to your account.`;
   }
   if (!loading.value && !entries.value.length) {
     return family.value
@@ -129,7 +144,7 @@ const statusLine = computed(() => {
   return "";
 });
 
-/** `ParticipantScreened` or `protocol_version` in plain words: "participant screened", "protocol version". */
+/** `ParticipantScreened` or `protocol_version` in plain words: "Participant screened", "Protocol version". */
 function words(name: string): string {
   const spaced = name
     .replace(/_/g, " ")
@@ -139,8 +154,7 @@ function words(name: string): string {
 }
 
 function hiddenLabel(entry: KernelActivityEntry): string {
-  const kind = words(entry.subject_kind ?? "object").toLowerCase();
-  return `Hidden ${kind} (${words(entry.mask ?? "").toLowerCase()})`;
+  return formatMaskedNode(entry.subject_kind ?? "object", entry.mask);
 }
 
 function when(iso: string): string {
@@ -150,22 +164,25 @@ function when(iso: string): string {
   });
 }
 
-function subjectLabel(entry: KernelActivityEntry): string {
+function subjectLink(entry: KernelActivityEntry): RouteLocationRaw | null {
+  if (!entry.subject) return null;
   const node = parseNodeRef(entry.subject);
-  if (!node) return entry.subject ?? "";
-  const version = node.version ? ` version ${node.version}` : "";
-  return `${words(node.kind).toLowerCase()} ${node.id.slice(-8)}${version}`;
-}
-
-function versionLink(entry: KernelActivityEntry): RouteLocationRaw | null {
-  const node = parseNodeRef(entry.subject);
-  if (node?.kind !== "protocol_version" || !entry.subject) return null;
+  if (node?.kind === "protocol_version") {
+    return {
+      name: "study",
+      params: { studyCode: props.studyCode },
+      query: {
+        stage: "design",
+        section: "protocol-versions",
+        node: entry.subject,
+      },
+    };
+  }
   return {
     name: "study",
     params: { studyCode: props.studyCode },
     query: {
-      stage: "design",
-      section: "protocol-versions",
+      ...(currentRoute.value?.query ?? {}),
       node: entry.subject,
     },
   };
@@ -196,6 +213,9 @@ async function read(before: string | null) {
     if (request !== latest) return;
     entries.value = before ? [...entries.value, ...page.entries] : page.entries;
     next.value = page.next;
+    ensureNodesResolved(
+      entries.value.filter((e) => !isMasked(e)).map((e) => e.subject)
+    );
   } catch (e) {
     if (request === latest) {
       error.value = e instanceof Error ? e.message : String(e);

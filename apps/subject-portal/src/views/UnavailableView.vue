@@ -21,19 +21,10 @@
       >
         {{ heading }}
       </h2>
-      <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px">
-        This participant workflow is disabled in production until its backend
-        clinical and authorization services are active. Nothing was submitted or
-        modified.
-      </p>
-      <p style="font-size: 14px; margin-bottom: 20px">
-        <a
-          :href="UNAVAILABLE_SCREENS_ISSUE"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          See workflow availability status
-        </a>
+      <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px">
+        This section is not open for your study right now. Nothing was changed
+        or submitted. You can return to your tasks or contact your study
+        coordinator if you have questions.
       </p>
       <button
         id="btn-unavailable-return-tasks"
@@ -51,10 +42,7 @@
 import { computed } from "vue";
 
 import { showView } from "../features/navigation.js";
-import {
-  UNAVAILABLE_SCREENS_ISSUE,
-  screenTitle,
-} from "../router/availability.js";
+import { screenTitle } from "../router/availability.js";
 import { useUiStore } from "../stores/ui.js";
 
 const ui = useUiStore();
