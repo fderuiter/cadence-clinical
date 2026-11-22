@@ -5,6 +5,7 @@ using System.CommandLine.Parsing;
 using System.Linq;
 
 using Cadence.Cli.Services;
+using Cadence.Compliance;
 using Cadence.ToolingCore.Services;
 
 using Spectre.Console;
@@ -26,7 +27,7 @@ public static class LocalCiCommand
         };
         var allowSkip = new Option<bool>("--allow-skip")
         {
-            Description = "Skip steps whose required tool is missing on PATH and allow .NET tests to run without PostgreSQL",
+            Description = "Skip steps whose required tool or Docker daemon is unavailable and allow .NET tests and compliance reports to run without PostgreSQL evidence",
         };
         var baseRef = new Option<string>("--base")
         {
@@ -88,7 +89,7 @@ public static class LocalCiCommand
             }
         });
 
-        var results = LocalCiRunner.Run(jobs, new LocalCiOptions(allowSkip, baseRef), environment);
+        var results = LocalCiRunner.Run(jobs, new LocalCiOptions(allowSkip, baseRef, jobKeys), environment);
         PrintSummary(results, jobKeys.Length == 0);
         return results.Any(r => r.Outcome == CiOutcome.Failed) ? 1 : 0;
     }
@@ -121,6 +122,9 @@ public static class LocalCiCommand
         if (step.InProcessDisplay is not null) parts.Add(step.InProcessDisplay);
         if (step.Files != CiFileSource.None) parts.Add($"(with {step.Files} files)");
         if (step.RequiredTool is not null) parts.Add($"(requires {step.RequiredTool} on PATH; skipped with --allow-skip)");
+        if (step.NeedsDocker) parts.Add("(requires a running Docker daemon; skipped with --allow-skip)");
+        if (step.Job == CiPlan.ContainerSecurityJobKey) parts.Add("(runs on container/dependency changes against --base, on tracked-files fallback, or with --job container-security)");
+        if (step.NeedsPostgres && !step.ScopedDatabaseTest) parts.Add($"(verifies PostgreSQL tests and *.database.txt evidence in {RtmGeneratorService.DefaultResultsDir}; skipped with --allow-skip)");
         if (step.CoveredBy is not null) parts.Add($"(covered when '{step.CoveredBy}' passed)");
         parts.AddRange(step.Environment.Select(e => $"(with {e.Key}={e.Value})"));
         parts.AddRange(step.EnvironmentIfPassed.Select(e => $"(with {e.Name}={e.Value} when '{e.StepKey}' passed)"));

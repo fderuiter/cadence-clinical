@@ -209,7 +209,11 @@ public static class SyncGxPService
         return 0;
     }
 
-    private static bool VerifyDatabaseEvidence(string resolvedResultsDir, string displayResultsDir, string repoRoot)
+    /// <summary>
+    /// Verifies that every mandatory database test under <paramref name="repoRoot"/> executed and passed in the TRX files
+    /// under <paramref name="resolvedResultsDir"/> and that every database assembly recorded <c>*.database.txt</c> fixture metadata.
+    /// </summary>
+    public static bool VerifyDatabaseEvidence(string resolvedResultsDir, string displayResultsDir, string repoRoot)
     {
         IReadOnlyList<SkippedDatabaseTest> skipped = DatabaseTestEvidence.FindSkipped(resolvedResultsDir, repoRoot);
         if (skipped.Count > 0)
