@@ -78,9 +78,6 @@
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="$(DotNetAiVersion)" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="$(DotNetAiVersion)" />
 
-    <!-- Resilience & HTTP Clients -->
-    <PackageVersion Include="Polly" Version="8.5.2" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="$(DotNetServicingVersion)" />
     <!-- AI agent tools (ADR-2633): the provider-neutral function abstraction and the official MCP C# SDK. -->
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />

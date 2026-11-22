@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.Linq;
 
 using Cadence.Cli.Services;
+using Cadence.ToolingCore.Services;
 
 using Spectre.Console;
 
@@ -28,9 +30,10 @@ public static class LocalCiCommand
         };
         var baseRef = new Option<string>("--base")
         {
-            Description = "Ref that changed files are compared with (CI uses origin/main)",
-            DefaultValueFactory = _ => "origin/main",
+            Description = "Ref that changed files and CLI check steps are compared with (CI uses origin/<base_ref>)",
+            DefaultValueFactory = _ => GitRevisionScopeService.DefaultBaseRef,
         };
+        baseRef.Validators.Add(RejectOptionLikeValue);
         var list = new Option<bool>("--list") { Description = "Print the steps and what each runs locally, without running them" };
 
         command.Options.Add(jobs);
@@ -40,8 +43,20 @@ public static class LocalCiCommand
         command.SetAction(result => Execute(
             result.GetValue(jobs) ?? [],
             result.GetValue(allowSkip),
-            result.GetValue(baseRef) ?? "origin/main",
+            result.GetValue(baseRef) ?? GitRevisionScopeService.DefaultBaseRef,
             result.GetValue(list)));
+    }
+
+    private static void RejectOptionLikeValue(OptionResult optionResult)
+    {
+        foreach (string value in optionResult.Tokens.Select(token => token.Value))
+        {
+            if (string.IsNullOrWhiteSpace(value) || value.StartsWith('-'))
+            {
+                optionResult.AddError(
+                    $"Option '{optionResult.Option.Name}' requires a value, got '{value}'.");
+            }
+        }
     }
 
     public static int Execute(string[] jobKeys, bool allowSkip, string baseRef, bool list, LocalCiEnvironment? environment = null)

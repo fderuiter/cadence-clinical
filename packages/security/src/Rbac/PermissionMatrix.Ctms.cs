@@ -14,11 +14,25 @@ public static partial class PermissionMatrix
         foreach (string role in new[]
         {
             RoleNormalization.ROLE_CRA_CANONICAL, "monitor", RoleNormalization.ROLE_INVESTIGATOR, RoleNormalization.ROLE_CRC,
-            RoleNormalization.ROLE_AUDITOR_CANONICAL,
+            RoleNormalization.ROLE_SPONSOR_MM, RoleNormalization.ROLE_AUDITOR_CANONICAL,
         })
         {
             Grant(role, "ctms_greenlight", "read");
         }
+
+        // Site milestones and monitoring visits/letters: site staff and medical monitors read scoped records within their
+        // assigned studies and sites; monitors complete and sign off monitoring visits; CRAs and sponsor DMs schedule visits.
+        Grant(RoleNormalization.ROLE_SPONSOR_MM, "ctms_site_milestone", "read");
+        foreach (string role in new[]
+        {
+            RoleNormalization.ROLE_INVESTIGATOR, RoleNormalization.ROLE_CRC, RoleNormalization.ROLE_SPONSOR_MM,
+        })
+        {
+            Grant(role, "ctms_monitoring_visit", "read");
+            Grant(role, "ctms_monitoring_letter", "read", "read_type");
+        }
+
+        Grant("monitor", "ctms_monitoring_visit", "update");
 
         // Delegation of Authority (DOA)
         foreach (string role in new[]
@@ -43,6 +57,9 @@ public static partial class PermissionMatrix
             Grant(role, "ctms_doa", "sign_off", "sign");
         }
 
-        Grant(RoleNormalization.ROLE_AUDITOR_CANONICAL, "ctms_doa", "read", "export");
+        foreach (string role in new[] { RoleNormalization.ROLE_AUDITOR_CANONICAL, RoleNormalization.ROLE_SPONSOR_MM })
+        {
+            Grant(role, "ctms_doa", "read", "export");
+        }
     }
 }

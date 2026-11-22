@@ -10,5 +10,12 @@ namespace Cadence.Apps.Execution.Application.Compliance;
 /// <c>ComplianceStatusResponse</c> Pydantic model.
 /// @req:PRD-SUB-001
 /// </summary>
-public sealed record ComplianceStatusResponse(StudyCode StudyId, SiteCode? SiteId, string Milestone,
-    bool IsComplete, IReadOnlyList<string> MissingDocuments);
+public sealed record ComplianceStatusResponse(
+    StudyCode StudyId,
+    SiteCode? SiteId,
+    string Milestone,
+    bool IsComplete,
+    IReadOnlyList<string> MissingDocuments,
+    bool IsActivated = false,
+    DateTimeOffset? ActivatedAt = null,
+    string? ActivatedBy = null);

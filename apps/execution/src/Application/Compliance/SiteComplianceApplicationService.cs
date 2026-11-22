@@ -8,6 +8,7 @@ using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Time;
 
 namespace Cadence.Apps.Execution.Application.Compliance;
 
@@ -37,7 +38,8 @@ namespace Cadence.Apps.Execution.Application.Compliance;
 public sealed class SiteComplianceApplicationService(
     ISiteComplianceRepository compliance,
     IAuditLogWriter auditLog,
-    ICurrentAuditContextAccessor auditContext) : ISiteComplianceApplicationService
+    ICurrentAuditContextAccessor auditContext,
+    IClock clock) : ISiteComplianceApplicationService
 {
     // The audit chain key for every entry this service writes: the aggregate's CLR type name (#4768).
     private const string SiteComplianceEntityName = nameof(SiteComplianceCache);
@@ -111,10 +113,23 @@ public sealed class SiteComplianceApplicationService(
             return SubjectErrors.BlockedActivation(siteId);
         }
 
-        // This endpoint does not itself flip SiteComplianceCache.IsComplete -- that only happens via
-        // ApplyEtmfWebhookAsync above (01_spec.md §1.1's explicit note). Only the audit trail is written here.
-        await auditLog.WriteAsync(SiteComplianceEntityName, siteId, "SITE_ACTIVATION",
-            auditContext.UserId, auditContext.ChangeReason, oldValues: null, newValues: null, ct);
+        // Activation is stateful and idempotent: if already activated, return success without writing a
+        // duplicate SITE_ACTIVATION audit row. ActivateSiteAsync never flips IsComplete or increments Version.
+        if (!gate.MarkActivated(clock.UtcNow, auditContext.UserId))
+        {
+            return true;
+        }
+
+        gate.ReasonForChange = auditContext.ChangeReason;
+        await auditLog.WriteAsync(SiteComplianceEntityName, gate.Id.ToString(), "SITE_ACTIVATION",
+            auditContext.UserId, auditContext.ChangeReason, oldValues: null,
+            newValues: new Dictionary<string, object?>
+            {
+                ["site_id"] = siteId,
+                ["is_activated"] = true,
+                ["activated_at"] = gate.ActivatedAt,
+                ["activated_by"] = gate.ActivatedBy,
+            }, ct);
         await compliance.SaveChangesAsync(ct);
 
         return true;
@@ -130,7 +145,23 @@ public sealed class SiteComplianceApplicationService(
 
         // Always succeeds -- a missing row is IsComplete: false / MissingDocuments: [], never a failure.
         return cache is null
-            ? new ComplianceStatusResponse(studyCode, siteCode, milestone, IsComplete: false, MissingDocuments: Array.Empty<string>())
-            : new ComplianceStatusResponse(cache.StudyCode, cache.SiteCode, cache.Milestone, cache.IsComplete, cache.MissingDocuments);
+            ? new ComplianceStatusResponse(
+                studyCode,
+                siteCode,
+                milestone,
+                IsComplete: false,
+                MissingDocuments: Array.Empty<string>(),
+                IsActivated: false,
+                ActivatedAt: null,
+                ActivatedBy: null)
+            : new ComplianceStatusResponse(
+                cache.StudyCode,
+                cache.SiteCode,
+                cache.Milestone,
+                cache.IsComplete,
+                cache.MissingDocuments,
+                cache.IsActivated,
+                cache.ActivatedAt,
+                cache.ActivatedBy);
     }
 }

@@ -46,7 +46,7 @@ The service refuses to start when either key is missing, is not 32 bytes, or bot
 
 ## Key dependencies
 
-- Project references: `Cadence.Core.Domain`, `Cadence.Deid`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Telemetry`, `Cadence.Contracts`, `Cadence.Database`.
+- Project references: `Cadence.Core.Domain`, `Cadence.Deid`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Telemetry`, `Cadence.Database`.
 - Packages: `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore`, `FluentValidation` (versions in `Directory.Packages.props`).
 
 ## Tests
