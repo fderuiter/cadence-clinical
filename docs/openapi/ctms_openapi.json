@@ -170,6 +170,16 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -1024,6 +1034,15 @@
         ],
         "summary": "Assign site trial task delegation requiring Principal Investigator sign-off.",
         "operationId": "DelegateSiteTasks",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1105,6 +1124,15 @@
         ],
         "summary": "Revoke or end a delegated trial duty with reason for change.",
         "operationId": "RevokeSiteTasks",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1176,6 +1204,15 @@
         ],
         "summary": "Endorse Delegation of Authority task assignment with Principal Investigator eSignature.",
         "operationId": "SignOffDelegation",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1245,6 +1282,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1293,6 +1337,13 @@
             "name": "site_id",
             "in": "path",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
             "schema": {
               "type": "string"
             }
@@ -1656,6 +1707,12 @@
               "null",
               "string"
             ]
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -1915,6 +1972,12 @@
             "type": "string"
           },
           "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study_id": {
             "type": [
               "null",
               "string"

@@ -7,13 +7,13 @@ Generated from the EF Core model of `Cadence.Apps.Ctms.Infrastructure.Persistenc
 | Table | Entity | Columns |
 | --- | --- | --- |
 | [`ctms.audit_log_entries`](#ctmsaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`ctms.ctms_audit_logs`](#ctmsctms_audit_logs) | `CtmsAuditLog` | 11 |
+| [`ctms.ctms_audit_logs`](#ctmsctms_audit_logs) | `CtmsAuditLog` | 13 |
 | [`ctms.ctms_budget_line_items`](#ctmsctms_budget_line_items) | `CtmsBudgetLineItem` | 10 |
 | [`ctms.ctms_clinical_queries`](#ctmsctms_clinical_queries) | `CtmsClinicalQuery` | 11 |
 | [`ctms.ctms_cra_allocations`](#ctmsctms_cra_allocations) | `CtmsCraAllocation` | 12 |
 | [`ctms.ctms_defeated_monitoring_visits`](#ctmsctms_defeated_monitoring_visits) | `CtmsDefeatedMonitoringVisit` | 12 |
-| [`ctms.ctms_delegations`](#ctmsctms_delegations) | `CtmsDelegation` | 14 |
-| [`ctms.ctms_generated_letters`](#ctmsctms_generated_letters) | `CtmsGeneratedLetter` | 17 |
+| [`ctms.ctms_delegations`](#ctmsctms_delegations) | `CtmsDelegation` | 15 |
+| [`ctms.ctms_generated_letters`](#ctmsctms_generated_letters) | `CtmsGeneratedLetter` | 19 |
 | [`ctms.ctms_investigator_grants`](#ctmsctms_investigator_grants) | `CtmsInvestigatorGrant` | 11 |
 | [`ctms.ctms_investigator_payables`](#ctmsctms_investigator_payables) | `CtmsInvestigatorPayable` | 12 |
 | [`ctms.ctms_monitoring_visit_findings`](#ctmsctms_monitoring_visit_findings) | `CtmsMonitoringVisitFinding` | 12 |
@@ -62,6 +62,8 @@ Entity: `CtmsAuditLog`
 | `CreatedBy` | `text` | no |  |  |
 | `Details` | `character varying(1000)` | no |  |  |
 | `ReasonForChange` | `text` | no |  |  |
+| `SiteId` | `character varying(255)` | yes |  |  |
+| `StudyId` | `character varying(255)` | yes |  |  |
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
@@ -70,6 +72,8 @@ Entity: `CtmsAuditLog`
 
 Indexes:
 
+- `IX_ctms_audit_logs_SiteId`: (`SiteId`)
+- `IX_ctms_audit_logs_StudyId`: (`StudyId`)
 - `IX_ctms_audit_logs_Timestamp`: (`Timestamp`)
 - `IX_ctms_audit_logs_UserId`: (`UserId`)
 - `IX_ctms_audit_logs_tenant_id`: (`tenant_id`)
@@ -192,6 +196,7 @@ Entity: `CtmsDelegation`
 | `SiteId` | `character varying(255)` | no |  |  |
 | `StaffUserId` | `character varying(255)` | no |  |  |
 | `StartDate` | `character varying(50)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
 | `TaskCodes` | `jsonb` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `tenant_id` | `uuid` | no |  |  |
@@ -200,6 +205,7 @@ Indexes:
 
 - `IX_ctms_delegations_SiteId`: (`SiteId`)
 - `IX_ctms_delegations_StaffUserId`: (`StaffUserId`)
+- `IX_ctms_delegations_StudyId`: (`StudyId`)
 - `IX_ctms_delegations_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_generated_letters
@@ -221,13 +227,17 @@ Entity: `CtmsGeneratedLetter`
 | `RecipientEmail` | `character varying(255)` | yes |  |  |
 | `RenderedContent` | `character varying(100000)` | no |  |  |
 | `SignatureManifestation` | `jsonb` | yes |  |  |
+| `SiteId` | `character varying(255)` | no |  |  |
 | `Status` | `character varying(50)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `VisitId` | `character varying(36)` | no |  |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
 
+- `IX_ctms_generated_letters_SiteId`: (`SiteId`)
+- `IX_ctms_generated_letters_StudyId`: (`StudyId`)
 - `IX_ctms_generated_letters_VisitId`: (`VisitId`)
 - `IX_ctms_generated_letters_tenant_id`: (`tenant_id`)
 

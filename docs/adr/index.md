@@ -379,6 +379,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2641: Contextual SOP Specificity Resolution and Audited Support Ticket Escalation](2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md) (2026-11-20)
 - [ADR-2642: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation](2026-11-20-ctms-core-topology-scoped-isolation-and-stateful-site-activation.md) (2026-11-20)
 - [ADR-2643: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks](2026-11-20-wire-web-ctms-training-and-etmf-workspaces-and-signed-completeness-webhooks.md) (2026-11-20)
+- [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](2026-11-22-ctms-study-and-site-scope-isolation.md) (2026-11-22)
 
 ### 5. Compliance, Audit & Governance
 

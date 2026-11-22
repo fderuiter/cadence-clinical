@@ -250,6 +250,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
         var delegation = new CtmsDelegation
         {
+            StudyId = StudyId,
             SiteId = SiteId,
             StaffUserId = "staff-crc-01",
             TaskCodes = JsonSerializer.Serialize(new[] { "CRF_DATA_ENTRY" }),
@@ -316,6 +317,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
         var delegation = new CtmsDelegation
         {
+            StudyId = StudyId,
             SiteId = SiteId,
             StaffUserId = "staff-crc-01",
             TaskCodes = JsonSerializer.Serialize(new[] { "CRF_DATA_ENTRY" }),
@@ -352,6 +354,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
         var delegation = new CtmsDelegation
         {
+            StudyId = StudyId,
             SiteId = SiteId,
             StaffUserId = "staff-crc-01",
             TaskCodes = JsonSerializer.Serialize(new[] { "CRF_DATA_ENTRY" }),
@@ -400,6 +403,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
         var delegation = new CtmsDelegation
         {
+            StudyId = StudyId,
             SiteId = SiteId,
             StaffUserId = "staff-crc-01",
             TaskCodes = JsonSerializer.Serialize(new[] { "CRF_DATA_ENTRY" }),
@@ -437,6 +441,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
         var delegation = new CtmsDelegation
         {
+            StudyId = StudyId,
             SiteId = SiteId,
             StaffUserId = "staff-user-42",
             TaskCodes = JsonSerializer.Serialize(new[] { "CRF_DATA_ENTRY", "REGULATORY_DOCS" }),
@@ -457,6 +462,8 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             UserRole = "CRC",
             Action = "DOA_DELEGATE",
             Details = $"Delegated tasks to staff {delegation.StaffUserId} at site {SiteId}.",
+            StudyId = StudyId,
+            SiteId = SiteId,
             ReasonForChange = "Initial site staffing",
             CreatedAt = _clock.UtcNow.UtcDateTime,
             CreatedBy = "crc-1",
@@ -498,6 +505,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
         var delegation = new CtmsDelegation
         {
+            StudyId = StudyId,
             SiteId = SiteId,
             StaffUserId = "staff-user-42",
             TaskCodes = JsonSerializer.Serialize(new[] { "CRF_DATA_ENTRY" }),
