@@ -444,6 +444,7 @@ import * as VueRouter from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { useToastStore } from "../stores/toasts.js";
+import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { validateField, debounce } from "ui";
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
@@ -1048,16 +1049,24 @@ const hasUnsavedChanges = computed(
   () => formPanelDirty.value || (demoBuild && isDirty.value)
 );
 
+function confirmLeaveDirtyDraft() {
+  return confirmDialog({
+    title: "Unsaved eCRF Changes",
+    message:
+      "You have unsaved eCRF draft changes. Are you sure you want to leave?",
+    confirmLabel: "Leave Without Saving",
+    cancelLabel: "Stay on Form",
+    variant: "warning",
+  });
+}
+
 // Route & Browser Navigation Guards
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
     if (hasUnsavedChanges.value && !shouldSuppressUnsavedGuard()) {
-      const confirmLeave = window.confirm(
-        "You have unsaved eCRF draft changes. Are you sure you want to leave?"
+      return confirmLeaveDirtyDraft().then((confirmLeave) =>
+        confirmLeave ? undefined : false
       );
-      if (!confirmLeave) {
-        return false;
-      }
     }
   });
 }
@@ -1069,12 +1078,9 @@ if (typeof onBeforeRouteUpdate === "function") {
     const currentFormId =
       loadedFormId.value ?? routeQuery("formId", from ?? route);
     if (nextFormId !== currentFormId) {
-      const confirmSwitch = window.confirm(
-        "You have unsaved eCRF draft changes. Are you sure you want to leave?"
+      return confirmLeaveDirtyDraft().then((confirmSwitch) =>
+        confirmSwitch ? undefined : false
       );
-      if (!confirmSwitch) {
-        return false;
-      }
     }
   });
 }

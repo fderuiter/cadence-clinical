@@ -1998,6 +1998,7 @@ import {
   useClinicalStore,
 } from "../stores/clinical";
 import { useToastStore } from "../stores/toasts.js";
+import { useErrorPresenter } from "../composables/useErrorPresenter";
 import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
 import ClinicalGanttVisualizer from "../components/clinical/ClinicalGanttVisualizer.vue";
 import { terminologyClient } from "../api/terminologyClient.js";
@@ -2017,6 +2018,7 @@ const mdrReasonOptions = [
 
 const store = useClinicalStore();
 const toasts = useToastStore();
+const { presentError } = useErrorPresenter();
 const designerStore = useDesignerStore();
 
 const showUsdmJson = ref(false);
@@ -2218,7 +2220,11 @@ function resetConceptForm() {
 // Saving concepts triggers ReasonModal
 function handleSaveConcept() {
   if (!conceptForm.concept_code || !conceptForm.preferred_name) {
-    alert("Please populate Concept Code and Preferred Name");
+    toasts.push({
+      tone: "warning",
+      title: "Missing Concept Fields",
+      message: "Please populate Concept Code and Preferred Name",
+    });
     return;
   }
   queueMutation({
@@ -2361,9 +2367,12 @@ function updateSoa() {
   try {
     const parsed = JSON.parse(usdmText.value);
     if (!parsed.visits && !parsed.encounters) {
-      alert(
-        "Invalid USDM Structure! Must contain either 'visits' or 'encounters'."
-      );
+      toasts.push({
+        tone: "error",
+        title: "Invalid USDM Structure",
+        message:
+          "Invalid USDM Structure! Must contain either 'visits' or 'encounters'.",
+      });
       return;
     }
     store.currentUsdm = parsed;
@@ -2373,7 +2382,10 @@ function updateSoa() {
       "User modified and compiled a custom USDM study protocol."
     );
   } catch (err) {
-    alert("Parsing Error: " + err.message);
+    presentError(err, {
+      title: "Parsing Error",
+      fallback: "Failed to parse USDM JSON.",
+    });
   }
 }
 
@@ -2388,7 +2400,11 @@ function queueMutation(mutation) {
       const errorMsg = `Instant Schema Validation Error: ${formatZodIssues(
         validation.error
       ).join(", ")}`;
-      alert(errorMsg);
+      toasts.push({
+        tone: "error",
+        title: "Schema Validation Error",
+        message: errorMsg,
+      });
       console.error(errorMsg);
       return; // Do not proceed to showReasonModal or save
     }
@@ -2437,7 +2453,11 @@ async function confirmMutation(finalReason) {
         }
       }
       resetConceptForm();
-      alert("Concept terminology registration successful!");
+      toasts.push({
+        tone: "success",
+        title: "Concept Registered",
+        message: "Concept terminology registration successful!",
+      });
     } else {
       await store.pushSoAMutation(
         mutation.type,
@@ -2540,7 +2560,11 @@ function applyMutationLocally(mutation) {
 
 function handleAddArm() {
   if (!newArm.id || !newArm.name) {
-    alert("Please enter Arm ID and Arm Name");
+    toasts.push({
+      tone: "warning",
+      title: "Missing Arm Fields",
+      message: "Please enter Arm ID and Arm Name",
+    });
     return;
   }
   queueMutation({
@@ -2555,7 +2579,11 @@ function handleAddArm() {
 
 function handleAddEpoch() {
   if (!newEpoch.id || !newEpoch.name) {
-    alert("Please enter Epoch ID and Epoch Name");
+    toasts.push({
+      tone: "warning",
+      title: "Missing Epoch Fields",
+      message: "Please enter Epoch ID and Epoch Name",
+    });
     return;
   }
   queueMutation({
@@ -2576,7 +2604,11 @@ function handleAddEpoch() {
 
 function handleAddEncounter() {
   if (!newEnc.id || !newEnc.name || !newEnc.epoch_id) {
-    alert("Please populate all fields");
+    toasts.push({
+      tone: "warning",
+      title: "Missing Visit Fields",
+      message: "Please populate all fields",
+    });
     return;
   }
   queueMutation({
@@ -2599,7 +2631,11 @@ function handleAddEncounter() {
 
 function handleAddProcedure() {
   if (!newProc.id || !newProc.name) {
-    alert("Please enter Activity ID and Name");
+    toasts.push({
+      tone: "warning",
+      title: "Missing Activity Fields",
+      message: "Please enter Activity ID and Name",
+    });
     return;
   }
   queueMutation({
@@ -2613,7 +2649,11 @@ function handleAddProcedure() {
 
 function handleToggleApplicability(isApplicable) {
   if (!linkPayload.procedure_id || !linkPayload.visit_id) {
-    alert("Please select both a Procedure and a Visit first");
+    toasts.push({
+      tone: "warning",
+      title: "Missing Selection",
+      message: "Please select both a Procedure and a Visit first",
+    });
     return;
   }
   queueMutation({
@@ -3313,7 +3353,10 @@ async function executeZeroClickBuild() {
     showUsdmModal.value = false;
   } catch (err) {
     console.error("Synthesis failed:", err);
-    alert(`Synthesis failed: ${err.message}`);
+    presentError(err, {
+      title: "Synthesis Failed",
+      fallback: "Protocol synthesis failed.",
+    });
   } finally {
     isSynthesizing.value = false;
   }

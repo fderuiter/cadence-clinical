@@ -518,12 +518,13 @@ function assertValidUsdmGraph(
       (e) => e.code === "CYCLE_DETECTED"
     );
     const errorMsg = graphValidation.errors.map((e) => e.message).join("; ");
-    if (
-      cycleError &&
-      typeof window !== "undefined" &&
-      typeof window.alert === "function"
-    ) {
-      window.alert(`Skip-Logic Cycle Alert: ${cycleError.message}`);
+    if (cycleError) {
+      useToastStore().push({
+        tone: "error",
+        title: "Skip-Logic Cycle Alert",
+        message: cycleError.message,
+        timeoutMs: 0,
+      });
     }
     const fullMessage = `${errorPrefix}: ${errorMsg}`;
     console.error(fullMessage);

@@ -39,7 +39,7 @@
     "dev": "vite",
     "format": "prettier --write .",
     "generate:api": "node scripts/generate-api-types.js",
-    "lint": "node ../../scripts/check_duplicate_identifiers.js && eslint .",
+    "lint": "node ../../scripts/check_duplicate_identifiers.js && eslint --max-warnings 0 .",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test --project=accessibility",
     "test:e2e:stack": "playwright test",

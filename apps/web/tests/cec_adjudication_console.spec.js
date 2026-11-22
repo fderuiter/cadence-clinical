@@ -3,6 +3,7 @@ import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import CecAdjudicationConsole from "../src/components/clinical/CecAdjudicationConsole.vue";
 import { apiClient } from "../src/api/apiClient";
+import { useToastStore } from "../src/stores/toasts";
 
 vi.mock("../src/api/apiClient", () => {
   return {
@@ -47,9 +48,13 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
 
     await wrapper.vm.submitChairAdjudication();
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      expect.stringContaining("re-authentication password")
-    );
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(useToastStore().toasts).toEqual([
+      expect.objectContaining({
+        tone: "warning",
+        message: expect.stringContaining("re-authentication password"),
+      }),
+    ]);
     expect(apiClient.post).not.toHaveBeenCalled();
 
     alertSpy.mockRestore();
@@ -172,9 +177,13 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
 
     await wrapper.vm.submitChairAdjudication();
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      expect.stringContaining("re-authentication failed")
-    );
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(useToastStore().toasts).toEqual([
+      expect.objectContaining({
+        tone: "error",
+        message: expect.stringContaining("re-authentication failed"),
+      }),
+    ]);
 
     alertSpy.mockRestore();
   });

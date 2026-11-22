@@ -10,6 +10,8 @@ import { ApiError } from "../../src/api/client";
 import { ecrfQueriesApi } from "../../src/api/ecrfQueriesApi";
 import { kernelApi } from "../../src/api/kernelApi";
 import { useAuthStore } from "../../src/stores/auth.js";
+import { useConfirmStore } from "../../src/stores/confirm.js";
+import ConfirmationDialogHost from "../../src/components/ConfirmationDialogHost.vue";
 import { scopedKey } from "../../src/utils/userScopedStorage.js";
 
 vi.mock("../../src/auth/keycloak.js", () => ({
@@ -665,7 +667,13 @@ describe("useEcrfForm outcomes (ADR-2622)", () => {
       FORM_ID
     )!;
     vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
-    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID },
+      attachTo: document.body,
+    });
+    const hostWrapper = mount(ConfirmationDialogHost, {
+      attachTo: document.body,
+    });
     await flushPromises();
 
     await wrapper.find("#ecrf-item-COMMENT").setValue("unsaved note");
@@ -674,17 +682,40 @@ describe("useEcrfForm outcomes (ADR-2622)", () => {
     expect(localStorage.getItem(draftKey)).not.toBeNull();
 
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const closeBtn = wrapper.find("#ecrf-form-close").element as HTMLElement;
+    closeBtn.focus();
+    expect(document.activeElement).toBe(closeBtn);
+
     await wrapper.find("#ecrf-form-close").trigger("click");
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    await nextTick();
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    const alertDialog = document.querySelector(
+      '.clinical-modal-dialog[role="alertdialog"]'
+    );
+    expect(alertDialog).not.toBeNull();
+    (alertDialog?.querySelector(".btn-cancel") as HTMLElement).click();
+    await flushPromises();
+    await nextTick();
+
+    expect(document.activeElement).toBe(closeBtn);
     expect(wrapper.find('[data-testid="ecrf-form-id"]').exists()).toBe(true);
     expect(localStorage.getItem(draftKey)).not.toBeNull();
 
-    confirmSpy.mockReturnValue(true);
     await wrapper.find("#ecrf-form-close").trigger("click");
-    expect(confirmSpy).toHaveBeenCalledTimes(2);
+    await nextTick();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    (
+      document.querySelector(
+        '.clinical-modal-dialog[role="alertdialog"] .btn-confirm'
+      ) as HTMLElement
+    ).click();
+    await flushPromises();
+
     expect(wrapper.find("#ecrf-form-id").exists()).toBe(true);
     expect(localStorage.getItem(draftKey)).toBeNull();
     expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
+    hostWrapper.unmount();
   });
 
   it("treats an unchanged value or an unchanged missing reason as no edit", async () => {
@@ -1658,6 +1689,7 @@ describe("EcrfFormPanel: account-scoped browser drafts", () => {
     await flushPromises();
 
     expect(confirmSpy).not.toHaveBeenCalled();
+    expect(useConfirmStore().activeRequest).toBeNull();
     expect(wrapper.find("#ecrf-form-new").exists()).toBe(true);
     expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
     expect(JSON.parse(localStorage.getItem(secondKey)!)).toEqual({

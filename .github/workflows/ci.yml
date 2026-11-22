@@ -61,6 +61,7 @@ jobs:
         run: |
           pnpm exec prettier --check --ignore-path .prettierignore "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}"
           pnpm -r lint
+          pnpm exec eslint --max-warnings 0 .
 
       - name: Run Hadolint on Dockerfiles
         run: |

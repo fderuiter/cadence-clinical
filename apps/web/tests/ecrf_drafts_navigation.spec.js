@@ -9,6 +9,7 @@ import EcrfFormPanel from "../src/components/ecrf/EcrfFormPanel.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 import { useClinicalStore } from "../src/stores/clinical.js";
 import { useAuthStore } from "../src/stores/auth.js";
+import { useConfirmStore } from "../src/stores/confirm.js";
 import { useToastStore } from "../src/stores/toasts.js";
 
 // Mock router
@@ -295,16 +296,20 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       expect(typeof routeLeaveHandler).toBe("function");
 
       // Attempt to leave route when user cancels
-      const leaveResult = routeLeaveHandler();
-      expect(confirmSpy).toHaveBeenCalledWith(
+      const confirmStore = useConfirmStore();
+      const leaveResultPromise = routeLeaveHandler();
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(confirmStore.activeRequest?.message).toBe(
         "You have unsaved eCRF draft changes. Are you sure you want to leave?"
       );
-      expect(leaveResult).toBe(false);
+      confirmStore.cancelConfirm();
+      expect(await leaveResultPromise).toBe(false);
 
       // Attempt to leave route when user accepts
-      confirmSpy.mockReturnValue(true);
-      const leaveResultAllowed = routeLeaveHandler();
-      expect(leaveResultAllowed).toBeUndefined();
+      const leaveAllowedPromise = routeLeaveHandler();
+      expect(confirmStore.activeRequest?.title).toBe("Unsaved eCRF Changes");
+      confirmStore.resolveConfirm();
+      expect(await leaveAllowedPromise).toBeUndefined();
     });
 
     function mountSampleForm() {
@@ -387,10 +392,14 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       expect(unloadEvent.defaultPrevented).toBe(true);
 
       const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
-      expect(routeLeaveHandler()).toBe(false);
-      expect(confirmSpy).toHaveBeenCalledWith(
+      const confirmStore = useConfirmStore();
+      const leavePromise = routeLeaveHandler();
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(confirmStore.activeRequest?.message).toBe(
         "You have unsaved eCRF draft changes. Are you sure you want to leave?"
       );
+      confirmStore.cancelConfirm();
+      expect(await leavePromise).toBe(false);
 
       // Reconnecting online dispatches no PIN challenge
       const pinChallengeSpy = vi.fn();
