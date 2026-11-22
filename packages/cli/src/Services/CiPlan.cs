@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
@@ -20,15 +19,21 @@ namespace Cadence.Cli.Services;
 /// <see cref="Display"/> when it is null, appears in the step's <c>run:</c> block.
 /// </param>
 /// <param name="AllowedExitCodes">Exit codes treated as success (defaults to <c>0</c> only when null).</param>
-public sealed record CiCommand(string FileName, IReadOnlyList<string> Arguments, string? CiText = null, IReadOnlyList<int>? AllowedExitCodes = null)
+/// <param name="ForwardsBaseRef">Whether <c>cadence ci</c> appends <c>--base &lt;ref&gt;</c> when running this command.</param>
+public sealed record CiCommand(
+    string FileName,
+    IReadOnlyList<string> Arguments,
+    string? CiText = null,
+    IReadOnlyList<int>? AllowedExitCodes = null,
+    bool ForwardsBaseRef = false)
 {
     /// <summary>The command as a person would type it.</summary>
-    public string Display => string.Join(' ', Arguments.Select(Quote).Prepend(FileName));
+    public string Display => string.Join(' ', Arguments.Select(QuoteArgument).Prepend(FileName));
 
     /// <summary>The text that must appear in the CI step (see <see cref="CiText"/>).</summary>
     public string MatchText => CiText ?? Display;
 
-    private static string Quote(string argument) =>
+    public static string QuoteArgument(string argument) =>
         argument.Length > 0 && argument.IndexOfAny([' ', ';', '"']) < 0 ? argument : $"\"{argument}\"";
 }
 
@@ -66,9 +71,10 @@ public sealed record CiStep(string Job, string Name)
     public IReadOnlyList<CiCommand> Commands { get; init; } = [];
 
     /// <summary>
-    /// Work done in the CLI process instead of a child process, returning an exit code. It gets the repository root.
+    /// Work done in the CLI process instead of a child process, returning an exit code. It gets the repository root and
+    /// the local CI options (including <see cref="LocalCiOptions.BaseRef"/>).
     /// </summary>
-    public Func<string, int>? InProcess { get; init; }
+    public Func<string, LocalCiOptions, int>? InProcess { get; init; }
 
     /// <summary>Describes <see cref="InProcess"/> in the plan and the summary.</summary>
     public string? InProcessDisplay { get; init; }
@@ -102,9 +108,6 @@ public sealed record CiStep(string Job, string Name)
 
     /// <summary>Files appended to the last command.</summary>
     public CiFileSource Files { get; init; }
-
-    /// <summary>Only files whose path matches this pattern are appended.</summary>
-    public string? FilePattern { get; init; }
 
     /// <summary>What happens when no file is found: the step passes with this message, as the CI script does.</summary>
     public string? NoFilesMessage { get; init; }
@@ -199,11 +202,14 @@ public static class CiPlan
 
     /// <summary><c>dotnet run --no-build --project packages/cli/... -- args</c>, as <c>dotnet-quality</c> calls the CLI.</summary>
     private static CiCommand CadenceCliNoBuild(params string[] args) =>
-        Dotnet(["run", "--no-build", "--project", Cli, "--", .. args]);
+        Dotnet(["run", "--no-build", "--project", Cli, "--", .. args]) with
+        {
+            ForwardsBaseRef = args.FirstOrDefault() == "check",
+        };
 
     /// <summary><c>node scripts/run-cli.js args</c>, as the Node-equipped CI steps call the CLI.</summary>
     private static CiCommand NodeCli(params string[] args) =>
-        new("node", ["scripts/run-cli.js", .. args]);
+        new("node", ["scripts/run-cli.js", .. args], ForwardsBaseRef: args.FirstOrDefault() == "check");
 
     private static List<CiJob> BuildJobs()
     {
@@ -318,25 +324,12 @@ public static class CiPlan
                 Always = true,
                 RequiredTool = "detect-secrets-hook",
                 ToolHint = $"run './scripts/setup_wizard.sh --minimal' or 'python3 -m venv .cadence/venv && .cadence/venv/bin/python -m pip install --upgrade pip detect-secrets=={DetectSecretsGateService.PinnedVersion}'",
-                Files = CiFileSource.ChangedFilesAcmr,
-                NoFilesMessage = "No changed files to scan.",
-                RestoreFiles = [".secrets.baseline"],
-                Commands =
-                [
-                    new CiCommand(
-                        "detect-secrets-hook",
-                        ["--baseline", ".secrets.baseline", "--exclude-files", SecretsBaselineCleanerService.CanonicalExcludePattern],
-                        CiText: $"detect-secrets-hook --baseline .secrets.baseline --exclude-files '{SecretsBaselineCleanerService.CanonicalExcludePattern}'",
-                        AllowedExitCodes: [0, 3]),
-                ],
+                Commands = [NodeCli("check", "detect-secrets")],
             },
             new("security", "Run DEID compliance scan")
             {
                 Always = true,
                 CoveredBy = QualitySentinels,
-                Files = CiFileSource.ChangedFiles,
-                FilePattern = @"(\.(py|js|mjs|cjs|ts|tsx|jsx|vue|json|md|html|svg|yaml|yml|toml|xml|csv|sql|log|txt|cs)|^(LICENSE|Dockerfile|Makefile))$",
-                NoFilesMessage = "No changed files to scan.",
                 Commands = [NodeCli("check", "deid")],
             },
         ]);
@@ -415,7 +408,7 @@ public static class CiPlan
             {
                 // A feature branch writes a preview and validates its tags and results; only snapshot mode writes
                 // docs/SDLC (ADR-2532). Unknown requirement IDs and failing tagged tests fail both.
-                InProcess = repoRoot =>
+                InProcess = (repoRoot, _) =>
                 {
                     bool snapshot = GxpSnapshotPolicy.IsSnapshotMode();
                     string outputDir = snapshot ? "docs/SDLC" : GxpSnapshotPolicy.PreviewDir;
@@ -437,7 +430,7 @@ public static class CiPlan
             {
                 // A feature branch must not change the snapshot. In snapshot mode the regenerated documents are compared
                 // with the snapshot instead, ignoring the evidence block, and a match is put back to the staged copy.
-                InProcess = repoRoot => GxpSnapshotGuardService.Check(repoRoot, preCommit: false),
+                InProcess = (repoRoot, options) => GxpSnapshotGuardService.Check(repoRoot, preCommit: false, baseRef: options.BaseRef),
                 InProcessDisplay = $"refuse branch changes to the generated GxP snapshot ({GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1: compare the regenerated documents with it)",
                 InProcessCiText = "node scripts/run-cli.js check gxp-snapshot",
             },
@@ -478,8 +471,4 @@ public static class CiPlan
 
         return [.. Jobs.Where(j => wanted.Contains(j.Key))];
     }
-
-    /// <summary>Whether a path matches a step's <see cref="CiStep.FilePattern"/> (all paths match when it has none).</summary>
-    public static bool MatchesFilePattern(CiStep step, string path) =>
-        step.FilePattern is null || Regex.IsMatch(path, step.FilePattern, RegexOptions.None, TimeSpan.FromSeconds(1));
 }

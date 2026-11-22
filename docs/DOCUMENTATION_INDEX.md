@@ -586,6 +586,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2549: Export Canonical Demo Manifest from Kernel Seed](adr/2026-11-20-export-canonical-demo-manifest-from-kernel-seed.md) | Current | - Status: Accepted |
 | [ADR-2551: Share Session Resilience, Draft-Safe Sign-Out, and Part 11 Signature Primitives](adr/2026-11-20-share-session-logout-and-signature-primitives.md) | Current | - Status: Accepted |
 | [ADR-2497: Dual-Layer Gates for Source and Public Bundles](adr/2026-11-20-dual-layer-gates-for-source-and-public-bundles.md) | Current | - Status: Accepted |
+| [ADR-2642: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation](adr/2026-11-20-ctms-core-topology-scoped-isolation-and-stateful-site-activation.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

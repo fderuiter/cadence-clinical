@@ -21,6 +21,7 @@ export const SPEC_DIR = path.resolve(WEB_DIR, "../../docs/openapi");
 export const OUTPUT_DIR = path.resolve(WEB_DIR, "src/api/generated");
 
 export const GENERATED_SERVICES = [
+  "ctms",
   "execution",
   "kernel",
   "knowledge",
