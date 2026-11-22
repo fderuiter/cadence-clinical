@@ -356,4 +356,129 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     wrapper.unmount();
     await router.push("/");
   });
+
+  it("publishes --shell-header-height onto document.documentElement when sticky and resets to 0px when non-sticky or unmounted", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const originalGetComputedStyle = window.getComputedStyle;
+    let headerPosition = "sticky";
+    vi.spyOn(window, "getComputedStyle").mockImplementation((el, pseudo) => {
+      const base = originalGetComputedStyle.call(window, el, pseudo);
+      if (el?.classList?.contains("app-header")) {
+        return new Proxy(base, {
+          get(target, prop) {
+            if (prop === "position") return headerPosition;
+            const val = Reflect.get(target, prop);
+            return typeof val === "function" ? val.bind(target) : val;
+          },
+        });
+      }
+      return base;
+    });
+
+    const wrapper = mount(AppShell, {
+      global: { plugins: [router] },
+    });
+    const headerEl = wrapper.find("header.app-header").element;
+    vi.spyOn(headerEl, "getBoundingClientRect").mockReturnValue({
+      height: 56,
+      width: 1280,
+      top: 0,
+      bottom: 56,
+      left: 0,
+      right: 1280,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    window.dispatchEvent(new Event("resize"));
+    await wrapper.vm.$nextTick();
+    expect(
+      document.documentElement.style.getPropertyValue("--shell-header-height")
+    ).toBe("56px");
+
+    headerPosition = "static";
+    window.dispatchEvent(new Event("resize"));
+    await wrapper.vm.$nextTick();
+    expect(
+      document.documentElement.style.getPropertyValue("--shell-header-height")
+    ).toBe("0px");
+
+    headerPosition = "sticky";
+    window.dispatchEvent(new Event("resize"));
+    await wrapper.vm.$nextTick();
+    expect(
+      document.documentElement.style.getPropertyValue("--shell-header-height")
+    ).toBe("56px");
+
+    wrapper.unmount();
+    expect(
+      document.documentElement.style.getPropertyValue("--shell-header-height")
+    ).toBe("0px");
+    vi.restoreAllMocks();
+  });
+
+  it("folds secondary header controls into #mobile-nav-menu below 768px width or 480px height without duplicate IDs", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const originalWidth = window.innerWidth;
+    const originalHeight = window.innerHeight;
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 320,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: 256,
+    });
+
+    const wrapper = mount(AppShell, {
+      global: { plugins: [router] },
+    });
+    window.dispatchEvent(new Event("resize"));
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find(".header-controls #btn-logout").exists()).toBe(false);
+    expect(
+      wrapper.find("#mobile-nav-menu .mobile-secondary-controls").exists()
+    ).toBe(true);
+    expect(wrapper.findAll("#btn-logout").length).toBe(1);
+    expect(wrapper.findAll("#persona-select").length).toBe(1);
+
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 1024,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: 400,
+    });
+    window.dispatchEvent(new Event("resize"));
+    await wrapper.vm.$nextTick();
+    expect(
+      wrapper.find("#mobile-nav-menu .mobile-secondary-controls").exists()
+    ).toBe(true);
+    expect(wrapper.findAll("#btn-logout").length).toBe(1);
+
+    wrapper.unmount();
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: originalWidth,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: originalHeight,
+    });
+  });
 });

@@ -2134,7 +2134,12 @@ onMounted(() => {
   cursor: pointer;
   border-bottom: 3px solid transparent;
   margin-bottom: -2px;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
   white-space: nowrap;
 }
 
@@ -2771,7 +2776,12 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
   font-family: inherit;
 }
 

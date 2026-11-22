@@ -319,8 +319,9 @@ async function executeSignedLock(sigToken: string, signingReason: string) {
 }
 
 .scope-lock-input {
-  flex: 1 1 220px;
-  min-width: 180px;
+  flex: 1 1 11.25rem;
+  min-width: 0;
+  max-width: 100%;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;

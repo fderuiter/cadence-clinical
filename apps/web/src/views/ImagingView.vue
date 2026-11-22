@@ -848,7 +848,12 @@ function handleBatchIngested(result) {
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -968,7 +973,12 @@ function handleBatchIngested(result) {
   border-radius: 6px;
   padding: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .series-item:hover {

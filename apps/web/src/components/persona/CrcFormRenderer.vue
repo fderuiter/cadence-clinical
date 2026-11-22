@@ -4,15 +4,26 @@
       <div
         style="
           display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
           justify-content: space-between;
           align-items: center;
           margin-bottom: var(--spacing-sm);
+          min-width: 0;
         "
       >
         <div class="card-title" style="margin-bottom: 0">
           {{ $t("ecrf.form.title") }}
         </div>
-        <div style="display: flex; align-items: center; gap: 8px">
+        <div
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+          "
+        >
           <span
             class="badge"
             :style="{

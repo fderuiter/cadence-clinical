@@ -56,15 +56,18 @@
       <template #header="{ titleId, close }">
         <div v-if="inspectedDoc" class="drawer-header">
           <div style="display: flex; align-items: center; gap: 8px">
-            <span style="font-size: 20px" aria-hidden="true">📋</span>
+            <span style="font-size: 1.25rem" aria-hidden="true">📋</span>
             <div>
-              <h3 :id="titleId" style="margin: 0; font-size: 16px">
+              <h3
+                :id="titleId"
+                style="margin: 0; font-size: var(--font-size-md, 1rem)"
+              >
                 Document Metadata &amp; 21 CFR Part 11 Manifest
               </h3>
               <p
                 style="
                   margin: 2px 0 0 0;
-                  font-size: 11px;
+                  font-size: var(--font-size-2xs, 0.6875rem);
                   color: var(--semantic-color-text-secondary);
                 "
               >
@@ -75,7 +78,7 @@
           <button
             type="button"
             class="btn btn-secondary btn-close-drawer"
-            style="padding: 4px 8px; font-size: 12px; cursor: pointer"
+            style="padding: 4px 8px; font-size: 0.75rem; cursor: pointer"
             aria-label="Close inspection drawer"
             :disabled="reviewingQc"
             @click="close"
@@ -128,7 +131,7 @@
             <p
               style="
                 margin: 4px 0 0 0;
-                font-size: 12px;
+                font-size: 0.75rem;
                 color: var(--semantic-color-text);
               "
             >
@@ -171,10 +174,14 @@
                 margin-bottom: 6px;
               "
             >
-              <span style="font-size: 11px; font-weight: 600"
+              <span
+                style="
+                  font-size: var(--font-size-2xs, 0.6875rem);
+                  font-weight: 600;
+                "
                 >SHA-256 Checksum Digest</span
               >
-              <span class="badge status-approved" style="font-size: 9px"
+              <span class="badge status-approved" style="font-size: 0.5625rem"
                 >LEDGER SEALED</span
               >
             </div>
@@ -209,12 +216,12 @@
                 margin-bottom: 8px;
               "
             >
-              <span style="font-size: 12px; font-weight: 600"
+              <span style="font-size: 0.75rem; font-weight: 600"
                 >DIA Classifier Confidence</span
               >
               <span
                 class="badge status-approved"
-                style="font-size: 10px; font-weight: bold"
+                style="font-size: 0.625rem; font-weight: bold"
               >
                 {{ getDocConfidence(inspectedDoc) }}
               </span>
@@ -286,7 +293,7 @@
                 style="
                   width: 100%;
                   padding: 6px 10px;
-                  font-size: 11px;
+                  font-size: var(--font-size-2xs, 0.6875rem);
                   cursor: pointer;
                 "
                 :disabled="
@@ -313,7 +320,7 @@
           v-if="inspectedDoc"
           type="button"
           class="btn btn-primary btn-preview-from-drawer"
-          style="padding: 8px 16px; font-size: 12px; cursor: pointer"
+          style="padding: 8px 16px; font-size: 0.75rem; cursor: pointer"
           :disabled="reviewingQc"
           @click="handlePreviewFromDrawer(inspectedDoc)"
         >
@@ -564,6 +571,7 @@ defineExpose({
   display: flex;
   height: calc(100vh - 120px);
   gap: 20px;
+  min-width: 0;
   background-color: var(--semantic-color-surface-muted);
   margin: -20px;
   padding: 20px;
@@ -582,6 +590,7 @@ defineExpose({
 
 .document-content-area {
   flex: 1;
+  min-width: 0;
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
   overflow: hidden;
@@ -592,8 +601,11 @@ defineExpose({
 
 .etmf-workspace-bar {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: space-between;
   align-items: center;
+  min-width: 0;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface-muted);
@@ -601,6 +613,8 @@ defineExpose({
 
 .etmf-tab-group {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
   gap: 8px;
 }
 
@@ -609,7 +623,7 @@ defineExpose({
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -622,8 +636,31 @@ defineExpose({
 }
 
 .etmf-study-chip {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--semantic-color-text-secondary);
+}
+
+@media (max-width: 1023px) {
+  .document-manager-layout {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+  }
+
+  .sidebar-binder-tree {
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .document-content-area {
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+  }
 }
 
 .qc-accept-panel {
@@ -635,9 +672,10 @@ defineExpose({
 
 .qc-reason-input {
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
@@ -646,7 +684,7 @@ defineExpose({
 
 .qc-role-note {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-warning-dark);
   background: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
@@ -656,7 +694,7 @@ defineExpose({
 
 .qc-error-note {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-error-text-dark);
   background: var(--semantic-color-error-bg-soft);
   border: 1px solid var(--semantic-color-error-border-soft);
@@ -729,7 +767,7 @@ defineExpose({
 
 .section-heading {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -738,24 +776,25 @@ defineExpose({
 
 .meta-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
   gap: 12px;
 }
 
 .meta-item {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 4px;
 }
 
 .meta-label {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
 
 .meta-val {
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -770,7 +809,7 @@ defineExpose({
   border-left: 3px solid var(--semantic-color-primary);
   padding: 10px 12px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .crypto-seal-card {
@@ -783,7 +822,7 @@ defineExpose({
 .sha256-hash-display {
   display: block;
   font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   word-break: break-all;
   color: var(--semantic-color-success-dark);
   background: var(--semantic-color-surface);

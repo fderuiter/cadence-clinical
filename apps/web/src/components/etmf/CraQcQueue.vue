@@ -3,13 +3,19 @@
   <div class="qc-queue-container">
     <div class="qc-queue-header">
       <div>
-        <h3 style="margin: 0; font-size: 16px; font-weight: 700">
+        <h3
+          style="
+            margin: 0;
+            font-size: var(--font-size-md, 1rem);
+            font-weight: 700;
+          "
+        >
           🛡️ CRA Quality Control Review Queue
         </h3>
         <p
           style="
             margin: 2px 0 0 0;
-            font-size: 12px;
+            font-size: 0.75rem;
             color: var(--semantic-color-text-secondary);
           "
         >
@@ -21,14 +27,14 @@
       <div style="display: flex; gap: 8px">
         <button
           class="btn btn-secondary btn-sm btn-refresh-qc"
-          style="font-size: 12px"
+          style="font-size: 0.75rem"
           @click="loadQueue"
         >
           🔄 Refresh Queue
         </button>
         <button
           class="btn btn-primary btn-sm btn-batch-accept"
-          style="font-size: 12px"
+          style="font-size: 0.75rem"
           :disabled="selectedItemIds.length === 0"
           @click="openBatchAcceptModal"
         >
@@ -52,7 +58,7 @@
       <div style="display: flex; align-items: center; gap: 12px">
         <label
           style="
-            font-size: 12px;
+            font-size: 0.75rem;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -70,7 +76,7 @@
         <span
           v-if="selectedItemIds.length > 0"
           class="badge status-approved"
-          style="font-size: 11px"
+          style="font-size: var(--font-size-2xs, 0.6875rem)"
         >
           {{ selectedItemIds.length }} Selected
         </span>
@@ -83,7 +89,7 @@
           aria-label="Filter by filename or code"
           class="form-control"
           placeholder="Filter by filename or code..."
-          style="font-size: 12px; width: 220px; padding: 4px 8px"
+          style="font-size: 0.75rem; width: 220px; padding: 4px 8px"
         />
       </div>
     </div>
@@ -99,11 +105,17 @@
           color: var(--semantic-color-text-secondary);
         "
       >
-        <span style="font-size: 32px">✅</span>
-        <p style="margin: 8px 0 0 0; font-size: 14px; font-weight: 600">
+        <span style="font-size: 2rem">✅</span>
+        <p
+          style="
+            margin: 8px 0 0 0;
+            font-size: var(--font-size-sm, 0.875rem);
+            font-weight: 600;
+          "
+        >
           No staged documents pending Quality Control review
         </p>
-        <p style="margin: 4px 0 0 0; font-size: 12px">
+        <p style="margin: 4px 0 0 0; font-size: 0.75rem">
           All batch ingested files have been reviewed and adjudicated.
         </p>
       </div>
@@ -136,17 +148,21 @@
             </td>
             <td>
               <div style="display: flex; flex-direction: column">
-                <span class="font-mono font-bold" style="font-size: 12px">{{
+                <span class="font-mono font-bold" style="font-size: 0.75rem">{{
                   item.filename
                 }}</span>
-                <span class="text-muted" style="font-size: 10px"
+                <span class="text-muted" style="font-size: 0.625rem"
                   >ID: {{ item.document_id }}</span
                 >
               </div>
             </td>
             <td>
               <div
-                style="display: flex; flex-direction: column; font-size: 11px"
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  font-size: var(--font-size-2xs, 0.6875rem);
+                "
               >
                 <span>{{ item.staged_by }}</span>
                 <span class="text-muted">{{ formatDate(item.staged_at) }}</span>
@@ -155,7 +171,11 @@
             <td>
               <div
                 v-if="item.intelligence_report"
-                style="display: flex; flex-direction: column; font-size: 11px"
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  font-size: var(--font-size-2xs, 0.6875rem);
+                "
               >
                 <span class="font-mono font-bold">{{
                   item.intelligence_report.primary_classification.artifact_code
@@ -199,19 +219,25 @@
                   v-for="(note, nIdx) in item.discrepancy_notes"
                   :key="nIdx"
                   class="badge status-hold"
-                  style="font-size: 10px"
+                  style="font-size: 0.625rem"
                 >
                   ⚠️ {{ note }}
                 </span>
               </div>
-              <span v-else class="text-muted" style="font-size: 11px"
+              <span
+                v-else
+                class="text-muted"
+                style="font-size: var(--font-size-2xs, 0.6875rem)"
                 >No discrepancies</span
               >
             </td>
             <td style="text-align: right">
               <button
                 class="btn btn-secondary btn-xs btn-inspect-qc"
-                style="font-size: 11px; padding: 4px 8px"
+                style="
+                  font-size: var(--font-size-2xs, 0.6875rem);
+                  padding: 4px 8px;
+                "
                 @click="openInspectionModal(item)"
               >
                 📋 Inspect &amp; Edit
@@ -239,13 +265,13 @@
       >
         <h4
           id="qc-batch-modal-title"
-          style="margin: 0 0 8px 0; font-size: 16px"
+          style="margin: 0 0 8px 0; font-size: var(--font-size-md, 1rem)"
         >
           Batch Accept AI Classifications
         </h4>
         <p
           style="
-            font-size: 12px;
+            font-size: 0.75rem;
             color: var(--semantic-color-text-secondary);
             margin-bottom: 12px;
           "
@@ -257,7 +283,7 @@
           <label
             for="batch-accept-reason"
             class="form-label"
-            style="font-size: 12px; font-weight: 600"
+            style="font-size: 0.75rem; font-weight: 600"
           >
             21 CFR Part 11 Reason for Approval <span class="required">*</span>
           </label>
@@ -267,20 +293,20 @@
             type="text"
             class="form-control"
             placeholder="e.g. Verified AI classifications against source regulatory document originals"
-            style="font-size: 12px"
+            style="font-size: 0.75rem"
           />
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 8px">
           <button
             class="btn btn-secondary"
-            style="font-size: 12px"
+            style="font-size: 0.75rem"
             @click="showBatchModal = false"
           >
             Cancel
           </button>
           <button
             class="btn btn-primary btn-confirm-batch-accept"
-            style="font-size: 12px"
+            style="font-size: 0.75rem"
             :disabled="!batchReason || batchReason.length < 10"
             @click="executeBatchAccept"
           >
@@ -317,7 +343,11 @@
         >
           <h4
             id="qc-inspect-modal-title"
-            style="margin: 0; font-size: 15px; font-weight: 700"
+            style="
+              margin: 0;
+              font-size: var(--font-size-base, 0.9375rem);
+              font-weight: 700;
+            "
           >
             CRA Quality Control Review: {{ inspectedItem.filename }}
           </h4>
@@ -342,25 +372,29 @@
           <!-- Predicted Classification Panel -->
           <div class="info-card">
             <h5
-              style="margin: 0 0 8px 0; font-size: 12px; color: var(--primary)"
+              style="
+                margin: 0 0 8px 0;
+                font-size: 0.75rem;
+                color: var(--primary);
+              "
             >
               Predicted Taxonomy
             </h5>
-            <p style="margin: 2px 0; font-size: 12px">
+            <p style="margin: 2px 0; font-size: 0.75rem">
               <strong>Artifact Code:</strong>
               <code class="font-mono">{{
                 inspectedItem.intelligence_report?.primary_classification
                   ?.artifact_code
               }}</code>
             </p>
-            <p style="margin: 2px 0; font-size: 12px">
+            <p style="margin: 2px 0; font-size: 0.75rem">
               <strong>Artifact Type:</strong>
               {{
                 inspectedItem.intelligence_report?.primary_classification
                   ?.artifact_type
               }}
             </p>
-            <p style="margin: 2px 0; font-size: 12px">
+            <p style="margin: 2px 0; font-size: 0.75rem">
               <strong>Zone:</strong>
               {{
                 inspectedItem.intelligence_report?.primary_classification?.zone
@@ -371,7 +405,7 @@
                   ?.section
               }}
             </p>
-            <p style="margin: 2px 0; font-size: 12px">
+            <p style="margin: 2px 0; font-size: 0.75rem">
               <strong>AI Confidence:</strong>
               {{
                 Math.round(
@@ -385,13 +419,17 @@
           <!-- Override Taxonomy Panel -->
           <div class="info-card">
             <h5
-              style="margin: 0 0 8px 0; font-size: 12px; color: var(--primary)"
+              style="
+                margin: 0 0 8px 0;
+                font-size: 0.75rem;
+                color: var(--primary);
+              "
             >
               Override Taxonomy Tag
             </h5>
             <label
               class="form-label"
-              style="font-size: 11px"
+              style="font-size: var(--font-size-2xs, 0.6875rem)"
               for="qc-artifact-code-override"
               >Artifact Code Override</label
             >
@@ -399,7 +437,7 @@
               id="qc-artifact-code-override"
               v-model="overrideArtifactCode"
               class="form-control"
-              style="font-size: 12px; margin-bottom: 8px"
+              style="font-size: 0.75rem; margin-bottom: 8px"
             >
               <option value="">
                 -- Keep Predicted ({{
@@ -444,7 +482,7 @@
           <label
             for="review-reason-input"
             class="form-label"
-            style="font-size: 12px; font-weight: 600"
+            style="font-size: 0.75rem; font-weight: 600"
           >
             21 CFR Part 11 Reason for Change <span class="required">*</span>
           </label>
@@ -454,7 +492,7 @@
             type="text"
             class="form-control"
             placeholder="Mandatory Part 11 justification (min 10 chars)"
-            style="font-size: 12px"
+            style="font-size: 0.75rem"
           />
         </div>
 
@@ -470,14 +508,14 @@
         >
           <button
             class="btn btn-secondary"
-            style="font-size: 12px"
+            style="font-size: 0.75rem"
             @click="inspectedItem = null"
           >
             Cancel
           </button>
           <button
             class="btn btn-danger btn-reject-qc"
-            style="font-size: 12px"
+            style="font-size: 0.75rem"
             :disabled="!reviewReason || reviewReason.length < 10"
             @click="submitDecision('REJECT')"
           >
@@ -485,7 +523,7 @@
           </button>
           <button
             class="btn btn-primary btn-accept-qc"
-            style="font-size: 12px"
+            style="font-size: 0.75rem"
             :disabled="!reviewReason || reviewReason.length < 10"
             @click="
               submitDecision(overrideArtifactCode ? 'OVERRIDE' : 'ACCEPT')
@@ -674,7 +712,7 @@ onMounted(() => {
 .qc-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .qc-table th,

@@ -43,7 +43,14 @@
         </div>
       </div>
 
-      <div style="display: flex; gap: 12px; justify-content: center">
+      <div
+        style="
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          justify-content: center;
+        "
+      >
         <button
           class="btn btn-primary"
           style="padding: 10px 20px"

@@ -47,8 +47,8 @@ export function renderTasks() {
       container.style.display = "none";
       container.innerHTML = `
         <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
-          <p style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">⚠️ Error loading tasks</p>
-          <p style="font-size: 14px;">We are unable to connect to the study servers right now. Please check your connection and try again.</p>
+          <p style="font-size: var(--font-size-lg, 1.125rem); font-weight: 700; margin-bottom: 6px;">⚠️ Error loading tasks</p>
+          <p style="font-size: var(--font-size-sm, 0.875rem);">We are unable to connect to the study servers right now. Please check your connection and try again.</p>
         </div>
       `;
     }
@@ -67,8 +67,8 @@ export function renderTasks() {
   ) {
     container.innerHTML = `
       <div id="tasks-signin-prompt" class="card" style="text-align: center; padding: 32px;">
-        <p style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Sign in to access your study tasks</p>
-        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px;">Authenticate with your participant credentials to view assigned questionnaires and sync clinical entries.</p>
+        <p style="font-size: var(--font-size-lg, 1.125rem); font-weight: 700; margin-bottom: 8px;">Sign in to access your study tasks</p>
+        <p style="font-size: var(--font-size-sm, 0.875rem); color: var(--text-muted); margin-bottom: 16px;">Authenticate with your participant credentials to view assigned questionnaires and sync clinical entries.</p>
         <button id="btn-tasks-login" type="button" class="btn btn-primary">Sign In</button>
       </div>
     `;
@@ -90,8 +90,8 @@ export function renderTasks() {
   if (activeTasks.length === 0) {
     container.innerHTML = `
       <div class="card" style="text-align: center; padding: 32px; color: var(--text-muted);">
-        <p style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">🎉 All caught up!</p>
-        <p style="font-size: 14px;">You have no pending clinical questionnaires due today.</p>
+        <p style="font-size: var(--font-size-lg, 1.125rem); font-weight: 700; margin-bottom: 6px;">🎉 All caught up!</p>
+        <p style="font-size: var(--font-size-sm, 0.875rem);">You have no pending clinical questionnaires due today.</p>
       </div>
     `;
     return;
@@ -146,7 +146,7 @@ export function renderTasks() {
       const disabledAttr = isAnyTaskLoading ? " disabled" : "";
       const ariaBusyAttr = isTaskLoading ? ' aria-busy="true"' : "";
       const actionHtml = isPendingSync
-        ? `<span class="task-queued-note" style="font-size: 13px; color: var(--text-muted);">Awaiting server confirmation</span>`
+        ? `<span class="task-queued-note" style="font-size: var(--font-size-xs, 0.8125rem); color: var(--text-muted);">Awaiting server confirmation</span>`
         : `<button type="button" class="${ctaClasses}" data-id="${task.id}"${disabledAttr}${ariaBusyAttr}>${ctaLabel}</button>`;
 
       return `

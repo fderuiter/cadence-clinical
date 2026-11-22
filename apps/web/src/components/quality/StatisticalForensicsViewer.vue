@@ -2262,7 +2262,12 @@ onMounted(() => {
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition:
+    background-color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out,
+    color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out,
+    opacity 0.15s ease-in-out;
   border: 1px solid transparent;
 }
 
@@ -2375,7 +2380,12 @@ onMounted(() => {
   border-bottom: 3px solid transparent;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .tab-btn:hover {

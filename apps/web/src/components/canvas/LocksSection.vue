@@ -651,14 +651,16 @@ async function executeModalSign(sigToken: string, signingReason: string) {
 
 .apply-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr));
   gap: 10px;
+  min-width: 0;
 }
 
 .field-group {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .field-group--wide {

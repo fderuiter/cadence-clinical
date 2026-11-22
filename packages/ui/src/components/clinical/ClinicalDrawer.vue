@@ -301,21 +301,22 @@ useFocusTrap(drawerRef, {
 
 .clinical-drawer-title {
   margin: 0;
-  font-size: var(--font-size-md, 16px);
+  font-size: var(--font-size-md, 1rem);
   font-weight: 600;
   color: var(--color-text);
 }
 
 .clinical-drawer-subtitle {
   margin: 4px 0 0 0;
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs, 0.75rem);
   color: var(--color-text-muted);
 }
 
 .clinical-drawer-close-btn {
   background: transparent;
   border: none;
-  font-size: 16px;
+  font: inherit;
+  font-size: var(--font-size-md, 1rem);
   color: var(--color-text-muted);
   cursor: pointer;
   padding: 4px 8px;

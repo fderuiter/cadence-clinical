@@ -394,26 +394,27 @@ const toggleEdit = () => {
 
 .ai-drawer-title {
   margin: 0;
-  font-size: var(--font-size-md, 16px);
+  font-size: var(--font-size-md, 1rem);
   font-weight: 600;
   color: var(--color-text);
 }
 
 .ai-drawer-subtitle {
   margin: 4px 0 0 0;
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs, 0.75rem);
   color: var(--color-text-muted);
 }
 
 .ai-drawer-close-btn {
   background: transparent;
   border: none;
-  font-size: 16px;
+  font: inherit;
+  font-size: var(--font-size-md, 1rem);
   color: var(--color-text-muted);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
-  transition: background 0.15s;
+  transition: background-color 0.15s ease;
 }
 
 .ai-drawer-close-btn:hover {
@@ -426,7 +427,7 @@ const toggleEdit = () => {
   padding: 10px 24px;
   background: var(--color-primary-light);
   border-bottom: 1px solid var(--semantic-color-info-border-accent);
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs, 0.75rem);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -452,7 +453,7 @@ code.ai-provenance-val {
   padding: 1px 4px;
   border-radius: 3px;
   font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
 }
 
 /* Body */
@@ -489,7 +490,7 @@ code.ai-provenance-val {
 }
 
 .ai-diff-tag {
-  font-size: var(--font-size-2xs, 11px);
+  font-size: var(--font-size-2xs, 0.6875rem);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -503,7 +504,8 @@ code.ai-provenance-val {
 .ai-edit-toggle-btn {
   background: transparent;
   border: none;
-  font-size: 11px;
+  font: inherit;
+  font-size: var(--font-size-2xs, 0.6875rem);
   font-weight: 500;
   color: var(--color-primary);
   cursor: pointer;
@@ -522,7 +524,7 @@ code.ai-provenance-val {
 .ai-diff-pre {
   margin: 0;
   font-family: var(--font-mono, monospace);
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs, 0.75rem);
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--color-text);
@@ -542,8 +544,9 @@ code.ai-provenance-val {
 .ai-edit-textarea {
   width: 100%;
   padding: 8px;
+  font: inherit;
   font-family: var(--font-mono, monospace);
-  font-size: 12px;
+  font-size: 0.75rem;
   border: 1px solid var(--color-primary);
   border-radius: 4px;
   box-sizing: border-box;
@@ -559,7 +562,7 @@ code.ai-provenance-val {
 }
 
 .ai-reason-label {
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 600;
   color: var(--color-text);
 }
@@ -571,7 +574,8 @@ code.ai-provenance-val {
 .ai-reason-input {
   width: 100%;
   padding: 8px 12px;
-  font-size: var(--font-size-sm, 13px);
+  font: inherit;
+  font-size: var(--font-size-sm, 0.8125rem);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: var(--radius-md, 6px);
   outline: none;
@@ -590,7 +594,7 @@ code.ai-provenance-val {
 
 .ai-validation-error {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--color-error);
 }
 
@@ -599,22 +603,30 @@ code.ai-provenance-val {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   width: 100%;
 }
 
 .ai-footer-right {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
 .btn {
   padding: 8px 16px;
-  font-size: 13px;
+  font: inherit;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-weight: 500;
   border-radius: var(--radius-md, 6px);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .btn-secondary {

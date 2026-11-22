@@ -976,16 +976,39 @@ const typedStudy = ref("");
 const inspectorCollapsed = ref(true);
 const inspectorRef = ref<InstanceType<typeof CanvasInspector> | null>(null);
 const topbarRef = ref<HTMLElement | null>(null);
-const topbarHeight = ref(45);
+const topbarHeight = ref(0);
 let topbarResizeObserver: ResizeObserver | null = null;
+
+function applyRootTopbarHeight(pxValue: number) {
+  if (typeof document !== "undefined" && document.documentElement) {
+    document.documentElement.style.setProperty(
+      "--canvas-topbar-height",
+      `${pxValue}px`
+    );
+  }
+}
 
 function syncTopbarHeight() {
   const el = topbarRef.value;
-  if (!el || typeof el.getBoundingClientRect !== "function") return;
-  const measured = Math.round(el.getBoundingClientRect().height);
-  if (measured > 0) {
-    topbarHeight.value = measured;
+  if (!el || typeof el.getBoundingClientRect !== "function") {
+    topbarHeight.value = 0;
+    applyRootTopbarHeight(0);
+    return;
   }
+  if (
+    typeof window !== "undefined" &&
+    typeof window.getComputedStyle === "function"
+  ) {
+    const pos = window.getComputedStyle(el).position;
+    if (pos && pos !== "sticky") {
+      topbarHeight.value = 0;
+      applyRootTopbarHeight(0);
+      return;
+    }
+  }
+  const measured = Math.ceil(el.getBoundingClientRect().height);
+  topbarHeight.value = measured > 0 ? measured : 0;
+  applyRootTopbarHeight(topbarHeight.value);
 }
 
 const hasStudyDirectoryService = computed(
@@ -2162,15 +2185,29 @@ function onGlobalKeydown(event: KeyboardEvent) {
   }
 }
 
+watch(topbarRef, (el) => {
+  if (topbarResizeObserver) {
+    topbarResizeObserver.disconnect();
+    topbarResizeObserver = null;
+  }
+  syncTopbarHeight();
+  if (typeof ResizeObserver !== "undefined" && el instanceof HTMLElement) {
+    topbarResizeObserver = new ResizeObserver(() => syncTopbarHeight());
+    topbarResizeObserver.observe(el);
+  }
+});
+
 onMounted(() => {
   window.addEventListener("beforeunload", handleBeforeUnload);
+  window.addEventListener("resize", syncTopbarHeight);
   if (!inAppShell) {
     document.addEventListener("keydown", onGlobalKeydown);
   }
   syncTopbarHeight();
   if (
     typeof ResizeObserver !== "undefined" &&
-    topbarRef.value instanceof HTMLElement
+    topbarRef.value instanceof HTMLElement &&
+    !topbarResizeObserver
   ) {
     topbarResizeObserver = new ResizeObserver(() => syncTopbarHeight());
     topbarResizeObserver.observe(topbarRef.value);
@@ -2178,11 +2215,13 @@ onMounted(() => {
 });
 onUnmounted(() => {
   window.removeEventListener("beforeunload", handleBeforeUnload);
+  window.removeEventListener("resize", syncTopbarHeight);
   document.removeEventListener("keydown", onGlobalKeydown);
   if (topbarResizeObserver) {
     topbarResizeObserver.disconnect();
     topbarResizeObserver = null;
   }
+  applyRootTopbarHeight(0);
 });
 </script>
 
@@ -2190,10 +2229,11 @@ onUnmounted(() => {
 .canvas {
   --canvas-sticky-offset: 0px;
   --canvas-pane-top: calc(
-    var(--canvas-sticky-offset) + var(--canvas-topbar-height, 45px)
+    var(--canvas-sticky-offset) + var(--canvas-topbar-height, 0px)
   );
   display: flex;
   flex-direction: column;
+  min-width: 0;
   min-height: 100vh;
   background: var(--semantic-color-surface-muted);
   color: var(--primary);
@@ -2201,7 +2241,7 @@ onUnmounted(() => {
 }
 
 .canvas.canvas-in-shell {
-  --canvas-sticky-offset: var(--shell-header-height, 57px);
+  --canvas-sticky-offset: var(--shell-header-height, 0px);
   min-height: calc(100vh - var(--canvas-sticky-offset));
 }
 
@@ -2221,9 +2261,11 @@ onUnmounted(() => {
   top: var(--canvas-sticky-offset);
   z-index: 20;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 8px 16px;
   padding: 8px 16px;
+  min-width: 0;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface);
 }
@@ -2262,6 +2304,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 6px 10px;
+  font: inherit;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
@@ -2271,6 +2314,7 @@ onUnmounted(() => {
 
 .ai-toggle {
   padding: 6px 10px;
+  font: inherit;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
@@ -2286,11 +2330,16 @@ onUnmounted(() => {
 
 .sr-only {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 1px;
   height: 1px;
+  padding: 0;
+  margin: -1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+  border: 0;
 }
 
 .palette-trigger kbd {
@@ -2522,6 +2571,7 @@ onUnmounted(() => {
 
 .study-card-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
@@ -2593,15 +2643,26 @@ onUnmounted(() => {
 
 .create-study-grid {
   width: 100%;
+  min-width: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.75rem), 1fr));
   gap: 12px;
 }
 
 .create-field {
+  position: relative;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 4px;
+}
+
+.create-field
+  input.sr-only:focus-visible
+  ~ .create-file-row
+  #create-study-choose-file {
+  outline: 2px solid var(--semantic-color-interactive-primary);
+  outline-offset: 2px;
 }
 
 .create-field-wide {
@@ -2661,6 +2722,21 @@ onUnmounted(() => {
     overflow-y: visible;
     align-self: stretch;
     border-top: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 767px), (max-height: 479px) {
+  .topbar {
+    position: static;
+    padding: 8px 12px;
+  }
+
+  .workspace {
+    padding: 12px;
+  }
+
+  .open-study {
+    padding: 16px 12px;
   }
 }
 </style>

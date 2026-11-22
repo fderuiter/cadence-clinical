@@ -1688,7 +1688,12 @@
               background-color: var(--semantic-color-surface-muted);
               cursor: pointer;
               margin-bottom: 14px;
-              transition: all 0.2s ease;
+              transition:
+                background-color 0.2s ease,
+                border-color 0.2s ease,
+                color 0.2s ease,
+                box-shadow 0.2s ease,
+                opacity 0.2s ease;
             "
             @dragover.prevent="isDragging = true"
             @dragleave.prevent="isDragging = false"

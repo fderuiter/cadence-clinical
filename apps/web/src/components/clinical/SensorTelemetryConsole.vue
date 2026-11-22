@@ -1250,14 +1250,14 @@ onMounted(() => {
 }
 
 .console-title {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0 0 6px 0;
 }
 
 .console-subtitle {
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   color: var(--semantic-color-text-secondary);
   line-height: 1.5;
   margin: 0;
@@ -1294,7 +1294,7 @@ onMounted(() => {
   width: 44px;
   height: 44px;
   border-radius: 8px;
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 
 .bg-blue {
@@ -1316,20 +1316,20 @@ onMounted(() => {
 }
 
 .metric-label {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
 
 .metric-value {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 2px 0;
 }
 
 .metric-sub {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1347,14 +1347,19 @@ onMounted(() => {
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .tab-button:hover {
@@ -1369,7 +1374,7 @@ onMounted(() => {
 .badge-count {
   background: var(--semantic-color-error);
   color: var(--semantic-color-surface);
-  font-size: 10px;
+  font-size: 0.625rem;
   padding: 2px 6px;
   border-radius: 10px;
 }
@@ -1402,7 +1407,7 @@ onMounted(() => {
 }
 
 .card-title {
-  font-size: 14px;
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 600;
   color: var(--semantic-color-text);
   margin: 0;
@@ -1452,7 +1457,7 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .legend-item {
@@ -1497,12 +1502,12 @@ onMounted(() => {
 }
 
 .sub-label {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-text-secondary);
 }
 
 .sub-val {
-  font-size: 14px;
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -1515,7 +1520,7 @@ onMounted(() => {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   text-align: left;
   font-variant-numeric: tabular-nums;
 }
@@ -1556,7 +1561,7 @@ onMounted(() => {
   color: var(--semantic-color-accent-inverse);
   padding: 14px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 0.75rem;
   overflow-x: auto;
   margin: 0;
   font-family: monospace;
@@ -1564,7 +1569,7 @@ onMounted(() => {
 
 /* Badges & Buttons */
 .badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 4px;
@@ -1600,7 +1605,7 @@ onMounted(() => {
 }
 
 .severity-badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 4px;
@@ -1625,7 +1630,7 @@ onMounted(() => {
   padding: 3px 8px;
   border-radius: 4px;
   font-weight: 600;
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
 }
 
 .lakehouse-tag {
@@ -1633,7 +1638,7 @@ onMounted(() => {
   color: var(--semantic-color-primary);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   font-weight: 600;
 }
 
@@ -1642,7 +1647,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-weight: 600;
   border-radius: var(--radius-md, 6px);
   cursor: pointer;
@@ -1669,7 +1674,7 @@ onMounted(() => {
 }
 .btn-sm {
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 /* Modals */
@@ -1704,7 +1709,7 @@ onMounted(() => {
 }
 
 .modal-title {
-  font-size: 15px;
+  font-size: var(--font-size-base, 0.9375rem);
   font-weight: 600;
   margin: 0;
 }
@@ -1712,7 +1717,7 @@ onMounted(() => {
 .modal-close {
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 1.25rem;
   cursor: pointer;
   color: var(--semantic-color-text-secondary);
 }
@@ -1742,7 +1747,7 @@ onMounted(() => {
 }
 
 .form-label {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -1751,7 +1756,7 @@ onMounted(() => {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
 }
@@ -1765,7 +1770,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-error-border-soft);
   padding: 12px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   margin-bottom: 14px;
 }
 
@@ -1779,10 +1784,10 @@ onMounted(() => {
   font-weight: 700;
 }
 .text-sm {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .threshold-sub {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-text-secondary);
   margin-left: 4px;
 }

@@ -637,7 +637,12 @@ onUnmounted(() => {
   padding: 4px 6px;
   cursor: pointer;
   font-size: 1rem;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s,
+    opacity 0.15s;
 }
 
 .btn-icon-toggle:hover,
@@ -981,7 +986,12 @@ onUnmounted(() => {
   padding: 10px 12px;
   background-color: var(--semantic-color-surface-muted);
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition:
+    background-color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out,
+    color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out,
+    opacity 0.15s ease-in-out;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1061,7 +1071,12 @@ onUnmounted(() => {
   padding: 10px 12px;
   background-color: white;
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s,
+    opacity 0.15s;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1160,7 +1175,12 @@ onUnmounted(() => {
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s,
+    opacity 0.15s;
   display: inline-flex;
   align-items: center;
   gap: 6px;

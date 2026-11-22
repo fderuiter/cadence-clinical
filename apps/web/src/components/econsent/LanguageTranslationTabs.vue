@@ -137,7 +137,12 @@ const selectLanguage = (langCode) => {
   border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s,
+    box-shadow 0.2s,
+    opacity 0.2s;
 }
 
 .tab-item:hover {

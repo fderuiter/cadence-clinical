@@ -604,6 +604,8 @@ defineExpose({
 
 .sr-only {
   position: absolute;
+  left: 0;
+  top: 0;
   width: 1px;
   height: 1px;
   overflow: hidden;
@@ -669,7 +671,7 @@ defineExpose({
 
 .template-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13.75rem), 1fr));
   gap: 6px;
   max-height: 180px;
   overflow-y: auto;
@@ -677,6 +679,7 @@ defineExpose({
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
+  min-width: 0;
 }
 
 .template-option {
@@ -707,14 +710,16 @@ defineExpose({
 
 .import-fields-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.75rem), 1fr));
   gap: 12px;
+  min-width: 0;
 }
 
 .field-group {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .checkbox-group {

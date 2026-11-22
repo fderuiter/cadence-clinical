@@ -1564,7 +1564,7 @@ onMounted(() => {
 }
 
 .badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: var(--radius-sm);
@@ -1619,14 +1619,14 @@ onMounted(() => {
 
 .sce-title {
   margin: 0 0 6px;
-  font-size: 24px;
+  font-size: var(--font-size-2xl, 1.5rem);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .sce-subtitle {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   color: var(--semantic-color-text-secondary);
   line-height: 1.5;
 }
@@ -1653,7 +1653,7 @@ onMounted(() => {
 }
 
 .status-icon {
-  font-size: 18px;
+  font-size: var(--font-size-lg, 1.125rem);
 }
 
 .status-info {
@@ -1662,12 +1662,12 @@ onMounted(() => {
 }
 
 .status-label {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
 .status-sub {
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1681,7 +1681,7 @@ onMounted(() => {
 
 .tab-btn {
   padding: 12px 18px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-weight: 600;
   border: none;
   background: transparent;
@@ -1689,7 +1689,12 @@ onMounted(() => {
   border-bottom: 3px solid transparent;
   cursor: pointer;
   min-height: 48px;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .tab-btn:hover {
@@ -1719,18 +1724,18 @@ onMounted(() => {
 
 .card-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-md, 1rem);
   font-weight: 700;
 }
 
 .card-sub {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--semantic-color-text-secondary);
 }
 
 .total-badge {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
@@ -1764,7 +1769,7 @@ onMounted(() => {
 
 .lang-btn {
   padding: 8px 14px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -1786,7 +1791,7 @@ onMounted(() => {
 }
 
 .template-label {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1805,14 +1810,14 @@ onMounted(() => {
 }
 
 .form-label {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
 .form-input,
 .form-select {
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--semantic-color-surface);
@@ -1832,7 +1837,7 @@ onMounted(() => {
   padding: 8px 16px;
   background: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-family: var(--font-mono);
 }
 
@@ -1840,7 +1845,7 @@ onMounted(() => {
   width: 100%;
   padding: 16px;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   line-height: 1.6;
   background: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-text-inverse);
@@ -1866,7 +1871,7 @@ onMounted(() => {
 }
 
 .field-hint {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1895,7 +1900,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-weight: 600;
   cursor: pointer;
 }
@@ -1913,7 +1918,7 @@ onMounted(() => {
 
 .token-warning {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-warning);
   line-height: 1.4;
 }
@@ -1927,7 +1932,7 @@ onMounted(() => {
 
 .bounds-title {
   margin: 0 0 10px;
-  font-size: 12px;
+  font-size: 0.75rem;
   text-transform: uppercase;
   color: var(--semantic-color-text-secondary);
 }
@@ -1941,7 +1946,7 @@ onMounted(() => {
 .bound-item {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .bound-name {
@@ -1962,18 +1967,23 @@ onMounted(() => {
   justify-content: center;
   gap: 8px;
   padding: 10px 18px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-weight: 600;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
   min-height: 44px;
 }
 
 .btn-lg {
   padding: 14px 24px;
-  font-size: 14px;
+  font-size: var(--font-size-sm, 0.875rem);
   min-height: 50px;
 }
 
@@ -2005,14 +2015,14 @@ onMounted(() => {
 
 .btn-xs {
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   min-height: 32px;
 }
 
 .btn-close {
   background: transparent;
   border: none;
-  font-size: 20px;
+  font-size: 1.25rem;
   cursor: pointer;
 }
 
@@ -2047,7 +2057,7 @@ onMounted(() => {
 .status-pill {
   padding: 3px 8px;
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   font-weight: 700;
 }
 
@@ -2074,12 +2084,12 @@ onMounted(() => {
 }
 
 .seal-label {
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--semantic-color-text-secondary);
 }
 
 .seal-code {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   word-break: break-all;
   font-family: var(--font-mono);
 }
@@ -2089,7 +2099,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-top: 4px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
@@ -2101,7 +2111,7 @@ onMounted(() => {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2117,12 +2127,12 @@ onMounted(() => {
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
 }
 
 .cell-id code {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
 }
 
 .cell-bold {
@@ -2135,19 +2145,19 @@ onMounted(() => {
 
 .cell-date {
   color: var(--semantic-color-text-secondary);
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
 }
 
 .digest-pill {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   background: var(--semantic-color-surface-muted);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
 }
 
 .lang-tag {
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: var(--radius-sm);
@@ -2164,7 +2174,7 @@ onMounted(() => {
 }
 
 .version-pill {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   background: var(--semantic-color-surface-muted);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
@@ -2173,7 +2183,7 @@ onMounted(() => {
 .badge-unblind-tag {
   background: var(--semantic-color-success-bg-soft);
   color: var(--semantic-color-success-dark);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: var(--radius-sm);
@@ -2182,7 +2192,7 @@ onMounted(() => {
 .badge-blinded-tag {
   background: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-secondary);
-  font-size: 10px;
+  font-size: 0.625rem;
   padding: 2px 6px;
   border-radius: var(--radius-sm);
 }
@@ -2228,12 +2238,12 @@ onMounted(() => {
 }
 
 .prov-label {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-text-secondary);
 }
 
 .prov-card code {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   word-break: break-all;
   font-family: var(--font-mono);
 }
@@ -2248,7 +2258,7 @@ onMounted(() => {
 
 .sig-title {
   margin: 0 0 12px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-weight: 700;
   color: var(--semantic-color-info);
 }
@@ -2270,17 +2280,17 @@ onMounted(() => {
 }
 
 .sig-lbl {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-text-secondary);
 }
 
 .sig-val {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
 .sig-hmac {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   font-family: var(--font-mono);
   word-break: break-all;
 }
@@ -2306,7 +2316,7 @@ onMounted(() => {
 }
 
 .art-icon {
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 
 .art-meta {
@@ -2317,11 +2327,11 @@ onMounted(() => {
 
 .art-name {
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
 }
 
 .art-sub {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -2335,7 +2345,7 @@ onMounted(() => {
 
 .preview-text {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   font-family: var(--font-mono);
 }
 
@@ -2349,7 +2359,7 @@ onMounted(() => {
   padding: 6px 12px;
   background: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   font-family: var(--font-mono);
 }
 
@@ -2359,7 +2369,7 @@ onMounted(() => {
   background: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-border);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.5;
   max-height: 300px;
   overflow-y: auto;
@@ -2423,13 +2433,13 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .pkg-footer {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   margin-top: 4px;
 }
 
@@ -2470,7 +2480,7 @@ onMounted(() => {
 
 .modal-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-md, 1rem);
   font-weight: 700;
 }
 

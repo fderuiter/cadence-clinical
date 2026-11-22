@@ -127,12 +127,47 @@ describe("CSS Assets and Package Exports", () => {
     expect(content).toContain(".responsive-grid");
     expect(content).toContain(".grid-layout-responsive");
     expect(content).toContain(".grid-2-responsive");
+    expect(content).toContain(".grid-asymmetric-responsive");
+    expect(content).toContain(".grid-cards-responsive");
+    expect(content).toContain(".split-pane-responsive");
+    expect(content).toContain(".responsive-grid > fieldset > *");
+    expect(content).toContain('.responsive-grid [class*="grid-span-"]');
+    expect(content).toContain(
+      "repeat(\n    auto-fit,\n    minmax(min(100%, var(--grid-card-min, 15rem)), 1fr)\n  )"
+    );
     expect(content).toContain(".container");
     expect(content).toContain(".touch-target");
     expect(content).toContain(".scrollable-table-wrapper");
     expect(content).toContain("@media (max-width: 640px)");
     expect(content).toContain(".drawer-mobile-full");
     expect(content).toContain(".drawer-panel-mobile-full");
+  });
+
+  it("defines rem-based typography tokens and min-width: 0 clinical control primitives for WCAG SC 1.4.4 and SC 1.4.10", () => {
+    const tokensPath = path.join(uiDir, "tokens.css");
+    const tokensContent = fs.readFileSync(tokensPath, "utf-8");
+    const tokens = parseRootTokens(tokensContent);
+
+    const fontScaleTokens = [
+      ["--font-size-2xs", "0.6875rem"],
+      ["--font-size-xs", "0.8125rem"],
+      ["--font-size-sm", "0.875rem"],
+      ["--font-size-base", "0.9375rem"],
+      ["--font-size-md", "1rem"],
+      ["--font-size-lg", "1.125rem"],
+      ["--font-size-xl", "1.375rem"],
+      ["--font-size-2xl", "1.5rem"],
+      ["--font-size-3xl", "1.75rem"],
+    ];
+
+    for (const [tokenName, expectedRem] of fontScaleTokens) {
+      expect(tokens.get(tokenName)).toBe(expectedRem);
+    }
+    expect(tokens.get("--grid-card-min")).toBe("15rem");
+    expect(tokensContent).toContain("min-width: 0;");
+    expect(tokensContent).toContain("max-width: 100%;");
+    expect(tokensContent).toContain(".clinical-input .query-flag");
+    expect(tokensContent).not.toContain("transition: all");
   });
 
   describe("WCAG 2.2 Relative Luminance Contrast Gates", () => {

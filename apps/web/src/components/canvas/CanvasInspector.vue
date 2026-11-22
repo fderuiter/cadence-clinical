@@ -935,9 +935,10 @@ watch(aiEnabled, (on) => {
 
 .details {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 6px 12px;
   margin: 0;
+  min-width: 0;
 }
 
 .details dt {
@@ -946,6 +947,8 @@ watch(aiEnabled, (on) => {
 
 .details dd {
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .numeric {

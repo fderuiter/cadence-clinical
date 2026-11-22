@@ -261,7 +261,7 @@ useFocusTrap(dialogRef, {
 
 .modal-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-md, 1rem);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -269,7 +269,8 @@ useFocusTrap(dialogRef, {
 .modal-close-btn {
   background: transparent;
   border: none;
-  font-size: 18px;
+  font: inherit;
+  font-size: var(--font-size-lg, 1.125rem);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   padding: 4px 8px;
@@ -284,13 +285,14 @@ useFocusTrap(dialogRef, {
 .modal-body {
   padding: 20px;
   overflow-y: auto;
-  font-size: 14px;
+  font-size: var(--font-size-sm, 0.875rem);
   color: var(--semantic-color-text);
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 14px 20px;
   border-top: 1px solid var(--semantic-color-border);
@@ -301,12 +303,17 @@ useFocusTrap(dialogRef, {
 
 .btn {
   padding: 8px 16px;
-  font-size: 14px;
+  font: inherit;
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 500;
   border-radius: var(--radius-sm);
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .btn-secondary {

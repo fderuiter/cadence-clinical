@@ -454,7 +454,12 @@ onMounted(() => {
   color: var(--semantic-color-text-secondary);
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .mode-btn.active {
@@ -552,7 +557,12 @@ onMounted(() => {
   border-radius: 8px;
   padding: 16px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -639,7 +649,12 @@ onMounted(() => {
   color: var(--semantic-color-text-secondary);
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .tab-btn:hover {

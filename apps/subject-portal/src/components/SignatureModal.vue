@@ -30,7 +30,7 @@
               background-color: var(--semantic-color-error-bg);
               color: var(--semantic-color-error);
               margin-bottom: 12px;
-              font-size: 13px;
+              font-size: var(--font-size-xs, 0.8125rem);
               font-weight: 600;
             "
             role="status"

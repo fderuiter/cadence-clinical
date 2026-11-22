@@ -1766,9 +1766,14 @@ onUnmounted(() => {
 }
 .ecrf-form-grid {
   display: grid;
-  grid-template-columns: minmax(140px, max-content) 1fr;
+  grid-template-columns: minmax(140px, max-content) minmax(0, 1fr);
   gap: 6px 12px;
   align-items: center;
+  min-width: 0;
+}
+.ecrf-form-grid > * {
+  min-width: 0;
+  max-width: 100%;
 }
 .ecrf-form-grid button {
   grid-column: 2;
@@ -1776,12 +1781,28 @@ onUnmounted(() => {
 }
 .ecrf-form-summary {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 4px 12px;
   font-size: 0.85rem;
+  min-width: 0;
 }
 .ecrf-form-summary dt {
   font-weight: 600;
+}
+.ecrf-form-summary dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 639px) {
+  .ecrf-form-grid,
+  .ecrf-form-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ecrf-form-grid button {
+    grid-column: 1;
+    justify-self: stretch;
+  }
 }
 .ecrf-table-scroll {
   overflow-x: auto;

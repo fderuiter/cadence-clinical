@@ -29,7 +29,7 @@
         background: var(--semantic-color-error-bg);
         border: 1px solid var(--semantic-color-error);
         color: var(--semantic-color-error);
-        font-size: 14px;
+        font-size: var(--font-size-sm, 0.875rem);
         font-weight: 600;
       "
     >
@@ -45,7 +45,13 @@
       style="margin-bottom: 20px"
     >
       <h3 style="margin-top: 0">Sign In Required for Participant Wallet</h3>
-      <p style="font-size: 14px; color: var(--text-muted); line-height: 1.5">
+      <p
+        style="
+          font-size: var(--font-size-sm, 0.875rem);
+          color: var(--text-muted);
+          line-height: 1.5;
+        "
+      >
         Direct participant stipend balances, payout cards, and receipt
         reimbursements require an active authenticated participant session.
         Please sign in or contact your study coordinator for assistance.
@@ -87,7 +93,7 @@
           background: var(--semantic-color-error-bg);
           border: 1px solid var(--semantic-color-error);
           color: var(--semantic-color-error);
-          font-size: 14px;
+          font-size: var(--font-size-sm, 0.875rem);
         "
       >
         <strong style="display: block; margin-bottom: 4px">
@@ -117,7 +123,7 @@
           background: var(--semantic-color-warning-bg-light);
           border: 1px solid var(--semantic-color-warning-border-strong);
           color: var(--semantic-color-warning-text-dark);
-          font-size: 14px;
+          font-size: var(--font-size-sm, 0.875rem);
           font-weight: 600;
         "
       >
@@ -151,7 +157,9 @@
           "
         >
           <div>
-            <div style="font-size: 14px; font-weight: 600">
+            <div
+              style="font-size: var(--font-size-sm, 0.875rem); font-weight: 600"
+            >
               {{
                 isDemo
                   ? "Demo Sandbox Wallet Balance"
@@ -160,7 +168,7 @@
             </div>
             <div
               id="wallet-balance-amount"
-              style="font-size: 32px; font-weight: 800; margin: 4px 0 0 0"
+              style="font-size: 2rem; font-weight: 800; margin: 4px 0 0 0"
             >
               {{ formattedAvailableBalance }}
             </div>
@@ -201,41 +209,60 @@
         <div
           style="
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            grid-template-columns: repeat(
+              auto-fit,
+              minmax(min(100%, 8.75rem), 1fr)
+            );
             gap: 12px;
             margin-top: 16px;
             padding-top: 12px;
             border-top: 1px solid var(--semantic-color-primary-light);
-            font-size: 13px;
+            font-size: var(--font-size-xs, 0.8125rem);
+            min-width: 0;
           "
         >
           <div>
             <div style="font-weight: 600">Lifetime Stipends</div>
-            <strong id="wallet-lifetime-stipends" style="font-size: 16px">
+            <strong
+              id="wallet-lifetime-stipends"
+              style="font-size: var(--font-size-md, 1rem)"
+            >
               {{ formatCurrency(wallet.lifetimeStipends) }}
             </strong>
           </div>
           <div>
             <div style="font-weight: 600">Lifetime Reimbursements</div>
-            <strong id="wallet-lifetime-reimbursements" style="font-size: 16px">
+            <strong
+              id="wallet-lifetime-reimbursements"
+              style="font-size: var(--font-size-md, 1rem)"
+            >
               {{ formatCurrency(wallet.lifetimeReimbursements) }}
             </strong>
           </div>
           <div>
             <div style="font-weight: 600">Total Paid Out</div>
-            <strong id="wallet-lifetime-disbursements" style="font-size: 16px">
+            <strong
+              id="wallet-lifetime-disbursements"
+              style="font-size: var(--font-size-md, 1rem)"
+            >
               {{ formatCurrency(wallet.lifetimeDisbursements) }}
             </strong>
           </div>
           <div>
             <div style="font-weight: 600">Taxable YTD (1099)</div>
-            <strong id="wallet-taxable-ytd" style="font-size: 16px">
+            <strong
+              id="wallet-taxable-ytd"
+              style="font-size: var(--font-size-md, 1rem)"
+            >
               {{ formatCurrency(wallet.taxableYtd) }}
             </strong>
           </div>
           <div>
             <div style="font-weight: 600">Tax Form (W-9)</div>
-            <strong id="wallet-w9-status" style="font-size: 15px">
+            <strong
+              id="wallet-w9-status"
+              style="font-size: var(--font-size-base, 0.9375rem)"
+            >
               {{ formatEnumLabel(wallet.w9Status || "NOT_REQUIRED") }}
             </strong>
           </div>
@@ -260,13 +287,13 @@
         <h3
           style="
             margin: 0 0 4px 0;
-            font-size: 16px;
+            font-size: var(--font-size-md, 1rem);
             color: var(--semantic-color-success);
           "
         >
           ✅ Balance Payout Dispatched
         </h3>
-        <p style="margin: 0; font-size: 14px">
+        <p style="margin: 0; font-size: var(--font-size-sm, 0.875rem)">
           Transferred
           <strong>{{
             formatCurrency(
@@ -293,15 +320,19 @@
         class="card"
         style="margin-bottom: 20px"
       >
-        <h3 style="margin-top: 0; font-size: 16px">
+        <h3 style="margin-top: 0; font-size: var(--font-size-md, 1rem)">
           Linked Payout Methods (Masked)
         </h3>
         <div
           style="
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(
+              auto-fit,
+              minmax(min(100%, 13.75rem), 1fr)
+            );
             gap: 12px;
-            font-size: 14px;
+            font-size: var(--font-size-sm, 0.875rem);
+            min-width: 0;
           "
         >
           <div
@@ -320,7 +351,10 @@
             <div
               v-if="wallet.achRoutingMask"
               id="wallet-ach-routing-mask"
-              style="color: var(--text-muted); font-size: 13px"
+              style="
+                color: var(--text-muted);
+                font-size: var(--font-size-xs, 0.8125rem);
+              "
             >
               Routing: {{ wallet.achRoutingMask }}
             </div>
@@ -341,7 +375,10 @@
             </div>
             <div
               v-if="wallet.virtualCardExpiry"
-              style="color: var(--text-muted); font-size: 13px"
+              style="
+                color: var(--text-muted);
+                font-size: var(--font-size-xs, 0.8125rem);
+              "
             >
               Expires: {{ wallet.virtualCardExpiry }}
             </div>
@@ -354,7 +391,12 @@
         <h3 style="margin-top: 0">
           📷 Travel &amp; Meal Receipt Reimbursement
         </h3>
-        <p style="font-size: 14px; color: var(--text-muted)">
+        <p
+          style="
+            font-size: var(--font-size-sm, 0.875rem);
+            color: var(--text-muted);
+          "
+        >
           Upload a receipt photo or PDF and we will fill in the merchant, date,
           category, and amount for you to review. Routine claims under $100.00
           (meals up to $75.00) with clear receipts are approved automatically.
@@ -379,14 +421,28 @@
           @keydown.enter.prevent="triggerReceiptUpload"
           @keydown.space.prevent="triggerReceiptUpload"
         >
-          <span aria-hidden="true" style="font-size: 24px">📷</span>
-          <p style="margin: 6px 0 0 0; font-size: 14px; font-weight: 600">
+          <span
+            aria-hidden="true"
+            style="font-size: var(--font-size-2xl, 1.5rem)"
+            >📷</span
+          >
+          <p
+            style="
+              margin: 6px 0 0 0;
+              font-size: var(--font-size-sm, 0.875rem);
+              font-weight: 600;
+            "
+          >
             Upload receipt image for travel reimbursement
           </p>
           <p
             v-if="wallet.expenseForm.receiptImageName"
             id="receipt-selected-filename"
-            style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted)"
+            style="
+              margin: 4px 0 0 0;
+              font-size: var(--font-size-xs, 0.8125rem);
+              color: var(--text-muted);
+            "
           >
             Selected: {{ wallet.expenseForm.receiptImageName }}
           </p>
@@ -459,7 +515,7 @@
             background: var(--semantic-color-warning-bg-light);
             border: 1px solid var(--semantic-color-warning-border-strong);
             color: var(--semantic-color-warning-text-dark);
-            font-size: 14px;
+            font-size: var(--font-size-sm, 0.875rem);
             font-weight: 600;
           "
         >
@@ -488,7 +544,7 @@
               flex-wrap: wrap;
             "
           >
-            <h4 style="margin: 0; font-size: 16px">
+            <h4 style="margin: 0; font-size: var(--font-size-md, 1rem)">
               {{
                 wallet.expenseManualEntry && !wallet.expenseOcr?.data
                   ? "Enter Receipt Details"
@@ -638,18 +694,23 @@
               style="
                 margin: 0 0 6px 0;
                 color: var(--semantic-color-success);
-                font-size: 16px;
+                font-size: var(--font-size-md, 1rem);
               "
             >
               ✅ Reimbursement Auto-Approved &amp; Dispatched
             </h4>
-            <p style="margin: 0 0 8px 0; font-size: 14px">
+            <p
+              style="
+                margin: 0 0 8px 0;
+                font-size: var(--font-size-sm, 0.875rem);
+              "
+            >
               Direct ACH reimbursement has been dispatched to your linked payout
               account.
             </p>
             <div
               style="
-                font-size: 13px;
+                font-size: var(--font-size-xs, 0.8125rem);
                 font-family: monospace;
                 background: var(--semantic-color-surface);
                 padding: 6px 10px;
@@ -683,12 +744,15 @@
               style="
                 margin: 0 0 6px 0;
                 color: var(--semantic-color-warning-text-dark);
-                font-size: 16px;
+                font-size: var(--font-size-md, 1rem);
               "
             >
               ⚠️ Expense Claim Held for Manual Review
             </h4>
-            <p id="pending-review-notes" style="margin: 0; font-size: 14px">
+            <p
+              id="pending-review-notes"
+              style="margin: 0; font-size: var(--font-size-sm, 0.875rem)"
+            >
               {{
                 wallet.expenseResult.review_notes ||
                 wallet.expenseResult.reviewNotes ||
@@ -701,7 +765,7 @@
 
       <!-- Submitted Reimbursement Claims History -->
       <div id="wallet-expense-claims" class="card" style="margin-top: 20px">
-        <h3 style="margin-top: 0; font-size: 16px">
+        <h3 style="margin-top: 0; font-size: var(--font-size-md, 1rem)">
           Expense Reimbursement Claims
         </h3>
         <p
@@ -710,7 +774,11 @@
             wallet.expenseClaims.length === 0
           "
           id="wallet-expense-claims-empty"
-          style="margin: 0; font-size: 14px; color: var(--text-muted)"
+          style="
+            margin: 0;
+            font-size: var(--font-size-sm, 0.875rem);
+            color: var(--text-muted);
+          "
         >
           No travel or meal reimbursement claims submitted yet.
         </p>
@@ -725,7 +793,7 @@
               align-items: flex-start;
               padding: 12px 0;
               border-bottom: 1px solid var(--semantic-color-border);
-              font-size: 14px;
+              font-size: var(--font-size-sm, 0.875rem);
               gap: 12px;
               flex-wrap: wrap;
             "
@@ -739,7 +807,7 @@
                   "Expense Claim"
                 }}
               </div>
-              <div style="font-size: 12px; color: var(--text-muted)">
+              <div style="font-size: 0.75rem; color: var(--text-muted)">
                 {{
                   formatEnumLabel(claim.category || claim.Category || "TRAVEL")
                 }}
@@ -757,7 +825,11 @@
                   claim.disbursement_reference ||
                   claim.DisbursementReference
                 "
-                style="font-size: 12px; font-family: monospace; margin-top: 2px"
+                style="
+                  font-size: 0.75rem;
+                  font-family: monospace;
+                  margin-top: 2px;
+                "
               >
                 Ref:
                 {{
@@ -771,7 +843,7 @@
                   claim.reviewNotes || claim.review_notes || claim.ReviewNotes
                 "
                 style="
-                  font-size: 12px;
+                  font-size: 0.75rem;
                   color: var(--text-muted);
                   margin-top: 2px;
                 "
@@ -817,18 +889,21 @@
         class="card"
         style="margin-top: 20px"
       >
-        <h3 style="margin-top: 0; font-size: 16px">Recent Wallet Activity</h3>
+        <h3 style="margin-top: 0; font-size: var(--font-size-md, 1rem)">
+          Recent Wallet Activity
+        </h3>
         <ul style="list-style: none; padding: 0; margin: 0">
           <li
             v-for="tx in wallet.recentTransactions"
             :key="tx.id || tx.Id"
             style="
               display: flex;
+              flex-wrap: wrap;
               justify-content: space-between;
               align-items: center;
               padding: 10px 0;
               border-bottom: 1px solid var(--semantic-color-border);
-              font-size: 14px;
+              font-size: var(--font-size-sm, 0.875rem);
               gap: 12px;
             "
           >
@@ -840,7 +915,7 @@
                   formatEnumLabel(tx.transactionType || tx.TransactionType)
                 }}
               </div>
-              <div style="font-size: 12px; color: var(--text-muted)">
+              <div style="font-size: 0.75rem; color: var(--text-muted)">
                 {{ formatEnumLabel(tx.transactionType || tx.TransactionType) }}
               </div>
             </div>
@@ -897,7 +972,7 @@
                   background: var(--semantic-color-error-bg);
                   border: 1px solid var(--semantic-color-error);
                   color: var(--semantic-color-error);
-                  font-size: 13px;
+                  font-size: var(--font-size-xs, 0.8125rem);
                   font-weight: 600;
                   margin-bottom: 12px;
                 "
@@ -907,7 +982,11 @@
 
               <fieldset class="clinical-radio-grid" style="margin-bottom: 16px">
                 <legend
-                  style="font-weight: 700; font-size: 13px; padding: 0 4px"
+                  style="
+                    font-weight: 700;
+                    font-size: var(--font-size-xs, 0.8125rem);
+                    padding: 0 4px;
+                  "
                 >
                   Payout Destination
                 </legend>
@@ -964,6 +1043,7 @@
                 <div
                   style="
                     display: flex;
+                    flex-wrap: wrap;
                     justify-content: space-between;
                     align-items: center;
                     margin-bottom: 6px;
@@ -980,7 +1060,7 @@
                     style="
                       min-height: var(--touch-target-min);
                       padding: 6px 12px;
-                      font-size: 12px;
+                      font-size: 0.75rem;
                     "
                     @click="fillFullDisburseAmount"
                   >

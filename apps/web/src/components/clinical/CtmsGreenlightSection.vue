@@ -446,7 +446,7 @@ onMounted(() => {
 
 .facet-row {
   display: grid;
-  grid-template-columns: minmax(140px, 1fr) 2fr auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
   gap: 12px;
   align-items: center;
   padding: 8px 10px;
@@ -454,6 +454,14 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   font-size: 0.88rem;
+  min-width: 0;
+}
+
+@media (max-width: 639px) {
+  .facet-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
 }
 
 .facet-name {

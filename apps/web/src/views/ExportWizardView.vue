@@ -45,7 +45,7 @@
           <h3
             style="
               margin: 0;
-              font-size: 15px;
+              font-size: var(--font-size-base, 0.9375rem);
               display: flex;
               align-items: center;
               gap: 6px;
@@ -56,7 +56,7 @@
           <p
             style="
               margin: 4px 0 0 0;
-              font-size: 12px;
+              font-size: 0.75rem;
               color: var(--semantic-color-text-secondary);
             "
           >
@@ -72,7 +72,7 @@
         >
           <span
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs, 0.6875rem);
               font-weight: 600;
               color: var(--semantic-color-text-secondary);
             "
@@ -94,7 +94,7 @@
               :class="{ active: recordLockFilter === 'all' }"
               style="
                 padding: 6px 12px;
-                font-size: 11px;
+                font-size: var(--font-size-2xs, 0.6875rem);
                 border: none;
                 cursor: pointer;
               "
@@ -116,7 +116,7 @@
               :class="{ active: recordLockFilter === 'locked_only' }"
               style="
                 padding: 6px 12px;
-                font-size: 11px;
+                font-size: var(--font-size-2xs, 0.6875rem);
                 border: none;
                 cursor: pointer;
               "
@@ -140,7 +140,7 @@
               :class="{ active: recordLockFilter === 'unlocked_only' }"
               style="
                 padding: 6px 12px;
-                font-size: 11px;
+                font-size: var(--font-size-2xs, 0.6875rem);
                 border: none;
                 cursor: pointer;
               "
@@ -168,7 +168,7 @@
             class="btn btn-primary btn-fast-export-odm"
             style="
               padding: 8px 14px;
-              font-size: 12px;
+              font-size: 0.75rem;
               cursor: pointer;
               display: flex;
               align-items: center;
@@ -184,7 +184,7 @@
             class="btn btn-secondary btn-fast-export-csv"
             style="
               padding: 8px 14px;
-              font-size: 12px;
+              font-size: 0.75rem;
               cursor: pointer;
               display: flex;
               align-items: center;
@@ -425,7 +425,7 @@
                   align-items: center;
                   gap: 6px;
                   cursor: pointer;
-                  font-size: 13px;
+                  font-size: var(--font-size-xs, 0.8125rem);
                 "
               >
                 <input v-model="recordLockFilter" type="radio" value="all" />
@@ -438,7 +438,7 @@
                   align-items: center;
                   gap: 6px;
                   cursor: pointer;
-                  font-size: 13px;
+                  font-size: var(--font-size-xs, 0.8125rem);
                 "
               >
                 <input
@@ -455,7 +455,7 @@
                   align-items: center;
                   gap: 6px;
                   cursor: pointer;
-                  font-size: 13px;
+                  font-size: var(--font-size-xs, 0.8125rem);
                 "
               >
                 <input
@@ -1143,7 +1143,12 @@ function resetExport() {
   border-radius: 8px;
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .step-item.active {
@@ -1230,7 +1235,12 @@ function resetExport() {
   border-radius: 8px;
   padding: 16px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1343,7 +1353,12 @@ function resetExport() {
   padding: 12px;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .domain-checkbox-card.checked {
@@ -1416,7 +1431,12 @@ function resetExport() {
   padding: 6px 12px;
   font-size: 0.8rem;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .site-chip.active {
@@ -1455,7 +1475,12 @@ function resetExport() {
   border-radius: 8px;
   padding: 16px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .privacy-profile-card.selected {

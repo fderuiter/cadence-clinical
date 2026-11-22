@@ -412,7 +412,7 @@ defineExpose({
 
 .modal-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-md, 1rem);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -420,7 +420,8 @@ defineExpose({
 .close-btn {
   background: transparent;
   border: none;
-  font-size: 18px;
+  font: inherit;
+  font-size: var(--font-size-lg, 1.125rem);
   color: var(--semantic-color-text-muted);
   cursor: pointer;
 }
@@ -437,7 +438,7 @@ defineExpose({
   border: 1px solid var(--semantic-color-error-border-soft);
   color: var(--semantic-color-error-text-dark);
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
 }
 
 .dropzone {
@@ -447,7 +448,10 @@ defineExpose({
   text-align: center;
   background: var(--semantic-color-surface-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .dropzone:hover,
@@ -468,19 +472,19 @@ defineExpose({
 }
 
 .upload-icon {
-  font-size: 32px;
+  font-size: 2rem;
 }
 
 .dropzone-title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
 
 .dropzone-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--semantic-color-text-muted);
 }
 
@@ -492,7 +496,7 @@ defineExpose({
 }
 
 .file-icon {
-  font-size: 36px;
+  font-size: 2.25rem;
 }
 
 .file-details {
@@ -503,7 +507,7 @@ defineExpose({
 
 .file-name {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -512,7 +516,7 @@ defineExpose({
 .file-checksum,
 .file-hashing {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--semantic-color-text-muted);
 }
 
@@ -523,7 +527,7 @@ defineExpose({
 }
 
 .form-label {
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -537,7 +541,8 @@ defineExpose({
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--semantic-color-border-control);
-  font-size: 13px;
+  font: inherit;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-family: inherit;
   resize: vertical;
   outline: none;
@@ -549,7 +554,7 @@ defineExpose({
 }
 
 .hint-text {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-text-muted);
 }
 
@@ -574,7 +579,7 @@ defineExpose({
 }
 
 .progress-text {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-text-muted);
   text-align: right;
 }
@@ -582,6 +587,7 @@ defineExpose({
 .modal-footer {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 14px 20px;
   border-top: 1px solid var(--semantic-color-border);
@@ -592,12 +598,17 @@ defineExpose({
 
 .btn {
   padding: 8px 16px;
-  font-size: 13px;
+  font: inherit;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-weight: 500;
   border-radius: var(--radius-sm);
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .btn:disabled {

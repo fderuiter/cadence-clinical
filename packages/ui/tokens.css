@@ -45,15 +45,15 @@
   --spacing-4xl: 64px;
 
   /* Typography Scale */
-  --font-size-2xs: 11px;
-  --font-size-xs: 13px;
-  --font-size-sm: 14px;
-  --font-size-base: 15px;
-  --font-size-md: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 22px;
-  --font-size-2xl: 24px;
-  --font-size-3xl: 28px;
+  --font-size-2xs: 0.6875rem;
+  --font-size-xs: 0.8125rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 0.9375rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.375rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.75rem;
 
   /* Font Stack */
   --font-sans:
@@ -74,6 +74,9 @@
   --drawer-width-md: min(100vw, 480px);
   --drawer-width-lg: min(100vw, 640px);
   --drawer-width-xl: min(100vw, 920px);
+
+  /* Responsive Card Grid Minimum Track Width */
+  --grid-card-min: 15rem;
 
   /* CENTRALIZED SEMANTIC CONTRACT (Requirement 1) */
   /* Semantic Colors - Brand & Accents */
@@ -403,6 +406,9 @@ td,
 .clinical-radio-grid {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   margin-bottom: var(--semantic-spacing-md, 16px);
   font-family: var(--semantic-font-family, sans-serif);
 }
@@ -411,16 +417,22 @@ td,
 .clinical-radio-grid legend {
   display: block;
   font-weight: 600;
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(--semantic-font-size-base, 0.9375rem);
   margin-bottom: var(--semantic-spacing-xs, 8px);
   color: var(--semantic-color-text-muted);
 }
 
 .clinical-input .input-wrapper {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   gap: var(--semantic-spacing-xs, 8px);
   position: relative;
   align-items: center;
+}
+
+.clinical-input .query-flag {
+  flex-shrink: 0;
 }
 
 /* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px and SC 1.4.11 >= 3:1 boundary contrast */
@@ -433,15 +445,22 @@ td,
 .clinical-input textarea,
 .clinical-input .clinical-input-control {
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
   padding: 12px 14px;
   min-height: var(--semantic-touch-target-min, 48px);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: var(--radius-sm);
+  font: inherit;
   font-family: var(--semantic-font-family, sans-serif);
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(--semantic-font-size-base, 0.9375rem);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  transition: all 0.2s;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
   box-sizing: border-box;
 }
 
@@ -500,7 +519,7 @@ textarea[aria-invalid="true"]:focus-visible {
 
 .validation-error-msg {
   color: var(--semantic-color-error);
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-weight: 600;
   margin-top: var(--semantic-spacing-2xs, 4px);
 }
@@ -518,6 +537,8 @@ textarea[aria-invalid="true"]:focus-visible {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
   gap: var(--semantic-spacing-xs, 8px);
 }
 
@@ -525,12 +546,16 @@ textarea[aria-invalid="true"]:focus-visible {
   display: flex;
   gap: var(--semantic-spacing-xl, 24px);
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .radio-option {
   display: flex;
   align-items: center;
   gap: var(--semantic-spacing-xs, 8px);
+  min-width: 0;
+  max-width: 100%;
   cursor: pointer;
   /* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px for interactive elements */
   min-height: var(--semantic-touch-target-min, 48px);
@@ -539,6 +564,7 @@ textarea[aria-invalid="true"]:focus-visible {
 .radio-option input[type="radio"] {
   width: 20px;
   height: 20px;
+  flex-shrink: 0;
   accent-color: var(--semantic-color-accent);
   cursor: pointer;
 }
@@ -546,7 +572,7 @@ textarea[aria-invalid="true"]:focus-visible {
 .radio-option label {
   cursor: pointer;
   font-weight: 500;
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(--semantic-font-size-base, 0.9375rem);
   color: var(--semantic-color-text);
 }
 
@@ -563,7 +589,7 @@ textarea[aria-invalid="true"]:focus-visible {
   gap: var(--semantic-spacing-2xs, 4px);
   padding: 2px 8px;
   border-radius: var(--radius-full);
-  font-size: var(--font-size-2xs, 11px);
+  font-size: var(--font-size-2xs, 0.6875rem);
   font-weight: 600;
   line-height: 1.2;
   border: 1px solid var(--semantic-color-border-control);

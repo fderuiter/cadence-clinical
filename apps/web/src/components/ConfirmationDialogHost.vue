@@ -79,7 +79,7 @@ const handleCancel = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: var(--font-size-2xl, 1.5rem);
   line-height: 1;
   padding: var(--semantic-spacing-xs, 8px);
   border-radius: 50%;
@@ -102,19 +102,24 @@ const handleCancel = () => {
 
 .confirmation-message {
   margin: 0;
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(--semantic-font-size-base, 0.9375rem);
   color: var(--semantic-color-text);
   line-height: 1.5;
 }
 
 .btn {
   padding: 8px 16px;
-  font-size: 14px;
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 500;
   border-radius: 6px;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
   min-height: 38px;
 }
 

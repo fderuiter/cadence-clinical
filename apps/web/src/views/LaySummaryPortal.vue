@@ -975,7 +975,12 @@ onMounted(() => {
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   margin-bottom: -2px;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .tab-btn:hover {
@@ -1045,7 +1050,12 @@ onMounted(() => {
   border-radius: 6px;
   cursor: pointer;
   background-color: var(--semantic-color-surface);
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .summary-item-card:hover {

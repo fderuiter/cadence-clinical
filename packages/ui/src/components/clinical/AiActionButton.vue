@@ -133,7 +133,12 @@ const handleClick = (e) => {
   border-radius: var(--radius-md, 6px);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition:
+    background-color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out,
+    color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out,
+    opacity 0.15s ease-in-out;
   outline: none;
   white-space: nowrap;
   user-select: none;
@@ -148,19 +153,19 @@ const handleClick = (e) => {
 /* Sizes */
 .ai-btn-sm {
   padding: 4px 10px;
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs, 0.8125rem);
   min-height: 28px;
 }
 
 .ai-btn-md {
   padding: 6px 14px;
-  font-size: var(--font-size-sm, 14px);
+  font-size: var(--font-size-sm, 0.875rem);
   min-height: 36px;
 }
 
 .ai-btn-lg {
   padding: 10px 18px;
-  font-size: var(--font-size-base, 15px);
+  font-size: var(--font-size-base, 0.9375rem);
   min-height: 44px;
 }
 

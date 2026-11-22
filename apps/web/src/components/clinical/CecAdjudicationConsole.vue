@@ -2289,7 +2289,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .tab-btn:hover {
@@ -2402,7 +2407,12 @@ onMounted(() => {
   border-radius: 6px;
   padding: 0.875rem;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .dossier-card:hover {
@@ -3158,7 +3168,12 @@ onMounted(() => {
   border-radius: 6px;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .btn-primary {

@@ -24,7 +24,13 @@
       style="margin-bottom: 20px"
     >
       <h3 style="margin-top: 0">Trial Summary Not Yet Available</h3>
-      <p style="font-size: 14px; color: var(--text-muted); line-height: 1.5">
+      <p
+        style="
+          font-size: var(--font-size-sm, 0.875rem);
+          color: var(--text-muted);
+          line-height: 1.5;
+        "
+      >
         Plain-language clinical trial results have not been published for your
         study in this portal yet. Your study team will notify you when a
         plain-language study summary is ready to read.
@@ -32,14 +38,20 @@
     </div>
 
     <div v-else class="card" style="margin-bottom: 20px">
-      <div style="display: flex; gap: 8px; margin-bottom: 8px">
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px">
         <span class="badge badge-gxp">Demo Sample</span>
         <span class="badge badge-regulatory">Phase III Results</span>
       </div>
       <h3 style="margin-top: 0">
         Sample Plain Language Summary: Trial Findings Preview
       </h3>
-      <p style="font-size: 14px; color: var(--text-muted); line-height: 1.5">
+      <p
+        style="
+          font-size: var(--font-size-sm, 0.875rem);
+          color: var(--text-muted);
+          line-height: 1.5;
+        "
+      >
         Synthetic demonstration preview of how plain-language study results will
         appear after trial completion and regulatory approval.
       </p>

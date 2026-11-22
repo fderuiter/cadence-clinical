@@ -27,14 +27,22 @@
         >
           <button
             class="btn btn-primary btn-batch-upload"
-            style="font-size: 13px; font-weight: 600; padding: 6px 14px"
+            style="
+              font-size: var(--font-size-xs, 0.8125rem);
+              font-weight: 600;
+              padding: 6px 14px;
+            "
             @click="isBatchDrawerOpen = true"
           >
             📤 Batch Ingestion
           </button>
           <button
             class="btn btn-outline-secondary btn-qc-queue"
-            style="font-size: 13px; font-weight: 600; padding: 6px 14px"
+            style="
+              font-size: var(--font-size-xs, 0.8125rem);
+              font-weight: 600;
+              padding: 6px 14px;
+            "
             @click="showQcQueue = !showQcQueue"
           >
             🛡️ CRA QC Queue
@@ -791,7 +799,12 @@ async function handleDeleteFile(file) {
   font-size: 0.85rem;
   background-color: var(--semantic-color-surface-muted);
   outline: none;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s,
+    box-shadow 0.2s,
+    opacity 0.2s;
   box-sizing: border-box;
 }
 

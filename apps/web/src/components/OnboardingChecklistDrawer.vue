@@ -400,7 +400,12 @@ function startGuidedTour() {
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   padding: 14px;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .task-card:hover {
@@ -487,7 +492,12 @@ function startGuidedTour() {
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .btn-navigate-task:hover {

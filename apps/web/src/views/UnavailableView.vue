@@ -146,9 +146,10 @@ const heading = computed(() =>
 
 .unavailable-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16.25rem), 1fr));
   gap: 16px;
   margin-bottom: 24px;
+  min-width: 0;
 }
 
 .unavailable-info-card {
@@ -156,6 +157,7 @@ const heading = computed(() =>
   background: var(--semantic-color-surface-muted);
   border-radius: 10px;
   padding: 16px;
+  min-width: 0;
 }
 
 .info-card-label {

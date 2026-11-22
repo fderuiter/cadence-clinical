@@ -11,7 +11,7 @@
           Please select an artifact from the binder tree to view documents.
         </p>
       </div>
-      <div style="display: flex; gap: 8px">
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
         <button
           v-if="selectedDocumentIds.length > 0"
           class="btn btn-outline-primary export-selected-btn"
@@ -1004,10 +1004,13 @@ async function submitUpload() {
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   height: 100%;
+  min-width: 0;
 }
 
 .grid-header {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 24px;
@@ -1230,7 +1233,10 @@ async function submitUpload() {
   padding: 32px 16px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
   margin-bottom: 20px;
 }
 
@@ -1283,11 +1289,13 @@ async function submitUpload() {
 
 .form-group-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
 }
 
 .form-group-row .form-group {
-  flex: 1;
+  flex: 1 1 12rem;
+  min-width: 0;
 }
 
 .form-group {
@@ -1338,6 +1346,7 @@ async function submitUpload() {
 
 .modal-footer-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
@@ -1354,7 +1363,12 @@ async function submitUpload() {
   font-weight: 500;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s,
+    box-shadow 0.2s,
+    opacity 0.2s;
 }
 
 .btn-primary {
@@ -1401,6 +1415,8 @@ async function submitUpload() {
 /* Pagination Styling */
 .pagination-controls {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: space-between;
   align-items: center;
   margin-top: 20px;
@@ -1420,6 +1436,7 @@ async function submitUpload() {
 
 .pagination-buttons {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }

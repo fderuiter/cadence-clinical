@@ -722,7 +722,12 @@ function formatRelativeTime(isoString) {
   cursor: pointer;
   padding: 0.4rem 0.6rem;
   border-radius: var(--radius-sm, 6px);
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .close-drawer-btn:hover {
@@ -779,7 +784,12 @@ function formatRelativeTime(isoString) {
   border-radius: var(--radius-sm, 6px);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .reset-filters-btn:hover {
@@ -1069,7 +1079,12 @@ function formatRelativeTime(isoString) {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 

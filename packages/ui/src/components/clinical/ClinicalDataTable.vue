@@ -204,13 +204,13 @@ const toggleRowSelection = (row) => {
 
 .table-title {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--font-size-base, 0.9375rem);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
 
 .table-meta {
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   color: var(--semantic-color-text-muted);
 }
 
@@ -223,7 +223,7 @@ const toggleRowSelection = (row) => {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 14px;
+  font-size: var(--font-size-sm, 0.875rem);
   font-variant-numeric: tabular-nums;
 }
 
@@ -251,7 +251,7 @@ const toggleRowSelection = (row) => {
 }
 
 .sort-icon {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-text-muted);
 }
 
@@ -300,7 +300,8 @@ const toggleRowSelection = (row) => {
 
 .pagination-btn {
   padding: 6px 12px;
-  font-size: 13px;
+  font: inherit;
+  font-size: var(--font-size-xs, 0.8125rem);
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
@@ -318,7 +319,7 @@ const toggleRowSelection = (row) => {
 }
 
 .pagination-info {
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   color: var(--semantic-color-text-muted);
 }
 

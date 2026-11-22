@@ -2004,7 +2004,12 @@ onMounted(() => {
   color: var(--semantic-color-text-muted);
   cursor: pointer;
   margin-bottom: -2px;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .tab-btn:hover {
@@ -2356,7 +2361,12 @@ onMounted(() => {
   text-align: center;
   cursor: pointer;
   background-color: var(--semantic-color-surface-muted);
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
   margin-bottom: 12px;
 }
 

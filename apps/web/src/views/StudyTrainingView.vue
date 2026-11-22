@@ -174,14 +174,18 @@ onMounted(() => {
 .dashboard-section {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: var(--spacing-lg, 24px);
   padding: var(--spacing-lg, 24px);
 }
 
 .section-header {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: space-between;
   align-items: flex-start;
+  min-width: 0;
 }
 
 .header-badge-row {
@@ -245,13 +249,15 @@ onMounted(() => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.75rem), 1fr));
   gap: var(--spacing-md, 16px);
+  min-width: 0;
 }
 
 .stat-card {
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: 16px;
   background: var(--semantic-color-surface);
   border: 1px solid var(--border);
@@ -261,11 +267,19 @@ onMounted(() => {
 
 .stat-icon {
   font-size: 2rem;
+  flex-shrink: 0;
 }
 
 .stat-details {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .dashboard-section {
+    padding: 12px;
+  }
 }
 
 .stat-value {

@@ -38,7 +38,7 @@ export function renderInbox() {
       container.style.display = "none";
       container.innerHTML = `
         <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
-          <p style="font-size: 16px; font-weight: 700;">⚠️ Error loading notifications</p>
+          <p style="font-size: var(--font-size-md, 1rem); font-weight: 700;">⚠️ Error loading notifications</p>
         </div>
       `;
     }
@@ -60,7 +60,7 @@ export function renderInbox() {
         : "No notifications found.";
     container.innerHTML = `
       <div class="card" style="text-align: center; padding: 32px; color: var(--text-muted);">
-        <p style="font-size: 16px; font-weight: 700;">${emptyMsg}</p>
+        <p style="font-size: var(--font-size-md, 1rem); font-weight: 700;">${emptyMsg}</p>
       </div>
     `;
     return;

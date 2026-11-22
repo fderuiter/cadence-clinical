@@ -57,127 +57,129 @@
       </div>
 
       <div class="header-controls">
-        <template v-if="authStore.isAuthenticated">
-          <router-link
-            v-if="authStore.activePlanBadge"
-            id="shell-plan-badge"
-            to="/plans"
-            class="plan-status-badge"
-            :class="{
-              'is-expired': authStore.isTrialExpired,
-              'is-trial': authStore.subscriptionStatus === 'Trialing',
-            }"
-            :title="PRE_RELEASE_ENVIRONMENT_NOTICE"
-          >
-            {{ authStore.activePlanBadge }}
-          </router-link>
-
-          <button
-            id="btn-open-palette"
-            type="button"
-            class="command-palette-trigger"
-            title="Open global search and command palette (Ctrl+K or Cmd+K)"
-            aria-keyshortcuts="Control+K Meta+K"
-            @click="isCommandPaletteOpen = true"
-          >
-            <span class="palette-trigger-text">Search</span>
-            <kbd class="palette-kbd" aria-hidden="true">⌘K</kbd>
-          </button>
-
-          <div
-            v-if="availablePersonas.length > 0"
-            class="persona-switcher-wrapper"
-          >
-            <label for="persona-select" class="persona-label">View</label>
-            <select
-              id="persona-select"
-              :value="authStore.currentPersona"
-              class="persona-select"
-              title="Switch workspace view orientation and help emphasis"
-              @change="handlePersonaChange"
+        <template v-if="!isCompactHeader">
+          <template v-if="authStore.isAuthenticated">
+            <router-link
+              v-if="authStore.activePlanBadge"
+              id="shell-plan-badge"
+              to="/plans"
+              class="plan-status-badge"
+              :class="{
+                'is-expired': authStore.isTrialExpired,
+                'is-trial': authStore.subscriptionStatus === 'Trialing',
+              }"
+              :title="PRE_RELEASE_ENVIRONMENT_NOTICE"
             >
-              <option
-                v-for="persona in availablePersonas"
-                :key="persona.key"
-                :value="persona.key"
-              >
-                {{ persona.label }}
-              </option>
-            </select>
-          </div>
+              {{ authStore.activePlanBadge }}
+            </router-link>
 
-          <button
-            v-if="onboardingStore.totalTasksCount > 0"
-            id="btn-onboarding-checklist-trigger"
-            type="button"
-            class="shell-control-btn"
-            title="Open workspace orientation and setup checklist"
-            @click="onboardingStore.toggleDrawer()"
-          >
-            <span>Orientation</span>
-            <span class="setup-progress-pill">
-              {{ onboardingStore.completedTasksCount }}/{{
-                onboardingStore.totalTasksCount
-              }}
-            </span>
-          </button>
-
-          <button
-            id="btn-contextual-help-trigger"
-            type="button"
-            class="shell-control-btn"
-            :aria-expanded="knowledgeStore.isOpen"
-            aria-label="Help & SOPs — Open contextual help and SOP guidance"
-            @click="knowledgeStore.toggleDrawer()"
-          >
-            Help &amp; SOPs
-          </button>
-
-          <div class="user-session-controls">
-            <span class="user-badge">
-              {{ authStore.identity?.username || "Signed in" }}
-            </span>
             <button
-              id="btn-logout"
+              id="btn-open-palette"
+              type="button"
+              class="command-palette-trigger"
+              title="Open global search and command palette (Ctrl+K or Cmd+K)"
+              aria-keyshortcuts="Control+K Meta+K"
+              @click="isCommandPaletteOpen = true"
+            >
+              <span class="palette-trigger-text">Search</span>
+              <kbd class="palette-kbd" aria-hidden="true">⌘K</kbd>
+            </button>
+
+            <div
+              v-if="availablePersonas.length > 0"
+              class="persona-switcher-wrapper"
+            >
+              <label for="persona-select" class="persona-label">View</label>
+              <select
+                id="persona-select"
+                :value="authStore.currentPersona"
+                class="persona-select"
+                title="Switch workspace view orientation and help emphasis"
+                @change="handlePersonaChange"
+              >
+                <option
+                  v-for="persona in availablePersonas"
+                  :key="persona.key"
+                  :value="persona.key"
+                >
+                  {{ persona.label }}
+                </option>
+              </select>
+            </div>
+
+            <button
+              v-if="onboardingStore.totalTasksCount > 0"
+              id="btn-onboarding-checklist-trigger"
+              type="button"
+              class="shell-control-btn"
+              title="Open workspace orientation and setup checklist"
+              @click="onboardingStore.toggleDrawer()"
+            >
+              <span>Orientation</span>
+              <span class="setup-progress-pill">
+                {{ onboardingStore.completedTasksCount }}/{{
+                  onboardingStore.totalTasksCount
+                }}
+              </span>
+            </button>
+
+            <button
+              id="btn-contextual-help-trigger"
+              type="button"
+              class="shell-control-btn"
+              :aria-expanded="knowledgeStore.isOpen"
+              aria-label="Help & SOPs — Open contextual help and SOP guidance"
+              @click="knowledgeStore.toggleDrawer()"
+            >
+              Help &amp; SOPs
+            </button>
+
+            <div class="user-session-controls">
+              <span class="user-badge">
+                {{ authStore.identity?.username || "Signed in" }}
+              </span>
+              <button
+                id="btn-logout"
+                type="button"
+                class="btn btn-sm btn-secondary"
+                @click="handleLogout"
+              >
+                Sign out
+              </button>
+            </div>
+          </template>
+
+          <template v-else>
+            <router-link
+              id="nav-public-plans"
+              to="/plans"
+              class="shell-control-btn"
+            >
+              Plans
+            </router-link>
+            <button
+              v-if="!authStore.isDemoMode"
+              id="btn-register"
               type="button"
               class="btn btn-sm btn-secondary"
-              @click="handleLogout"
+              @click="handleRegister"
             >
-              Sign out
+              Start trial
             </button>
-          </div>
-        </template>
-
-        <template v-else>
-          <router-link
-            id="nav-public-plans"
-            to="/plans"
-            class="shell-control-btn"
-          >
-            Plans
-          </router-link>
-          <button
-            v-if="!authStore.isDemoMode"
-            id="btn-register"
-            type="button"
-            class="btn btn-sm btn-secondary"
-            @click="handleRegister"
-          >
-            Start trial
-          </button>
-          <button
-            id="btn-login"
-            type="button"
-            class="btn btn-sm btn-primary"
-            @click="handleLogin"
-          >
-            Sign in
-          </button>
+            <button
+              id="btn-login"
+              type="button"
+              class="btn btn-sm btn-primary"
+              @click="handleLogin"
+            >
+              Sign in
+            </button>
+          </template>
         </template>
 
         <button
-          v-if="authStore.isAuthenticated"
           id="btn-mobile-menu-toggle"
+          ref="mobileMenuToggleRef"
           type="button"
           class="mobile-menu-toggle"
           aria-label="Toggle navigation menu"
@@ -189,38 +191,179 @@
         </button>
       </div>
 
-      <div
-        v-if="authStore.isAuthenticated"
+      <nav
         id="mobile-nav-menu"
         class="mobile-nav-drawer"
         :class="{ 'is-open': isMobileMenuOpen }"
         aria-label="Mobile navigation"
       >
-        <router-link
-          v-if="showStudiesNav"
-          :to="studiesPath"
-          class="mobile-nav-link"
-          @click="isMobileMenuOpen = false"
-        >
-          Studies
-        </router-link>
-        <router-link
-          v-if="showDataCollectionNav"
-          :to="dataCollectionPath"
-          class="mobile-nav-link"
-          @click="isMobileMenuOpen = false"
-        >
-          Data collection
-        </router-link>
-        <router-link
-          v-if="siteReadinessPath"
-          :to="siteReadinessPath"
-          class="mobile-nav-link"
-          @click="isMobileMenuOpen = false"
-        >
-          Site readiness
-        </router-link>
-      </div>
+        <template v-if="authStore.isAuthenticated">
+          <router-link
+            v-if="showStudiesNav"
+            :to="studiesPath"
+            class="mobile-nav-link"
+            @click="isMobileMenuOpen = false"
+          >
+            Studies
+          </router-link>
+          <router-link
+            v-if="showDataCollectionNav"
+            :to="dataCollectionPath"
+            class="mobile-nav-link"
+            @click="isMobileMenuOpen = false"
+          >
+            Data collection
+          </router-link>
+          <router-link
+            v-if="siteReadinessPath"
+            :to="siteReadinessPath"
+            class="mobile-nav-link"
+            @click="isMobileMenuOpen = false"
+          >
+            Site readiness
+          </router-link>
+        </template>
+
+        <div v-if="isCompactHeader" class="mobile-secondary-controls">
+          <template v-if="authStore.isAuthenticated">
+            <router-link
+              v-if="authStore.activePlanBadge"
+              id="shell-plan-badge"
+              to="/plans"
+              class="plan-status-badge"
+              :class="{
+                'is-expired': authStore.isTrialExpired,
+                'is-trial': authStore.subscriptionStatus === 'Trialing',
+              }"
+              :title="PRE_RELEASE_ENVIRONMENT_NOTICE"
+              @click="isMobileMenuOpen = false"
+            >
+              {{ authStore.activePlanBadge }}
+            </router-link>
+
+            <button
+              id="btn-open-palette"
+              type="button"
+              class="command-palette-trigger"
+              title="Open global search and command palette (Ctrl+K or Cmd+K)"
+              aria-keyshortcuts="Control+K Meta+K"
+              @click="
+                isMobileMenuOpen = false;
+                isCommandPaletteOpen = true;
+              "
+            >
+              <span class="palette-trigger-text">Search</span>
+              <kbd class="palette-kbd" aria-hidden="true">⌘K</kbd>
+            </button>
+
+            <div
+              v-if="availablePersonas.length > 0"
+              class="persona-switcher-wrapper"
+            >
+              <label for="persona-select" class="persona-label">View</label>
+              <select
+                id="persona-select"
+                :value="authStore.currentPersona"
+                class="persona-select"
+                title="Switch workspace view orientation and help emphasis"
+                @change="handlePersonaChange"
+              >
+                <option
+                  v-for="persona in availablePersonas"
+                  :key="persona.key"
+                  :value="persona.key"
+                >
+                  {{ persona.label }}
+                </option>
+              </select>
+            </div>
+
+            <button
+              v-if="onboardingStore.totalTasksCount > 0"
+              id="btn-onboarding-checklist-trigger"
+              type="button"
+              class="shell-control-btn"
+              title="Open workspace orientation and setup checklist"
+              @click="
+                isMobileMenuOpen = false;
+                onboardingStore.toggleDrawer();
+              "
+            >
+              <span>Orientation</span>
+              <span class="setup-progress-pill">
+                {{ onboardingStore.completedTasksCount }}/{{
+                  onboardingStore.totalTasksCount
+                }}
+              </span>
+            </button>
+
+            <button
+              id="btn-contextual-help-trigger"
+              type="button"
+              class="shell-control-btn"
+              :aria-expanded="knowledgeStore.isOpen"
+              aria-label="Help & SOPs — Open contextual help and SOP guidance"
+              @click="
+                isMobileMenuOpen = false;
+                knowledgeStore.toggleDrawer();
+              "
+            >
+              Help &amp; SOPs
+            </button>
+
+            <div class="user-session-controls">
+              <span class="user-badge">
+                {{ authStore.identity?.username || "Signed in" }}
+              </span>
+              <button
+                id="btn-logout"
+                type="button"
+                class="btn btn-sm btn-secondary"
+                @click="
+                  isMobileMenuOpen = false;
+                  handleLogout();
+                "
+              >
+                Sign out
+              </button>
+            </div>
+          </template>
+
+          <template v-else>
+            <router-link
+              id="nav-public-plans"
+              to="/plans"
+              class="shell-control-btn"
+              @click="isMobileMenuOpen = false"
+            >
+              Plans
+            </router-link>
+            <button
+              v-if="!authStore.isDemoMode"
+              id="btn-register"
+              type="button"
+              class="btn btn-sm btn-secondary"
+              @click="
+                isMobileMenuOpen = false;
+                handleRegister();
+              "
+            >
+              Start trial
+            </button>
+            <button
+              id="btn-login"
+              type="button"
+              class="btn btn-sm btn-primary"
+              @click="
+                isMobileMenuOpen = false;
+                handleLogin();
+              "
+            >
+              Sign in
+            </button>
+          </template>
+        </div>
+      </nav>
 
       <div
         class="sr-only-status-alerts"
@@ -324,18 +467,68 @@ const router = useRouter();
 
 const isCommandPaletteOpen = ref(false);
 const isMobileMenuOpen = ref(false);
+const isCompactHeader = ref(false);
 const statusAnnouncement = ref("");
 const headerRef = ref(null);
-const headerHeight = ref(57);
+const mobileMenuToggleRef = ref(null);
+const headerHeight = ref(0);
 let headerResizeObserver = null;
+let compactMediaQuery = null;
+
+function applyRootHeaderHeight(pxValue) {
+  if (typeof document !== "undefined" && document.documentElement) {
+    document.documentElement.style.setProperty(
+      "--shell-header-height",
+      `${pxValue}px`
+    );
+  }
+}
+
+function evaluateCompactHeader() {
+  if (typeof window === "undefined") return false;
+  if (typeof window.matchMedia === "function") {
+    const mql = window.matchMedia("(max-width: 767px), (max-height: 479px)");
+    if (mql && typeof mql.matches === "boolean" && mql.matches) {
+      return true;
+    }
+  }
+  const w = typeof window.innerWidth === "number" ? window.innerWidth : 1024;
+  const h = typeof window.innerHeight === "number" ? window.innerHeight : 768;
+  return (w > 0 && w < 768) || (h > 0 && h < 480);
+}
 
 function syncHeaderHeight() {
   const el = headerRef.value;
-  if (!el || typeof el.getBoundingClientRect !== "function") return;
-  const measured = Math.round(el.getBoundingClientRect().height);
-  if (measured > 0) {
-    headerHeight.value = measured;
+  if (!el || typeof el.getBoundingClientRect !== "function") {
+    headerHeight.value = 0;
+    applyRootHeaderHeight(0);
+    return;
   }
+  if (
+    typeof window !== "undefined" &&
+    typeof window.getComputedStyle === "function"
+  ) {
+    const pos = window.getComputedStyle(el).position;
+    if (pos && pos !== "sticky") {
+      headerHeight.value = 0;
+      applyRootHeaderHeight(0);
+      return;
+    }
+  }
+  const measured = Math.ceil(el.getBoundingClientRect().height);
+  headerHeight.value = measured > 0 ? measured : 0;
+  applyRootHeaderHeight(headerHeight.value);
+}
+
+function handleViewportResize() {
+  const nextCompact = evaluateCompactHeader();
+  if (isCompactHeader.value !== nextCompact) {
+    isCompactHeader.value = nextCompact;
+    if (!nextCompact) {
+      isMobileMenuOpen.value = false;
+    }
+  }
+  nextTick(syncHeaderHeight);
 }
 
 const availablePersonas = computed(() => authStore.availablePersonas || []);
@@ -453,6 +646,11 @@ const {
 });
 
 function handleGlobalKeydown(event) {
+  if (event.key === "Escape" && isMobileMenuOpen.value) {
+    isMobileMenuOpen.value = false;
+    mobileMenuToggleRef.value?.focus?.();
+    return;
+  }
   if (!authStore.isAuthenticated) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
@@ -470,10 +668,18 @@ watch(
 );
 
 watch(
+  () => route?.fullPath,
+  () => {
+    isMobileMenuOpen.value = false;
+  }
+);
+
+watch(
   () => [
     authStore.isAuthenticated,
     authStore.activePlanBadge,
     isMobileMenuOpen.value,
+    isCompactHeader.value,
   ],
   () => {
     nextTick(syncHeaderHeight);
@@ -481,7 +687,15 @@ watch(
 );
 
 onMounted(() => {
+  isCompactHeader.value = evaluateCompactHeader();
   window.addEventListener("keydown", handleGlobalKeydown);
+  window.addEventListener("resize", handleViewportResize);
+  if (typeof window.matchMedia === "function") {
+    compactMediaQuery = window.matchMedia(
+      "(max-width: 767px), (max-height: 479px)"
+    );
+    compactMediaQuery?.addEventListener?.("change", handleViewportResize);
+  }
   syncHeaderHeight();
   if (typeof ResizeObserver !== "undefined" && headerRef.value) {
     headerResizeObserver = new ResizeObserver(() => syncHeaderHeight());
@@ -497,10 +711,14 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
+  window.removeEventListener("resize", handleViewportResize);
+  compactMediaQuery?.removeEventListener?.("change", handleViewportResize);
+  compactMediaQuery = null;
   if (headerResizeObserver) {
     headerResizeObserver.disconnect();
     headerResizeObserver = null;
   }
+  applyRootHeaderHeight(0);
 });
 </script>
 
@@ -556,12 +774,15 @@ onUnmounted(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 20px;
+  min-width: 0;
+  width: auto;
 }
 
 .brand-link {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   text-decoration: none;
   color: var(--semantic-color-text);
 }
@@ -653,12 +874,15 @@ onUnmounted(() => {
 }
 
 .shell-expired-banner {
+  position: static;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
   padding: 10px 24px;
+  min-width: 0;
+  max-width: 100%;
   background: var(--semantic-color-error-bg);
   border-bottom: 1px solid var(--semantic-color-error-border);
   color: var(--semantic-color-error-dark);
@@ -668,13 +892,15 @@ onUnmounted(() => {
 .shell-expired-copy {
   display: flex;
   flex-wrap: wrap;
+  min-width: 0;
   gap: 6px;
   align-items: baseline;
 }
 
 .shell-expired-cta {
   text-decoration: none;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
 }
 
 .command-palette-trigger {
@@ -774,6 +1000,7 @@ onUnmounted(() => {
 .shell-main {
   flex: 1;
   width: 100%;
+  min-width: 0;
   max-width: 1440px;
   margin: 0 auto;
   padding: 20px 24px;
@@ -791,12 +1018,16 @@ onUnmounted(() => {
   display: none;
   align-items: center;
   justify-content: center;
+  min-height: var(--touch-target-min, 48px);
+  min-width: var(--touch-target-min, 48px);
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
+  font: inherit;
   font-size: 1rem;
+  flex-shrink: 0;
   cursor: pointer;
 }
 
@@ -804,13 +1035,28 @@ onUnmounted(() => {
   display: none;
   width: 100%;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   padding-top: 8px;
   border-top: 1px solid var(--semantic-color-border);
 }
 
 .mobile-nav-drawer.is-open {
   display: flex;
+}
+
+.mobile-secondary-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--semantic-color-border);
+}
+
+.mobile-secondary-controls .user-session-controls {
+  border-left: none;
+  padding-left: 0;
+  flex-wrap: wrap;
 }
 
 .mobile-nav-link {
@@ -827,6 +1073,8 @@ onUnmounted(() => {
 
 .sr-only-status-alerts {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 1px;
   height: 1px;
   padding: 0;
@@ -844,6 +1092,61 @@ onUnmounted(() => {
 
   .mobile-menu-toggle {
     display: inline-flex;
+  }
+}
+
+@media (max-width: 767px), (max-height: 479px) {
+  .app-header {
+    padding: 6px 12px;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .header-left {
+    flex: 1 1 auto;
+    width: auto;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .header-title-area h1 {
+    font-size: 0.95rem;
+    line-height: 1.2;
+  }
+
+  .primary-nav {
+    display: none;
+  }
+
+  .header-controls {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+  }
+
+  .mobile-menu-toggle {
+    display: inline-flex;
+  }
+
+  .mobile-nav-drawer {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: calc(100vh - var(--shell-header-height, 60px));
+    overflow-y: auto;
+    padding: 12px;
+    background: var(--semantic-color-surface);
+    border-bottom: 1px solid var(--semantic-color-border);
+    box-shadow: var(--shadow-lg);
+    z-index: 40;
+  }
+
+  .shell-main {
+    padding: 16px 12px;
+  }
+
+  .shell-expired-banner {
+    padding: 8px 12px;
   }
 }
 </style>

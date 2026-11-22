@@ -11,6 +11,7 @@
       margin-bottom: 24px;
       border-radius: 8px;
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
@@ -19,19 +20,19 @@
     role="alert"
   >
     <div style="display: flex; align-items: center; gap: 12px">
-      <span style="font-size: 24px">⚠️</span>
+      <span style="font-size: var(--font-size-2xl, 1.5rem)">⚠️</span>
       <div>
         <h3
           style="
             margin: 0 0 4px 0;
-            font-size: 16px;
+            font-size: var(--font-size-md, 1rem);
             font-weight: 700;
             color: var(--semantic-color-warning-text-dark);
           "
         >
           Action Needed: Updated Study Consent
         </h3>
-        <p style="margin: 0; font-size: 14px">
+        <p style="margin: 0; font-size: var(--font-size-sm, 0.875rem)">
           Your study consent form has been updated. Please review and sign the
           changes before submitting your next survey.
         </p>

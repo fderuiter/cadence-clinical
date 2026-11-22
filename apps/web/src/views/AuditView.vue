@@ -32,7 +32,11 @@
           <span>GxP Execution Ledger Chain Verification</span>
           <button
             class="btn btn-secondary badge"
-            style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+            style="
+              padding: 4px 8px;
+              font-size: var(--font-size-2xs, 0.6875rem);
+              cursor: pointer;
+            "
             :disabled="integrity.loading"
             @click="verifyExecutionIntegrity"
           >
@@ -42,7 +46,7 @@
         <div style="padding: 8px 0">
           <p
             style="
-              font-size: 13px;
+              font-size: var(--font-size-xs, 0.8125rem);
               color: var(--semantic-color-text-secondary);
               margin-bottom: 12px;
             "
@@ -80,15 +84,18 @@
             "
           >
             <div style="display: flex; align-items: center; gap: 8px">
-              <span style="font-size: 20px">🟢</span>
+              <span style="font-size: 1.25rem">🟢</span>
               <div>
                 <strong
-                  style="color: var(--semantic-color-success); font-size: 14px"
+                  style="
+                    color: var(--semantic-color-success);
+                    font-size: var(--font-size-sm, 0.875rem);
+                  "
                   >INTEGRITY VERIFIED</strong
                 >
                 <p
                   style="
-                    font-size: 12px;
+                    font-size: 0.75rem;
                     margin: 4px 0 0 0;
                     color: var(--semantic-color-text);
                   "
@@ -112,14 +119,18 @@
             "
           >
             <div style="display: flex; align-items: center; gap: 8px">
-              <span style="font-size: 20px">🔴</span>
+              <span style="font-size: 1.25rem">🔴</span>
               <div>
-                <strong style="color: var(--error); font-size: 14px"
+                <strong
+                  style="
+                    color: var(--error);
+                    font-size: var(--font-size-sm, 0.875rem);
+                  "
                   >INTEGRITY BREACH / TAMPERED</strong
                 >
                 <p
                   style="
-                    font-size: 12px;
+                    font-size: 0.75rem;
                     margin: 4px 0 0 0;
                     color: var(--semantic-color-text);
                   "
@@ -145,7 +156,7 @@
           >
             <span
               style="
-                font-size: 13px;
+                font-size: var(--font-size-xs, 0.8125rem);
                 color: var(--semantic-color-text-secondary);
               "
             >
@@ -164,7 +175,7 @@
         <div style="padding: 8px 0">
           <p
             style="
-              font-size: 13px;
+              font-size: var(--font-size-xs, 0.8125rem);
               color: var(--semantic-color-text-secondary);
               margin-bottom: 12px;
             "
@@ -179,7 +190,7 @@
                 for="binder-study-id-input"
                 style="
                   font-weight: 600;
-                  font-size: 12px;
+                  font-size: 0.75rem;
                   margin-bottom: 4px;
                   display: block;
                 "
@@ -216,7 +227,11 @@
               />
               <label
                 for="chk-history"
-                style="font-size: 13px; cursor: pointer; user-select: none"
+                style="
+                  font-size: var(--font-size-xs, 0.8125rem);
+                  cursor: pointer;
+                  user-select: none;
+                "
                 >Include complete document version histories (audit
                 files)</label
               >
@@ -245,7 +260,7 @@
         <div style="padding: 8px 0">
           <p
             style="
-              font-size: 13px;
+              font-size: var(--font-size-xs, 0.8125rem);
               color: var(--semantic-color-text-secondary);
               margin-bottom: 12px;
             "
@@ -259,7 +274,7 @@
                 for="tmf-file-input"
                 style="
                   font-weight: 600;
-                  font-size: 12px;
+                  font-size: 0.75rem;
                   margin-bottom: 4px;
                   display: block;
                 "
@@ -285,7 +300,7 @@
                   for="tmf-zone-select"
                   style="
                     font-weight: 600;
-                    font-size: 12px;
+                    font-size: 0.75rem;
                     margin-bottom: 4px;
                     display: block;
                   "
@@ -319,7 +334,7 @@
                   for="tmf-section-input"
                   style="
                     font-weight: 600;
-                    font-size: 12px;
+                    font-size: 0.75rem;
                     margin-bottom: 4px;
                     display: block;
                   "
@@ -360,7 +375,11 @@
         <span>eTMF Document Directory &amp; Viewer</span>
         <button
           class="btn btn-secondary badge"
-          style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+          style="
+            padding: 4px 8px;
+            font-size: var(--font-size-2xs, 0.6875rem);
+            cursor: pointer;
+          "
           :disabled="documentsLoading"
           @click="fetchDocuments"
         >
@@ -370,7 +389,7 @@
 
       <p
         style="
-          font-size: 13px;
+          font-size: var(--font-size-xs, 0.8125rem);
           color: var(--semantic-color-text-secondary);
           margin: 8px 0 16px 0;
         "
@@ -383,7 +402,11 @@
       <div style="overflow-x: auto">
         <table
           class="clinical-table"
-          style="width: 100%; border-collapse: collapse; font-size: 13px"
+          style="
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-xs, 0.8125rem);
+          "
         >
           <thead>
             <tr
@@ -436,7 +459,7 @@
                 style="
                   padding: 10px;
                   font-family: monospace;
-                  font-size: 11px;
+                  font-size: var(--font-size-2xs, 0.6875rem);
                   max-width: 80px;
                   overflow: hidden;
                   text-overflow: ellipsis;
@@ -462,7 +485,7 @@
                       ? 'badge status-approved'
                       : 'badge status-draft'
                   "
-                  style="font-size: 10px"
+                  style="font-size: 0.625rem"
                 >
                   {{ doc.status }}
                 </span>
@@ -479,7 +502,11 @@
               >
                 <button
                   class="btn btn-secondary btn-preview-doc"
-                  style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+                  style="
+                    padding: 4px 8px;
+                    font-size: var(--font-size-2xs, 0.6875rem);
+                    cursor: pointer;
+                  "
                   :aria-label="'Preview secure document ' + doc.filename"
                   @click="previewDocument(doc)"
                 >
@@ -488,7 +515,11 @@
                 <button
                   v-if="doc.status !== 'SIGNED'"
                   class="btn btn-primary btn-sign-doc"
-                  style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+                  style="
+                    padding: 4px 8px;
+                    font-size: var(--font-size-2xs, 0.6875rem);
+                    cursor: pointer;
+                  "
                   :aria-label="
                     'Sign and manifestation seal document ' + doc.filename
                   "
@@ -498,7 +529,11 @@
                 </button>
                 <button
                   class="btn btn-secondary btn-download-watermarked"
-                  style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+                  style="
+                    padding: 4px 8px;
+                    font-size: var(--font-size-2xs, 0.6875rem);
+                    cursor: pointer;
+                  "
                   :aria-label="
                     'Download secure watermarked copy of ' + doc.filename
                   "
@@ -535,17 +570,21 @@
           "
         >
           <div style="display: flex; align-items: center; gap: 8px">
-            <span style="font-size: 16px">🔍</span>
+            <span style="font-size: var(--font-size-md, 1rem)">🔍</span>
             <span style="font-weight: 600"
               >Secure Preview: {{ previewDoc.filename }}</span
             >
-            <span class="badge status-approved" style="font-size: 10px"
+            <span class="badge status-approved" style="font-size: 0.625rem"
               >Watermarked Preview active</span
             >
           </div>
           <button
             class="btn btn-secondary btn-close-preview"
-            style="padding: 2px 8px; font-size: 11px; cursor: pointer"
+            style="
+              padding: 2px 8px;
+              font-size: var(--font-size-2xs, 0.6875rem);
+              cursor: pointer;
+            "
             @click="closePreview"
           >
             Close Viewer
@@ -562,7 +601,7 @@
             background: white;
             color: var(--semantic-color-text-dark);
             font-family: monospace;
-            font-size: 13px;
+            font-size: var(--font-size-xs, 0.8125rem);
             line-height: 1.5;
             overflow-y: auto;
             max-height: 450px;
@@ -602,7 +641,7 @@
             padding: 16px;
             border-top: 1px solid var(--border);
             background: var(--semantic-color-surface-muted);
-            font-size: 13px;
+            font-size: var(--font-size-xs, 0.8125rem);
           "
         >
           <div
@@ -639,7 +678,7 @@
             <div
               style="
                 grid-column: span 2;
-                font-size: 11px;
+                font-size: var(--font-size-2xs, 0.6875rem);
                 color: var(--semantic-color-text-secondary);
                 word-break: break-all;
               "
@@ -651,7 +690,7 @@
               v-if="previewDoc.signature_manifestation.signature"
               style="
                 grid-column: span 2;
-                font-size: 11px;
+                font-size: var(--font-size-2xs, 0.6875rem);
                 color: var(--semantic-color-text-secondary);
                 word-break: break-all;
               "
@@ -666,7 +705,7 @@
           style="
             padding: 10px 16px;
             border-top: 1px solid var(--border);
-            font-size: 11px;
+            font-size: var(--font-size-2xs, 0.6875rem);
             color: var(--semantic-color-text-secondary);
             display: flex;
             justify-content: space-between;
@@ -691,7 +730,11 @@
         <div style="display: flex; gap: 8px">
           <button
             class="btn btn-secondary badge btn-refresh-logs"
-            style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+            style="
+              padding: 4px 8px;
+              font-size: var(--font-size-2xs, 0.6875rem);
+              cursor: pointer;
+            "
             :disabled="auditLoading"
             @click="fetchAuditLogs"
           >
@@ -702,7 +745,7 @@
 
       <p
         style="
-          font-size: 13px;
+          font-size: var(--font-size-xs, 0.8125rem);
           color: var(--semantic-color-text-secondary);
           margin: 8px 0 16px 0;
         "
@@ -732,7 +775,7 @@
           <label
             for="filter-user-id-input"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs, 0.6875rem);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -748,7 +791,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: 0.75rem;
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -763,7 +806,7 @@
           <label
             for="filter-action-select"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs, 0.6875rem);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -777,7 +820,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: 0.75rem;
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -808,7 +851,7 @@
           <label
             for="filter-entity-type-select"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs, 0.6875rem);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -822,7 +865,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: 0.75rem;
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -844,7 +887,7 @@
           <label
             for="filter-start-date-input"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs, 0.6875rem);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -859,7 +902,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: 0.75rem;
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -874,7 +917,7 @@
           <label
             for="filter-end-date-input"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs, 0.6875rem);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -889,7 +932,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: 0.75rem;
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -904,7 +947,7 @@
           <label
             for="filter-document-id-input"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs, 0.6875rem);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -920,7 +963,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: 0.75rem;
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -939,14 +982,14 @@
         >
           <button
             class="btn btn-secondary btn-clear-filters"
-            style="padding: 6px 12px; font-size: 12px; cursor: pointer"
+            style="padding: 6px 12px; font-size: 0.75rem; cursor: pointer"
             @click="clearFilters"
           >
             Clear Filters
           </button>
           <button
             class="btn btn-primary btn-apply-filters"
-            style="padding: 6px 12px; font-size: 12px; cursor: pointer"
+            style="padding: 6px 12px; font-size: 0.75rem; cursor: pointer"
             :disabled="auditLoading"
             @click="applyFilters"
           >
@@ -959,7 +1002,11 @@
       <div style="overflow-x: auto">
         <table
           class="clinical-table audit-ledger-table"
-          style="width: 100%; border-collapse: collapse; font-size: 13px"
+          style="
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-xs, 0.8125rem);
+          "
         >
           <thead>
             <tr
@@ -1017,7 +1064,7 @@
                   style="
                     padding: 10px;
                     font-family: monospace;
-                    font-size: 11px;
+                    font-size: var(--font-size-2xs, 0.6875rem);
                     white-space: nowrap;
                     color: var(--semantic-color-text-secondary);
                   "
@@ -1027,13 +1074,13 @@
                 <td style="padding: 10px; font-weight: 500">
                   {{ log.user_id }}
                 </td>
-                <td style="padding: 10px; font-size: 12px">
+                <td style="padding: 10px; font-size: 0.75rem">
                   <span
                     class="badge"
                     style="
                       background: var(--semantic-color-surface-header);
                       color: var(--semantic-color-text-secondary);
-                      font-size: 10px;
+                      font-size: 0.625rem;
                     "
                   >
                     {{ getEntityType(log) }}
@@ -1042,18 +1089,22 @@
                 <td style="padding: 10px">
                   <span
                     :class="getActionBadgeClass(log.action)"
-                    style="font-size: 10px"
+                    style="font-size: 0.625rem"
                   >
                     {{ log.action }}
                   </span>
                 </td>
-                <td style="padding: 10px; font-size: 12px; line-height: 1.4">
+                <td style="padding: 10px; font-size: 0.75rem; line-height: 1.4">
                   {{ log.details }}
                 </td>
                 <td style="padding: 10px; text-align: right">
                   <button
                     class="btn btn-secondary btn-inspect-row"
-                    style="padding: 3px 8px; font-size: 11px; cursor: pointer"
+                    style="
+                      padding: 3px 8px;
+                      font-size: var(--font-size-2xs, 0.6875rem);
+                      cursor: pointer;
+                    "
                     :aria-label="'Inspect audit details for ' + log.id"
                     @click.stop="toggleRowDetails(log.id)"
                   >
@@ -1077,7 +1128,7 @@
                       display: flex;
                       flex-direction: column;
                       gap: 12px;
-                      font-size: 12px;
+                      font-size: 0.75rem;
                     "
                   >
                     <!-- Header Info -->
@@ -1092,13 +1143,17 @@
                     >
                       <div>
                         <strong>21 CFR Part 11 Audit Record:</strong>
-                        <code style="margin-left: 6px; font-size: 11px">{{
-                          log.id
-                        }}</code>
+                        <code
+                          style="
+                            margin-left: 6px;
+                            font-size: var(--font-size-2xs, 0.6875rem);
+                          "
+                          >{{ log.id }}</code
+                        >
                       </div>
                       <div
                         style="
-                          font-size: 11px;
+                          font-size: var(--font-size-2xs, 0.6875rem);
                           color: var(--semantic-color-text-secondary);
                         "
                       >
@@ -1171,7 +1226,7 @@
                         <pre
                           style="
                             margin: 0;
-                            font-size: 11px;
+                            font-size: var(--font-size-2xs, 0.6875rem);
                             white-space: pre-wrap;
                             word-break: break-all;
                             color: var(--semantic-color-text-secondary);
@@ -1209,7 +1264,7 @@
                         <pre
                           style="
                             margin: 0;
-                            font-size: 11px;
+                            font-size: var(--font-size-2xs, 0.6875rem);
                             white-space: pre-wrap;
                             word-break: break-all;
                             color: var(--semantic-color-text-dark);
@@ -1234,18 +1289,20 @@
                         padding: 8px 12px;
                         border-radius: 6px;
                         border: 1px dashed var(--border);
-                        font-size: 11px;
+                        font-size: var(--font-size-2xs, 0.6875rem);
                       "
                     >
                       <div style="display: flex; align-items: center; gap: 8px">
-                        <span style="font-size: 14px">🛡️</span>
+                        <span style="font-size: var(--font-size-sm, 0.875rem)"
+                          >🛡️</span
+                        >
                         <span
                           ><strong>Cryptographic SHA-256 Digest:</strong></span
                         >
                         <code
                           class="hash-code"
                           style="
-                            font-size: 11px;
+                            font-size: var(--font-size-2xs, 0.6875rem);
                             color: var(--primary);
                             word-break: break-all;
                           "
@@ -1254,7 +1311,7 @@
                       </div>
                       <span
                         class="badge status-approved"
-                        style="font-size: 10px"
+                        style="font-size: 0.625rem"
                         >SEAL VERIFIED</span
                       >
                     </div>
@@ -1279,7 +1336,10 @@
         "
       >
         <span
-          style="font-size: 12px; color: var(--semantic-color-text-secondary)"
+          style="
+            font-size: 0.75rem;
+            color: var(--semantic-color-text-secondary);
+          "
         >
           Showing records {{ offset + 1 }} to
           {{ Math.min(offset + limit, totalLogs) }} of {{ totalLogs }}
@@ -1287,7 +1347,7 @@
         <div style="display: flex; gap: 8px">
           <button
             class="btn btn-secondary btn-prev-page"
-            style="padding: 4px 12px; font-size: 12px; cursor: pointer"
+            style="padding: 4px 12px; font-size: 0.75rem; cursor: pointer"
             :disabled="offset === 0 || auditLoading"
             @click="prevPage"
           >
@@ -1295,7 +1355,7 @@
           </button>
           <button
             class="btn btn-secondary btn-next-page"
-            style="padding: 4px 12px; font-size: 12px; cursor: pointer"
+            style="padding: 4px 12px; font-size: 0.75rem; cursor: pointer"
             :disabled="offset + limit >= totalLogs || auditLoading"
             @click="nextPage"
           >
@@ -1311,7 +1371,11 @@
         <span>eTMF Completeness Tracking &amp; Verification</span>
         <button
           class="btn btn-secondary badge btn-check-completeness"
-          style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+          style="
+            padding: 4px 8px;
+            font-size: var(--font-size-2xs, 0.6875rem);
+            cursor: pointer;
+          "
           :disabled="completenessLoading"
           @click="checkCompleteness"
         >
@@ -1321,7 +1385,7 @@
 
       <p
         style="
-          font-size: 13px;
+          font-size: var(--font-size-xs, 0.8125rem);
           color: var(--semantic-color-text-secondary);
           margin: 8px 0 16px 0;
         "
@@ -1351,7 +1415,7 @@
           <label
             for="completeness-study-id-input"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs, 0.6875rem);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -1367,7 +1431,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: 0.75rem;
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -1382,7 +1446,7 @@
           <label
             for="completeness-milestone-select"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs, 0.6875rem);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -1396,7 +1460,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: 0.75rem;
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -1415,7 +1479,7 @@
           <label
             for="completeness-site-id-input"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs, 0.6875rem);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -1431,7 +1495,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: 0.75rem;
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -1450,7 +1514,7 @@
         >
           <button
             class="btn btn-primary btn-run-completeness"
-            style="padding: 6px 12px; font-size: 12px; cursor: pointer"
+            style="padding: 6px 12px; font-size: 0.75rem; cursor: pointer"
             :disabled="
               completenessLoading || !completenessParams.study_id.trim()
             "
@@ -1510,7 +1574,7 @@
             "
           >
             <div style="display: flex; align-items: center; gap: 8px">
-              <span style="font-size: 20px">{{
+              <span style="font-size: 1.25rem">{{
                 completenessResult.is_complete ? "🟢" : "🟡"
               }}</span>
               <div>
@@ -1519,7 +1583,7 @@
                     color: completenessResult.is_complete
                       ? 'var(--semantic-color-success)'
                       : 'var(--semantic-color-warning)',
-                    fontSize: '15px',
+                    fontSize: 'var(--font-size-base, 0.9375rem)',
                   }"
                 >
                   {{
@@ -1530,7 +1594,7 @@
                 </strong>
                 <p
                   style="
-                    font-size: 12px;
+                    font-size: 0.75rem;
                     margin: 4px 0 0 0;
                     color: var(--semantic-color-text);
                   "
@@ -1544,7 +1608,12 @@
                 </p>
               </div>
             </div>
-            <div style="font-size: 13px; font-weight: 600">
+            <div
+              style="
+                font-size: var(--font-size-xs, 0.8125rem);
+                font-weight: 600;
+              "
+            >
               Score:
               {{
                 (completenessResult.present_artifacts &&
@@ -1568,7 +1637,11 @@
         <div style="overflow-x: auto">
           <table
             class="clinical-table"
-            style="width: 100%; border-collapse: collapse; font-size: 13px"
+            style="
+              width: 100%;
+              border-collapse: collapse;
+              font-size: var(--font-size-xs, 0.8125rem);
+            "
           >
             <thead>
               <tr
@@ -1601,13 +1674,17 @@
                 <td style="padding: 10px">
                   <span
                     :class="getCompletenessBadgeClass(art.status)"
-                    style="font-size: 10px"
+                    style="font-size: 0.625rem"
                   >
                     {{ art.status }}
                   </span>
                 </td>
                 <td
-                  style="padding: 10px; font-family: monospace; font-size: 11px"
+                  style="
+                    padding: 10px;
+                    font-family: monospace;
+                    font-size: var(--font-size-2xs, 0.6875rem);
+                  "
                 >
                   {{ art.document_id || "-" }}
                 </td>
@@ -1623,7 +1700,11 @@
                   <button
                     v-if="art.document_id"
                     class="btn btn-secondary btn-preview-completeness-doc"
-                    style="padding: 3px 6px; font-size: 11px; cursor: pointer"
+                    style="
+                      padding: 3px 6px;
+                      font-size: var(--font-size-2xs, 0.6875rem);
+                      cursor: pointer;
+                    "
                     @click="
                       previewDocument({
                         id: art.document_id,
@@ -1637,7 +1718,7 @@
                     v-else
                     style="
                       color: var(--semantic-color-text-secondary);
-                      font-size: 12px;
+                      font-size: 0.75rem;
                       font-style: italic;
                     "
                     >Missing Document</span

@@ -18,7 +18,12 @@
           Updated Study Consent Review
         </div>
         <div class="modal-body">
-          <p style="font-size: 14px; margin-bottom: 12px">
+          <p
+            style="
+              font-size: var(--font-size-sm, 0.875rem);
+              margin-bottom: 12px;
+            "
+          >
             Your study consent form has been updated. Please review what changed
             below and sign to continue with your study surveys.
           </p>
@@ -32,7 +37,7 @@
               background-color: var(--semantic-color-error-bg);
               color: var(--semantic-color-error);
               margin-bottom: 12px;
-              font-size: 13px;
+              font-size: var(--font-size-xs, 0.8125rem);
               font-weight: 600;
             "
             role="status"
@@ -55,7 +60,7 @@
             <h4
               style="
                 margin: 0 0 6px 0;
-                font-size: 14px;
+                font-size: var(--font-size-sm, 0.875rem);
                 color: var(--semantic-color-text-dark);
               "
             >
@@ -64,7 +69,7 @@
             <p
               style="
                 margin: 0;
-                font-size: 13px;
+                font-size: var(--font-size-xs, 0.8125rem);
                 color: var(--semantic-color-text-muted);
               "
             >

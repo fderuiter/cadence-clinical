@@ -989,11 +989,16 @@ async function handleExecuteBulkSignOff() {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md, 16px);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   font-family: inherit;
 }
 
 .console-header {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: space-between;
   align-items: flex-start;
   border-bottom: 1px solid var(--border);
@@ -1049,6 +1054,7 @@ async function handleExecuteBulkSignOff() {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  min-width: 0;
   background: var(--semantic-color-surface-header);
   padding: 12px 16px;
   border-radius: var(--radius-sm, 6px);
@@ -1056,17 +1062,29 @@ async function handleExecuteBulkSignOff() {
   flex-wrap: wrap;
 }
 
+.assignment-selector-panel > .form-group {
+  flex: 1 1 16rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .select-input {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 4px);
   background: var(--semantic-color-surface);
+  font: inherit;
   font-size: 0.9rem;
-  min-width: 320px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .status-summary-chips {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
   gap: 12px;
 }
 
@@ -1107,6 +1125,7 @@ async function handleExecuteBulkSignOff() {
 
 .tab-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   border-bottom: 2px solid var(--border);
   margin-bottom: 16px;
@@ -1131,13 +1150,28 @@ async function handleExecuteBulkSignOff() {
 
 .modules-layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
   gap: 20px;
+  min-width: 0;
 }
 
 .module-sidebar {
   border-right: 1px solid var(--border);
   padding-right: 16px;
+  min-width: 0;
+}
+
+@media (max-width: 899px) {
+  .modules-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .module-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-right: 0;
+    padding-bottom: 16px;
+  }
 }
 
 .sidebar-heading {
@@ -1165,7 +1199,10 @@ async function handleExecuteBulkSignOff() {
   border-radius: 6px;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .module-item:hover {
@@ -1211,10 +1248,13 @@ async function handleExecuteBulkSignOff() {
 .module-reader {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .reader-header {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--border);
@@ -1229,6 +1269,7 @@ async function handleExecuteBulkSignOff() {
 
 .content-text {
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font-family: inherit;
   font-size: 0.95rem;
   line-height: 1.6;
@@ -1240,6 +1281,8 @@ async function handleExecuteBulkSignOff() {
 
 .reader-footer {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: space-between;
   margin-top: 20px;
 }
@@ -1247,6 +1290,8 @@ async function handleExecuteBulkSignOff() {
 /* Quiz Styles */
 .quiz-header-card {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: space-between;
   align-items: center;
   background: var(--semantic-color-surface-muted);
@@ -1312,7 +1357,10 @@ async function handleExecuteBulkSignOff() {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .option-item.selected {
@@ -1341,6 +1389,7 @@ async function handleExecuteBulkSignOff() {
 
 .quiz-actions-bar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 20px;
@@ -1414,13 +1463,14 @@ async function handleExecuteBulkSignOff() {
 
 .manifest-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
   gap: 6px 16px;
   font-size: 0.85rem;
 }
 
 .cert-routing-status {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 20px;
 }
@@ -1592,8 +1642,9 @@ async function handleExecuteBulkSignOff() {
 
 .batch-filter-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: 20px;
+  min-width: 0;
   background: var(--semantic-color-surface-muted);
   padding: 16px;
   border-radius: 6px;
@@ -1625,6 +1676,8 @@ async function handleExecuteBulkSignOff() {
 
 .batch-preview-bar {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: space-between;
   align-items: center;
   background: var(--semantic-color-info-bg);
@@ -1635,6 +1688,7 @@ async function handleExecuteBulkSignOff() {
 
 .preview-info {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   font-size: 0.9rem;
@@ -1667,6 +1721,7 @@ async function handleExecuteBulkSignOff() {
 
 .result-stats {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 12px;
 }
@@ -1691,18 +1746,26 @@ async function handleExecuteBulkSignOff() {
   color: var(--semantic-color-primary-dark);
 }
 
-.skipped-table-wrapper {
+.skipped-table-wrapper,
+.delegations-table-wrapper {
   margin-top: 12px;
+  overflow-x: auto;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .delegation-header {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: space-between;
   align-items: flex-start;
 }
 
 .delegation-actions-bar {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;

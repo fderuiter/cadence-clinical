@@ -21,7 +21,13 @@
       >
         {{ heading }}
       </h2>
-      <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px">
+      <p
+        style="
+          font-size: var(--font-size-sm, 0.875rem);
+          color: var(--text-muted);
+          margin-bottom: 20px;
+        "
+      >
         This section is not open for your study right now. Nothing was changed
         or submitted. You can return to your tasks or contact your study
         coordinator if you have questions.

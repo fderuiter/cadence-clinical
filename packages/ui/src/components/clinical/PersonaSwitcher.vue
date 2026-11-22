@@ -123,9 +123,14 @@ const selectPersona = (persona) => {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 6px 12px;
+  font: inherit;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .persona-toggle-btn:hover {
@@ -147,13 +152,13 @@ const selectPersona = (persona) => {
 }
 
 .persona-label {
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-weight: 500;
   color: var(--semantic-color-text);
 }
 
 .persona-badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   padding: 2px 6px;
   border-radius: 4px;
   background: var(--semantic-color-surface-header);
@@ -162,7 +167,7 @@ const selectPersona = (persona) => {
 }
 
 .dropdown-arrow {
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--semantic-color-text-muted);
 }
 
@@ -170,7 +175,7 @@ const selectPersona = (persona) => {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  width: 280px;
+  width: min(280px, calc(100vw - 24px));
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
@@ -183,7 +188,7 @@ const selectPersona = (persona) => {
 
 .menu-header {
   padding: 8px 12px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -224,18 +229,18 @@ const selectPersona = (persona) => {
 }
 
 .item-title {
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   font-weight: 500;
   color: var(--semantic-color-text);
 }
 
 .item-role {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   color: var(--semantic-color-text-muted);
 }
 
 .item-badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs, 0.6875rem);
   padding: 2px 6px;
   border-radius: 4px;
   background: var(--semantic-color-surface-header);

@@ -189,11 +189,15 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 4px 10px;
+  font: inherit;
   font-size: 0.8rem;
   font-weight: 600;
   border-radius: var(--radius-xs);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .btn-retry {

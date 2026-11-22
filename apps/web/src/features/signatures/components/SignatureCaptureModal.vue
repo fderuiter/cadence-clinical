@@ -472,7 +472,7 @@ defineExpose({
   padding: 16px;
   border-bottom: 1px solid var(--semantic-color-border);
   font-weight: 600;
-  font-size: 16px;
+  font-size: var(--font-size-md, 1rem);
   color: white;
 }
 
@@ -482,7 +482,7 @@ defineExpose({
 
 .modal-desc {
   margin-bottom: 16px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   color: var(--semantic-color-text-body);
   line-height: 1.4;
 }
@@ -499,15 +499,16 @@ label {
   display: block;
   font-weight: 500;
   margin-bottom: 4px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   color: var(--semantic-color-text-secondary);
 }
 
 select {
   box-sizing: border-box;
   width: 100%;
+  min-width: 0;
   padding: 8px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: var(--radius-sm, 4px);
@@ -515,6 +516,7 @@ select {
 
 .modal-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 16px;
@@ -524,7 +526,7 @@ select {
 
 .btn {
   padding: 6px 12px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   cursor: pointer;
   border-radius: var(--radius-sm, 4px);
   font-weight: 500;
@@ -564,7 +566,7 @@ button:focus-visible {
   .btn {
     min-height: 48px;
     padding: 10px 14px;
-    font-size: 16px;
+    font-size: var(--font-size-md, 1rem);
   }
 }
 </style>

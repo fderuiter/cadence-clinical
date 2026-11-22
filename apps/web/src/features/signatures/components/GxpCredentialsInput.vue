@@ -183,16 +183,17 @@ label {
   display: block;
   font-weight: 500;
   margin-bottom: 4px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   color: var(--semantic-color-text-secondary);
 }
 
 input {
   width: 100%;
+  min-width: 0;
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.8125rem);
   background: white;
   box-sizing: border-box;
 }
@@ -213,7 +214,7 @@ input:focus-visible {
   border: 1px solid var(--semantic-color-orange-border);
   background: var(--semantic-color-orange-bg);
   color: var(--semantic-color-orange-text);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.4;
 }
@@ -222,7 +223,7 @@ input:focus-visible {
   input {
     min-height: 48px;
     padding: 10px 14px;
-    font-size: 16px;
+    font-size: var(--font-size-md, 1rem);
   }
 }
 </style>

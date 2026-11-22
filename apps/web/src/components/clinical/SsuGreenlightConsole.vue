@@ -1611,7 +1611,12 @@ onMounted(() => {
   font-size: 0.9rem;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .view-tab-btn.active {
@@ -1763,8 +1768,9 @@ onMounted(() => {
 
 .metrics-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr));
   gap: 16px;
+  min-width: 0;
 }
 
 .metric-card {
@@ -1808,6 +1814,8 @@ onMounted(() => {
 
 .batch-action-bar {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: space-between;
   align-items: center;
   background: var(--semantic-color-info-bg);
@@ -1818,6 +1826,7 @@ onMounted(() => {
 
 .batch-selection-info {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 16px;
 }
@@ -1836,7 +1845,12 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
   border: none;
 }
 
@@ -2144,7 +2158,7 @@ onMounted(() => {
 
 .form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
   gap: 12px;
 }
 
@@ -2188,8 +2202,9 @@ onMounted(() => {
 
 .facets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17.5rem), 1fr));
   gap: 16px;
+  min-width: 0;
 }
 
 .facet-card {

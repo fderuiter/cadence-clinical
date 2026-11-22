@@ -1874,7 +1874,12 @@ export default {
   border-radius: 8px;
   padding: 14px 18px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .stat-card:hover {
@@ -2001,7 +2006,12 @@ export default {
   border-radius: 6px;
   padding: 8px 10px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
   color: var(--primary);
 }
 
@@ -2148,7 +2158,12 @@ export default {
   font-size: 0.7rem;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s,
+    opacity 0.15s;
 }
 
 .tag-chip:hover {
@@ -2177,7 +2192,12 @@ export default {
   border-radius: 6px;
   padding: 12px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -2392,7 +2412,12 @@ export default {
   font-weight: 600;
   color: var(--neutral-dark);
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s,
+    opacity 0.15s;
 }
 
 .reader-tab-btn:hover {
@@ -2789,7 +2814,12 @@ export default {
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .btn-sm {

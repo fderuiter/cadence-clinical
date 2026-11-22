@@ -1346,7 +1346,12 @@ const commitAndActivateEDC = async () => {
   text-align: center;
   background-color: var(--semantic-color-surface-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .dropzone:hover,
@@ -1885,7 +1890,12 @@ const commitAndActivateEDC = async () => {
   font-size: 0.95rem;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -447,7 +447,7 @@ function onKeydown(event: KeyboardEvent) {
 
 .palette-item {
   display: grid;
-  grid-template-columns: 7rem 1fr;
+  grid-template-columns: 7rem minmax(0, 1fr);
   gap: 2px 12px;
   padding: 8px 10px;
   border-radius: 6px;

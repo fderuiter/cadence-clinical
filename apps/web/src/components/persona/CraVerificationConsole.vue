@@ -57,6 +57,8 @@
         class="card-title"
         style="
           display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 12px;
@@ -95,7 +97,10 @@
           align-items: center;
         "
       >
-        <div class="form-group" style="margin: 0; min-width: 180px">
+        <div
+          class="form-group"
+          style="margin: 0; flex: 1 1 11.25rem; min-width: 0"
+        >
           <label
             for="cra-subject-selector"
             style="font-weight: bold; font-size: 0.75rem"
@@ -121,7 +126,10 @@
           </select>
         </div>
 
-        <div class="form-group" style="margin: 0; min-width: 180px">
+        <div
+          class="form-group"
+          style="margin: 0; flex: 1 1 11.25rem; min-width: 0"
+        >
           <label
             for="cra-visit-selector"
             style="font-weight: bold; font-size: 0.75rem"
@@ -147,6 +155,7 @@
           style="
             margin-left: auto;
             display: flex;
+            flex-wrap: wrap;
             gap: 12px;
             align-items: center;
             font-size: 0.85rem;
@@ -925,7 +934,7 @@ function confirmCloseQuery() {
   padding: 14px 16px;
   border-bottom: 1px solid var(--semantic-color-border);
   font-weight: 600;
-  font-size: 15px;
+  font-size: var(--font-size-base, 0.9375rem);
   color: white;
 }
 

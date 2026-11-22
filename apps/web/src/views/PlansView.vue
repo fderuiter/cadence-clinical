@@ -857,24 +857,28 @@ async function handleActivateSubscription() {
   border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
   padding: 28px;
+  min-width: 0;
 }
 
 .scoping-form {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  min-width: 0;
 }
 
 .scoping-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
   gap: 16px;
+  min-width: 0;
 }
 
 .scoping-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .scoping-field label {
@@ -886,6 +890,8 @@ async function handleActivateSubscription() {
 .scoping-field input,
 .scoping-field select {
   padding: 9px 11px;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
@@ -902,14 +908,17 @@ async function handleActivateSubscription() {
 
 .scoping-actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: flex-start;
 }
 
 .plans-tiers-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18.75rem), 1fr));
   gap: 20px;
   margin-bottom: 40px;
+  min-width: 0;
 }
 
 .plan-card {
@@ -917,6 +926,7 @@ async function handleActivateSubscription() {
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 12px;
   padding: 24px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1029,8 +1039,9 @@ async function handleActivateSubscription() {
 .families-grid,
 .benchmark-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15.625rem), 1fr));
   gap: 16px;
+  min-width: 0;
 }
 
 .guarantee-card,
@@ -1040,6 +1051,7 @@ async function handleActivateSubscription() {
   border: 1px solid var(--semantic-color-border);
   border-radius: 10px;
   padding: 18px;
+  min-width: 0;
 }
 
 .guarantee-card h3,
@@ -1051,6 +1063,7 @@ async function handleActivateSubscription() {
 
 .family-card-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 8px;

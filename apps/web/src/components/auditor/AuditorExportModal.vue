@@ -36,7 +36,9 @@
           margin-bottom: 20px;
         "
       >
-        <h3 style="margin: 0; font-size: 16px">Export Inspection Log</h3>
+        <h3 style="margin: 0; font-size: var(--font-size-md, 1rem)">
+          Export Inspection Log
+        </h3>
         <button
           type="button"
           class="btn-close"
@@ -44,7 +46,7 @@
           style="
             background: none;
             border: none;
-            font-size: 20px;
+            font-size: 1.25rem;
             cursor: pointer;
             color: var(--semantic-color-text);
           "
@@ -60,7 +62,7 @@
       >
         <legend
           style="
-            font-size: 12px;
+            font-size: 0.75rem;
             font-weight: 600;
             margin-bottom: 6px;
             display: block;
@@ -77,7 +79,7 @@
               align-items: center;
               gap: 8px;
               cursor: pointer;
-              font-size: 13px;
+              font-size: var(--font-size-xs, 0.8125rem);
             "
           >
             <input
@@ -96,7 +98,7 @@
               align-items: center;
               gap: 8px;
               cursor: pointer;
-              font-size: 13px;
+              font-size: var(--font-size-xs, 0.8125rem);
             "
           >
             <input
@@ -115,7 +117,7 @@
               align-items: center;
               gap: 8px;
               cursor: pointer;
-              font-size: 13px;
+              font-size: var(--font-size-xs, 0.8125rem);
             "
           >
             <input
@@ -135,7 +137,7 @@
       >
         <legend
           style="
-            font-size: 12px;
+            font-size: 0.75rem;
             font-weight: 600;
             margin-bottom: 6px;
             display: block;
@@ -148,7 +150,7 @@
             <label
               for="auditor-export-start-date"
               style="
-                font-size: 11px;
+                font-size: var(--font-size-2xs, 0.6875rem);
                 color: var(--semantic-color-text-secondary);
                 display: block;
                 margin-bottom: 4px;
@@ -167,7 +169,7 @@
                 border: 1px solid var(--border);
                 background: var(--semantic-color-surface-muted);
                 color: var(--semantic-color-text);
-                font-size: 13px;
+                font-size: var(--font-size-xs, 0.8125rem);
               "
             />
           </div>
@@ -175,7 +177,7 @@
             <label
               for="auditor-export-end-date"
               style="
-                font-size: 11px;
+                font-size: var(--font-size-2xs, 0.6875rem);
                 color: var(--semantic-color-text-secondary);
                 display: block;
                 margin-bottom: 4px;
@@ -194,7 +196,7 @@
                 border: 1px solid var(--border);
                 background: var(--semantic-color-surface-muted);
                 color: var(--semantic-color-text);
-                font-size: 13px;
+                font-size: var(--font-size-xs, 0.8125rem);
               "
             />
           </div>

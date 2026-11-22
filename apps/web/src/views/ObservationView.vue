@@ -454,8 +454,19 @@ watch(() => props.observationRef, load);
 }
 .observation-summary {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 4px 16px;
+  min-width: 0;
+}
+.observation-summary dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 479px) {
+  .observation-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .observation-correction {
   display: flex;

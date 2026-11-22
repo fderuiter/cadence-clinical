@@ -78,7 +78,14 @@
           >
             Roles: {{ authStore.normalizedRoles.join(", ") || "none" }}
           </p>
-          <div style="display: flex; gap: 12px; justify-content: center">
+          <div
+            style="
+              display: flex;
+              flex-wrap: wrap;
+              gap: 12px;
+              justify-content: center;
+            "
+          >
             <button
               class="btn btn-primary"
               style="padding: 10px 24px; font-weight: 600; cursor: pointer"

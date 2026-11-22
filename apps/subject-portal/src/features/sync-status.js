@@ -235,12 +235,12 @@ export async function renderSyncQueueList() {
         <div class="task-item" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; border: 1px solid var(--semantic-color-border); border-radius: 8px; background: var(--semantic-color-surface);">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; flex-direction: column;">
-              <span style="font-weight: 700; font-size: 14px;">${escapeQueueHtml(instName)}</span>
-              <span style="font-size: 11px; color: var(--text-muted);">Saved ${escapeQueueHtml(submittedTime)}</span>
+              <span style="font-weight: 700; font-size: var(--font-size-sm, 0.875rem);">${escapeQueueHtml(instName)}</span>
+              <span style="font-size: var(--font-size-2xs, 0.6875rem); color: var(--text-muted);">Saved ${escapeQueueHtml(submittedTime)}</span>
             </div>
             <span class="status-pill ${badgeClass}">${escapeQueueHtml(statusLabel)}</span>
           </div>
-          <div style="font-size: 12px; color: var(--text-muted); border-top: 1px dashed var(--semantic-color-border); padding-top: 6px; margin-top: 4px;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); border-top: 1px dashed var(--semantic-color-border); padding-top: 6px; margin-top: 4px;">
             <p style="margin: 0 0 4px 0;">${escapeQueueHtml(statusDesc)}</p>
             ${recoveryGuidanceHtml}
             ${answersDetails}

@@ -507,7 +507,12 @@ defineExpose({
   background-color: var(--neutral-light);
   color: var(--neutral-dark);
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s,
+    opacity 0.15s;
 }
 
 .domain-pill.active {
@@ -576,7 +581,12 @@ defineExpose({
   padding: 14px;
   background-color: white;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s,
+    box-shadow 0.2s,
+    opacity 0.2s;
   display: flex;
   flex-direction: column;
   gap: 10px;

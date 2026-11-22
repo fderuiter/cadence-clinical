@@ -829,8 +829,9 @@ function startGuidedTour() {
 
 .overview-grid {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
   gap: 24px;
+  min-width: 0;
 }
 
 @media (max-width: 960px) {
@@ -839,9 +840,10 @@ function startGuidedTour() {
   }
   .landing-preference-card {
     width: 100%;
+    min-width: 0;
   }
   .overview-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -850,11 +852,14 @@ function startGuidedTour() {
   border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
   padding: 24px;
+  min-width: 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .section-header {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
@@ -865,6 +870,7 @@ function startGuidedTour() {
   font-weight: 700;
   margin: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   color: var(--semantic-color-text);
@@ -920,13 +926,17 @@ function startGuidedTour() {
 
 .checklist-item-row {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   align-items: flex-start;
   justify-content: space-between;
   padding: 12px;
   background: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .checklist-item-row:hover {
@@ -943,13 +953,15 @@ function startGuidedTour() {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  min-width: 0;
   cursor: pointer;
-  flex: 1;
+  flex: 1 1 10rem;
 }
 
 .task-checkbox {
   width: 18px;
   height: 18px;
+  flex-shrink: 0;
   margin-top: 2px;
   cursor: pointer;
   accent-color: var(--semantic-color-success);
@@ -958,6 +970,7 @@ function startGuidedTour() {
 .task-content {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 2px;
 }
 
@@ -988,7 +1001,6 @@ function startGuidedTour() {
   cursor: pointer;
   font-weight: 600;
   white-space: nowrap;
-  margin-left: 8px;
 }
 
 .btn-task-launch:hover {
@@ -1021,8 +1033,9 @@ function startGuidedTour() {
 
 .launchers-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
   gap: 16px;
+  min-width: 0;
 }
 
 .launcher-card {
@@ -1030,6 +1043,7 @@ function startGuidedTour() {
   border: 1px solid var(--semantic-color-border);
   border-radius: 10px;
   padding: 16px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1104,7 +1118,16 @@ function startGuidedTour() {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+@media (max-width: 640px) {
+  .overview-section {
+    padding: 16px 12px;
+  }
 }
 
 .launcher-card:hover .btn-launcher-action {

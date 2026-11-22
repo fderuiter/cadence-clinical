@@ -264,14 +264,16 @@ async function downloadSnapshot() {
 
 .exports-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.75rem), 1fr));
   gap: 12px;
+  min-width: 0;
 }
 
 .field-group {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .field-group label {

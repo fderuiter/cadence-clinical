@@ -788,7 +788,12 @@ function synthesizeProtocol() {
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.8rem;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .btn-retry-save:hover {
@@ -866,7 +871,12 @@ function synthesizeProtocol() {
   border-radius: 8px;
   padding: 16px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
   display: flex;
   flex-direction: column;
 }
@@ -989,7 +999,12 @@ function synthesizeProtocol() {
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .btn-tab.active {

@@ -495,10 +495,20 @@ function getUnreadBadgeCount(node) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
+  max-width: 100%;
   background-color: var(--semantic-color-surface);
   border-right: 1px solid var(--semantic-color-border);
   padding: 16px;
   box-sizing: border-box;
+}
+
+@media (max-width: 1023px) {
+  .tmf-binder-tree-container {
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--semantic-color-border);
+  }
 }
 
 .binder-export-header {
