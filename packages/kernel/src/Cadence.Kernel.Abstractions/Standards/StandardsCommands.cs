@@ -49,6 +49,12 @@ public enum LibraryItemKind
 /// </summary>
 [KernelCapability("standard.register", VerbClass.Execute)]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(StandardsErrors),
+    nameof(StandardsErrors.PackageInvalid),
+    nameof(StandardsErrors.ContentHashMismatch),
+    nameof(StandardsErrors.VersionAlreadyRegistered))]
 public sealed record RegisterStandardVersion(
     TenantId TenantId,
     StandardVersionId StandardVersionId,
@@ -60,6 +66,11 @@ public sealed record RegisterStandardVersion(
 /// <summary>Approves a draft standard version for use by studies. Needs an <c>Approved</c> Attestation bound to its content hash.</summary>
 [KernelCapability("standard.approve", VerbClass.Approve, Resource = nameof(ApproveStandardVersion.StandardVersionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(
+    typeof(StandardsErrors),
+    nameof(StandardsErrors.StandardVersionUnknown),
+    nameof(StandardsErrors.AttestationRejected),
+    nameof(StandardsErrors.InvalidTransition))]
 public sealed record ApproveStandardVersion(
     TenantId TenantId,
     StandardVersionId StandardVersionId,
@@ -73,6 +84,11 @@ public sealed record ApproveStandardVersion(
 /// </summary>
 [KernelCapability("standard.deprecate", VerbClass.Approve, Resource = nameof(DeprecateStandardVersion.StandardVersionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(
+    typeof(StandardsErrors),
+    nameof(StandardsErrors.StandardVersionUnknown),
+    nameof(StandardsErrors.AttestationRejected),
+    nameof(StandardsErrors.InvalidTransition))]
 public sealed record DeprecateStandardVersion(
     TenantId TenantId,
     StandardVersionId StandardVersionId,
@@ -87,6 +103,11 @@ public sealed record DeprecateStandardVersion(
 /// </summary>
 [KernelCapability("library_item.draft", VerbClass.Propose)]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(StandardsErrors),
+    nameof(StandardsErrors.LibraryItemInvalid),
+    nameof(StandardsErrors.StandardVersionUnknown))]
 public sealed record DraftLibraryItem(
     TenantId TenantId,
     LibraryItemId LibraryItemId,
@@ -101,6 +122,11 @@ public sealed record DraftLibraryItem(
 /// <summary>Approves a draft library item version. Needs an <c>Approved</c> Attestation bound to its content hash.</summary>
 [KernelCapability("library_item.approve", VerbClass.Approve, Resource = nameof(ApproveLibraryItem.LibraryItemId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(
+    typeof(StandardsErrors),
+    nameof(StandardsErrors.LibraryItemUnknown),
+    nameof(StandardsErrors.AttestationRejected),
+    nameof(StandardsErrors.InvalidTransition))]
 public sealed record ApproveLibraryItem(
     TenantId TenantId,
     LibraryItemId LibraryItemId,
@@ -111,6 +137,11 @@ public sealed record ApproveLibraryItem(
 /// <summary>Deprecates a library item version. Needs a <c>Responsibility</c> Attestation. Pinned studies keep it.</summary>
 [KernelCapability("library_item.deprecate", VerbClass.Approve, Resource = nameof(DeprecateLibraryItem.LibraryItemId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(
+    typeof(StandardsErrors),
+    nameof(StandardsErrors.LibraryItemUnknown),
+    nameof(StandardsErrors.AttestationRejected),
+    nameof(StandardsErrors.InvalidTransition))]
 public sealed record DeprecateLibraryItem(
     TenantId TenantId,
     LibraryItemId LibraryItemId,
@@ -126,6 +157,13 @@ public sealed record DeprecateLibraryItem(
 /// </summary>
 [KernelCapability("study.declare_standards", VerbClass.Execute, Resource = nameof(DeclareStudyStandards.StudyId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(
+    typeof(StandardsErrors),
+    nameof(StandardsErrors.StudyUnknown),
+    nameof(StandardsErrors.StandardVersionUnknown),
+    nameof(StandardsErrors.LibraryItemUnknown),
+    nameof(StandardsErrors.NotApproved),
+    nameof(StandardsErrors.DeclarationInvalid))]
 public sealed record DeclareStudyStandards(
     TenantId TenantId,
     StudyId StudyId,

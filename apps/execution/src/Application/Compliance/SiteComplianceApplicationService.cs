@@ -39,7 +39,8 @@ public sealed class SiteComplianceApplicationService(
     ISiteComplianceRepository compliance,
     IAuditLogWriter auditLog,
     ICurrentAuditContextAccessor auditContext,
-    IClock clock) : ISiteComplianceApplicationService
+    IClock clock,
+    IKernelSiteActivationSynchronizer? kernelSiteActivationSynchronizer = null) : ISiteComplianceApplicationService
 {
     // The audit chain key for every entry this service writes: the aggregate's CLR type name (#4768).
     private const string SiteComplianceEntityName = nameof(SiteComplianceCache);
@@ -115,6 +116,24 @@ public sealed class SiteComplianceApplicationService(
 
         // Activation is stateful and idempotent: if already activated, return success without writing a
         // duplicate SITE_ACTIVATION audit row. ActivateSiteAsync never flips IsComplete or increments Version.
+        if (gate.IsActivated)
+        {
+            return true;
+        }
+
+        if (kernelSiteActivationSynchronizer is not null)
+        {
+            var syncResult = await kernelSiteActivationSynchronizer.SynchronizeSiteActivationAsync(
+                studyCode.Value,
+                siteCode.Value,
+                auditContext.ChangeReason,
+                ct).ConfigureAwait(false);
+            if (syncResult.IsFailure)
+            {
+                return Result<bool>.Failure(syncResult.Error!);
+            }
+        }
+
         if (!gate.MarkActivated(clock.UtcNow, auditContext.UserId))
         {
             return true;

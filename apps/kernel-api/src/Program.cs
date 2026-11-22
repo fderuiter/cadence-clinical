@@ -31,6 +31,7 @@ using Cadence.Modules.Intelligence.Mcp;
 using Cadence.Modules.Intelligence.Tools;
 using Cadence.Rules;
 using Cadence.Security.DependencyInjection;
+using Cadence.Standards;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
@@ -90,6 +91,7 @@ builder.Services
     // Standards registry, validation findings ledger, and rule evaluation (spec §6.3, §10, K-RULE-3, K-FIND-1)
     .AddKernelStandardsPersistence()
     .AddKernelStandards()
+    .AddCadenceStandards()
     .AddKernelValidationPersistence()
     .AddKernelValidation()
     .AddCadenceRules()
@@ -143,6 +145,8 @@ app.MapCadenceHealthAndStatusEndpoints(
 app.MapKernelApi()
     .MapKernelReads()
     .MapKernelStudyImports()
+    .MapKernelProtocols()
+    .MapKernelGovernance()
     .MapKernelObservations()
     .MapKernelExecution()
     .MapKernelLocks()

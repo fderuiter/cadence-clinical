@@ -101,6 +101,29 @@ export type KernelValidationFindingPage =
   Schemas["Kernel_KernelValidationFindingPageResponse"];
 export type KernelValidationFindingDetail =
   Schemas["Kernel_KernelValidationFindingDetailResponse"];
+export type KernelValidationRun = Schemas["Kernel_KernelValidationRunResponse"];
+export type KernelStandardVersion =
+  Schemas["Kernel_KernelStandardVersionResponse"];
+export type KernelBundledStandardSeed =
+  Schemas["Kernel_KernelBundledStandardSeedResponse"];
+export type KernelStandardsCatalog =
+  Schemas["Kernel_KernelStandardsCatalogResponse"];
+export type KernelLibraryItem = Schemas["Kernel_KernelLibraryItemResponse"];
+export type KernelStudyStandardsProfile =
+  Schemas["Kernel_KernelStudyStandardsProfileResponse"];
+export type KernelCodeSystemVersionRef =
+  Schemas["Kernel_KernelCodeSystemVersionRefDto"];
+export type KernelSiteSummary = Schemas["Kernel_KernelSiteSummaryResponse"];
+export type KernelStudySiteSummary =
+  Schemas["Kernel_KernelStudySiteSummaryResponse"];
+export type KernelArtifactSummary =
+  Schemas["Kernel_KernelArtifactSummaryResponse"];
+export type KernelArtifactVersionSummary =
+  Schemas["Kernel_KernelArtifactVersionSummaryResponse"];
+export type KernelEffectivitySummary =
+  Schemas["Kernel_KernelEffectivitySummaryResponse"];
+export type KernelAttestationMeaning =
+  "Approved" | "Withdrawn" | "Responsibility";
 export type KernelEntitlements = Schemas["Kernel_KernelEntitlementsResponse"];
 export type KernelSubscriptionScoping =
   Schemas["Kernel_KernelSubscriptionScopingResponse"];
@@ -180,8 +203,20 @@ export function extractKernelFieldErrors(
   return normalized;
 }
 
-/** Gateway step-up target URL for `POST /api/v1/kernel/locks`. */
+/** Gateway step-up semantic action and target URL helpers for 21 CFR Part 11 signed kernel commands. */
 export const RULE_PACK_APPROVE_SEMANTIC_ACTION = "kernel.library_item.approve";
+export const LIBRARY_ITEM_DEPRECATE_SEMANTIC_ACTION =
+  "kernel.library_item.deprecate";
+export const STANDARD_APPROVE_SEMANTIC_ACTION = "kernel.standard.approve";
+export const STANDARD_DEPRECATE_SEMANTIC_ACTION = "kernel.standard.deprecate";
+export const PROTOCOL_VERSION_APPROVE_SEMANTIC_ACTION =
+  "kernel.protocol_version.approve";
+export const PROTOCOL_VERSION_WITHDRAW_SEMANTIC_ACTION =
+  "kernel.protocol_version.withdraw";
+export const FINDING_ACCEPT_SEMANTIC_ACTION =
+  "kernel.validation_finding.accept";
+export const FINDING_EXPLAIN_SEMANTIC_ACTION =
+  "kernel.validation_finding.explain";
 
 /** Gateway step-up target URL for `POST /api/v1/kernel/library-items/{itemRef}/approve`. */
 export function rulePackApproveAction(itemRef: string): string {
@@ -190,9 +225,58 @@ export function rulePackApproveAction(itemRef: string): string {
   return `/api/v1/kernel/library-items/${clean}/approve`;
 }
 
+/** Gateway step-up target URL for `POST /api/v1/kernel/library-items/{itemRef}/deprecate`. */
+export function libraryItemDeprecateAction(itemRef: string): string {
+  const at = itemRef.indexOf("@");
+  const clean = at < 0 ? itemRef : itemRef.slice(0, at);
+  return `/api/v1/kernel/library-items/${clean}/deprecate`;
+}
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/standards/{standardRef}/approve`. */
+export function standardApproveAction(standardRef: string): string {
+  const at = standardRef.indexOf("@");
+  const clean = at < 0 ? standardRef : standardRef.slice(0, at);
+  return `/api/v1/kernel/standards/${clean}/approve`;
+}
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/standards/{standardRef}/deprecate`. */
+export function standardDeprecateAction(standardRef: string): string {
+  const at = standardRef.indexOf("@");
+  const clean = at < 0 ? standardRef : standardRef.slice(0, at);
+  return `/api/v1/kernel/standards/${clean}/deprecate`;
+}
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/protocol-versions/{versionRef}/approve`. */
+export function protocolVersionApproveAction(versionRef: string): string {
+  const at = versionRef.indexOf("@");
+  const clean = at < 0 ? versionRef : versionRef.slice(0, at);
+  return `/api/v1/kernel/protocol-versions/${clean}/approve`;
+}
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/protocol-versions/{versionRef}/withdraw`. */
+export function protocolVersionWithdrawAction(versionRef: string): string {
+  const at = versionRef.indexOf("@");
+  const clean = at < 0 ? versionRef : versionRef.slice(0, at);
+  return `/api/v1/kernel/protocol-versions/${clean}/withdraw`;
+}
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/validation/findings/{findingRef}/accept`. */
+export function findingAcceptAction(findingRef: string): string {
+  const at = findingRef.indexOf("@");
+  const clean = at < 0 ? findingRef : findingRef.slice(0, at);
+  return `/api/v1/kernel/validation/findings/${clean}/accept`;
+}
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/validation/findings/{findingRef}/explain`. */
+export function findingExplainAction(findingRef: string): string {
+  const at = findingRef.indexOf("@");
+  const clean = at < 0 ? findingRef : findingRef.slice(0, at);
+  return `/api/v1/kernel/validation/findings/${clean}/explain`;
+}
+
 export interface KernelApproveLibraryItemRequest {
   itemRef: string;
-  meaning?: KernelLockMeaning;
+  meaning?: KernelAttestationMeaning;
   attestationId?: string | null;
   sigToken: string;
   reason: string;
@@ -202,6 +286,17 @@ export interface KernelApproveLibraryItemRequest {
 export interface KernelDeclareStudyRulePacksInput {
   studyRef: string;
   rulePackRefs: string[];
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelDeclareStudyStandardsInput {
+  studyRef: string;
+  rulePackRefs?: string[];
+  mappingSpecRefs?: string[];
+  libraryPinRefs?: string[];
+  standardVersionRefs?: string[];
+  controlledTerminology?: KernelCodeSystemVersionRef[];
   reason: string;
   idempotencyKey: string;
 }
@@ -1275,7 +1370,7 @@ export const kernelApi = {
     );
   },
 
-  /** Approves a draft library item (such as a RulePack) with a step-up signature token. */
+  /** Approves a draft library item (such as a RulePack or MappingSpecification) with a step-up signature token. */
   approveLibraryItem({
     itemRef,
     meaning = "Approved",
@@ -1286,6 +1381,31 @@ export const kernelApi = {
   }: KernelApproveLibraryItemRequest): Promise<KernelRulePack> {
     return unwrapResponse(
       client.POST("/api/v1/kernel/library-items/{itemRef}/approve", {
+        params: { path: { itemRef: unversioned(itemRef) } },
+        body: {
+          meaning,
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Deprecates an approved library item with a step-up signature token. */
+  deprecateLibraryItem({
+    itemRef,
+    meaning = "Responsibility",
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: KernelApproveLibraryItemRequest): Promise<KernelLibraryItem> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/library-items/{itemRef}/deprecate", {
         params: { path: { itemRef: unversioned(itemRef) } },
         body: {
           meaning,
@@ -1323,6 +1443,733 @@ export const kernelApi = {
     );
   },
 
+  /** Reads a study's full standards profile (pinned StandardVersions, CT versions, and LibraryItem pins). */
+  getStudyStandards(studyRef: string): Promise<KernelStudyStandardsProfile> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/studies/{studyRef}/standards", {
+        params: { path: { studyRef: unversioned(studyRef) } },
+      })
+    );
+  },
+
+  /** Declares or updates a study's standards profile (StandardVersions, CT versions, MappingSpecifications, RulePacks). */
+  declareStudyStandards({
+    studyRef,
+    rulePackRefs,
+    mappingSpecRefs,
+    libraryPinRefs,
+    standardVersionRefs,
+    controlledTerminology,
+    reason,
+    idempotencyKey,
+  }: KernelDeclareStudyStandardsInput): Promise<KernelStudyRulePacks> {
+    const normalizeItems = (refs?: string[]) =>
+      refs?.map((ref) => {
+        const clean = unversioned(ref.trim());
+        return clean.includes(":") ? clean : `library_item:${clean}`;
+      });
+    const normalizeStandards = (refs?: string[]) =>
+      refs?.map((ref) => {
+        const clean = unversioned(ref.trim());
+        return clean.includes(":") ? clean : `standard_version:${clean}`;
+      });
+    return unwrapResponse(
+      client.PUT("/api/v1/kernel/studies/{studyRef}/standards", {
+        params: { path: { studyRef: unversioned(studyRef) } },
+        body: {
+          ...(rulePackRefs
+            ? { rule_pack_refs: normalizeItems(rulePackRefs) }
+            : {}),
+          ...(mappingSpecRefs
+            ? { mapping_spec_refs: normalizeItems(mappingSpecRefs) }
+            : {}),
+          ...(libraryPinRefs
+            ? { library_pin_refs: normalizeItems(libraryPinRefs) }
+            : {}),
+          ...(standardVersionRefs
+            ? { standard_version_refs: normalizeStandards(standardVersionRefs) }
+            : {}),
+          ...(controlledTerminology
+            ? { controlled_terminology: controlledTerminology }
+            : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Lists registered standard versions and bundled CDISC Library seeds. */
+  async listStandards(standardCode?: string): Promise<KernelStandardsCatalog> {
+    const catalog = await unwrapResponse(
+      client.GET("/api/v1/kernel/standards")
+    );
+    if (!standardCode) return catalog;
+    const normalized = standardCode.trim().toUpperCase();
+    return {
+      standards: catalog.standards.filter(
+        (s) => s.standard_code.toUpperCase() === normalized
+      ),
+      bundled_seeds: catalog.bundled_seeds.filter(
+        (s) => s.standard_code.toUpperCase() === normalized
+      ),
+    };
+  },
+
+  /** Registers a standard version from a bundled seed file or explicit package. */
+  registerStandardVersion({
+    seedFile,
+    standardPackage,
+    expectedContentHash,
+    standardVersionId,
+    reason,
+    idempotencyKey,
+  }: {
+    seedFile?: string | null;
+    standardPackage?: Schemas["Kernel_StandardPackage"] | null;
+    expectedContentHash?: string | null;
+    standardVersionId?: string | null;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelStandardVersion> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/standards", {
+        body: {
+          seed_file: seedFile ?? null,
+          package: standardPackage ?? null,
+          expected_content_hash: expectedContentHash ?? null,
+          standard_version_id: standardVersionId ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Approves a draft standard version with a step-up signature token. */
+  approveStandardVersion({
+    standardRef,
+    meaning = "Approved",
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: {
+    standardRef: string;
+    meaning?: KernelAttestationMeaning;
+    attestationId?: string | null;
+    sigToken: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelStandardVersion> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/standards/{standardRef}/approve", {
+        params: { path: { standardRef: unversioned(standardRef) } },
+        body: {
+          meaning,
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Deprecates an approved standard version with a step-up signature token. */
+  deprecateStandardVersion({
+    standardRef,
+    meaning = "Responsibility",
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: {
+    standardRef: string;
+    meaning?: KernelAttestationMeaning;
+    attestationId?: string | null;
+    sigToken: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelStandardVersion> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/standards/{standardRef}/deprecate", {
+        params: { path: { standardRef: unversioned(standardRef) } },
+        body: {
+          meaning,
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Lists tenant library items, optionally filtered by kind, key, and study pin context. */
+  listLibraryItems(
+    query: { kind?: string; key?: string; studyRef?: string } = {}
+  ): Promise<KernelLibraryItem[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/library-items", {
+        params: {
+          query: {
+            kind: query.kind || undefined,
+            key: query.key || undefined,
+            study_ref: query.studyRef ? unversioned(query.studyRef) : undefined,
+          },
+        },
+      })
+    );
+  },
+
+  /** Drafts a library item (CollectionSpecification, RulePack, MappingSpecification, DerivationSpecification, IndicatorSet). */
+  draftLibraryItem({
+    kind,
+    key,
+    title,
+    content,
+    standardVersionRefs,
+    libraryItemId,
+    reason,
+    idempotencyKey,
+  }: {
+    kind: string;
+    key: string;
+    title: string;
+    content: unknown;
+    standardVersionRefs?: string[];
+    libraryItemId?: string | null;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelLibraryItem> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/library-items", {
+        body: {
+          kind,
+          key,
+          title,
+          content: content as Schemas["Kernel_JsonElement"],
+          standard_version_refs:
+            standardVersionRefs?.map(unversioned) ?? undefined,
+          library_item_id: libraryItemId ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Creates a first protocol draft from structured USDM JSON content. */
+  createProtocolDraft({
+    studyRef,
+    content,
+    protocolVersionId,
+    reason,
+    idempotencyKey,
+  }: {
+    studyRef: string;
+    content: string;
+    protocolVersionId?: string | null;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelProtocolVersion> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/studies/{studyRef}/protocol-versions", {
+        params: { path: { studyRef: unversioned(studyRef) } },
+        body: {
+          content,
+          protocol_version_id: protocolVersionId ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Revises an existing Draft protocol version's content and optional amendment declaration. */
+  reviseProtocolDraft({
+    versionRef,
+    content,
+    amendment,
+    reason,
+    idempotencyKey,
+  }: {
+    versionRef: string;
+    content: string;
+    amendment?: Schemas["Kernel_KernelProtocolAmendmentInput"] | null;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelProtocolVersion> {
+    return unwrapResponse(
+      client.PUT("/api/v1/kernel/protocol-versions/{versionRef}/draft", {
+        params: { path: { versionRef: unversioned(versionRef) } },
+        body: {
+          content,
+          amendment: amendment ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Submits a Draft protocol version for formal review (enforcing K-STD-1 mapping coverage). */
+  submitProtocolVersion({
+    versionRef,
+    reason,
+    idempotencyKey,
+  }: {
+    versionRef: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelProtocolVersion> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/protocol-versions/{versionRef}/submit", {
+        params: { path: { versionRef: unversioned(versionRef) } },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Returns an InReview protocol version to Draft for further authoring. */
+  returnProtocolVersionToDraft({
+    versionRef,
+    reason,
+    idempotencyKey,
+  }: {
+    versionRef: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelProtocolVersion> {
+    return unwrapResponse(
+      client.POST(
+        "/api/v1/kernel/protocol-versions/{versionRef}/return-to-draft",
+        {
+          params: { path: { versionRef: unversioned(versionRef) } },
+          headers: {
+            "X-Change-Reason": encodeChangeReason(reason),
+            "Idempotency-Key": idempotencyKey,
+          },
+        }
+      )
+    );
+  },
+
+  /** Approves an InReview protocol version with a step-up electronic signature. */
+  approveProtocolVersion({
+    versionRef,
+    meaning = "Approved",
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: {
+    versionRef: string;
+    meaning?: KernelAttestationMeaning;
+    attestationId?: string | null;
+    sigToken: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelProtocolVersion> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/protocol-versions/{versionRef}/approve", {
+        params: { path: { versionRef: unversioned(versionRef) } },
+        body: {
+          meaning,
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Withdraws an InReview or Approved protocol version with a step-up electronic signature. */
+  withdrawProtocolVersion({
+    versionRef,
+    meaning = "Withdrawn",
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: {
+    versionRef: string;
+    meaning?: KernelAttestationMeaning;
+    attestationId?: string | null;
+    sigToken: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelProtocolVersion> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/protocol-versions/{versionRef}/withdraw", {
+        params: { path: { versionRef: unversioned(versionRef) } },
+        body: {
+          meaning,
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Forks an Approved protocol version into an amended Draft protocol version. */
+  forkProtocolVersion({
+    versionRef,
+    intent,
+    rationale,
+    summaryOfChanges,
+    impactedElements,
+    classification,
+    transitionPolicy,
+    protocolVersionId,
+    reason,
+    idempotencyKey,
+  }: {
+    versionRef: string;
+    intent: string;
+    rationale: string;
+    summaryOfChanges: string;
+    impactedElements: string[];
+    classification?: string | null;
+    transitionPolicy?: string | null;
+    protocolVersionId?: string | null;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelProtocolVersion> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/protocol-versions/{versionRef}/amendments", {
+        params: { path: { versionRef: unversioned(versionRef) } },
+        body: {
+          intent,
+          rationale,
+          summary_of_changes: summaryOfChanges,
+          impacted_elements: impactedElements,
+          classification: classification ?? null,
+          transition_policy: transitionPolicy ?? null,
+          protocol_version_id: protocolVersionId ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Lists registered clinical sites in the caller's tenant. */
+  listSites(): Promise<KernelSiteSummary[]> {
+    return unwrapResponse(client.GET("/api/v1/kernel/sites"));
+  },
+
+  /** Registers a clinical site and optional institution in the caller's tenant. */
+  registerSite({
+    siteCode,
+    name,
+    country,
+    institutionRef,
+    institutionCode,
+    institutionName,
+    siteId,
+    reason,
+    idempotencyKey,
+  }: {
+    siteCode: string;
+    name: string;
+    country: string;
+    institutionRef?: string | null;
+    institutionCode?: string | null;
+    institutionName?: string | null;
+    siteId?: string | null;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelSiteSummary> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/sites", {
+        body: {
+          site_code: siteCode,
+          name,
+          country,
+          institution_ref: institutionRef ?? null,
+          institution_code: institutionCode ?? null,
+          institution_name: institutionName ?? null,
+          site_id: siteId ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Lists study sites linked to a study together with their activation status and effective protocol versions. */
+  listStudySites(studyRef: string): Promise<KernelStudySiteSummary[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/studies/{studyRef}/sites", {
+        params: { path: { studyRef: unversioned(studyRef) } },
+      })
+    );
+  },
+
+  /** Links a clinical site to a study. */
+  linkSiteToStudy({
+    studyRef,
+    siteRef,
+    siteCode,
+    studySiteId,
+    reason,
+    idempotencyKey,
+  }: {
+    studyRef: string;
+    siteRef?: string | null;
+    siteCode?: string | null;
+    studySiteId?: string | null;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelStudySiteSummary> {
+    const resolvedSiteRef = siteRef ? unversioned(siteRef) : (siteCode ?? "");
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/studies/{studyRef}/sites", {
+        params: { path: { studyRef: unversioned(studyRef) } },
+        body: {
+          site_ref: resolvedSiteRef,
+          study_site_id: studySiteId ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Activates a study site once a protocol version is effective at the site (K-TIME-4). */
+  activateStudySite({
+    studySiteRef,
+    reason,
+    idempotencyKey,
+  }: {
+    studySiteRef: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelStudySiteSummary> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/study-sites/{studySiteRef}/activate", {
+        params: { path: { studySiteRef: unversioned(studySiteRef) } },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Lists evidence artifacts recorded for a study. */
+  listStudyArtifacts(studyRef: string): Promise<KernelArtifactSummary[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/studies/{studyRef}/artifacts", {
+        params: { path: { studyRef: unversioned(studyRef) } },
+      })
+    );
+  },
+
+  /** Registers an evidence artifact and its initial version (e.g., EthicsApproval or RegulatoryApproval). */
+  registerArtifact({
+    kind,
+    title,
+    studyRef,
+    contentHash,
+    sizeBytes,
+    mediaType,
+    storageRef,
+    documentText,
+    artifactId,
+    artifactVersionId,
+    reason,
+    idempotencyKey,
+  }: {
+    kind: string;
+    title: string;
+    studyRef?: string | null;
+    contentHash?: string | null;
+    sizeBytes?: number | null;
+    mediaType?: string | null;
+    storageRef?: string | null;
+    documentText?: string | null;
+    artifactId?: string | null;
+    artifactVersionId?: string | null;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelArtifactSummary> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/artifacts", {
+        body: {
+          kind,
+          title,
+          study_ref: studyRef ? unversioned(studyRef) : null,
+          content_hash: contentHash ?? null,
+          size_bytes: sizeBytes ?? null,
+          media_type: mediaType ?? null,
+          storage_ref: storageRef ?? null,
+          document_text: documentText ?? null,
+          artifact_id: artifactId ?? null,
+          artifact_version_id: artifactVersionId ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Appends a new version to an existing evidence artifact. */
+  addArtifactVersion({
+    artifactRef,
+    contentHash,
+    sizeBytes,
+    mediaType,
+    storageRef,
+    documentText,
+    artifactVersionId,
+    reason,
+    idempotencyKey,
+  }: {
+    artifactRef: string;
+    contentHash?: string | null;
+    sizeBytes?: number | null;
+    mediaType?: string | null;
+    storageRef?: string | null;
+    documentText?: string | null;
+    artifactVersionId?: string | null;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelArtifactSummary> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/artifacts/{artifactRef}/versions", {
+        params: { path: { artifactRef: unversioned(artifactRef) } },
+        body: {
+          content_hash: contentHash ?? null,
+          size_bytes: sizeBytes ?? null,
+          media_type: mediaType ?? null,
+          storage_ref: storageRef ?? null,
+          document_text: documentText ?? null,
+          artifact_version_id: artifactVersionId ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Lists protocol effectivities declared in a study. */
+  listStudyEffectivities(
+    studyRef: string
+  ): Promise<KernelEffectivitySummary[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/studies/{studyRef}/effectivities", {
+        params: { path: { studyRef: unversioned(studyRef) } },
+      })
+    );
+  },
+
+  /** Declares a protocol version's effectivity at Study, Country, or Site scope. */
+  declareEffectivity({
+    protocolVersionRef,
+    scopeLevel,
+    country,
+    studySiteRef,
+    declaredAt,
+    effectivityId,
+    reason,
+    idempotencyKey,
+  }: {
+    protocolVersionRef: string;
+    scopeLevel: string;
+    country?: string | null;
+    studySiteRef?: string | null;
+    declaredAt?: string | null;
+    effectivityId?: string | null;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelEffectivitySummary> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/effectivities", {
+        body: {
+          protocol_version_ref: unversioned(protocolVersionRef),
+          scope_level: scopeLevel,
+          country: country ?? null,
+          study_site_ref: studySiteRef ? unversioned(studySiteRef) : null,
+          declared_at: declaredAt ?? null,
+          effectivity_id: effectivityId ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Transitions a declared protocol effectivity (e.g., to Effective citing approval evidence, K-TIME-5). */
+  changeEffectivityStatus({
+    effectivityRef,
+    status,
+    evidenceVersionRefs,
+    effectiveAt,
+    reason,
+    idempotencyKey,
+  }: {
+    effectivityRef: string;
+    status: string;
+    evidenceVersionRefs?: string[];
+    effectiveAt?: string | null;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelEffectivitySummary> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/effectivities/{effectivityRef}/status", {
+        params: { path: { effectivityRef: unversioned(effectivityRef) } },
+        body: {
+          status,
+          evidence_version_refs: evidenceVersionRefs ?? null,
+          effective_at: effectiveAt ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
   /** Lists validation findings recorded for a study, newest first. */
   listStudyValidationFindings(
     studyRef: string,
@@ -1352,6 +2199,177 @@ export const kernelApi = {
     return unwrapResponse(
       client.GET("/api/v1/kernel/validation/findings/{findingRef}", {
         params: { path: { findingRef: unversioned(findingRef) } },
+      })
+    );
+  },
+
+  /** Runs an on-demand validation pass across the study's observations and persists resulting findings. */
+  runStudyValidation({
+    studyRef,
+    stage,
+    rulePackRefs,
+    asOf,
+    reason,
+    idempotencyKey,
+  }: {
+    studyRef: string;
+    stage?: string | null;
+    rulePackRefs?: string[];
+    asOf?: string | null;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelValidationRun> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/studies/{studyRef}/validation/runs", {
+        params: { path: { studyRef: unversioned(studyRef) } },
+        body: {
+          stage: stage ?? null,
+          rule_pack_refs: rulePackRefs?.map(unversioned) ?? null,
+          as_of: asOf ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Marks an Open validation finding as Investigating. */
+  investigateFinding({
+    findingRef,
+    reason,
+    idempotencyKey,
+  }: {
+    findingRef: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelValidationFindingDetail> {
+    return unwrapResponse(
+      client.POST(
+        "/api/v1/kernel/validation/findings/{findingRef}/investigate",
+        {
+          params: { path: { findingRef: unversioned(findingRef) } },
+          headers: {
+            "X-Change-Reason": encodeChangeReason(reason),
+            "Idempotency-Key": idempotencyKey,
+          },
+        }
+      )
+    );
+  },
+
+  /** Classifies a validation finding (TrueIssue, DataException, RuleDefect, MappingGap, StandardLimitation). */
+  classifyFinding({
+    findingRef,
+    classification,
+    reason,
+    idempotencyKey,
+  }: {
+    findingRef: string;
+    classification: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelValidationFindingDetail> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/validation/findings/{findingRef}/classify", {
+        params: { path: { findingRef: unversioned(findingRef) } },
+        body: { classification },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Accepts a validation finding with rationale and a step-up signature token (Responsibility meaning). */
+  acceptFinding({
+    findingRef,
+    rationale,
+    meaning = "Responsibility",
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: {
+    findingRef: string;
+    rationale: string;
+    meaning?: KernelAttestationMeaning;
+    attestationId?: string | null;
+    sigToken: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelValidationFindingDetail> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/validation/findings/{findingRef}/accept", {
+        params: { path: { findingRef: unversioned(findingRef) } },
+        body: {
+          rationale,
+          meaning,
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Explains a validation finding for the reviewer's guide with a step-up signature token (Approved meaning). */
+  explainFinding({
+    findingRef,
+    explanation,
+    meaning = "Approved",
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: {
+    findingRef: string;
+    explanation: string;
+    meaning?: KernelAttestationMeaning;
+    attestationId?: string | null;
+    sigToken: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelValidationFindingDetail> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/validation/findings/{findingRef}/explain", {
+        params: { path: { findingRef: unversioned(findingRef) } },
+        body: {
+          explanation,
+          meaning,
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Reopens an Accepted or Explained validation finding back into Investigating. */
+  reopenFinding({
+    findingRef,
+    reason,
+    idempotencyKey,
+  }: {
+    findingRef: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<KernelValidationFindingDetail> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/validation/findings/{findingRef}/reopen", {
+        params: { path: { findingRef: unversioned(findingRef) } },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
       })
     );
   },

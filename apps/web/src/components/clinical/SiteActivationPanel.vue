@@ -218,6 +218,189 @@
       Administrator authorization (site_compliance:activate).
     </p>
 
+    <section
+      v-if="
+        checked && !loading && !scopeGuidance && canActivate && kernelStudyRef
+      "
+      id="kernel-site-readiness"
+      class="kernel-readiness"
+      aria-labelledby="kernel-site-readiness-title"
+    >
+      <h4 id="kernel-site-readiness-title" class="kernel-readiness-title">
+        Kernel protocol &amp; site start-up readiness
+      </h4>
+      <p class="kernel-readiness-desc">
+        Before activating {{ siteCode.trim() }} for data capture, link the site
+        to {{ studyCode.trim() }}, record regulatory/IRB approval evidence, and
+        mark an approved protocol version effective (K-TIME-4 / K-TIME-5).
+      </p>
+
+      <p
+        v-if="kernelReadinessMessage"
+        id="kernel-readiness-outcome"
+        data-testid="kernel-readiness-outcome"
+        class="status status-complete"
+        role="status"
+      >
+        {{ kernelReadinessMessage }}
+      </p>
+      <p
+        v-if="kernelReadinessError"
+        id="kernel-readiness-error"
+        data-testid="kernel-readiness-error"
+        class="status status-error"
+        role="alert"
+      >
+        {{ kernelReadinessError }}
+      </p>
+
+      <div class="kernel-step">
+        <strong>1. Study site link:</strong>
+        <span v-if="kernelStudySite" data-testid="kernel-study-site-status">
+          Linked ({{ kernelStudySite.site_code }} ·
+          {{ kernelStudySite.country }} · status: {{ kernelStudySite.status }})
+        </span>
+        <div v-else class="kernel-inline-controls">
+          <label for="kernel-site-country">Country (ISO-2)</label>
+          <input
+            id="kernel-site-country"
+            v-model="kernelSiteCountry"
+            type="text"
+            maxlength="2"
+            placeholder="US"
+            :disabled="kernelBusy"
+          />
+          <button
+            id="btn-kernel-link-site"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="kernelBusy || !kernelSiteCountry.trim()"
+            @click="registerAndLinkKernelSite"
+          >
+            Register &amp; link {{ siteCode.trim() }}
+          </button>
+        </div>
+      </div>
+
+      <div class="kernel-step">
+        <strong>2. Regulatory / ethics evidence:</strong>
+        <span v-if="kernelArtifacts.length > 0">
+          {{ kernelArtifacts.length }}
+          {{ kernelArtifacts.length === 1 ? "artifact" : "artifacts" }} recorded
+        </span>
+        <div class="kernel-inline-controls">
+          <label for="kernel-artifact-kind">Evidence kind</label>
+          <select
+            id="kernel-artifact-kind"
+            v-model="kernelArtifactKind"
+            :disabled="kernelBusy"
+          >
+            <option value="EthicsApproval">EthicsApproval</option>
+            <option value="RegulatoryApproval">RegulatoryApproval</option>
+            <option value="CtaAcknowledgement">CtaAcknowledgement</option>
+          </select>
+          <label for="kernel-artifact-title">Document title</label>
+          <input
+            id="kernel-artifact-title"
+            v-model="kernelArtifactTitle"
+            type="text"
+            placeholder="IRB approval letter"
+            :disabled="kernelBusy"
+          />
+          <button
+            id="btn-kernel-register-artifact"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="kernelBusy || !kernelArtifactTitle.trim()"
+            @click="recordKernelApprovalArtifact"
+          >
+            Record approval evidence
+          </button>
+        </div>
+      </div>
+
+      <div v-if="kernelStudySite" class="kernel-step">
+        <strong>3. Protocol effectivity:</strong>
+        <span
+          v-if="kernelStudySite.effective_versions.length > 0"
+          data-testid="kernel-effective-versions"
+        >
+          Version
+          {{
+            kernelStudySite.effective_versions
+              .map((v) => v.protocol_version_number)
+              .join(", ")
+          }}
+          effective at {{ kernelStudySite.site_code }}
+        </span>
+        <span v-else-if="approvedProtocolVersions.length === 0">
+          Approve a protocol version in Design → Protocol versions first.
+        </span>
+        <div v-else class="kernel-inline-controls">
+          <label for="kernel-effectivity-version">Approved version</label>
+          <select
+            id="kernel-effectivity-version"
+            v-model="selectedProtocolVersionRef"
+            :disabled="kernelBusy"
+          >
+            <option
+              v-for="ver in approvedProtocolVersions"
+              :key="ver.ref"
+              :value="ver.ref"
+            >
+              Version {{ ver.number }}
+            </option>
+          </select>
+          <label for="kernel-effectivity-artifact">Approval evidence</label>
+          <select
+            id="kernel-effectivity-artifact"
+            v-model="selectedArtifactVersionRef"
+            :disabled="kernelBusy"
+          >
+            <option value="">Select recorded evidence</option>
+            <option
+              v-for="art in kernelArtifacts"
+              :key="art.latest_version.ref"
+              :value="art.latest_version.ref"
+            >
+              {{ art.title }} ({{ art.kind }} v{{ art.latest_version.number }})
+            </option>
+          </select>
+          <button
+            id="btn-kernel-make-effective"
+            type="button"
+            class="btn btn-primary"
+            :disabled="
+              kernelBusy ||
+              !selectedProtocolVersionRef ||
+              !selectedArtifactVersionRef
+            "
+            @click="declareAndMakeProtocolEffective"
+          >
+            Declare &amp; mark protocol effective
+          </button>
+        </div>
+      </div>
+
+      <div
+        v-if="kernelStudySite && kernelStudySite.status !== 'Active'"
+        class="kernel-step"
+      >
+        <strong>4. Kernel site activation:</strong>
+        <button
+          id="btn-kernel-activate-site"
+          type="button"
+          class="btn btn-primary"
+          :disabled="
+            kernelBusy || kernelStudySite.effective_versions.length === 0
+          "
+          @click="activateKernelSiteDirectly"
+        >
+          Activate {{ kernelStudySite.site_code }} in kernel
+        </button>
+      </div>
+    </section>
+
     <p v-if="!props.studyCode" class="unavailable-note">
       Grant financials, CRA workload allocation, recruitment target updates, and
       adaptive dose escalation aren't available yet in this pre-release
@@ -227,10 +410,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
+import { describeKernelError, kernelApi } from "../../api/kernelApi";
 import { canActivateSite } from "../../canvas/authority";
+import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { useAuthStore } from "../../stores/auth";
 import { useClinicalStore } from "../../stores/clinical";
 import { useToastStore } from "../../stores/toasts.js";
@@ -238,6 +423,7 @@ import {
   formatScopeForbiddenGuidance,
   isForbiddenScopeError,
 } from "../../utils/callerScope";
+import { demoRandomToken, isDemoBuild } from "../../utils/demoMode.js";
 import PlansRoadmapLink from "./PlansRoadmapLink.vue";
 
 /**
@@ -281,6 +467,210 @@ const loadError = ref(false);
 const scopeGuidance = ref("");
 const reason = ref("");
 const activating = ref(false);
+
+const kernelStudyRef = ref("");
+const kernelStudySites = ref([]);
+const kernelArtifacts = ref([]);
+const kernelProtocolVersions = ref([]);
+const kernelSiteCountry = ref("US");
+const kernelArtifactKind = ref("EthicsApproval");
+const kernelArtifactTitle = ref("IRB / Ethics approval letter");
+const selectedProtocolVersionRef = ref("");
+const selectedArtifactVersionRef = ref("");
+const kernelBusy = ref(false);
+const kernelReadinessMessage = ref("");
+const kernelReadinessError = ref("");
+
+const kernelStudySite = computed(() => {
+  const target = siteCode.value?.trim().toUpperCase();
+  if (!target) return null;
+  return (
+    kernelStudySites.value.find((s) => s.site_code?.toUpperCase() === target) ||
+    null
+  );
+});
+
+const approvedProtocolVersions = computed(() =>
+  kernelProtocolVersions.value.filter(
+    (v) => v.ref && v.status === "Approved" && !v.mask
+  )
+);
+
+let unmounted = false;
+
+function makeKernelIdempotencyKey() {
+  if (isDemoBuild()) {
+    return `site-kernel-${demoRandomToken(12, 36, "site-kernel.idempotency")}`;
+  }
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `site-kernel-${demoRandomToken(12, 36, "site-kernel.idempotency")}`;
+}
+
+async function loadKernelReadiness(study, site) {
+  kernelStudyRef.value = "";
+  kernelStudySites.value = [];
+  kernelArtifacts.value = [];
+  kernelProtocolVersions.value = [];
+  if (unmounted || !canActivate.value || !study || !site) return;
+  if (typeof kernelApi.listStudySites !== "function") return;
+
+  try {
+    const resolvedStudy = await findKernelStudyRef(study);
+    if (unmounted || !resolvedStudy) return;
+    kernelStudyRef.value = resolvedStudy;
+
+    const [sites, artifacts, versions] = await Promise.all([
+      kernelApi.listStudySites(resolvedStudy),
+      typeof kernelApi.listStudyArtifacts === "function"
+        ? kernelApi.listStudyArtifacts(resolvedStudy)
+        : Promise.resolve([]),
+      typeof kernelApi.listProtocolVersions === "function"
+        ? kernelApi.listProtocolVersions(resolvedStudy)
+        : Promise.resolve([]),
+    ]);
+    if (unmounted) return;
+    kernelStudySites.value = Array.isArray(sites) ? sites : [];
+    kernelArtifacts.value = Array.isArray(artifacts) ? artifacts : [];
+    kernelProtocolVersions.value = Array.isArray(versions) ? versions : [];
+
+    if (
+      !selectedProtocolVersionRef.value &&
+      approvedProtocolVersions.value.length > 0
+    ) {
+      selectedProtocolVersionRef.value = approvedProtocolVersions.value[0].ref;
+    }
+    if (!selectedArtifactVersionRef.value && kernelArtifacts.value.length > 0) {
+      selectedArtifactVersionRef.value =
+        kernelArtifacts.value[0].latest_version?.ref || "";
+    }
+  } catch {
+    // Optional kernel readiness lookup never blocks eTMF status display.
+  }
+}
+
+async function registerAndLinkKernelSite() {
+  const study = studyCode.value.trim();
+  const site = siteCode.value.trim();
+  const country = kernelSiteCountry.value.trim().toUpperCase();
+  if (!kernelStudyRef.value || !site || !country || kernelBusy.value) return;
+  kernelBusy.value = true;
+  kernelReadinessError.value = "";
+  kernelReadinessMessage.value = "";
+  try {
+    const registered = await kernelApi.registerSite({
+      siteCode: site,
+      name: `${site} Clinical Research Center`,
+      country,
+      institutionCode: `INST-${site}`,
+      institutionName: `${site} Medical Institution`,
+      reason: `Register clinical site ${site} for ${study}`,
+      idempotencyKey: makeKernelIdempotencyKey(),
+    });
+    await kernelApi.linkSiteToStudy({
+      studyRef: kernelStudyRef.value,
+      siteRef: registered.ref,
+      reason: `Link clinical site ${site} to ${study}`,
+      idempotencyKey: makeKernelIdempotencyKey(),
+    });
+    await loadKernelReadiness(study, site);
+    kernelReadinessMessage.value = `Registered and linked ${site} to ${study}.`;
+  } catch (err) {
+    kernelReadinessError.value = describeKernelError(err);
+  } finally {
+    kernelBusy.value = false;
+  }
+}
+
+async function recordKernelApprovalArtifact() {
+  const study = studyCode.value.trim();
+  const site = siteCode.value.trim();
+  const title = kernelArtifactTitle.value.trim();
+  if (!kernelStudyRef.value || !title || kernelBusy.value) return;
+  kernelBusy.value = true;
+  kernelReadinessError.value = "";
+  kernelReadinessMessage.value = "";
+  try {
+    const created = await kernelApi.registerArtifact({
+      kind: kernelArtifactKind.value,
+      title,
+      studyRef: kernelStudyRef.value,
+      documentText: `${kernelArtifactKind.value} for ${study} / ${site}: ${title}`,
+      mediaType: "text/plain",
+      reason: `Record ${kernelArtifactKind.value} evidence for ${site}`,
+      idempotencyKey: makeKernelIdempotencyKey(),
+    });
+    await loadKernelReadiness(study, site);
+    selectedArtifactVersionRef.value = created.latest_version?.ref || "";
+    kernelReadinessMessage.value = `Recorded ${created.kind} evidence (${created.title}).`;
+  } catch (err) {
+    kernelReadinessError.value = describeKernelError(err);
+  } finally {
+    kernelBusy.value = false;
+  }
+}
+
+async function declareAndMakeProtocolEffective() {
+  const study = studyCode.value.trim();
+  const site = siteCode.value.trim();
+  if (
+    !kernelStudySite.value?.ref ||
+    !selectedProtocolVersionRef.value ||
+    !selectedArtifactVersionRef.value ||
+    kernelBusy.value
+  ) {
+    return;
+  }
+  kernelBusy.value = true;
+  kernelReadinessError.value = "";
+  kernelReadinessMessage.value = "";
+  try {
+    const declared = await kernelApi.declareEffectivity({
+      protocolVersionRef: selectedProtocolVersionRef.value,
+      scopeLevel: "Site",
+      studySiteRef: kernelStudySite.value.ref,
+      reason: `Declare protocol effective scope at ${site}`,
+      idempotencyKey: makeKernelIdempotencyKey(),
+    });
+    await kernelApi.changeEffectivityStatus({
+      effectivityRef: declared.ref,
+      status: "Effective",
+      evidenceVersionRefs: [selectedArtifactVersionRef.value],
+      reason: `Mark protocol version effective at ${site} on regulatory evidence`,
+      idempotencyKey: makeKernelIdempotencyKey(),
+    });
+    await loadKernelReadiness(study, site);
+    kernelReadinessMessage.value = `Marked Version ${declared.protocol_version_number} effective at ${site}.`;
+  } catch (err) {
+    kernelReadinessError.value = describeKernelError(err);
+  } finally {
+    kernelBusy.value = false;
+  }
+}
+
+async function activateKernelSiteDirectly() {
+  const study = studyCode.value.trim();
+  const site = siteCode.value.trim();
+  if (!kernelStudySite.value?.ref || kernelBusy.value) return;
+  kernelBusy.value = true;
+  kernelReadinessError.value = "";
+  kernelReadinessMessage.value = "";
+  try {
+    await kernelApi.activateStudySite({
+      studySiteRef: kernelStudySite.value.ref,
+      reason:
+        reason.value.trim() || `Activate clinical site ${site} in ${study}`,
+      idempotencyKey: makeKernelIdempotencyKey(),
+    });
+    await loadKernelReadiness(study, site);
+    kernelReadinessMessage.value = `Activated ${site} in the kernel for ${study}.`;
+  } catch (err) {
+    kernelReadinessError.value = describeKernelError(err);
+  } finally {
+    kernelBusy.value = false;
+  }
+}
 
 const siteOptions = computed(() => {
   const merged = new Set(DEFAULT_KNOWN_SITES);
@@ -376,8 +766,10 @@ async function checkStatus() {
   loadError.value = false;
   scopeGuidance.value = "";
   compliance.value = null;
+  let shouldLoadKernelReadiness = false;
   try {
     compliance.value = await executionApi.getSiteComplianceStatus(site, study);
+    shouldLoadKernelReadiness = true;
   } catch (err) {
     if (isForbiddenScopeError(err)) {
       scopeGuidance.value = formatScopeForbiddenGuidance(err, {
@@ -393,6 +785,9 @@ async function checkStatus() {
     }
   } finally {
     loading.value = false;
+  }
+  if (shouldLoadKernelReadiness) {
+    void loadKernelReadiness(study, site);
   }
 }
 
@@ -464,6 +859,10 @@ async function activate() {
 // Opened for a study and site (CTMS reads ?studyId= and ?siteId=, or token claims provide assigned scope): show status straight away.
 onMounted(() => {
   if (canCheck.value) checkStatus();
+});
+
+onUnmounted(() => {
+  unmounted = true;
 });
 
 defineExpose({ checkStatus, loadStudySites });
@@ -625,5 +1024,50 @@ defineExpose({ checkStatus, loadStudySites });
   border: 1px solid var(--semantic-color-warning-border);
   border-radius: 4px;
   padding: 8px 12px;
+}
+
+.kernel-readiness {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--semantic-color-surface-muted);
+}
+
+.kernel-readiness-title {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.kernel-readiness-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-secondary);
+}
+
+.kernel-step {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.kernel-inline-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.kernel-inline-controls input,
+.kernel-inline-controls select {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--semantic-color-surface);
 }
 </style>

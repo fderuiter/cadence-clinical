@@ -7,7 +7,7 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | Service | Operations |
 | ------- | ---------- |
 | [ctms](ctms.md) | 23 |
-| [designer](designer.md) | 6 |
+| [designer](designer.md) | 5 |
 | [econsent](econsent.md) | 6 |
 | [eisf](eisf.md) | 2 |
 | [etmf](etmf.md) | 14 |
@@ -15,7 +15,7 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [fileshare](fileshare.md) | 2 |
 | [imaging](imaging.md) | 11 |
 | [interop](interop.md) | 28 |
-| [kernel](kernel.md) | 72 |
+| [kernel](kernel.md) | 105 |
 | [knowledge](knowledge.md) | 13 |
 | [notifications](notifications.md) | 3 |
 | [org](org.md) | 2 |

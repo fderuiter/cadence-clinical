@@ -110,14 +110,22 @@ public sealed class HttpKernelEnrollmentSynchronizer(
                 return created?.EnrollmentId ?? Guid.Empty;
             }
 
-            return await ReadProblemErrorAsync(response, cancellationToken).ConfigureAwait(false);
+            return await ReadProblemErrorAsync(
+                response,
+                "KERNEL_ENROLLMENT_SYNC_FAILED",
+                "screening enrollment",
+                cancellationToken).ConfigureAwait(false);
         }
     }
 
-    private static async Task<DomainError> ReadProblemErrorAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    internal static async Task<DomainError> ReadProblemErrorAsync(
+        HttpResponseMessage response,
+        string defaultCode,
+        string actionDescription,
+        CancellationToken cancellationToken)
     {
-        string code = "KERNEL_ENROLLMENT_SYNC_FAILED";
-        string detail = $"Clinical Kernel refused screening enrollment ({(int)response.StatusCode}).";
+        string code = defaultCode;
+        string detail = $"Clinical Kernel refused {actionDescription} ({(int)response.StatusCode}).";
 
         string raw = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         if (!string.IsNullOrWhiteSpace(raw))

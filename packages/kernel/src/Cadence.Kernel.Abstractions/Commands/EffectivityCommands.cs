@@ -13,6 +13,15 @@ namespace Cadence.Kernel.Commands;
 /// </summary>
 [KernelCapability("effectivity.declare", VerbClass.Execute, Resource = nameof(ProtocolVersionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(EffectivityErrors),
+    nameof(EffectivityErrors.ScopeInvalid),
+    nameof(EffectivityErrors.ProtocolVersionUnknown),
+    nameof(EffectivityErrors.ProtocolVersionWithdrawn),
+    nameof(EffectivityErrors.StudySiteNotInStudy),
+    nameof(EffectivityErrors.AlreadyDeclared),
+    nameof(EffectivityErrors.TransitionTimeInvalid))]
 public sealed record DeclareEffectivity(
     TenantId TenantId,
     EffectivityId EffectivityId,
@@ -30,6 +39,14 @@ public sealed record DeclareEffectivity(
 /// </summary>
 [KernelCapability("effectivity.change_status", VerbClass.Approve, Resource = nameof(EffectivityId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(EffectivityErrors),
+    nameof(EffectivityErrors.InvalidTransition),
+    nameof(EffectivityErrors.TransitionTimeInvalid),
+    nameof(EffectivityErrors.EvidenceInvalid),
+    nameof(EffectivityErrors.EvidenceRequired),
+    nameof(EffectivityErrors.ProtocolVersionNotApproved))]
 public sealed record ChangeEffectivityStatus(
     TenantId TenantId,
     EffectivityId EffectivityId,
@@ -44,6 +61,11 @@ public sealed record ChangeEffectivityStatus(
 /// </summary>
 [KernelCapability("study_site.activate", VerbClass.Approve, Resource = nameof(StudySiteId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(
+    typeof(EffectivityErrors),
+    nameof(EffectivityErrors.StudySiteUnknown),
+    nameof(EffectivityErrors.StudySiteAlreadyActive),
+    nameof(EffectivityErrors.NoEffectiveVersion))]
 public sealed record ActivateStudySite(
     TenantId TenantId,
     StudySiteId StudySiteId,

@@ -411,6 +411,24 @@ function onFileSelected(event: Event) {
     return;
   }
 
+  const lowerName = file.name.toLowerCase();
+  const isPdf = lowerName.endsWith(".pdf") || file.type === "application/pdf";
+  const isXmlOrJson =
+    lowerName.endsWith(".xml") ||
+    lowerName.endsWith(".json") ||
+    file.type === "application/xml" ||
+    file.type === "text/xml" ||
+    file.type === "application/json";
+
+  if (!isXmlOrJson) {
+    selectedFile.value = null;
+    if (input) input.value = "";
+    errorMessage.value = isPdf
+      ? `PDF protocol digitization is not yet available for '${file.name}'. Upload an ODM v1.3.2 XML (.xml) or USDM v4 JSON (.json) file.`
+      : `Unsupported file '${file.name}'. Upload an ODM v1.3.2 XML (.xml) or USDM v4 JSON (.json) file.`;
+    return;
+  }
+
   if (file.size > MAX_UPLOAD_BYTES) {
     selectedFile.value = null;
     if (input) input.value = "";

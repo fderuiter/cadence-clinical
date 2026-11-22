@@ -93,7 +93,11 @@ export function useSchemaIngestion(store) {
     const isPdf = lowerName.endsWith(".pdf") || file.type === "application/pdf";
 
     if (!isXmlOrJson) {
-      if (isPdf && typeof store?.uploadProtocolDocument === "function") {
+      if (
+        isPdf &&
+        isDemoBuild() &&
+        typeof store?.uploadProtocolDocument === "function"
+      ) {
         importingDraft.value = true;
         try {
           await store.uploadProtocolDocument(
@@ -115,7 +119,9 @@ export function useSchemaIngestion(store) {
         return;
       }
 
-      importErrorMessage.value = `Unsupported file '${file.name}'. Upload an ODM v1.3.2 XML (.xml) or USDM v4 JSON (.json) file.`;
+      importErrorMessage.value = isPdf
+        ? `PDF protocol digitization is not yet available for '${file.name}'. Upload an ODM v1.3.2 XML (.xml) or USDM v4 JSON (.json) file.`
+        : `Unsupported file '${file.name}'. Upload an ODM v1.3.2 XML (.xml) or USDM v4 JSON (.json) file.`;
       if (input) input.value = "";
       return;
     }

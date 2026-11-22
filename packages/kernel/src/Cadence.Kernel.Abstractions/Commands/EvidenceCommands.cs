@@ -14,6 +14,13 @@ namespace Cadence.Kernel.Commands;
 /// </remarks>
 [KernelCapability("artifact.register", VerbClass.Execute)]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(EvidenceErrors),
+    nameof(EvidenceErrors.StudyUnknown),
+    nameof(EvidenceErrors.KindInvalid),
+    nameof(EvidenceErrors.TitleInvalid),
+    nameof(EvidenceErrors.ContentInvalid))]
 public sealed record RegisterArtifact(
     TenantId TenantId,
     ArtifactId ArtifactId,
@@ -28,6 +35,11 @@ public sealed record RegisterArtifact(
 /// <summary>Adds a new immutable version to an artifact, numbered after its latest one.</summary>
 [KernelCapability("artifact.add_version", VerbClass.Execute, Resource = nameof(AddArtifactVersion.ArtifactId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(EvidenceErrors),
+    nameof(EvidenceErrors.ContentInvalid),
+    nameof(EvidenceErrors.ContentUnchanged))]
 public sealed record AddArtifactVersion(
     TenantId TenantId,
     ArtifactId ArtifactId,

@@ -252,6 +252,7 @@
                 <option value="Open">Open</option>
                 <option value="Investigating">Investigating</option>
                 <option value="Accepted">Accepted</option>
+                <option value="Explained">Explained</option>
                 <option value="Resolved">Resolved</option>
               </select>
             </label>
@@ -269,6 +270,33 @@
               </select>
             </label>
           </div>
+        </div>
+
+        <div
+          v-if="canManageRules"
+          id="study-validation-run-bar"
+          class="pin-reason-row"
+        >
+          <label for="validation-run-reason">
+            Reason for validation run
+            <input
+              id="validation-run-reason"
+              v-model="validationRunReason"
+              type="text"
+              autocomplete="off"
+              placeholder="Evaluate pinned edit checks across study forms"
+              :disabled="busy"
+            />
+          </label>
+          <button
+            id="btn-run-study-validation"
+            type="button"
+            class="btn btn-primary"
+            :disabled="busy || !validationRunReason.trim()"
+            @click="executeStudyValidationRun"
+          >
+            Run study validation
+          </button>
         </div>
 
         <p v-if="findings.length === 0" data-testid="no-validation-findings">
@@ -316,6 +344,20 @@
               <p>
                 <strong>{{ selectedFinding.explanation.claim }}</strong>
               </p>
+              <p
+                v-if="selectedFinding.finding.classification"
+                data-testid="finding-classification-badge"
+              >
+                Classification:
+                <strong>{{ selectedFinding.finding.classification }}</strong>
+              </p>
+              <p v-if="selectedFinding.finding.rationale">
+                Acceptance rationale: {{ selectedFinding.finding.rationale }}
+              </p>
+              <p v-if="selectedFinding.finding.reviewer_explanation">
+                Reviewer explanation:
+                {{ selectedFinding.finding.reviewer_explanation }}
+              </p>
               <ul v-if="selectedFinding.explanation.steps.length > 0">
                 <li
                   v-for="(step, idx) in selectedFinding.explanation.steps"
@@ -324,6 +366,103 @@
                   {{ step.claim }}
                 </li>
               </ul>
+
+              <div
+                v-if="canManageRules"
+                class="finding-triage-controls"
+                data-testid="finding-triage-controls"
+              >
+                <label :for="`finding-triage-reason-${finding.id}`">
+                  Triage rationale / explanation
+                  <input
+                    :id="`finding-triage-reason-${finding.id}`"
+                    v-model="triageReason"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Document investigation, acceptance rationale, or reviewer note"
+                    :disabled="busy"
+                  />
+                </label>
+
+                <div class="finding-actions">
+                  <button
+                    v-if="selectedFinding.finding.status === 'Open'"
+                    id="btn-investigate-finding"
+                    type="button"
+                    class="btn btn-secondary"
+                    :disabled="busy || !triageReason.trim()"
+                    @click="markFindingInvestigating(finding.ref)"
+                  >
+                    Start investigation
+                  </button>
+
+                  <label :for="`finding-classification-${finding.id}`">
+                    Classification
+                    <select
+                      :id="`finding-classification-${finding.id}`"
+                      v-model="triageClassification"
+                      :disabled="busy"
+                    >
+                      <option value="DataIssue">Data issue</option>
+                      <option value="MappingIssue">Mapping issue</option>
+                      <option value="MetadataIssue">Metadata issue</option>
+                      <option value="RuleIssue">Rule issue</option>
+                      <option value="NotAnIssue">Not an issue</option>
+                    </select>
+                  </label>
+                  <button
+                    id="btn-classify-finding"
+                    type="button"
+                    class="btn btn-secondary"
+                    :disabled="busy || !triageReason.trim()"
+                    @click="classifySelectedFinding(finding.ref)"
+                  >
+                    Classify finding
+                  </button>
+
+                  <button
+                    v-if="
+                      selectedFinding.finding.status === 'Open' ||
+                      selectedFinding.finding.status === 'Investigating'
+                    "
+                    id="btn-accept-finding"
+                    type="button"
+                    class="btn btn-primary"
+                    :disabled="busy || !triageReason.trim()"
+                    @click="beginSignedFindingAction('accept', finding)"
+                  >
+                    Accept finding
+                  </button>
+
+                  <button
+                    v-if="
+                      selectedFinding.finding.status === 'Open' ||
+                      selectedFinding.finding.status === 'Investigating'
+                    "
+                    id="btn-explain-finding-sign"
+                    type="button"
+                    class="btn btn-primary"
+                    :disabled="busy || !triageReason.trim()"
+                    @click="beginSignedFindingAction('explain', finding)"
+                  >
+                    Sign reviewer explanation
+                  </button>
+
+                  <button
+                    v-if="
+                      selectedFinding.finding.status === 'Accepted' ||
+                      selectedFinding.finding.status === 'Explained'
+                    "
+                    id="btn-reopen-finding"
+                    type="button"
+                    class="btn btn-secondary"
+                    :disabled="busy || !triageReason.trim()"
+                    @click="reopenSelectedFinding(finding.ref)"
+                  >
+                    Reopen finding
+                  </button>
+                </div>
+              </div>
             </div>
           </li>
         </ul>
@@ -343,6 +482,28 @@
       @cancel="approvingPack = null"
       @success="approvingPack = null"
     />
+
+    <SignatureCaptureModal
+      v-if="signingFinding && signingFindingMode"
+      :is-open="Boolean(signingFinding && signingFindingMode)"
+      :username="signerUsername"
+      :signer-name="signerFullName"
+      signer-role="Data Manager"
+      :reasons="FINDING_SIGN_REASONS"
+      :action-url="
+        signingFindingMode === 'accept'
+          ? findingAcceptAction(signingFinding.ref)
+          : findingExplainAction(signingFinding.ref)
+      "
+      :semantic-action="
+        signingFindingMode === 'accept'
+          ? FINDING_ACCEPT_SEMANTIC_ACTION
+          : FINDING_EXPLAIN_SEMANTIC_ACTION
+      "
+      :on-sign="completeSignedFindingAction"
+      @cancel="closeSignedFindingModal"
+      @success="closeSignedFindingModal"
+    />
   </section>
 </template>
 
@@ -351,6 +512,10 @@ import { computed, reactive, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   describeKernelError,
+  FINDING_ACCEPT_SEMANTIC_ACTION,
+  FINDING_EXPLAIN_SEMANTIC_ACTION,
+  findingAcceptAction,
+  findingExplainAction,
   kernelApi,
   RULE_PACK_APPROVE_SEMANTIC_ACTION,
   rulePackApproveAction,
@@ -389,10 +554,22 @@ const approvingPack = ref<KernelRulePack | null>(null);
 const pinningPack = ref<KernelRulePack | null>(null);
 const pinReason = ref("");
 
+const validationRunReason = ref("Run on-demand study edit-check validation");
+const triageReason = ref("");
+const triageClassification = ref("DataIssue");
+const signingFinding = ref<KernelValidationFinding | null>(null);
+const signingFindingMode = ref<"accept" | "explain" | null>(null);
+
 const APPROVE_REASONS = [
   "Rule pack governance approval",
   "APPROVAL",
   "CLINICAL_QC",
+];
+
+const FINDING_SIGN_REASONS = [
+  "Validation finding disposition",
+  "CLINICAL_QC",
+  "APPROVAL",
 ];
 
 const signerUsername = computed(() => authStore.identity?.username ?? "");
@@ -550,9 +727,146 @@ async function inspectFinding(findingRef: string) {
     return;
   }
   try {
-    selectedFinding.value = await kernelApi.getValidationFinding(findingRef);
+    const detail = await kernelApi.getValidationFinding(findingRef);
+    selectedFinding.value = detail;
+    if (detail.finding.classification) {
+      triageClassification.value = detail.finding.classification;
+    }
   } catch (error) {
     errorMessage.value = describeKernelError(error);
+  }
+}
+
+async function executeStudyValidationRun() {
+  if (!studyRef.value || !validationRunReason.value.trim() || busy.value) {
+    return;
+  }
+  busy.value = true;
+  errorMessage.value = "";
+  try {
+    const run = await kernelApi.runStudyValidation({
+      studyRef: studyRef.value,
+      reason: validationRunReason.value.trim(),
+      idempotencyKey: globalThis.crypto.randomUUID(),
+    });
+    await loadFindings();
+    actionMessage.value = `Validation run complete: ${run.detected} detected (${run.new} new, ${run.resolved} resolved).`;
+  } catch (error) {
+    errorMessage.value = describeKernelError(error);
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function markFindingInvestigating(findingRef: string) {
+  if (!triageReason.value.trim() || busy.value) return;
+  busy.value = true;
+  errorMessage.value = "";
+  try {
+    const updated = await kernelApi.investigateFinding({
+      findingRef,
+      reason: triageReason.value.trim(),
+      idempotencyKey: globalThis.crypto.randomUUID(),
+    });
+    selectedFinding.value = updated;
+    await loadFindings();
+    actionMessage.value = `Marked finding ${updated.finding.rule_id} as Investigating.`;
+  } catch (error) {
+    errorMessage.value = describeKernelError(error);
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function classifySelectedFinding(findingRef: string) {
+  if (!triageReason.value.trim() || busy.value) return;
+  busy.value = true;
+  errorMessage.value = "";
+  try {
+    const updated = await kernelApi.classifyFinding({
+      findingRef,
+      classification: triageClassification.value,
+      reason: triageReason.value.trim(),
+      idempotencyKey: globalThis.crypto.randomUUID(),
+    });
+    selectedFinding.value = updated;
+    await loadFindings();
+    actionMessage.value = `Classified finding ${updated.finding.rule_id} as ${updated.finding.classification}.`;
+  } catch (error) {
+    errorMessage.value = describeKernelError(error);
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function reopenSelectedFinding(findingRef: string) {
+  if (!triageReason.value.trim() || busy.value) return;
+  busy.value = true;
+  errorMessage.value = "";
+  try {
+    const updated = await kernelApi.reopenFinding({
+      findingRef,
+      reason: triageReason.value.trim(),
+      idempotencyKey: globalThis.crypto.randomUUID(),
+    });
+    selectedFinding.value = updated;
+    await loadFindings();
+    actionMessage.value = `Reopened finding ${updated.finding.rule_id} (${updated.finding.status}).`;
+  } catch (error) {
+    errorMessage.value = describeKernelError(error);
+  } finally {
+    busy.value = false;
+  }
+}
+
+function beginSignedFindingAction(
+  mode: "accept" | "explain",
+  finding: KernelValidationFinding
+) {
+  signingFinding.value = finding;
+  signingFindingMode.value = mode;
+}
+
+function closeSignedFindingModal() {
+  signingFinding.value = null;
+  signingFindingMode.value = null;
+}
+
+async function completeSignedFindingAction(sigToken: string, reason: string) {
+  const target = signingFinding.value;
+  const mode = signingFindingMode.value;
+  if (!target || !mode) return null;
+  const text = triageReason.value.trim() || reason;
+  busy.value = true;
+  errorMessage.value = "";
+  try {
+    const updated =
+      mode === "accept"
+        ? await kernelApi.acceptFinding({
+            findingRef: target.ref,
+            rationale: text,
+            meaning: "Responsibility",
+            sigToken,
+            reason: text,
+            idempotencyKey: globalThis.crypto.randomUUID(),
+          })
+        : await kernelApi.explainFinding({
+            findingRef: target.ref,
+            explanation: text,
+            meaning: "Approved",
+            sigToken,
+            reason: text,
+            idempotencyKey: globalThis.crypto.randomUUID(),
+          });
+    selectedFinding.value = updated;
+    await loadFindings();
+    actionMessage.value =
+      mode === "accept"
+        ? `Accepted finding ${updated.finding.rule_id}.`
+        : `Recorded reviewer explanation for ${updated.finding.rule_id}.`;
+    return updated;
+  } finally {
+    busy.value = false;
   }
 }
 

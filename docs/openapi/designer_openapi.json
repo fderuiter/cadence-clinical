@@ -167,30 +167,6 @@
         }
       }
     },
-    "/api/v1/studies": {
-      "get": {
-        "tags": [
-          "Cadence.Apps.Designer"
-        ],
-        "summary": "Lists active CDISC USDM study protocol definitions.",
-        "operationId": "ListStudies",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/protocols/compile": {
       "post": {
         "tags": [

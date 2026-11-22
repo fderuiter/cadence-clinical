@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 using Cadence.Apps.Designer;
@@ -28,12 +27,6 @@ app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service =
     .WithName("DesignerHealthCheck")
     .WithSummary("Protocol designer metadata health probe.")
     .AllowAnonymous();
-
-var api = app.MapGroup("/api/v1/studies");
-api.MapGet("/", () => TypedResults.Ok(Array.Empty<string>()))
-    .WithName("ListStudies")
-    .WithSummary("Lists active CDISC USDM study protocol definitions.")
-    .RequirePermission("study_design:read").RequireCallerStudyScope();
 
 var protocols = app.MapGroup("/api/v1/protocols");
 protocols.MapPost("/compile", Results<Ok<DDFCompilationResult>, ProblemHttpResult> (CompileProtocolRequest request, HttpContext httpContext) =>

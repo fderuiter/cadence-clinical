@@ -178,4 +178,31 @@ describe("DesignerSchemaPanel synchronous ODM/USDM & CDISC eCRF import", () => {
     );
     expect(alertSpy).not.toHaveBeenCalled();
   });
+
+  it("rejects .pdf uploads with actionable ODM XML / USDM JSON guidance and never calls store.uploadProtocolDocument (@req:PRD-CRF-006)", async () => {
+    const uploadDocSpy = vi
+      .spyOn(store, "uploadProtocolDocument")
+      .mockResolvedValue({});
+
+    const { wrapper } = mountPanel();
+    await flushPromises();
+
+    const fileInput = wrapper.find("#designer-schema-file-input");
+    const pdfFile = new File(["%PDF-1.7"], "protocol-v1.pdf", {
+      type: "application/pdf",
+    });
+    Object.defineProperty(fileInput.element, "files", {
+      value: [pdfFile],
+      configurable: true,
+    });
+    await fileInput.trigger("change");
+    await flushPromises();
+
+    expect(uploadDocSpy).not.toHaveBeenCalled();
+    expect(kernelApi.importProtocolDraft).not.toHaveBeenCalled();
+    expect(wrapper.find("#schema-import-error").text()).toContain(
+      "PDF protocol digitization is not yet available for 'protocol-v1.pdf'. Upload an ODM v1.3.2 XML (.xml) or USDM v4 JSON (.json) file."
+    );
+    expect(alertSpy).not.toHaveBeenCalled();
+  });
 });

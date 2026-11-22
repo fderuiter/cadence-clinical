@@ -1,5 +1,6 @@
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Standards;
 
 namespace Cadence.Kernel.Commands;
 
@@ -12,6 +13,13 @@ namespace Cadence.Kernel.Commands;
 /// </remarks>
 [KernelCapability("protocol.draft", VerbClass.Propose, Resource = nameof(CreateProtocolDraft.StudyId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(ProtocolErrors),
+    nameof(ProtocolErrors.StudyUnknown),
+    nameof(ProtocolErrors.FirstVersionExists),
+    nameof(ProtocolErrors.ContentRequired),
+    nameof(ProtocolErrors.ContentInvalid))]
 public sealed record CreateProtocolDraft(
     TenantId TenantId,
     StudyId StudyId,
@@ -26,6 +34,14 @@ public sealed record CreateProtocolDraft(
 /// </remarks>
 [KernelCapability("protocol.revise_draft", VerbClass.Propose, Resource = nameof(ReviseProtocolDraft.ProtocolVersionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(ProtocolErrors),
+    nameof(ProtocolErrors.InvalidTransition),
+    nameof(ProtocolErrors.ContentRequired),
+    nameof(ProtocolErrors.ContentInvalid),
+    nameof(ProtocolErrors.AmendmentNotAllowed),
+    nameof(ProtocolErrors.AmendmentInvalid))]
 public sealed record ReviseProtocolDraft(
     TenantId TenantId,
     ProtocolVersionId ProtocolVersionId,
@@ -37,6 +53,12 @@ public sealed record ReviseProtocolDraft(
 /// <summary>Freezes a draft for review and computes its content hash, which approval attestations bind to.</summary>
 [KernelCapability("protocol.submit_for_review", VerbClass.Propose, Resource = nameof(SubmitProtocolVersionForReview.ProtocolVersionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(ProtocolErrors),
+    nameof(ProtocolErrors.InvalidTransition),
+    nameof(ProtocolErrors.ReferenceUnknown))]
+[RaisesKernelErrors(typeof(StandardsErrors), nameof(StandardsErrors.MappingMissing))]
 public sealed record SubmitProtocolVersionForReview(
     TenantId TenantId,
     ProtocolVersionId ProtocolVersionId,
@@ -46,6 +68,8 @@ public sealed record SubmitProtocolVersionForReview(
 /// <summary>Returns a version in review to draft so it can be revised; its content hash is cleared.</summary>
 [KernelCapability("protocol.return_to_draft", VerbClass.Approve, Resource = nameof(ReturnProtocolVersionToDraft.ProtocolVersionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(typeof(ProtocolErrors), nameof(ProtocolErrors.InvalidTransition))]
 public sealed record ReturnProtocolVersionToDraft(
     TenantId TenantId,
     ProtocolVersionId ProtocolVersionId,
@@ -58,6 +82,11 @@ public sealed record ReturnProtocolVersionToDraft(
 /// </summary>
 [KernelCapability("protocol.approve", VerbClass.Approve, Resource = nameof(ApproveProtocolVersion.ProtocolVersionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(ProtocolErrors),
+    nameof(ProtocolErrors.InvalidTransition),
+    nameof(ProtocolErrors.AttestationRejected))]
 public sealed record ApproveProtocolVersion(
     TenantId TenantId,
     ProtocolVersionId ProtocolVersionId,
@@ -72,6 +101,11 @@ public sealed record ApproveProtocolVersion(
 /// </summary>
 [KernelCapability("protocol.withdraw", VerbClass.Approve, Resource = nameof(WithdrawProtocolVersion.ProtocolVersionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(ProtocolErrors),
+    nameof(ProtocolErrors.InvalidTransition),
+    nameof(ProtocolErrors.AttestationRejected))]
 public sealed record WithdrawProtocolVersion(
     TenantId TenantId,
     ProtocolVersionId ProtocolVersionId,
@@ -85,6 +119,11 @@ public sealed record WithdrawProtocolVersion(
 /// </summary>
 [KernelCapability("protocol.amend", VerbClass.Propose, Resource = nameof(ForkProtocolVersion.ParentVersionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(ProtocolErrors),
+    nameof(ProtocolErrors.InvalidTransition),
+    nameof(ProtocolErrors.AmendmentInvalid))]
 public sealed record ForkProtocolVersion(
     TenantId TenantId,
     ProtocolVersionId ParentVersionId,

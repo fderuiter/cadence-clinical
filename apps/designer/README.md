@@ -1,6 +1,6 @@
 # Designer service
 
-Study design service. Today it exposes a CDISC USDM compile endpoint backed by `UsdmCompiler` from [packages/ddf](../../packages/ddf/README.md) and a placeholder study list; it has no datastore.
+Study design service. Today it exposes a CDISC USDM compile endpoint backed by `UsdmCompiler` from [packages/ddf](../../packages/ddf/README.md) and rule-batch evaluation endpoints; it has no datastore.
 
 **Status:** a standalone ASP.NET Core 10 service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) study design becomes an application module over the kernel's ProtocolVersion model; the disposition of the scaffold services is tracked in issue #4787.
 
@@ -12,7 +12,6 @@ Study design service. Today it exposes a CDISC USDM compile endpoint backed by `
 ## HTTP surface
 
 - `GET /healthz` (anonymous, mapped in `Program.cs`); `GET /healthz/live` and `GET /healthz/ready` (anonymous, mapped by `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)).
-- `GET /api/v1/studies/`: returns an empty array.
 - `POST /api/v1/protocols/compile`: body `{ usdmJson, studyId?, versionTag? }`; returns the DDF compilation result with its accessibility report. A `usdmJson` that is not JSON, or JSON not shaped like a USDM study (an array or string at the root, a number where a name belongs), gets `400` problem details titled "The USDM document cannot be read." rather than a server error (#5040). A study whose item rules do not compile (a rule that does not parse, names an unknown item or makes a skip-logic cycle, or a duplicated item) gets `422` problem details with `problems` ([ADR-2502](../../docs/adr/2026-09-30-ddf-item-rules-use-the-one-rule-language.md)). A form that fails the compiler's accessibility check is not returned: the route answers `422` problem details with `violations` and `layoutErrors` ([ADR-2501](../../docs/adr/2026-09-30-the-ddf-compiler-refuses-forms-that-fail-the-accessibility-check.md)).
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/studies/**` and `/api/v1/protocols/**` here. Compose publishes host port 8001 (container port 8080).
