@@ -1,9 +1,10 @@
-# ADR-2642: Participant ePRO Interop Endpoints and Keyed-HMAC BYOD Activation
+# ADR-2643: Participant ePRO Interop Endpoints and Keyed-HMAC BYOD Activation
 
 - **Status:** Accepted
 - **Date:** 2026-11-20
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
+- **Requirements:** @req:PRD-SYS-001
 
 ---
 

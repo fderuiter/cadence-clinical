@@ -17,7 +17,9 @@ public static class QualityGateOrchestrator
         string[]? targetFiles = null,
         bool preCommit = false,
         string[]? excludedGates = null,
-        string? repoRoot = null)
+        string? repoRoot = null,
+        string? baseRef = null,
+        string? pushBefore = null)
     {
         AnsiConsole.MarkupLine("[bold cyan]Executing Cadence Quality Sentinels & Policy Gates...[/]\n");
 
@@ -49,7 +51,7 @@ public static class QualityGateOrchestrator
             targetFiles = [.. PreCommitOpenApiService.GetStagedFiles(repoRoot)];
         }
 
-        var context = new GateContext(repoRoot, targetFiles, preCommit);
+        var context = new GateContext(repoRoot, targetFiles, preCommit, baseRef, pushBefore);
 
         if (!string.IsNullOrEmpty(gateName))
         {

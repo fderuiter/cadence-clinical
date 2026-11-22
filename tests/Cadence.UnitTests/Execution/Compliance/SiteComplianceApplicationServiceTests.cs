@@ -13,6 +13,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Database;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
@@ -39,17 +40,20 @@ public class SiteComplianceApplicationServiceTests
     private const string SiteId = "SITE-COMPLIANCE-APP";
     private const string Milestone = "SITE_ACTIVATION";
 
+    private static readonly DateTimeOffset FixedActivatedAt = new(2026, 11, 20, 12, 30, 0, TimeSpan.Zero);
+
     private static ExecutionDbContext CreateContext(string databaseName) =>
         new(new DbContextOptionsBuilder<ExecutionDbContext>()
             .UseInMemoryDatabase(databaseName)
-            .AddInterceptors(new GxPAuditInterceptor(() => "user-compliance-1", SystemClock.Instance))
+            .AddInterceptors(new GxPAuditInterceptor(() => "user-compliance-1", new FakeClock(FixedActivatedAt)))
             .Options);
 
     private static SiteComplianceApplicationService CreateService(
-        ExecutionDbContext context, RecordingAuditLogWriter? auditLog = null) =>
+        ExecutionDbContext context, RecordingAuditLogWriter? auditLog = null, IClock? clock = null) =>
         new(new SiteComplianceRepository(context),
             auditLog ?? new RecordingAuditLogWriter(),
-            new FakeCurrentAuditContextAccessor("user-compliance-1", "system_operation"));
+            new FakeCurrentAuditContextAccessor("user-compliance-1", "system_operation"),
+            clock ?? new FakeClock(FixedActivatedAt));
 
     // ---- ApplyEtmfWebhookAsync: create branch ------------------------------------------------------
 
@@ -229,7 +233,8 @@ public class SiteComplianceApplicationServiceTests
             var service = new SiteComplianceApplicationService(
                 new SiteComplianceRepository(context),
                 new EfAuditLogWriter(context),
-                new FakeCurrentAuditContextAccessor("user-compliance-1", "system_operation"));
+                new FakeCurrentAuditContextAccessor("user-compliance-1", "system_operation"),
+                new FakeClock(FixedActivatedAt));
 
             var result = await service.ActivateSiteAsync(
                 SiteId, new SiteActivationRequest(Study.Value), TestContext.Current.CancellationToken);
@@ -271,14 +276,74 @@ public class SiteComplianceApplicationServiceTests
 
         auditLog.Calls.Should().ContainSingle();
         auditLog.Calls[0].Action.Should().Be("SITE_ACTIVATION");
-        auditLog.Calls[0].RecordId.Should().Be(SiteId);
 
         // ActivateSiteAsync never itself flips IsComplete -- only the eTMF webhook does that.
         await using var readContext = CreateContext(databaseName);
         var row = await readContext.SiteComplianceCaches.AsNoTracking()
             .SingleAsync(TestContext.Current.CancellationToken);
+        auditLog.Calls[0].RecordId.Should().Be(row.Id.ToString());
         row.IsComplete.Should().BeTrue();
+        row.IsActivated.Should().BeTrue();
+        row.ActivatedAt.Should().Be(FixedActivatedAt);
+        row.ActivatedBy.Should().Be("user-compliance-1");
         row.Version.Should().Be(1, "activation must not touch the compliance row's own version counter");
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task ActivateSiteAsync_CalledTwiceOnCompliantSite_IsIdempotentAcrossReloadsAndWritesSingleAuditEntry()
+    {
+        string databaseName = Guid.NewGuid().ToString();
+        var clock = new FakeClock(FixedActivatedAt);
+
+        await using (var seed = CreateContext(databaseName))
+        {
+            seed.SiteComplianceCaches.Add(SiteComplianceCache.Create(
+                Study, new SiteCode(SiteId), Milestone, isComplete: true, Array.Empty<string>()));
+            await seed.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        // First activation persists state and writes exactly one SITE_ACTIVATION entry.
+        await using (var firstCtx = CreateContext(databaseName))
+        {
+            var service = new SiteComplianceApplicationService(
+                new SiteComplianceRepository(firstCtx),
+                new EfAuditLogWriter(firstCtx),
+                new FakeCurrentAuditContextAccessor("sponsor-dm-1", "Initial activation sign-off"),
+                clock);
+
+            var firstResult = await service.ActivateSiteAsync(
+                SiteId, new SiteActivationRequest(Study.Value), TestContext.Current.CancellationToken);
+            firstResult.IsSuccess.Should().BeTrue();
+        }
+
+        // Second activation at a later time is a clean no-op: returns true without adding duplicate audit rows.
+        clock.Advance(TimeSpan.FromHours(1));
+        await using (var secondCtx = CreateContext(databaseName))
+        {
+            var service = new SiteComplianceApplicationService(
+                new SiteComplianceRepository(secondCtx),
+                new EfAuditLogWriter(secondCtx),
+                new FakeCurrentAuditContextAccessor("sponsor-dm-2", "Duplicate retry"),
+                clock);
+
+            var secondResult = await service.ActivateSiteAsync(
+                SiteId, new SiteActivationRequest(Study.Value), TestContext.Current.CancellationToken);
+            secondResult.IsSuccess.Should().BeTrue();
+
+            var status = await service.GetComplianceStatusAsync(
+                SiteId, Study.Value, Milestone, TestContext.Current.CancellationToken);
+            status.IsActivated.Should().BeTrue();
+            status.ActivatedAt.Should().Be(FixedActivatedAt);
+            status.ActivatedBy.Should().Be("sponsor-dm-1");
+        }
+
+        await using var auditCtx = CreateContext(databaseName);
+        var activationEntries = await auditCtx.AuditLogEntries.AsNoTracking()
+            .Where(e => e.Action == "SITE_ACTIVATION")
+            .ToListAsync(TestContext.Current.CancellationToken);
+        activationEntries.Should().ContainSingle();
+        activationEntries[0].UserId.Should().Be("sponsor-dm-1");
     }
 
     // ---- GetComplianceStatusAsync: always-200, no Result<T> wrapper --------------------------------

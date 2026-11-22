@@ -43,6 +43,7 @@ public static class MonitoringVisitEndpoints
             .WithName("ListMonitoringVisits")
             .WithSummary("List monitoring visits filtered by study, site, CRA, or status.")
             .Produces<List<MonitoringVisitResponseDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission(ReadPermission).RequireCallerStudyAndSiteScope();
 
         group.MapPost("/monitoring-visits", ScheduleMonitoringVisitAsync)
@@ -50,6 +51,7 @@ public static class MonitoringVisitEndpoints
             .WithSummary("Schedule a new monitoring visit.")
             .Produces<MonitoringVisitResponseDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission(CreatePermission).RequireCallerStudyAndSiteScope();
 
         group.MapPost("/monitoring-visits/{visit_id}/complete", CompleteMonitoringVisitAsync)
@@ -57,6 +59,7 @@ public static class MonitoringVisitEndpoints
             .WithSummary("Complete a scheduled monitoring visit with actual date and clinical findings.")
             .Produces<MonitoringVisitResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(UpdatePermission).RequireCallerStudyAndSiteScope();
 
@@ -65,6 +68,7 @@ public static class MonitoringVisitEndpoints
             .WithSummary("Perform supervisory Part 11 sign-off on a completed monitoring visit.")
             .Produces<MonitoringVisitResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope();
 
@@ -72,12 +76,15 @@ public static class MonitoringVisitEndpoints
             .WithName("GetMonitoringVisitLetters")
             .WithSummary("Get generated letters for a monitoring visit.")
             .Produces<List<GeneratedLetterResponseDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(ReadLetterPermission).RequireCallerStudyAndSiteScope();
 
         group.MapGet("/monitoring-visits/{visit_id}/letters/{letter_type}", GetMonitoringVisitLetterByTypeAsync)
             .WithName("GetMonitoringVisitLetterByType")
             .WithSummary("Get a generated visit letter by type.")
             .Produces<GeneratedLetterResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(ReadLetterTypePermission).RequireCallerStudyAndSiteScope();
 
@@ -90,22 +97,15 @@ public static class MonitoringVisitEndpoints
         [FromQuery(Name = "cra_id")] string? craId,
         [FromQuery(Name = "status")] string? status,
         CtmsDbContext db,
-        CancellationToken ct,
-        HttpContext? httpContext = null)
+        HttpContext httpContext,
+        CancellationToken ct)
     {
-        HashSet<string>? studyFilter = null;
-        if (httpContext is not null
-            && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
-            && !ClinicalScopeGuard.ResolveStudyAndSiteFilters(httpContext, studyId, siteId, out studyFilter, out _, out var denied))
+        if (CtmsScopeGuard.ResolveStudyAndSiteFilters(httpContext, studyId, siteId, out var studyFilter, out var siteFilter) is { } scopeDenied)
         {
-            return denied!;
+            return scopeDenied;
         }
 
         IQueryable<CtmsMonitoringVisit> query = db.CtmsMonitoringVisits.AsNoTracking();
-        if (studyFilter is not null)
-        {
-            query = query.Where(v => studyFilter.Contains(v.StudyId));
-        }
 
         if (!string.IsNullOrWhiteSpace(studyId))
         {
@@ -130,12 +130,9 @@ public static class MonitoringVisitEndpoints
         var visits = await query
             .OrderByDescending(v => v.ScheduledDate)
             .ToListAsync(ct);
-        if (httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
-        {
-            visits = visits.Where(v => ClinicalScopeGuard.CanAccessSite(httpContext, v.SiteId)).ToList();
-        }
 
-        var dtos = visits.Select(ToResponseDto).ToList();
+        var scopedVisits = CtmsScopeGuard.ApplyFilters(visits, studyFilter, v => v.StudyId, siteFilter, v => v.SiteId);
+        var dtos = scopedVisits.Select(ToResponseDto).ToList();
         return TypedResults.Ok(dtos);
     }
 
@@ -154,11 +151,6 @@ public static class MonitoringVisitEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
-        {
-            return problem!;
-        }
-
         if (string.IsNullOrWhiteSpace(request.Study) ||
             string.IsNullOrWhiteSpace(request.Site) ||
             string.IsNullOrWhiteSpace(request.CraId) ||
@@ -170,18 +162,22 @@ public static class MonitoringVisitEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, request.Study, request.Site) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
+        {
+            return problem!;
+        }
+
         if (request.ScheduledDate == default)
         {
             return TypedResults.Problem(
                 title: "Validation error",
                 detail: "scheduled_date is required.",
                 statusCode: StatusCodes.Status400BadRequest);
-        }
-
-        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
-            && ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.Study, request.Site) is { } scheduleDenied)
-        {
-            return scheduleDenied;
         }
 
         var (user, role) = ResolveCaller(httpContext, request.CraId);
@@ -229,6 +225,11 @@ public static class MonitoringVisitEndpoints
         [FromServices] IClock clock,
         CancellationToken ct)
     {
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
+        {
+            return missingScope;
+        }
+
         var visit = await db.CtmsMonitoringVisits.FirstOrDefaultAsync(v => v.Id == visitId, ct);
         if (visit is null)
         {
@@ -238,10 +239,9 @@ public static class MonitoringVisitEndpoints
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
-            && ClinicalScopeGuard.RequireStudyAndSite(httpContext, visit.StudyId, visit.SiteId) is { } completeDenied)
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, visit.StudyId, visit.SiteId) is { } scopeDenied)
         {
-            return completeDenied;
+            return scopeDenied;
         }
 
         if (!TryExtractReasonForChange(httpContext, request?.ReasonForChange, out string reason, out var problem))
@@ -317,6 +317,11 @@ public static class MonitoringVisitEndpoints
         CancellationToken ct,
         [FromServices] IPublishEndpoint? publishEndpoint = null)
     {
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
+        {
+            return missingScope;
+        }
+
         var visit = await db.CtmsMonitoringVisits.FirstOrDefaultAsync(v => v.Id == visitId, ct);
         if (visit is null)
         {
@@ -326,10 +331,9 @@ public static class MonitoringVisitEndpoints
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
-            && ClinicalScopeGuard.RequireStudyAndSite(httpContext, visit.StudyId, visit.SiteId) is { } signOffDenied)
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, visit.StudyId, visit.SiteId) is { } scopeDenied)
         {
-            return signOffDenied;
+            return scopeDenied;
         }
 
         if (!TryExtractReasonForChange(httpContext, null, out string reason, out var problem))
@@ -403,18 +407,26 @@ public static class MonitoringVisitEndpoints
     public static async Task<IResult> GetMonitoringVisitLettersAsync(
         [FromRoute(Name = "visit_id")] string visitId,
         CtmsDbContext db,
-        CancellationToken ct,
-        HttpContext? httpContext = null)
+        HttpContext httpContext,
+        CancellationToken ct)
     {
-        if (httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
         {
-            var visit = await db.CtmsMonitoringVisits.AsNoTracking().FirstOrDefaultAsync(v => v.Id == visitId, ct);
-            if (visit is not null
-                && (!ClinicalScopeGuard.CanAccessStudy(httpContext, visit.StudyId)
-                    || !ClinicalScopeGuard.CanAccessSite(httpContext, visit.SiteId)))
-            {
-                return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail);
-            }
+            return missingScope;
+        }
+
+        var visit = await db.CtmsMonitoringVisits.AsNoTracking().FirstOrDefaultAsync(v => v.Id == visitId, ct);
+        if (visit is null)
+        {
+            return TypedResults.Problem(
+                title: "Visit not found",
+                detail: $"Monitoring visit '{visitId}' not found.",
+                statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, visit.StudyId, visit.SiteId) is { } scopeDenied)
+        {
+            return scopeDenied;
         }
 
         var letters = await db.CtmsGeneratedLetters.AsNoTracking()
@@ -430,19 +442,28 @@ public static class MonitoringVisitEndpoints
         [FromRoute(Name = "visit_id")] string visitId,
         [FromRoute(Name = "letter_type")] string letterType,
         CtmsDbContext db,
-        CancellationToken ct,
-        HttpContext? httpContext = null)
+        HttpContext httpContext,
+        CancellationToken ct)
     {
-        if (httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
         {
-            var visit = await db.CtmsMonitoringVisits.AsNoTracking().FirstOrDefaultAsync(v => v.Id == visitId, ct);
-            if (visit is not null
-                && (!ClinicalScopeGuard.CanAccessStudy(httpContext, visit.StudyId)
-                    || !ClinicalScopeGuard.CanAccessSite(httpContext, visit.SiteId)))
-            {
-                return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail);
-            }
+            return missingScope;
         }
+
+        var visit = await db.CtmsMonitoringVisits.AsNoTracking().FirstOrDefaultAsync(v => v.Id == visitId, ct);
+        if (visit is null)
+        {
+            return TypedResults.Problem(
+                title: "Visit not found",
+                detail: $"Monitoring visit '{visitId}' not found.",
+                statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, visit.StudyId, visit.SiteId) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
         var letter = await db.CtmsGeneratedLetters.AsNoTracking()
             .Where(l => l.VisitId == visitId && l.LetterType == letterType)
             .OrderByDescending(l => l.CreatedAt)

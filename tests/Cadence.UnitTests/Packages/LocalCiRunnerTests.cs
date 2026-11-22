@@ -266,12 +266,28 @@ public class LocalCiRunnerTests
     }
 
     [Fact]
-    public void FilePattern_KeepsOnlyMatchingPaths()
+    public void BaseRef_IsForwardedToCliCheckCommands_AndInProcessSteps()
     {
-        var step = new CiStep("a", "dup") { FilePattern = @"\.(cs|vue)$" };
+        string? observedInProcessBaseRef = null;
+        var checkCommand = new CiCommand("node", ["scripts/run-cli.js", "check", "deid"], ForwardsBaseRef: true);
+        var job = Job("custom",
+            new CiStep("custom", "cli-check") { Commands = [checkCommand] },
+            new CiStep("custom", "in-process")
+            {
+                InProcess = (_, options) =>
+                {
+                    observedInProcessBaseRef = options.BaseRef;
+                    return 0;
+                },
+                InProcessDisplay = "in-process check",
+                InProcessCiText = "node scripts/run-cli.js check gxp-snapshot",
+            });
 
-        new[] { "a.cs", "b.md", "c.vue", "d.csproj" }.Where(p => CiPlan.MatchesFilePattern(step, p))
-            .Should().Equal("a.cs", "c.vue");
+        var results = LocalCiRunner.Run([job], new LocalCiOptions(AllowSkip: false, BaseRef: "origin/release/1.0"), Environment());
+
+        results.Select(r => r.Outcome).Should().Equal(CiOutcome.Passed, CiOutcome.Passed);
+        _ran.Should().Equal("scripts/run-cli.js --base origin/release/1.0");
+        observedInProcessBaseRef.Should().Be("origin/release/1.0");
     }
 
     [Fact]

@@ -22,10 +22,18 @@ public enum PreCommitMode
     Skipped,
 }
 
-/// <summary>What a gate checks: the repository root, the files to limit it to, and whether the pre-commit hook runs it.</summary>
-public sealed record GateContext(string RepoRoot, string[]? TargetFiles = null, bool PreCommit = false)
+/// <summary>
+/// What a gate checks: the repository root, the files to limit it to, whether the pre-commit hook runs it, and
+/// optional <c>--base</c> / <c>--push-before</c> Git scope overrides.
+/// </summary>
+public sealed record GateContext(
+    string RepoRoot,
+    string[]? TargetFiles = null,
+    bool PreCommit = false,
+    string? BaseRef = null,
+    string? PushBefore = null)
 {
-    /// <summary>The target files (empty when a pre-commit change only deletes files), or <c>null</c> for the whole repository.</summary>
+    /// <summary>The target files (empty when a pre-commit change only deletes files), or <c>null</c> for the whole repository or Git revision scope.</summary>
     public string[]? Files => TargetFiles;
 }
 
@@ -103,8 +111,8 @@ public static class QualityGates
             "Verifies `.secrets.baseline` is valid, normalized JSON with the canonical exclusion filter without mutating it",
             ctx => SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: ctx.RepoRoot, check: true) == 0),
         new("detect-secrets", ["secrets-scan"],
-            "Scans changed files against `.secrets.baseline` using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
-            ctx => DetectSecretsGateService.Scan(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit) == 0)
+            "Scans changed or tracked files against `.secrets.baseline` using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
+            ctx => DetectSecretsGateService.Scan(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
@@ -117,10 +125,10 @@ public static class QualityGates
             "`docs/cli.md` documents every command in `Program.cs`, and the gate tables in `docs/cli.md` and `docs/CI.md` match this registry",
             ctx => CheckCliDocs(ctx.RepoRoot)),
         new("adrs", ["validate-adrs"], "ADR schema, `docs/adr/index.md` consistency, and an ADR for architectural changes",
-            ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot, preCommit: ctx.PreCommit))
+            ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot, preCommit: ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore))
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "checks staged files for architectural changes instead of the working tree",
+            PreCommitNote = "checks staged files for architectural changes, accepting ADRs already added on the branch",
         },
         new("arch-drift", ["validate-architecture-drift"],
             "`docker/docker-compose.yml` exists and declares services; services missing from the architecture docs are warnings",
@@ -156,8 +164,8 @@ public static class QualityGates
             ctx => SecurityAuditorService.AuditSecurity(ctx.Files, ctx.RepoRoot) == 0)
         { TakesFiles = true },
         new("deid", ["deid-compliance-scan"],
-            "PHI/PII in tracked files outside tests, docs, scripts and similar folders (all 14 detector categories), ratcheted by `.deid-baseline.txt`; a line that is not PHI takes a `deid-ignore` comment",
-            ctx => DeidComplianceService.ScanDeidCompliance(ctx.Files, ctx.RepoRoot) == 0)
+            "PHI/PII in changed or tracked files outside tests, docs, scripts and similar folders (all 14 detector categories), ratcheted by `.deid-baseline.txt`; a line that is not PHI takes a `deid-ignore` comment",
+            ctx => DeidComplianceService.ScanDeidCompliance(ctx.Files, ctx.RepoRoot, preCommit: ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         { TakesFiles = true },
         new("openapi", ["auto-stage-openapi"], "`docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi`",
             ctx => PreCommitOpenApiService.ExecutePreCommitOpenApi(ctx.RepoRoot, quick: ctx.PreCommit, targetFiles: ctx.TargetFiles) == 0)
@@ -197,18 +205,18 @@ public static class QualityGates
             "Requirement tags name known requirements and sit on test methods, and the generated documents match their integrity stamps and are not drafts",
             ctx => GxpRtmValidatorService.ValidateGxpRtm(ctx.RepoRoot)),
         new("gxp-snapshot", ["gxp-snapshot-guard"],
-            "The branch does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` unless `CADENCE_GXP_SNAPSHOT=1` (ADR-2532)",
-            ctx => GxpSnapshotGuardService.Check(ctx.RepoRoot, ctx.PreCommit) == 0)
+            "The branch or push range does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` unless `CADENCE_GXP_SNAPSHOT=1` (ADR-2532)",
+            ctx => GxpSnapshotGuardService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         {
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "checks the staged files instead of the branch",
         },
         new("baseline-ratchet", ["baselines"],
-            "No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) gained an entry since the `origin/main` merge base, unless a commit has a `Baseline-Growth:` trailer",
-            ctx => BaselineRatchetService.Check(ctx.RepoRoot, ctx.PreCommit) == 0)
+            "No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) gained an entry without a `Baseline-Growth: <path> - <reason>` trailer on the commit that grew it",
+            ctx => BaselineRatchetService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "checks the staged files; `CADENCE_BASELINE_GROWTH=\"<reason>\"` admits growth",
+            PreCommitNote = "checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH=\"<reason>\"` admits growth",
         },
     ];
 

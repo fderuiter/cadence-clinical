@@ -98,7 +98,7 @@ public sealed class BaselineRatchetServiceTests : IDisposable
     public void Growth_WithTrailerOnABranchCommit_Passes()
     {
         Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\n");
-        Commit("feat: add C\n\nBaseline-Growth: C is ported from the legacy service and burned down in #9999");
+        Commit($"feat: add C\n\nBaseline-Growth: {Baseline} - C is ported from the legacy service and burned down in #9999");
         Write("src/Program.cs", "class P { }\n");
         Commit("fix: later commit without a trailer");
 
@@ -106,10 +106,93 @@ public sealed class BaselineRatchetServiceTests : IDisposable
     }
 
     [Fact]
+    public void Growth_OnSecondCommitAfterAuthorizedFirstCommit_Fails()
+    {
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\n");
+        Commit($"feat: add C\n\nBaseline-Growth: {Baseline} - C is ported from the legacy service");
+
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\nK-XS-1|App|D\n");
+        Commit("feat: sneak in D without trailer");
+
+        Check().Should().Be(1);
+    }
+
+    [Fact]
+    public void Growth_InUnmentionedSecondBaselineFile_Fails_UntilBothFilesHaveTrailers()
+    {
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\n");
+        Write(".deid-baseline.txt", "# deid\napps/x.cs|urls|0001\napps/y.cs|urls|0002\n");
+        Commit($"feat: grow two baselines\n\nBaseline-Growth: {Baseline} - authorized kernel boundary");
+
+        Check().Should().Be(1);
+
+        Git("commit", "--amend", "-q", "-m",
+            $"feat: grow two baselines\n\nBaseline-Growth: {Baseline} - authorized kernel boundary\nBaseline-Growth: .deid-baseline.txt - legacy fixture pending cleanup");
+
+        Check().Should().Be(0);
+    }
+
+    [Fact]
+    public void Growth_WithLegacyPathlessTrailer_Fails()
+    {
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\n");
+        Commit("feat: add C\n\nBaseline-Growth: legacy format without path");
+
+        Check().Should().Be(1);
+    }
+
+    [Fact]
+    public void Growth_InDirtyWorkingTreeAfterAuthorizedCommit_Fails()
+    {
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\n");
+        Commit($"feat: add C\n\nBaseline-Growth: {Baseline} - authorized");
+
+        Write(".deid-baseline.txt", "# deid\napps/x.cs|urls|0001\napps/z.cs|urls|0003\n");
+
+        Check().Should().Be(1);
+    }
+
+    [Fact]
+    public void PreCommit_ComparesStagedCopyAgainstHead_NotBranchMergeBase()
+    {
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\n");
+        Commit($"feat: add C\n\nBaseline-Growth: {Baseline} - authorized on commit 1");
+
+        Write("src/Program.cs", "class P { static void Main() {} }\n");
+        Git("add", "src/Program.cs");
+        BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(0);
+
+        Write(".deid-baseline.txt", "# deid\napps/x.cs|urls|0001\napps/y.cs|urls|0002\n");
+        Git("add", ".deid-baseline.txt");
+        BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(1);
+    }
+
+    [Fact]
+    public void PushBefore_EvaluatesAllCommitsInPushRange_AndHandlesZeroShaFallback()
+    {
+        string pushBefore = CaptureGit("rev-parse", "HEAD").Trim();
+
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\n");
+        Commit($"feat: add C\n\nBaseline-Growth: {Baseline} - authorized");
+
+        Write(".deid-baseline.txt", "# deid\napps/x.cs|urls|0001\napps/y.cs|urls|0002\n");
+        Commit("feat: unauthorized growth on second pushed commit");
+
+        BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment, pushBefore: pushBefore).Should().Be(1);
+
+        Git("commit", "--amend", "-q", "-m",
+            "feat: authorized growth on second pushed commit\n\nBaseline-Growth: .deid-baseline.txt - legacy fixture");
+
+        BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment, pushBefore: pushBefore).Should().Be(0);
+        BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment,
+            pushBefore: "0000000000000000000000000000000000000000").Should().Be(0);
+    }
+
+    [Fact]
     public void TrailerInTheBodyRatherThanTheTrailerBlock_DoesNotCount()
     {
         Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\n");
-        Commit("feat: add C\n\nBaseline-Growth: not a trailer\n\nThis paragraph ends the message.");
+        Commit($"feat: add C\n\nBaseline-Growth: {Baseline} - not a trailer\n\nThis paragraph ends the message.");
 
         Check().Should().Be(1);
     }
@@ -190,7 +273,9 @@ public sealed class BaselineRatchetServiceTests : IDisposable
         File.WriteAllText(path, content);
     }
 
-    private void Git(params string[] args)
+    private void Git(params string[] args) => _ = CaptureGit(args);
+
+    private string CaptureGit(params string[] args)
     {
         var psi = new ProcessStartInfo("git") { WorkingDirectory = _dir, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (string arg in new List<string> { "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false" })
@@ -204,9 +289,10 @@ public sealed class BaselineRatchetServiceTests : IDisposable
         }
 
         using var process = Process.Start(psi)!;
-        process.StandardOutput.ReadToEnd();
+        string output = process.StandardOutput.ReadToEnd();
         string error = process.StandardError.ReadToEnd();
         process.WaitForExit();
         process.ExitCode.Should().Be(0, $"git {string.Join(' ', args)} failed: {error}");
+        return output;
     }
 }
