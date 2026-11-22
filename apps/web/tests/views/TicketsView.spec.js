@@ -332,7 +332,7 @@ describe("TicketsView - Live API Mode (VITE_DEMO_MODE=false)", () => {
         reason_for_change: "Initial escalation",
         version_index: 1,
         changes_json: "{}",
-        block_hash: "abcdef0123456789abcdef0123456789",
+        block_hash: "mock-merkle-block-hash-0001",
         predecessor_hash: "",
       },
     ]);
