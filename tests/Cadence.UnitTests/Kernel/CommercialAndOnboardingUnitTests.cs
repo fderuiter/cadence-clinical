@@ -312,6 +312,142 @@ public sealed class CommercialAndOnboardingUnitTests
         handler.AssignedRoleNames.Should().Equal("Sponsor Admin", "Sponsor Designer");
     }
 
+    [Fact(DisplayName = "TrialOnboardingService_AndDevelopmentDemoData_GrantParticipantRegisterToExecutionForms_AndArtifactCapabilitiesToSponsorRoles")]
+    public async Task TrialOnboardingServiceAndDevelopmentDemoDataGrantParticipantRegisterAndArtifactCapabilities()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        const string subjectId = "77777777-2222-4444-8888-aaaaaaaaaaaa";
+        var sender = new RecordingBootstrapSender();
+        var directory = new EmptyTenantDirectory();
+        var entitlements = new StubEntitlementReader(new TenantEntitlementSnapshot(
+            TenantId.New(),
+            SubscriptionId: null,
+            CommercialTier.Individual,
+            SubscriptionStatus.Trialing,
+            StartedAt: T0,
+            TrialEndsAt: T0.AddDays(30),
+            IsReadOnly: false,
+            ProductFamilies: []));
+        var keycloak = new NoOpKeycloakClient();
+
+        await using var provider = new ServiceCollection()
+            .AddLogging()
+            .AddScoped<ServiceActorScope>()
+            .AddScoped<IKernelCommandSender>(_ => sender)
+            .BuildServiceProvider();
+
+        var service = new TrialOnboardingService(
+            directory,
+            entitlements,
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            keycloak,
+            new FakeClock(T0),
+            provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<TrialOnboardingService>>());
+
+        var result = await service.BootstrapAsync(
+            Actor.Person(subjectId),
+            new TrialOnboardingInput("Meridian Bio", "US", "Individual"),
+            ct);
+
+        result.IsSuccess.Should().BeTrue(result.Error?.Message);
+
+        var definedRoles = sender.Commands.OfType<DefineRole>().ToDictionary(r => r.Code, r => r.Capabilities);
+        definedRoles.Should().ContainKey("TRIAL_EXECUTION_FORMS");
+        definedRoles["TRIAL_EXECUTION_FORMS"].Should().Contain(["execution.form.open", "participant.register"]);
+
+        definedRoles.Should().ContainKey("SPONSOR_ADMIN");
+        definedRoles["SPONSOR_ADMIN"].Should().Contain([
+            "artifact.register",
+            "artifact.add_version",
+            "effectivity.declare",
+            "effectivity.change_status",
+            "attestation.sign",
+        ]);
+
+        definedRoles.Should().ContainKey("SPONSOR_DESIGNER");
+        definedRoles["SPONSOR_DESIGNER"].Should().Contain([
+            "protocol.submit_for_review",
+            "protocol.return_to_draft",
+            "protocol.approve",
+            "artifact.register",
+            "artifact.add_version",
+            "effectivity.declare",
+            "effectivity.change_status",
+            "attestation.sign",
+        ]);
+
+        var issuedGrants = sender.Commands.OfType<IssueGrant>().ToList();
+        issuedGrants.Should().ContainSingle(g => g.Grantee == Actor.ServiceAccount("execution-forms"));
+
+        var demoDesigner = Cadence.Kernel.Host.DevelopmentDemoData.Roles.Single(r => r.Code == "DEMO_DESIGNER");
+        demoDesigner.Capabilities.Should().Contain([
+            "protocol.submit_for_review",
+            "protocol.return_to_draft",
+            "protocol.approve",
+            "artifact.register",
+            "artifact.add_version",
+            "effectivity.declare",
+            "effectivity.change_status",
+            "site.register",
+            "study_site.link",
+            "study_site.activate",
+            "attestation.sign",
+        ]);
+
+        var demoDm = Cadence.Kernel.Host.DevelopmentDemoData.Roles.Single(r => r.Code == "DEMO_DATA_MANAGER");
+        demoDm.Capabilities.Should().Contain([
+            "artifact.register",
+            "artifact.add_version",
+            "effectivity.declare",
+            "effectivity.change_status",
+            "site.register",
+            "study_site.link",
+            "study_site.activate",
+        ]);
+    }
+
+    private sealed class EmptyTenantDirectory : ITenantDirectory
+    {
+        public Task<TenantId?> FindActiveByCodeAsync(string code, CancellationToken cancellationToken) =>
+            Task.FromResult<TenantId?>(null);
+    }
+
+    private sealed class NoOpKeycloakClient : IKeycloakOnboardingClient
+    {
+        public Task AssignTrialWorkspaceAsync(
+            string subjectId,
+            string tenantCode,
+            IReadOnlyList<string> realmRoles,
+            CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+    }
+
+    private sealed class RecordingBootstrapSender : IKernelCommandSender
+    {
+        public List<ICommand> Commands { get; } = [];
+
+        public Task<CommandResult<TResult>> SendAsync<TResult>(
+            ICommand<TResult> command,
+            CommandMetadata? metadata = null,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command);
+            object outcome = command switch
+            {
+                ProvisionTenant pt => pt.TenantId,
+                DefineRole dr => new RoleState(dr.RoleId, dr.Code, dr.Name, dr.Capabilities),
+                IssueGrant ig => new GrantState(ig.GrantId, ig.Grantee, ig.Capability, ig.RoleId, ig.Scope, null, ig.WithGrantOption, ig.ValidFrom, ig.ValidTo, false),
+                RegisterOrganization ro => ro.OrganizationId,
+                RegisterPerson rp => rp.PersonId,
+                RegisterTenantMembership rtm => rtm.TenantMembershipId,
+                ProvisionSubscription ps => ps.SubscriptionId,
+                GrantProductEntitlement gpe => gpe.ProductEntitlementId,
+                _ => throw new NotSupportedException($"Unexpected onboarding command {command.GetType().Name}."),
+            };
+            return Task.FromResult(CommandResult<TResult>.Success((TResult)outcome));
+        }
+    }
+
     private sealed class FixedActor(Actor actor) : ICurrentActor
     {
         public Actor? Actor { get; } = actor;

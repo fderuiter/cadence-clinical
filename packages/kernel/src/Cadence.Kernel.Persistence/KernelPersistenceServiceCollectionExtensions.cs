@@ -82,6 +82,7 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<IProtocolVersionReader, KernelProtocolVersionReader>();
         services.TryAddSingleton<IProposalReader, KernelProposalReader>();
         services.TryAddSingleton<IEffectivityReader, KernelEffectivityReader>();
+        services.TryAddSingleton<IStudyGovernanceReader, KernelStudyGovernanceReader>();
         services.TryAddSingleton<IObservationRecords, KernelObservationRecords>();
         services.TryAddSingleton<ICollectionInstanceRecords, KernelCollectionInstanceRecords>();
         services.TryAddSingleton<ILockRecords, KernelLockRecords>();

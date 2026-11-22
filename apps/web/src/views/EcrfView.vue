@@ -462,6 +462,7 @@ import { useConsentGating } from "../composables/useConsentGating";
 import { useVerification } from "../composables/useVerification";
 import { useSchemaIngestion } from "../composables/useSchemaIngestion";
 import { useEcrfDrafts } from "../composables/useEcrfDrafts";
+import { buildCanvasLocationFromEcrfQuery } from "../canvas/ecrfRedirect";
 import {
   allowUnbackedAction,
   unbackedActionsEnabled,
@@ -596,6 +597,15 @@ const showManageParticipantsLink = computed(
     canManageParticipants(authStore)
 );
 
+function currentCanvasRedirectQuery() {
+  return {
+    ...(route?.query || {}),
+    studyId: store.activeStudyId.trim() || routeQuery("studyId") || "",
+    subjectId: selectedSubjectId.value.trim() || routeQuery("subjectId") || "",
+    siteId: selectedSubject.value?.siteId || routeQuery("siteId") || "",
+  };
+}
+
 const manageParticipantsLocation = computed(() => {
   const code = store.activeStudyId.trim();
   if (code) {
@@ -618,6 +628,16 @@ const manageParticipantsHref = computed(() => {
 
 async function resolveSelectedEnrollment() {
   if (demoBuild) return;
+  if (
+    typeof router?.hasRoute === "function" &&
+    router.hasRoute("study") &&
+    typeof router?.replace === "function"
+  ) {
+    void router.replace(
+      buildCanvasLocationFromEcrfQuery(currentCanvasRedirectQuery())
+    );
+    return;
+  }
   const studyCode = store.activeStudyId.trim();
   const subjectCode = selectedSubjectId.value.trim();
 

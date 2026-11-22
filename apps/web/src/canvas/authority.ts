@@ -479,6 +479,47 @@ export function canAssignTrainingCurriculum(auth: AuthorityAuth): boolean {
   return holdsBackendRole(auth, TRAINING_CURRICULUM_ASSIGN_ROLES);
 }
 
+const PROTOCOL_GOVERNANCE_ROLES = new Set([
+  "sysadmin",
+  "sponsor_designer",
+  "sponsor_dm",
+  "protocol_reviewer",
+]);
+
+const KERNEL_SITE_GOVERNANCE_ROLES = new Set([
+  "sysadmin",
+  "sponsor_designer",
+  "sponsor_dm",
+]);
+
+/** Submit protocol drafts for review, return to draft, approve via Part 11 signature, register evidence artifacts, and manage protocol effectivities. */
+export function canGovernProtocols(
+  auth: (AuthorityAuth & { isAuthenticated?: boolean }) | null | undefined
+): boolean {
+  if (!auth || auth.isAuthenticated === false) return false;
+  if (holdsBackendRole(auth, PROTOCOL_GOVERNANCE_ROLES)) return true;
+  if (typeof auth.hasRole === "function") {
+    return ["study_designer", "designer", "data_manager", "sponsor_admin"].some(
+      (role) => auth.hasRole!(role)
+    );
+  }
+  return false;
+}
+
+/** Link and activate kernel study sites once a governing protocol version is effective. */
+export function canManageKernelStudySites(
+  auth: (AuthorityAuth & { isAuthenticated?: boolean }) | null | undefined
+): boolean {
+  if (!auth || auth.isAuthenticated === false) return false;
+  if (holdsBackendRole(auth, KERNEL_SITE_GOVERNANCE_ROLES)) return true;
+  if (typeof auth.hasRole === "function") {
+    return ["study_designer", "designer", "data_manager", "sponsor_admin"].some(
+      (role) => auth.hasRole!(role)
+    );
+  }
+  return false;
+}
+
 /** Sign Knowledge site delegation logs as Principal Investigator (delegation_log:sign). */
 export function canSignTrainingDelegations(auth: AuthorityAuth): boolean {
   return holdsBackendRole(auth, TRAINING_DELEGATION_SIGN_ROLES);

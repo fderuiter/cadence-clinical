@@ -28,6 +28,9 @@ public interface ISubjectApplicationService
     /// <summary>Records or merges a <see cref="Domain.Subjects.SubjectConsent"/> (SCN-002). Implemented by MIG-SUBJ-018.</summary>
     Task<Result<SubjectConsentResponse>> RecordConsentAsync(string subjectIdOrCode, SubjectConsentRequest request, CancellationToken ct);
 
+    /// <summary>Assigns a clinical site to a screening subject and synchronizes screening enrollment with the kernel.</summary>
+    Task<Result<SubjectResponse>> AssignSiteAsync(string subjectIdOrCode, SubjectSiteAssignmentRequest request, string changeReason, CancellationToken ct);
+
     /// <summary>Transitions a subject's state (SCN-003/SCN-005). Implemented by MIG-SUBJ-019.</summary>
     Task<Result<SubjectResponse>> AdvanceStateAsync(string subjectIdOrCode, SubjectStateUpdateRequest request, string changeReason, CancellationToken ct);
 

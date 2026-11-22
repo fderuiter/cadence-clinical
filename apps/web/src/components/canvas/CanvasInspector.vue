@@ -306,6 +306,12 @@
             </dd>
           </dl>
 
+          <ParticipantSiteAssignment
+            v-if="canManageParticipants && !participant.site_id"
+            :participant="participant"
+            :study-code="studyCode"
+          />
+
           <ParticipantStateChange
             v-if="canManageParticipants"
             :participant="participant"
@@ -328,7 +334,7 @@
             Open in data entry
           </router-link>
           <router-link
-            v-if="handoffLocation"
+            v-if="isDemoBuild() && handoffLocation"
             id="inspector-handoff-standalone"
             data-testid="inspector-ecrf-handoff"
             class="inspector-link"
@@ -424,6 +430,7 @@ import { computed, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import type { SubjectSummary } from "../../api/executionApi";
 import { participantStateLabel } from "../../canvas/lifecycle";
+import ParticipantSiteAssignment from "./ParticipantSiteAssignment.vue";
 import ParticipantStateChange from "./ParticipantStateChange.vue";
 import KernelActPanel from "./KernelActPanel.vue";
 import KernelExplanation from "./KernelExplanation.vue";
@@ -445,6 +452,7 @@ import {
   getNodeDisplay,
 } from "../../canvas/nodeResolver";
 import { useAiAssistance } from "../../ai/aiAssistance";
+import { isDemoBuild } from "../../utils/demoMode";
 import AssistPanel from "../ai/AssistPanel.vue";
 
 /**

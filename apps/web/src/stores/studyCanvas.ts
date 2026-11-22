@@ -775,6 +775,56 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       return true;
     },
 
+    /**
+     * Assigns a clinical site to a siteless participant with an audited reason, synchronizing its kernel
+     * screening enrollment and refreshing the open participant record so casebooks unlock immediately.
+     */
+    async assignParticipantSite(
+      participant: SubjectSummary,
+      siteId: string,
+      reason: string
+    ): Promise<boolean> {
+      const toasts = useToastStore();
+      const normalizedSite = siteId.trim();
+      const normalizedReason = reason.trim();
+      if (!normalizedSite || !normalizedReason) return false;
+      let changed: SubjectSummary;
+      try {
+        const updated = await executionApi.assignSubjectSite(
+          participant.id,
+          normalizedSite,
+          normalizedReason
+        );
+        changed = {
+          ...participant,
+          site_id: updated.site_id ?? normalizedSite,
+        };
+        this.rememberParticipants([changed]);
+        const index = this.participants.findIndex(
+          (p) => p.id === participant.id
+        );
+        if (index >= 0) this.participants.splice(index, 1, changed);
+        toasts.push({
+          tone: "success",
+          title: `Site ${changed.site_id} assigned to ${participant.subject_id}`,
+          message: "",
+        });
+      } catch (err) {
+        toasts.apiError(
+          `Site ${normalizedSite} was not assigned to ${participant.subject_id}`,
+          err
+        );
+        return false;
+      }
+      await Promise.all([
+        this.refreshAfterChange(),
+        this.record.subjectCode === participant.subject_id
+          ? this.loadRecord(changed)
+          : null,
+      ]);
+      return true;
+    },
+
     /** Reads the participant list and the counts again, where the canvas has already read them. */
     async refreshAfterChange({ list = false } = {}): Promise<void> {
       const listed =

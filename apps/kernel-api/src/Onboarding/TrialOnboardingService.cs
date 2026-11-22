@@ -86,6 +86,8 @@ public sealed partial class TrialOnboardingService(
         "code_system.import_version",
         "concept.define",
         "concept.revise",
+        "artifact.register",
+        "artifact.add_version",
         "effectivity.declare",
         "effectivity.change_status",
         "subscription.switch_tier",
@@ -120,6 +122,8 @@ public sealed partial class TrialOnboardingService(
         "protocol.approve",
         "protocol.withdraw",
         "protocol.amend",
+        "artifact.register",
+        "artifact.add_version",
         "effectivity.declare",
         "effectivity.change_status",
         "code_system.register",
@@ -137,7 +141,7 @@ public sealed partial class TrialOnboardingService(
 
     private static readonly (string Consumer, string RoleCode, string Name, string[] Capabilities)[] ModuleServiceAccounts =
     [
-        ("execution-forms", "TRIAL_EXECUTION_FORMS", "Execution forms consumer", ["execution.form.open"]),
+        ("execution-forms", "TRIAL_EXECUTION_FORMS", "Execution forms consumer", ["execution.form.open", "participant.register"]),
         ("execution-queries", "TRIAL_EXECUTION_QUERIES", "Execution queries consumer", ["observation.query", "observation.query.answer", "assertion.retract"]),
         ("execution-edit-checks", "TRIAL_EXECUTION_EDIT_CHECKS", "Execution edit checks consumer", ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
     ];

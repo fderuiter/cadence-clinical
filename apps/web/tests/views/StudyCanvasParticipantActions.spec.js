@@ -12,6 +12,7 @@ vi.mock("../../src/api/executionApi", () => ({
     listSubjects: vi.fn(),
     addSubject: vi.fn(),
     changeSubjectState: vi.fn(),
+    assignSubjectSite: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
@@ -317,5 +318,41 @@ describe("Clinical Canvas: adding participants and changing their state", () => 
 
     expect(wrapper.find("#btn-add-participant").exists()).toBe(true);
     expect(wrapper.find("#inspector-state-change").exists()).toBe(true);
+  });
+
+  it("assigns a clinical site to a siteless participant and updates inspector state", async () => {
+    participants = [participant(0, { site_id: null, status: "SCREENING" })];
+    vi.mocked(executionApi.assignSubjectSite).mockImplementation(
+      async (id, siteId) => {
+        const target = participants.find((p) => p.id === id);
+        target.site_id = siteId;
+        return { ...target };
+      }
+    );
+
+    await open(
+      `/studies/CAD-101?stage=conduct&section=participants&node=participant:${IDS[0]}`
+    );
+
+    expect(wrapper.find("#participant-site-assignment").exists()).toBe(true);
+    await wrapper.find("#participant-site-assign-input").setValue("017");
+    await wrapper
+      .find("#participant-site-assign-reason")
+      .setValue("Assign participant to activated site 017");
+    await wrapper.find("#participant-site-assignment").trigger("submit");
+    await flushPromises();
+
+    expect(executionApi.assignSubjectSite).toHaveBeenCalledWith(
+      IDS[0],
+      "017",
+      "Assign participant to activated site 017"
+    );
+    expect(wrapper.find("#inspector-site").text()).toBe("017");
+    expect(wrapper.find("#participant-site-assignment").exists()).toBe(false);
+    expect(
+      useToastStore().toasts.some(
+        (t) => t.title === "Site 017 assigned to 017-0001"
+      )
+    ).toBe(true);
   });
 });

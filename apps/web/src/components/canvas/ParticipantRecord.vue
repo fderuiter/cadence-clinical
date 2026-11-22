@@ -36,6 +36,12 @@
     </p>
 
     <template v-else>
+      <ParticipantSiteAssignment
+        v-if="canManage && !participant.site_id"
+        :participant="participant"
+        :study-code="canvas.studyCode"
+      />
+
       <div
         v-if="record.enrollmentId"
         class="participant-governance"
@@ -139,6 +145,7 @@ import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { participantStateLabel } from "../../canvas/lifecycle";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import ParticipantFormsPanel from "./ParticipantFormsPanel.vue";
+import ParticipantSiteAssignment from "./ParticipantSiteAssignment.vue";
 import QueriesPanel from "./QueriesPanel.vue";
 import ScopeLockControls, {
   type DirectScopeLockItem,

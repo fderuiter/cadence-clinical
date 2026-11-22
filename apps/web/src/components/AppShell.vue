@@ -263,7 +263,7 @@
     <main
       id="main-content"
       class="shell-main"
-      :class="{ 'shell-main-canvas': isStudiesRoute }"
+      :class="{ 'shell-main-canvas': isCanvasRoute }"
       tabindex="-1"
     >
       <slot />
@@ -303,6 +303,7 @@ import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
+import { isDemoBuild } from "../utils/demoMode.js";
 import {
   buildDataCollectionPath,
   canAccessDataCollection,
@@ -363,6 +364,7 @@ const dataCollectionPath = computed(() => {
   );
   return buildDataCollectionPath({
     studyCode: activeStudyCode.value,
+    participantRef: participantContext.participantRef,
     subjectCode: participantContext.subjectCode,
     enrollmentId: participantContext.enrollmentId,
   });
@@ -376,16 +378,24 @@ const siteReadinessPath = computed(() =>
   resolveSiteReadinessPath(normalizedRoles.value)
 );
 
-const isStudiesRoute = computed(
+const isCanvasRoute = computed(
   () =>
     route?.name === "study" ||
     Boolean(route?.path && route.path.startsWith("/studies"))
+);
+const isConductCanvasRoute = computed(
+  () =>
+    !isDemoBuild() && isCanvasRoute.value && route?.query?.stage === "conduct"
+);
+const isStudiesRoute = computed(
+  () => isCanvasRoute.value && !isConductCanvasRoute.value
 );
 const isDataCollectionRoute = computed(
   () =>
     route?.name === "ecrf" ||
     route?.name === "observation" ||
-    route?.path === "/ecrf"
+    route?.path === "/ecrf" ||
+    isConductCanvasRoute.value
 );
 const isSiteReadinessRoute = computed(
   () =>

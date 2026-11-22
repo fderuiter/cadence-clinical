@@ -69,6 +69,7 @@ const workspaceItems = computed(() => {
     normalizedRoles: authStore.normalizedRoles || [],
     availablePersonas: authStore.availablePersonas || [],
     activeStudyCode: activeStudyCode.value,
+    activeParticipantRef: participantContext.participantRef,
     activeSubjectCode: participantContext.subjectCode,
     activeEnrollmentId: participantContext.enrollmentId,
   });
