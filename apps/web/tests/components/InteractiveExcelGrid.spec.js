@@ -148,39 +148,68 @@ describe("2D Interactive Excel-Like Grid (DocumentGrid.vue)", () => {
     expect(writeTextMock).toHaveBeenCalledWith("v1.0");
   });
 
-  it("toggles inline edit taxonomy select dropdown on Enter key press and commits update on select option change", async () => {
-    const wrapper = mount(DocumentGrid, {
-      props: {
-        documents: mockDocuments,
-      },
-      global: {
-        plugins: [pinia],
-      },
-    });
+  it("omits inline taxonomy editing and /api/v1/etmf/classify calls outside demo mode", async () => {
+    vi.stubEnv("VITE_DEMO_MODE", "false");
+    try {
+      const wrapper = mount(DocumentGrid, {
+        props: {
+          documents: mockDocuments,
+        },
+        global: {
+          plugins: [pinia],
+        },
+      });
 
-    const cell = wrapper.find('td[data-row="1"][data-col="1"]');
-    await cell.trigger("click");
-    await cell.trigger("keydown", { key: "Enter" });
+      const cell = wrapper.find('td[data-row="1"][data-col="1"]');
+      await cell.trigger("click");
+      await cell.trigger("keydown", { key: "Enter" });
+      await cell.trigger("dblclick");
 
-    // Dropdown select must be visible
-    const select = wrapper.find("select.inline-select");
-    expect(select.exists()).toBe(true);
+      expect(wrapper.find("select.inline-select").exists()).toBe(false);
+      expect(etmfService.tagDocument).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 
-    // Let's choose "01.01.03" protocol signoff and save
-    await select.setValue("01.01.03");
-    await select.trigger("change");
+  it("toggles inline edit taxonomy select dropdown on Enter key press and commits update on select option change in demo mode", async () => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      const wrapper = mount(DocumentGrid, {
+        props: {
+          documents: mockDocuments,
+        },
+        global: {
+          plugins: [pinia],
+        },
+      });
 
-    expect(etmfService.tagDocument).toHaveBeenCalledWith(
-      "DOC-2",
-      {
-        zone: 1,
-        section: "01.01",
-        artifact_code: "01.01.03",
-      },
-      {
-        changeReason:
-          "Corrected taxonomy classification via interactive grid navigation",
-      }
-    );
+      const cell = wrapper.find('td[data-row="1"][data-col="1"]');
+      await cell.trigger("click");
+      await cell.trigger("keydown", { key: "Enter" });
+
+      // Dropdown select must be visible in demo mode
+      const select = wrapper.find("select.inline-select");
+      expect(select.exists()).toBe(true);
+
+      // Choose "01.01.03" protocol signoff and save
+      await select.setValue("01.01.03");
+      await select.trigger("change");
+
+      expect(etmfService.tagDocument).toHaveBeenCalledWith(
+        "DOC-2",
+        {
+          zone: 1,
+          section: "01.01",
+          artifact_code: "01.01.03",
+        },
+        {
+          changeReason:
+            "Corrected taxonomy classification via interactive grid navigation",
+        }
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

@@ -423,7 +423,7 @@
     <EhrReconciliationDrawer
       v-if="demoBuild"
       :is-open="showEhrReconciliationDrawer"
-      :study-id="store.currentStudyId || 'STUDY-101'"
+      :study-id="currentStudyId"
       :subject-id="selectedSubjectId"
       @close="showEhrReconciliationDrawer = false"
     />
@@ -458,6 +458,7 @@ import StudySubjectsBar from "../components/clinical/StudySubjectsBar.vue";
 import EhrReconciliationDrawer from "../components/clinical/EhrReconciliationDrawer.vue";
 
 // Import Domain Composables
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useConsentGating } from "../composables/useConsentGating";
 import { useVerification } from "../composables/useVerification";
 import { useSchemaIngestion } from "../composables/useSchemaIngestion";
@@ -485,6 +486,7 @@ const authStore = useAuthStore();
 const toastStore = useToastStore();
 const route = useRoute();
 const router = typeof useRouter === "function" ? useRouter() : null;
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const demoBuild = unbackedActionsEnabled();
 const instance = getCurrentInstance();
 const routerLinkComponent =
@@ -550,10 +552,8 @@ const selectedVisitId = ref("Screening");
 
 const currentStudyId = computed(
   () =>
-    store.activeStudyId ||
-    store.currentStudyId ||
-    store.currentUsdm?.studyId ||
-    "STUDY-USDM-001"
+    activeStudyCode.value ||
+    (demoBuild ? store.currentUsdm?.studyId || "STUDY-USDM-001" : "")
 );
 
 // Non-demo builds never persist or restore sample-form drafts in localStorage (ADR-2622).
@@ -742,7 +742,7 @@ watch(
       nextStudy && nextStudy !== store.activeStudyId
     );
     if (nextStudy) {
-      store.activeStudyId = nextStudy;
+      setActiveStudyCode(nextStudy);
     }
     if (nextSubject) {
       store.activeSubjectId = nextSubject;
@@ -1000,9 +1000,10 @@ onMounted(async () => {
   window.addEventListener("beforeunload", handleBeforeUnload);
   if (route && route.query) {
     if (route.query.studyId) {
-      const incomingStudy = String(route.query.studyId);
-      store.activeStudyId = incomingStudy;
-      if (demoBuild) store.currentStudyId = incomingStudy;
+      const incomingStudy = String(route.query.studyId).trim();
+      if (incomingStudy) {
+        setActiveStudyCode(incomingStudy);
+      }
     }
     if (route.query.siteId) store.activeSiteId = String(route.query.siteId);
     if (route.query.subjectId) {

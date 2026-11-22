@@ -24,6 +24,7 @@ import { useAuthStore } from "../stores/auth";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 
 const props = defineProps<{
   isOpen?: boolean;
@@ -39,14 +40,7 @@ const authStore = useAuthStore();
 const knowledgeStore = useKnowledgeStore();
 const onboardingStore = useOnboardingStore();
 const canvasStore = useStudyCanvasStore();
-
-const activeStudyCode = computed(() => {
-  const fromRoute = route?.params?.studyCode;
-  if (typeof fromRoute === "string" && fromRoute.trim()) {
-    return fromRoute.trim();
-  }
-  return canvasStore.studyCode || "";
-});
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
 watch(
   [() => props.isOpen, activeStudyCode],
@@ -87,6 +81,9 @@ function handleAction(action: PaletteWorkspaceAction) {
 }
 
 function handleGo(target: PaletteTarget) {
+  if (target.studyCode) {
+    setActiveStudyCode(target.studyCode);
+  }
   if (target.participant) {
     if (target.studyCode && target.studyCode !== canvasStore.studyCode) {
       canvasStore.openStudy(target.studyCode);

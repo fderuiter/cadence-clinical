@@ -347,6 +347,7 @@ import DocumentGrid from "../components/etmf/DocumentGrid.vue";
 import ExportJobDrawer from "../components/etmf/ExportJobDrawer.vue";
 import PdfPreviewModal from "../components/etmf/PdfPreviewModal.vue";
 import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useEtmfStore } from "../stores/etmf";
@@ -363,6 +364,7 @@ const authStore = useAuthStore();
 const etmfStore = useEtmfStore();
 const clinicalStore = useClinicalStore();
 const route = useRoute();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
 const activeWorkspaceTab = ref("binder");
 const selectedDoc = ref(null);
@@ -374,23 +376,47 @@ const reviewingQc = ref(false);
 const qcReviewError = ref("");
 
 const canReviewQc = computed(() => canReviewEtmfQc(authStore));
-const effectiveStudyId = computed(
-  () => props.studyId || clinicalStore.activeStudyId || etmfStore.currentStudyId
-);
+const effectiveStudyId = computed(() => {
+  const fromProp =
+    typeof props.studyId === "string" ? props.studyId.trim() : "";
+  if (fromProp) return fromProp;
+  const fromQuery =
+    typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
+  if (fromQuery) return fromQuery;
+  return activeStudyCode.value;
+});
 
 function syncStudyScope(study) {
-  if (study) {
-    clinicalStore.activeStudyId = study;
-    etmfStore.currentStudyId = study;
+  const normalized = typeof study === "string" ? study.trim() : "";
+  if (normalized) {
+    setActiveStudyCode(normalized);
+  }
+}
+
+async function refreshStudyBinderAndDocuments(study) {
+  const normalized = typeof study === "string" ? study.trim() : "";
+  if (normalized) {
+    syncStudyScope(normalized);
+  }
+  await etmfStore.fetchBinderTree(normalized);
+  if (normalized) {
+    await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
   }
 }
 
 watch(
-  () => props.studyId,
-  (val) => {
-    if (val) {
-      syncStudyScope(val);
-      etmfStore.fetchBinderTree();
+  () => [props.studyId, route?.query?.studyId],
+  ([propStudy, queryStudy], [prevPropStudy, prevQueryStudy] = []) => {
+    const nextStudy =
+      (typeof propStudy === "string" && propStudy.trim()) ||
+      (typeof queryStudy === "string" && queryStudy.trim()) ||
+      "";
+    const prevStudy =
+      (typeof prevPropStudy === "string" && prevPropStudy.trim()) ||
+      (typeof prevQueryStudy === "string" && prevQueryStudy.trim()) ||
+      "";
+    if (nextStudy && nextStudy !== prevStudy) {
+      void refreshStudyBinderAndDocuments(nextStudy);
     }
   }
 );
@@ -540,16 +566,17 @@ async function handleAcceptClassification(doc) {
 }
 
 onMounted(() => {
-  if (props.studyId) {
-    syncStudyScope(props.studyId);
-  } else if (route && route.query) {
-    if (route.query.studyId) syncStudyScope(route.query.studyId);
-    if (route.query.siteId) clinicalStore.activeSiteId = route.query.siteId;
-    if (route.query.subjectId)
-      clinicalStore.activeSubjectId = route.query.subjectId;
-    if (route.query.visitId) clinicalStore.activeVisitId = route.query.visitId;
+  if (route && route.query) {
+    if (route.query.siteId)
+      clinicalStore.activeSiteId = String(route.query.siteId);
+    if (route.query.subjectId) {
+      clinicalStore.activeSubjectId = String(route.query.subjectId);
+    }
+    if (route.query.visitId) {
+      clinicalStore.activeVisitId = String(route.query.visitId);
+    }
   }
-  etmfStore.fetchBinderTree();
+  void refreshStudyBinderAndDocuments(effectiveStudyId.value);
 });
 
 defineExpose({

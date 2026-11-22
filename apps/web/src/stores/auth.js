@@ -23,6 +23,7 @@ import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { demoNowMs, isDemoBuild } from "../utils/demoMode.js";
 import { useNotificationsStore } from "./notifications.js";
 import { useClinicalStore } from "./clinical.ts";
+import { clearActiveStudyScope } from "./studyScopeBridge";
 import { useOnboardingStore } from "./onboarding.js";
 import {
   purgeUserScopedStorage,
@@ -724,6 +725,7 @@ export const useAuthStore = defineStore("auth", {
       purgeLegacyAuthStorage();
       purgeUserScopedStorage(null);
       try {
+        clearActiveStudyScope();
         useClinicalStore().$reset();
       } catch {
         // Pinia or store not ready

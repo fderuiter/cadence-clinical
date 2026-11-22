@@ -19,6 +19,7 @@ import {
 } from "demo-fixtures";
 import { useAuthStore } from "./auth.js";
 import { useToastStore } from "./toasts.js";
+import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
 import {
   allowUnbackedAction,
   refuseUnbackedAction,
@@ -884,7 +885,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       formQueries: initial.savedFormQueries || {},
       ledgerBlocks: initial.savedLedgerBlocks || [],
 
-      activeStudyId: demo ? DEMO_STUDY.code : "",
+      activeStudyId: getSyncedStudyScope() || (demo ? DEMO_STUDY.code : ""),
       activeSiteId: demo ? DEFAULT_DEMO_SITE?.code || "" : "",
       activeSubjectId: demo
         ? DEFAULT_DEMO_PARTICIPANT?.subjectCode || ""
@@ -990,6 +991,8 @@ const useClinicalStoreInner = defineStore("clinical", {
         this.subjectsError = null;
         return false;
       }
+      this.activeStudyId = study;
+      syncActiveStudyScope(study);
       this.subjectsLoading = true;
       this.subjectsError = null;
       try {

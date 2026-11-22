@@ -27,6 +27,8 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
       json: () => Promise.resolve([]),
     });
     document.body.innerHTML = `<div id="app"></div>`;
+    state.session.isDemoMode = true;
+    state.session.isOfflineMode = true;
     state.currentView = "view-tasks";
     state.isSyncDrawerOpen = false;
     state.signatureModalOpen = false;
@@ -331,18 +333,26 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     state.activeQuestionnaire = null;
   });
 
-  it("drives participant portal tabs from a single state source in both 4-tab production mode and 6-tab demo mode", async () => {
+  it("drives participant portal tabs from a single state source across authenticated production mode and 6-tab demo mode", async () => {
     expect(tabs).toHaveLength(6);
 
-    // 1. Default non-demo mode renders the 4 backed tabs and wraps keyboard navigation cleanly
+    // 1. Authenticated non-demo mode renders only My Wallet and wraps keyboard navigation cleanly
+    state.session.userId = "subject_001";
+    state.session.token = "jwt_valid_subject_token"; // pragma: allowlist secret
+    state.session.isOfflineMode = false;
     state.session.isDemoMode = false;
+    showView("view-wallet");
     await settle();
-    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(4);
+    state.pinSetup.isOpen = false;
+    await settle();
+    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(1);
 
-    const tasksTab = document.getElementById("btn-tab-btn-tasks");
-    const consentTab = document.getElementById("btn-tab-btn-consent");
-    tasksTab.focus();
-    tasksTab.dispatchEvent(
+    const walletTab = document.getElementById("btn-tab-btn-wallet");
+    expect(walletTab).not.toBeNull();
+    expect(walletTab.getAttribute("aria-selected")).toBe("true");
+    expect(walletTab.getAttribute("tabindex")).toBe("0");
+    walletTab.focus();
+    walletTab.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: "End",
         bubbles: true,
@@ -350,8 +360,13 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
       })
     );
     await settle();
-    expect(state.currentView).toBe("view-consent");
-    expect(document.activeElement).toBe(consentTab);
+    expect(state.currentView).toBe("view-wallet");
+    expect(document.activeElement).toBe(walletTab);
+
+    // Unauthenticated non-demo mode hides all tabs
+    state.session.token = null;
+    await settle();
+    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(0);
 
     // 2. Demo mode renders all 6 tabs with bidirectional ARIA links and roving tabindex navigation
     state.session.isDemoMode = true;

@@ -87,6 +87,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import ProtocolTrainingConsole from "../components/clinical/ProtocolTrainingConsole.vue";
 import { trainingApi } from "../api/training";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useToastStore } from "../stores/toasts.js";
 
 const props = defineProps({
@@ -101,6 +102,7 @@ const props = defineProps({
 });
 
 const route = useRoute();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const activeCurriculaCount = ref(0);
 const completedQualificationsCount = ref(0);
 const pendingGatedCount = ref(0);
@@ -110,7 +112,24 @@ const protocolVersionFilter = ref(
 );
 
 const effectiveStudyId = computed(
-  () => props.studyId || String(route?.query?.studyId || "")
+  () =>
+    props.studyId.trim() ||
+    String(route?.query?.studyId || "").trim() ||
+    activeStudyCode.value
+);
+
+watch(
+  () => [props.studyId, route?.query?.studyId],
+  ([propStudy, queryStudy]) => {
+    const incoming =
+      (typeof propStudy === "string" && propStudy.trim()) ||
+      (typeof queryStudy === "string" && queryStudy.trim()) ||
+      "";
+    if (incoming) {
+      setActiveStudyCode(incoming);
+    }
+  },
+  { immediate: true }
 );
 const effectiveProtocolVersion = computed(
   () =>

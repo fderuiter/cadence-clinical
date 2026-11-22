@@ -669,11 +669,28 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       // Initialize application under non-demo, online authenticated context
       await portal.initializeApp();
 
-      // Verify mocks were NOT loaded
+      // Startup skips unbacked interop/econsent fetches outside demo mode and loads zero mocks
       expect(portal.state.assignments).toEqual([]);
       expect(portal.state.notifications).toEqual([]);
+      const startupUrls = globalThis.fetch.mock.calls.map((c) => String(c[0]));
+      expect(
+        startupUrls.filter(
+          (url) =>
+            url.includes("/api/v1/interop/") ||
+            url.includes("/api/v1/econsent/")
+        )
+      ).toEqual([]);
 
-      // Tasks list and inbox list contain error/failure UI state instead of mocks
+      // Direct invocations of loadAssignedTasks and loadNotifications still surface error UI instead of mocks
+      const { loadAssignedTasks, renderTasks } =
+        await import("../src/features/tasks.js");
+      const { loadNotifications, renderInbox } =
+        await import("../src/features/inbox.js");
+      await loadAssignedTasks(portal.state.session.userId);
+      renderTasks();
+      await loadNotifications(portal.state.session.userId);
+      renderInbox();
+
       const tasksList = document.getElementById("tasks-list-container");
       expect(tasksList.innerHTML).toContain("Error loading tasks");
       expect(tasksList.innerHTML).not.toContain(

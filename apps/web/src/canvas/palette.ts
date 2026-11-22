@@ -48,21 +48,40 @@ const SITE_READINESS_SPONSOR_ROLES = [
   "sponsor_admin",
 ];
 const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+const ETMF_ROLES = [
+  "cra",
+  "monitor",
+  "data_manager",
+  "site_investigator",
+  "crc",
+  "auditor",
+  "tmf_auditor",
+  "sponsor_admin",
+];
+
+export function buildStudyScopedPath(
+  basePath: string,
+  studyCode?: string
+): string {
+  const code = studyCode?.trim() || "";
+  return code ? `${basePath}?studyId=${encodeURIComponent(code)}` : basePath;
+}
 
 export function resolveSiteReadinessPath(
-  normalizedRoles: string[]
+  normalizedRoles: string[],
+  studyCode?: string
 ): string | null {
   if (
     isScreenAvailable("ctms") &&
     hasRequiredRole(normalizedRoles, SITE_READINESS_SPONSOR_ROLES)
   ) {
-    return "/ctms";
+    return buildStudyScopedPath("/ctms", studyCode);
   }
   if (
     isScreenAvailable("ssu") &&
     hasRequiredRole(normalizedRoles, SITE_READINESS_SITE_ROLES)
   ) {
-    return "/ssu";
+    return buildStudyScopedPath("/ssu", studyCode);
   }
   return null;
 }
@@ -177,7 +196,10 @@ export function buildWorkspacePaletteItems(options: {
     });
   }
 
-  const siteReadinessPath = resolveSiteReadinessPath(roles);
+  const siteReadinessPath = resolveSiteReadinessPath(
+    roles,
+    options.activeStudyCode
+  );
   if (siteReadinessPath) {
     items.push({
       key: "workspace:site-readiness",
@@ -188,13 +210,39 @@ export function buildWorkspacePaletteItems(options: {
     });
   }
 
+  if (isScreenAvailable("etmf") && hasRequiredRole(roles, ETMF_ROLES)) {
+    items.push({
+      key: "workspace:trial-documents",
+      group: "Workspace",
+      label: "Trial documents",
+      detail: "Study binder, document classification, and clinical review",
+      target: {
+        routePath: buildStudyScopedPath("/etmf", options.activeStudyCode),
+      },
+    });
+  }
+
+  if (isScreenAvailable("training")) {
+    items.push({
+      key: "workspace:training",
+      group: "Workspace",
+      label: "Study training",
+      detail: "Protocol curricula, staff assignments, and delegation sign-off",
+      target: {
+        routePath: buildStudyScopedPath("/training", options.activeStudyCode),
+      },
+    });
+  }
+
   if (isScreenAvailable("overview")) {
     items.push({
       key: "workspace:orientation",
       group: "Workspace",
       label: "Orientation",
       detail: "Role-tailored workspace orientation and setup",
-      target: { routePath: "/overview" },
+      target: {
+        routePath: buildStudyScopedPath("/overview", options.activeStudyCode),
+      },
     });
   }
 

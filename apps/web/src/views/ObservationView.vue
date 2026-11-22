@@ -216,6 +216,7 @@ import {
 import { observationNodeRef } from "../canvas/nodeRef";
 import { canCorrectObservations } from "../canvas/authority";
 import { findKernelStudyRef } from "../canvas/kernelStudy";
+import { syncActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useAuthStore } from "../stores/auth";
 
 /**
@@ -414,20 +415,33 @@ watch(
       const studyStep = steps.find(
         (s) => s.level === "study" && s.mask === null
       );
+      const studyRef = studyStep?.ref ?? null;
       if (!props.studyRef && !props.studyCode) {
-        observationStudyRef.value = studyStep?.node ?? null;
+        observationStudyRef.value = studyRef;
       }
       const enrollmentStep = steps.find(
         (s) => s.level === "enrollment" && s.mask === null
       );
-      if (!studyStep?.label || !enrollmentStep) return;
+      if (
+        !studyRef ||
+        !enrollmentStep ||
+        typeof kernelApi.getNode !== "function"
+      ) {
+        return;
+      }
+      const studyNode = await kernelApi.getNode(studyRef);
+      if (request !== redirectRequest) return;
+      const resolvedStudyCode =
+        studyNode?.mask === null ? (studyNode.code?.trim() ?? "") : "";
+      if (!resolvedStudyCode) return;
+      syncActiveStudyScope(resolvedStudyCode);
       const siteStep = steps.find(
         (s) => s.level === "study_site" && s.mask === null && s.label
       );
       const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
       await activeRouter.replace({
         name: "study",
-        params: { studyCode: studyStep.label },
+        params: { studyCode: resolvedStudyCode },
         query: {
           stage: "conduct",
           ...(siteStep?.label ? { site: siteStep.label } : {}),

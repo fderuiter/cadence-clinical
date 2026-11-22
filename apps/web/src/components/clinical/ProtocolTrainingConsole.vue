@@ -683,6 +683,7 @@ import {
   canAssignTrainingCurriculum,
   canSignTrainingDelegations,
 } from "../../canvas/authority";
+import { useActiveStudyScope } from "../../composables/useActiveStudyScope";
 import { useAuthStore } from "../../stores/auth";
 import {
   DELEGATION_SIGN_OFF_ACTION,
@@ -702,6 +703,10 @@ const props = defineProps({
 });
 
 const authStore = useAuthStore();
+const { activeStudyCode } = useActiveStudyScope();
+const effectiveStudyId = computed(
+  () => (props.studyId || "").trim() || activeStudyCode.value
+);
 const canAssignCurriculum = computed(() =>
   canAssignTrainingCurriculum(authStore)
 );
@@ -742,7 +747,7 @@ async function refreshData() {
     }
 
     const asnQuery = { user_id: userId };
-    if (props.studyId) asnQuery.study_id = props.studyId;
+    if (effectiveStudyId.value) asnQuery.study_id = effectiveStudyId.value;
 
     const asnList = await trainingApi.listAssignments(asnQuery);
     assignments.value = Array.isArray(asnList) ? asnList : [];
@@ -753,8 +758,8 @@ async function refreshData() {
 
     if (selectedAssignmentId.value) {
       await loadAssignmentDetails(selectedAssignmentId.value);
-    } else if (props.studyId) {
-      const curQuery = { study_id: props.studyId };
+    } else if (effectiveStudyId.value) {
+      const curQuery = { study_id: effectiveStudyId.value };
       if (props.protocolVersion) {
         curQuery.protocol_version = props.protocolVersion;
       }
@@ -813,7 +818,7 @@ function selectModule(index) {
 }
 
 watch(
-  () => [props.studyId, props.protocolVersion],
+  () => [effectiveStudyId.value, props.protocolVersion],
   () => {
     selectedAssignmentId.value = "";
     selectedCurriculumId.value = "";
@@ -914,7 +919,7 @@ function toggleSelectAllDelegations() {
 }
 
 async function loadDelegations() {
-  const studyId = activeCurriculum.value?.study_id || props.studyId;
+  const studyId = effectiveStudyId.value || activeCurriculum.value?.study_id;
   if (!studyId) {
     delegations.value = [];
     return;
@@ -957,7 +962,8 @@ async function handleExecuteBulkSignOff() {
     const res = await trainingApi.bulkSignOffDelegations(
       {
         delegation_ids: delegationIds,
-        study_id: activeCurriculum.value?.study_id || props.studyId || null,
+        study_id:
+          effectiveStudyId.value || activeCurriculum.value?.study_id || null,
         site_id: singleSite(delegationIds),
         signature_payload: {
           meaning:

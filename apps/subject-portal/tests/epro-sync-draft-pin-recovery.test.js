@@ -536,6 +536,7 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
   });
 
   it("Req 5: navigating Back saves partial answers and marks task Resume Survey, while Cancel requires confirmation before discarding", async () => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     sessionStorage.setItem("mock_user_id", "subject_001");
     sessionStorage.setItem("mock_token", "jwt_valid_subject_token"); // pragma: allowlist secret
     globalThis.fetch = vi.fn().mockImplementation(async (url) => {
@@ -629,6 +630,7 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
         .getElementById("task-card-assign_01")
         .querySelector(".btn-start-task").textContent
     ).toBe("Start Survey");
+    vi.unstubAllEnvs();
   });
 
   it("Req 6: caps consecutive failed PIN attempts at 5, traps focus across recovery & support links in <=3 interactions, and resets PIN via OIDC with a new key while flagging prior entries without PII", async () => {

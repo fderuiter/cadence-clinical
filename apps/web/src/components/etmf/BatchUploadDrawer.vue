@@ -377,9 +377,11 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { DEMO_STUDY } from "demo-fixtures";
 import { useFocusTrap } from "ui";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useToastStore } from "../../stores/toasts.js";
+import { isDemoBuild } from "../../utils/demoMode.js";
 
 const props = defineProps({
   isOpen: {
@@ -388,7 +390,7 @@ const props = defineProps({
   },
   studyId: {
     type: String,
-    default: "STUDY-USDM-001",
+    default: "",
   },
   siteId: {
     type: String,
@@ -586,7 +588,10 @@ async function startBatchUpload() {
         filename: item.file.name,
         content: textContent || `%PDF-1.7 Content of ${item.file.name}`,
         mime_type: item.file.type || "application/pdf",
-        study_id: props.studyId || etmfStore.currentStudyId,
+        study_id:
+          props.studyId ||
+          etmfStore.currentStudyId ||
+          (isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : ""),
         site_id: props.siteId || null,
         reason_for_change: reasonForChange.value,
       });

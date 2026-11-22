@@ -302,6 +302,7 @@ import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { isScreenAvailable } from "../router/availability";
 import {
   buildDataCollectionPath,
@@ -341,13 +342,7 @@ function syncHeaderHeight() {
 const availablePersonas = computed(() => authStore.availablePersonas || []);
 const normalizedRoles = computed(() => authStore.normalizedRoles || []);
 
-const activeStudyCode = computed(() => {
-  const fromRoute = route?.params?.studyCode;
-  if (typeof fromRoute === "string" && fromRoute.trim()) {
-    return fromRoute.trim();
-  }
-  return canvasStore.studyCode || "";
-});
+const { activeStudyCode } = useActiveStudyScope();
 
 const studiesPath = computed(() =>
   activeStudyCode.value
@@ -373,7 +368,7 @@ const showDataCollectionNav = computed(() =>
   canAccessDataCollection(normalizedRoles.value)
 );
 const siteReadinessPath = computed(() =>
-  resolveSiteReadinessPath(normalizedRoles.value)
+  resolveSiteReadinessPath(normalizedRoles.value, activeStudyCode.value)
 );
 
 const isStudiesRoute = computed(

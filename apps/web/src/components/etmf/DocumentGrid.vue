@@ -163,11 +163,15 @@
                 :data-row="rIndex"
                 :data-col="1"
                 @click="selectCell(rIndex, 1)"
-                @dblclick="startEditing(rIndex, doc)"
+                @dblclick="canEditTaxonomyInline && startEditing(rIndex, doc)"
                 @keydown="handleCellKeyDown($event, rIndex, 1, doc)"
               >
                 <div
-                  v-if="isEditing && isCellActive(rIndex, 1)"
+                  v-if="
+                    canEditTaxonomyInline &&
+                    isEditing &&
+                    isCellActive(rIndex, 1)
+                  "
                   class="inline-edit-container"
                 >
                   <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
@@ -523,6 +527,7 @@ import { useEtmfStore } from "../../stores/etmf";
 import { etmfService } from "../../api/etmf";
 import { use2DGrid } from "../../composables/use2DGrid";
 import { useToastStore } from "../../stores/toasts.js";
+import { isDemoBuild } from "../../utils/demoMode.js";
 import BatchUploadDrawer from "./BatchUploadDrawer.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 
@@ -542,6 +547,7 @@ const props = defineProps({
 defineEmits(["preview", "inspect"]);
 
 const etmfStore = useEtmfStore();
+const canEditTaxonomyInline = computed(() => isDemoBuild());
 
 // 2D Interactive Grid selection & editing state
 const containerRef = ref(null);
@@ -554,7 +560,7 @@ const grid = use2DGrid(() => paginatedDocuments.value.length, 7, {
   initialCol: 0,
   onCopyCell: (rIndex, cIndex, doc) => copyActiveCellValue(doc),
   onCellAction: (rIndex, cIndex, doc, _event) => {
-    if (cIndex === 1) {
+    if (cIndex === 1 && canEditTaxonomyInline.value) {
       startEditing(rIndex, doc);
     }
   },
@@ -593,6 +599,7 @@ function getZoneAndSectionFromCode(code) {
 }
 
 async function startEditing(rIndex, doc) {
+  if (!canEditTaxonomyInline.value) return;
   grid.startEditing(rIndex, 1);
   tempTaxonomyCode.value = doc.artifact_code;
   await nextTick();
@@ -615,7 +622,10 @@ function cancelEditing() {
 }
 
 async function commitTaxonomy(doc) {
-  if (!isEditing.value) return;
+  if (!canEditTaxonomyInline.value || !isEditing.value) {
+    if (isEditing.value) exitEditing();
+    return;
+  }
 
   const targetCode = tempTaxonomyCode.value;
   const selectedNode = etmfStore.folderLookup[targetCode];
@@ -764,7 +774,7 @@ const fileInputRef = ref(null);
 const uploadModalRef = ref(null);
 
 // Form Fields
-const studyId = ref("STUDY-USDM-001");
+const studyId = ref(etmfStore.currentStudyId || "");
 const siteId = ref("");
 const artifactCode = ref("");
 const artifactType = ref("");

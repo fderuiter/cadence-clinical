@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { DEMO_STUDY, getDemoPersonaByWorkflow } from "demo-fixtures";
 import { etmfService } from "../api/etmf";
+import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
 import {
   demoNowIso,
   demoNowMs,
@@ -232,7 +233,8 @@ export const useEtmfStore = defineStore("etmf", {
     activeDocument: null,
     isUploading: false,
     currentStudyId:
-      isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : "STUDY-USDM-001",
+      getSyncedStudyScope() ||
+      (isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : ""),
     batchQueue: [],
     qcQueue: [],
     isBatchUploading: false,
@@ -270,12 +272,18 @@ export const useEtmfStore = defineStore("etmf", {
   },
 
   actions: {
-    async fetchBinderTree(
-      studyId = isDemoBuild() && DEMO_STUDY.code
-        ? DEMO_STUDY.code
-        : "STUDY-USDM-001"
-    ) {
-      this.currentStudyId = studyId;
+    async fetchBinderTree(studyId) {
+      const resolvedStudyId =
+        typeof studyId === "string"
+          ? studyId.trim()
+          : String(
+              this.currentStudyId ||
+                (isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : "")
+            ).trim();
+      this.currentStudyId = resolvedStudyId;
+      if (resolvedStudyId) {
+        syncActiveStudyScope(resolvedStudyId);
+      }
 
       // Seed hierarchical DIA TMF Reference Model v3.2.0-complete hierarchy
       this.binderTree = [

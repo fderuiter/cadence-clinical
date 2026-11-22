@@ -22,18 +22,23 @@
         {{ heading }}
       </h2>
       <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px">
-        This section is not open for your study right now. Nothing was changed
-        or submitted. You can return to your tasks or contact your study
-        coordinator if you have questions.
+        {{ descriptionText }}
       </p>
-      <button
+      <a
         id="btn-unavailable-return-tasks"
-        type="button"
+        :href="availableAction.href"
         class="btn btn-primary"
-        @click="returnToTasks"
+        style="
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 48px;
+          text-decoration: none;
+        "
+        @click.prevent="navigateToAvailable"
       >
-        Return to My Tasks
-      </button>
+        {{ availableAction.label }}
+      </a>
     </div>
   </section>
 </template>
@@ -42,10 +47,15 @@
 import { computed } from "vue";
 
 import { showView } from "../features/navigation.js";
-import { screenTitle } from "../router/availability.js";
+import { isScreenAvailable, screenTitle } from "../router/availability.js";
+import { ROUTER_BASE } from "../router/index.js";
 import { useUiStore } from "../stores/ui.js";
 
 const ui = useUiStore();
+
+const normalizedBase = computed(() =>
+  (ROUTER_BASE || "/subject-portal/").replace(/\/+$/, "")
+);
 
 const heading = computed(() => {
   const screen = ui.unavailableScreen;
@@ -54,8 +64,40 @@ const heading = computed(() => {
     : "This workflow isn't available yet";
 });
 
-function returnToTasks() {
+const availableAction = computed(() => {
+  if (isScreenAvailable("tasks")) {
+    return {
+      viewId: "view-tasks",
+      href: `${normalizedBase.value}/`,
+      label: "Return to My Tasks",
+    };
+  }
+  if (isScreenAvailable("wallet")) {
+    return {
+      viewId: "view-wallet",
+      href: `${normalizedBase.value}/wallet`,
+      label: "Go to My Wallet",
+    };
+  }
+  return {
+    viewId: "view-unavailable",
+    href: `${normalizedBase.value}/unavailable`,
+    label: "View Availability Notice",
+  };
+});
+
+const descriptionText = computed(() => {
+  if (isScreenAvailable("tasks")) {
+    return "This section is not open for your study right now. Nothing was changed or submitted. You can return to your tasks or contact your study coordinator if you have questions.";
+  }
+  if (isScreenAvailable("wallet")) {
+    return "This section is not open for your study right now. Nothing was changed or submitted. You can open My Wallet or contact your study coordinator if you have questions.";
+  }
+  return "This section is not open for your study right now. Nothing was changed or submitted. Sign in to access available participant services or contact your study coordinator if you have questions.";
+});
+
+function navigateToAvailable() {
   ui.unavailableScreen = null;
-  showView("view-tasks");
+  showView(availableAction.value.viewId);
 }
 </script>

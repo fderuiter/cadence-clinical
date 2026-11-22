@@ -3207,6 +3207,7 @@ import {
 } from "ui";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import CraVerificationConsole from "../components/persona/CraVerificationConsole.vue";
 import SsuGreenlightConsole from "../components/clinical/SsuGreenlightConsole.vue";
 import AdaptiveDoseEscalationConsole from "../components/clinical/AdaptiveDoseEscalationConsole.vue";
@@ -3270,10 +3271,12 @@ const liveTab = ref(
       : "activation"
 );
 
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
+
 // Scope comes from props or the route; apply before the first render so child panels see it.
 if (route && route.query) {
-  if (typeof route.query.studyId === "string" && route.query.studyId) {
-    store.activeStudyId = route.query.studyId;
+  if (typeof route.query.studyId === "string" && route.query.studyId.trim()) {
+    setActiveStudyCode(route.query.studyId);
   }
   if (typeof route.query.siteId === "string" && route.query.siteId) {
     store.activeSiteId = route.query.siteId;
@@ -3292,7 +3295,7 @@ const initialResolvedSite =
   store.activeSiteId ||
   "";
 
-const localStudyId = ref(props.studyCode || store.activeStudyId || "");
+const localStudyId = ref(props.studyCode || activeStudyCode.value || "");
 const localSiteId = ref(initialResolvedSite);
 const sitePickerChoice = ref(
   !initialResolvedSite
@@ -3315,19 +3318,20 @@ function onSitePickerChange() {
 
 function syncScopeToStore() {
   if (!props.studyCode) {
-    store.activeStudyId = localStudyId.value.trim();
+    const trimmedStudy = localStudyId.value.trim();
+    store.activeStudyId = trimmedStudy;
+    if (trimmedStudy) {
+      setActiveStudyCode(trimmedStudy);
+    }
   }
   store.activeSiteId = localSiteId.value.trim();
 }
 
-watch(
-  () => store.activeStudyId,
-  (next) => {
-    if (!props.studyCode && next && next !== localStudyId.value) {
-      localStudyId.value = next;
-    }
+watch(activeStudyCode, (next) => {
+  if (!props.studyCode && next && next !== localStudyId.value) {
+    localStudyId.value = next;
   }
-);
+});
 
 watch(
   () => store.activeSiteId,
@@ -3355,7 +3359,7 @@ const studyId = computed(() => {
   const candidate =
     props.studyCode.trim() ||
     localStudyId.value.trim() ||
-    (store.activeStudyId || "").trim();
+    activeStudyCode.value;
   if (candidate) return candidate;
   return demoBuild ? "STUDY-USDM-001" : "";
 });
