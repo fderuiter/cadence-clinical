@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 
 using Microsoft.EntityFrameworkCore;
@@ -35,11 +36,31 @@ internal sealed class KernelObservationRecords(KernelTenantDbContextFactory cont
             .Select(e => e.StudySiteId)
             .SingleAsync(cancellationToken)
             .ConfigureAwait(false);
-        var instance = await db.CollectionInstances.AsNoTracking()
-            .Where(c => c.Members.Any(m => m.ObservationId == found.Id))
-            .Select(c => (CollectionInstanceId?)c.Id)
-            .SingleOrDefaultAsync(cancellationToken)
+        var foundInstance = await db.CollectionInstances.AsNoTracking()
+            .SingleOrDefaultAsync(c => c.Members.Any(m => m.ObservationId == found.Id), cancellationToken)
             .ConfigureAwait(false);
+        CollectionInstanceId? instance = foundInstance?.Id;
+        string? itemId = null;
+        CollectionItem? specItem = null;
+        if (foundInstance is not null)
+        {
+            itemId = foundInstance.Members.FirstOrDefault(m => m.ObservationId == found.Id)?.ItemId;
+            if (itemId is not null)
+            {
+                var content = await db.ProtocolVersions.AsNoTracking()
+                    .Where(v => v.Id == foundInstance.ProtocolVersionId)
+                    .Select(v => v.Content)
+                    .SingleOrDefaultAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                if (content is not null)
+                {
+                    specItem = ProtocolDesignDocument.Read(content).Design?.CollectionSpecs
+                        .FirstOrDefault(s => string.Equals(s.Id, foundInstance.CollectionSpecId, StringComparison.Ordinal))
+                        ?.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
+                }
+            }
+        }
+
         var scopes = LockScopes.Covering(found.StudyId, studySite, found.EnrollmentId, found.Id, instance);
         var assertions = await ScopedAssertions.ReadAsync(db, scopes, cancellationToken).ConfigureAwait(false);
         var locks = assertions.Locks();
@@ -71,6 +92,11 @@ internal sealed class KernelObservationRecords(KernelTenantDbContextFactory cont
             locks,
             views,
             about,
-            audit);
+            audit,
+            instance,
+            itemId,
+            specItem?.ExpectedKind,
+            specItem?.Unit,
+            specItem?.Terminology?.CodeSystemVersionId);
     }
 }

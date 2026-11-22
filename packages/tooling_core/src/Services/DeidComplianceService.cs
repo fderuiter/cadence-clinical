@@ -12,18 +12,19 @@ namespace Cadence.ToolingCore.Services;
 public sealed record DeidFinding(string File, int Line, int Column, string Category);
 
 /// <summary>
-/// The <c>check deid</c> gate: scans repository files for PHI and PII with the full <see cref="DeidDetector"/>, the
-/// port of the Python reference repository scanner (<c>packages/deid/cli.py</c>). A line carrying
-/// <c>deid-ignore</c>, <c>deid: ignore</c> or <c>pragma: allowlist</c> is skipped, and known development values
-/// (local addresses, toolchain URLs, placeholder dates and numbers) are allowed per category.
+/// The <c>check deid</c> gate: scans repository files for PHI and PII with the full <see cref="DeidDetector"/>,
+/// covering application code, authored portal docs (<c>docs/</c>), root portal documents, Vue templates, and client
+/// stores while keeping vendored standards (<c>docs/CDISC/</c>, <c>docs/NCI/</c>) and GxP runs (<c>docs/SDLC/runs/</c>)
+/// excluded. A line carrying <c>deid-ignore</c>, <c>deid: ignore</c> or <c>pragma: allowlist</c> is skipped in source,
+/// and known development values are allowed per category.
 /// </summary>
 public static partial class DeidComplianceService
 {
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        // The Python reference's list, plus the source types of the .NET and Vue code base.
-        ".py", ".js", ".ts", ".tsx", ".jsx", ".json", ".md", ".log", ".txt", ".yaml", ".yml", ".csv", ".toml", ".xml",
-        ".html", ".css", ".cs", ".vue", ".sql",
+        // The Python reference's list, plus the source and asset types of the .NET, Vue and VitePress code base.
+        ".py", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".json", ".md", ".log", ".txt", ".yaml", ".yml", ".csv",
+        ".toml", ".xml", ".html", ".css", ".cs", ".vue", ".sql", ".svg",
     };
 
     private static readonly HashSet<string> AlwaysScannedNames = new(StringComparer.Ordinal)
@@ -34,15 +35,53 @@ public static partial class DeidComplianceService
 
     private static readonly HashSet<string> ExcludedDirectories = new(StringComparer.Ordinal)
     {
-        "tests", "test", "testing", "node_modules", ".git", ".venv", ".cadence", "env", "build", "dist", ".github", ".ruff_cache",
-        ".pytest_cache", "docs", "scripts", "docker", "verification", "stores", "alembic", "deid", "coverage",
-        ".agents", ".jules", "bin", "obj",
+        "tests", "test", "testing", "node_modules", ".git", ".venv", "env", "build", "dist", ".github", ".ruff_cache",
+        ".pytest_cache", "scripts", "docker", "verification", "alembic", "deid", "coverage", ".agents", ".jules",
+        ".cadence", "bin", "obj",
+    };
+
+    private static readonly string[] ExcludedPathPrefixes =
+    [
+        "docs/cdisc/",
+        "docs/nci/",
+        "docs/sdlc/runs/",
+        "docs/openapi/",
+        "docs/schema/",
+        "docs/.vitepress/cache/",
+        "docs/.vitepress/dist/",
+    ];
+
+    private static readonly HashSet<string> ExcludedRelativePaths = new(StringComparer.Ordinal)
+    {
+        "docs/sdlc/requirements_traceability_matrix.md",
+        "docs/sdlc/iq_oq_pq_execution_report.md",
     };
 
     private static readonly HashSet<string> ExcludedFileNames = new(StringComparer.Ordinal)
     {
         "package.json", "pyproject.toml", "pnpm-workspace.yaml", "pnpm-lock.yaml", "uv.lock", ".secrets.baseline",
-        ".deid-baseline.txt", "readme.md", "agents.md", "contributing.md", "license", "architecture.md", "eslint.config.mjs",
+        ".deid-baseline.txt", "eslint.config.mjs",
+    };
+
+    private static readonly string[] ApprovedSyntheticEmailDomains =
+    [
+        "cadence.clinical",
+        "cadence-clinical.com",
+        "ccrsoft.com",
+        "cadence.example",
+    ];
+
+    private static readonly HashSet<string> ApprovedCanonicalDemoEmails = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "crc.site101@example.com",
+        "pi.site101@example.com",
+        "cra.monitor@example.com",
+        "dm.lead@example.com",
+        "designer_demo@example.com",
+        "designer.lead@example.com",
+        "safety.officer@example.com",
+        "auditor.lead@example.com",
+        "subject.site101@example.com",
     };
 
     private static readonly string[] AllowedUrlFragments =
@@ -50,6 +89,13 @@ public static partial class DeidComplianceService
         "localhost", "127.0.0.1", "0.0.0.0", "transmit-mock", "cadence-clinical.com", "ccrsoft.com", "brand_domain",
         "github.com", "githubusercontent.com", "pypi.org", "npmjs.com", "cdisc.org", "cadence.clinical", "nih.gov",
         "json-schema.org", "snomed.info", "loinc.org", "hl7.org", "w3.org", "ama-assn.org", "example.com", "example.org",
+        "cadence.example", "cadence-clinical.internal", "storage.local", "://keycloak:", "://host:port",
+        "://execution-", "://cadence.", "://test", "fderuiter.github.io", "purl.org/dc/", "microsoft.com", "dot.net", "schemastore.org",
+        "unitsofmeasure.org", "who.int", "who-umc.org", "whocc.no", "meddra.org", "clinicaltrials.gov", "nist.gov",
+        "owasp.org", "ecfr.gov", "fda.gov", "ema.europa.eu", "ich.org", "iso.org", "conventionalcommits.org",
+        "postgresql.org", "astral.sh", "python.org", "vuejs.org", "vitepress.dev", "vitejs.dev", "playwright.dev",
+        "docker.com", "opentelemetry.io", "keycloak.org", "ietf.org", "rfc-editor.org", "spdx.org", "apache.org",
+        "opensource.org", "creativecommons.org", "mozilla.org", "npmjs.org", "nuget.org",
     ];
 
     private static readonly HashSet<string> AllowedZipValues = new(StringComparer.Ordinal)
@@ -255,11 +301,66 @@ public static partial class DeidComplianceService
         return findings;
     }
 
-    /// <summary>Whether a repository-relative path is outside the scan: tests, docs, tooling and generated folders.</summary>
+    /// <summary>Whether an email address belongs to an approved synthetic Cadence or RFC 2606 <c>.invalid</c> domain.</summary>
+    public static bool IsApprovedSyntheticEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return false;
+        }
+
+        int atIndex = email.LastIndexOf('@');
+        if (atIndex <= 0 || atIndex == email.Length - 1)
+        {
+            return false;
+        }
+
+        string normalizedEmail = email
+            .Trim()
+            .Trim('.', ',', ';', ':', ')', ']', '>', '<', '"', '\'');
+        if (ApprovedCanonicalDemoEmails.Contains(normalizedEmail))
+        {
+            return true;
+        }
+
+        string domain = email[(atIndex + 1)..]
+            .Trim()
+            .TrimEnd('.', ',', ';', ':', ')', ']', '>', '"', '\'')
+            .ToLowerInvariant();
+        if (domain.Length == 0)
+        {
+            return false;
+        }
+
+        if (domain == "invalid" || domain.EndsWith(".invalid", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        foreach (string approved in ApprovedSyntheticEmailDomains)
+        {
+            if (domain == approved || domain.EndsWith("." + approved, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Whether a repository-relative path is outside the scan: tests, vendored standards, GxP runs, tooling and generated folders.</summary>
     public static bool IsExcludedPath(string relativePath)
     {
-        string normalized = relativePath.Replace('\\', '/');
-        string[] parts = normalized.ToLowerInvariant().Split('/');
+        ArgumentNullException.ThrowIfNull(relativePath);
+        string normalized = relativePath.Replace('\\', '/').TrimStart('/');
+        string lower = normalized.ToLowerInvariant();
+        if (ExcludedRelativePaths.Contains(lower) ||
+            ExcludedPathPrefixes.Any(prefix => lower.StartsWith(prefix, StringComparison.Ordinal)))
+        {
+            return true;
+        }
+
+        string[] parts = lower.Split('/');
         if (parts.Any(ExcludedDirectories.Contains))
         {
             return true;
@@ -307,43 +408,69 @@ public static partial class DeidComplianceService
         string val = value.ToLowerInvariant();
         string line = lineContent.ToLowerInvariant();
         string path = relativePath.ToLowerInvariant();
+        bool isDocOrLicense = path.StartsWith("docs/", StringComparison.Ordinal) ||
+                              path.EndsWith(".md", StringComparison.Ordinal) ||
+                              path is "license";
         return category switch
         {
             DetectorCategory.Urls =>
                 AllowedUrlFragments.Any(f => val.Contains(f, StringComparison.Ordinal)) ||
                 line.Contains("brand_domain", StringComparison.Ordinal),
             DetectorCategory.Email =>
-                val.Contains("cadence", StringComparison.Ordinal) || val.Contains("clinical", StringComparison.Ordinal) ||
-                !val.Contains('@', StringComparison.Ordinal),
-            DetectorCategory.IpMacAddresses => val is "127.0.0.1" or "0.0.0.0" or "::1",
+                !val.Contains('@', StringComparison.Ordinal) || IsApprovedSyntheticEmail(val),
+            DetectorCategory.IpMacAddresses =>
+                val is "127.0.0.1" or "0.0.0.0" or "::1" ||
+                (isDocOrLicense && IsDocumentationExampleNetworkAddress(val)),
             DetectorCategory.ZipGeographic =>
                 AllowedZipValues.Contains(val) ||
                 ZipContextWords.Any(w => line.Contains(w, StringComparison.Ordinal)) ||
                 path.Contains("xml_mapping", StringComparison.Ordinal) ||
                 path.Contains("concept_maps", StringComparison.Ordinal) ||
-                path.Contains("matcher", StringComparison.Ordinal),
-            DetectorCategory.TelephoneFax => IsAllowedTelephoneValue(val, lineContent, path),
+                path.Contains("matcher", StringComparison.Ordinal) ||
+                path.EndsWith(".svg", StringComparison.Ordinal) ||
+                isDocOrLicense,
+            DetectorCategory.TelephoneFax => IsAllowedTelephoneValue(val, lineContent, path, isDocOrLicense),
             DetectorCategory.Dates =>
-                AllowedDateValues.Contains(val) || DateContextWords.Any(w => line.Contains(w, StringComparison.Ordinal)),
+                AllowedDateValues.Contains(val) ||
+                DateContextWords.Any(w => line.Contains(w, StringComparison.Ordinal)) ||
+                isDocOrLicense,
+            DetectorCategory.Age or DetectorCategory.CertificateLicense or DetectorCategory.DeviceSerial
+                or DetectorCategory.MedicalRecordAccount or DetectorCategory.HealthPlanBeneficiary
+                or DetectorCategory.VehicleIdentifiers when isDocOrLicense => true,
             _ => false,
         };
     }
 
-    private static bool IsAllowedTelephoneValue(string val, string lineContent, string path)
+    private static bool IsDocumentationExampleNetworkAddress(string val) =>
+        val.StartsWith("10.", StringComparison.Ordinal) ||
+        val.StartsWith("192.168.", StringComparison.Ordinal) ||
+        val.StartsWith("192.0.2.", StringComparison.Ordinal) ||
+        val.StartsWith("198.51.100.", StringComparison.Ordinal) ||
+        val.StartsWith("203.0.113.", StringComparison.Ordinal) ||
+        val.StartsWith("172.", StringComparison.Ordinal) ||
+        val.StartsWith("255.255.", StringComparison.Ordinal) ||
+        val.Contains(':', StringComparison.Ordinal);
+
+    private static bool IsAllowedTelephoneValue(string val, string lineContent, string path, bool isDocOrLicense)
     {
         string line = lineContent.ToLowerInvariant();
         string digits = val.Replace("+", string.Empty, StringComparison.Ordinal).Replace("-", string.Empty, StringComparison.Ordinal).Trim();
-        return lineContent.Contains("concept", StringComparison.Ordinal)
+        return isDocOrLicense
+            || lineContent.Contains("concept", StringComparison.Ordinal)
             || path.Contains("concept_maps", StringComparison.Ordinal)
             || path.Contains("matcher", StringComparison.Ordinal)
             || line.Contains("bandwidth", StringComparison.Ordinal)
             || line.Contains("bitrate", StringComparison.Ordinal)
+            || line.Contains("bytes", StringComparison.Ordinal)
             || lineContent.Contains("usr_", StringComparison.Ordinal)
             || val is "+1234567890" or "+0987654321"
             || digits.Length == 0 || !digits.All(char.IsAsciiDigit)
             || val.Contains('.', StringComparison.Ordinal)
-            || val.Contains("0000000000", StringComparison.Ordinal)
-            || DecimalNumberRegex().Matches(lineContent).Any(m => m.Value.Replace(".", string.Empty, StringComparison.Ordinal).Contains(val, StringComparison.Ordinal));
+            || digits.Contains("0000000000", StringComparison.Ordinal)
+            || digits.All(c => c == '0')
+            || DecimalNumberRegex().Matches(lineContent).Any(m => m.Value.Replace(".", string.Empty, StringComparison.Ordinal).Contains(val, StringComparison.Ordinal))
+            || HexTokenRegex().Matches(lineContent).Any(m => m.Value.Contains(val, StringComparison.Ordinal))
+            || UuidRegex().Matches(lineContent).Any(m => m.Value.Contains(val.Trim(), StringComparison.Ordinal));
     }
 
     private static (int Line, int Column) LineAndColumn(string content, int offset)
@@ -363,7 +490,7 @@ public static partial class DeidComplianceService
     }
 
     // Explicit files, GitRevisionScopeService diff scope, or every file git tracks (git ls-files -z), filtered through
-    // IsExcludedPath and ShouldScanFile (all 19 TextExtensions, AlwaysScannedNames, and extensionless NUL-byte sniffing).
+    // IsExcludedPath and ShouldScanFile (all 22 TextExtensions, AlwaysScannedNames, and extensionless NUL-byte sniffing).
     public static IReadOnlyList<string> CandidateFiles(
         string repoRoot,
         string[]? files = null,
@@ -410,8 +537,15 @@ public static partial class DeidComplianceService
         GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-files", "-z")
         ?? throw new InvalidOperationException($"git ls-files failed in {repoRoot}; the DEID scan needs git to list files.");
 
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    /// <summary>Resolves the repository root directory from the current working directory or binary path.</summary>
+    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 
     [GeneratedRegex(@"\d+\.\d+")]
     private static partial Regex DecimalNumberRegex();
+
+    [GeneratedRegex(@"[0-9a-fA-F]{32,}")]
+    private static partial Regex HexTokenRegex();
+
+    [GeneratedRegex(@"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b")]
+    private static partial Regex UuidRegex();
 }

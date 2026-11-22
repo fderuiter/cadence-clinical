@@ -7,6 +7,7 @@ using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Protocol.Import;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Standards;
 
 namespace Cadence.Kernel.Api;
 
@@ -185,6 +186,31 @@ public sealed record KernelProtocolFormSummaryResponse(
     }
 }
 
+/// <summary>Summary of a rule-pack library item drafted alongside a protocol import.</summary>
+/// <param name="Ref">Drafted library item <c>NodeRef</c> (<c>library_item:&lt;uuid&gt;</c>).</param>
+/// <param name="Key">Rule-pack key.</param>
+/// <param name="Version">Assigned version number.</param>
+/// <param name="Title">Rule-pack title.</param>
+/// <param name="RuleCount">Number of compiled ODM rules.</param>
+/// <param name="Status">Governance status (<c>Draft</c>).</param>
+public sealed record KernelImportedRulePackSummaryResponse(
+    string Ref,
+    string Key,
+    int Version,
+    string Title,
+    int RuleCount,
+    string Status)
+{
+    internal static KernelImportedRulePackSummaryResponse From(LibraryItemVersion item, string title, int ruleCount) =>
+        new(
+            NodeRef.For(item.Id).ToString(),
+            item.Key,
+            item.Version,
+            title,
+            ruleCount,
+            GovernanceStatus.Draft.ToString());
+}
+
 /// <summary>Viewable protocol draft summary with forms, ordered items, and readable import notes.</summary>
 /// <param name="Version">Protocol version metadata.</param>
 /// <param name="Title">Protocol design title.</param>
@@ -192,18 +218,21 @@ public sealed record KernelProtocolFormSummaryResponse(
 /// <param name="ItemCount">Total number of collection items across all forms.</param>
 /// <param name="Forms">Forms and their ordered items.</param>
 /// <param name="ImportNotes">Readable import notes recorded during ODM/USDM import.</param>
+/// <param name="ImportedRulePack">Drafted rule-pack library item when the imported ODM file contained range checks or conditions.</param>
 public sealed record KernelProtocolDraftSummaryResponse(
     KernelProtocolVersionResponse Version,
     string Title,
     int FormCount,
     int ItemCount,
     IReadOnlyList<KernelProtocolFormSummaryResponse> Forms,
-    IReadOnlyList<KernelProtocolImportNoteResponse> ImportNotes)
+    IReadOnlyList<KernelProtocolImportNoteResponse> ImportNotes,
+    KernelImportedRulePackSummaryResponse? ImportedRulePack = null)
 {
     internal static KernelProtocolDraftSummaryResponse From(
         ProtocolVersionSummary version,
         ProtocolDesign? design,
-        IReadOnlyDictionary<ConceptRef, string> conceptLabels)
+        IReadOnlyDictionary<ConceptRef, string> conceptLabels,
+        KernelImportedRulePackSummaryResponse? importedRulePack = null)
     {
         var specs = design?.CollectionSpecs ?? [];
         var forms = specs
@@ -218,6 +247,7 @@ public sealed record KernelProtocolDraftSummaryResponse(
             forms.Count,
             forms.Sum(f => f.ItemCount),
             forms,
-            notes);
+            notes,
+            importedRulePack);
     }
 }
