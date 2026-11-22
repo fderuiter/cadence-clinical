@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -9,7 +10,9 @@ using System.Threading.Tasks;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 
@@ -70,11 +73,18 @@ public sealed class CtmsRoutingTests : IAsyncDisposable
         _server = _host.GetTestServer();
     }
 
-    private HttpClient CreateClient(string role = "sysadmin", string userId = "admin-1")
+    private HttpClient CreateClient(
+        string role = "sysadmin",
+        string userId = "admin-1",
+        string[]? studyIds = null,
+        string[]? siteIds = null)
     {
+        var normalized = RoleNormalization.GetNormalizedRoles([role]);
+        bool siteScoped = normalized.Any(SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains);
         var identity = TestSecurityContext.Identity(userId, role) with
         {
-            SiteIds = string.Equals(role, "sysadmin", StringComparison.OrdinalIgnoreCase) ? [] : ["SITE-1"],
+            StudyIds = studyIds ?? ["*"],
+            SiteIds = siteIds ?? (siteScoped ? ["SITE-1"] : []),
         };
         var handler = new TestSecurityContext.GatewaySigningHandler(identity)
         {
@@ -219,6 +229,23 @@ public sealed class CtmsRoutingTests : IAsyncDisposable
         updateRes.StatusCode.Should().Be(HttpStatusCode.OK);
         var updatedDoc = await updateRes.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
         updatedDoc.GetProperty("status").GetString().Should().Be("ACHIEVED");
+    }
+
+    [Fact]
+    public async Task CrossScopeRequests_ThroughHttp_Return403WithForbiddenScopeCode()
+    {
+        using var siteScopedCra = CreateClient("CRA", "cra-scoped", studyIds: ["STUDY-1"], siteIds: ["SITE-1"]);
+
+        var crossSiteVisits = await siteScopedCra.GetAsync("/api/v1/ctms/monitoring-visits?study_id=STUDY-1&site_id=SITE-2", TestContext.Current.CancellationToken);
+        crossSiteVisits.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var visitsDoc = await crossSiteVisits.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        visitsDoc.GetProperty("code").GetString().Should().Be(CtmsScopeGuard.ForbiddenCode);
+
+        var crossStudyMilestones = await siteScopedCra.GetAsync("/api/v1/ctms/site-milestones?study_id=STUDY-2&site_id=SITE-1", TestContext.Current.CancellationToken);
+        crossStudyMilestones.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var crossSiteDoa = await siteScopedCra.GetAsync("/api/v1/ctms/doa/sites/SITE-2/log", TestContext.Current.CancellationToken);
+        crossSiteDoa.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     public async ValueTask DisposeAsync()
