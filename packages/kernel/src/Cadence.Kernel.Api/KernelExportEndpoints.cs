@@ -9,11 +9,13 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Trust;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -33,6 +35,8 @@ public static class KernelExportEndpoints
     public const string ContentSha256Header = "X-Content-Sha256";
 
     private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
+    private static readonly Capability StudyExportCapability = new("study.export", VerbClass.Execute);
+    private static readonly Capability EnrollmentExportCapability = new("enrollment.export", VerbClass.Execute);
 
     internal static void Map(RouteGroupBuilder reads)
     {
@@ -69,6 +73,7 @@ public static class KernelExportEndpoints
         HttpContext context,
         IKernelNavigator navigator,
         IKernelExportReader exportReader,
+        IKernelCommandSender sender,
         INodeVisibility visibility,
         IAuthorizationProbe probe,
         ICurrentActor actor,
@@ -85,7 +90,7 @@ public static class KernelExportEndpoints
             return KernelProblems.WrongKind(studyNode, NodeKinds.Study);
         }
 
-        if (!TryParseStudyFormat(format, out var exportFormat))
+        if (!TryParseStudyFormat(format, out var exportFormat, out var formatToken))
         {
             return KernelProblems.BadRequest(
                 "Invalid export format",
@@ -100,24 +105,50 @@ public static class KernelExportEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
-        if (await navigator.ResolveAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false) is not { } resolvedStudy)
+        if (await navigator.ResolveAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false) is null)
         {
             return KernelProblems.NotFound(studyNode);
-        }
-
-        var studyMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [resolvedStudy.Ref], cancellationToken).ConfigureAwait(false);
-        if (studyMasks.For(resolvedStudy.Ref) is { } studyMask)
-        {
-            return KernelProblems.NotVisible($"You may not see this study ({studyMask}), so its clinical exports are refused.");
         }
 
         var generatedAt = clock.UtcNow;
         var effectiveValidAt = validAt ?? asOf ?? generatedAt;
         var effectiveKnownAt = knownAt ?? asOf ?? generatedAt;
+        var studyId = StudyId.FromGuid(studyNode.Id);
+        var (contentType, mediaType, extension) = exportFormat switch
+        {
+            StudyExportFormat.Csv => ("text/csv; charset=utf-8", "text/csv", "csv"),
+            StudyExportFormat.OdmXml => ("application/xml; charset=utf-8", "application/xml", "odm.xml"),
+            _ => ("application/json; charset=utf-8", "application/json", "dataset.json"),
+        };
+
+        var exportDecision = await probe.CanIAsync(tenant, StudyExportCapability, studyNode, cancellationToken).ConfigureAwait(false);
+        if (!exportDecision.Permitted)
+        {
+            var deniedVersionId = ArtifactVersionId.New(generatedAt);
+            var deniedReceipt = await sender.SendAsync(
+                new ExportStudySnapshot(
+                    tenant,
+                    studyId,
+                    ArtifactId.New(generatedAt),
+                    deniedVersionId,
+                    $"Study snapshot export ({formatToken}, {normalizedLockFilter})",
+                    new ArtifactContent(ContentHash.OfBytes([]), 1L, mediaType, $"export://studies/{studyId}/{deniedVersionId}"),
+                    formatToken,
+                    normalizedLockFilter,
+                    effectiveValidAt,
+                    effectiveKnownAt,
+                    IncludesUnblindedData: false,
+                    ReadOrCreateIdempotencyKey(context, generatedAt),
+                    $"Export study snapshot ({studyId}, format={formatToken}, lock_filter={normalizedLockFilter})"),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            return deniedReceipt.IsSuccess
+                ? KernelProblems.NotVisible("You are not permitted to export this study.")
+                : KernelErrorEndpoints.Problem(deniedReceipt.Error!);
+        }
 
         var snapshot = await exportReader.ReadStudySnapshotAsync(
             tenant,
-            StudyId.FromGuid(studyNode.Id),
+            studyId,
             effectiveValidAt,
             effectiveKnownAt,
             cancellationToken).ConfigureAwait(false);
@@ -134,35 +165,67 @@ public static class KernelExportEndpoints
             probe,
             actor,
             cancellationToken).ConfigureAwait(false);
+        if (visibilityMap.Masks.For(studyNode) is { } studyMask)
+        {
+            return KernelProblems.NotVisible($"You may not see this study ({studyMask}), so its clinical exports are refused.");
+        }
 
         var filteredObservations = FilterObservations(snapshot.Observations, parsedLockFilter);
         var projected = ProjectStudyExport(snapshot, filteredObservations, parsedLockFilter, normalizedLockFilter, generatedAt, visibilityMap);
 
         var safeCode = SanitizeFileName(snapshot.StudyCode);
-        var (contentType, extension) = exportFormat switch
-        {
-            StudyExportFormat.Csv => ("text/csv; charset=utf-8", "csv"),
-            StudyExportFormat.OdmXml => ("application/xml; charset=utf-8", "odm.xml"),
-            _ => ("application/json; charset=utf-8", "dataset.json"),
-        };
 
-        context.Response.StatusCode = StatusCodes.Status200OK;
-        context.Response.ContentType = contentType;
-        context.Response.Headers.ContentDisposition = $"attachment; filename=\"{safeCode}-{normalizedLockFilter}.{extension}\"";
-
+        await using var buffer = new MemoryStream();
         switch (exportFormat)
         {
             case StudyExportFormat.Csv:
-                await KernelExportStreamer.WriteStudyCsvAsync(context.Response.Body, projected, cancellationToken).ConfigureAwait(false);
+                await KernelExportStreamer.WriteStudyCsvAsync(buffer, projected, cancellationToken).ConfigureAwait(false);
                 break;
             case StudyExportFormat.OdmXml:
-                await KernelExportStreamer.WriteStudyOdmXmlAsync(context.Response.Body, projected, cancellationToken).ConfigureAwait(false);
+                await KernelExportStreamer.WriteStudyOdmXmlAsync(buffer, projected, cancellationToken).ConfigureAwait(false);
                 break;
             case StudyExportFormat.DatasetJson:
-                await KernelExportStreamer.WriteStudyDatasetJsonAsync(context.Response.Body, projected, cancellationToken).ConfigureAwait(false);
+                await KernelExportStreamer.WriteStudyDatasetJsonAsync(buffer, projected, cancellationToken).ConfigureAwait(false);
                 break;
         }
 
+        var payloadBytes = buffer.ToArray();
+        var wireSha256 = Convert.ToHexString(SHA256.HashData(payloadBytes)).ToLowerInvariant();
+        var contentHash = ContentHash.OfBytes(payloadBytes);
+        bool includesUnblinded = filteredObservations.Any(o => o.IsBlindedTreatment && visibilityMap.UnblindedEnrollments.Contains(o.EnrollmentId));
+        var disclosure = includesUnblinded ? "unblinded" : "blinded";
+        var artifactId = ArtifactId.New(generatedAt);
+        var versionId = ArtifactVersionId.New(generatedAt);
+        var idempotencyKey = ReadOrCreateIdempotencyKey(context, generatedAt);
+        var reason = $"Export study snapshot ({snapshot.StudyCode}, format={formatToken}, lock_filter={normalizedLockFilter}, disclosure={disclosure})";
+
+        var receipt = await sender.SendAsync(
+            new ExportStudySnapshot(
+                tenant,
+                studyId,
+                artifactId,
+                versionId,
+                $"Study snapshot export {snapshot.StudyCode} ({formatToken}, {normalizedLockFilter}, {disclosure})",
+                new ArtifactContent(contentHash, Math.Max(1L, payloadBytes.LongLength), mediaType, $"export://studies/{studyId}/{versionId}"),
+                formatToken,
+                normalizedLockFilter,
+                effectiveValidAt,
+                effectiveKnownAt,
+                includesUnblinded,
+                idempotencyKey,
+                reason),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!receipt.IsSuccess)
+        {
+            return KernelErrorEndpoints.Problem(receipt.Error!);
+        }
+
+        context.Response.StatusCode = StatusCodes.Status200OK;
+        context.Response.ContentType = contentType;
+        context.Response.Headers[ContentSha256Header] = wireSha256;
+        context.Response.Headers.ETag = $"\"{wireSha256}\"";
+        context.Response.Headers.ContentDisposition = $"attachment; filename=\"{safeCode}-{normalizedLockFilter}.{extension}\"";
+        await context.Response.Body.WriteAsync(payloadBytes, cancellationToken).ConfigureAwait(false);
         return Results.Empty;
     }
 
@@ -173,7 +236,9 @@ public static class KernelExportEndpoints
         [FromQuery(Name = "valid_at")] DateTimeOffset? validAt,
         [FromQuery(Name = "known_at")] DateTimeOffset? knownAt,
         HttpContext context,
+        IKernelNavigator navigator,
         IKernelExportReader exportReader,
+        IKernelCommandSender sender,
         INodeVisibility visibility,
         IAuthorizationProbe probe,
         ICurrentActor actor,
@@ -190,7 +255,7 @@ public static class KernelExportEndpoints
             return KernelProblems.WrongKind(enrollmentNode, NodeKinds.Enrollment);
         }
 
-        if (!TryParseCasebookFormat(format, out var casebookFormat))
+        if (!TryParseCasebookFormat(format, out var casebookFormat, out var formatToken))
         {
             return KernelProblems.BadRequest(
                 "Invalid casebook format",
@@ -198,13 +263,50 @@ public static class KernelExportEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await navigator.ResolveAsync(tenant, enrollmentNode, cancellationToken).ConfigureAwait(false) is null)
+        {
+            return KernelProblems.NotFound(enrollmentNode);
+        }
+
         var generatedAt = clock.UtcNow;
         var effectiveValidAt = validAt ?? asOf ?? generatedAt;
         var effectiveKnownAt = knownAt ?? asOf ?? generatedAt;
+        var enrollmentId = EnrollmentId.FromGuid(enrollmentNode.Id);
+        var (contentType, mediaType, extension) = casebookFormat switch
+        {
+            CasebookExportFormat.OdmXml => ("application/xml; charset=utf-8", "application/xml", "casebook.odm.xml"),
+            CasebookExportFormat.Html => ("text/html; charset=utf-8", "text/html", "casebook.html"),
+            _ => ("application/json; charset=utf-8", "application/json", "casebook.json"),
+        };
+
+        var exportDecision = await probe.CanIAsync(tenant, EnrollmentExportCapability, enrollmentNode, cancellationToken).ConfigureAwait(false);
+        if (!exportDecision.Permitted)
+        {
+            var deniedVersionId = ArtifactVersionId.New(generatedAt);
+            var deniedReceipt = await sender.SendAsync(
+                new ExportEnrollmentCasebook(
+                    tenant,
+                    enrollmentId,
+                    StudyId.FromGuid(Guid.Empty),
+                    ArtifactId.New(generatedAt),
+                    deniedVersionId,
+                    $"Participant casebook export ({formatToken})",
+                    new ArtifactContent(ContentHash.OfBytes([]), 1L, mediaType, $"export://enrollments/{enrollmentId}/{deniedVersionId}"),
+                    formatToken,
+                    effectiveValidAt,
+                    effectiveKnownAt,
+                    IncludesUnblindedData: false,
+                    ReadOrCreateIdempotencyKey(context, generatedAt),
+                    $"Export participant casebook ({enrollmentId}, format={formatToken})"),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            return deniedReceipt.IsSuccess
+                ? KernelProblems.NotVisible("You are not permitted to export this participant casebook.")
+                : KernelErrorEndpoints.Problem(deniedReceipt.Error!);
+        }
 
         var snapshot = await exportReader.ReadEnrollmentCasebookAsync(
             tenant,
-            EnrollmentId.FromGuid(enrollmentNode.Id),
+            enrollmentId,
             effectiveValidAt,
             effectiveKnownAt,
             cancellationToken).ConfigureAwait(false);
@@ -218,11 +320,6 @@ public static class KernelExportEndpoints
         var nodes = new List<NodeRef> { studyNode, siteNode, enrollmentNode };
 
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, nodes, cancellationToken).ConfigureAwait(false);
-        if (masks.For(studyNode) is { } studyMask)
-        {
-            return KernelProblems.NotVisible($"You may not see this study ({studyMask}), so its participant casebook is refused.");
-        }
-
         var enrollmentMask = masks.For(enrollmentNode) ?? masks.For(siteNode);
         bool mayUnblind = false;
         if (enrollmentMask is null && snapshot.Observations.Any(o => o.IsBlindedTreatment))
@@ -239,12 +336,6 @@ public static class KernelExportEndpoints
             mayUnblind);
 
         await using var buffer = new MemoryStream();
-        var (contentType, extension) = casebookFormat switch
-        {
-            CasebookExportFormat.OdmXml => ("application/xml; charset=utf-8", "casebook.odm.xml"),
-            CasebookExportFormat.Html => ("text/html; charset=utf-8", "casebook.html"),
-            _ => ("application/json; charset=utf-8", "casebook.json"),
-        };
 
         switch (casebookFormat)
         {
@@ -261,7 +352,40 @@ public static class KernelExportEndpoints
 
         var payloadBytes = buffer.ToArray();
         var wireSha256 = Convert.ToHexString(SHA256.HashData(payloadBytes)).ToLowerInvariant();
+        var contentHash = ContentHash.OfBytes(payloadBytes);
         var fileLabel = projected.Masked ? "masked-participant" : SanitizeFileName(snapshot.SubjectCode);
+        bool includesUnblinded = enrollmentMask is null && mayUnblind && snapshot.Observations.Any(o => o.IsBlindedTreatment);
+        var disclosure = ResolveCasebookDisclosure(projected.Masked, includesUnblinded);
+        var artifactId = ArtifactId.New(generatedAt);
+        var versionId = ArtifactVersionId.New(generatedAt);
+        var idempotencyKey = ReadOrCreateIdempotencyKey(context, generatedAt);
+        var reason = $"Export participant casebook ({snapshot.StudyCode}/{fileLabel}, format={formatToken}, disclosure={disclosure})";
+
+        var receipt = await sender.SendAsync(
+            new ExportEnrollmentCasebook(
+                tenant,
+                enrollmentId,
+                snapshot.StudyId,
+                artifactId,
+                versionId,
+                $"Participant casebook export {snapshot.StudyCode}/{fileLabel} ({formatToken}, {disclosure})",
+                new ArtifactContent(contentHash, Math.Max(1L, payloadBytes.LongLength), mediaType, $"export://enrollments/{enrollmentId}/{versionId}"),
+                formatToken,
+                effectiveValidAt,
+                effectiveKnownAt,
+                includesUnblinded,
+                idempotencyKey,
+                reason),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!receipt.IsSuccess)
+        {
+            return KernelErrorEndpoints.Problem(receipt.Error!);
+        }
+
+        if (masks.For(studyNode) is { } studyMask)
+        {
+            return KernelProblems.NotVisible($"You may not see this study ({studyMask}), so its participant casebook is refused.");
+        }
 
         context.Response.StatusCode = StatusCodes.Status200OK;
         context.Response.ContentType = contentType;
@@ -392,42 +516,68 @@ public static class KernelExportEndpoints
             visibility);
     }
 
-    private static bool TryParseStudyFormat(string? raw, out StudyExportFormat format)
+    private static string ResolveCasebookDisclosure(bool masked, bool includesUnblinded)
+    {
+        if (masked)
+        {
+            return "masked";
+        }
+
+        return includesUnblinded ? "unblinded" : "blinded";
+    }
+
+    private static string ReadOrCreateIdempotencyKey(HttpContext context, DateTimeOffset generatedAt)
+    {
+        var supplied = context.Request.Headers["Idempotency-Key"].FirstOrDefault();
+        return string.IsNullOrWhiteSpace(supplied)
+            ? $"export-{Guid.CreateVersion7(generatedAt):N}"
+            : supplied.Trim();
+    }
+
+    private static bool TryParseStudyFormat(string? raw, out StudyExportFormat format, out string normalizedFormat)
     {
         var normalized = string.IsNullOrWhiteSpace(raw) ? "csv" : raw.Trim().ToLowerInvariant();
         switch (normalized)
         {
             case "csv":
                 format = StudyExportFormat.Csv;
+                normalizedFormat = "csv";
                 return true;
             case "odm_xml" or "odm":
                 format = StudyExportFormat.OdmXml;
+                normalizedFormat = "odm_xml";
                 return true;
             case "dataset_json" or "dataset-json":
                 format = StudyExportFormat.DatasetJson;
+                normalizedFormat = "dataset_json";
                 return true;
             default:
                 format = default;
+                normalizedFormat = string.Empty;
                 return false;
         }
     }
 
-    private static bool TryParseCasebookFormat(string? raw, out CasebookExportFormat format)
+    private static bool TryParseCasebookFormat(string? raw, out CasebookExportFormat format, out string normalizedFormat)
     {
         var normalized = string.IsNullOrWhiteSpace(raw) ? "json" : raw.Trim().ToLowerInvariant();
         switch (normalized)
         {
             case "json":
                 format = CasebookExportFormat.Json;
+                normalizedFormat = "json";
                 return true;
             case "odm_xml" or "odm":
                 format = CasebookExportFormat.OdmXml;
+                normalizedFormat = "odm_xml";
                 return true;
             case "html" or "pdf":
                 format = CasebookExportFormat.Html;
+                normalizedFormat = "html";
                 return true;
             default:
                 format = default;
+                normalizedFormat = string.Empty;
                 return false;
         }
     }
@@ -563,7 +713,7 @@ internal sealed record ProjectedObservationRow(
             SiteCode: site?.SiteCode ?? enrollment?.SiteCode ?? obs.StudySiteId.ToString(),
             SubjectCode: enrollment?.SubjectCode ?? obs.EnrollmentId.ToString(),
             EnrollmentRef: NodeRef.For(obs.EnrollmentId).ToString(),
-            ObservationRef: NodeRef.For(obs.ObservationId, obs.CurrentRevision.Number).ToString(),
+            ObservationRef: "masked",
             CollectionInstanceRef: obs.CollectionInstanceId is { } cid ? NodeRef.For(cid).ToString() : null,
             CollectionSpecId: obs.CollectionSpecId ?? "unscheduled",
             PlannedActivityId: obs.PlannedActivityId,
@@ -572,7 +722,7 @@ internal sealed record ProjectedObservationRow(
             ConceptCode: obs.ConceptCode,
             ConceptLabel: obs.ConceptLabel,
             ObservedAt: obs.ObservedAt,
-            Revision: obs.CurrentRevision.Number,
+            Revision: null,
             ValueKind: "masked",
             ResultText: "masked",
             ResultDecimal: null,
@@ -582,7 +732,7 @@ internal sealed record ProjectedObservationRow(
             MaskReason: Cadence.Kernel.References.MaskReason.Blinded.ToString(),
             RecordedBy: null,
             RecordedAt: obs.CurrentRevision.RecordedAt,
-            SourceObservation: obs);
+            SourceObservation: null);
 
     public static ProjectedObservationRow CreateVisible(
         string studyCode,

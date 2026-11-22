@@ -100,7 +100,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             NodeRef.For(world.ParticipantBoston),
             NodeRef.For(PersonId.New()),
             NodeRef.For(ConceptId.New(), 1),
-            NodeRef.For(ObservationId.New(), 2),
+            NodeRef.For(AttestationId.New(), 2),
         ];
         var nonPathResult = await harness.AuthorityStore.PathsOfAsync(world.Tenant, nonPathOnly, ct);
         nonPathResult.Values.Should().AllSatisfy(p => p.Should().Be(ScopePath.TenantWide));

@@ -102,6 +102,15 @@ public interface IAuthorityStore
 
     /// <summary>Every requirement defined for <paramref name="capability"/>, with its whole validity history.</summary>
     Task<IReadOnlyList<QualificationRequirement>> QualificationRequirementsAsync(TenantId tenant, string capability, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// For each blinded object in <paramref name="nodes"/> (such as a treatment-allocation observation or an assertion
+    /// about one), returns the <see cref="EnrollmentId"/> against which <c>enrollment.unblind</c> is evaluated (K-AUTH-4).
+    /// Objects that are not blinded are omitted.
+    /// </summary>
+    Task<IReadOnlyDictionary<NodeRef, EnrollmentId>> BlindedNodeEnrollmentsAsync(
+        TenantId tenant, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyDictionary<NodeRef, EnrollmentId>>(new Dictionary<NodeRef, EnrollmentId>());
 }
 
 /// <summary>Settings of the authority evaluator.</summary>
@@ -248,14 +257,23 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
         {
             if (await InEffectAsync(request, grant, cancellationToken).ConfigureAwait(false))
             {
-                EvaluatedCondition[] conditions =
-                [
-                    EvaluatedCondition.Satisfied(GrantCondition, $"Holds {token} for {grant.Scope}", NodeRef.For(grant.Id)),
-                    .. qualified ? await QualificationConditionsAsync(request, path, cancellationToken).ConfigureAwait(false) : [],
-                ];
-                return conditions.FirstOrDefault(c => !c.Met) is { } missing
-                    ? AuthorizationDecision.Deny($"{request.Actor.Id} is not qualified to {token}: {missing.Description}.", conditions)
-                    : AuthorizationDecision.Permit(conditions: conditions);
+                return await PermitIfQualifiedAsync(request, token, grant, path, qualified, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        if (token is "study.export" or "enrollment.export" && path.Study is not null && carrying.Count > 0)
+        {
+            var grantPaths = await store.PathsOfAsync(
+                request.Tenant,
+                [.. carrying.Select(g => NodeRef.For(g.Id))],
+                cancellationToken).ConfigureAwait(false);
+            foreach (var grant in carrying)
+            {
+                var grantPath = grantPaths.GetValueOrDefault(NodeRef.For(grant.Id), ScopePath.TenantWide);
+                if (grantPath.Study == path.Study && await InEffectAsync(request, grant, cancellationToken).ConfigureAwait(false))
+                {
+                    return await PermitIfQualifiedAsync(request, token, grant, grantPath, qualified, cancellationToken).ConfigureAwait(false);
+                }
             }
         }
 
@@ -268,6 +286,24 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
                 GrantCondition,
                 $"Obtain a grant or delegation of {token} covering this {request.Resource.Kind}",
                 [request.Resource, .. carrying.Select(g => NodeRef.For(g.Id))]));
+    }
+
+    private async ValueTask<AuthorizationDecision> PermitIfQualifiedAsync(
+        AuthorizationRequest request,
+        string token,
+        Grant grant,
+        ScopePath qualificationPath,
+        bool qualified,
+        CancellationToken cancellationToken)
+    {
+        EvaluatedCondition[] conditions =
+        [
+            EvaluatedCondition.Satisfied(GrantCondition, $"Holds {token} for {grant.Scope}", NodeRef.For(grant.Id)),
+            .. qualified ? await QualificationConditionsAsync(request, qualificationPath, cancellationToken).ConfigureAwait(false) : [],
+        ];
+        return conditions.FirstOrDefault(c => !c.Met) is { } missing
+            ? AuthorizationDecision.Deny($"{request.Actor.Id} is not qualified to {token}: {missing.Description}.", conditions)
+            : AuthorizationDecision.Permit(conditions: conditions);
     }
 
     private async Task<AuthorizationDecision?> DecideOnGrantAsync(AuthorizationRequest request, CancellationToken cancellationToken)

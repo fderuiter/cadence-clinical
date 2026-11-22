@@ -21,11 +21,17 @@ public sealed class KernelReadAccess(
     ICurrentActor actor,
     IAuthorizationProbe? probe = null) : IKernelReadAccess
 {
+    private static readonly Capability EnrollmentUnblind = new("enrollment.unblind", VerbClass.Read);
+
     /// <inheritdoc />
-    public async ValueTask<bool> CanSeeAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken)
+    public async ValueTask<bool> CanSeeAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
+        await MaskForAsync(tenant, node, cancellationToken).ConfigureAwait(false) is null;
+
+    /// <inheritdoc />
+    public async ValueTask<MaskReason?> MaskForAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken)
     {
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [node], cancellationToken).ConfigureAwait(false);
-        return masks.For(node) is null;
+        return masks.For(node);
     }
 
     /// <inheritdoc />
@@ -37,10 +43,17 @@ public sealed class KernelReadAccess(
     {
         if (probe is null)
         {
-            return true;
+            return !Capability.IsUnblinding(capability.Token);
         }
 
         var decision = await probe.CanIAsync(tenant, capability, resource, cancellationToken).ConfigureAwait(false);
         return decision.Permitted;
     }
+
+    /// <inheritdoc />
+    public ValueTask<bool> CanUnblindAsync(
+        TenantId tenant,
+        EnrollmentId enrollment,
+        CancellationToken cancellationToken) =>
+        CanExerciseAsync(tenant, EnrollmentUnblind, NodeRef.For(enrollment), cancellationToken);
 }

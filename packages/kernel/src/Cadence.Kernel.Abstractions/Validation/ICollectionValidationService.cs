@@ -88,6 +88,20 @@ public interface ICollectionValidationService
         CollectionInstanceId formId,
         IReadOnlyDictionary<string, ObservationValue?> draftValues,
         DateOnly asOf,
+        CancellationToken cancellationToken = default) =>
+        PreviewFormAsync(tenant, formId, draftValues, asOf, maskBlinded: false, cancellationToken);
+
+    /// <summary>
+    /// Evaluates the study's pinned rule packs in memory over <paramref name="formId"/> overlaid with
+    /// <paramref name="draftValues"/>, replacing persisted and cross-form blinded values with null when
+    /// <paramref name="maskBlinded"/> is true (K-AUTH-4).
+    /// </summary>
+    Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
+        TenantId tenant,
+        CollectionInstanceId formId,
+        IReadOnlyDictionary<string, ObservationValue?> draftValues,
+        DateOnly asOf,
+        bool maskBlinded,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -99,6 +113,20 @@ public interface ICollectionValidationService
         StudyId studyId,
         LibraryItemId rulePackId,
         DateOnly asOf,
+        CancellationToken cancellationToken = default) =>
+        PreviewRulePackAsync(tenant, studyId, rulePackId, asOf, visibleEnrollments: null, unblindedEnrollments: null, cancellationToken);
+
+    /// <summary>
+    /// Evaluates a specific <see cref="LibraryItemKind.RulePack"/> library item in memory against visible collection
+    /// instances of <paramref name="studyId"/>, masking blinded items for enrollments outside <paramref name="unblindedEnrollments"/>.
+    /// </summary>
+    Task<CollectionRulePackPreviewResult> PreviewRulePackAsync(
+        TenantId tenant,
+        StudyId studyId,
+        LibraryItemId rulePackId,
+        DateOnly asOf,
+        IReadOnlySet<EnrollmentId>? visibleEnrollments,
+        IReadOnlySet<EnrollmentId>? unblindedEnrollments,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -88,12 +88,13 @@ public static class KernelObservationEndpoints
             return KernelProblems.NotFound(NodeRef.For(observation));
         }
 
-        // An observation is seen by whoever may see its enrollment (ADR-2457).
+        // An observation is seen by whoever may see its enrollment (ADR-2457) and, when blinded, holds enrollment.unblind (K-AUTH-4).
         var enrollment = NodeRef.For(record.EnrollmentId);
-        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [enrollment], cancellationToken).ConfigureAwait(false);
-        return masks.For(enrollment) is null
+        var observationNode = NodeRef.For(observation);
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [enrollment, observationNode], cancellationToken).ConfigureAwait(false);
+        return masks.For(enrollment) is null && masks.For(observationNode) is null
             ? TypedResults.Ok(KernelObservationResponse.From(record))
-            : KernelProblems.NotVisible($"You may not see {NodeRef.For(observation)}.");
+            : KernelProblems.NotVisible($"You may not see {observationNode}.");
     }
 
     internal static async Task<Results<Created<KernelObservationStateResponse>, ProblemHttpResult>> RecordAsync(

@@ -28,6 +28,28 @@ internal sealed class ValidationFindingExplanations(IServiceProvider services) :
         }
 
         var finding = await findings.FindAsync(principal.Tenant, new ValidationFindingId(node.Id), cancellationToken).ConfigureAwait(false);
-        return finding?.Explain();
+        if (finding is null)
+        {
+            return null;
+        }
+
+        if (finding.BlindedVariables is { Count: > 0 })
+        {
+            var canUnblind = false;
+            if (finding.BlindedObservation is { } blindedObsId
+                && services.GetService<IAgentVisibility>() is { } visibility)
+            {
+                var probeRef = NodeRef.For(blindedObsId);
+                var masks = await visibility.MaskAsync(principal, [probeRef], cancellationToken).ConfigureAwait(false);
+                canUnblind = !masks.ContainsKey(probeRef);
+            }
+
+            if (!canUnblind)
+            {
+                finding = finding.MaskBlinded();
+            }
+        }
+
+        return finding.Explain();
     }
 }

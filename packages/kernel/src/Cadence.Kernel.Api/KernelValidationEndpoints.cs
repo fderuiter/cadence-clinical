@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -10,6 +11,7 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
@@ -41,6 +43,7 @@ public static class KernelValidationEndpoints
     private static readonly Capability ApproveLibraryItemCapability = new("library_item.approve", VerbClass.Approve);
     private static readonly Capability RegisterStandardCapability = new("standard.register", VerbClass.Execute);
     private static readonly Capability ApproveStandardCapability = new("standard.approve", VerbClass.Approve);
+    private static readonly Capability UnblindCapability = new("enrollment.unblind", VerbClass.Read);
 
     /// <summary>The canonical concrete action path for approving a library item reference.</summary>
     public static string ApproveLibraryItemAction(string itemRef) =>
@@ -187,11 +190,46 @@ public static class KernelValidationEndpoints
             return KernelProblems.NotFound(NodeRef.For(itemId));
         }
 
+        IReadOnlySet<EnrollmentId>? visibleEnrollments = null;
+        IReadOnlySet<EnrollmentId> unblindedEnrollments = FrozenSet<EnrollmentId>.Empty;
+        var collections = context.RequestServices.GetService<ICollectionInstanceRecords>();
+        if (collections is not null)
+        {
+            var studyInstances = await collections.ListForStudyAsync(tenant, resolved.StudyId, cancellationToken).ConfigureAwait(false);
+            var distinctEnrollments = studyInstances.Select(i => i.EnrollmentId).Distinct().ToList();
+            if (distinctEnrollments.Count == 0)
+            {
+                visibleEnrollments = FrozenSet<EnrollmentId>.Empty;
+            }
+            else
+            {
+                var enrollmentNodes = distinctEnrollments.Select(e => NodeRef.For(e)).ToList();
+                var enrollmentMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, enrollmentNodes, cancellationToken).ConfigureAwait(false);
+                var visible = new HashSet<EnrollmentId>();
+                var unblinded = new HashSet<EnrollmentId>();
+                var probe = context.RequestServices.GetService<IAuthorizationProbe>();
+                foreach (var enrollmentId in distinctEnrollments.Where(e => enrollmentMasks.For(NodeRef.For(e)) is null))
+                {
+                    visible.Add(enrollmentId);
+                    if (probe is not null
+                        && (await probe.CanIAsync(tenant, UnblindCapability, NodeRef.For(enrollmentId), cancellationToken).ConfigureAwait(false)).Permitted)
+                    {
+                        unblinded.Add(enrollmentId);
+                    }
+                }
+
+                visibleEnrollments = visible;
+                unblindedEnrollments = unblinded;
+            }
+        }
+
         var preview = await validation.PreviewRulePackAsync(
             tenant,
             resolved.StudyId,
             itemId,
             DateOnly.FromDateTime(clock.UtcNow.UtcDateTime),
+            visibleEnrollments,
+            unblindedEnrollments,
             cancellationToken).ConfigureAwait(false);
 
         return TypedResults.Ok(new KernelRulePackPreviewResponse(
@@ -451,6 +489,7 @@ public static class KernelValidationEndpoints
             return TypedResults.Ok(new KernelValidationFindingPageResponse(0, []));
         }
 
+        var effectiveLimit = limit ?? 100;
         var page = await findings.ListAsync(
             tenant,
             new FindingQuery(resolved.StudyId)
@@ -460,13 +499,51 @@ public static class KernelValidationEndpoints
                 Severity = parsedSeverity,
                 Dataset = string.IsNullOrWhiteSpace(dataset) ? null : dataset.Trim(),
                 PackKey = string.IsNullOrWhiteSpace(pack_key) ? null : pack_key.Trim(),
-                Take = limit ?? 100,
+                Take = FindingQuery.MaxTake,
             },
             cancellationToken).ConfigureAwait(false);
 
+        if (page.Findings.Count == 0)
+        {
+            return TypedResults.Ok(new KernelValidationFindingPageResponse(0, []));
+        }
+
+        var findingNodes = page.Findings.Select(f => NodeRef.For(f.Id)).ToList();
+        var findingMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, findingNodes, cancellationToken).ConfigureAwait(false);
+        var visibleFindings = page.Findings
+            .Where(f => findingMasks.For(NodeRef.For(f.Id)) is null)
+            .ToList();
+        var pagedFindings = visibleFindings.Take(effectiveLimit).ToList();
+
+        var unblindedEnrollments = new HashSet<EnrollmentId>();
+        var probe = context.RequestServices.GetService<IAuthorizationProbe>();
+        if (probe is not null)
+        {
+            var candidateEnrollments = pagedFindings
+                .Where(f => f.BlindedVariables is { Count: > 0 } && f.Enrollment is not null)
+                .Select(f => f.Enrollment!.Value)
+                .Distinct();
+            foreach (var enrollmentId in candidateEnrollments)
+            {
+                var decision = await probe.CanIAsync(tenant, UnblindCapability, NodeRef.For(enrollmentId), cancellationToken).ConfigureAwait(false);
+                if (decision.Permitted)
+                {
+                    unblindedEnrollments.Add(enrollmentId);
+                }
+            }
+        }
+
+        var maskedFindings = pagedFindings
+            .Select(f => f.BlindedVariables is { Count: > 0 }
+                && (f.Enrollment is not { } enrollmentId || !unblindedEnrollments.Contains(enrollmentId))
+                ? f.MaskBlinded()
+                : f)
+            .Select(KernelValidationFindingResponse.From)
+            .ToList();
+
         return TypedResults.Ok(new KernelValidationFindingPageResponse(
-            page.Total,
-            [.. page.Findings.Select(KernelValidationFindingResponse.From)]));
+            visibleFindings.Count,
+            maskedFindings));
     }
 
     internal static async Task<Results<Ok<KernelValidationFindingDetailResponse>, ProblemHttpResult>> GetFindingAsync(
@@ -490,10 +567,28 @@ public static class KernelValidationEndpoints
         }
 
         var studyNode = NodeRef.For(view.Study);
-        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [studyNode], cancellationToken).ConfigureAwait(false);
+        var findingNode = NodeRef.For(view.Id);
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [studyNode, findingNode], cancellationToken).ConfigureAwait(false);
         if (masks.For(studyNode) is { } mask)
         {
             return KernelProblems.NotVisible($"You may not see findings for study {studyNode} ({mask}).");
+        }
+
+        if (masks.For(findingNode) is { } findingMask)
+        {
+            return KernelProblems.NotVisible($"You may not see finding {findingNode} ({findingMask}).");
+        }
+
+        if (view.BlindedVariables is { Count: > 0 })
+        {
+            var probe = context.RequestServices.GetService<IAuthorizationProbe>();
+            var canUnblind = view.Enrollment is { } enrollmentId
+                && probe is not null
+                && (await probe.CanIAsync(tenant, UnblindCapability, NodeRef.For(enrollmentId), cancellationToken).ConfigureAwait(false)).Permitted;
+            if (!canUnblind)
+            {
+                view = view.MaskBlinded();
+            }
         }
 
         return TypedResults.Ok(new KernelValidationFindingDetailResponse(

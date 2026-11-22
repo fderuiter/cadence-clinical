@@ -90,21 +90,33 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
             : [.. readerCandidates, .. requesterCandidates];
         var inEffect = await GrantChain.FilterInEffectAsync(store, tenant, chainCandidates, now, now, cancellationToken).ConfigureAwait(false);
 
-        var readerGrants = readerCandidates.Where(g => inEffect.Contains(g.Id)).DistinctBy(g => g.Scope).ToList();
-        if (readerGrants.Count == 0)
+        var readerActiveGrants = readerCandidates.Where(g => inEffect.Contains(g.Id)).ToList();
+        if (readerActiveGrants.Count == 0)
         {
             return MaskAll(distinct);
         }
 
-        var requesterGrants = requesterCandidates?.Where(g => inEffect.Contains(g.Id)).DistinctBy(g => g.Scope).ToList();
-        if (requesterGrants is { Count: 0 })
+        var requesterActiveGrants = requesterCandidates?.Where(g => inEffect.Contains(g.Id)).ToList();
+        if (requesterActiveGrants is { Count: 0 })
         {
             return MaskAll(distinct);
         }
+
+        var readerGrants = readerActiveGrants.DistinctBy(g => g.Scope).ToList();
+        var requesterGrants = requesterActiveGrants?.DistinctBy(g => g.Scope).ToList();
+
+        var blindableNodes = distinct
+            .Select(n => n.Unversioned())
+            .Where(n => n.Kind is NodeKinds.Observation or NodeKinds.Assertion)
+            .Distinct()
+            .ToList();
+        var blindedByNode = blindableNodes.Count == 0
+            ? new Dictionary<NodeRef, EnrollmentId>()
+            : await store.BlindedNodeEnrollmentsAsync(tenant, blindableNodes, cancellationToken).ConfigureAwait(false);
 
         var readerHasTenant = readerGrants.Exists(g => g.Scope.Level == ScopeLevel.Tenant);
         var requesterHasTenant = requesterGrants is null || requesterGrants.Exists(g => g.Scope.Level == ScopeLevel.Tenant);
-        if (readerHasTenant && requesterHasTenant)
+        if (blindedByNode.Count == 0 && readerHasTenant && requesterHasTenant)
         {
             return new Dictionary<NodeRef, MaskReason>();
         }
@@ -114,12 +126,29 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
             .Where(n => !TenantMemberKinds.Contains(n.Kind))
             .Distinct()
             .ToList();
-        if (candidates.Count == 0)
+        if (candidates.Count == 0 && blindedByNode.Count == 0)
         {
             return new Dictionary<NodeRef, MaskReason>();
         }
 
-        var pathBatch = new HashSet<NodeRef>(candidates);
+        List<Grant>? unblindGrants = null;
+        Actor? unblindActor = null;
+        if (blindedByNode.Count > 0)
+        {
+            unblindActor = agent ? reader.RequestedBy! : reader.AsIdentity();
+            var unblindSourceGrants = agent ? requesterActiveGrants! : readerActiveGrants;
+            unblindGrants = await FilterUnblindGrantsAsync(tenant, unblindSourceGrants, cancellationToken).ConfigureAwait(false);
+        }
+
+        var pathBatch = new HashSet<NodeRef>();
+        if (!readerHasTenant || !requesterHasTenant)
+        {
+            foreach (var candidate in candidates)
+            {
+                pathBatch.Add(candidate);
+            }
+        }
+
         if (!readerHasTenant)
         {
             foreach (var grant in readerGrants)
@@ -136,54 +165,154 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
             }
         }
 
-        var paths = await store.PathsOfAsync(tenant, pathBatch, cancellationToken).ConfigureAwait(false);
-        var held = readerHasTenant ? null : BuildHeldScopes(readerGrants, paths);
-        var requester = requesterGrants is null || requesterHasTenant ? null : BuildHeldScopes(requesterGrants, paths);
-
-        var maskedObjects = new HashSet<NodeRef>();
-        var uncoveredReachable = new List<NodeRef>();
-        foreach (var node in candidates)
+        if (blindedByNode.Count > 0 && unblindGrants is { Count: > 0 })
         {
-            var path = paths.GetValueOrDefault(node, ScopePath.TenantWide);
-            if (CoversPath(held, path) && CoversPath(requester, path))
+            foreach (var enrollmentId in blindedByNode.Values.Distinct())
             {
-                continue;
-            }
-
-            if (node.Kind is NodeKinds.Participant or NodeKinds.Site)
-            {
-                uncoveredReachable.Add(node);
-            }
-            else
-            {
-                maskedObjects.Add(node);
+                pathBatch.Add(NodeRef.For(enrollmentId));
             }
         }
 
-        if (uncoveredReachable.Count > 0)
+        var paths = pathBatch.Count == 0
+            ? (IReadOnlyDictionary<NodeRef, ScopePath>)new Dictionary<NodeRef, ScopePath>()
+            : await store.PathsOfAsync(tenant, pathBatch, cancellationToken).ConfigureAwait(false);
+
+        var maskedObjects = new HashSet<NodeRef>();
+        if (!readerHasTenant || !requesterHasTenant)
         {
-            var reachedByNode = await store.StudySitePathsAsync(tenant, uncoveredReachable, cancellationToken).ConfigureAwait(false);
-            foreach (var node in uncoveredReachable)
+            var held = readerHasTenant ? null : BuildHeldScopes(readerGrants, paths);
+            var requester = requesterGrants is null || requesterHasTenant ? null : BuildHeldScopes(requesterGrants, paths);
+
+            var uncoveredReachable = new List<NodeRef>();
+            foreach (var node in candidates)
             {
                 var path = paths.GetValueOrDefault(node, ScopePath.TenantWide);
-                var reached = reachedByNode.GetValueOrDefault(node, []);
-                var visibleToReader = CoversPath(held, path) || CoversReached(held, reached);
-                var visibleToRequester = CoversPath(requester, path) || CoversReached(requester, reached);
-                if (!visibleToReader || !visibleToRequester)
+                if (CoversPath(held, path) && CoversPath(requester, path))
+                {
+                    continue;
+                }
+
+                if (node.Kind is NodeKinds.Participant or NodeKinds.Site)
+                {
+                    uncoveredReachable.Add(node);
+                }
+                else
                 {
                     maskedObjects.Add(node);
                 }
             }
+
+            if (uncoveredReachable.Count > 0)
+            {
+                var reachedByNode = await store.StudySitePathsAsync(tenant, uncoveredReachable, cancellationToken).ConfigureAwait(false);
+                foreach (var node in uncoveredReachable)
+                {
+                    var path = paths.GetValueOrDefault(node, ScopePath.TenantWide);
+                    var reached = reachedByNode.GetValueOrDefault(node, []);
+                    var visibleToReader = CoversPath(held, path) || CoversReached(held, reached);
+                    var visibleToRequester = CoversPath(requester, path) || CoversReached(requester, reached);
+                    if (!visibleToReader || !visibleToRequester)
+                    {
+                        maskedObjects.Add(node);
+                    }
+                }
+            }
         }
 
-        if (maskedObjects.Count == 0)
+        HashSet<EnrollmentId>? unblindedEnrollments = null;
+        if (blindedByNode.Count > 0)
         {
-            return new Dictionary<NodeRef, MaskReason>();
+            unblindedEnrollments = await EvaluateUnblindedEnrollmentsAsync(
+                tenant,
+                unblindActor!,
+                now,
+                unblindGrants!,
+                blindedByNode.Values.Distinct(),
+                paths,
+                cancellationToken).ConfigureAwait(false);
         }
 
-        return distinct
-            .Where(node => maskedObjects.Contains(node.Unversioned()))
-            .ToDictionary(node => node, _ => MaskReason.NotPermitted);
+        var result = new Dictionary<NodeRef, MaskReason>();
+        foreach (var node in distinct)
+        {
+            var unversioned = node.Unversioned();
+            if (maskedObjects.Contains(unversioned))
+            {
+                result[node] = MaskReason.NotPermitted;
+            }
+            else if (blindedByNode.TryGetValue(unversioned, out var enrollmentId)
+                && unblindedEnrollments is not null
+                && !unblindedEnrollments.Contains(enrollmentId))
+            {
+                result[node] = MaskReason.Blinded;
+            }
+        }
+
+        return result;
+    }
+
+    private const string EnrollmentUnblindToken = "enrollment.unblind";
+
+    private async Task<List<Grant>> FilterUnblindGrantsAsync(
+        TenantId tenant, List<Grant> activeGrants, CancellationToken cancellationToken)
+    {
+        var roleIds = activeGrants.Where(g => g.RoleId is not null).Select(g => g.RoleId!.Value).Distinct().ToList();
+        var roles = roleIds.Count == 0
+            ? new Dictionary<RoleId, Role>()
+            : (await store.RolesAsync(tenant, roleIds, cancellationToken).ConfigureAwait(false)).ToDictionary(r => r.Id);
+
+        return
+        [
+            .. activeGrants.Where(g =>
+                string.Equals(g.Capability, EnrollmentUnblindToken, StringComparison.Ordinal)
+                || (g.RoleId is { } roleId
+                    && roles.TryGetValue(roleId, out var role)
+                    && role.Capabilities.Contains(EnrollmentUnblindToken, StringComparer.Ordinal))),
+        ];
+    }
+
+    private async Task<HashSet<EnrollmentId>> EvaluateUnblindedEnrollmentsAsync(
+        TenantId tenant,
+        Actor actor,
+        DateTimeOffset now,
+        List<Grant> unblindGrants,
+        IEnumerable<EnrollmentId> enrollments,
+        IReadOnlyDictionary<NodeRef, ScopePath> paths,
+        CancellationToken cancellationToken)
+    {
+        var permitted = new HashSet<EnrollmentId>();
+        if (unblindGrants.Count == 0)
+        {
+            return permitted;
+        }
+
+        var requirements = (await store.QualificationRequirementsAsync(tenant, EnrollmentUnblindToken, cancellationToken).ConfigureAwait(false))
+            .Where(r => r.IsInEffect(now, now))
+            .ToList();
+        IReadOnlyList<Qualification>? qualificationsHeld = null;
+
+        foreach (var enrollmentId in enrollments)
+        {
+            var enrollmentPath = paths.GetValueOrDefault(NodeRef.For(enrollmentId), ScopePath.TenantWide);
+            if (!unblindGrants.Exists(g => g.Scope.Covers(enrollmentPath)))
+            {
+                continue;
+            }
+
+            var applicable = requirements.Where(r => r.Scope.Covers(enrollmentPath)).ToList();
+            if (applicable.Count > 0)
+            {
+                qualificationsHeld ??= await store.QualificationsHeldAsync(tenant, actor, cancellationToken).ConfigureAwait(false);
+                if (!applicable.All(req => qualificationsHeld.Any(q => req.IsMetBy(q) && q.IsInEffect(now, now))))
+                {
+                    continue;
+                }
+            }
+
+            permitted.Add(enrollmentId);
+        }
+
+        return permitted;
     }
 
     /// <summary>True when <paramref name="path"/> is on the way from the tenant down to <paramref name="below"/>, or is it.</summary>

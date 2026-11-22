@@ -10,6 +10,7 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Persistence.Evidence;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
 
@@ -40,7 +41,11 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
         NodeKinds.Grant,
         NodeKinds.QualificationRequirement,
         NodeKinds.Effectivity,
-        NodeKinds.Proposal);
+        NodeKinds.Proposal,
+        NodeKinds.Observation,
+        NodeKinds.CollectionInstance,
+        NodeKinds.Assertion,
+        NodeKinds.ValidationFinding);
 
     private const string ProtocolElementPathsSql = """
         SELECT DISTINCT ON (le.to_id)
@@ -161,6 +166,102 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
         WHERE e.tenant_id = @tenant AND e.id = ANY(@ids)
         """;
 
+    private const string AssertionPathsSql = """
+        SELECT
+            a.id AS "Id",
+            s.sponsor_id AS "OrganizationId",
+            a.study_id AS "StudyId",
+            CASE WHEN ss.id IS NOT NULL AND site.id IS NOT NULL THEN site.country END AS "Country",
+            CASE WHEN ss.id IS NOT NULL AND site.id IS NOT NULL THEN ss.id END AS "StudySiteId"
+        FROM kernel.assertions AS a
+        JOIN kernel.studies AS s
+            ON s.tenant_id = a.tenant_id AND s.id = a.study_id
+        LEFT JOIN kernel.assertions AS pa
+            ON a.enrollment_id IS NULL
+            AND (a.target_kind = 'assertion' OR a.retracts_id IS NOT NULL)
+            AND pa.tenant_id = a.tenant_id
+            AND pa.id = COALESCE(a.retracts_id, CASE WHEN a.target_kind = 'assertion' THEN a.target_id END)
+        LEFT JOIN kernel.enrollments AS e
+            ON e.tenant_id = a.tenant_id
+            AND e.id = COALESCE(a.enrollment_id, pa.enrollment_id)
+        LEFT JOIN kernel.study_sites AS ss
+            ON ss.tenant_id = a.tenant_id
+            AND ss.id = COALESCE(
+                e.study_site_id,
+                CASE WHEN a.target_kind = 'study_site' THEN a.target_id END,
+                CASE WHEN pa.target_kind = 'study_site' THEN pa.target_id END)
+        LEFT JOIN kernel.sites AS site
+            ON site.tenant_id = ss.tenant_id AND site.id = ss.site_id
+        WHERE a.tenant_id = @tenant AND a.id = ANY(@ids)
+        """;
+
+    private const string ValidationFindingPathsSql = """
+        WITH latest_detection AS (
+            SELECT DISTINCT ON (d.finding_id)
+                d.finding_id,
+                d.tenant_id,
+                d.study_id,
+                d.target_kind,
+                d.target_key,
+                substring(d.target_key FROM '([0-9a-fA-F]{{8}}-[0-9a-fA-F]{{4}}-[0-9a-fA-F]{{4}}-[0-9a-fA-F]{{4}}-[0-9a-fA-F]{{12}})')::uuid AS target_uuid
+            FROM kernel.validation_detections AS d
+            WHERE d.tenant_id = @tenant AND d.finding_id = ANY(@ids)
+            ORDER BY d.finding_id, d.run_id DESC
+        ),
+        finding_base AS (
+            SELECT
+                ld.finding_id AS id,
+                ld.tenant_id,
+                ld.study_id,
+                ld.target_kind,
+                ld.target_key,
+                ld.target_uuid
+            FROM latest_detection AS ld
+            UNION ALL
+            SELECT
+                vf.id,
+                vf.tenant_id,
+                vf.study_id,
+                NULL::text AS target_kind,
+                NULL::text AS target_key,
+                NULL::uuid AS target_uuid
+            FROM kernel.validation_findings AS vf
+            WHERE vf.tenant_id = @tenant
+              AND vf.id = ANY(@ids)
+              AND NOT EXISTS (SELECT 1 FROM latest_detection AS ld WHERE ld.finding_id = vf.id)
+        )
+        SELECT
+            fb.id AS "Id",
+            s.sponsor_id AS "OrganizationId",
+            fb.study_id AS "StudyId",
+            CASE WHEN ss.id IS NOT NULL AND site.id IS NOT NULL THEN site.country END AS "Country",
+            CASE WHEN ss.id IS NOT NULL AND site.id IS NOT NULL THEN ss.id END AS "StudySiteId"
+        FROM finding_base AS fb
+        JOIN kernel.studies AS s
+            ON s.tenant_id = fb.tenant_id AND s.id = fb.study_id
+        LEFT JOIN kernel.collection_instances AS ci
+            ON fb.target_kind = 'DatasetRecord' AND fb.target_uuid IS NOT NULL
+            AND ci.tenant_id = fb.tenant_id AND ci.id = fb.target_uuid
+        LEFT JOIN kernel.observations AS obs
+            ON fb.target_kind = 'Observation' AND fb.target_uuid IS NOT NULL
+            AND obs.tenant_id = fb.tenant_id AND obs.id = fb.target_uuid
+        LEFT JOIN kernel.enrollments AS e
+            ON e.tenant_id = fb.tenant_id
+            AND e.id = COALESCE(
+                ci.enrollment_id,
+                obs.enrollment_id,
+                CASE WHEN fb.target_kind = 'DatasetRecord' THEN fb.target_uuid END)
+        LEFT JOIN kernel.enrollments AS esubj
+            ON e.id IS NULL AND fb.target_kind = 'DatasetRecord' AND fb.target_key IS NOT NULL
+            AND esubj.tenant_id = fb.tenant_id AND esubj.study_id = fb.study_id
+            AND esubj.subject_code = split_part(fb.target_key, ':', 1)
+        LEFT JOIN kernel.study_sites AS ss
+            ON ss.tenant_id = fb.tenant_id
+            AND ss.id = COALESCE(ci.study_site_id, e.study_site_id, esubj.study_site_id)
+        LEFT JOIN kernel.sites AS site
+            ON site.tenant_id = ss.tenant_id AND site.id = ss.site_id
+        """;
+
     public async Task<IReadOnlyList<Grant>> GrantsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(actor);
@@ -232,6 +333,125 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
         return await db.QualificationRequirements.AsNoTracking()
             .Where(r => r.TenantId == tenant && r.Capability == capability)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyDictionary<NodeRef, EnrollmentId>> BlindedNodeEnrollmentsAsync(
+        TenantId tenant, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        var distinct = nodes.Distinct().ToList();
+        var obsNodeIds = distinct
+            .Where(n => n.Kind == NodeKinds.Observation)
+            .Select(n => ObservationId.FromGuid(n.Id))
+            .Distinct()
+            .ToList();
+        var assertionNodeIds = distinct
+            .Where(n => n.Kind == NodeKinds.Assertion)
+            .Select(n => AssertionId.FromGuid(n.Id))
+            .Distinct()
+            .ToList();
+        if (obsNodeIds.Count == 0 && assertionNodeIds.Count == 0)
+        {
+            return new Dictionary<NodeRef, EnrollmentId>();
+        }
+
+        await using var db = contexts.Create(tenant);
+        await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var assertionTargetObs = new Dictionary<Guid, ObservationId>();
+            if (assertionNodeIds.Count > 0)
+            {
+                var assertions = await db.Assertions.AsNoTracking()
+                    .Where(a => a.TenantId == tenant && assertionNodeIds.Contains(a.Id))
+                    .Select(a => new { a.Id, a.TargetKind, a.TargetId, a.RetractsId })
+                    .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+                var parentAssertionIds = assertions
+                    .Select(a => a.RetractsId ?? (a.TargetKind == NodeKinds.Assertion ? AssertionId.FromGuid(a.TargetId) : (AssertionId?)null))
+                    .Where(id => id is not null)
+                    .Select(id => id!.Value)
+                    .Distinct()
+                    .ToList();
+
+                var parentById = parentAssertionIds.Count == 0
+                    ? new Dictionary<AssertionId, (string TargetKind, Guid TargetId)>()
+                    : (await db.Assertions.AsNoTracking()
+                            .Where(a => a.TenantId == tenant && parentAssertionIds.Contains(a.Id))
+                            .Select(a => new { a.Id, a.TargetKind, a.TargetId })
+                            .ToListAsync(cancellationToken).ConfigureAwait(false))
+                        .ToDictionary(a => a.Id, a => (a.TargetKind, a.TargetId));
+
+                foreach (var a in assertions)
+                {
+                    if (a.TargetKind == NodeKinds.Observation)
+                    {
+                        assertionTargetObs[a.Id.Value] = ObservationId.FromGuid(a.TargetId);
+                    }
+                    else
+                    {
+                        var parentId = a.RetractsId ?? (a.TargetKind == NodeKinds.Assertion ? AssertionId.FromGuid(a.TargetId) : (AssertionId?)null);
+                        if (parentId is { } pid && parentById.TryGetValue(pid, out var parent) && parent.TargetKind == NodeKinds.Observation)
+                        {
+                            assertionTargetObs[a.Id.Value] = ObservationId.FromGuid(parent.TargetId);
+                        }
+                    }
+                }
+            }
+
+            var allObsIds = obsNodeIds.Concat(assertionTargetObs.Values).Distinct().ToList();
+            if (allObsIds.Count == 0)
+            {
+                return new Dictionary<NodeRef, EnrollmentId>();
+            }
+
+            var observations = await db.Observations.AsNoTracking()
+                .Where(o => o.TenantId == tenant && allObsIds.Contains(o.Id))
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            if (observations.Count == 0)
+            {
+                return new Dictionary<NodeRef, EnrollmentId>();
+            }
+
+            var blindedObsToEnrollment = new Dictionary<ObservationId, EnrollmentId>();
+            foreach (var studyGroup in observations.GroupBy(o => o.StudyId))
+            {
+                var blindedInStudy = await KernelLockRecords
+                    .ResolveBlindedObservationsAsync(db, studyGroup.Key, studyGroup, cancellationToken)
+                    .ConfigureAwait(false);
+                foreach (var obs in studyGroup.Where(obs => blindedInStudy.Contains(obs.Id)))
+                {
+                    blindedObsToEnrollment[obs.Id] = obs.EnrollmentId;
+                }
+            }
+
+            if (blindedObsToEnrollment.Count == 0)
+            {
+                return new Dictionary<NodeRef, EnrollmentId>();
+            }
+
+            var result = new Dictionary<NodeRef, EnrollmentId>();
+            foreach (var node in distinct)
+            {
+                if (node.Kind == NodeKinds.Observation
+                    && blindedObsToEnrollment.TryGetValue(ObservationId.FromGuid(node.Id), out var enrollmentId))
+                {
+                    result[node] = enrollmentId;
+                }
+                else if (node.Kind == NodeKinds.Assertion
+                    && assertionTargetObs.TryGetValue(node.Id, out var targetObsId)
+                    && blindedObsToEnrollment.TryGetValue(targetObsId, out var assertionEnrollmentId))
+                {
+                    result[node] = assertionEnrollmentId;
+                }
+            }
+
+            return result;
+        }
+        finally
+        {
+            await db.Database.CloseConnectionAsync().ConfigureAwait(false);
+        }
     }
 
     public async Task<ScopePath> PathOfAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken)
@@ -557,6 +777,53 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
 
                     break;
                 }
+
+            case NodeKinds.Observation:
+                {
+                    var ids = rawIds.Select(ObservationId.FromGuid).ToList();
+                    var rows = await (
+                            from o in db.Observations.AsNoTracking()
+                            join e in db.Enrollments.AsNoTracking() on new { o.TenantId, Id = o.EnrollmentId } equals new { e.TenantId, e.Id }
+                            join ss in db.StudySites.AsNoTracking() on new { e.TenantId, Id = e.StudySiteId } equals new { ss.TenantId, ss.Id }
+                            join study in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { study.TenantId, study.Id }
+                            join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                            where o.TenantId == tenant && ids.Contains(o.Id)
+                            select new { o.Id, study.SponsorId, ss.StudyId, site.Country, StudySiteId = ss.Id })
+                        .ToListAsync(ct).ConfigureAwait(false);
+                    foreach (var row in rows)
+                    {
+                        resolved[(kind, row.Id.Value)] = new ScopePath(row.SponsorId, row.StudyId, row.Country, row.StudySiteId);
+                    }
+
+                    break;
+                }
+
+            case NodeKinds.CollectionInstance:
+                {
+                    var ids = rawIds.Select(CollectionInstanceId.FromGuid).ToList();
+                    var rows = await (
+                            from c in db.CollectionInstances.AsNoTracking()
+                            join ss in db.StudySites.AsNoTracking() on new { c.TenantId, Id = c.StudySiteId } equals new { ss.TenantId, ss.Id }
+                            join study in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { study.TenantId, study.Id }
+                            join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                            where c.TenantId == tenant && ids.Contains(c.Id)
+                            select new { c.Id, study.SponsorId, ss.StudyId, site.Country, StudySiteId = ss.Id })
+                        .ToListAsync(ct).ConfigureAwait(false);
+                    foreach (var row in rows)
+                    {
+                        resolved[(kind, row.Id.Value)] = new ScopePath(row.SponsorId, row.StudyId, row.Country, row.StudySiteId);
+                    }
+
+                    break;
+                }
+
+            case NodeKinds.Assertion:
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, AssertionPathsSql, resolved, ct).ConfigureAwait(false);
+                break;
+
+            case NodeKinds.ValidationFinding:
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, ValidationFindingPathsSql, resolved, ct).ConfigureAwait(false);
+                break;
 
             default:
                 // Tenants, participants (who may be in several studies), roles, qualifications (held by a person across

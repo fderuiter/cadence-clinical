@@ -264,6 +264,13 @@ var amended = await sender.SendAsync(
 - **Content.** `ArtifactContent.Problem()` checks the `sha256:` hash, a positive size, a lower-case `type/subtype`
   media type and a storage reference. `ContentHash.OfBytes` computes the hash the storage adapter records.
 - **Signing.** `Attest` accepts `artifact_version` targets with the version's content hash.
+- **Exports.** `GET /api/v1/kernel/studies/{studyRef}/exports` and `GET /api/v1/kernel/enrollments/{enrollmentRef}/casebook`
+  synchronously dispatch `[BaselineKernelCommand]` `ExportStudySnapshot` (`study.export`) and `ExportEnrollmentCasebook`
+  (`enrollment.export`) through `IKernelCommandSender`, registering an immutable `Dataset` `Artifact`, emitting
+  `StudySnapshotExported` or `EnrollmentCasebookExported`, and recording blinded versus unblinded disclosure on the
+  tenant's audit chain; unauthorized export requests record a denied `ProvenanceActivity` and `AuditEntry` before reading
+  clinical rows. Historical `as_of` snapshots reconstruct governing protocol versions and draft snapshots bitemporally at
+  `(asOf, asOf)` via `FormVersionSnapshots`, `AuditEntries`, and `Effectivities`.
 - **Database.** `artifacts` and `artifact_versions` are tenant-isolated; `artifact_versions` is insert-only
   (`KA001`) with check constraints on the hash, size and number.
 - **Not yet:** `Source`, lab range sets and the TMF classification Assertion.
@@ -659,7 +666,9 @@ services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
 - **Visibility (ADR-2457).** `AddKernelGrantVisibility()` registers `GrantNodeVisibility` as the host's
   `INodeVisibility`. A reader sees what a grant it holds in effect covers, the organization, study and country above
   that scope, participants and sites through the study sites they reach, and tenant reference data. Everything else
-  is masked `NotPermitted`.
+  is masked `NotPermitted`. Observations bound to randomization or treatment-assignment concepts are masked `Blinded`
+  (even for tenant-scoped readers and MCP tools) unless `AuthorityEvaluator` permits `enrollment.unblind` on the
+  participant's enrollment (K-AUTH-4).
 - **Qualifications (ADR-2459).** `RecordQualification` files a qualification held by an actor: `Training`,
   `ProtocolTraining` (naming its protocol version), `Credential` or `Certificate`, with a lower snake_case code, a
   validity period and a `TrainingRecord` or `Credential` artifact version as evidence. `RevokeQualification`
@@ -926,7 +935,7 @@ decide anything else, and approving it does not run its plan (K-SIM-5).
 
 ## Commercial subscriptions and entitlements (ADR-2547, ADR-2604)
 
-`Subscription` (`kernel.subscriptions`) and `ProductEntitlement` (`kernel.product_entitlements`) track commercial workspace packaging (`Individual`, `Select`, `Complete` and product families `Blueprint`, `Capture`, `Orbit`, `Engage`, `Allocate`, `Vigil`, `Lens`, `Assure`) separately from `Tenant` and clinical `Grant`s ([ADR-2547](../../docs/adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md), [ADR-2604](../../docs/adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md)). Commercial state never confers clinical visibility or bypasses `AuthorityEvaluator`. Switching tiers during an active trial (`SwitchTrialTier`, `POST /api/v1/kernel/entitlements/tier`) updates enabled product families in place while keeping `SubscriptionStatus.Trialing` and preserving the original 30-day `TrialEndsAt` window. Transitioning a `Trialing` or `Expired` workspace to `Active` (`ActivateSubscription`, `POST /api/v1/kernel/entitlements/activate`) requires validated `SubscriptionScoping` (`study_phase`, `study_duration_months`, `countries`, `site_count`, `participant_count`, `active_study_count`, and purchase-order/quote `billing_confirmation`; `422 K.Commercial.ScopingInvalid` otherwise). When a trial subscription expires, `KernelCommandPipeline` and `ExpiredSubscriptionWriteGuardMiddleware` refuse non-baseline workspace mutations with `403 K.Subscription.Expired` while keeping `[BaselineKernelCommand]` commands (`Attest`, authority governance, IdentityVault privacy actions, scoped `ActivateSubscription`) and regulated reads and exports unrestricted.
+`Subscription` (`kernel.subscriptions`) and `ProductEntitlement` (`kernel.product_entitlements`) track commercial workspace packaging (`Individual`, `Select`, `Complete` and product families `Blueprint`, `Capture`, `Orbit`, `Engage`, `Allocate`, `Vigil`, `Lens`, `Assure`) separately from `Tenant` and clinical `Grant`s ([ADR-2547](../../docs/adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md), [ADR-2604](../../docs/adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md)). Commercial state never confers clinical visibility or bypasses `AuthorityEvaluator`. Switching tiers during an active trial (`SwitchTrialTier`, `POST /api/v1/kernel/entitlements/tier`) updates enabled product families in place while keeping `SubscriptionStatus.Trialing` and preserving the original 30-day `TrialEndsAt` window. Transitioning a `Trialing` or `Expired` workspace to `Active` (`ActivateSubscription`, `POST /api/v1/kernel/entitlements/activate`) requires validated `SubscriptionScoping` (`study_phase`, `study_duration_months`, `countries`, `site_count`, `participant_count`, `active_study_count`, and purchase-order/quote `billing_confirmation`; `422 K.Commercial.ScopingInvalid` otherwise). When a trial subscription expires, `KernelCommandPipeline` and `ExpiredSubscriptionWriteGuardMiddleware` refuse non-baseline workspace mutations with `403 K.Subscription.Expired` while keeping `[BaselineKernelCommand]` commands (`Attest`, `ExportStudySnapshot`, `ExportEnrollmentCasebook`, authority governance, IdentityVault privacy actions, scoped `ActivateSubscription`) and regulated reads and exports unrestricted.
 
 ## Migrations
 

@@ -208,8 +208,10 @@ internal static class FormEndpoints
             SignFormCapability,
             NodeRef.For(record.EnrollmentId),
             cancellationToken).ConfigureAwait(false);
+        var canUnblind = await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        var effectiveRecord = canUnblind ? record : record.MaskBlinded();
 
-        return TypedResults.Ok(FormResponse.From(record, layout, canSign));
+        return TypedResults.Ok(FormResponse.From(effectiveRecord, layout, canSign));
     }
 
     internal static async Task<Results<Ok<FormPreviewResponse>, ProblemHttpResult>> PreviewAsync(
@@ -251,8 +253,15 @@ internal static class FormEndpoints
             overlay[entry.ItemId.Trim()] = entry.Value;
         }
 
+        var canUnblind = await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
         var asOf = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
-        var warnings = await validation.PreviewFormAsync(tenant, id, overlay, asOf, cancellationToken).ConfigureAwait(false);
+        var warnings = await validation.PreviewFormAsync(
+            tenant,
+            id,
+            overlay,
+            asOf,
+            maskBlinded: !canUnblind,
+            cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok(new FormPreviewResponse(
             formId,
             [.. warnings.Select(FormPreviewWarningResponse.From)]));
