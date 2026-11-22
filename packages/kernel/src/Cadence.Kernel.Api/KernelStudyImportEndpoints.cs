@@ -19,6 +19,7 @@ using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Protocol.Import;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Standards;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -105,6 +106,8 @@ public static class KernelStudyImportEndpoints
                 ProtocolErrors.ContentInvalid,
                 ProtocolErrors.AmendmentInvalid,
                 ProtocolErrors.AmendmentNotAllowed,
+                StandardsErrors.LibraryItemInvalid,
+                StandardsErrors.StandardVersionUnknown,
             ]);
 
         return kernel;
@@ -512,8 +515,32 @@ public static class KernelStudyImportEndpoints
                 null,
                 null);
 
+        KernelImportedRulePackSummaryResponse? draftedRulePack = null;
+        if (importOutcome.RulePack is { } rulePack)
+        {
+            var libraryItemId = LibraryItemId.FromGuid(DeriveGuid(tenant, "import-rule-pack", $"{study.StudyId}:{idempotencyKey}"));
+            var draftItemResult = await sender.SendAsync(
+                new DraftLibraryItem(
+                    tenant,
+                    libraryItemId,
+                    LibraryItemKind.RulePack,
+                    rulePack.Key,
+                    rulePack.Title,
+                    rulePack.Content,
+                    [],
+                    $"{idempotencyKey}:rule-pack",
+                    reason),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!draftItemResult.IsSuccess)
+            {
+                return KernelErrorEndpoints.Problem(draftItemResult.Error!);
+            }
+
+            draftedRulePack = KernelImportedRulePackSummaryResponse.From(draftItemResult.Value!, rulePack.Title, rulePack.RuleCount);
+        }
+
         var conceptLabels = await ResolveConceptLabelsAsync(tenant, importOutcome.Design, concepts, cancellationToken).ConfigureAwait(false);
-        var responseBody = KernelProtocolDraftSummaryResponse.From(persistedSummary, importOutcome.Design, conceptLabels);
+        var responseBody = KernelProtocolDraftSummaryResponse.From(persistedSummary, importOutcome.Design, conceptLabels, draftedRulePack);
 
         return plan.CreatedNewVersion
             ? TypedResults.Created(

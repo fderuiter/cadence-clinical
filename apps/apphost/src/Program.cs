@@ -58,7 +58,7 @@ else
     useDatabase = project => project.WithReference(cadenceDb).WaitFor(cadenceDb);
 }
 
-// Identity. With AppHost:OidcAuthority set to an existing Keycloak realm URL (http://host:port/realms/<realm>), the
+// Identity. With AppHost:OidcAuthority set to an existing Keycloak realm URL (http://localhost:8080/realms/<realm>), the
 // gateway and the web app use it and no container starts; otherwise the AppHost runs Keycloak with the same realm
 // docker compose imports: clients, roles and local test users (docs/LOCAL_DEV_ENVIRONMENT.md). The gateway accepts
 // only tokens with the API audience the realm gives cadence-web tokens (#5037); AppHost:OidcAudience overrides it for

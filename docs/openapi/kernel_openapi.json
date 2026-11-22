@@ -1874,7 +1874,7 @@
             }
           },
           "404": {
-            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060, \u0060K.Protocol.StudyUnknown\u0060.",
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060, \u0060K.Protocol.StudyUnknown\u0060, \u0060K.Standards.StandardVersionUnknown\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1914,7 +1914,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Protocol.AmendmentInvalid\u0060, \u0060K.Protocol.AmendmentNotAllowed\u0060, \u0060K.Protocol.ContentInvalid\u0060, \u0060K.Protocol.ContentRequired\u0060.",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Protocol.AmendmentInvalid\u0060, \u0060K.Protocol.AmendmentNotAllowed\u0060, \u0060K.Protocol.ContentInvalid\u0060, \u0060K.Protocol.ContentRequired\u0060, \u0060K.Standards.LibraryItemInvalid\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1943,6 +1943,10 @@
           },
           {
             "code": "K.Protocol.StudyUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Standards.StandardVersionUnknown",
             "status": 404
           },
           {
@@ -1995,6 +1999,10 @@
           },
           {
             "code": "K.Protocol.ContentRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Standards.LibraryItemInvalid",
             "status": 422
           }
         ]
@@ -2313,7 +2321,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Observation.ValueInvalid\u0060, \u0060K.Observation.ValueUnchanged\u0060.",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Collection.ValuesInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Observation.ValueInvalid\u0060, \u0060K.Observation.ValueUnchanged\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -2361,6 +2369,10 @@
           {
             "code": "K.Observation.VersionStale",
             "status": 409
+          },
+          {
+            "code": "K.Collection.ValuesInvalid",
+            "status": 422
           },
           {
             "code": "K.Command.IdempotencyKeyRequired",
@@ -3636,6 +3648,683 @@
             "status": 422
           }
         ]
+      }
+    },
+    "/api/v1/kernel/studies/{studyRef}/rule-packs": {
+      "get": {
+        "tags": [
+          "Kernel validation"
+        ],
+        "summary": "Lists rule-pack library items in the tenant and indicates which versions are pinned on the study.",
+        "operationId": "KernelListStudyRulePacks",
+        "parameters": [
+          {
+            "name": "studyRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelStudyRulePacksResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/studies/{studyRef}/rule-packs/{itemRef}/preview": {
+      "post": {
+        "tags": [
+          "Kernel validation"
+        ],
+        "summary": "Evaluates a draft or approved rule pack in memory over the study\u0027s current collection records without mutating state.",
+        "operationId": "KernelPreviewStudyRulePack",
+        "parameters": [
+          {
+            "name": "studyRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelRulePackPreviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060, \u0060K.Standards.LibraryItemUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Standards.LibraryItemUnknown",
+            "status": 404
+          }
+        ]
+      }
+    },
+    "/api/v1/kernel/library-items/{itemRef}/approve": {
+      "post": {
+        "tags": [
+          "Kernel validation"
+        ],
+        "summary": "Approves a draft library item version with an Approved attestation (library_item.approve).",
+        "operationId": "KernelApproveLibraryItem",
+        "parameters": [
+          {
+            "name": "itemRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelApproveLibraryItemRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelRulePackResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060, \u0060K.Trust.AuthenticationStale\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Standards.AttestationRejected\u0060, \u0060K.Subscription.Expired\u0060, \u0060K.Trust.PersonRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Standards.LibraryItemUnknown\u0060, \u0060K.Trust.TargetUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Standards.InvalidTransition\u0060, \u0060K.Trust.TargetContentChanged\u0060, \u0060K.Trust.TargetNotSignable\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Trust.MethodRequired\u0060, \u0060K.Trust.TargetKindUnsupported\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Trust.AuthenticationStale",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Standards.AttestationRejected",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Trust.PersonRequired",
+            "status": 403
+          },
+          {
+            "code": "K.Standards.LibraryItemUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Trust.TargetUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Standards.InvalidTransition",
+            "status": 409
+          },
+          {
+            "code": "K.Trust.TargetContentChanged",
+            "status": 409
+          },
+          {
+            "code": "K.Trust.TargetNotSignable",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Trust.MethodRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Trust.TargetKindUnsupported",
+            "status": 422
+          }
+        ]
+      }
+    },
+    "/api/v1/kernel/studies/{studyRef}/standards": {
+      "put": {
+        "tags": [
+          "Kernel validation"
+        ],
+        "summary": "Declares or updates the approved rule-pack library items pinned on a study (study.declare_standards).",
+        "operationId": "KernelDeclareStudyRulePacks",
+        "parameters": [
+          {
+            "name": "studyRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelDeclareStudyRulePacksRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelStudyRulePacksResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Standards.LibraryItemUnknown\u0060, \u0060K.Standards.StudyUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Standards.DeclarationInvalid\u0060, \u0060K.Standards.NotApproved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Standards.LibraryItemUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Standards.StudyUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Standards.DeclarationInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Standards.NotApproved",
+            "status": 422
+          }
+        ]
+      }
+    },
+    "/api/v1/kernel/studies/{studyRef}/validation/findings": {
+      "get": {
+        "tags": [
+          "Kernel validation"
+        ],
+        "summary": "Lists derived validation findings for a study, optionally filtered by stage, status, severity, rule pack or dataset.",
+        "operationId": "KernelListStudyValidationFindings",
+        "parameters": [
+          {
+            "name": "studyRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stage",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dataset",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pack_key",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelValidationFindingPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/validation/findings/{findingRef}": {
+      "get": {
+        "tags": [
+          "Kernel validation"
+        ],
+        "summary": "Returns one derived validation finding and its structured provenance explanation.",
+        "operationId": "KernelGetValidationFinding",
+        "parameters": [
+          {
+            "name": "findingRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelValidationFindingDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/kernel/entitlements": {
@@ -5397,6 +6086,108 @@
           {
             "code": "K.Observation.Locked",
             "status": 423
+          }
+        ]
+      }
+    },
+    "/api/v1/execution/forms/{formId}/preview": {
+      "post": {
+        "tags": [
+          "Execution forms"
+        ],
+        "summary": "Evaluates pinned study collection rules in memory over draft form values without mutating state (K-RULE-3).",
+        "operationId": "ExecutionPreviewFormValues",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_PreviewFormValuesRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_FormPreviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
           }
         ]
       }
@@ -8082,6 +8873,29 @@
           }
         }
       },
+      "Kernel_EvaluatedCondition": {
+        "required": [
+          "code",
+          "description",
+          "met",
+          "evidence"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "met": {
+            "type": "boolean"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
       "Kernel_EvaluationRunResponse": {
         "required": [
           "run",
@@ -8238,6 +9052,77 @@
           },
           "content_hash": {
             "type": "string"
+          }
+        }
+      },
+      "Kernel_Explanation": {
+        "required": [
+          "subject",
+          "claim",
+          "producer",
+          "steps",
+          "conditions",
+          "next_actions"
+        ],
+        "type": "object",
+        "properties": {
+          "subject": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_NodeRef"
+              }
+            ]
+          },
+          "claim": {
+            "type": "string"
+          },
+          "producer": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ExplanationStep"
+            }
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_EvaluatedCondition"
+            }
+          },
+          "next_actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_NextAction"
+            }
+          },
+          "unmet_conditions": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_EvaluatedCondition"
+            }
+          }
+        }
+      },
+      "Kernel_ExplanationStep": {
+        "required": [
+          "claim",
+          "evidence"
+        ],
+        "type": "object",
+        "properties": {
+          "claim": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
           }
         }
       },
@@ -8408,6 +9293,71 @@
           },
           "reason": {
             "type": "string"
+          }
+        }
+      },
+      "Kernel_FormPreviewResponse": {
+        "required": [
+          "form_id",
+          "warnings"
+        ],
+        "type": "object",
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_FormPreviewWarningResponse"
+            }
+          }
+        }
+      },
+      "Kernel_FormPreviewWarningResponse": {
+        "required": [
+          "pack_key",
+          "rule_id",
+          "rule_version",
+          "severity",
+          "dataset",
+          "item_id",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "pack_key": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "rule_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "item_id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "remediation_guidance": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -8691,6 +9641,10 @@
               "null",
               "string"
             ]
+          },
+          "can_sign": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -9498,6 +10452,24 @@
           }
         }
       },
+      "Kernel_KernelApproveLibraryItemRequest": {
+        "type": "object",
+        "properties": {
+          "meaning": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attestation_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "Kernel_KernelAssertionStateResponse": {
         "required": [
           "ref",
@@ -9711,6 +10683,20 @@
           },
           "explanation": {
             "$ref": "#/components/schemas/Kernel_KernelExplanationResponse"
+          }
+        }
+      },
+      "Kernel_KernelDeclareStudyRulePacksRequest": {
+        "required": [
+          "rule_pack_refs"
+        ],
+        "type": "object",
+        "properties": {
+          "rule_pack_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -10005,6 +10991,65 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Kernel_KernelFindingObservedValueResponse": {
+        "required": [
+          "variable",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "variable": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelImportedRulePackSummaryResponse": {
+        "required": [
+          "ref",
+          "key",
+          "version",
+          "title",
+          "rule_count",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "rule_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "status": {
+            "type": "string"
           }
         }
       },
@@ -10427,6 +11472,37 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_ObservationAuditView"
             }
+          },
+          "form_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "item_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expected_value_kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expected_unit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expected_code_system_version_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -10826,6 +11902,16 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_KernelProtocolImportNoteResponse"
             }
+          },
+          "imported_rule_pack": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelImportedRulePackSummaryResponse"
+              }
+            ]
           }
         }
       },
@@ -11140,6 +12226,221 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "Kernel_KernelRulePackPreviewResponse": {
+        "required": [
+          "item_ref",
+          "forms_evaluated",
+          "rules_evaluated",
+          "violation_count",
+          "violations"
+        ],
+        "type": "object",
+        "properties": {
+          "item_ref": {
+            "type": "string"
+          },
+          "forms_evaluated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rules_evaluated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "violation_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "violations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelRulePackPreviewViolationResponse"
+            }
+          }
+        }
+      },
+      "Kernel_KernelRulePackPreviewViolationResponse": {
+        "required": [
+          "form_id",
+          "pack_key",
+          "rule_id",
+          "rule_version",
+          "severity",
+          "dataset",
+          "item_id",
+          "message",
+          "remediation_guidance"
+        ],
+        "type": "object",
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pack_key": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "rule_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "item_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "remediation_guidance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelRulePackResponse": {
+        "required": [
+          "ref",
+          "key",
+          "version",
+          "title",
+          "description",
+          "status",
+          "pinned",
+          "content_hash",
+          "rule_count",
+          "rules"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "content_hash": {
+            "type": "string"
+          },
+          "rule_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelRuleSummaryResponse"
+            }
+          }
+        }
+      },
+      "Kernel_KernelRuleSummaryResponse": {
+        "required": [
+          "id",
+          "version",
+          "stage",
+          "dataset",
+          "severity",
+          "explanation",
+          "remediation_guidance"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "dataset": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "severity": {
+            "type": "string"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "remediation_guidance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "condition": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -11689,6 +12990,38 @@
           }
         }
       },
+      "Kernel_KernelStudyRulePacksResponse": {
+        "required": [
+          "study_ref",
+          "profile_ref",
+          "pinned_rule_pack_refs",
+          "rule_packs"
+        ],
+        "type": "object",
+        "properties": {
+          "study_ref": {
+            "type": "string"
+          },
+          "profile_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pinned_rule_pack_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rule_packs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelRulePackResponse"
+            }
+          }
+        }
+      },
       "Kernel_KernelStudySummaryResponse": {
         "required": [
           "ref",
@@ -11818,6 +13151,155 @@
         "properties": {
           "tier": {
             "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelValidationFindingDetailResponse": {
+        "required": [
+          "finding",
+          "explanation"
+        ],
+        "type": "object",
+        "properties": {
+          "finding": {
+            "$ref": "#/components/schemas/Kernel_KernelValidationFindingResponse"
+          },
+          "explanation": {
+            "$ref": "#/components/schemas/Kernel_Explanation"
+          }
+        }
+      },
+      "Kernel_KernelValidationFindingPageResponse": {
+        "required": [
+          "total",
+          "findings"
+        ],
+        "type": "object",
+        "properties": {
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelValidationFindingResponse"
+            }
+          }
+        }
+      },
+      "Kernel_KernelValidationFindingResponse": {
+        "required": [
+          "ref",
+          "study_ref",
+          "stage",
+          "pack_key",
+          "rule_pack_ref",
+          "rule_id",
+          "rule_version",
+          "severity",
+          "status",
+          "blocks",
+          "target_kind",
+          "dataset",
+          "record_key",
+          "variable",
+          "message",
+          "expected",
+          "observed",
+          "first_detected_run_ref",
+          "last_detected_run_ref",
+          "resolved_by_run_ref",
+          "classification"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "study_ref": {
+            "type": "string"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "pack_key": {
+            "type": "string"
+          },
+          "rule_pack_ref": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "rule_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "blocks": {
+            "type": "boolean"
+          },
+          "target_kind": {
+            "type": "string"
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "record_key": {
+            "type": "string"
+          },
+          "variable": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "expected": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelFindingObservedValueResponse"
+            }
+          },
+          "first_detected_run_ref": {
+            "type": "string"
+          },
+          "last_detected_run_ref": {
+            "type": "string"
+          },
+          "resolved_by_run_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "classification": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -12038,6 +13520,24 @@
       },
       "Kernel_MatrixGapSeverity": {
         "type": "integer"
+      },
+      "Kernel_NextAction": {
+        "required": [
+          "description"
+        ],
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "capability": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "target": {}
+        }
       },
       "Kernel_NodeRef": {},
       "Kernel_NullFlavor": {
@@ -12807,6 +14307,42 @@
           }
         }
       },
+      "Kernel_PreviewFormItemValueRequest": {
+        "required": [
+          "item_id",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string"
+          },
+          "value": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_ObservationValue"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_PreviewFormValuesRequest": {
+        "required": [
+          "values"
+        ],
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_PreviewFormItemValueRequest"
+            }
+          }
+        }
+      },
       "Kernel_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -13394,6 +14930,9 @@
     },
     {
       "name": "Kernel proposals"
+    },
+    {
+      "name": "Kernel validation"
     },
     {
       "name": "IntentEndpoints"

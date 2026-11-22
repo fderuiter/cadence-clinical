@@ -19,7 +19,7 @@ const auditEntries = ref([
   {
     id: "aud_001",
     timestamp: "2026-08-14 14:30:00 UTC",
-    user_id: "crc_smith@site101.org",
+    user_id: "crc_smith@cadence.clinical",
     action: "UPDATE",
     entity_type: "ClinicalObservation",
     entity_id: "obs_sysbp_01",

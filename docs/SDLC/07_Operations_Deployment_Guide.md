@@ -505,7 +505,9 @@ if __name__ == "__main__":
     db_manager.init_db(
         "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
     )
-    asyncio.run(provision_new_tenant("novartis", "lead_admin@novartis.com"))
+    asyncio.run(
+        provision_new_tenant("sponsor_alpha", "lead_admin@cadence.clinical")
+    )
 ```
 
 ---

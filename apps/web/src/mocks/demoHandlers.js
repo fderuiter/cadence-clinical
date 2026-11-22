@@ -282,7 +282,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
       orgDemoState.sealed.set(personId, {
         person_id: personId,
         display_name: body?.full_name || "Workspace Member",
-        email: body?.email || "member@example.com", // deid-ignore
+        email: body?.email || "member@cadence.example",
         given_name: body?.full_name || "Workspace",
         family_name: "Member",
       });
@@ -347,7 +347,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
       orgDemoState.sealed.set(personId, {
         person_id: personId,
         display_name: body?.full_name || "Delegated Staff",
-        email: body?.email || "delegate@example.com", // deid-ignore
+        email: body?.email || "delegate@cadence.example",
         given_name: body?.full_name || "Delegated",
         family_name: "Staff",
       });
@@ -398,7 +398,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
         orgDemoState.sealed.get(personId) || {
           person_id: personId,
           display_name: "Disclosed Member",
-          email: "disclosed.member@example.com", // deid-ignore
+          email: "disclosed.member@cadence.example",
           given_name: "Disclosed",
           family_name: "Member",
         }

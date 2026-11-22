@@ -97,6 +97,18 @@ public sealed partial class TrialOnboardingService(
         "execution.query.raise",
         "execution.query.answer",
         "execution.query.manage",
+        "library_item.draft",
+        "library_item.approve",
+        "library_item.deprecate",
+        "standard.register",
+        "standard.approve",
+        "study.declare_standards",
+        "validation_run.record",
+        "validation_finding.investigate",
+        "validation_finding.classify",
+        "validation_finding.accept",
+        "validation_finding.explain",
+        "validation_finding.reopen",
     ];
 
     private static readonly string[] SponsorDesignerCapabilities =
@@ -115,6 +127,12 @@ public sealed partial class TrialOnboardingService(
         "code_system.import_version",
         "concept.define",
         "concept.revise",
+        "library_item.draft",
+        "library_item.approve",
+        "standard.register",
+        "standard.approve",
+        "study.declare_standards",
+        "validation_run.record",
         "attestation.sign",
     ];
 
@@ -122,6 +140,7 @@ public sealed partial class TrialOnboardingService(
     [
         ("execution-forms", "TRIAL_EXECUTION_FORMS", "Execution forms consumer", ["execution.form.open"]),
         ("execution-queries", "TRIAL_EXECUTION_QUERIES", "Execution queries consumer", ["observation.query", "observation.query.answer", "assertion.retract"]),
+        ("execution-edit-checks", "TRIAL_EXECUTION_EDIT_CHECKS", "Execution edit checks consumer", ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
     ];
 
     public async Task<CommandResult<TrialOnboardingOutcome>> BootstrapAsync(

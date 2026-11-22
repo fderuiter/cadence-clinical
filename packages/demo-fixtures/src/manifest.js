@@ -73,7 +73,7 @@ export const DEMO_MANIFEST = Object.freeze({
       enrollmentIndex: 2,
       status: "SCREENED",
       screenedAt: "2026-01-14T09:00:00Z",
-      participantUuid: "7b536802-4122-8225-b5f7-875c4392fcdc", // deid-ignore: synthetic demo manifest fixture
+      participantUuid: "7b536802-4122-8225-b5f7-875c4392fcdc",
       enrollmentUuid: "e1d4e034-a7ac-856a-ae47-674b0c2f5ae0",
       enrollmentRef: "enrollment:e1d4e034-a7ac-856a-ae47-674b0c2f5ae0",
     }),
@@ -168,6 +168,7 @@ export const DEMO_MANIFEST = Object.freeze({
         "collection.record_unasked",
         "execution.query.raise",
         "execution.query.manage",
+        "study.declare_standards",
       ]),
     }),
     Object.freeze({
@@ -183,6 +184,12 @@ export const DEMO_MANIFEST = Object.freeze({
         "protocol.submit_for_review",
         "protocol.approve",
         "protocol.amend",
+        "standard.register",
+        "standard.approve",
+        "library_item.draft",
+        "library_item.approve",
+        "study.declare_standards",
+        "validation_run.record",
         "attestation.sign",
       ]),
     }),
@@ -198,7 +205,7 @@ export const DEMO_MANIFEST = Object.freeze({
     Object.freeze({
       code: "DEMO_AUDITOR",
       name: "Auditor",
-      roleUuid: "647a2d36-5052-8489-80a9-d0790d7b0491", // deid-ignore: synthetic demo manifest fixture
+      roleUuid: "647a2d36-5052-8489-80a9-d0790d7b0491",
       capabilities: Object.freeze(["validation_finding.investigate"]),
     }),
   ]),
@@ -206,7 +213,7 @@ export const DEMO_MANIFEST = Object.freeze({
     Object.freeze({
       username: "crc.site101",
       id: "1a4345cc-364c-4b8b-881e-93bbea528b0a",
-      email: "crc.site101@example.com", // deid-ignore: synthetic demo manifest fixture
+      email: "crc.site101@example.com",
       firstName: "Site",
       lastName: "Coordinator",
       tenantId: "cadence-local",
@@ -220,7 +227,7 @@ export const DEMO_MANIFEST = Object.freeze({
     Object.freeze({
       username: "pi.site101",
       id: "cf64a3b4-33cc-4925-8452-75e29ca9526e",
-      email: "pi.site101@example.com", // deid-ignore: synthetic demo manifest fixture
+      email: "pi.site101@example.com",
       firstName: "Principal",
       lastName: "Investigator",
       tenantId: "cadence-local",
@@ -234,7 +241,7 @@ export const DEMO_MANIFEST = Object.freeze({
     Object.freeze({
       username: "cra.monitor",
       id: "ee2cfdb6-d893-4fb4-a10f-d50830b6728a",
-      email: "cra.monitor@example.com", // deid-ignore: synthetic demo manifest fixture
+      email: "cra.monitor@example.com",
       firstName: "CRA",
       lastName: "Monitor",
       tenantId: "cadence-local",
@@ -248,7 +255,7 @@ export const DEMO_MANIFEST = Object.freeze({
     Object.freeze({
       username: "dm.lead",
       id: "47a9d88f-73d7-4aca-9fd6-14b8e6e9284f",
-      email: "dm.lead@example.com", // deid-ignore: synthetic demo manifest fixture
+      email: "dm.lead@example.com",
       firstName: "Data",
       lastName: "Manager",
       tenantId: "cadence-local",
@@ -266,7 +273,7 @@ export const DEMO_MANIFEST = Object.freeze({
     Object.freeze({
       username: "designer_demo",
       id: "d0b6257b-57fe-420b-9526-366e83c756aa",
-      email: "designer_demo@example.com", // deid-ignore: synthetic demo manifest fixture
+      email: "designer_demo@example.com",
       firstName: "Designer",
       lastName: "Demo",
       tenantId: "cadence-local",
@@ -280,7 +287,7 @@ export const DEMO_MANIFEST = Object.freeze({
     Object.freeze({
       username: "designer.lead",
       id: "8808e058-a472-4f72-9970-a027eddf35bc",
-      email: "designer.lead@example.com", // deid-ignore: synthetic demo manifest fixture
+      email: "designer.lead@example.com",
       firstName: "Designer",
       lastName: "Lead",
       tenantId: "cadence-local",
@@ -297,8 +304,8 @@ export const DEMO_MANIFEST = Object.freeze({
     }),
     Object.freeze({
       username: "safety.officer",
-      id: "3d290711-4167-4da5-b55a-4c75760bd27c", // deid-ignore: synthetic demo manifest fixture
-      email: "safety.officer@example.com", // deid-ignore: synthetic demo manifest fixture
+      id: "3d290711-4167-4da5-b55a-4c75760bd27c",
+      email: "safety.officer@example.com",
       firstName: "Safety",
       lastName: "Officer",
       tenantId: "cadence-local",
@@ -312,7 +319,7 @@ export const DEMO_MANIFEST = Object.freeze({
     Object.freeze({
       username: "auditor.lead",
       id: "d43095eb-1912-40dd-a528-fa04335a2342",
-      email: "auditor.lead@example.com", // deid-ignore: synthetic demo manifest fixture
+      email: "auditor.lead@example.com",
       firstName: "Auditor",
       lastName: "Lead",
       tenantId: "cadence-local",

@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Protocol.Import;
+using Cadence.Rules.Expressions;
+using Cadence.Rules.Packs;
 
 namespace Cadence.Ddf;
 
@@ -83,8 +85,10 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         var problems = new List<string>();
         var notes = new List<ProtocolImportNote>();
         var importedSpecs = new List<CollectionSpec>();
+        var importedRules = new List<Rule>();
         var batchUsedIds = NonCollectionElementIds(request.BaseDesign);
         string? firstTemplateTitle = null;
+        string? firstStudyOid = null;
 
         foreach (var rawId in request.TemplateIds!.Where(t => !string.IsNullOrWhiteSpace(t)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
@@ -97,6 +101,7 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
 
             var odm = await OdmDesignImporter.ImportAsync(templateBytes, resolveConcept, batchUsedIds, cancellationToken).ConfigureAwait(false);
             firstTemplateTitle ??= odm.Title;
+            firstStudyOid ??= odm.StudyOid;
             notes.AddRange(odm.Notes);
             if (!odm.IsSuccess)
             {
@@ -105,6 +110,10 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             }
 
             importedSpecs.AddRange(odm.CollectionSpecs);
+            if (odm.Rules is { Count: > 0 })
+            {
+                importedRules.AddRange(odm.Rules);
+            }
         }
 
         if (problems.Count > 0)
@@ -112,7 +121,13 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             return new ProtocolDesignImportResult(null, problems, DeduplicateNotes(notes));
         }
 
-        return FinalizeMergedFormsDesign(request.BaseDesign, importedSpecs, notes, request.FallbackTitle ?? firstTemplateTitle ?? "Protocol Draft");
+        return FinalizeMergedFormsDesign(
+            request.BaseDesign,
+            importedSpecs,
+            notes,
+            request.FallbackTitle ?? firstTemplateTitle ?? "Protocol Draft",
+            importedRules,
+            firstStudyOid);
     }
 
     private static async Task<ProtocolDesignImportResult> ImportOdmPayloadAsync(
@@ -133,7 +148,7 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         }
 
         var fallbackTitle = FirstNonBlank(request.BaseDesign?.Title, odm.Title, request.FallbackTitle, "Imported ODM Protocol")!;
-        return FinalizeMergedFormsDesign(request.BaseDesign, odm.CollectionSpecs, odm.Notes, fallbackTitle);
+        return FinalizeMergedFormsDesign(request.BaseDesign, odm.CollectionSpecs, odm.Notes, fallbackTitle, odm.Rules, odm.StudyOid);
     }
 
     private static async Task<ProtocolDesignImportResult> ImportUsdmPayloadAsync(
@@ -224,10 +239,13 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         ProtocolDesign? baseDesign,
         IReadOnlyList<CollectionSpec> incomingSpecs,
         IReadOnlyList<ProtocolImportNote> incomingNotes,
-        string fallbackTitle)
+        string fallbackTitle,
+        IReadOnlyList<Rule>? incomingRules = null,
+        string? studyOid = null)
     {
         var mergedSpecs = new List<CollectionSpec>();
         var usedIds = NonCollectionElementIds(baseDesign);
+        var idRenameMap = new Dictionary<string, string>(StringComparer.Ordinal);
 
         if (baseDesign is not null)
         {
@@ -253,10 +271,13 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         foreach (var spec in incomingSpecs)
         {
             var specId = OdmDesignImporter.AllocateUniqueElementId(spec.Id, "Form", usedIds);
+            idRenameMap[spec.Id] = specId;
             var adjustedItems = spec.Items.Select(item =>
             {
                 var candidate = usedIds.Contains(item.Id) ? $"{specId}.{item.Id}" : item.Id;
                 var itemId = OdmDesignImporter.AllocateUniqueElementId(candidate, "Item", usedIds);
+                idRenameMap[item.Id] = itemId;
+                idRenameMap[$"{spec.Id}.{item.Id}"] = $"{specId}.{itemId}";
                 return itemId == item.Id ? item : item with { Id = itemId };
             }).ToList();
             mergedSpecs.Add(spec with { Id = specId, Items = adjustedItems });
@@ -272,9 +293,78 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         };
 
         var check = ProtocolDesignDocument.Read(ProtocolDesignDocument.Write(candidateDesign));
-        return check.IsValid
-            ? new ProtocolDesignImportResult(check.Design, [], mergedNotes)
-            : new ProtocolDesignImportResult(null, check.Problems, mergedNotes);
+        if (!check.IsValid)
+        {
+            return new ProtocolDesignImportResult(null, check.Problems, mergedNotes);
+        }
+
+        ImportedRulePack? importedPack = null;
+        if (incomingRules is { Count: > 0 })
+        {
+            var usedRuleIds = new HashSet<string>(StringComparer.Ordinal);
+            var remappedRules = incomingRules.Select(rule =>
+            {
+                var mappedDataset = rule.Applicability.Dataset is not null && idRenameMap.TryGetValue(rule.Applicability.Dataset, out var ds)
+                    ? ds
+                    : rule.Applicability.Dataset;
+                var mappedCondition = OdmFormalExpressionParser.RewriteVariables(
+                    rule.Condition,
+                    varName => idRenameMap.TryGetValue(varName, out var mappedVar) ? mappedVar : varName);
+                var uniqueRuleId = OdmDesignImporter.AllocateRuleId(rule.Id, usedRuleIds);
+                return rule with
+                {
+                    Id = uniqueRuleId,
+                    Applicability = rule.Applicability with { Dataset = mappedDataset },
+                    Condition = mappedCondition,
+                };
+            }).ToList();
+
+            var packTitle = $"{title} Edit Checks";
+            if (packTitle.Length > RulePackJson.MaxTextLength)
+            {
+                packTitle = packTitle[..RulePackJson.MaxTextLength];
+            }
+
+            var pack = new RulePack(RuleAuthority.Study, packTitle, remappedRules);
+            var packJson = RulePackJson.ToJson(pack);
+            var (_, packProblems) = RulePackJson.Read(packJson);
+            if (packProblems.Count > 0)
+            {
+                return new ProtocolDesignImportResult(null, packProblems, mergedNotes);
+            }
+
+            var keySlug = BuildLibraryKeySlug(FirstNonBlank(studyOid, title, "odm")!);
+            importedPack = new ImportedRulePack(keySlug, packTitle, remappedRules.Count, packJson);
+        }
+
+        return new ProtocolDesignImportResult(check.Design, [], mergedNotes, RulePack: importedPack);
+    }
+
+    private static string BuildLibraryKeySlug(string source)
+    {
+        var sb = new StringBuilder("odm-");
+        bool lastDash = true;
+        foreach (var ch in source)
+        {
+            if (char.IsAsciiLetterOrDigit(ch))
+            {
+                sb.Append(char.ToLowerInvariant(ch));
+                lastDash = false;
+            }
+            else if (!lastDash)
+            {
+                sb.Append('-');
+                lastDash = true;
+            }
+        }
+
+        var slug = sb.ToString().Trim('-');
+        if (slug.Length > 52)
+        {
+            slug = slug[..52].TrimEnd('-');
+        }
+
+        return $"{slug}-edit-checks";
     }
 
     private static HashSet<string> NonCollectionElementIds(ProtocolDesign? design)

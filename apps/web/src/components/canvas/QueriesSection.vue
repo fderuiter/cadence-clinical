@@ -129,8 +129,11 @@
         v-else-if="queries.queries.length > 0"
         :queries="queries.queries"
         :can-manage="canManage"
+        :can-answer="canAnswer"
         :busy="queries.busy"
         :study-code="studyCode"
+        :form-to="queryFormLocation"
+        :observation-to="queryObservationLocation"
         :act="queries.act"
         :act-many="queries.actMany"
         show-form
@@ -154,9 +157,17 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
-import type { FormQueryStatus } from "../../api/ecrfQueriesApi";
+import type { RouteLocationRaw } from "vue-router";
+import type {
+  FormQueryResponse,
+  FormQueryStatus,
+} from "../../api/ecrfQueriesApi";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
-import { parseNodeRef } from "../../canvas/nodeRef";
+import {
+  collectionInstanceRef,
+  observationNodeRef,
+  parseNodeRef,
+} from "../../canvas/nodeRef";
 import { useFormQueries } from "../../composables/useFormQueries";
 import FormQueryList from "../ecrf/FormQueryList.vue";
 
@@ -176,14 +187,20 @@ const VALID_STATUSES = new Set<FormQueryStatus>([
   "cancelled",
 ]);
 
-const props = defineProps<{
-  studyCode: string;
-  canManage: boolean;
-  status?: string;
-  site?: string;
-  participant?: string;
-  changed?: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    studyCode: string;
+    canManage: boolean;
+    canAnswer?: boolean;
+    status?: string;
+    site?: string;
+    participant?: string;
+    changed?: string;
+  }>(),
+  {
+    canAnswer: undefined,
+  }
+);
 
 const emit = defineEmits<{
   filter: [next: StudyQueriesFilterState];
@@ -263,6 +280,41 @@ const hasActiveFilter = computed(() =>
     changedFilter.value
   )
 );
+
+function queryFormLocation(query: FormQueryResponse): RouteLocationRaw {
+  const formRef = collectionInstanceRef(query.form_id) ?? query.form_id;
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: {
+      stage: "data",
+      section: "queries",
+      ...(query.site_code ? { site: query.site_code } : {}),
+      form: formRef,
+      item: query.item_id,
+    },
+  };
+}
+
+function queryObservationLocation(
+  query: FormQueryResponse
+): RouteLocationRaw | null {
+  const obsRef = observationNodeRef(query.observation_id);
+  if (!obsRef) return null;
+  const formRef = collectionInstanceRef(query.form_id);
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: {
+      stage: "data",
+      section: "queries",
+      ...(query.site_code ? { site: query.site_code } : {}),
+      ...(formRef ? { form: formRef } : {}),
+      ...(query.item_id ? { item: query.item_id } : {}),
+      observation: obsRef,
+    },
+  };
+}
 
 function syncFilterUrl() {
   emit("filter", {

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="90" height="20" role="img" aria-label=".NET: 10.0">
+  <title>.NET: 10.0</title>
+  <rect width="46" height="20" rx="3" fill="#334155"/>
+  <rect x="43" width="47" height="20" rx="3" fill="#512BD4"/>
+  <rect x="43" width="4" height="20" fill="#512BD4"/>
+  <g fill="#ffffff" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif" font-size="11" font-weight="600">
+    <text x="23" y="14">.NET</text>
+    <text x="66" y="14">10.0</text>
+  </g>
+</svg>
