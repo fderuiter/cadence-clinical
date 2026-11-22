@@ -23,6 +23,7 @@ TOTAL_STAGES=6
 _STAGE_INDEX=0
 AUTO_ACCEPT="${CADENCE_WIZARD_AUTO_ACCEPT:-0}"
 MINIMAL=0
+LINTERS_ONLY=0
 
 for arg in "$@"; do
   case "$arg" in
@@ -32,10 +33,15 @@ for arg in "$@"; do
     --minimal)
       MINIMAL=1
       ;;
+    --linters-only)
+      LINTERS_ONLY=1
+      AUTO_ACCEPT=1
+      ;;
     -h|--help)
-      printf "Usage: %s [--dev] [--minimal] [--help]\n" "$0"
+      printf "Usage: %s [--dev] [--minimal] [--linters-only] [--help]\n" "$0"
       printf "  --dev, --non-interactive, -y  Skip prompts and accept all defaults\n"
       printf "  --minimal                     Skip heavy/optional steps (Playwright browsers, cert trust)\n"
+      printf "  --linters-only                Provision only SHA-256 verified actionlint and hadolint in .cadence/bin\n"
       exit 0
       ;;
   esac
@@ -68,6 +74,151 @@ stage() {
   printf '\n%s%s[%d/%d] %s%s\n' "$BOLD" "$CYAN" "$_STAGE_INDEX" "$TOTAL_STAGES" "$1" "$RESET"
   printf '%s  %s%s\n' "$DIM" "$2" "$RESET"
 }
+
+compute_sha256() {
+  local target_file="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$target_file" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$target_file" | awk '{print $1}'
+  else
+    return 1
+  fi
+}
+
+verify_sha256() {
+  local artifact_label="$1"
+  local target_file="$2"
+  local expected_hash="$3"
+  local actual_hash=""
+  if ! actual_hash="$(compute_sha256 "$target_file")"; then
+    fail_blocking "Neither sha256sum nor shasum is available to verify SHA-256 checksum for ${artifact_label}."
+    return 1
+  fi
+
+  local expected_lower
+  local actual_lower
+  expected_lower="$(printf '%s' "$expected_hash" | tr '[:upper:]' '[:lower:]')"
+  actual_lower="$(printf '%s' "$actual_hash" | tr '[:upper:]' '[:lower:]')"
+  if [[ "$actual_lower" != "$expected_lower" ]]; then
+    fail_blocking "Checksum verification failed for ${artifact_label} (expected ${expected_lower}, got ${actual_lower})."
+    return 1
+  fi
+
+  return 0
+}
+
+provision_cli_linters() {
+  local cadence_bin="${CADENCE_BIN_DIR:-$REPO_ROOT/.cadence/bin}"
+  mkdir -p "$cadence_bin"
+
+  local os_lower arch_raw actionlint_arch hadolint_os hadolint_arch
+  os_lower="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  arch_raw="$(uname -m)"
+
+  case "$arch_raw" in
+    x86_64|amd64)
+      actionlint_arch="amd64"
+      hadolint_arch="x86_64"
+      ;;
+    aarch64|arm64)
+      actionlint_arch="arm64"
+      hadolint_arch="arm64"
+      ;;
+    *)
+      fail_blocking "Unsupported CPU architecture '${arch_raw}' for actionlint/hadolint provisioning."
+      return 1
+      ;;
+  esac
+
+  local pinned_actionlint_sha=""
+  local pinned_hadolint_sha=""
+  case "${os_lower}_${actionlint_arch}" in
+    linux_amd64)
+      hadolint_os="linux"
+      pinned_actionlint_sha="8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8" # pragma: allowlist secret
+      pinned_hadolint_sha="c7187db94eeeeca956519a6af171adc31453941a1e777961f6e680f697c8c507" # pragma: allowlist secret
+      ;;
+    linux_arm64)
+      hadolint_os="linux"
+      pinned_actionlint_sha="325e971b6ba9bfa504672e29be93c24981eeb1c07576d730e9f7c8805afff0c6" # pragma: allowlist secret
+      pinned_hadolint_sha="f6198ef8090f404dbb771abfee086eb8c48ac177f30da7fd3510aca35b344b5d" # pragma: allowlist secret
+      ;;
+    darwin_amd64)
+      hadolint_os="macos"
+      pinned_actionlint_sha="5b44c3bc2255115c9b69e30efc0fecdf498fdb63c5d58e17084fd5f16324c644" # pragma: allowlist secret
+      pinned_hadolint_sha="ffe9bb18b23d5ed1eae50237aecdbb523d016e96da0bd4e7aa432040acfc3fde" # pragma: allowlist secret
+      ;;
+    darwin_arm64)
+      hadolint_os="macos"
+      pinned_actionlint_sha="aba9ced2dee8d27fecca3dc7feb1a7f9a52caefa1eb46f3271ea66b6e0e6953f" # pragma: allowlist secret
+      pinned_hadolint_sha="5c09f3213f8e40406abe048233d985eebef336d4a6a20021be47fadb6cf480a2" # pragma: allowlist secret
+      ;;
+    *)
+      fail_blocking "Unsupported OS '${os_lower}' for actionlint/hadolint provisioning."
+      return 1
+      ;;
+  esac
+
+  local actionlint_version="1.7.12"
+  local hadolint_version="2.15.1"
+  local actionlint_bin="$cadence_bin/actionlint"
+  local hadolint_bin="$cadence_bin/hadolint"
+
+  if [[ -x "$actionlint_bin" ]] && "$actionlint_bin" -version 2>/dev/null | grep -Fq "$actionlint_version" \
+     && [[ -z "${ACTIONLINT_SHA256:-}" ]] && [[ -z "${ACTIONLINT_DOWNLOAD_URL:-}" ]]; then
+    ok "actionlint ${actionlint_version} already provisioned in .cadence/bin."
+  else
+    local actionlint_asset="actionlint_${actionlint_version}_${os_lower}_${actionlint_arch}.tar.gz"
+    local actionlint_url="${ACTIONLINT_DOWNLOAD_URL:-https://github.com/rhysd/actionlint/releases/download/v${actionlint_version}/${actionlint_asset}}"
+    local expected_actionlint_sha="${ACTIONLINT_SHA256:-$pinned_actionlint_sha}"
+    local tmp_actionlint_dir
+    tmp_actionlint_dir="$(mktemp -d /tmp/cadence-actionlint.XXXXXX)"
+    local tmp_actionlint_archive="$tmp_actionlint_dir/$actionlint_asset"
+
+    if ! curl -fsSL --connect-timeout 15 --retry 3 "$actionlint_url" -o "$tmp_actionlint_archive"; then
+      rm -rf "$tmp_actionlint_dir"
+      fail_blocking "Failed to download actionlint v${actionlint_version} from ${actionlint_url}."
+    elif ! verify_sha256 "actionlint (${actionlint_asset})" "$tmp_actionlint_archive" "$expected_actionlint_sha"; then
+      rm -rf "$tmp_actionlint_dir"
+    elif ! tar -xzf "$tmp_actionlint_archive" -C "$tmp_actionlint_dir" actionlint || [[ ! -f "$tmp_actionlint_dir/actionlint" ]]; then
+      rm -rf "$tmp_actionlint_dir"
+      fail_blocking "Failed to extract actionlint binary from ${actionlint_asset}."
+    else
+      mv "$tmp_actionlint_dir/actionlint" "$actionlint_bin"
+      chmod +x "$actionlint_bin"
+      rm -rf "$tmp_actionlint_dir"
+      ok "actionlint ${actionlint_version} SHA-256 verified and installed in .cadence/bin."
+    fi
+  fi
+
+  if [[ -x "$hadolint_bin" ]] && "$hadolint_bin" --version 2>/dev/null | grep -Fq "$hadolint_version" \
+     && [[ -z "${HADOLINT_SHA256:-}" ]] && [[ -z "${HADOLINT_DOWNLOAD_URL:-}" ]]; then
+    ok "hadolint ${hadolint_version} already provisioned in .cadence/bin."
+  else
+    local hadolint_asset="hadolint-${hadolint_os}-${hadolint_arch}"
+    local hadolint_url="${HADOLINT_DOWNLOAD_URL:-https://github.com/hadolint/hadolint/releases/download/v${hadolint_version}/${hadolint_asset}}"
+    local expected_hadolint_sha="${HADOLINT_SHA256:-$pinned_hadolint_sha}"
+    local tmp_hadolint
+    tmp_hadolint="$(mktemp /tmp/cadence-hadolint.XXXXXX)"
+
+    if ! curl -fsSL --connect-timeout 15 --retry 3 "$hadolint_url" -o "$tmp_hadolint"; then
+      rm -f "$tmp_hadolint"
+      fail_blocking "Failed to download hadolint v${hadolint_version} from ${hadolint_url}."
+    elif ! verify_sha256 "hadolint (${hadolint_asset})" "$tmp_hadolint" "$expected_hadolint_sha"; then
+      rm -f "$tmp_hadolint"
+    else
+      mv "$tmp_hadolint" "$hadolint_bin"
+      chmod +x "$hadolint_bin"
+      ok "hadolint ${hadolint_version} SHA-256 verified and installed in .cadence/bin."
+    fi
+  fi
+}
+
+if [[ "$LINTERS_ONLY" == "1" ]]; then
+  provision_cli_linters
+  exit "$BLOCKING_FAILURE"
+fi
 
 printf '\n%s%s================================================================================%s\n' "$BOLD" "$CYAN" "$RESET"
 printf '%s%s   CADENCE CLINICAL PLATFORM — FULL-STACK DEVELOPER SETUP WIZARD                 %s\n' "$BOLD" "$CYAN" "$RESET"
@@ -167,6 +318,8 @@ elif command -v python3 >/dev/null 2>&1; then
 else
   fail_blocking "Neither 'uv' nor 'python3' was found on PATH to provision detect-secrets==1.5.0 and pip-audit==2.10.1 for pre-commit guardrails."
 fi
+
+provision_cli_linters
 
 if [[ "$MINIMAL" == "1" ]]; then
   info "Skipped Playwright browser download (--minimal)."
