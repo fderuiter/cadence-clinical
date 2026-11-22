@@ -91,7 +91,7 @@
         >
           <strong>
             <template v-if="res.subjectCode">{{ res.subjectCode }} · </template>
-            {{ res.itemId }} ({{ res.queryId }}):
+            {{ res.itemId }}:
           </strong>
           {{ res.message }}
         </li>
@@ -155,9 +155,9 @@
                 :data-testid="`query-form-link-${query.query_id}`"
                 class="form-query-link"
                 :to="formLink(query)!"
-                >form {{ query.form_id }}</component
+                >{{ formDisplayLabel(query) }}</component
               >
-              <template v-else>form {{ query.form_id }}</template>
+              <template v-else>{{ formDisplayLabel(query) }}</template>
             </template>
           </span>
           <span
@@ -232,6 +232,7 @@ import {
   queryActions,
   type FormQueryBatchItemResult,
 } from "../../composables/useFormQueries";
+import { getNodeDisplay } from "../../canvas/nodeResolver";
 
 /**
  * A list of eCRF queries (#5461) with the transitions the Execution module allows from each state, links to open the
@@ -250,6 +251,7 @@ const props = withDefaults(
     showContext?: boolean;
     studyCode?: string;
     subjectCode?: string;
+    formTitles?: Record<string, string>;
     assertionsLocked?: boolean;
     formTo?: (query: FormQueryResponse) => RouteLocationRaw | null;
     observationTo?: (query: FormQueryResponse) => RouteLocationRaw | null;
@@ -282,6 +284,19 @@ function formLink(query: FormQueryResponse): RouteLocationRaw | null {
   if (!hasRouter) return null;
   if (props.formTo) return props.formTo(query);
   return defaultFormLocation(query);
+}
+
+function formDisplayLabel(query: FormQueryResponse): string {
+  const fromProp = props.formTitles?.[query.form_id]?.trim();
+  if (fromProp) return fromProp;
+  if (query.collection_spec_id) {
+    return query.planned_activity_id
+      ? `${query.collection_spec_id} · ${query.planned_activity_id}`
+      : query.collection_spec_id;
+  }
+  const resolved = getNodeDisplay(`collection_instance:${query.form_id}`);
+  if (resolved.resolved && resolved.title) return resolved.title;
+  return "Case report form";
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -365,7 +380,11 @@ watch(
 );
 
 function isEligibleForBulk(query: FormQueryResponse): boolean {
-  return queryActions(query, props.canManage).includes(bulkAction.value);
+  return queryActions(
+    query,
+    props.canManage,
+    effectiveCanAnswer.value
+  ).includes(bulkAction.value);
 }
 
 const eligibleQueries = computed(() =>

@@ -58,7 +58,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.studies`](#kernelstudies) | `Study` | 11 |
 | [`kernel.study_sites`](#kernelstudy_sites) | `StudySite` | 10 |
 | [`kernel.study_standards_profiles`](#kernelstudy_standards_profiles) | `StudyStandardsProfile` | 11 |
-| [`kernel.subscriptions`](#kernelsubscriptions) | `Subscription` | 11 |
+| [`kernel.subscriptions`](#kernelsubscriptions) | `Subscription` | 19 |
 | [`kernel.tenant_memberships`](#kerneltenant_memberships) | `TenantMembership` | 8 |
 | [`kernel.tenants`](#kerneltenants) | `Tenant` | 9 |
 | [`kernel.validation_detections`](#kernelvalidation_detections) | `ValidationDetectionRecord` | 17 |
@@ -1563,12 +1563,20 @@ Entity: `Subscription`
 | Column | Type | Null | Default | Key |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | no |  | PK |
+| `activated_at` | `timestamp with time zone` | yes |  |  |
+| `active_study_count` | `integer` | yes |  |  |
+| `billing_confirmation` | `character varying(128)` | yes |  |  |
+| `countries_csv` | `character varying(1024)` | yes |  |  |
 | `created_at` | `timestamp with time zone` | no |  |  |
 | `created_by` | `character varying(255)` | no |  |  |
 | `expired_at` | `timestamp with time zone` | yes |  |  |
+| `participant_count` | `integer` | yes |  |  |
 | `reason_for_change` | `character varying(1000)` | no |  |  |
+| `site_count` | `integer` | yes |  |  |
 | `started_at` | `timestamp with time zone` | no |  |  |
 | `status` | `character varying(32)` | no |  |  |
+| `study_duration_months` | `integer` | yes |  |  |
+| `study_phase` | `character varying(64)` | yes |  |  |
 | `tenant_id` | `uuid` | no |  |  |
 | `tier` | `character varying(32)` | no |  |  |
 | `trial_ends_at` | `timestamp with time zone` | yes |  |  |

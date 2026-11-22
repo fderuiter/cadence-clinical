@@ -6,7 +6,16 @@
     :aria-busy="loading"
   >
     <h2 id="protocol-versions-title">Protocol versions</h2>
-    <p id="protocol-versions-status" class="status-line" role="status">
+    <div
+      v-if="error"
+      id="protocol-versions-status"
+      class="status-line"
+      role="alert"
+    >
+      <p class="status-line">Protocol versions couldn't be loaded right now.</p>
+      <SupportDetails :detail="error" />
+    </div>
+    <p v-else id="protocol-versions-status" class="status-line" role="status">
       {{ statusLine }}
     </p>
 
@@ -70,13 +79,12 @@ import {
 } from "../../api/kernelApi";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
+import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
 import ProtocolImportPanel from "./ProtocolImportPanel.vue";
+import SupportDetails from "./SupportDetails.vue";
 
 /**
- * The study's protocol versions, newest first, from the kernel (ADR-2540). The study is found by its code with
- * kernel search, then its versions are listed without content. A version the reader may not see keeps its place,
- * with only why it is hidden. Selecting a version fills the inspector, where Impact shows what an amendment changes
- * and what depends on the version it amends (K-PROT-2).
+ * The study's protocol versions, newest first (ADR-2540). Restricted versions keep their place as masked placeholders.
  */
 const props = defineProps<{ studyCode: string; selectedRef: string }>();
 const emit = defineEmits<{ select: [version: KernelProtocolVersion] }>();
@@ -121,14 +129,13 @@ function parentNumber(version: KernelProtocolVersion): string {
 }
 
 function maskWords(mask: string | null): string {
-  return (mask ?? "").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+  return maskReasonWords(mask);
 }
 
 const statusLine = computed(() => {
   if (loading.value) return "Loading protocol versions...";
-  if (error.value) return `The kernel couldn't answer: ${error.value}`;
   if (noStudy.value) {
-    return `The kernel has no study ${props.studyCode} that you may see.`;
+    return `Study ${props.studyCode} wasn't found or isn't visible to your account.`;
   }
   const count = versions.value.length;
   if (count === 0) return `${props.studyCode} has no protocol versions yet.`;
@@ -157,7 +164,18 @@ async function load(code: string) {
     }
     studyNodeRef.value = study;
     const listed = await kernelApi.listProtocolVersions(study);
-    if (request === latest) versions.value = listed;
+    if (request === latest) {
+      versions.value = listed;
+      for (const v of listed) {
+        if (v.ref) {
+          seedNodeSummary(v.ref, {
+            kind: "protocol_version",
+            title: `Version ${v.number}`,
+            status: v.status,
+          });
+        }
+      }
+    }
   } catch (e) {
     if (request === latest) {
       error.value = e instanceof Error ? e.message : String(e);
@@ -170,12 +188,27 @@ async function load(code: string) {
 async function onDraftImported(summary: KernelProtocolDraftSummary) {
   if (studyNodeRef.value) {
     try {
-      versions.value = await kernelApi.listProtocolVersions(studyNodeRef.value);
+      const listed = await kernelApi.listProtocolVersions(studyNodeRef.value);
+      versions.value = listed;
+      for (const v of listed) {
+        if (v.ref) {
+          seedNodeSummary(v.ref, {
+            kind: "protocol_version",
+            title: `Version ${v.number}`,
+            status: v.status,
+          });
+        }
+      }
     } catch {
       // Keep the imported version visible even if refreshing the list fails.
     }
   }
   if (summary.version?.ref) {
+    seedNodeSummary(summary.version.ref, {
+      kind: "protocol_version",
+      title: `Version ${summary.version.number}`,
+      status: summary.version.status,
+    });
     emit("select", summary.version);
   }
 }

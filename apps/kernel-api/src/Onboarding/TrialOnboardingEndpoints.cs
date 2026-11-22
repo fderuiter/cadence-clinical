@@ -9,6 +9,7 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -31,6 +32,7 @@ public static class TrialOnboardingEndpoints
         ArgumentNullException.ThrowIfNull(kernel);
 
         kernel.MapPost("/onboarding/trial", BootstrapTrialAsync)
+            .AllowExpiredTenantWrite()
             .WithName("KernelBootstrapTrialWorkspace")
             .WithSummary("Provisions an isolated self-service trial workspace for an authenticated OIDC caller.")
             .WithDescription(

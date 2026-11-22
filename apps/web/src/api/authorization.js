@@ -16,6 +16,62 @@ import { resolveGatewayBaseUrl } from "../utils/demoMode";
 /** Seconds of remaining validity below which the token is refreshed first. */
 export const TOKEN_MIN_VALIDITY_SECONDS = 30;
 
+/** Canonical RFC 9457 error code returned when a tenant's trial has expired. */
+export const KERNEL_SUBSCRIPTION_EXPIRED_CODE = "K.Subscription.Expired";
+
+/** Actionable user-facing upgrade guidance when a write is blocked by trial expiry. */
+export const SUBSCRIPTION_EXPIRED_GUIDANCE =
+  "Workspace trial has expired (Read & Export mode). Clinical reads, regulated exports, and electronic signatures remain available; complete study scoping on Plans to activate full write access.";
+
+/**
+ * True when an HTTP error payload represents an expired tenant subscription (`K.Subscription.Expired`).
+ *
+ * @param {number|null|undefined} status
+ * @param {unknown} errorBody
+ * @returns {boolean}
+ */
+export function isSubscriptionExpiredProblem(status, errorBody) {
+  if (!errorBody || typeof errorBody !== "object") {
+    return false;
+  }
+  const code = /** @type {{ code?: unknown }} */ (errorBody).code;
+  if (code !== KERNEL_SUBSCRIPTION_EXPIRED_CODE) {
+    return false;
+  }
+  return status === 403 || status == null || status === 0;
+}
+
+/**
+ * Synchronises the auth store's expired-subscription state when a mutation fails
+ * with `403 K.Subscription.Expired` and returns actionable upgrade guidance.
+ *
+ * @param {number|null|undefined} status
+ * @param {unknown} errorBody
+ * @returns {string|null}
+ */
+export function notifySubscriptionExpiredIfNeeded(status, errorBody) {
+  if (!isSubscriptionExpiredProblem(status, errorBody)) {
+    return null;
+  }
+  const detail =
+    typeof (/** @type {{ detail?: unknown }} */ (errorBody).detail) ===
+      "string" &&
+    /** @type {{ detail: string }} */ (errorBody).detail.trim().length > 0
+      ? /** @type {{ detail: string }} */ (errorBody).detail.trim()
+      : null;
+  try {
+    const authStore = useAuthStore();
+    if (typeof authStore.markSubscriptionExpired === "function") {
+      authStore.markSubscriptionExpired(
+        detail || SUBSCRIPTION_EXPIRED_GUIDANCE
+      );
+    }
+  } catch {
+    // Pinia store not active (e.g. unit test outside app context)
+  }
+  return SUBSCRIPTION_EXPIRED_GUIDANCE;
+}
+
 export function getApiBaseUrl() {
   return resolveGatewayBaseUrl();
 }
@@ -116,6 +172,13 @@ export function installAuthorizedFetch(target = globalThis) {
     const retryClone =
       !hadExplicitAuth && input instanceof Request ? input.clone() : null;
     const response = await original.call(target, input, { ...init, headers });
+    if (response.status === 403) {
+      const errBody = await response
+        .clone()
+        .json()
+        .catch(() => null);
+      notifySubscriptionExpiredIfNeeded(403, errBody);
+    }
     if (response.status === 401 && !hadExplicitAuth) {
       const errBody = await response
         .clone()

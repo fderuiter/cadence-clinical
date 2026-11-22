@@ -181,7 +181,7 @@ public static class QualityGates
             ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("rulesets", ["validate-rulesets"],
-            "Branch and tag rulesets in `.github/rulesets/*.json`, strict status check policy, `CI Gate` upstream job coverage, and workflow check parity",
+            "`CI Gate` upstream job coverage in `.github/workflows/ci.yml`, plus branch and tag rulesets in `.github/rulesets/*.json`, strict status check policy, and workflow check parity when present",
             ctx => RulesetService.Validate(ctx.RepoRoot) == 0),
         new("imports", ["validate-imports"], "No `using` of another service's namespace across `apps/<service>`",
             ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot) == 0),

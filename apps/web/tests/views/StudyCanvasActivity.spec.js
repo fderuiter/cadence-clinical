@@ -23,6 +23,7 @@ vi.mock("../../src/api/kernelApi", () => ({
     listProtocolVersions: vi.fn(),
     getProtocolVersion: vi.fn(),
     getCommands: vi.fn(),
+    getNode: vi.fn(),
   },
   isMasked: (object) => object.mask !== null,
 }));
@@ -99,6 +100,36 @@ describe("Clinical Canvas study activity (PX-11, ADR-2485)", () => {
       },
     ]);
     vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([]);
+    vi.mocked(kernelApi.getNode).mockImplementation(async (ref) => {
+      if (ref === ENROLLMENT) {
+        return {
+          ref: ENROLLMENT,
+          kind: "enrollment",
+          code: "017-0001",
+          title: "Enrollment 017-0001",
+          status: "Screened",
+          mask: null,
+        };
+      }
+      if (ref === VERSION) {
+        return {
+          ref: VERSION,
+          kind: "protocol_version",
+          code: null,
+          title: "Version 3",
+          status: "Approved",
+          mask: null,
+        };
+      }
+      return {
+        ref,
+        kind: "record",
+        code: null,
+        title: null,
+        status: null,
+        mask: null,
+      };
+    });
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -147,7 +178,7 @@ describe("Clinical Canvas study activity (PX-11, ADR-2485)", () => {
     expect(rows()).toEqual([
       {
         what: "Participant screened",
-        subject: "enrollment 000000c1 version 1",
+        subject: "017-0001 · Enrollment 017-0001",
         actor: "by crc@site.test",
       },
       {
@@ -157,12 +188,28 @@ describe("Clinical Canvas study activity (PX-11, ADR-2485)", () => {
       },
       {
         what: "Protocol version approved",
-        subject: "protocol version 000000b1 version 3",
+        subject: "Version 3",
         actor: "by sponsor@cro.test",
       },
     ]);
     expect(wrapper.find("#activity-status").exists()).toBe(false);
     expect(wrapper.find("#btn-activity-older").exists()).toBe(false);
+  });
+
+  it("selects a non-version activity subject in the inspector when clicked", async () => {
+    vi.mocked(kernelApi.activity).mockResolvedValue({
+      entries: [SCREENED],
+      next: null,
+    });
+
+    await open();
+    await wrapper.find("#activity-list a").trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.query.node).toBe(ENROLLMENT);
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe(
+      "017-0001 · Enrollment 017-0001"
+    );
   });
 
   it("opens a protocol version from its activity entry", async () => {
@@ -241,7 +288,7 @@ describe("Clinical Canvas study activity (PX-11, ADR-2485)", () => {
     );
   });
 
-  it("reports the kernel's refusal as it is", async () => {
+  it("presents a plain status message and collapsible support details when activity cannot be read", async () => {
     vi.mocked(kernelApi.activity).mockRejectedValue(
       new ApiError(
         `You can't see ${STUDY} (NotPermitted), so its activity is not shown.`,
@@ -251,19 +298,22 @@ describe("Clinical Canvas study activity (PX-11, ADR-2485)", () => {
 
     await open();
 
-    expect(wrapper.find("#activity-status").text()).toBe(
-      `The kernel couldn't answer: You can't see ${STUDY} (NotPermitted), so its activity is not shown.`
+    expect(wrapper.find("#activity-status").text()).toContain(
+      "Recent activity couldn't be loaded right now."
+    );
+    expect(wrapper.find("#study-activity details").text()).toContain(
+      "NotPermitted"
     );
     expect(wrapper.find("#activity-list").exists()).toBe(false);
   });
 
-  it("says so when the kernel has no study with that code the reader may see", async () => {
+  it("says in plain terms when the study wasn't found or isn't visible", async () => {
     vi.mocked(kernelApi.search).mockResolvedValue([]);
 
     await open();
 
     expect(wrapper.find("#activity-status").text()).toBe(
-      "The kernel has no study CAD-101 that you may see."
+      "Study CAD-101 wasn't found or isn't visible to your account."
     );
     expect(kernelApi.activity).not.toHaveBeenCalled();
   });

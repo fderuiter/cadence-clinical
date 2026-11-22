@@ -302,6 +302,49 @@ public sealed class RulesetServiceTests : IDisposable
         writer.ToString().Should().Contain("HTTP 403");
     }
 
+    [Fact]
+    public void Validate_PassesWithoutRulesetsDirectory_WhenCiGateCoverageIsValid()
+    {
+        Directory.Delete(Path.Combine(_root, ".github", "rulesets"), recursive: true);
+        using var writer = new StringWriter();
+
+        int exitCode = RulesetService.Validate(_root, writer);
+
+        exitCode.Should().Be(0, writer.ToString());
+        writer.ToString().Should().Contain("Validated CI Gate workflow coverage");
+    }
+
+    [Fact]
+    public void Validate_FailsWithoutRulesetsDirectory_WhenCiGateCoverageIsBroken()
+    {
+        Directory.Delete(Path.Combine(_root, ".github", "rulesets"), recursive: true);
+        WriteCiWorkflow(ciGateNeeds: "[unit-tests]", ciGateIf: "success()", checkComplianceResult: false);
+        using var writer = new StringWriter();
+
+        RulesetService.Validate(_root, writer).Should().Be(1);
+        string output = writer.ToString();
+        output.Should().Contain("if: always()");
+        output.Should().Contain("compliance");
+    }
+
+    [Fact]
+    public void Sync_FailsClosed_WhenRulesetsDirectoryIsMissing()
+    {
+        Directory.Delete(Path.Combine(_root, ".github", "rulesets"), recursive: true);
+        using var writer = new StringWriter();
+
+        int exitCode = RulesetService.Sync(
+            repoRoot: _root,
+            dryRun: true,
+            repoOverride: "owner/repo",
+            runner: (_, _, _) => new RulesetService.ProcessOutcome(1, "", "unexpected"),
+            environment: _ => null,
+            output: writer);
+
+        exitCode.Should().Be(1);
+        writer.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
+    }
+
     private void SeedValidFixture()
     {
         WriteMainRuleset(strict: true, integrationId: RulesetService.GitHubActionsIntegrationId, firstCheck: "CI Gate");

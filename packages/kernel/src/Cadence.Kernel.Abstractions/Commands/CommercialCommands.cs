@@ -35,7 +35,24 @@ public sealed record ExpireSubscription(
     string ReasonForChange) : ICommand<SubscriptionId>;
 
 /// <summary>
-/// Activates or upgrades a tenant's commercial <c>Subscription</c>, clearing trial read-only restrictions.
+/// Switches the commercial <see cref="CommercialTier"/> of an active <see cref="SubscriptionStatus.Trialing"/>
+/// subscription (or already <see cref="SubscriptionStatus.Active"/> subscription) without activating billing or
+/// extending the original 30-day <c>TrialEndsAt</c> window. Intentionally excluded from
+/// <see cref="BaselineKernelCommandAttribute"/> so expired trials cannot change tiers without completing scoping.
+/// </summary>
+[KernelCapability("subscription.switch_tier", VerbClass.Execute, Resource = nameof(SubscriptionId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+public sealed record SwitchTrialTier(
+    TenantId TenantId,
+    SubscriptionId SubscriptionId,
+    CommercialTier Tier,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<SubscriptionId>;
+
+/// <summary>
+/// Activates or upgrades a tenant's commercial <c>Subscription</c> with validated study scoping and purchase-order or
+/// quote confirmation, transitioning <see cref="SubscriptionStatus.Trialing"/> or <see cref="SubscriptionStatus.Expired"/>
+/// workspaces to <see cref="SubscriptionStatus.Active"/> and clearing trial read-only restrictions.
 /// </summary>
 [KernelCapability("subscription.activate", VerbClass.Approve, Resource = nameof(SubscriptionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
@@ -44,6 +61,7 @@ public sealed record ActivateSubscription(
     TenantId TenantId,
     SubscriptionId SubscriptionId,
     CommercialTier Tier,
+    SubscriptionScoping? Scoping,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<SubscriptionId>;
 
@@ -99,6 +117,9 @@ public static class CommercialErrors
 
     public static readonly KernelError TierInvalid =
         new("K.Commercial.TierInvalid", 422, "The requested commercial tier must be Individual, Select, or Complete.");
+
+    public static readonly KernelError ScopingInvalid =
+        new("K.Commercial.ScopingInvalid", 422, "Study scoping parameters and a purchase order or quote reference are required to activate a subscription.");
 
     public static readonly KernelError IdentityProviderSyncFailed =
         new("K.Commercial.IdentityProviderSyncFailed", 502, "The trial workspace was provisioned, but updating identity provider claims failed; retry to complete synchronization.");

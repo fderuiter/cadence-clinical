@@ -21,6 +21,7 @@ vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: {
     listProposals: vi.fn(async () => []),
     getCommands: vi.fn(),
+    getNode: vi.fn(),
     search: vi.fn(),
     trace: vi.fn(),
     dependents: vi.fn(),
@@ -129,8 +130,49 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
     });
     vi.mocked(executionApi.getSiteComplianceStatus).mockReset();
     vi.mocked(kernelApi.getCommands).mockReset();
+    vi.mocked(kernelApi.getNode).mockReset();
     vi.mocked(kernelApi.trace).mockReset();
     vi.mocked(kernelApi.dependents).mockReset();
+    vi.mocked(kernelApi.getNode).mockImplementation(async (ref) => {
+      if (ref.startsWith("study_site:")) {
+        return {
+          ref,
+          kind: "study_site",
+          code: "017",
+          title: "Boston General",
+          status: "Active",
+          mask: null,
+        };
+      }
+      if (ref.startsWith("observation:")) {
+        return {
+          ref,
+          kind: "observation",
+          code: "SYSBP",
+          title: "Systolic Blood Pressure",
+          status: "Recorded",
+          mask: null,
+        };
+      }
+      if (ref.startsWith("grant:")) {
+        return {
+          ref,
+          kind: "grant",
+          code: null,
+          title: "Study Monitor Grant",
+          status: "Active",
+          mask: null,
+        };
+      }
+      return {
+        ref,
+        kind: "participant",
+        code: "017-0001",
+        title: "017-0001",
+        status: "Active",
+        mask: null,
+      };
+    });
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -200,7 +242,7 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
     );
     const explain = wrapper.find("#kernel-explain");
     expect(explain.find("#kernel-explain-title").text()).toBe(
-      "Why: ChangeParticipantState"
+      "Why: Change participant state"
     );
     expect(explain.text()).toContain(
       "You may not participant.change_state on this participant."
@@ -208,14 +250,16 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
     expect(explain.find(".condition-unmet").text()).toContain(
       "Obtain a grant or delegation of participant.change_state covering this participant"
     );
-    expect(explain.find(".condition-unmet code").text()).toBe(REF);
+    expect(explain.find(".condition-unmet .node-ref-chip").text()).toBe(
+      "017-0001"
+    );
     expect(explain.text()).toContain("Ask a study administrator for a grant.");
 
     await wrapper.find("#verb-details").trigger("click");
     expect(wrapper.find("#inspector-state").exists()).toBe(true);
   });
 
-  it("reports the kernel's refusal as it is rather than listing nothing", async () => {
+  it("presents a plain status message and collapsible support details when commands cannot be read", async () => {
     vi.mocked(kernelApi.getCommands).mockRejectedValue(
       new ApiError("Your sign-in's tenant is not an active kernel tenant.", 403)
     );
@@ -224,13 +268,16 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
     await wrapper.find("#verb-act").trigger("click");
     await flushPromises();
 
-    expect(wrapper.find("#kernel-act-status").text()).toBe(
-      "The kernel couldn't answer: Your sign-in's tenant is not an active kernel tenant."
+    expect(wrapper.find("#kernel-act-status").text()).toContain(
+      "Available actions couldn't be loaded right now."
+    );
+    expect(wrapper.find("#kernel-act details").text()).toContain(
+      "Your sign-in's tenant is not an active kernel tenant."
     );
     expect(wrapper.find("#kernel-act-list").exists()).toBe(false);
   });
 
-  it("says when no kernel command applies", async () => {
+  it("says in plain clinical terms when no action is available", async () => {
     vi.mocked(kernelApi.getCommands).mockResolvedValue([]);
     await openParticipant();
 
@@ -238,7 +285,7 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
     await flushPromises();
 
     expect(wrapper.find("#kernel-act-status").text()).toBe(
-      "No kernel command applies to this object."
+      "No actions are available for this record."
     );
   });
 
@@ -277,11 +324,22 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
     expect(wrapper.find("#verb-trace").attributes("aria-pressed")).toBe("true");
     const edges = wrapper.findAll("#kernel-trace-list .lineage-edge");
     expect(edges.map((e) => e.text().replace(/\s+/g, " "))).toEqual([
-      `${REF} governed by ${SITE}`,
-      `${REF} required by Hidden consent (blinded)`,
+      "017-0001 governed by Site 017 · Boston General",
+      "017-0001 required by Hidden consent (blinded)",
     ]);
     expect(wrapper.find("#kernel-trace").text()).toContain(
       "The lineage goes further than the 10 steps shown."
+    );
+
+    // Clicking a referenced study object in lineage selects it in CanvasInspector
+    const siteLink = wrapper
+      .findAll("#kernel-trace-list .node-ref-chip")
+      .find((link) => link.text().includes("Site 017"));
+    await siteLink.trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.query.node).toBe(SITE);
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe(
+      "Site 017 · Boston General"
     );
   });
 
@@ -341,8 +399,8 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
   });
 
   it.each([
-    ["trace", "The kernel records nothing this came from."],
-    ["impact", "Nothing the kernel records depends on this."],
+    ["trace", "No upstream source records are recorded for this item."],
+    ["impact", "No downstream records depend on this item."],
   ])("says when %s finds nothing", async (verb, message) => {
     vi.mocked(kernelApi.trace).mockResolvedValue({
       nodes: [node(REF, "participant", 0)],
@@ -362,7 +420,7 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
     expect(wrapper.find(`#kernel-${verb}`).text()).toContain(message);
   });
 
-  it("reports a lineage refusal as it is", async () => {
+  it("presents a plain status message and support disclosure when lineage fails", async () => {
     vi.mocked(kernelApi.trace).mockRejectedValue(
       new ApiError("Lineage reads name their reader.", 403)
     );
@@ -371,8 +429,11 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
     await wrapper.find("#verb-trace").trigger("click");
     await flushPromises();
 
-    expect(wrapper.find("#kernel-trace [role=alert]").text()).toBe(
-      "The kernel couldn't answer: Lineage reads name their reader."
+    expect(wrapper.find("#kernel-trace [role=alert]").text()).toContain(
+      "Related records couldn't be loaded right now."
+    );
+    expect(wrapper.find("#kernel-trace details").text()).toContain(
+      "Lineage reads name their reader."
     );
     expect(wrapper.find("#kernel-trace-list").exists()).toBe(false);
   });

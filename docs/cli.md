@@ -287,10 +287,12 @@ pnpm cadence rulesets --repo fderuiter/cadence-clinical # target an explicit own
 | `--dry-run`           | Validates `.github/rulesets/*.json` and workflow parity, prints the planned `gh api` reconciliation, and exits without mutating GitHub. |
 | `--repo <owner/repo>` | Target GitHub repository (`owner/repo`). Defaults to `GITHUB_REPOSITORY`, then `git remote get-url origin`.                             |
 
-Before making any API request, `cadence rulesets` runs the `rulesets` quality gate (`RulesetService.Validate`): every
-branch ruleset must set `strict_required_status_checks_policy: true`, pin required status checks to GitHub Actions
-(`integration_id: 15368`), require `CI Gate` and `Check for Merge Conflicts`, and match active pull-request workflow
-jobs (`CI Gate` in `.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request validation job).
+Before making any API request, `cadence rulesets` requires `.github/rulesets/*.json` to be present and validates all
+declarative ruleset invariants (`RulesetService.Sync`): every branch ruleset must set
+`strict_required_status_checks_policy: true`, pin required status checks to GitHub Actions (`integration_id: 15368`),
+require `CI Gate` and `Check for Merge Conflicts`, and match active pull-request workflow jobs (`CI Gate` in
+`.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request validation job; `pnpm cadence check rulesets`
+continues to enforce `CI Gate` workflow coverage even when `.github/rulesets` is absent).
 
 Without `--dry-run`, it fetches `gh api --paginate repos/<owner>/<repo>/rulesets?per_page=100`, updates existing
 rulesets by `name` (`PUT repos/<owner>/<repo>/rulesets/<id> --input <file>`), and creates missing ones

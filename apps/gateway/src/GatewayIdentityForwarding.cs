@@ -177,11 +177,12 @@ public static class GatewayIdentityForwarding
 
     /// <summary>
     /// Registers the proxy transform: strip every client-supplied identity header and the bearer token, then
-    /// attach freshly signed identity headers for the authenticated caller.
+    /// attach freshly signed identity headers (including cached <c>X-Tenant-Read-Only</c> state) for the
+    /// authenticated caller, and evict cached tenant state immediately after commercial tier or activation changes.
     /// </summary>
     public static void AddSignedIdentityTransform(TransformBuilderContext builderContext)
     {
-        builderContext.AddRequestTransform(transformContext =>
+        builderContext.AddRequestTransform(async transformContext =>
         {
             var proxyHeaders = transformContext.ProxyRequest.Headers;
             foreach (string header in StrippedRequestHeaders)
@@ -192,7 +193,23 @@ public static class GatewayIdentityForwarding
             var identity = CreateIdentity(transformContext.HttpContext);
             if (identity is null)
             {
-                return ValueTask.CompletedTask;
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(identity.TenantId)
+                && !IsDirectEntitlementRead(transformContext.HttpContext.Request))
+            {
+                var entitlementCache = transformContext.HttpContext.RequestServices.GetService<ITenantEntitlementCache>();
+                if (entitlementCache is not null)
+                {
+                    bool isReadOnly = await entitlementCache.IsTenantReadOnlyAsync(
+                        identity.TenantId,
+                        transformContext.HttpContext.RequestAborted).ConfigureAwait(false);
+                    if (isReadOnly)
+                    {
+                        identity = identity with { TenantReadOnly = true };
+                    }
+                }
             }
 
             var signing = transformContext.HttpContext.RequestServices.GetRequiredService<IOptions<GatewaySigningOptions>>().Value;
@@ -204,8 +221,38 @@ public static class GatewayIdentityForwarding
             {
                 proxyHeaders.TryAddWithoutValidation(name, value);
             }
+        });
+
+        builderContext.AddResponseTransform(transformContext =>
+        {
+            if (IsCommercialStateMutation(transformContext.HttpContext.Request))
+            {
+                var entitlementCache = transformContext.HttpContext.RequestServices.GetService<ITenantEntitlementCache>();
+                if (entitlementCache is not null)
+                {
+                    string? tenantId = transformContext.HttpContext.User.FindFirst(CadenceClaimTypes.TenantId)?.Value;
+                    if (!string.IsNullOrWhiteSpace(tenantId))
+                    {
+                        entitlementCache.Evict(tenantId);
+                    }
+                    else
+                    {
+                        entitlementCache.EvictAll();
+                    }
+                }
+            }
 
             return ValueTask.CompletedTask;
         });
     }
+
+    private static bool IsDirectEntitlementRead(HttpRequest request) =>
+        HttpMethods.IsGet(request.Method)
+        && request.Path.Equals("/api/v1/kernel/entitlements", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsCommercialStateMutation(HttpRequest request) =>
+        HttpMethods.IsPost(request.Method)
+        && (request.Path.StartsWithSegments("/api/v1/kernel/entitlements/tier", StringComparison.OrdinalIgnoreCase)
+            || request.Path.StartsWithSegments("/api/v1/kernel/entitlements/activate", StringComparison.OrdinalIgnoreCase)
+            || request.Path.StartsWithSegments("/api/v1/kernel/onboarding/trial", StringComparison.OrdinalIgnoreCase));
 }

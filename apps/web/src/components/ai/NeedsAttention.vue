@@ -7,8 +7,19 @@
   >
     <h2 id="needs-attention-title">Needs attention</h2>
 
+    <div
+      v-if="error"
+      id="needs-attention-status"
+      class="attention-status"
+      role="alert"
+    >
+      <p class="attention-status">
+        Items needing attention couldn't be loaded right now.
+      </p>
+      <SupportDetails :detail="error" />
+    </div>
     <p
-      v-if="statusLine"
+      v-else-if="statusLine"
       id="needs-attention-status"
       class="attention-status"
       role="status"
@@ -58,6 +69,8 @@ import type { RouteLocationRaw } from "vue-router";
 import { kernelApi, type KernelProposal } from "../../api/kernelApi";
 import { isAgentProposal } from "../../ai/proposals";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import { maskReasonWords } from "../../canvas/nodeResolver";
+import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
 /**
@@ -77,9 +90,8 @@ const noStudy = ref(false);
 
 const statusLine = computed(() => {
   if (loading.value) return "Reading what needs attention...";
-  if (error.value) return `The kernel couldn't answer: ${error.value}`;
   if (noStudy.value) {
-    return `The kernel has no study ${props.studyCode} that you may see.`;
+    return `Study ${props.studyCode} wasn't found or isn't visible to your account.`;
   }
   if (!proposals.value.length) return "Nothing is waiting on a decision.";
   return "";
@@ -104,7 +116,7 @@ function when(value: string): string {
 }
 
 function maskWords(mask: string | null | undefined): string {
-  return (mask ?? "").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+  return maskReasonWords(mask);
 }
 
 let latest = 0;

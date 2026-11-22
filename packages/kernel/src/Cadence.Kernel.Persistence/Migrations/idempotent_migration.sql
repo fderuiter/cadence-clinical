@@ -4376,3 +4376,70 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261121163115_AddSubscriptionScopingFields') THEN
+    ALTER TABLE kernel.subscriptions ADD activated_at timestamp with time zone;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261121163115_AddSubscriptionScopingFields') THEN
+    ALTER TABLE kernel.subscriptions ADD active_study_count integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261121163115_AddSubscriptionScopingFields') THEN
+    ALTER TABLE kernel.subscriptions ADD billing_confirmation character varying(128);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261121163115_AddSubscriptionScopingFields') THEN
+    ALTER TABLE kernel.subscriptions ADD countries_csv character varying(1024);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261121163115_AddSubscriptionScopingFields') THEN
+    ALTER TABLE kernel.subscriptions ADD participant_count integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261121163115_AddSubscriptionScopingFields') THEN
+    ALTER TABLE kernel.subscriptions ADD site_count integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261121163115_AddSubscriptionScopingFields') THEN
+    ALTER TABLE kernel.subscriptions ADD study_duration_months integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261121163115_AddSubscriptionScopingFields') THEN
+    ALTER TABLE kernel.subscriptions ADD study_phase character varying(64);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261121163115_AddSubscriptionScopingFields') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20261121163115_AddSubscriptionScopingFields', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+
