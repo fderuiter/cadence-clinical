@@ -25,6 +25,7 @@ namespace Cadence.Kernel.Commands;
     nameof(AssertionErrors.ScopeInvalid),
     nameof(AssertionErrors.ScopeUnknown),
     nameof(AssertionErrors.AlreadyLocked),
+    nameof(AssertionErrors.ScopeNotReady),
     nameof(AssertionErrors.AttestationRejected))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ApplyLock(
@@ -176,6 +177,9 @@ public static class AssertionErrors
     public static readonly KernelError AlreadyLocked =
         new("K.Assertion.AlreadyLocked", 409, "A lock of this kind already holds at this scope.");
 
+    public static readonly KernelError ScopeNotReady =
+        new("K.Assertion.ScopeNotReady", 409, "The lock scope has open queries or missing required items that must be resolved before locking.");
+
     public static readonly KernelError AlreadyRetracted =
         new("K.Assertion.AlreadyRetracted", 409, "The assertion is already retracted.");
 
@@ -199,5 +203,5 @@ public static class AssertionErrors
 
     /// <summary>Every assertion error, for the API's documented problem set.</summary>
     public static IReadOnlyList<KernelError> All { get; } =
-        [ScopeInvalid, ScopeUnknown, AlreadyLocked, AlreadyRetracted, NotRetractable, NotAQuery, RevisionStale, TextInvalid, Locked, AttestationRejected];
+        [ScopeInvalid, ScopeUnknown, AlreadyLocked, ScopeNotReady, AlreadyRetracted, NotRetractable, NotAQuery, RevisionStale, TextInvalid, Locked, AttestationRejected];
 }

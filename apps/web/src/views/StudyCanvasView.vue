@@ -1136,7 +1136,17 @@ async function loadStudyDirectory() {
 
 function openStudyByCode(code: string) {
   const clean = code.trim();
-  if (clean) router.push(studyLocation({}, clean));
+  if (clean) {
+    router.push(
+      studyLocation(
+        {
+          stage: stage.value?.id,
+          section: section.value?.id,
+        },
+        clean
+      )
+    );
+  }
 }
 
 function openStudyDesign(code: string) {

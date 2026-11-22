@@ -102,6 +102,16 @@ public interface IAuthorityStore
 
     /// <summary>Every requirement defined for <paramref name="capability"/>, with its whole validity history.</summary>
     Task<IReadOnlyList<QualificationRequirement>> QualificationRequirementsAsync(TenantId tenant, string capability, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Which of <paramref name="observations"/> record a blinded treatment allocation, investigational intervention, or
+    /// masked value requiring <c>enrollment.unblind</c> to view (K-AUTH-4).
+    /// </summary>
+    Task<IReadOnlySet<ObservationId>> BlindedObservationsAsync(
+        TenantId tenant,
+        IReadOnlyCollection<ObservationId> observations,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlySet<ObservationId>>(FrozenSet<ObservationId>.Empty);
 }
 
 /// <summary>Settings of the authority evaluator.</summary>

@@ -172,6 +172,49 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
         subjects.Should().Equal(NodeRef.For(tenant, 1), NodeRef.For(organization, 1));
     }
 
+    /// <summary>
+    /// Enrollment children include opened <see cref="CollectionInstance"/> forms, collection-instance children include
+    /// member <see cref="Observation"/>s, and <see cref="KernelNavigator.ResolveAsync"/> resolves both scopes.
+    /// </summary>
+    [Fact(DisplayName = "Navigation_CollectionInstanceAndObservation_ResolveSummariesAndChildren")]
+    public async Task NavigationCollectionInstanceAndObservationResolveSummariesAndChildren()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var forms = new KernelCollectionScenario(fixture);
+        var form = await forms.NewFormAsync(ct);
+        var saved = await forms.Protocol.OkAsync(
+            KernelCollectionScenario.Save(
+                form,
+                KernelCollectionScenario.Value(KernelCollectionScenario.Systolic, KernelCollectionScenario.Mmhg(122)),
+                KernelCollectionScenario.Value(KernelCollectionScenario.Diastolic, KernelCollectionScenario.Mmhg(78))),
+            ct);
+
+        var navigator = new KernelNavigator(new KernelScopeGraph(fixture.TenantContexts));
+
+        var enrollmentChildren = await navigator.GetChildrenAsync(form.Subject.Tenant, NodeRef.For(form.Subject.Enrollment), ct);
+        enrollmentChildren.Should().ContainSingle(c => c.Node.Ref.Kind == NodeKinds.CollectionInstance && c.Node.Ref.Id == form.Instance.Value);
+        var formChild = enrollmentChildren!.Single(c => c.Node.Ref.Id == form.Instance.Value);
+        formChild.ChildCount.Should().Be(2);
+        formChild.Node.Code.Should().Be(KernelCollectionScenario.SpecId);
+
+        var formSummary = await navigator.ResolveAsync(form.Subject.Tenant, NodeRef.For(form.Instance), ct);
+        formSummary.Should().NotBeNull();
+        formSummary!.Code.Should().Be(KernelCollectionScenario.SpecId);
+
+        var formChildren = await navigator.GetChildrenAsync(form.Subject.Tenant, NodeRef.For(form.Instance), ct);
+        formChildren.Should().HaveCount(2);
+        formChildren!.Select(c => c.Node.Ref.Id).Should().BeEquivalentTo(saved.Values.Select(v => v.ObservationId.Value));
+
+        var sbpObs = saved.Values.Single(v => v.ItemId == KernelCollectionScenario.Systolic).ObservationId;
+        var obsSummary = await navigator.ResolveAsync(form.Subject.Tenant, NodeRef.For(sbpObs), ct);
+        obsSummary.Should().NotBeNull();
+        obsSummary!.Ref.Id.Should().Be(sbpObs.Value);
+
+        var obsChildren = await navigator.GetChildrenAsync(form.Subject.Tenant, NodeRef.For(sbpObs), ct);
+        obsChildren.Should().BeEmpty();
+    }
+
     private async Task<SeededTenant> SeedTenantAsync(string code)
     {
         var tenant = TenantId.New();
