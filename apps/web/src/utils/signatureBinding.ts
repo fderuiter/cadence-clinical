@@ -32,3 +32,32 @@ export function delegationBatchBindingId(
     ordinalSort(delegationIds.map((id) => String(id).trim())).join(",")
   );
 }
+
+export type SignedFindingDecision = "Accepted" | "Explained";
+
+function stripNodeRefPrefix(refText: string): string {
+  const trimmed = String(refText || "").trim();
+  const atIndex = trimmed.indexOf("@");
+  const unversioned = atIndex < 0 ? trimmed : trimmed.slice(0, atIndex);
+  const colonIndex = unversioned.indexOf(":");
+  return colonIndex < 0 ? unversioned : unversioned.slice(colonIndex + 1);
+}
+
+/**
+ * Canonical `FindingDecisionContent.Hash` (`sha256:` + lower-case hex SHA-256 of `{decision,detectedBy,finding,text}`)
+ * bound into `batch_id` of step-up `X-Sig-Token` headers for `AcceptFinding` and `ExplainFinding` (K-FIND-2).
+ */
+export async function findingDecisionHash(
+  findingRef: string,
+  lastDetectedRunRef: string,
+  decision: SignedFindingDecision,
+  text: string
+): Promise<string> {
+  const canonical = JSON.stringify({
+    decision,
+    detectedBy: stripNodeRefPrefix(lastDetectedRunRef),
+    finding: stripNodeRefPrefix(findingRef),
+    text,
+  });
+  return `sha256:${await sha256Hex(canonical)}`;
+}

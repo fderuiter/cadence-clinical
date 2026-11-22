@@ -116,6 +116,7 @@
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
         :can-manage="canManage"
+        :can-answer="canAnswer"
         :form-titles="formTitles"
         :form-location="formLocation"
         :observation-location="observationLocation"
@@ -148,21 +149,27 @@ import ScopeLockControls, {
  * One participant's data inside Clinical Canvas: opened case report forms, locks, casebooks, and queries on the
  * participant's enrollment (ADR-2622), linking directly to forms and observations in the zoom path.
  */
-defineProps<{
-  participant: SubjectSummary;
-  canManage: boolean;
-  formLocation: (formId: string) => RouteLocationRaw;
-  newFormLocation: RouteLocationRaw;
-  newFormCellLocation?: (
-    collectionSpecId: string,
-    plannedActivityId?: string | null
-  ) => RouteLocationRaw;
-  handoffLocation?: RouteLocationRaw | null;
-  observationLocation: (
-    observationId: string,
-    formId: string
-  ) => RouteLocationRaw;
-}>();
+withDefaults(
+  defineProps<{
+    participant: SubjectSummary;
+    canManage: boolean;
+    canAnswer?: boolean;
+    formLocation: (formId: string) => RouteLocationRaw;
+    newFormLocation: RouteLocationRaw;
+    newFormCellLocation?: (
+      collectionSpecId: string,
+      plannedActivityId?: string | null
+    ) => RouteLocationRaw;
+    handoffLocation?: RouteLocationRaw | null;
+    observationLocation: (
+      observationId: string,
+      formId: string
+    ) => RouteLocationRaw;
+  }>(),
+  {
+    canAnswer: false,
+  }
+);
 const emit = defineEmits<{
   retry: [];
 }>();

@@ -37,6 +37,7 @@
       v-else
       :queries="queries.queries"
       :can-manage="canManage"
+      :can-answer="canAnswer"
       :busy="queries.busy"
       :study-code="studyCode"
       :subject-code="subjectCode"
@@ -71,19 +72,25 @@ import SupportDetails from "./SupportDetails.vue";
 /**
  * A participant's queries across their forms, read by enrollment, with links directly to target forms and observations.
  */
-const props = defineProps<{
-  studyCode?: string;
-  subjectCode: string;
-  /** The participant's enrollment id, or null when none is visible. */
-  enrollmentId: string | null;
-  canManage: boolean;
-  formTitles?: Record<string, string>;
-  formLocation?: (formId: string) => RouteLocationRaw | null;
-  observationLocation?: (
-    observationId: string,
-    formId: string
-  ) => RouteLocationRaw | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    studyCode?: string;
+    subjectCode: string;
+    /** The participant's enrollment id, or null when none is visible. */
+    enrollmentId: string | null;
+    canManage: boolean;
+    canAnswer?: boolean;
+    formTitles?: Record<string, string>;
+    formLocation?: (formId: string) => RouteLocationRaw | null;
+    observationLocation?: (
+      observationId: string,
+      formId: string
+    ) => RouteLocationRaw | null;
+  }>(),
+  {
+    canAnswer: false,
+  }
+);
 
 const formTo = computed(() =>
   props.formLocation

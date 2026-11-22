@@ -69,12 +69,46 @@ export function canManageQueries(auth: RoleHolder): boolean {
   return MONITORING_ROLES.some((role) => auth.hasRole(role));
 }
 
-/** Answer open queries (`execution.query.answer`: site coordinators and investigators, not monitors or data managers). */
+const QUERY_ANSWER_RAW_ROLES = new Set([
+  ...PARTICIPANT_ROLES,
+  "site crc",
+  "site_crc",
+  "site-crc",
+  "study coordinator",
+  "study_coordinator",
+  "study-coordinator",
+  "coordinator",
+  "site-coordinator",
+  "investigator_user",
+  "sponsor admin",
+  "sponsor_admin",
+  "sponsor-admin",
+  "admin",
+  "super_admin",
+  "sysadmin",
+  "system_admin",
+  "system-admin",
+  "system administrator",
+]);
+
+/** Answer open queries (`execution.query.answer`: site coordinators, investigators, and Sponsor Admin founders; not auditors, monitors, data managers, or study designers). */
 export function canAnswerQueries(
   auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
 ): boolean {
   if (!auth.isAuthenticated) return true;
-  if (canManageParticipants(auth)) return true;
+  const raw = auth.rawRoles ?? [];
+  if (raw.length > 0) {
+    return raw.some((role) =>
+      QUERY_ANSWER_RAW_ROLES.has(role.trim().toLowerCase())
+    );
+  }
+  if (
+    ["sponsor_admin", "admin", "super_admin", "sysadmin"].some((role) =>
+      auth.hasRole(role)
+    )
+  ) {
+    return true;
+  }
   if (canManageQueries(auth)) return false;
   return [
     "site_investigator",
@@ -101,7 +135,7 @@ export function canSignForms(
   );
 }
 
-/** Draft, approve, and pin study edit-check rule packs. */
+/** Draft, approve, deprecate, and pin study edit-check rule packs. */
 export function canManageRulePacks(
   auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
 ): boolean {
@@ -113,16 +147,51 @@ export function canManageRulePacks(
         normalized.includes("designer") ||
         normalized.includes("data_manager") ||
         normalized.includes("data manager") ||
+        normalized === "sponsor_admin" ||
+        normalized === "sponsor admin" ||
         normalized === "admin" ||
-        normalized === "system_admin"
+        normalized === "system_admin" ||
+        normalized === "sysadmin"
       );
     })
   ) {
     return true;
   }
-  return ["study_designer", "designer", "data_manager", "admin"].some((role) =>
-    auth.hasRole(role)
+  return [
+    "study_designer",
+    "sponsor_designer",
+    "designer",
+    "data_manager",
+    "sponsor_admin",
+    "admin",
+  ].some((role) => auth.hasRole(role));
+}
+
+const VALIDATION_TRIAGE_BACKEND_ROLES = new Set([
+  "sysadmin",
+  "sponsor_dm",
+  "cra",
+  "monitor",
+]);
+
+/** Record study validation runs (`validation_run.record`: monitors, data managers, and sponsor admins). */
+export function canRunValidation(
+  auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
+): boolean {
+  if (!auth.isAuthenticated) return true;
+  if ((auth.rawRoles ?? []).length > 0) {
+    return holdsBackendRole(auth, VALIDATION_TRIAGE_BACKEND_ROLES);
+  }
+  return ["cra", "monitor", "data_manager", "sponsor_admin", "admin"].some(
+    (role) => auth.hasRole(role)
   );
+}
+
+/** Investigate, classify, accept, explain, or reopen validation findings (`validation_finding.*`: monitors, data managers, and sponsor admins). */
+export function canTriageFindings(
+  auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
+): boolean {
+  return canRunValidation(auth);
 }
 
 /** Verify observations against source, or flag them for re-verification. */

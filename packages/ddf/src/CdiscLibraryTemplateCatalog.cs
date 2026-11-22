@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -7,7 +8,12 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 
+using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Protocol.Import;
+using Cadence.Kernel.Validation;
+using Cadence.Rules.Expressions;
+using Cadence.Rules.Packs;
 
 namespace Cadence.Ddf;
 
@@ -41,6 +47,50 @@ public sealed partial class CdiscLibraryTemplateCatalog
         return _catalog.Value.FilesById.TryGetValue(templateId.Trim(), out var filePath) && File.Exists(filePath)
             ? File.ReadAllBytes(filePath)
             : null;
+    }
+
+    /// <summary>
+    /// Synthesizes starter collection-stage edit-check rules from a bundled CDISC Library eCRF template's bounded items
+    /// (mandatory flags, enumerated codelists, character length limits, and numeric digit bounds) citing public CDISC
+    /// template metadata (K-RULE-2).
+    /// </summary>
+    public IReadOnlyList<Rule> SynthesizeStarterRules(string templateId, IReadOnlyList<CollectionSpec> importedSpecs)
+    {
+        ArgumentNullException.ThrowIfNull(importedSpecs);
+        if (string.IsNullOrWhiteSpace(templateId)
+            || importedSpecs.Count == 0
+            || !_catalog.Value.FilesById.TryGetValue(templateId.Trim(), out var filePath)
+            || !File.Exists(filePath))
+        {
+            return [];
+        }
+
+        try
+        {
+            var settings = new XmlReaderSettings
+            {
+                DtdProcessing = DtdProcessing.Prohibit,
+                XmlResolver = null,
+                IgnoreComments = true,
+                IgnoreProcessingInstructions = true,
+            };
+            using var stream = File.OpenRead(filePath);
+            using var reader = XmlReader.Create(stream, settings);
+            var doc = XDocument.Load(reader);
+            var mdv = doc.Root?
+                .Elements().FirstOrDefault(e => e.Name.LocalName == "Study")?
+                .Elements().FirstOrDefault(e => e.Name.LocalName == "MetaDataVersion");
+            if (mdv is null)
+            {
+                return [];
+            }
+
+            return BuildTemplateStarterRules(mdv, importedSpecs);
+        }
+        catch (Exception ex) when (ex is IOException or XmlException)
+        {
+            return [];
+        }
     }
 
     private static LoadedCatalog Load(string? explicitDirectory)
@@ -190,6 +240,183 @@ public sealed partial class CdiscLibraryTemplateCatalog
 
     [GeneratedRegex("[^a-z0-9]+", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 100)]
     private static partial Regex NonSlugRegex();
+
+    private static List<Rule> BuildTemplateStarterRules(XElement mdv, IReadOnlyList<CollectionSpec> importedSpecs)
+    {
+        var forms = mdv.Elements().Where(e => e.Name.LocalName == "FormDef").ToList();
+        var itemGroups = mdv.Elements()
+            .Where(e => e.Name.LocalName == "ItemGroupDef" && !string.IsNullOrWhiteSpace(e.Attribute("OID")?.Value))
+            .ToDictionary(e => e.Attribute("OID")!.Value.Trim(), StringComparer.Ordinal);
+        var itemDefs = mdv.Elements()
+            .Where(e => e.Name.LocalName == "ItemDef" && !string.IsNullOrWhiteSpace(e.Attribute("OID")?.Value))
+            .ToDictionary(e => e.Attribute("OID")!.Value.Trim(), StringComparer.Ordinal);
+        var codeLists = mdv.Elements()
+            .Where(e => e.Name.LocalName == "CodeList" && !string.IsNullOrWhiteSpace(e.Attribute("OID")?.Value))
+            .ToDictionary(
+                cl => cl.Attribute("OID")!.Value.Trim(),
+                cl => cl.Elements()
+                    .Where(i => i.Name.LocalName is "CodeListItem" or "EnumeratedItem")
+                    .Select(i => i.Attribute("CodedValue")?.Value?.Trim())
+                    .Where(v => !string.IsNullOrWhiteSpace(v))
+                    .Select(v => v!)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList(),
+                StringComparer.Ordinal);
+
+        var rules = new List<Rule>();
+        var usedRuleIds = new HashSet<string>(StringComparer.Ordinal);
+
+        int formCount = Math.Min(forms.Count, importedSpecs.Count);
+        for (int f = 0; f < formCount; f++)
+        {
+            var formDef = forms[f];
+            var spec = importedSpecs[f];
+            var formOid = formDef.Attribute("OID")?.Value?.Trim() ?? spec.Id;
+            var citationDoc = Truncate($"CDISC Library eCRF Template ({spec.Name})", RulePackJson.MaxTextLength);
+
+            var orderedItemDefs = ResolveOrderedFormItems(formDef, itemGroups, itemDefs);
+            int itemCount = Math.Min(orderedItemDefs.Count, spec.Items.Count);
+            for (int i = 0; i < itemCount; i++)
+            {
+                var (itemOid, itemDef) = orderedItemDefs[i];
+                var item = spec.Items[i];
+                var label = string.IsNullOrWhiteSpace(item.Prompt) ? item.Id : item.Prompt;
+                var variable = new VariableExpression(item.Id);
+
+                if (item.Required)
+                {
+                    rules.Add(new Rule(
+                        OdmDesignImporter.AllocateRuleId($"REQ.{spec.Id}.{item.Id}", usedRuleIds),
+                        1,
+                        RuleAuthority.Study,
+                        new SourceCitation(citationDoc, $"{formOid}/{itemOid}", null),
+                        new RuleApplicability(ValidationStage.Collection, null, null, null, spec.Id),
+                        ValidationSeverity.Warning,
+                        new FunctionExpression(RuleFunction.IsEmpty, [variable]),
+                        Truncate($"Required item '{label}' is missing on '{spec.Name}'.", RulePackJson.MaxTextLength),
+                        "Enter the required clinical value or record why it was not collected.",
+                        EffectivePeriod.Always));
+                }
+
+                var codeListOid = itemDef.Elements().FirstOrDefault(e => e.Name.LocalName == "CodeListRef")?.Attribute("CodeListOID")?.Value?.Trim();
+                bool hasCodeListRule = false;
+                if (!string.IsNullOrWhiteSpace(codeListOid)
+                    && codeLists.TryGetValue(codeListOid, out var allowedCodes)
+                    && allowedCodes.Count is > 0 and <= 100)
+                {
+                    hasCodeListRule = true;
+                    var sample = allowedCodes.Count <= 5
+                        ? string.Join(", ", allowedCodes)
+                        : $"{string.Join(", ", allowedCodes.Take(5))}, +{allowedCodes.Count - 5} more";
+                    var condition = new LogicalExpression(
+                        LogicalOperator.And,
+                        [
+                            new FunctionExpression(RuleFunction.IsNotEmpty, [variable]),
+                            new FunctionExpression(
+                                RuleFunction.NotIn,
+                                [variable, .. allowedCodes.Select(c => (RuleExpression)new LiteralExpression(RuleValue.FromText(c)))]),
+                        ]);
+                    rules.Add(new Rule(
+                        OdmDesignImporter.AllocateRuleId($"CL.{spec.Id}.{item.Id}", usedRuleIds),
+                        1,
+                        RuleAuthority.Study,
+                        new SourceCitation(citationDoc, $"{formOid}/{itemOid}/{codeListOid}", null),
+                        new RuleApplicability(ValidationStage.Collection, null, null, null, spec.Id),
+                        ValidationSeverity.Warning,
+                        condition,
+                        Truncate($"Item '{label}' must use a permitted CDISC codelist value ({sample}).", RulePackJson.MaxTextLength),
+                        "Select a coded value from the form's controlled terminology codelist.",
+                        EffectivePeriod.Always));
+                }
+
+                if (int.TryParse(itemDef.Attribute("Length")?.Value?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var maxLen)
+                    && maxLen > 0)
+                {
+                    if (item.ValueKind == ObservationValueKind.Quantity && maxLen <= 12)
+                    {
+                        decimal upperBound = 1m;
+                        for (int d = 0; d < maxLen; d++)
+                        {
+                            upperBound *= 10m;
+                        }
+
+                        upperBound -= 1m;
+                        rules.Add(new Rule(
+                            OdmDesignImporter.AllocateRuleId($"MAX.{spec.Id}.{item.Id}", usedRuleIds),
+                            1,
+                            RuleAuthority.Study,
+                            new SourceCitation(citationDoc, $"{formOid}/{itemOid}", null),
+                            new RuleApplicability(ValidationStage.Collection, null, null, null, spec.Id),
+                            ValidationSeverity.Warning,
+                            new ComparisonExpression(ComparisonOperator.Greater, variable, new LiteralExpression(RuleValue.FromNumber(upperBound))),
+                            Truncate($"Numeric item '{label}' exceeds the {maxLen}-digit template bound ({upperBound.ToString(CultureInfo.InvariantCulture)}).", RulePackJson.MaxTextLength),
+                            "Verify the source numeric measurement and unit.",
+                            EffectivePeriod.Always));
+                    }
+                    else if (!hasCodeListRule && item.ValueKind == ObservationValueKind.Text && maxLen <= 2000)
+                    {
+                        rules.Add(new Rule(
+                            OdmDesignImporter.AllocateRuleId($"LEN.{spec.Id}.{item.Id}", usedRuleIds),
+                            1,
+                            RuleAuthority.Study,
+                            new SourceCitation(citationDoc, $"{formOid}/{itemOid}", null),
+                            new RuleApplicability(ValidationStage.Collection, null, null, null, spec.Id),
+                            ValidationSeverity.Notice,
+                            new ComparisonExpression(
+                                ComparisonOperator.Greater,
+                                new FunctionExpression(RuleFunction.Length, [variable]),
+                                new LiteralExpression(RuleValue.FromNumber(maxLen))),
+                            Truncate($"Item '{label}' exceeds the {maxLen}-character template field length.", RulePackJson.MaxTextLength),
+                            "Shorten the text entry to fit the template's maximum character length.",
+                            EffectivePeriod.Always));
+                    }
+                }
+            }
+        }
+
+        return rules;
+    }
+
+    private static List<(string ItemOid, XElement ItemDef)> ResolveOrderedFormItems(
+        XElement formDef,
+        Dictionary<string, XElement> itemGroups,
+        Dictionary<string, XElement> itemDefs)
+    {
+        var list = new List<(string ItemOid, XElement ItemDef)>();
+        var orderedGroupRefs = OrderElements(formDef.Elements().Where(e => e.Name.LocalName == "ItemGroupRef"));
+        foreach (var igRef in orderedGroupRefs)
+        {
+            var igOid = igRef.Attribute("ItemGroupOID")?.Value?.Trim();
+            if (string.IsNullOrWhiteSpace(igOid) || !itemGroups.TryGetValue(igOid, out var igDef))
+            {
+                continue;
+            }
+
+            foreach (var itemRef in OrderElements(igDef.Elements().Where(e => e.Name.LocalName == "ItemRef")))
+            {
+                var itemOid = itemRef.Attribute("ItemOID")?.Value?.Trim();
+                if (!string.IsNullOrWhiteSpace(itemOid) && itemDefs.TryGetValue(itemOid, out var itemDef))
+                {
+                    list.Add((itemOid, itemDef));
+                }
+            }
+        }
+
+        return list;
+    }
+
+    private static IEnumerable<XElement> OrderElements(IEnumerable<XElement> elements) =>
+        elements
+            .Select((el, idx) => (
+                Element: el,
+                Order: int.TryParse(el.Attribute("OrderNumber")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : int.MaxValue,
+                Index: idx))
+            .OrderBy(x => x.Order)
+            .ThenBy(x => x.Index)
+            .Select(x => x.Element);
+
+    private static string Truncate(string text, int maxLength) =>
+        text.Length <= maxLength ? text : text[..maxLength];
 
     private sealed record LoadedCatalog(
         IReadOnlyList<BundledProtocolTemplate> Summaries,

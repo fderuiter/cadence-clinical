@@ -9,9 +9,11 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Validation;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -40,7 +42,8 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
         NodeKinds.Grant,
         NodeKinds.QualificationRequirement,
         NodeKinds.Effectivity,
-        NodeKinds.Proposal);
+        NodeKinds.Proposal,
+        NodeKinds.ValidationFinding);
 
     private const string ProtocolElementPathsSql = """
         SELECT DISTINCT ON (le.to_id)
@@ -558,6 +561,10 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
                     break;
                 }
 
+            case NodeKinds.ValidationFinding:
+                await LoadValidationFindingPathsAsync(db, tenant, kind, rawIds, resolved, ct).ConfigureAwait(false);
+                break;
+
             default:
                 // Tenants, participants (who may be in several studies), roles, qualifications (held by a person across
                 // studies), attestations and reference data belong to no organization or study.
@@ -585,6 +592,68 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
             if (row.ToScopePath() is { } path)
             {
                 resolved[(kind, row.Id)] = path;
+            }
+        }
+    }
+
+    private static async Task LoadValidationFindingPathsAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        string kind,
+        Guid[] rawIds,
+        Dictionary<(string Kind, Guid Id), ScopePath> resolved,
+        CancellationToken ct)
+    {
+        var ids = rawIds.Select(ValidationFindingId.FromGuid).ToList();
+        var detections = await (
+                from d in db.Set<ValidationDetectionRecord>().AsNoTracking()
+                join study in db.Studies.AsNoTracking() on new { d.TenantId, Id = d.StudyId } equals new { study.TenantId, study.Id }
+                where d.TenantId == tenant && ids.Contains(d.FindingId)
+                select new { d.FindingId, study.SponsorId, d.StudyId, d.TargetKind, d.TargetKey })
+            .ToListAsync(ct).ConfigureAwait(false);
+
+        var distinctFindings = detections
+            .GroupBy(d => d.FindingId)
+            .Select(g => g.First())
+            .ToList();
+
+        var instanceIds = new List<CollectionInstanceId>();
+        foreach (var entry in distinctFindings)
+        {
+            if (entry.TargetKind == FindingTargetKind.DatasetRecord && Guid.TryParse(entry.TargetKey, out var instanceGuid))
+            {
+                instanceIds.Add(CollectionInstanceId.FromGuid(instanceGuid));
+            }
+        }
+
+        var siteByInstance = new Dictionary<CollectionInstanceId, (string Country, StudySiteId StudySiteId)>();
+        if (instanceIds.Count > 0)
+        {
+            var distinctInstances = instanceIds.Distinct().ToList();
+            var siteRows = await (
+                    from ci in db.CollectionInstances.AsNoTracking()
+                    join ss in db.StudySites.AsNoTracking() on new { ci.TenantId, Id = ci.StudySiteId } equals new { ss.TenantId, ss.Id }
+                    join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                    where ci.TenantId == tenant && distinctInstances.Contains(ci.Id)
+                    select new { ci.Id, site.Country, StudySiteId = ss.Id })
+                .ToListAsync(ct).ConfigureAwait(false);
+            foreach (var siteRow in siteRows)
+            {
+                siteByInstance[siteRow.Id] = (siteRow.Country, siteRow.StudySiteId);
+            }
+        }
+
+        foreach (var entry in distinctFindings)
+        {
+            if (entry.TargetKind == FindingTargetKind.DatasetRecord
+                && Guid.TryParse(entry.TargetKey, out var instanceGuid)
+                && siteByInstance.TryGetValue(CollectionInstanceId.FromGuid(instanceGuid), out var siteInfo))
+            {
+                resolved[(kind, entry.FindingId.Value)] = new ScopePath(entry.SponsorId, entry.StudyId, siteInfo.Country, siteInfo.StudySiteId);
+            }
+            else
+            {
+                resolved[(kind, entry.FindingId.Value)] = new ScopePath(entry.SponsorId, entry.StudyId);
             }
         }
     }

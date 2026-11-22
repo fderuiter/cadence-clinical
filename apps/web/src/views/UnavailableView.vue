@@ -48,10 +48,22 @@
       </div>
 
       <div class="unavailable-actions">
+        <router-link
+          v-if="screenKey === 'rules'"
+          id="link-unavailable-canvas-validation"
+          data-testid="link-unavailable-canvas-validation"
+          class="btn btn-primary"
+          :to="canvasValidationTarget"
+        >
+          Open Clinical Canvas Validation
+        </router-link>
         <button
           id="btn-unavailable-study"
           type="button"
-          class="btn btn-primary"
+          :class="[
+            'btn',
+            screenKey === 'rules' ? 'btn-secondary' : 'btn-primary',
+          ]"
           @click="router.push('/studies')"
         >
           Open study workspace
@@ -83,10 +95,12 @@ import { useRoute, useRouter } from "vue-router";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { screenMetadata, screenTitle } from "../router/availability";
 import { useAuthStore } from "../stores/auth";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const studyCanvas = useStudyCanvasStore();
 
 onMounted(() => {
   if (authStore.isAuthenticated) {
@@ -110,6 +124,26 @@ const heading = computed(() =>
     ? `${screenTitle(screenKey.value)} isn't available yet`
     : "This screen isn't available yet"
 );
+
+const canvasValidationTarget = computed(() => {
+  const fromQuery =
+    typeof route.query.studyId === "string" && route.query.studyId.trim()
+      ? route.query.studyId.trim()
+      : typeof route.query.study === "string" && route.query.study.trim()
+        ? route.query.study.trim()
+        : "";
+  const activeCode =
+    fromQuery ||
+    studyCanvas.studyCode ||
+    (Array.isArray(authStore.assignedStudies) &&
+    authStore.assignedStudies.length > 0
+      ? authStore.assignedStudies[0]
+      : "CADENCE-101");
+  return {
+    path: `/studies/${encodeURIComponent(activeCode)}`,
+    query: { stage: "data", section: "validation" },
+  };
+});
 </script>
 
 <style scoped>

@@ -34,6 +34,7 @@ export interface SignatureVerificationPayload {
   totp?: string | null;
   action: string;
   semanticAction?: string;
+  batchId?: string | null;
 }
 
 export interface DocumentSignOffPayload {
@@ -349,6 +350,7 @@ export const etmfService = {
       totp = null,
       action,
       semanticAction,
+      batchId = null,
     }: SignatureVerificationPayload,
     options: Record<string, unknown> = {}
   ) {
@@ -375,6 +377,7 @@ export const etmfService = {
       totp,
       action,
       semanticAction: semantic,
+      batchId,
     });
 
     return unwrapResponse(

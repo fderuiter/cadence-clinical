@@ -531,12 +531,14 @@ public static class KernelStudyImportEndpoints
                     $"{idempotencyKey}:rule-pack",
                     reason),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (!draftItemResult.IsSuccess)
+            if (draftItemResult.IsSuccess)
+            {
+                draftedRulePack = KernelImportedRulePackSummaryResponse.From(draftItemResult.Value!, rulePack.Title, rulePack.RuleCount);
+            }
+            else if (draftItemResult.Error != KernelErrors.AuthorizationDenied)
             {
                 return KernelErrorEndpoints.Problem(draftItemResult.Error!);
             }
-
-            draftedRulePack = KernelImportedRulePackSummaryResponse.From(draftItemResult.Value!, rulePack.Title, rulePack.RuleCount);
         }
 
         var conceptLabels = await ResolveConceptLabelsAsync(tenant, importOutcome.Design, concepts, cancellationToken).ConfigureAwait(false);

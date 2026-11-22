@@ -128,6 +128,7 @@ public sealed partial class TrialOnboardingService(
         "concept.revise",
         "library_item.draft",
         "library_item.approve",
+        "library_item.deprecate",
         "standard.register",
         "standard.approve",
         "study.declare_standards",

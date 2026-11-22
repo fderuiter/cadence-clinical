@@ -178,4 +178,195 @@ public sealed class OdmRuleImportTests
         violations.Should().Contain(v => v.Explanation.Contains("Diastolic BP", StringComparison.Ordinal));
         violations.Should().Contain(v => v.Explanation.Contains("Severe systolic elevation requires an AE entry", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public async Task CdiscLibraryTemplates_WithBoundedItems_SynthesizeExecutableStarterRulePack()
+    {
+        var service = new ProtocolDesignImporterService();
+        var templates = service.ListBundledTemplates();
+        templates.Should().NotBeEmpty();
+
+        var selectedIds = templates.Select(t => t.Id).Take(2).ToArray();
+        var result = await service.ImportAsync(
+            new ProtocolDesignImportRequest(TemplateIds: selectedIds),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue(string.Join("; ", result.Problems));
+        result.RulePack.Should().NotBeNull();
+        result.RulePack!.RuleCount.Should().BeGreaterThan(0);
+
+        var (pack, parseProblems) = RulePackJson.Read(result.RulePack.Content);
+        parseProblems.Should().BeEmpty();
+        pack.Should().NotBeNull();
+        pack!.Authority.Should().Be(RuleAuthority.Study);
+        pack.Rules.Should().AllSatisfy(r =>
+        {
+            r.Applicability.Stage.Should().Be(ValidationStage.Collection);
+            r.Citation.Document.Should().StartWith("CDISC Library eCRF Template");
+        });
+    }
+
+    [Fact]
+    public async Task UsdmV4JsonImport_SynthesizesStarterRulePackWhenBounded_AndOmitsWhenUnbounded()
+    {
+        const string boundedUsdm = """
+            {
+              "usdmVersion": "4.0.0",
+              "study": {
+                "id": "study-bounded-1",
+                "name": "USDM-STARTER-1",
+                "versions": [
+                  {
+                    "id": "ver-1",
+                    "versionIdentifier": "1.0",
+                    "titles": [{ "id": "title-1", "text": "USDM Starter Rules Trial" }],
+                    "biomedicalConcepts": [
+                      {
+                        "id": "bc-sex",
+                        "name": "Biological Sex",
+                        "code": { "id": "alias-sex", "standardCode": { "code": "C28421", "decode": "Sex" } },
+                        "properties": [
+                          {
+                            "id": "prop-sex",
+                            "name": "SEX",
+                            "label": "Sex",
+                            "isRequired": true,
+                            "datatype": "string",
+                            "maxLength": 4,
+                            "responseCodes": [
+                              { "code": { "code": "M", "decode": "Male" } },
+                              { "code": { "code": "F", "decode": "Female" } }
+                            ]
+                          }
+                        ]
+                      }
+                    ],
+                    "studyDesigns": [
+                      {
+                        "id": "sd-1",
+                        "epochs": [{ "id": "ep-1", "name": "Screening" }],
+                        "encounters": [{ "id": "enc-1", "name": "Screening Visit", "environmentalSettings": [{ "code": "C211570", "decode": "Clinic" }] }],
+                        "activities": [
+                          {
+                            "id": "act-dm",
+                            "name": "Demographics",
+                            "biomedicalConceptIds": ["bc-sex"]
+                          }
+                        ],
+                        "scheduleTimelines": [
+                          {
+                            "id": "tl-1",
+                            "mainTimeline": true,
+                            "instances": [
+                              {
+                                "id": "inst-1",
+                                "instanceType": "ScheduledActivityInstance",
+                                "epochId": "ep-1",
+                                "encounterId": "enc-1",
+                                "activityIds": ["act-dm"]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+            """;
+
+        var service = new ProtocolDesignImporterService();
+        var boundedResult = await service.ImportAsync(
+            new ProtocolDesignImportRequest(RawBytes: Encoding.UTF8.GetBytes(boundedUsdm), FileName: "usdm-bounded.json"),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+
+        boundedResult.IsSuccess.Should().BeTrue(string.Join("; ", boundedResult.Problems));
+        boundedResult.RulePack.Should().NotBeNull();
+        var (pack, problems) = RulePackJson.Read(boundedResult.RulePack!.Content);
+        problems.Should().BeEmpty();
+        pack.Should().NotBeNull();
+        pack!.Rules.Should().HaveCountGreaterThanOrEqualTo(2);
+
+        var dmSpec = boundedResult.Design!.CollectionSpecs.Single();
+        var sexItem = dmSpec.Items.Single();
+        var evaluator = new DotNetRuleEvaluator();
+        var ctx = new RuleEvaluationContext(ValidationStage.Collection, new DateOnly(2026, 3, 1));
+
+        evaluator.Evaluate(
+            pack,
+            ctx,
+            [new RuleRecord(dmSpec.Id, "valid-dm", new Dictionary<string, RuleValue>(StringComparer.Ordinal) { [sexItem.Id] = RuleValue.FromText("F") })])
+            .Should().BeEmpty();
+
+        evaluator.Evaluate(
+            pack,
+            ctx,
+            [new RuleRecord(dmSpec.Id, "empty-dm", new Dictionary<string, RuleValue>(StringComparer.Ordinal))])
+            .Should().ContainSingle();
+
+        evaluator.Evaluate(
+            pack,
+            ctx,
+            [new RuleRecord(dmSpec.Id, "invalid-dm", new Dictionary<string, RuleValue>(StringComparer.Ordinal) { [sexItem.Id] = RuleValue.FromText("INVALID") })])
+            .Should().ContainSingle();
+
+        const string unboundedUsdm = """
+            {
+              "usdmVersion": "4.0.0",
+              "study": {
+                "id": "study-unbounded-1",
+                "name": "USDM-UNBOUNDED-1",
+                "versions": [
+                  {
+                    "id": "ver-1",
+                    "versionIdentifier": "1.0",
+                    "titles": [{ "id": "title-1", "text": "Unbounded USDM Study" }],
+                    "biomedicalConcepts": [
+                      {
+                        "id": "bc-note",
+                        "name": "Clinical Note",
+                        "code": { "id": "alias-note", "standardCode": { "code": "C25398", "decode": "Clinical Observation" } },
+                        "properties": [
+                          {
+                            "id": "prop-note",
+                            "name": "NOTE",
+                            "label": "Free-text Note",
+                            "isRequired": false,
+                            "datatype": "string"
+                          }
+                        ]
+                      }
+                    ],
+                    "studyDesigns": [
+                      {
+                        "id": "sd-1",
+                        "epochs": [{ "id": "ep-1", "name": "Visit 1" }],
+                        "encounters": [{ "id": "enc-1", "name": "Visit 1", "environmentalSettings": [{ "code": "C211570", "decode": "Clinic" }] }],
+                        "activities": [{ "id": "act-1", "name": "Notes", "biomedicalConceptIds": ["bc-note"] }],
+                        "scheduleTimelines": [
+                          {
+                            "id": "tl-1",
+                            "mainTimeline": true,
+                            "instances": [{ "id": "inst-1", "instanceType": "ScheduledActivityInstance", "epochId": "ep-1", "encounterId": "enc-1", "activityIds": ["act-1"] }]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+            """;
+
+        var unboundedResult = await service.ImportAsync(
+            new ProtocolDesignImportRequest(RawBytes: Encoding.UTF8.GetBytes(unboundedUsdm), FileName: "usdm-unbounded.json"),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+
+        unboundedResult.IsSuccess.Should().BeTrue(string.Join("; ", unboundedResult.Problems));
+        unboundedResult.RulePack.Should().BeNull();
+    }
 }

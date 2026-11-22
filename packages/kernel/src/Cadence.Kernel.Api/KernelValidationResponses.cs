@@ -19,6 +19,10 @@ namespace Cadence.Kernel.Api;
 /// <param name="Explanation">Human-readable discrepancy message.</param>
 /// <param name="RemediationGuidance">Optional guidance for resolving a violation.</param>
 /// <param name="Condition">Canonical JSON representation of the rule violation condition.</param>
+/// <param name="Authority">Rule authority (<c>Study</c>, <c>Sponsor</c>, <c>CDISC</c>, <c>FDA</c>, etc.).</param>
+/// <param name="CitationDocument">Public document cited by the rule (K-RULE-2).</param>
+/// <param name="CitationSection">Section or element cited within the public document.</param>
+/// <param name="CitationUri">Optional HTTP(S) URI for the cited public document.</param>
 public sealed record KernelRuleSummaryResponse(
     string Id,
     int Version,
@@ -27,7 +31,11 @@ public sealed record KernelRuleSummaryResponse(
     string Severity,
     string Explanation,
     string? RemediationGuidance,
-    string? Condition = null);
+    string? Condition = null,
+    string? Authority = null,
+    string? CitationDocument = null,
+    string? CitationSection = null,
+    string? CitationUri = null);
 
 /// <summary>Summary of a <see cref="LibraryItemKind.RulePack"/> library item available to or pinned by a study.</summary>
 /// <param name="Ref">Library item <c>NodeRef</c> (<c>library_item:&lt;uuid&gt;</c>).</param>
@@ -40,6 +48,7 @@ public sealed record KernelRuleSummaryResponse(
 /// <param name="ContentHash">Canonical SHA-256 content hash attested on approval.</param>
 /// <param name="RuleCount">Total number of rules in the pack.</param>
 /// <param name="Rules">Summaries of the rules defined in the pack.</param>
+/// <param name="Authority">Rule-pack authority (<c>Study</c>, <c>Sponsor</c>, <c>CDISC</c>, etc.).</param>
 public sealed record KernelRulePackResponse(
     string Ref,
     string Key,
@@ -50,11 +59,12 @@ public sealed record KernelRulePackResponse(
     bool Pinned,
     string ContentHash,
     int RuleCount,
-    IReadOnlyList<KernelRuleSummaryResponse> Rules)
+    IReadOnlyList<KernelRuleSummaryResponse> Rules,
+    string Authority = "Study")
 {
     internal static KernelRulePackResponse From(LibraryItemView item, bool pinned)
     {
-        var (description, rules) = ReadRulesSummary(item.Content);
+        var (authority, description, rules) = ReadRulesSummary(item.Content);
         return new(
             NodeRef.For(item.Id).ToString(),
             item.Key,
@@ -65,22 +75,26 @@ public sealed record KernelRulePackResponse(
             pinned,
             item.ContentHash,
             rules.Count,
-            rules);
+            rules,
+            authority);
     }
 
-    private static (string? Description, IReadOnlyList<KernelRuleSummaryResponse> Rules) ReadRulesSummary(JsonElement content)
+    private static (string Authority, string? Description, IReadOnlyList<KernelRuleSummaryResponse> Rules) ReadRulesSummary(JsonElement content)
     {
         if (content.ValueKind != JsonValueKind.Object)
         {
-            return (null, []);
+            return ("Study", null, []);
         }
 
+        var packAuthority = content.TryGetProperty("authority", out var authProp) && authProp.ValueKind == JsonValueKind.String
+            ? authProp.GetString() ?? "Study"
+            : "Study";
         var description = content.TryGetProperty("description", out var descProp) && descProp.ValueKind == JsonValueKind.String
             ? descProp.GetString()
             : null;
         if (!content.TryGetProperty("rules", out var rulesProp) || rulesProp.ValueKind != JsonValueKind.Array)
         {
-            return (description, []);
+            return (packAuthority, description, []);
         }
 
         var rules = new List<KernelRuleSummaryResponse>();
@@ -93,6 +107,9 @@ public sealed record KernelRulePackResponse(
 
             var id = entry.TryGetProperty("id", out var idProp) && idProp.ValueKind == JsonValueKind.String ? idProp.GetString() ?? string.Empty : string.Empty;
             var version = entry.TryGetProperty("version", out var verProp) && verProp.TryGetInt32(out var verInt) ? verInt : 1;
+            var ruleAuthority = entry.TryGetProperty("authority", out var rAuthProp) && rAuthProp.ValueKind == JsonValueKind.String
+                ? rAuthProp.GetString() ?? packAuthority
+                : packAuthority;
             var severity = entry.TryGetProperty("severity", out var sevProp) && sevProp.ValueKind == JsonValueKind.String ? sevProp.GetString() ?? "Warning" : "Warning";
             var explanation = entry.TryGetProperty("explanation", out var expProp) && expProp.ValueKind == JsonValueKind.String ? expProp.GetString() ?? string.Empty : string.Empty;
             string? guidance = null;
@@ -105,6 +122,16 @@ public sealed record KernelRulePackResponse(
                 guidance = guidProp.GetString();
             }
             var condition = entry.TryGetProperty("condition", out var condProp) ? condProp.GetRawText() : null;
+
+            string? citationDoc = null;
+            string? citationSec = null;
+            string? citationUri = null;
+            if (entry.TryGetProperty("citation", out var citProp) && citProp.ValueKind == JsonValueKind.Object)
+            {
+                citationDoc = citProp.TryGetProperty("document", out var docProp) && docProp.ValueKind == JsonValueKind.String ? docProp.GetString() : null;
+                citationSec = citProp.TryGetProperty("section", out var secProp) && secProp.ValueKind == JsonValueKind.String ? secProp.GetString() : null;
+                citationUri = citProp.TryGetProperty("uri", out var uriProp) && uriProp.ValueKind == JsonValueKind.String ? uriProp.GetString() : null;
+            }
 
             string stage = "Collection";
             string? dataset = null;
@@ -121,10 +148,22 @@ public sealed record KernelRulePackResponse(
                 }
             }
 
-            rules.Add(new KernelRuleSummaryResponse(id, version, stage, dataset, severity, explanation, guidance, condition));
+            rules.Add(new KernelRuleSummaryResponse(
+                id,
+                version,
+                stage,
+                dataset,
+                severity,
+                explanation,
+                guidance,
+                condition,
+                ruleAuthority,
+                citationDoc,
+                citationSec,
+                citationUri));
         }
 
-        return (description, rules);
+        return (packAuthority, description, rules);
     }
 }
 
@@ -139,14 +178,73 @@ public sealed record KernelStudyRulePacksResponse(
     IReadOnlyList<string> PinnedRulePackRefs,
     IReadOnlyList<KernelRulePackResponse> RulePacks);
 
+/// <summary>Request body for <c>POST /api/v1/kernel/studies/{studyRef}/rule-packs</c>.</summary>
+/// <param name="Key">Stable rule-pack key across versions (<c>DraftLibraryItem.Key</c>).</param>
+/// <param name="Title">Display title of the rule-pack version.</param>
+/// <param name="Content">RulePack JSON object validated against <c>RulePackJson</c>.</param>
+/// <param name="LibraryItemId">Optional caller-supplied library item UUID.</param>
+/// <param name="StandardVersionRefs">Optional <c>standard_version:&lt;uuid&gt;</c> references linked to the rule pack.</param>
+public sealed record KernelDraftRulePackRequest(
+    string Key,
+    string Title,
+    JsonElement Content,
+    Guid? LibraryItemId = null,
+    IReadOnlyList<string>? StandardVersionRefs = null);
+
 /// <summary>Optional request body for <c>POST /api/v1/kernel/library-items/{itemRef}/approve</c>.</summary>
 /// <param name="Meaning">Attestation meaning (<c>Approved</c>).</param>
 /// <param name="AttestationId">Optional caller-supplied attestation identifier.</param>
 public sealed record KernelApproveLibraryItemRequest(string? Meaning = null, Guid? AttestationId = null);
 
+/// <summary>Optional request body for <c>POST /api/v1/kernel/library-items/{itemRef}/deprecate</c>.</summary>
+/// <param name="Meaning">Attestation meaning (<c>Responsibility</c>).</param>
+/// <param name="AttestationId">Optional caller-supplied attestation identifier.</param>
+public sealed record KernelDeprecateLibraryItemRequest(string? Meaning = null, Guid? AttestationId = null);
+
 /// <summary>Request body for <c>PUT /api/v1/kernel/studies/{studyRef}/standards</c>.</summary>
 /// <param name="RulePackRefs">Approved rule-pack <c>NodeRef</c>s to pin on the study (replaces pinned rule packs while preserving other declared standards/pins).</param>
 public sealed record KernelDeclareStudyRulePacksRequest(IReadOnlyList<string> RulePackRefs);
+
+/// <summary>Optional request body for <c>POST /api/v1/kernel/studies/{studyRef}/validation/runs</c>.</summary>
+/// <param name="AsOf">Optional effective date for rule evaluation; defaults to today in UTC.</param>
+public sealed record KernelRunStudyValidationRequest(DateOnly? AsOf = null);
+
+/// <summary>Response for <c>POST /api/v1/kernel/studies/{studyRef}/validation/runs</c>.</summary>
+/// <param name="StudyRef">Evaluated study <c>NodeRef</c>.</param>
+/// <param name="RunRef">Recorded <c>validation_run:&lt;uuid&gt;</c> <c>NodeRef</c>, or null when no pinned rule packs or datasets applied.</param>
+/// <param name="Detected">Total findings detected in the run.</param>
+/// <param name="New">Findings detected for the first time on the study.</param>
+/// <param name="Resolved">Previously open findings resolved by this run.</param>
+/// <param name="Findings">Current collection-stage findings across the study after the run.</param>
+public sealed record KernelStudyValidationRunResponse(
+    string StudyRef,
+    string? RunRef,
+    int Detected,
+    int New,
+    int Resolved,
+    IReadOnlyList<KernelValidationFindingResponse> Findings);
+
+/// <summary>Request body for <c>POST /api/v1/kernel/validation/findings/{findingRef}/classify</c>.</summary>
+/// <param name="Classification">Finding classification (<c>DataIssue</c>, <c>MappingIssue</c>, <c>MetadataIssue</c>, <c>RuleIssue</c>, <c>NotAnIssue</c>).</param>
+public sealed record KernelClassifyFindingRequest(string Classification);
+
+/// <summary>Request body for <c>POST /api/v1/kernel/validation/findings/{findingRef}/accept</c>.</summary>
+/// <param name="Rationale">Acceptance rationale attested with <c>Responsibility</c> meaning.</param>
+/// <param name="LastDetectedRunRef">Optional <c>validation_run:&lt;uuid&gt;</c> <c>NodeRef</c> the signer bound into <c>FindingDecisionContent.Hash</c>.</param>
+/// <param name="AttestationId">Optional caller-supplied attestation identifier.</param>
+public sealed record KernelAcceptFindingRequest(
+    string Rationale,
+    string? LastDetectedRunRef = null,
+    Guid? AttestationId = null);
+
+/// <summary>Request body for <c>POST /api/v1/kernel/validation/findings/{findingRef}/explain</c>.</summary>
+/// <param name="Explanation">Reviewer-guide explanation attested with <c>Approved</c> meaning.</param>
+/// <param name="LastDetectedRunRef">Optional <c>validation_run:&lt;uuid&gt;</c> <c>NodeRef</c> the signer bound into <c>FindingDecisionContent.Hash</c>.</param>
+/// <param name="AttestationId">Optional caller-supplied attestation identifier.</param>
+public sealed record KernelExplainFindingRequest(
+    string Explanation,
+    string? LastDetectedRunRef = null,
+    Guid? AttestationId = null);
 
 /// <summary>One in-memory violation returned when previewing a rule pack against a study's collection instances.</summary>
 /// <param name="FormId">The evaluated form instance identifier.</param>
@@ -222,7 +320,9 @@ public sealed record KernelValidationFindingResponse(
     string FirstDetectedRunRef,
     string LastDetectedRunRef,
     string? ResolvedByRunRef,
-    string? Classification)
+    string? Classification,
+    string? DecisionText = null,
+    string? DecidedBy = null)
 {
     internal static KernelValidationFindingResponse From(ValidationFindingView view) =>
         new(
@@ -246,7 +346,9 @@ public sealed record KernelValidationFindingResponse(
             NodeRef.For(view.FirstDetectedRun).ToString(),
             NodeRef.For(view.LastDetectedRun).ToString(),
             view.ResolvedBy is { } r ? NodeRef.For(r).ToString() : null,
-            view.Classification?.ToString());
+            view.Classification?.ToString(),
+            view.Decision?.Text,
+            view.Decision?.DecidedBy);
 }
 
 /// <summary>Page of validation findings for a study.</summary>

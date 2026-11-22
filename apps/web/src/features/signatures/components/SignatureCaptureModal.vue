@@ -39,7 +39,9 @@
             <option value="PI">PI / Principal Investigator</option>
             <option value="Site CRC">Site CRC</option>
             <option value="Investigator">Investigator</option>
+            <option value="Study Designer">Study Designer</option>
             <option value="Sponsor Designer">Sponsor Designer</option>
+            <option value="CRA / Monitor">CRA / Monitor</option>
             <option value="Data Manager">Data Manager</option>
             <option value="Auditor">Auditor</option>
           </select>
@@ -109,6 +111,7 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
   signerRole: { type: String, default: "" },
   role: { type: String, default: "" },
   semanticAction: { type: String, default: "" },
+  batchId: { type: String, default: null },
   onSign: { type: Function, default: null },
   reasons: { type: Array, default: null },
 };
@@ -347,6 +350,7 @@ async function confirm() {
         (props.actionUrl.includes("capture-consent")
           ? "econsent.consent.capture"
           : undefined),
+      ...(props.batchId ? { batchId: props.batchId } : {}),
     });
 
     const sigToken = reauthRes.sig_token;

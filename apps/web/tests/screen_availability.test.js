@@ -127,6 +127,22 @@ describe("Screen availability", () => {
     expect(wrapper.find("#btn-unavailable-home").exists()).toBe(true);
   });
 
+  it("keeps /rules gated out of AVAILABLE_SCREENS and links users directly to Clinical Canvas Validation", async () => {
+    signInAsSuperAdmin();
+    expect(isScreenAvailable("rules")).toBe(false);
+
+    await router.push("/rules");
+    expect(router.currentRoute.value.path).toBe("/unavailable");
+    expect(router.currentRoute.value.query.screen).toBe("rules");
+
+    const wrapper = mount(UnavailableView, { global: { plugins: [router] } });
+    const validationLink = wrapper.find("#link-unavailable-canvas-validation");
+    expect(validationLink.exists()).toBe(true);
+    expect(validationLink.attributes("href")).toContain(
+      "stage=data&section=validation"
+    );
+  });
+
   it("always offers study workspace recovery on /unavailable for every authenticated role", async () => {
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;

@@ -206,7 +206,7 @@ export const SCREEN_CATALOG = Object.freeze({
     minimumTier: "Individual",
     isBaselineCapability: false,
     roadmapStage:
-      "Rule packs, edit-check previews, validation findings, and inline queries active in Study Workspace; standalone rule studio in pre-release",
+      "Rule authoring, edit-check previews, validation runs, finding triage, and inline queries active in Clinical Canvas Validation; standalone rule studio in pre-release",
     summary:
       "Edit-check specification, discrepancy query triage, and cross-visit validation rules.",
   },

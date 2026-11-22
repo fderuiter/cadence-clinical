@@ -217,7 +217,7 @@ public static partial class RuleExpressionJson
 
             return VariableName().IsMatch(variable)
                 ? new VariableExpression(variable)
-                : throw new FormatException($"{path}: \"{variable}\" is not a variable name (letters, digits, '_' and '.', starting with a letter or '_', at most 64 characters).");
+                : throw new FormatException($"{path}: \"{variable}\" is not a variable name (letters, digits, '_', '.', ':' and '-', starting with a letter or '_', at most 64 characters).");
         }
 
         if (nodeType is not null && (nodeType.Equals("LITERAL", StringComparison.OrdinalIgnoreCase) || nodeType.Equals("constant", StringComparison.OrdinalIgnoreCase)))
@@ -393,6 +393,6 @@ public static partial class RuleExpressionJson
         _ => "length",
     };
 
-    [GeneratedRegex("^[A-Za-z_][A-Za-z0-9_.]{0,63}$")]
+    [GeneratedRegex("^[A-Za-z_][A-Za-z0-9_.:-]{0,63}$")]
     private static partial Regex VariableName();
 }

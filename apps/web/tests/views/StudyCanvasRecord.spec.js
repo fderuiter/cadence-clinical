@@ -593,6 +593,27 @@ describe("Clinical Canvas: a participant's data", () => {
       );
     });
 
+    it("lets Sponsor Admin founders answer queries in ParticipantRecord while denying auditor, cra, data_manager, and sponsor_designer", async () => {
+      for (const deniedRole of [
+        "auditor",
+        "cra",
+        "data_manager",
+        "sponsor_designer",
+      ]) {
+        signInWith([deniedRole]);
+        await openRecord();
+        expect(
+          wrapper.find(`#btn-answer-${QUERY_ID}`).exists(),
+          `${deniedRole} must not answer`
+        ).toBe(false);
+        wrapper.unmount();
+      }
+
+      signInWith(["Sponsor Admin"]);
+      await openRecord();
+      expect(wrapper.find(`#btn-answer-${QUERY_ID}`).exists()).toBe(true);
+    });
+
     it("offers a CRA the transitions the module allows, one request per query", async () => {
       signInWith(["cra"]);
       vi.mocked(ecrfQueriesApi.listForEnrollment).mockResolvedValue([

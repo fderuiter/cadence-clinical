@@ -279,6 +279,7 @@
               v-if="recordParticipant"
               :participant="recordParticipant"
               :can-manage="canManage"
+              :can-answer="canAnswer"
               :form-location="formLocationById"
               :new-form-location="newFormLocationFor(recordParticipant)"
               :new-form-cell-location="
@@ -415,6 +416,8 @@
             :key="`validation-${studyCode}`"
             :study-code="studyCode"
             :can-manage-rules="canManageRules"
+            :can-run-validation="canRunStudyValidation"
+            :can-triage-findings="canTriageStudyFindings"
           />
 
           <ExportsSection
@@ -897,6 +900,8 @@ import {
   canManageParticipants,
   canManageQueries,
   canManageRulePacks,
+  canRunValidation,
+  canTriageFindings,
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
@@ -1479,6 +1484,8 @@ const inspectedNodeText = computed(() => {
 const canManage = computed(() => canManageQueries(authStore));
 const canAnswer = computed(() => canAnswerQueries(authStore));
 const canManageRules = computed(() => canManageRulePacks(authStore));
+const canRunStudyValidation = computed(() => canRunValidation(authStore));
+const canTriageStudyFindings = computed(() => canTriageFindings(authStore));
 const canVerify = computed(() => canVerifySource(authStore));
 const canChangeParticipants = computed(() => canManageParticipants(authStore));
 

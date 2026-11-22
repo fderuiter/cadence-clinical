@@ -343,7 +343,7 @@ const ACTION_TEXT: Record<
   },
 };
 
-const effectiveCanAnswer = computed(() => props.canAnswer ?? !props.canManage);
+const effectiveCanAnswer = computed(() => props.canAnswer ?? false);
 
 const pendingAction = ref<{ queryId: string; action: FormQueryAction } | null>(
   null

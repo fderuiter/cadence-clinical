@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,13 +39,37 @@ public static class KernelValidationEndpoints
     /// <summary>The semantic action a library-item approval step-up token must carry.</summary>
     public const string ApproveLibraryItemSemanticAction = "kernel.library_item.approve";
 
+    /// <summary>The semantic action a library-item deprecation step-up token must carry.</summary>
+    public const string DeprecateLibraryItemSemanticAction = "kernel.library_item.deprecate";
+
+    /// <summary>The semantic action a finding acceptance step-up token must carry.</summary>
+    public const string AcceptFindingSemanticAction = "kernel.validation_finding.accept";
+
+    /// <summary>The semantic action a finding explanation step-up token must carry.</summary>
+    public const string ExplainFindingSemanticAction = "kernel.validation_finding.explain";
+
     private static readonly Capability ApproveLibraryItemCapability = new("library_item.approve", VerbClass.Approve);
+    private static readonly Capability DeprecateLibraryItemCapability = new("library_item.deprecate", VerbClass.Approve);
+    private static readonly Capability AcceptFindingCapability = new("validation_finding.accept", VerbClass.Approve);
+    private static readonly Capability ExplainFindingCapability = new("validation_finding.explain", VerbClass.Approve);
     private static readonly Capability RegisterStandardCapability = new("standard.register", VerbClass.Execute);
     private static readonly Capability ApproveStandardCapability = new("standard.approve", VerbClass.Approve);
 
     /// <summary>The canonical concrete action path for approving a library item reference.</summary>
     public static string ApproveLibraryItemAction(string itemRef) =>
         $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/library-items/{itemRef}/approve";
+
+    /// <summary>The canonical concrete action path for deprecating a library item reference.</summary>
+    public static string DeprecateLibraryItemAction(string itemRef) =>
+        $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/library-items/{itemRef}/deprecate";
+
+    /// <summary>The canonical concrete action path for accepting a validation finding reference.</summary>
+    public static string AcceptFindingAction(string findingRef) =>
+        $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/validation/findings/{findingRef}/accept";
+
+    /// <summary>The canonical concrete action path for explaining a validation finding reference.</summary>
+    public static string ExplainFindingAction(string findingRef) =>
+        $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/validation/findings/{findingRef}/explain";
 
     /// <summary>Maps study rule-pack and validation finding routes on the kernel group.</summary>
     public static RouteGroupBuilder MapKernelValidation(this RouteGroupBuilder kernel)
@@ -58,6 +83,18 @@ public static class KernelValidationEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/studies/{studyRef}/rule-packs", DraftStudyRulePackAsync)
+            .WithName("KernelDraftStudyRulePack")
+            .WithSummary("Drafts the next version of a study rule-pack library item (library_item.draft).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesKernelErrors([
+                .. KernelErrors.CommandPipeline,
+                KernelErrors.AlreadyExists,
+                StandardsErrors.LibraryItemInvalid,
+                StandardsErrors.StandardVersionUnknown,
+            ]);
 
         group.MapPost("/studies/{studyRef}/rule-packs/{itemRef}/preview", PreviewStudyRulePackAsync)
             .WithName("KernelPreviewStudyRulePack")
@@ -86,6 +123,23 @@ public static class KernelValidationEndpoints
                 ApproveLibraryItemSemanticAction,
                 ctx => ApproveLibraryItemAction(ctx.Request.RouteValues["itemRef"]?.ToString() ?? string.Empty));
 
+        group.MapPost("/library-items/{itemRef}/deprecate", DeprecateLibraryItemAsync)
+            .WithName("KernelDeprecateLibraryItem")
+            .WithSummary("Deprecates an approved library item version with a Responsibility attestation (library_item.deprecate).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesKernelErrors([
+                .. KernelErrors.CommandPipeline,
+                .. RaisesKernelErrorsAttribute.Of(typeof(Attest))!,
+                KernelErrors.AlreadyExists,
+                StandardsErrors.LibraryItemUnknown,
+                StandardsErrors.InvalidTransition,
+                StandardsErrors.AttestationRejected,
+            ])
+            .RequireElectronicSignature(
+                DeprecateLibraryItemSemanticAction,
+                ctx => DeprecateLibraryItemAction(ctx.Request.RouteValues["itemRef"]?.ToString() ?? string.Empty));
+
         group.MapPut("/studies/{studyRef}/standards", DeclareStudyRulePacksAsync)
             .WithName("KernelDeclareStudyRulePacks")
             .WithSummary("Declares or updates the approved rule-pack library items pinned on a study (study.declare_standards).")
@@ -97,6 +151,19 @@ public static class KernelValidationEndpoints
                 StandardsErrors.LibraryItemUnknown,
                 StandardsErrors.NotApproved,
                 StandardsErrors.DeclarationInvalid,
+            ]);
+
+        group.MapPost("/studies/{studyRef}/validation/runs", RunStudyValidationAsync)
+            .WithName("KernelRunStudyValidation")
+            .WithSummary("Evaluates the study's pinned rule packs over current collection instances and records a deterministic validation run (validation_run.record).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesKernelErrors([
+                .. KernelErrors.CommandPipeline,
+                KernelErrors.AlreadyExists,
+                ValidationErrors.RunInvalid,
+                ValidationErrors.RulePackNotUsable,
+                ValidationErrors.StudyUnknown,
             ]);
 
         group.MapGet("/studies/{studyRef}/validation/findings", ListStudyFindingsAsync)
@@ -112,6 +179,68 @@ public static class KernelValidationEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/validation/findings/{findingRef}/investigate", InvestigateFindingAsync)
+            .WithName("KernelInvestigateValidationFinding")
+            .WithSummary("Marks an open validation finding as under investigation (validation_finding.investigate).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesKernelErrors([
+                .. KernelErrors.CommandPipeline,
+                ValidationErrors.FindingUnknown,
+                ValidationErrors.InvalidTransition,
+            ]);
+
+        group.MapPost("/validation/findings/{findingRef}/classify", ClassifyFindingAsync)
+            .WithName("KernelClassifyValidationFinding")
+            .WithSummary("Records the problem classification on a detected validation finding (validation_finding.classify).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesKernelErrors([
+                .. KernelErrors.CommandPipeline,
+                ValidationErrors.FindingUnknown,
+                ValidationErrors.InvalidTransition,
+            ]);
+
+        group.MapPost("/validation/findings/{findingRef}/accept", AcceptFindingAsync)
+            .WithName("KernelAcceptValidationFinding")
+            .WithSummary("Accepts an open or investigating finding with a Responsibility attestation over FindingDecisionContent.Hash (validation_finding.accept).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesKernelErrors([
+                .. KernelErrors.CommandPipeline,
+                .. RaisesKernelErrorsAttribute.Of(typeof(Attest))!,
+                KernelErrors.AlreadyExists,
+                ValidationErrors.FindingUnknown,
+                ValidationErrors.InvalidTransition,
+                ValidationErrors.DecisionTextInvalid,
+                ValidationErrors.AttestationRejected,
+            ])
+            .RequireElectronicSignature(AcceptFindingBinding);
+
+        group.MapPost("/validation/findings/{findingRef}/explain", ExplainFindingAsync)
+            .WithName("KernelExplainValidationFinding")
+            .WithSummary("Explains an open or investigating finding for the reviewer guide with an Approved attestation over FindingDecisionContent.Hash (validation_finding.explain).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesKernelErrors([
+                .. KernelErrors.CommandPipeline,
+                .. RaisesKernelErrorsAttribute.Of(typeof(Attest))!,
+                KernelErrors.AlreadyExists,
+                ValidationErrors.FindingUnknown,
+                ValidationErrors.InvalidTransition,
+                ValidationErrors.DecisionTextInvalid,
+                ValidationErrors.AttestationRejected,
+            ])
+            .RequireElectronicSignature(ExplainFindingBinding);
+
+        group.MapPost("/validation/findings/{findingRef}/reopen", ReopenFindingAsync)
+            .WithName("KernelReopenValidationFinding")
+            .WithSummary("Withdraws an investigation, acceptance or explanation so a detected finding returns to Open (validation_finding.reopen).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesKernelErrors([
+                .. KernelErrors.CommandPipeline,
+                ValidationErrors.FindingUnknown,
+                ValidationErrors.InvalidTransition,
+            ]);
 
         return kernel;
     }
@@ -291,6 +420,166 @@ public static class KernelValidationEndpoints
 
         var updated = await registry.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false) ?? existing;
         return TypedResults.Ok(KernelRulePackResponse.From(updated, pinned: false));
+    }
+
+    internal static async Task<Results<Created<KernelRulePackResponse>, ProblemHttpResult>> DraftStudyRulePackAsync(
+        string studyRef,
+        KernelDraftRulePackRequest? request,
+        HttpContext context,
+        IStandardsRegistry registry,
+        IKernelCommandSender sender,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken)
+    {
+        if (request is null
+            || string.IsNullOrWhiteSpace(request.Key)
+            || string.IsNullOrWhiteSpace(request.Title)
+            || request.Content.ValueKind != JsonValueKind.Object)
+        {
+            return KernelProblems.BadRequest(
+                "Invalid rule-pack draft",
+                "Provide key, title, and a RulePack JSON content object.");
+        }
+
+        if (ReadWriteHeaders(context, changeReason, out var idempotencyKey, out var reason) is { } headerProblem)
+        {
+            return headerProblem;
+        }
+
+        var standardVersions = new List<StandardVersionId>();
+        if (request.StandardVersionRefs is not null)
+        {
+            foreach (var rawRef in request.StandardVersionRefs)
+            {
+                if (!NodeRef.TryParse(rawRef, out var stdNode) || stdNode.Kind != NodeKinds.StandardVersion)
+                {
+                    return KernelProblems.BadRequest("Invalid NodeRef", $"'{rawRef}' is not a standard_version NodeRef.");
+                }
+
+                standardVersions.Add(StandardVersionId.FromGuid(stdNode.Id));
+            }
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var resolved = await ResolveVisibleStudyAsync(tenant, studyRef, context, visibility, actor, cancellationToken).ConfigureAwait(false);
+        if (resolved.Problem is { } studyProblem)
+        {
+            return studyProblem;
+        }
+
+        var itemId = request.LibraryItemId is { } given && given != Guid.Empty
+            ? LibraryItemId.FromGuid(given)
+            : LibraryItemId.FromGuid(DeriveGuid(tenant, "draft-rule-pack", $"{resolved.StudyId}:{idempotencyKey}"));
+
+        var draftResult = await sender.SendAsync(
+            new DraftLibraryItem(
+                tenant,
+                itemId,
+                LibraryItemKind.RulePack,
+                request.Key.Trim(),
+                request.Title.Trim(),
+                request.Content,
+                standardVersions,
+                idempotencyKey,
+                reason),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!draftResult.IsSuccess)
+        {
+            return KernelErrorEndpoints.Problem(draftResult.Error!);
+        }
+
+        var drafted = await registry.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
+        var response = drafted is not null
+            ? KernelRulePackResponse.From(drafted, pinned: false)
+            : new KernelRulePackResponse(
+                NodeRef.For(itemId).ToString(),
+                draftResult.Value!.Key,
+                draftResult.Value.Version,
+                request.Title.Trim(),
+                null,
+                GovernanceStatus.Draft.ToString(),
+                false,
+                draftResult.Value.ContentHash,
+                0,
+                []);
+
+        return TypedResults.Created(
+            $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/studies/{NodeRef.For(resolved.StudyId)}/rule-packs",
+            response);
+    }
+
+    internal static async Task<Results<Ok<KernelRulePackResponse>, ProblemHttpResult>> DeprecateLibraryItemAsync(
+        string itemRef,
+        KernelDeprecateLibraryItemRequest? request,
+        HttpContext context,
+        IStandardsRegistry registry,
+        IKernelCommandSender sender,
+        IAuthorizationProbe probe,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken)
+    {
+        if (context.VerifiedSigToken() is not { } sigToken)
+        {
+            return TypedResults.Problem(
+                title: "Electronic signature required",
+                detail: "Supply a fresh, single-use X-Sig-Token step-up header bound to this library item deprecation.",
+                statusCode: StatusCodes.Status401Unauthorized);
+        }
+
+        if (!TryParseLibraryItem(itemRef, out var itemId))
+        {
+            return KernelProblems.BadRequest("Invalid NodeRef", $"'{itemRef}' is not a library_item NodeRef (library_item:<uuid>).");
+        }
+
+        if (ReadWriteHeaders(context, changeReason, out var idempotencyKey, out var reason) is { } headerProblem)
+        {
+            return headerProblem;
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var existing = await registry.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
+        if (existing is null)
+        {
+            return KernelErrorEndpoints.Problem(StandardsErrors.LibraryItemUnknown);
+        }
+
+        var attestationId = request?.AttestationId is { } given && given != Guid.Empty
+            ? AttestationId.FromGuid(given)
+            : AttestationId.FromGuid(DeriveGuid(tenant, "deprecate-library-item-attest", idempotencyKey));
+
+        var canDeprecate = await probe.CanIAsync(tenant, DeprecateLibraryItemCapability, NodeRef.For(itemId), cancellationToken).ConfigureAwait(false);
+        if (canDeprecate.Permitted)
+        {
+            var attestResult = await sender.SendAsync(
+                new Attest(
+                    tenant,
+                    attestationId,
+                    AttestationMeaning.Responsibility,
+                    new AttestationTarget(NodeKinds.LibraryItem, itemId.Value, existing.ContentHash),
+                    new DateTimeOffset(sigToken.IssuedAt, TimeSpan.Zero),
+                    KernelLockEndpoints.StepUpMethod,
+                    $"{idempotencyKey}:attest",
+                    reason),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!attestResult.IsSuccess && attestResult.Error?.Code != KernelErrors.AlreadyExists.Code)
+            {
+                return KernelErrorEndpoints.Problem(attestResult.Error!);
+            }
+        }
+
+        var deprecateResult = await sender.SendAsync(
+            new DeprecateLibraryItem(tenant, itemId, attestationId, idempotencyKey, reason),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!deprecateResult.IsSuccess)
+        {
+            return KernelErrorEndpoints.Problem(deprecateResult.Error!);
+        }
+
+        var profilePins = new HashSet<LibraryItemId>();
+        var updated = await registry.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false) ?? existing;
+        return TypedResults.Ok(KernelRulePackResponse.From(updated, pinned: profilePins.Contains(itemId)));
     }
 
     internal static async Task<Results<Ok<KernelStudyRulePacksResponse>, ProblemHttpResult>> DeclareStudyRulePacksAsync(
@@ -501,6 +790,394 @@ public static class KernelValidationEndpoints
             view.Explain()));
     }
 
+    internal static async Task<Results<Ok<KernelStudyValidationRunResponse>, ProblemHttpResult>> RunStudyValidationAsync(
+        string studyRef,
+        KernelRunStudyValidationRequest? request,
+        HttpContext context,
+        ICollectionValidationService validation,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        IKernelChangeReason changeReason,
+        IClock clock,
+        CancellationToken cancellationToken)
+    {
+        if (ReadWriteHeaders(context, changeReason, out var idempotencyKey, out var reason) is { } headerProblem)
+        {
+            return headerProblem;
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var resolved = await ResolveVisibleStudyAsync(tenant, studyRef, context, visibility, actor, cancellationToken).ConfigureAwait(false);
+        if (resolved.Problem is { } studyProblem)
+        {
+            return studyProblem;
+        }
+
+        var now = clock.UtcNow;
+        var asOf = request?.AsOf ?? DateOnly.FromDateTime(now.UtcDateTime);
+        var runResult = await validation.ValidateStudyCollectionsAsync(
+            tenant,
+            resolved.StudyId,
+            asOf,
+            now,
+            idempotencyKey,
+            reason,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!runResult.IsSuccess)
+        {
+            return KernelErrorEndpoints.Problem(runResult.Error!);
+        }
+
+        var outcome = runResult.Value!.RunOutcome;
+        return TypedResults.Ok(new KernelStudyValidationRunResponse(
+            NodeRef.For(resolved.StudyId).ToString(),
+            outcome is not null ? NodeRef.For(outcome.RunId).ToString() : null,
+            outcome?.Detected ?? 0,
+            outcome?.New ?? 0,
+            outcome?.Resolved ?? 0,
+            [.. runResult.Value.Findings.Select(KernelValidationFindingResponse.From)]));
+    }
+
+    internal static Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> InvestigateFindingAsync(
+        string findingRef,
+        HttpContext context,
+        IValidationFindings findings,
+        IKernelCommandSender sender,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken) =>
+        SendUnsignedFindingDecisionAsync(
+            findingRef,
+            context,
+            findings,
+            sender,
+            changeReason,
+            (tenant, id, key, reason) => new InvestigateFinding(tenant, id, key, reason),
+            cancellationToken);
+
+    internal static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> ClassifyFindingAsync(
+        string findingRef,
+        KernelClassifyFindingRequest? request,
+        HttpContext context,
+        IValidationFindings findings,
+        IKernelCommandSender sender,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request?.Classification)
+            || !Enum.TryParse<FindingClassification>(request.Classification.Trim(), ignoreCase: true, out var classification)
+            || !Enum.IsDefined(classification))
+        {
+            return KernelProblems.BadRequest("Invalid classification", $"'{request?.Classification}' is not a valid FindingClassification.");
+        }
+
+        return await SendUnsignedFindingDecisionAsync(
+            findingRef,
+            context,
+            findings,
+            sender,
+            changeReason,
+            (tenant, id, key, reason) => new ClassifyFinding(tenant, id, classification, key, reason),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> AcceptFindingAsync(
+        string findingRef,
+        KernelAcceptFindingRequest? request,
+        HttpContext context,
+        IValidationFindings findings,
+        IKernelCommandSender sender,
+        IAuthorizationProbe probe,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken) =>
+        AttestAndConcludeFindingAsync(
+            findingRef,
+            request?.Rationale,
+            request?.LastDetectedRunRef,
+            request?.AttestationId,
+            FindingStatus.Accepted,
+            AttestationMeaning.Responsibility,
+            AcceptFindingCapability,
+            "accept-finding-attest",
+            context,
+            findings,
+            sender,
+            probe,
+            changeReason,
+            (tenant, id, text, attestId, key, reason) => new AcceptFinding(tenant, id, text, attestId, key, reason),
+            cancellationToken);
+
+    internal static Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> ExplainFindingAsync(
+        string findingRef,
+        KernelExplainFindingRequest? request,
+        HttpContext context,
+        IValidationFindings findings,
+        IKernelCommandSender sender,
+        IAuthorizationProbe probe,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken) =>
+        AttestAndConcludeFindingAsync(
+            findingRef,
+            request?.Explanation,
+            request?.LastDetectedRunRef,
+            request?.AttestationId,
+            FindingStatus.Explained,
+            AttestationMeaning.Approved,
+            ExplainFindingCapability,
+            "explain-finding-attest",
+            context,
+            findings,
+            sender,
+            probe,
+            changeReason,
+            (tenant, id, text, attestId, key, reason) => new ExplainFinding(tenant, id, text, attestId, key, reason),
+            cancellationToken);
+
+    internal static Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> ReopenFindingAsync(
+        string findingRef,
+        HttpContext context,
+        IValidationFindings findings,
+        IKernelCommandSender sender,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken) =>
+        SendUnsignedFindingDecisionAsync(
+            findingRef,
+            context,
+            findings,
+            sender,
+            changeReason,
+            (tenant, id, key, reason) => new ReopenFinding(tenant, id, key, reason),
+            cancellationToken);
+
+    private static SigTokenBinding? AcceptFindingBinding(EndpointFilterInvocationContext invocation)
+    {
+        var rawRef = invocation.GetArgument<string>(0);
+        var req = invocation.GetArgument<KernelAcceptFindingRequest?>(1);
+        return BuildSignedFindingBinding(
+            invocation.HttpContext,
+            rawRef,
+            req?.Rationale,
+            req?.LastDetectedRunRef,
+            FindingStatus.Accepted,
+            AcceptFindingSemanticAction,
+            AcceptFindingAction);
+    }
+
+    private static SigTokenBinding? ExplainFindingBinding(EndpointFilterInvocationContext invocation)
+    {
+        var rawRef = invocation.GetArgument<string>(0);
+        var req = invocation.GetArgument<KernelExplainFindingRequest?>(1);
+        return BuildSignedFindingBinding(
+            invocation.HttpContext,
+            rawRef,
+            req?.Explanation,
+            req?.LastDetectedRunRef,
+            FindingStatus.Explained,
+            ExplainFindingSemanticAction,
+            ExplainFindingAction);
+    }
+
+    private static SigTokenBinding? BuildSignedFindingBinding(
+        HttpContext httpContext,
+        string? rawFindingRef,
+        string? decisionText,
+        string? rawRunRef,
+        FindingStatus decision,
+        string semanticAction,
+        Func<string, string> buildAction)
+    {
+        if (!TryParseFinding(rawFindingRef ?? string.Empty, out var findingId)
+            || string.IsNullOrWhiteSpace(decisionText))
+        {
+            return null;
+        }
+
+        ValidationRunId detectedByRun;
+        if (!string.IsNullOrWhiteSpace(rawRunRef))
+        {
+            if (!TryParseValidationRun(rawRunRef, out detectedByRun))
+            {
+                return null;
+            }
+        }
+        else
+        {
+            var findings = httpContext.RequestServices.GetService<IValidationFindings>();
+            if (findings is null)
+            {
+                return null;
+            }
+
+            TenantId tenant;
+            try
+            {
+                tenant = KernelRequestTenant.Get(httpContext);
+            }
+            catch (InvalidOperationException)
+            {
+                return null;
+            }
+
+            var current = findings.FindAsync(tenant, findingId, httpContext.RequestAborted).GetAwaiter().GetResult();
+            if (current is null)
+            {
+                return null;
+            }
+
+            detectedByRun = current.LastDetectedRun;
+        }
+
+        var canonicalRef = NodeRef.For(findingId).ToString();
+        var hash = FindingDecisionContent.Hash(findingId, detectedByRun, decision, decisionText);
+        return new SigTokenBinding(buildAction(canonicalRef), semanticAction, hash);
+    }
+
+    private static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> SendUnsignedFindingDecisionAsync(
+        string findingRef,
+        HttpContext context,
+        IValidationFindings findings,
+        IKernelCommandSender sender,
+        IKernelChangeReason changeReason,
+        Func<TenantId, ValidationFindingId, string, string, ICommand<ValidationFindingId>> buildCommand,
+        CancellationToken cancellationToken)
+    {
+        if (!TryParseFinding(findingRef, out var findingId))
+        {
+            return KernelProblems.BadRequest("Invalid NodeRef", $"'{findingRef}' is not a validation_finding NodeRef (validation_finding:<uuid>).");
+        }
+
+        if (ReadWriteHeaders(context, changeReason, out var idempotencyKey, out var reason) is { } headerProblem)
+        {
+            return headerProblem;
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var result = await sender.SendAsync(buildCommand(tenant, findingId, idempotencyKey, reason), cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!result.IsSuccess)
+        {
+            return KernelErrorEndpoints.Problem(result.Error!);
+        }
+
+        var updated = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
+        return updated is null
+            ? KernelErrorEndpoints.Problem(ValidationErrors.FindingUnknown)
+            : TypedResults.Ok(KernelValidationFindingResponse.From(updated));
+    }
+
+    private static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> AttestAndConcludeFindingAsync(
+        string findingRef,
+        string? rawText,
+        string? rawRunRef,
+        Guid? explicitAttestationId,
+        FindingStatus decision,
+        AttestationMeaning meaning,
+        Capability capability,
+        string attestSeedKind,
+        HttpContext context,
+        IValidationFindings findings,
+        IKernelCommandSender sender,
+        IAuthorizationProbe probe,
+        IKernelChangeReason changeReason,
+        Func<TenantId, ValidationFindingId, string, AttestationId, string, string, ICommand<ValidationFindingId>> buildCommand,
+        CancellationToken cancellationToken)
+    {
+        if (context.VerifiedSigToken() is not { } sigToken)
+        {
+            return TypedResults.Problem(
+                title: "Electronic signature required",
+                detail: "Supply a fresh, single-use X-Sig-Token step-up header bound to FindingDecisionContent.Hash.",
+                statusCode: StatusCodes.Status401Unauthorized);
+        }
+
+        if (!TryParseFinding(findingRef, out var findingId))
+        {
+            return KernelProblems.BadRequest("Invalid NodeRef", $"'{findingRef}' is not a validation_finding NodeRef (validation_finding:<uuid>).");
+        }
+
+        if (ReadWriteHeaders(context, changeReason, out var idempotencyKey, out var reason) is { } headerProblem)
+        {
+            return headerProblem;
+        }
+
+        var text = rawText ?? string.Empty;
+        if (!FindingText.IsValid(text))
+        {
+            return KernelErrorEndpoints.Problem(ValidationErrors.DecisionTextInvalid);
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var existing = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
+        if (existing is null)
+        {
+            return KernelErrorEndpoints.Problem(ValidationErrors.FindingUnknown);
+        }
+
+        if (!string.IsNullOrWhiteSpace(rawRunRef)
+            && (!TryParseValidationRun(rawRunRef, out var signedRun) || signedRun != existing.LastDetectedRun))
+        {
+            return KernelErrorEndpoints.Problem(
+                ValidationErrors.AttestationRejected.WithMessage(
+                    $"Decision signature targets validation run '{rawRunRef}', whereas the finding was last detected by '{NodeRef.For(existing.LastDetectedRun)}'."));
+        }
+
+        var attestationId = explicitAttestationId is { } given && given != Guid.Empty
+            ? AttestationId.FromGuid(given)
+            : AttestationId.FromGuid(DeriveGuid(tenant, attestSeedKind, idempotencyKey));
+        var contentHash = FindingDecisionContent.Hash(findingId, existing.LastDetectedRun, decision, text);
+
+        var canDecide = await probe.CanIAsync(tenant, capability, NodeRef.For(findingId), cancellationToken).ConfigureAwait(false);
+        if (canDecide.Permitted)
+        {
+            var attestResult = await sender.SendAsync(
+                new Attest(
+                    tenant,
+                    attestationId,
+                    meaning,
+                    new AttestationTarget(NodeKinds.ValidationFinding, findingId.Value, contentHash),
+                    new DateTimeOffset(sigToken.IssuedAt, TimeSpan.Zero),
+                    KernelLockEndpoints.StepUpMethod,
+                    $"{idempotencyKey}:attest",
+                    reason),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!attestResult.IsSuccess && attestResult.Error?.Code != KernelErrors.AlreadyExists.Code)
+            {
+                return KernelErrorEndpoints.Problem(attestResult.Error!);
+            }
+        }
+
+        var decisionResult = await sender.SendAsync(
+            buildCommand(tenant, findingId, text, attestationId, idempotencyKey, reason),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!decisionResult.IsSuccess)
+        {
+            return KernelErrorEndpoints.Problem(decisionResult.Error!);
+        }
+
+        var updated = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false) ?? existing;
+        return TypedResults.Ok(KernelValidationFindingResponse.From(updated));
+    }
+
+    private static ProblemHttpResult? ReadWriteHeaders(
+        HttpContext context,
+        IKernelChangeReason changeReason,
+        out string idempotencyKey,
+        out string reason)
+    {
+        idempotencyKey = context.Request.Headers[KernelObservationEndpoints.IdempotencyKeyHeader].ToString().Trim();
+        reason = string.Empty;
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.IdempotencyKeyRequired);
+        }
+
+        reason = (changeReason.Read(context) ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.ReasonForChangeRequired);
+        }
+
+        return null;
+    }
+
     private static async Task<(StudyId StudyId, ProblemHttpResult? Problem)> ResolveVisibleStudyAsync(
         TenantId tenant,
         string studyRef,
@@ -564,6 +1241,30 @@ public static class KernelValidationEndpoints
 
         itemId = LibraryItemId.FromGuid(node.Id);
         return !itemId.IsEmpty;
+    }
+
+    private static bool TryParseFinding(string text, out ValidationFindingId findingId)
+    {
+        findingId = default;
+        if (!NodeRef.TryParse(text, out var node) || node.Kind != NodeKinds.ValidationFinding)
+        {
+            return false;
+        }
+
+        findingId = ValidationFindingId.FromGuid(node.Id);
+        return !findingId.IsEmpty;
+    }
+
+    private static bool TryParseValidationRun(string text, out ValidationRunId runId)
+    {
+        runId = default;
+        if (!NodeRef.TryParse(text, out var node) || node.Kind != NodeKinds.ValidationRun)
+        {
+            return false;
+        }
+
+        runId = ValidationRunId.FromGuid(node.Id);
+        return !runId.IsEmpty;
     }
 
     private static async Task EnsureBaselineStandardApprovedAsync(

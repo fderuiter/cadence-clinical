@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Protocol.Import;
+using Cadence.Kernel.Validation;
 using Cadence.Rules.Expressions;
 using Cadence.Rules.Packs;
 
@@ -113,6 +115,14 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             if (odm.Rules is { Count: > 0 })
             {
                 importedRules.AddRange(odm.Rules);
+            }
+            else
+            {
+                var starterRules = _catalog.SynthesizeStarterRules(rawId, odm.CollectionSpecs);
+                if (starterRules.Count > 0)
+                {
+                    importedRules.AddRange(starterRules);
+                }
             }
         }
 
@@ -230,9 +240,15 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         };
 
         var validation = ProtocolDesignDocument.Read(ProtocolDesignDocument.Write(enrichedDesign));
-        return validation.IsValid
-            ? new ProtocolDesignImportResult(validation.Design, [], combinedNotes)
-            : new ProtocolDesignImportResult(null, validation.Problems, combinedNotes);
+        if (!validation.IsValid)
+        {
+            return new ProtocolDesignImportResult(null, validation.Problems, combinedNotes);
+        }
+
+        var starterPack = SynthesizeUsdmStarterRulePack(json, validation.Design!, finalTitle, out var packProblems);
+        return packProblems.Count > 0
+            ? new ProtocolDesignImportResult(null, packProblems, combinedNotes)
+            : new ProtocolDesignImportResult(validation.Design, [], combinedNotes, RulePack: starterPack);
     }
 
     private static ProtocolDesignImportResult FinalizeMergedFormsDesign(
@@ -340,9 +356,9 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         return new ProtocolDesignImportResult(check.Design, [], mergedNotes, RulePack: importedPack);
     }
 
-    private static string BuildLibraryKeySlug(string source)
+    private static string BuildLibraryKeySlug(string source, string prefix = "odm-")
     {
-        var sb = new StringBuilder("odm-");
+        var sb = new StringBuilder(prefix);
         bool lastDash = true;
         foreach (var ch in source)
         {
@@ -523,6 +539,291 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         return map;
     }
 
+    private static ImportedRulePack? SynthesizeUsdmStarterRulePack(
+        string json,
+        ProtocolDesign design,
+        string title,
+        out IReadOnlyList<string> problems)
+    {
+        problems = [];
+        if (design.CollectionSpecs.Count == 0)
+        {
+            return null;
+        }
+
+        var boundsByBcId = ExtractUsdmBoundsByBcId(json, out var studyIdentifier);
+        var rules = new List<Rule>();
+        var usedRuleIds = new HashSet<string>(StringComparer.Ordinal);
+        var citationDoc = TruncateRuleText($"CDISC USDM v4 Protocol Import ({title})");
+
+        foreach (var spec in design.CollectionSpecs.Where(s => s.Id.Length <= FindingTarget.MaxNameLength))
+        {
+            string? sbpItemId = null;
+            string? dbpItemId = null;
+
+            foreach (var item in spec.Items.Where(i => i.Id.Length <= FindingTarget.MaxNameLength))
+            {
+                var dot = item.Id.LastIndexOf('.');
+                var bcId = dot >= 0 ? item.Id[(dot + 1)..] : item.Id;
+                boundsByBcId.TryGetValue(bcId, out var bounds);
+
+                if (string.Equals(bounds?.ConceptCode, "C25298", StringComparison.OrdinalIgnoreCase))
+                {
+                    sbpItemId ??= item.Id;
+                }
+                else if (string.Equals(bounds?.ConceptCode, "C25299", StringComparison.OrdinalIgnoreCase))
+                {
+                    dbpItemId ??= item.Id;
+                }
+
+                var label = FirstNonBlank(item.Prompt, bounds?.Label, item.Id)!;
+                var section = FirstNonBlank(bounds?.Reference, $"{spec.Id}/{bcId}");
+                var variable = new VariableExpression(item.Id);
+
+                if (item.Required || (bounds?.HasRequiredProperty ?? false))
+                {
+                    rules.Add(new Rule(
+                        OdmDesignImporter.AllocateRuleId($"REQ.{item.Id}", usedRuleIds),
+                        1,
+                        RuleAuthority.Study,
+                        new SourceCitation(citationDoc, section, null),
+                        new RuleApplicability(ValidationStage.Collection, null, null, null, spec.Id),
+                        ValidationSeverity.Warning,
+                        new FunctionExpression(RuleFunction.IsEmpty, [variable]),
+                        TruncateRuleText($"Required item '{label}' is missing on '{spec.Name}'."),
+                        "Enter the required clinical value or record why it was not collected.",
+                        EffectivePeriod.Always));
+                }
+
+                if (bounds?.ResponseValues is { Count: > 0 and <= 100 } responseValues)
+                {
+                    var sample = responseValues.Count <= 6
+                        ? string.Join(", ", responseValues)
+                        : $"{string.Join(", ", responseValues.Take(6))}, +{responseValues.Count - 6} more";
+                    var condition = new LogicalExpression(
+                        LogicalOperator.And,
+                        [
+                            new FunctionExpression(RuleFunction.IsNotEmpty, [variable]),
+                            new FunctionExpression(
+                                RuleFunction.NotIn,
+                                [variable, .. responseValues.Select(v => (RuleExpression)new LiteralExpression(RuleValue.FromText(v)))]),
+                        ]);
+                    rules.Add(new Rule(
+                        OdmDesignImporter.AllocateRuleId($"CL.{item.Id}", usedRuleIds),
+                        1,
+                        RuleAuthority.Study,
+                        new SourceCitation(citationDoc, section, null),
+                        new RuleApplicability(ValidationStage.Collection, null, null, null, spec.Id),
+                        ValidationSeverity.Warning,
+                        condition,
+                        TruncateRuleText($"Item '{label}' must match a permitted response code ({sample})."),
+                        "Select one of the protocol's permitted response values.",
+                        EffectivePeriod.Always));
+                }
+
+                if (bounds?.MinValue is { } minVal)
+                {
+                    rules.Add(new Rule(
+                        OdmDesignImporter.AllocateRuleId($"MIN.{item.Id}", usedRuleIds),
+                        1,
+                        RuleAuthority.Study,
+                        new SourceCitation(citationDoc, section, null),
+                        new RuleApplicability(ValidationStage.Collection, null, null, null, spec.Id),
+                        ValidationSeverity.Warning,
+                        new ComparisonExpression(ComparisonOperator.Less, variable, new LiteralExpression(RuleValue.FromNumber(minVal))),
+                        TruncateRuleText($"Item '{label}' must be at least {minVal.ToString(CultureInfo.InvariantCulture)}."),
+                        "Verify the recorded measurement against the protocol range.",
+                        EffectivePeriod.Always));
+                }
+
+                if (bounds?.MaxValue is { } maxVal)
+                {
+                    rules.Add(new Rule(
+                        OdmDesignImporter.AllocateRuleId($"MAX.{item.Id}", usedRuleIds),
+                        1,
+                        RuleAuthority.Study,
+                        new SourceCitation(citationDoc, section, null),
+                        new RuleApplicability(ValidationStage.Collection, null, null, null, spec.Id),
+                        ValidationSeverity.Warning,
+                        new ComparisonExpression(ComparisonOperator.Greater, variable, new LiteralExpression(RuleValue.FromNumber(maxVal))),
+                        TruncateRuleText($"Item '{label}' must not exceed {maxVal.ToString(CultureInfo.InvariantCulture)}."),
+                        "Verify the recorded measurement against the protocol range.",
+                        EffectivePeriod.Always));
+                }
+            }
+
+            if (sbpItemId is not null && dbpItemId is not null)
+            {
+                rules.Add(new Rule(
+                    OdmDesignImporter.AllocateRuleId($"BP.{spec.Id}", usedRuleIds),
+                    1,
+                    RuleAuthority.Study,
+                    new SourceCitation(citationDoc, $"{spec.Id}/C25298-C25299", null),
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, spec.Id),
+                    ValidationSeverity.Warning,
+                    new ComparisonExpression(ComparisonOperator.LessOrEqual, new VariableExpression(sbpItemId), new VariableExpression(dbpItemId)),
+                    TruncateRuleText($"Systolic Blood Pressure must exceed Diastolic Blood Pressure on '{spec.Name}'."),
+                    "Verify both blood pressure measurements on the source record.",
+                    EffectivePeriod.Always));
+            }
+        }
+
+        if (rules.Count == 0)
+        {
+            return null;
+        }
+
+        var packTitle = TruncateRuleText($"{title} Edit Checks");
+        var pack = new RulePack(RuleAuthority.Study, packTitle, rules);
+        var packJson = RulePackJson.ToJson(pack);
+        var (_, readProblems) = RulePackJson.Read(packJson);
+        if (readProblems.Count > 0)
+        {
+            problems = readProblems;
+            return null;
+        }
+
+        var keySlug = BuildLibraryKeySlug(FirstNonBlank(studyIdentifier, title, "usdm")!, "usdm-");
+        return new ImportedRulePack(keySlug, packTitle, rules.Count, packJson);
+    }
+
+    private static Dictionary<string, UsdmBcBounds> ExtractUsdmBoundsByBcId(string json, out string? studyIdentifier)
+    {
+        studyIdentifier = null;
+        var map = new Dictionary<string, UsdmBcBounds>(StringComparer.Ordinal);
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object
+                || !doc.RootElement.TryGetProperty("study", out var study)
+                || study.ValueKind != JsonValueKind.Object)
+            {
+                return map;
+            }
+
+            studyIdentifier = FirstNonBlank(ReadStr(study, "name"), ReadStr(study, "id"));
+            if (!study.TryGetProperty("versions", out var versions) || versions.ValueKind != JsonValueKind.Array)
+            {
+                return map;
+            }
+
+            foreach (var version in versions.EnumerateArray())
+            {
+                if (version.ValueKind != JsonValueKind.Object
+                    || !version.TryGetProperty("biomedicalConcepts", out var bcs)
+                    || bcs.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+
+                foreach (var bc in bcs.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Object))
+                {
+                    var id = ReadStr(bc, "id");
+                    if (string.IsNullOrWhiteSpace(id))
+                    {
+                        continue;
+                    }
+
+                    var conceptCode = ReadNestedCode(bc);
+                    var label = FirstNonBlank(ReadStr(bc, "label"), ReadStr(bc, "name"));
+                    var reference = ReadStr(bc, "reference");
+                    bool hasRequired = false;
+                    decimal? minValue = TryReadDecimalBound(bc, "minValue", "minimum");
+                    decimal? maxValue = TryReadDecimalBound(bc, "maxValue", "maximum");
+                    List<string>? responseValues = null;
+
+                    if (bc.TryGetProperty("properties", out var props) && props.ValueKind == JsonValueKind.Array)
+                    {
+                        var enabledProps = props.EnumerateArray()
+                            .Where(p => p.ValueKind == JsonValueKind.Object
+                                && (!p.TryGetProperty("isEnabled", out var en) || en.ValueKind != JsonValueKind.False))
+                            .ToList();
+
+                        hasRequired = enabledProps.Any(p => p.TryGetProperty("isRequired", out var req) && req.ValueKind == JsonValueKind.True);
+                        if (enabledProps.Count > 0)
+                        {
+                            var primaryProp = enabledProps[0];
+                            minValue ??= TryReadDecimalBound(primaryProp, "minValue", "minimum");
+                            maxValue ??= TryReadDecimalBound(primaryProp, "maxValue", "maximum");
+                            responseValues = ExtractResponseValues(primaryProp);
+                        }
+                    }
+
+                    if (hasRequired || responseValues is { Count: > 0 } || minValue is not null || maxValue is not null || !string.IsNullOrWhiteSpace(conceptCode))
+                    {
+                        map[id] = new UsdmBcBounds(conceptCode, label, reference, hasRequired, responseValues, minValue, maxValue);
+                    }
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Ignored after StageAsync validation.
+        }
+
+        return map;
+    }
+
+    private static List<string>? ExtractResponseValues(JsonElement prop)
+    {
+        if (!prop.TryGetProperty("responseCodes", out var rcArr) || rcArr.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var values = new List<string>();
+        foreach (var rc in rcArr.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Object))
+        {
+            if (rc.TryGetProperty("isEnabled", out var en) && en.ValueKind == JsonValueKind.False)
+            {
+                continue;
+            }
+
+            if (rc.TryGetProperty("code", out var codeObj) && codeObj.ValueKind == JsonValueKind.Object)
+            {
+                if (ReadStr(codeObj, "code") is { Length: > 0 } codeVal)
+                {
+                    values.Add(codeVal);
+                }
+
+                if (ReadStr(codeObj, "decode") is { Length: > 0 } decodeVal)
+                {
+                    values.Add(decodeVal);
+                }
+            }
+        }
+
+        var distinct = values.Distinct(StringComparer.Ordinal).ToList();
+        return distinct.Count > 0 ? distinct : null;
+    }
+
+    private static decimal? TryReadDecimalBound(JsonElement obj, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (!obj.TryGetProperty(name, out var val))
+            {
+                continue;
+            }
+
+            if (val.ValueKind == JsonValueKind.Number && val.TryGetDecimal(out var d))
+            {
+                return d;
+            }
+
+            if (val.ValueKind == JsonValueKind.String
+                && decimal.TryParse(val.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return null;
+    }
+
+    private static string TruncateRuleText(string text) =>
+        text.Length <= RulePackJson.MaxTextLength ? text : text[..RulePackJson.MaxTextLength];
+
     private static void CollectUsdmExtensionNotes(JsonElement element, string path, List<ProtocolImportNote> notes)
     {
         switch (element.ValueKind)
@@ -598,4 +899,13 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         candidates.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c))?.Trim();
 
     private sealed record UsdmBcMeta(string? Name, string? Label, string? Description);
+
+    private sealed record UsdmBcBounds(
+        string? ConceptCode,
+        string? Label,
+        string? Reference,
+        bool HasRequiredProperty,
+        IReadOnlyList<string>? ResponseValues,
+        decimal? MinValue,
+        decimal? MaxValue);
 }
