@@ -99,11 +99,11 @@ internal sealed class ExpireSubscriptionHandler : ICommandHandler<ExpireSubscrip
     }
 }
 
-/// <summary>Handles <see cref="ActivateSubscription"/>.</summary>
-internal sealed class ActivateSubscriptionHandler : ICommandHandler<ActivateSubscription, SubscriptionId>
+/// <summary>Handles <see cref="SwitchTrialTier"/>.</summary>
+internal sealed class SwitchTrialTierHandler : ICommandHandler<SwitchTrialTier, SubscriptionId>
 {
     public async Task<CommandResult<SubscriptionId>> HandleAsync(
-        ActivateSubscription command,
+        SwitchTrialTier command,
         ICommandContext context,
         CancellationToken cancellationToken)
     {
@@ -118,8 +118,50 @@ internal sealed class ActivateSubscriptionHandler : ICommandHandler<ActivateSubs
             return CommercialErrors.SubscriptionUnknown;
         }
 
-        subscription.Activate(command.Tier, context.Actor.Id, command.ReasonForChange);
-        context.Work.Raise(new SubscriptionActivated(command.TenantId, subscription.Id, command.Tier));
+        if (subscription.IsExpiredAt(context.RecordedAt))
+        {
+            return KernelErrors.SubscriptionExpired;
+        }
+
+        subscription.SwitchTierInPlace(command.Tier, context.Actor.Id, command.ReasonForChange);
+        context.Work.Raise(new SubscriptionTrialTierSwitched(
+            command.TenantId,
+            subscription.Id,
+            command.Tier,
+            subscription.Status,
+            subscription.TrialEndsAt));
+        return CommandResult<SubscriptionId>.Success(subscription.Id);
+    }
+}
+
+/// <summary>Handles <see cref="ActivateSubscription"/>.</summary>
+internal sealed class ActivateSubscriptionHandler : ICommandHandler<ActivateSubscription, SubscriptionId>
+{
+    public async Task<CommandResult<SubscriptionId>> HandleAsync(
+        ActivateSubscription command,
+        ICommandContext context,
+        CancellationToken cancellationToken)
+    {
+        if (command.SubscriptionId.IsEmpty)
+        {
+            return CommercialErrors.SubscriptionRequired;
+        }
+
+        var validationErrors = SubscriptionScopingValidator.Validate(command.Scoping);
+        if (validationErrors.Count > 0)
+        {
+            return CommercialErrors.ScopingInvalid with { Errors = validationErrors };
+        }
+
+        if (await context.Work.FindAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false) is not { } subscription
+            || subscription.TenantId != command.TenantId)
+        {
+            return CommercialErrors.SubscriptionUnknown;
+        }
+
+        var normalizedScoping = SubscriptionScopingValidator.Normalize(command.Scoping!);
+        subscription.Activate(command.Tier, normalizedScoping, context.RecordedAt, context.Actor.Id, command.ReasonForChange);
+        context.Work.Raise(new SubscriptionActivated(command.TenantId, subscription.Id, command.Tier, normalizedScoping));
         return CommandResult<SubscriptionId>.Success(subscription.Id);
     }
 }
@@ -250,6 +292,7 @@ internal static class CommercialServiceCollectionExtensions
     {
         services.AddTransient<ICommandHandler<ProvisionSubscription, SubscriptionId>, ProvisionSubscriptionHandler>();
         services.AddTransient<ICommandHandler<ExpireSubscription, SubscriptionId>, ExpireSubscriptionHandler>();
+        services.AddTransient<ICommandHandler<SwitchTrialTier, SubscriptionId>, SwitchTrialTierHandler>();
         services.AddTransient<ICommandHandler<ActivateSubscription, SubscriptionId>, ActivateSubscriptionHandler>();
         services.AddTransient<ICommandHandler<GrantProductEntitlement, ProductEntitlementId>, GrantProductEntitlementHandler>();
         services.AddTransient<ICommandHandler<RevokeProductEntitlement, SubscriptionId>, RevokeProductEntitlementHandler>();

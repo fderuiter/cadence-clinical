@@ -18,6 +18,14 @@ internal sealed class SubscriptionConfiguration : IEntityTypeConfiguration<Subsc
         builder.Property(x => x.Tier).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(x => x.StartedAt).IsRequired();
+        builder.Property(x => x.StudyPhase).HasMaxLength(64);
+        builder.Property(x => x.StudyDurationMonths);
+        builder.Property(x => x.CountriesCsv).HasMaxLength(1024);
+        builder.Property(x => x.SiteCount);
+        builder.Property(x => x.ParticipantCount);
+        builder.Property(x => x.ActiveStudyCount);
+        builder.Property(x => x.BillingConfirmation).HasMaxLength(128);
+        builder.Property(x => x.ActivatedAt);
         builder.HasIndex(x => x.TenantId).IsUnique();
         builder.HasAlternateKey(x => new { x.TenantId, x.Id });
         builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);

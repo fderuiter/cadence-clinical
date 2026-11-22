@@ -2,6 +2,7 @@ import { encodeChangeReason } from "./changeReason";
 import {
   getApiBaseUrl,
   getBearerToken,
+  notifySubscriptionExpiredIfNeeded,
   refreshBearerTokenOnUnauthorized,
 } from "./authorization.js";
 
@@ -120,8 +121,13 @@ async function request(path, options = {}) {
       } catch {
         // Not JSON
       }
+      const expiredGuidance = notifySubscriptionExpiredIfNeeded(
+        response.status,
+        data
+      );
       throw new ApiError(
-        data?.detail ||
+        expiredGuidance ||
+          data?.detail ||
           data?.message ||
           `Request failed with status ${response.status}`,
         response.status,
