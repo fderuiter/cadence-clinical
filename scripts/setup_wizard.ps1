@@ -154,6 +154,90 @@ if (-not $VenvReady) {
     }
 }
 
+$CadenceBin = if ($env:CADENCE_BIN_DIR) { $env:CADENCE_BIN_DIR } else { Join-Path $RepoRoot ".cadence\bin" }
+New-Item -ItemType Directory -Force -Path $CadenceBin | Out-Null
+
+$ArchName = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+$ActionlintArch = if ($ArchName -eq "arm64") { "arm64" } else { "amd64" }
+$PinnedActionlintSha = if ($ActionlintArch -eq "arm64") {
+    "cadcf7ea4efe3a68728893813643cebe1185e5b1d4be5b96245f65c9a4d5ea41" # pragma: allowlist secret
+}
+else {
+    "6e7241b51e6817ea6a047693d8e6fed13b31819c9a0dd6c5a726e1592d22f6e9" # pragma: allowlist secret
+}
+$PinnedHadolintSha = "01d927294962b5387f9ead4f18679158452be4f17c765ad0bdffe5264b9c7b0a" # pragma: allowlist secret
+
+$ActionlintExe = Join-Path $CadenceBin "actionlint.exe"
+$ActionlintReady = $false
+if ((Test-Path $ActionlintExe) -and -not $env:ACTIONLINT_SHA256) {
+    $alVer = & $ActionlintExe -version 2>$null
+    if ($LASTEXITCODE -eq 0 -and ($alVer -join "`n") -match "1\.7\.12") {
+        Write-Ok "actionlint 1.7.12 already provisioned in .cadence\bin."
+        $ActionlintReady = $true
+    }
+}
+if (-not $ActionlintReady) {
+    $ActionlintAsset = "actionlint_1.7.12_windows_${ActionlintArch}.zip"
+    $ActionlintUrl = if ($env:ACTIONLINT_DOWNLOAD_URL) { $env:ACTIONLINT_DOWNLOAD_URL } else { "https://github.com/rhysd/actionlint/releases/download/v1.7.12/${ActionlintAsset}" }
+    $ExpectedActionlintSha = (if ($env:ACTIONLINT_SHA256) { $env:ACTIONLINT_SHA256 } else { $PinnedActionlintSha }).ToLowerInvariant()
+    $TmpActionlintDir = Join-Path ([System.IO.Path]::GetTempPath()) ("cadence-actionlint-" + [Guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Force -Path $TmpActionlintDir | Out-Null
+    $TmpActionlintZip = Join-Path $TmpActionlintDir $ActionlintAsset
+    try {
+        Invoke-WebRequest -Uri $ActionlintUrl -OutFile $TmpActionlintZip -UseBasicParsing
+        $ActualActionlintSha = (Get-FileHash -Path $TmpActionlintZip -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($ActualActionlintSha -ne $ExpectedActionlintSha) {
+            Write-Blocking "Checksum verification failed for ${ActionlintAsset} (expected ${ExpectedActionlintSha}, got ${ActualActionlintSha})."
+        }
+        else {
+            Expand-Archive -Path $TmpActionlintZip -DestinationPath $TmpActionlintDir -Force
+            Copy-Item -Path (Join-Path $TmpActionlintDir "actionlint.exe") -Destination $ActionlintExe -Force
+            Write-Ok "actionlint 1.7.12 SHA-256 verified and installed in .cadence\bin."
+        }
+    }
+    catch {
+        Write-Blocking "Failed to provision actionlint 1.7.12 in .cadence\bin: $_"
+    }
+    finally {
+        Remove-Item -Path $TmpActionlintDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+$HadolintExe = Join-Path $CadenceBin "hadolint.exe"
+$HadolintReady = $false
+if ((Test-Path $HadolintExe) -and -not $env:HADOLINT_SHA256) {
+    $hlVer = & $HadolintExe --version 2>$null
+    if ($LASTEXITCODE -eq 0 -and ($hlVer -join "`n") -match "2\.15\.1") {
+        Write-Ok "hadolint 2.15.1 already provisioned in .cadence\bin."
+        $HadolintReady = $true
+    }
+}
+if (-not $HadolintReady) {
+    $HadolintAsset = "hadolint-windows-x86_64.exe"
+    $HadolintUrl = if ($env:HADOLINT_DOWNLOAD_URL) { $env:HADOLINT_DOWNLOAD_URL } else { "https://github.com/hadolint/hadolint/releases/download/v2.15.1/${HadolintAsset}" }
+    $ExpectedHadolintSha = (if ($env:HADOLINT_SHA256) { $env:HADOLINT_SHA256 } else { $PinnedHadolintSha }).ToLowerInvariant()
+    $TmpHadolint = Join-Path ([System.IO.Path]::GetTempPath()) ("cadence-hadolint-" + [Guid]::NewGuid().ToString("N") + ".exe")
+    try {
+        Invoke-WebRequest -Uri $HadolintUrl -OutFile $TmpHadolint -UseBasicParsing
+        $ActualHadolintSha = (Get-FileHash -Path $TmpHadolint -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($ActualHadolintSha -ne $ExpectedHadolintSha) {
+            Write-Blocking "Checksum verification failed for ${HadolintAsset} (expected ${ExpectedHadolintSha}, got ${ActualHadolintSha})."
+        }
+        else {
+            Move-Item -Path $TmpHadolint -Destination $HadolintExe -Force
+            Write-Ok "hadolint 2.15.1 SHA-256 verified and installed in .cadence\bin."
+        }
+    }
+    catch {
+        Write-Blocking "Failed to provision hadolint 2.15.1 in .cadence\bin: $_"
+    }
+    finally {
+        if (Test-Path $TmpHadolint) {
+            Remove-Item -Path $TmpHadolint -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 if ($Minimal) {
     Write-Info "Skipped Playwright browser download (-Minimal). Run 'pnpm --filter web exec playwright install chromium' later if needed."
 }

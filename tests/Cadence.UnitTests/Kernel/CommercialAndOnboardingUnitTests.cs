@@ -165,15 +165,105 @@ public sealed class CommercialAndOnboardingUnitTests
         unitOfWork.CommittedCount.Should().Be(0, "expired-trial refusal never commits state mutations");
         unitOfWork.Refusals.Should().ContainSingle(r => r.Code == "K.Subscription.Expired");
 
-        // 2. Baseline regulated capability ([BaselineKernelCommand], e.g. Attest / DefineRole / ActivateSubscription) is never blocked by subscription expiry.
+        // 2. Baseline regulated capability ([BaselineKernelCommand], e.g. Attest / DefineRole / ActivateSubscription) is never blocked by subscription expiry,
+        //    whereas SwitchTrialTier is NOT baseline so expired workspaces cannot bypass scoped activation.
         BaselineKernelCommandAttribute.IsBaseline(typeof(Attest)).Should().BeTrue();
+        BaselineKernelCommandAttribute.IsBaseline(typeof(SignCollectionInstance)).Should().BeTrue();
         BaselineKernelCommandAttribute.IsBaseline(typeof(DefineRole)).Should().BeTrue();
         BaselineKernelCommandAttribute.IsBaseline(typeof(IssueGrant)).Should().BeTrue();
         BaselineKernelCommandAttribute.IsBaseline(typeof(ActivateSubscription)).Should().BeTrue();
         BaselineKernelCommandAttribute.IsBaseline(typeof(GrantProductEntitlement)).Should().BeTrue();
         BaselineKernelCommandAttribute.IsBaseline(typeof(RevokeProductEntitlement)).Should().BeTrue();
+        BaselineKernelCommandAttribute.IsBaseline(typeof(SwitchTrialTier)).Should().BeFalse();
         BaselineKernelCommandAttribute.IsBaseline(typeof(RegisterStudy)).Should().BeFalse();
         BaselineKernelCommandAttribute.IsBaseline(typeof(RecordObservation)).Should().BeFalse();
+        BaselineKernelCommandAttribute.IsBaseline(typeof(RecordCollectedValues)).Should().BeFalse();
+    }
+
+    [Fact(DisplayName = "TrialTierSwitchPreservesTrialCountdown_AndActivateSubscriptionRequiresValidatedStudyScoping")]
+    public void TrialTierSwitchPreservesTrialCountdownAndActivateSubscriptionRequiresValidatedStudyScoping()
+    {
+        var tenantId = TenantId.New();
+        var subscriptionId = SubscriptionId.New();
+        var actor = Actor.Person("01960000-0000-7000-8000-000000000040");
+        var trialEnd = T0.AddDays(30);
+
+        var subscription = new Subscription(
+            subscriptionId,
+            tenantId,
+            CommercialTier.Individual,
+            SubscriptionStatus.Trialing,
+            startedAt: T0,
+            trialEndsAt: trialEnd,
+            createdBy: actor.Id,
+            reasonForChange: "Start trial");
+
+        subscription.Status.Should().Be(SubscriptionStatus.Trialing);
+        subscription.TrialEndsAt.Should().Be(trialEnd);
+
+        // Switching tiers during an active trial keeps Status == Trialing and preserves original 30-day TrialEndsAt.
+        subscription.SwitchTierInPlace(CommercialTier.Select, actor.Id, "Switch trial tier to Select");
+        subscription.Tier.Should().Be(CommercialTier.Select);
+        subscription.Status.Should().Be(SubscriptionStatus.Trialing);
+        subscription.TrialEndsAt.Should().Be(trialEnd);
+
+        subscription.SwitchTierInPlace(CommercialTier.Complete, actor.Id, "Switch trial tier to Complete");
+        subscription.Tier.Should().Be(CommercialTier.Complete);
+        subscription.Status.Should().Be(SubscriptionStatus.Trialing);
+        subscription.TrialEndsAt.Should().Be(trialEnd);
+
+        // Validation rejects missing or invalid scoping fields with structured per-field errors.
+        var missingErrors = SubscriptionScopingValidator.Validate(null);
+        missingErrors.Keys.Should().BeEquivalentTo(
+            "study_phase",
+            "study_duration_months",
+            "countries",
+            "site_count",
+            "participant_count",
+            "active_study_count",
+            "billing_confirmation");
+
+        var invalidScoping = new SubscriptionScoping(
+            StudyPhase: new string('X', 65),
+            StudyDurationMonths: 0,
+            Countries: ["  "],
+            SiteCount: -1,
+            ParticipantCount: 0,
+            ActiveStudyCount: 0,
+            BillingConfirmation: "PO");
+        var invalidErrors = SubscriptionScopingValidator.Validate(invalidScoping);
+        invalidErrors.Keys.Should().BeEquivalentTo(
+            "study_phase",
+            "study_duration_months",
+            "countries",
+            "site_count",
+            "participant_count",
+            "active_study_count",
+            "billing_confirmation");
+
+        // Valid scoping transitions both Expired and Trialing workspaces to Active and records scoping metadata.
+        subscription.Expire(T0.AddDays(31), actor.Id, "Trial window elapsed");
+        subscription.Status.Should().Be(SubscriptionStatus.Expired);
+        subscription.IsExpiredAt(T0.AddDays(31)).Should().BeTrue();
+
+        var validScoping = new SubscriptionScoping(
+            StudyPhase: "Phase II",
+            StudyDurationMonths: 18,
+            Countries: ["US", "DE", "NL"],
+            SiteCount: 14,
+            ParticipantCount: 220,
+            ActiveStudyCount: 2,
+            BillingConfirmation: "PO-2026-8841");
+        SubscriptionScopingValidator.Validate(validScoping).Should().BeEmpty();
+
+        subscription.Activate(CommercialTier.Select, validScoping, T0.AddDays(32), actor.Id, "Scoped activation");
+        subscription.Status.Should().Be(SubscriptionStatus.Active);
+        subscription.Tier.Should().Be(CommercialTier.Select);
+        subscription.IsExpiredAt(T0.AddDays(32)).Should().BeFalse();
+        subscription.GetScoping().Should().NotBeNull();
+        subscription.GetScoping()!.StudyPhase.Should().Be("Phase II");
+        subscription.GetScoping()!.Countries.Should().Equal("US", "DE", "NL");
+        subscription.GetScoping()!.BillingConfirmation.Should().Be("PO-2026-8841");
     }
 
     [Fact(DisplayName = "HttpKeycloakOnboardingClient_WritesTenantClaimStudyWildcardAndSponsorRoles_PreservingUserFields")]

@@ -29,87 +29,118 @@ public static partial class SecretsBaselineCleanerService
         return ExcludePatternRegex().IsMatch(normalized);
     }
 
-    public static int CleanSecretsBaseline(string? customPath = null, string? repoRoot = null, bool check = false)
+    public static int CleanSecretsBaseline(
+        string? customPath = null,
+        string? repoRoot = null,
+        bool check = false,
+        bool preCommit = false,
+        GitIndexReader? indexReader = null)
     {
         repoRoot ??= FindRepoRoot();
         string filepath = customPath ?? Path.Combine(repoRoot, ".secrets.baseline");
 
-        if (!File.Exists(filepath))
+        GitIndexReader? ownedReader = null;
+        GitIndexReader? reader = customPath is null
+            ? GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out ownedReader)
+            : null;
+        using (ownedReader)
         {
-            Console.WriteLine($"✔ Secrets baseline file not found at {filepath}, skipping.");
-            return 0;
-        }
-
-        try
-        {
-            string jsonText = File.ReadAllText(filepath);
-            var node = JsonNode.Parse(jsonText);
-            if (node is not JsonObject obj)
+            string jsonText;
+            if (reader is { HasAuthoritativeIndex: true })
             {
-                Console.WriteLine($"[ERROR] Secrets baseline at {filepath} must be a JSON object.");
-                return 1;
-            }
-
-            obj.Remove("generated_at");
-            obj.Remove("exclude");
-
-            EnsureCanonicalExcludeFilter(obj);
-
-            if (obj["results"] is JsonObject resultsObj)
-            {
-                var cleanedResults = new JsonObject();
-                foreach (var prop in resultsObj)
+                if (!reader.FileExists(".secrets.baseline"))
                 {
-                    string filename = prop.Key;
-                    if (IsExcludedFile(filename))
-                    {
-                        continue;
-                    }
-
-                    if (prop.Value is JsonArray arr)
-                    {
-                        var cleanedArr = new JsonArray();
-                        foreach (var item in arr)
-                        {
-                            if (item is JsonObject itemObj)
-                            {
-                                itemObj.Remove("line_number");
-                                cleanedArr.Add(itemObj.DeepClone());
-                            }
-                        }
-
-                        cleanedResults[filename] = cleanedArr;
-                    }
+                    Console.WriteLine($"✔ Secrets baseline file not found at {filepath}, skipping.");
+                    return 0;
                 }
 
-                obj["results"] = cleanedResults;
+                if (!reader.TryReadText(".secrets.baseline", out jsonText))
+                {
+                    Console.WriteLine($"[ERROR] Could not read staged secrets baseline at {filepath}.");
+                    return 1;
+                }
+            }
+            else
+            {
+                if (!File.Exists(filepath))
+                {
+                    Console.WriteLine($"✔ Secrets baseline file not found at {filepath}, skipping.");
+                    return 0;
+                }
+
+                jsonText = File.ReadAllText(filepath);
             }
 
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            string expected = obj.ToJsonString(options).ReplaceLineEndings("\n") + "\n";
-            string actual = jsonText.ReplaceLineEndings("\n");
-
-            if (check)
+            try
             {
-                if (!string.Equals(actual, expected, StringComparison.Ordinal))
+                var node = JsonNode.Parse(jsonText);
+                if (node is not JsonObject obj)
                 {
-                    Console.WriteLine($"[ERROR] Secrets baseline at {filepath} is not normalized. Run 'pnpm cadence clean-secrets-baseline' or 'pnpm cadence fix' to normalize it.");
+                    Console.WriteLine($"[ERROR] Secrets baseline at {filepath} must be a JSON object.");
                     return 1;
                 }
 
-                Console.WriteLine($"✔ Secrets baseline at {filepath} is normalized.");
+                obj.Remove("generated_at");
+                obj.Remove("exclude");
+
+                EnsureCanonicalExcludeFilter(obj);
+
+                if (obj["results"] is JsonObject resultsObj)
+                {
+                    var cleanedResults = new JsonObject();
+                    foreach (var prop in resultsObj)
+                    {
+                        string filename = prop.Key;
+                        if (IsExcludedFile(filename))
+                        {
+                            continue;
+                        }
+
+                        if (prop.Value is JsonArray arr)
+                        {
+                            var cleanedArr = new JsonArray();
+                            foreach (var item in arr)
+                            {
+                                if (item is JsonObject itemObj)
+                                {
+                                    itemObj.Remove("line_number");
+                                    cleanedArr.Add(itemObj.DeepClone());
+                                }
+                            }
+
+                            cleanedResults[filename] = cleanedArr;
+                        }
+                    }
+
+                    obj["results"] = cleanedResults;
+                }
+
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                string expected = obj.ToJsonString(options).ReplaceLineEndings("\n") + "\n";
+                string actual = jsonText.ReplaceLineEndings("\n");
+
+                if (check || (preCommit && customPath is null))
+                {
+                    if (!string.Equals(actual, expected, StringComparison.Ordinal))
+                    {
+                        Console.WriteLine($"[ERROR] Secrets baseline at {filepath} is not normalized. Run 'pnpm cadence clean-secrets-baseline' or 'pnpm cadence fix' to normalize it.");
+                        return 1;
+                    }
+
+                    Console.WriteLine($"✔ Secrets baseline at {filepath} is normalized.");
+                    return 0;
+                }
+
+                File.WriteAllText(filepath, expected);
+
+                Console.WriteLine($"✔ Successfully cleaned secrets baseline at {filepath}");
                 return 0;
             }
-
-            File.WriteAllText(filepath, expected);
-
-            Console.WriteLine($"✔ Successfully cleaned secrets baseline at {filepath}");
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Error cleaning secrets baseline: {ex.Message}");
-            return 1;
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Error cleaning secrets baseline: {ex.Message}");
+                return 1;
+            }
         }
     }
 

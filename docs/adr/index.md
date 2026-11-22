@@ -134,6 +134,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2601: One Composition Host for the Kernel and Its Modules](2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md) (2026-10-19)
 - [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) (2026-10-28) _(Partially superseded by ADR-2603)_
 - [ADR-2603: Keep Cadence in One Repository](2026-11-19-keep-cadence-in-one-repository.md) (2026-11-19)
+- [ADR-2604: Signed Gateway Expiry Guard and Scoped Trial Upgrades](2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md) (2026-11-21)
 - [ADR-2610: Scaffold Services Become Kernel Modules or Merge](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md) (2026-10-15)
 - [ADR-2620: The eCRF Correction Transaction Boundary](2026-10-15-ecrf-correction-transaction-boundary.md) (2026-10-15)
 - [ADR-2621: Observation Corrections Are Revisions; Locks Are Scoped Assertions](2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md) (2026-10-19)
@@ -376,6 +377,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2640: Randomisation Allocates from Approved, Encrypted Scheme Versions](2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md) (2026-10-20)
 - [ADR-2641: Contextual SOP Specificity Resolution and Audited Support Ticket Escalation](2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md) (2026-11-20)
 - [ADR-2642: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation](2026-11-20-ctms-core-topology-scoped-isolation-and-stateful-site-activation.md) (2026-11-20)
+- [ADR-2643: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks](2026-11-20-wire-web-ctms-training-and-etmf-workspaces-and-signed-completeness-webhooks.md) (2026-11-20)
 
 ### 5. Compliance, Audit & Governance
 

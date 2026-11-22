@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 using Yarp.ReverseProxy.Configuration;
@@ -126,6 +127,14 @@ var routes = ServiceTopology.Services
 var clusters = ServiceTopology.Services
     .Select(service => GatewayClusters.Create(service.ClusterId, GetServiceUrl(service), builder.Configuration))
     .ToArray();
+
+string kernelServiceUrl = GetServiceUrl(ServiceTopology.Get("kernel"));
+builder.Services.AddHttpClient(GatewayTenantEntitlementCache.HttpClientName, client =>
+{
+    client.BaseAddress = new Uri(kernelServiceUrl, UriKind.Absolute);
+    client.Timeout = TimeSpan.FromSeconds(3);
+});
+builder.Services.TryAddSingleton<ITenantEntitlementCache, GatewayTenantEntitlementCache>();
 
 builder.Services.AddGatewayRateLimiting(builder.Configuration);
 

@@ -21,12 +21,22 @@ public sealed record SubscriptionExpired(
     SubscriptionId SubscriptionId,
     DateTimeOffset ExpiredAt);
 
-/// <summary>A commercial subscription was activated.</summary>
+/// <summary>A trial or active subscription switched commercial tier without resetting its trial window.</summary>
+[KernelEvent("SubscriptionTrialTierSwitched", 1)]
+public sealed record SubscriptionTrialTierSwitched(
+    TenantId TenantId,
+    SubscriptionId SubscriptionId,
+    CommercialTier Tier,
+    SubscriptionStatus Status,
+    DateTimeOffset? TrialEndsAt);
+
+/// <summary>A commercial subscription was activated with validated study scoping.</summary>
 [KernelEvent("SubscriptionActivated", 1)]
 public sealed record SubscriptionActivated(
     TenantId TenantId,
     SubscriptionId SubscriptionId,
-    CommercialTier Tier);
+    CommercialTier Tier,
+    SubscriptionScoping? Scoping = null);
 
 /// <summary>A product family entitlement was granted to a tenant subscription.</summary>
 [KernelEvent("ProductEntitlementGranted", 1)]

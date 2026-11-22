@@ -200,7 +200,7 @@ jobs:
           else
             SCOPE_ARGS=(--push-before "$BEFORE_SHA")
           fi
-          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle "${SCOPE_ARGS[@]}"
+          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle "${SCOPE_ARGS[@]}"
 
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build

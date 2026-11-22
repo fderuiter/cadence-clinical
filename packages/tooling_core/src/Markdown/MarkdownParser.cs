@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
+using Cadence.ToolingCore.Services;
+
 namespace Cadence.ToolingCore.Markdown;
 
 public record MarkdownValidationIssue(
@@ -72,7 +74,8 @@ public static partial class MarkdownParser
 
     public static List<MarkdownValidationIssue> ValidateWorkspaceLinks(
         string repoRoot,
-        IEnumerable<string> filesToScan)
+        IEnumerable<string> filesToScan,
+        GitIndexReader? indexReader = null)
     {
         var issues = new List<MarkdownValidationIssue>();
         var anchorCache = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
@@ -80,7 +83,7 @@ public static partial class MarkdownParser
         foreach (var file in filesToScan)
         {
             if (file.Contains("node_modules") || file.Contains(".venv") || file.Contains(".cadence") || file.Contains(".git")) continue;
-            if (!File.Exists(file)) continue;
+            if (!SnapshotFileExists(repoRoot, file, indexReader)) continue;
 
             string fullSourceFile = Path.GetFullPath(file);
             string relativeFile = Path.GetRelativePath(repoRoot, fullSourceFile).Replace('\\', '/');
@@ -92,7 +95,10 @@ public static partial class MarkdownParser
 
             try
             {
-                string[] lines = File.ReadAllLines(fullSourceFile);
+                if (!TryReadSnapshotLines(repoRoot, fullSourceFile, indexReader, out string[] lines))
+                {
+                    continue;
+                }
                 char fenceChar = '\0';
                 int fenceLen = 0;
 
@@ -131,13 +137,15 @@ public static partial class MarkdownParser
                         if (rawTarget.StartsWith('#'))
                         {
                             ValidateAnchorFragment(
+                                repoRoot,
                                 fullSourceFile,
                                 rawFragment,
                                 relativeFile,
                                 rawTarget,
                                 i + 1,
                                 anchorCache,
-                                issues);
+                                issues,
+                                indexReader);
                             continue;
                         }
 
@@ -162,31 +170,37 @@ public static partial class MarkdownParser
 
                         // Try relative to file directory
                         string pathFromDir = Path.GetFullPath(Path.Combine(fileDir, decodedTarget));
-                        if (File.Exists(pathFromDir) || Directory.Exists(pathFromDir))
+                        if (SnapshotFileExists(repoRoot, pathFromDir, indexReader) ||
+                            SnapshotDirectoryExists(repoRoot, pathFromDir, indexReader))
                         {
                             ValidateResolvedTargetAnchor(
+                                repoRoot,
                                 pathFromDir,
                                 rawFragment,
                                 relativeFile,
                                 rawTarget,
                                 i + 1,
                                 anchorCache,
-                                issues);
+                                issues,
+                                indexReader);
                             continue;
                         }
 
                         // Try relative to repo root
                         string pathFromRoot = Path.GetFullPath(Path.Combine(repoRoot, decodedTarget.TrimStart('/')));
-                        if (File.Exists(pathFromRoot) || Directory.Exists(pathFromRoot))
+                        if (SnapshotFileExists(repoRoot, pathFromRoot, indexReader) ||
+                            SnapshotDirectoryExists(repoRoot, pathFromRoot, indexReader))
                         {
                             ValidateResolvedTargetAnchor(
+                                repoRoot,
                                 pathFromRoot,
                                 rawFragment,
                                 relativeFile,
                                 rawTarget,
                                 i + 1,
                                 anchorCache,
-                                issues);
+                                issues,
+                                indexReader);
                             continue;
                         }
 
@@ -198,7 +212,7 @@ public static partial class MarkdownParser
                         {
                             string csTarget = Path.ChangeExtension(target, ".cs");
                             string csFromRoot = Path.GetFullPath(Path.Combine(repoRoot, csTarget.TrimStart('/')));
-                            if (File.Exists(csFromRoot)) continue;
+                            if (SnapshotFileExists(repoRoot, csFromRoot, indexReader)) continue;
 
                             if (isHistoricalDoc)
                             {
@@ -259,13 +273,15 @@ public static partial class MarkdownParser
     }
 
     private static void ValidateResolvedTargetAnchor(
+        string repoRoot,
         string resolvedPath,
         string rawFragment,
         string relativeFile,
         string rawTarget,
         int lineNumber,
         Dictionary<string, HashSet<string>> anchorCache,
-        List<MarkdownValidationIssue> issues)
+        List<MarkdownValidationIssue> issues,
+        GitIndexReader? indexReader)
     {
         if (string.IsNullOrEmpty(rawFragment))
         {
@@ -273,19 +289,20 @@ public static partial class MarkdownParser
         }
 
         string? markdownTarget = null;
-        if (File.Exists(resolvedPath) && resolvedPath.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        if (SnapshotFileExists(repoRoot, resolvedPath, indexReader) &&
+            resolvedPath.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
         {
             markdownTarget = resolvedPath;
         }
-        else if (Directory.Exists(resolvedPath))
+        else if (SnapshotDirectoryExists(repoRoot, resolvedPath, indexReader))
         {
             string indexCandidate = Path.Combine(resolvedPath, "index.md");
             string readmeCandidate = Path.Combine(resolvedPath, "README.md");
-            if (File.Exists(indexCandidate))
+            if (SnapshotFileExists(repoRoot, indexCandidate, indexReader))
             {
                 markdownTarget = indexCandidate;
             }
-            else if (File.Exists(readmeCandidate))
+            else if (SnapshotFileExists(repoRoot, readmeCandidate, indexReader))
             {
                 markdownTarget = readmeCandidate;
             }
@@ -294,24 +311,28 @@ public static partial class MarkdownParser
         if (markdownTarget is not null)
         {
             ValidateAnchorFragment(
+                repoRoot,
                 markdownTarget,
                 rawFragment,
                 relativeFile,
                 rawTarget,
                 lineNumber,
                 anchorCache,
-                issues);
+                issues,
+                indexReader);
         }
     }
 
     private static void ValidateAnchorFragment(
+        string repoRoot,
         string targetMarkdownPath,
         string rawFragment,
         string relativeFile,
         string rawTarget,
         int lineNumber,
         Dictionary<string, HashSet<string>> anchorCache,
-        List<MarkdownValidationIssue> issues)
+        List<MarkdownValidationIssue> issues,
+        GitIndexReader? indexReader)
     {
         if (string.IsNullOrEmpty(rawFragment))
         {
@@ -324,7 +345,7 @@ public static partial class MarkdownParser
             return;
         }
 
-        var anchors = GetMarkdownAnchors(targetMarkdownPath, anchorCache);
+        var anchors = GetMarkdownAnchors(repoRoot, targetMarkdownPath, anchorCache, indexReader);
         if (!anchors.Contains(fragment))
         {
             issues.Add(new MarkdownValidationIssue(
@@ -425,15 +446,28 @@ public static partial class MarkdownParser
     }
 
     private static HashSet<string> GetMarkdownAnchors(
+        string repoRoot,
         string fullMarkdownPath,
-        Dictionary<string, HashSet<string>> anchorCache)
+        Dictionary<string, HashSet<string>> anchorCache,
+        GitIndexReader? indexReader)
     {
         if (anchorCache.TryGetValue(fullMarkdownPath, out var cached))
         {
             return cached;
         }
 
-        string content = File.ReadAllText(fullMarkdownPath);
+        string content;
+        if (indexReader is not null &&
+            GitIndexReader.TryNormalizeRelativePath(repoRoot, fullMarkdownPath) is { Length: > 0 } rel &&
+            indexReader.TryReadText(rel, out string indexedText))
+        {
+            content = indexedText;
+        }
+        else
+        {
+            content = File.ReadAllText(fullMarkdownPath);
+        }
+
         var extracted = ExtractMarkdownAnchors(content);
         anchorCache[fullMarkdownPath] = extracted;
         return extracted;
@@ -521,14 +555,15 @@ public static partial class MarkdownParser
     /// </summary>
     public static List<MarkdownValidationIssue> ValidateTestProjectPaths(
         string repoRoot,
-        IEnumerable<string> filesToScan)
+        IEnumerable<string> filesToScan,
+        GitIndexReader? indexReader = null)
     {
         var issues = new List<MarkdownValidationIssue>();
 
         foreach (var file in filesToScan)
         {
             if (file.Contains("node_modules") || file.Contains(".venv") || file.Contains(".cadence") || file.Contains(".git")) continue;
-            if (!File.Exists(file)) continue;
+            if (!SnapshotFileExists(repoRoot, file, indexReader)) continue;
 
             string relativeFile = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
             if (relativeFile.StartsWith("docs/migration/", StringComparison.OrdinalIgnoreCase) ||
@@ -538,8 +573,10 @@ public static partial class MarkdownParser
                 continue;
             }
 
-            string[] lines;
-            try { lines = File.ReadAllLines(file); } catch (IOException) { continue; }
+            if (!TryReadSnapshotLines(repoRoot, file, indexReader, out string[] lines))
+            {
+                continue;
+            }
 
             for (int i = 0; i < lines.Length; i++)
             {
@@ -550,7 +587,11 @@ public static partial class MarkdownParser
 
                     string target = m.Value.TrimEnd('.');
                     string fullPath = Path.Combine(repoRoot, target);
-                    if (File.Exists(fullPath) || Directory.Exists(fullPath)) continue;
+                    if (SnapshotFileExists(repoRoot, fullPath, indexReader) ||
+                        SnapshotDirectoryExists(repoRoot, fullPath, indexReader))
+                    {
+                        continue;
+                    }
 
                     issues.Add(new MarkdownValidationIssue(relativeFile, target,
                         $"Path to a missing test file or folder in '{relativeFile}:{i + 1}': '{target}'", i + 1));
@@ -559,5 +600,57 @@ public static partial class MarkdownParser
         }
 
         return issues;
+    }
+
+    private static bool SnapshotFileExists(string repoRoot, string candidatePath, GitIndexReader? indexReader)
+    {
+        if (indexReader is not null)
+        {
+            string? rel = GitIndexReader.TryNormalizeRelativePath(repoRoot, candidatePath);
+            return !string.IsNullOrEmpty(rel) && indexReader.FileExists(rel);
+        }
+
+        return File.Exists(candidatePath);
+    }
+
+    private static bool SnapshotDirectoryExists(string repoRoot, string candidatePath, GitIndexReader? indexReader)
+    {
+        if (indexReader is not null)
+        {
+            string? rel = GitIndexReader.TryNormalizeRelativePath(repoRoot, candidatePath);
+            return rel is not null && indexReader.DirectoryExists(rel);
+        }
+
+        return Directory.Exists(candidatePath);
+    }
+
+    private static bool TryReadSnapshotLines(
+        string repoRoot,
+        string candidatePath,
+        GitIndexReader? indexReader,
+        out string[] lines)
+    {
+        if (indexReader is not null)
+        {
+            string? rel = GitIndexReader.TryNormalizeRelativePath(repoRoot, candidatePath);
+            if (!string.IsNullOrEmpty(rel))
+            {
+                return indexReader.TryReadLines(rel, out lines);
+            }
+
+            lines = [];
+            return false;
+        }
+
+        try
+        {
+            lines = File.ReadAllLines(candidatePath);
+            return true;
+        }
+        catch (IOException)
+        {
+            lines = [];
+            return false;
+        }
     }
 }

@@ -150,7 +150,7 @@ public static partial class PermissionMatrix
             ["ctms_financial_budget"] = ["create", "read"],
             ["ctms_financial_milestone"] = ["create", "read", "trigger"],
             ["ctms_financial_payable"] = ["read"],
-            ["etmf_document"] = ["tag", "create", "read", "read_raw", "redact", "sign", "transition_technical_qc", "transition_approved", "transition_archived", "transition_rejected", "transition_draft", "transition_signed", "manage_expiration"],
+            ["etmf_document"] = ["tag", "create", "read", "read_raw", "redact", "sign", "transition_technical_qc", "transition_clinical_qc", "transition_approved", "transition_archived", "transition_rejected", "transition_draft", "transition_signed", "manage_expiration"],
             ["etmf_edl"] = ["read", "create"],
             ["etmf_taxonomy"] = ["read"],
             ["quality_event"] = ["create", "read", "update", "delete", "investigate"],

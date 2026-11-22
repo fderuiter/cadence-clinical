@@ -34,6 +34,7 @@ public static class HmacSigner
     private static readonly JsonEncodedText SponsorIdProperty = JsonEncodedText.Encode("sponsor_id", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText StudyIdsProperty = JsonEncodedText.Encode("study_ids", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText TenantIdProperty = JsonEncodedText.Encode("tenant_id", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
+    private static readonly JsonEncodedText TenantReadOnlyProperty = JsonEncodedText.Encode("tenant_read_only", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText TimestampProperty = JsonEncodedText.Encode("timestamp", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText UnblindedAccessProperty = JsonEncodedText.Encode("unblinded_access", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText UserIdProperty = JsonEncodedText.Encode("user_id", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
@@ -87,13 +88,14 @@ public static class HmacSigner
         string? sponsorId = null,
         bool unblindedAccess = false,
         string? tenantId = null,
-        string? sigToken = null)
+        string? sigToken = null,
+        bool tenantReadOnly = false)
     {
         ArgumentNullException.ThrowIfNull(secret);
 
         Span<byte> hash = stackalloc byte[HMACSHA256.HashSizeInBytes];
         ComputeGatewaySignatureDigest(
-            userId, roles, timestamp, secret, changeReason, siteId, studyIds, sponsorId, unblindedAccess, tenantId, sigToken, hash);
+            userId, roles, timestamp, secret, changeReason, siteId, studyIds, sponsorId, unblindedAccess, tenantId, sigToken, tenantReadOnly, hash);
         return Convert.ToHexStringLower(hash);
     }
 
@@ -101,7 +103,7 @@ public static class HmacSigner
     /// Verifies a gateway identity signature against the one canonical payload
     /// <see cref="GenerateGatewaySignature"/> produces. There are deliberately no fallback payload shapes: every
     /// signed field must match exactly, so a caller cannot drop a scope field (site, study, sponsor, tenant, unblinded
-    /// access) and still pass verification.
+    /// access, or tenant read-only state) and still pass verification.
     /// </summary>
     public static bool VerifyGatewaySignature(
         string userId,
@@ -115,7 +117,8 @@ public static class HmacSigner
         string? sponsorId = null,
         bool unblindedAccess = false,
         string? tenantId = null,
-        string? sigToken = null)
+        string? sigToken = null,
+        bool tenantReadOnly = false)
     {
         if (string.IsNullOrWhiteSpace(signature) || secret is null || secret.Length == 0)
         {
@@ -124,7 +127,7 @@ public static class HmacSigner
 
         Span<byte> expectedHash = stackalloc byte[HMACSHA256.HashSizeInBytes];
         ComputeGatewaySignatureDigest(
-            userId, roles, timestamp, secret, changeReason, siteId, studyIds, sponsorId, unblindedAccess, tenantId, sigToken, expectedHash);
+            userId, roles, timestamp, secret, changeReason, siteId, studyIds, sponsorId, unblindedAccess, tenantId, sigToken, tenantReadOnly, expectedHash);
 
         return FixedTimeEqualsHex(expectedHash, signature);
     }
@@ -184,6 +187,7 @@ public static class HmacSigner
         bool unblindedAccess,
         string? tenantId,
         string? sigToken,
+        bool tenantReadOnly,
         Span<byte> destination)
     {
         using var pooled = PooledUtf8JsonWriter.Rent();
@@ -201,6 +205,11 @@ public static class HmacSigner
         writer.WriteString(SponsorIdProperty, sponsorId ?? string.Empty);
         writer.WriteString(StudyIdsProperty, studyIds ?? string.Empty);
         writer.WriteString(TenantIdProperty, tenantId ?? string.Empty);
+        if (tenantReadOnly)
+        {
+            writer.WriteBoolean(TenantReadOnlyProperty, true);
+        }
+
         writer.WriteString(TimestampProperty, timestamp ?? string.Empty);
         writer.WriteBoolean(UnblindedAccessProperty, unblindedAccess);
         writer.WriteString(UserIdProperty, userId ?? string.Empty);

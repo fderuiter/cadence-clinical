@@ -222,9 +222,12 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       expect(wrapper.find("#proposal-review-proposer").text()).toBe(
         "AI agent data-reviewer, for data-manager@sponsor.test"
       );
-      expect(wrapper.find("#proposal-review-configuration").text()).toContain(
-        "#5385"
+      expect(wrapper.find("#proposal-review-configuration").text()).toBe(
+        "Not recorded for this proposal."
       );
+      expect(
+        wrapper.find("#proposal-review-configuration").text()
+      ).not.toContain("#5385");
       expect(wrapper.find("#proposal-review-hash").text()).toBe(
         "sha256:proposal"
       );
@@ -240,15 +243,16 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       await expect(wrapper.find("#proposal-review").element).toBeAccessible();
     });
 
-    it("offers approval only once each source is opened, and says signing waits on #5552", async () => {
+    it("offers approval only once each source is opened, and explains signing availability in plain terms", async () => {
       await open(`/studies/CAD-101?proposal=${PROPOSAL}`);
 
       const approve = wrapper.find("#btn-approve-proposal");
       expect(approve.attributes("aria-disabled")).toBe("true");
       expect(blockers()).toEqual([
         "Open each source it reasoned over before approving: 2 still to open.",
-        expect.stringContaining("#5552"),
+        "Approving requires an electronic signature, which isn't available in the web workspace yet. You can still reject this proposal below.",
       ]);
+      expect(blockers().join(" ")).not.toMatch(/#\d+|ADR-/);
 
       await wrapper.find("#proposal-source-open-0").trigger("click");
       await flushPromises();
@@ -260,11 +264,22 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       expect(wrapper.find("#proposal-review-open-rule").text()).toContain(
         "2 of 2 opened"
       );
-      expect(blockers()).toEqual([expect.stringContaining("#5552")]);
+      expect(blockers()).toEqual([
+        "Approving requires an electronic signature, which isn't available in the web workspace yet. You can still reject this proposal below.",
+      ]);
       expect(approve.attributes("aria-disabled")).toBe("true");
+
+      // Clicking a source NodeRefChip selects that object in CanvasInspector
+      const sourceChip = wrapper
+        .findAll("#proposal-review-source-list .node-ref-chip")
+        .find((chip) => chip.text().includes("017-0001"));
+      await sourceChip.trigger("click");
+      await flushPromises();
+      expect(router.currentRoute.value.query.node).toBe(`${PARTICIPANT_REF}@4`);
+      expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0001");
     });
 
-    it("counts a source the kernel has no view of as opened, saying so", async () => {
+    it("counts a missing source summary as opened and explains it in plain terms", async () => {
       vi.mocked(kernelApi.getNode).mockRejectedValue(
         new ApiError("No such node.", 404)
       );
@@ -274,12 +289,12 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       await flushPromises();
 
       expect(wrapper.find("[role=alert]").text()).toContain(
-        "The kernel has no view of a participant yet"
+        "Detailed preview isn't available for this participant yet"
       );
       expect(blockers()[0]).toContain("1 still to open");
     });
 
-    it("refuses approval of the reviewer's own proposal and of one with hidden sources", async () => {
+    it("refuses approval of the reviewer's own proposal and of one with hidden sources without ADR or issue codes", async () => {
       vi.mocked(kernelApi.getProposal).mockResolvedValue(
         proposal({
           proposed_by: "reviewer-1",
@@ -292,10 +307,11 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
 
       expect(wrapper.find("#proposal-review-ai").exists()).toBe(false);
       expect(blockers()).toEqual([
-        "You made this proposal, so another person approves it (ADR-2489).",
+        "You made this proposal, so another person must approve it.",
         expect.stringContaining("You may not see 1 of the objects it names"),
-        expect.stringContaining("#5552"),
+        "Approving requires an electronic signature, which isn't available in the web workspace yet. You can still reject this proposal below.",
       ]);
+      expect(blockers().join(" ")).not.toMatch(/#\d+|ADR-/);
     });
 
     it("rejects with the reviewer's reason and shows the kernel's decision", async () => {
@@ -336,7 +352,7 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       expect(wrapper.find("#btn-approve-proposal").exists()).toBe(false);
     });
 
-    it("shows the kernel's refusal of a rejection", async () => {
+    it("presents a plain status message and collapsible support details when rejection fails", async () => {
       vi.mocked(kernelApi.rejectProposal).mockRejectedValue(
         new ApiError("The proposal is no longer open.", 409)
       );
@@ -346,8 +362,11 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       await wrapper.find("#proposal-reject-form").trigger("submit");
       await flushPromises();
 
-      expect(wrapper.find("#proposal-reject-error").text()).toBe(
-        "The kernel refused the rejection: The proposal is no longer open."
+      expect(wrapper.find("#proposal-reject-error").text()).toContain(
+        "Proposal couldn't be rejected right now."
+      );
+      expect(wrapper.find("#proposal-reject-error details").text()).toContain(
+        "The proposal is no longer open."
       );
     });
   });
@@ -372,7 +391,12 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       );
       const ask = wrapper.find("#btn-ai-assist-ask");
       expect(ask.attributes("aria-disabled")).toBe("true");
-      expect(wrapper.find("#ai-assist-unavailable").text()).toContain("#5547");
+      expect(wrapper.find("#ai-assist-unavailable").text()).toContain(
+        "Interactive AI drafting isn't enabled"
+      );
+      expect(wrapper.find("#ai-assist-unavailable").text()).not.toMatch(
+        /#\d+|ADR-|K-/
+      );
       await expect(wrapper.find("#ai-assist").element).toBeAccessible();
 
       await wrapper.find("#btn-ai-assist-act").trigger("click");
@@ -392,6 +416,25 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       expect(wrapper.find("#ai-assist-status").text()).toBe(
         "No proposal names this yet."
       );
+    });
+
+    it("shows plain clinical guidance with collapsible support details when Assist proposals fail to load", async () => {
+      await selectParticipant();
+      vi.mocked(kernelApi.listProposals).mockRejectedValueOnce(
+        new Error("Kernel gateway timeout")
+      );
+
+      await wrapper.find("#verb-assist").trigger("click");
+      await flushPromises();
+
+      const status = wrapper.find("#ai-assist-status");
+      expect(status.attributes("role")).toBe("alert");
+      expect(status.text()).toContain(
+        "Proposals couldn't be loaded right now."
+      );
+      expect(status.text()).not.toContain("The kernel");
+      expect(status.find("details").text()).toContain("Kernel gateway timeout");
+      await expect(wrapper.find("#ai-assist").element).toBeAccessible();
     });
 
     it("turns a sentence in the palette into a question for Assist on the selection", async () => {

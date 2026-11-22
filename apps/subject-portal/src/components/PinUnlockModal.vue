@@ -19,10 +19,11 @@
         </div>
         <div class="modal-body">
           <div id="pin-reset-warning" class="pin-warning-alert" role="alert">
-            <strong>Warning:</strong> Resetting your security PIN generates a
-            new local encryption key, will permanently clear unsent survey
-            drafts, and flags any locked local offline entries without exposing
-            clinical data. Already synchronized server records are not affected.
+            <strong>Warning:</strong> Resetting your security PIN sets up a new
+            PIN on this device, will permanently clear unsent survey drafts, and
+            marks older locked offline entries without showing your health
+            information. Answers already sent to your study team are not
+            affected.
           </div>
           <p v-if="requiresIdentitySignIn" class="pin-reset-prompt">
             Please sign in with your participant account to verify your identity

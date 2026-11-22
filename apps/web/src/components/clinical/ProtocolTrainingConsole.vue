@@ -13,8 +13,8 @@
           >
             {{
               isGated
-                ? "🔒 EDC Write Permissions Gated"
-                : "🟢 EDC Write & Signature Unlocked"
+                ? "🔒 Qualification Pending"
+                : "🟢 Qualification Completed"
             }}
           </span>
         </div>
@@ -22,9 +22,8 @@
           Protocol Amendment Training &amp; Qualification Console
         </h2>
         <p class="console-subtitle">
-          Mandatory procedural delta training, time-on-page verification,
-          comprehension quizzes (&ge;80%), and Part 11 electronic signature
-          certificates.
+          Procedural delta curricula, multi-site role-based batch assignment,
+          and 21 CFR Part 11 Principal Investigator delegation sign-off.
         </p>
       </div>
 
@@ -62,6 +61,20 @@
         </select>
       </div>
 
+      <div v-if="curricula.length > 0" class="form-group">
+        <label for="curriculum-select">Study Curriculum:</label>
+        <select
+          id="curriculum-select"
+          v-model="selectedCurriculumId"
+          class="select-input"
+          @change="onCurriculumChange"
+        >
+          <option v-for="cur in curricula" :key="cur.id" :value="cur.id">
+            {{ cur.title }} (v{{ cur.protocol_version }})
+          </option>
+        </select>
+      </div>
+
       <div class="status-summary-chips">
         <div class="summary-chip">
           <span class="chip-label">Status:</span>
@@ -75,10 +88,10 @@
           </span>
         </div>
         <div class="summary-chip">
-          <span class="chip-label">Time on Page:</span>
-          <span class="chip-value">{{
-            formatTime(activeAssignment?.time_spent_seconds || totalTimeSpent)
-          }}</span>
+          <span class="chip-label">Protocol Version:</span>
+          <span class="chip-value">
+            {{ activeCurriculum?.protocol_version || "—" }}
+          </span>
         </div>
         <div class="summary-chip">
           <span class="chip-label">Quiz Score:</span>
@@ -86,44 +99,16 @@
             {{
               activeAssignment?.quiz_score != null
                 ? Math.round(activeAssignment.quiz_score * 100) + "%"
-                : "Not Taken"
+                : "Not Recorded"
             }}
           </span>
         </div>
       </div>
     </div>
 
-    <!-- Inline Sync Error Alert Banner -->
-    <div
-      v-if="syncError"
-      class="sync-error-banner alert-banner error-banner"
-      role="alert"
-    >
-      <div class="banner-content">
-        <span class="banner-icon">⚠️</span>
-        <div class="banner-text">
-          <strong class="banner-title">Heartbeat Synchronization Failed</strong>
-          <span class="banner-message">
-            {{
-              syncErrorMessage ||
-              "Failed to record training progress heartbeat. Time tracking has been paused."
-            }}
-          </span>
-        </div>
-      </div>
-      <button
-        class="btn btn-retry btn-sm"
-        :disabled="isSyncing"
-        @click="retrySync"
-      >
-        <span v-if="isSyncing">Syncing...</span>
-        <span v-else>🔄 Retry Sync</span>
-      </button>
-    </div>
-
-    <!-- Main Learning & Assessment Workspace -->
+    <!-- Main Learning & Governance Workspace -->
     <div v-if="activeCurriculum" class="training-workspace">
-      <!-- Navigation Tabs: Modules | Quiz | Certificate -->
+      <!-- Navigation Tabs: Live .NET routes only (Modules | Batch Assignments | Delegation Bulk Sign-Off) -->
       <div class="tab-bar">
         <button
           class="tab-btn"
@@ -131,21 +116,6 @@
           @click="activeTab = 'modules'"
         >
           📖 Procedural Modules ({{ activeCurriculum.modules?.length || 0 }})
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ active: activeTab === 'quiz' }"
-          @click="activeTab = 'quiz'"
-        >
-          📝 Comprehension Quiz (&ge;80%)
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ active: activeTab === 'certificate' }"
-          :disabled="activeAssignment?.status !== 'COMPLETED'"
-          @click="activeTab = 'certificate'"
-        >
-          📜 21 CFR Part 11 Certificate
         </button>
         <button
           class="tab-btn"
@@ -171,7 +141,6 @@
         <div class="module-sidebar">
           <h4 class="sidebar-heading">Curriculum Sections</h4>
           <ul class="module-list">
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <li
               v-for="(mod, idx) in activeCurriculum.modules"
@@ -208,20 +177,9 @@
                 </h3>
               </div>
               <div class="reader-timer">
-                ⏱️ Section Time: <strong>{{ formatTime(moduleTimer) }}</strong>
-                <span
-                  v-if="
-                    moduleTimer >=
-                    (currentModule.min_reading_time_seconds || 30)
-                  "
-                  class="text-success"
-                  >✅ Min Read Time Met</span
-                >
-                <span v-else class="text-muted"
-                  >({{
-                    (currentModule.min_reading_time_seconds || 30) -
-                    moduleTimer
-                  }}s remaining)</span
+                Min Reading Guidance:
+                <strong
+                  >{{ currentModule.min_reading_time_seconds || 30 }}s</strong
                 >
               </div>
             </div>
@@ -239,228 +197,39 @@
                 ⬅️ Previous Section
               </button>
               <button
-                v-if="selectedModuleIndex < activeCurriculum.modules.length - 1"
+                v-if="
+                  activeCurriculum.modules &&
+                  selectedModuleIndex < activeCurriculum.modules.length - 1
+                "
                 class="btn btn-primary"
                 @click="selectModule(selectedModuleIndex + 1)"
               >
                 Next Section ➡️
               </button>
-              <button
-                v-else
-                class="btn btn-primary btn-proceed-quiz"
-                @click="activeTab = 'quiz'"
-              >
-                Proceed to Comprehension Quiz 📝
-              </button>
+            </div>
+          </div>
+          <div v-else class="reader-content">
+            <div class="reader-header">
+              <div class="reader-title-group">
+                <span class="badge badge-delta"
+                  >v{{ activeCurriculum.protocol_version }}</span
+                >
+                <h3 class="reader-title">
+                  {{ activeCurriculum.title }}
+                </h3>
+              </div>
+            </div>
+            <div class="markdown-body">
+              <pre class="content-text">{{
+                activeCurriculum.description ||
+                "No procedural modules attached to this curriculum."
+              }}</pre>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- TAB 2: COMPREHENSION QUIZ -->
-      <div v-if="activeTab === 'quiz'" class="tab-content quiz-layout">
-        <div class="quiz-header-card">
-          <div class="quiz-info">
-            <h3>Protocol Comprehension Assessment</h3>
-            <p>
-              Under ICH GCP E6(R2) Section 4, clinical personnel must
-              demonstrate procedural mastery before entering eCRF data. Passing
-              threshold: <strong>&ge;80%</strong>.
-            </p>
-          </div>
-          <div
-            v-if="quizResult"
-            class="quiz-score-badge"
-            :class="quizResult.passed ? 'score-passed' : 'score-failed'"
-          >
-            <div class="score-number">
-              {{ Math.round(quizResult.score_percentage * 100) }}%
-            </div>
-            <div class="score-label">
-              {{
-                quizResult.passed
-                  ? "PASSED (Qualified)"
-                  : "FAILED (Retry Required)"
-              }}
-            </div>
-          </div>
-        </div>
-
-        <div class="quiz-questions-list">
-          <div
-            v-for="(q, qIndex) in aggregatedQuestions"
-            :key="q.id"
-            class="quiz-card"
-          >
-            <div class="question-title">
-              <span class="q-number">Question {{ qIndex + 1 }}:</span>
-              <span>{{ q.question }}</span>
-            </div>
-
-            <div class="options-group">
-              <label
-                v-for="(opt, optIdx) in q.options"
-                :key="optIdx"
-                class="option-item"
-                :class="{
-                  selected: userAnswers[q.id] === optIdx,
-                  correct: quizResult && optIdx === q.correct_option_index,
-                  incorrect:
-                    quizResult &&
-                    userAnswers[q.id] === optIdx &&
-                    optIdx !== q.correct_option_index,
-                }"
-              >
-                <input
-                  v-model="userAnswers[q.id]"
-                  type="radio"
-                  :name="'question_' + q.id"
-                  :value="optIdx"
-                  :disabled="activeAssignment?.status === 'COMPLETED'"
-                />
-                <span class="option-text">{{ opt }}</span>
-              </label>
-            </div>
-
-            <div v-if="quizResult && q.rationale" class="rationale-box">
-              💡 <strong>GxP Rationale:</strong> {{ q.rationale }}
-            </div>
-          </div>
-        </div>
-
-        <div class="quiz-actions-bar">
-          <button
-            v-if="activeAssignment?.status !== 'COMPLETED'"
-            class="btn btn-primary btn-submit-quiz"
-            :disabled="
-              submittingQuiz ||
-              Object.keys(userAnswers).length < aggregatedQuestions.length
-            "
-            @click="handleSubmitQuiz"
-          >
-            <span v-if="submittingQuiz">Scoring Assessment...</span>
-            <span v-else>Submit Quiz for Evaluation 📊</span>
-          </button>
-
-          <button
-            v-if="
-              quizResult?.passed && activeAssignment?.status !== 'COMPLETED'
-            "
-            class="btn btn-success btn-signoff"
-            @click="showSignModal = true"
-          >
-            ✍️ 21 CFR Part 11 Digital Sign-Off
-          </button>
-        </div>
-      </div>
-
-      <!-- TAB 3: CERTIFICATE -->
-      <div
-        v-if="activeTab === 'certificate'"
-        class="tab-content certificate-layout"
-      >
-        <div class="certificate-paper">
-          <div class="cert-header">
-            <div class="cert-brand">CADENCE CLINICAL RESEARCH PLATFORM</div>
-            <h2 class="cert-title">CERTIFICATE OF PROTOCOL QUALIFICATION</h2>
-            <div class="cert-subtitle">
-              Compliant with ICH GCP E6(R2)/(R3) &amp; 21 CFR Part 11 Electronic
-              Signatures
-            </div>
-          </div>
-
-          <div class="cert-body">
-            <p class="cert-lead">
-              This certifies that
-              <strong>{{ activeAssignment?.user_name }}</strong> (ID:
-              <code>{{ activeAssignment?.user_id }}</code>), acting in the
-              capacity of <strong>{{ activeAssignment?.user_role }}</strong>,
-              has successfully fulfilled all mandatory protocol curriculum
-              requirements and demonstrated mastery under:
-            </p>
-
-            <table class="cert-table">
-              <tbody>
-                <tr>
-                  <td>Curriculum / Scope:</td>
-                  <td>
-                    <strong>{{ activeCurriculum?.title }}</strong>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Study &amp; Site:</td>
-                  <td>
-                    Study <code>{{ activeAssignment?.study_id }}</code> (Site:
-                    <code>{{ activeAssignment?.site_id }}</code>)
-                  </td>
-                </tr>
-                <tr>
-                  <td>Protocol Version:</td>
-                  <td>Version {{ activeCurriculum?.protocol_version }}</td>
-                </tr>
-                <tr>
-                  <td>Comprehension Score:</td>
-                  <td>
-                    <strong
-                      >{{
-                        Math.round((activeAssignment?.quiz_score || 1.0) * 100)
-                      }}%</strong
-                    >
-                    (Threshold: &ge;80%)
-                  </td>
-                </tr>
-                <tr>
-                  <td>Verified Duration:</td>
-                  <td>
-                    {{ activeAssignment?.time_spent_seconds || 0 }} seconds
-                    recorded time-on-page
-                  </td>
-                </tr>
-                <tr>
-                  <td>Completion Date:</td>
-                  <td>{{ activeAssignment?.completed_at || "Verified" }}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div v-if="activeCertificate" class="cert-signature-manifest">
-              <div class="manifest-header">
-                🔒 21 CFR Part 11 Cryptographic Signature Manifestation
-              </div>
-              <div class="manifest-grid">
-                <div>
-                  <strong>Signer:</strong>
-                  {{ activeCertificate.signature_manifestation?.signer_name }}
-                </div>
-                <div>
-                  <strong>Role:</strong>
-                  {{ activeCertificate.signature_manifestation?.signer_role }}
-                </div>
-                <div>
-                  <strong>Meaning:</strong>
-                  {{ activeCertificate.signature_manifestation?.meaning }}
-                </div>
-                <div>
-                  <strong>Seal (SHA-256):</strong>
-                  <code>{{ activeCertificate.sha256_seal }}</code>
-                </div>
-              </div>
-            </div>
-
-            <div class="cert-routing-status">
-              <div class="routing-badge badge-etmf">
-                📁 Routed to eTMF Zone 5 (Artifact 05.02.04 Site Staff Training
-                Records)
-              </div>
-              <div class="routing-badge badge-eisf">
-                📑 Routed to Site eISF Regulatory Binder (Section 05.02)
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 4: BATCH ASSIGNMENT WORKSPACE -->
+      <!-- TAB 2: BATCH ASSIGNMENT WORKSPACE -->
       <div v-if="activeTab === 'batch'" class="tab-content batch-layout">
         <div class="batch-card card">
           <div class="batch-header">
@@ -519,6 +288,15 @@
             </div>
           </div>
 
+          <p
+            v-if="!canAssignCurriculum"
+            id="training-assign-role-note"
+            class="role-note"
+            role="note"
+          >
+            {{ TRAINING_ASSIGN_ROLE_REASON }}
+          </p>
+
           <div class="batch-preview-bar">
             <div class="preview-info">
               <span
@@ -535,9 +313,13 @@
             <button
               class="btn btn-primary"
               :disabled="
+                !canAssignCurriculum ||
                 computedBatchCount === 0 ||
                 computedBatchCount > 200 ||
                 submittingBatch
+              "
+              :title="
+                !canAssignCurriculum ? TRAINING_ASSIGN_ROLE_REASON : undefined
               "
               @click="showBatchModal = true"
             >
@@ -569,7 +351,10 @@
               </div>
             </div>
             <div
-              v-if="batchResult.skipped_items &amp;&amp; batchResult.skipped_items.length > 0"
+              v-if="
+                batchResult.skipped_items &&
+                batchResult.skipped_items.length > 0
+              "
               class="skipped-table-wrapper"
             >
               <h5>Skipped Duplicate Assignments</h5>
@@ -601,7 +386,7 @@
         </div>
       </div>
 
-      <!-- TAB 5: DELEGATION BULK SIGN-OFF WORKSPACE -->
+      <!-- TAB 3: DELEGATION BULK SIGN-OFF WORKSPACE -->
       <div
         v-if="activeTab === 'delegations'"
         class="tab-content delegations-layout"
@@ -697,6 +482,15 @@
             </table>
           </div>
 
+          <p
+            v-if="!canSignDelegations"
+            id="training-delegation-role-note"
+            class="role-note"
+            role="note"
+          >
+            {{ TRAINING_DELEGATION_SIGN_ROLE_REASON }}
+          </p>
+
           <div class="delegation-actions-bar">
             <span
               >Selected for Sign-Off:
@@ -704,7 +498,14 @@
             >
             <button
               class="btn btn-success"
-              :disabled="selectedDelegationIds.length === 0"
+              :disabled="
+                !canSignDelegations || selectedDelegationIds.length === 0
+              "
+              :title="
+                !canSignDelegations
+                  ? TRAINING_DELEGATION_SIGN_ROLE_REASON
+                  : undefined
+              "
               @click="showBulkSignModal = true"
             >
               ✍️ Execute Part 11 Bulk Signature
@@ -731,73 +532,6 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 21 CFR Part 11 Electronic Signature Modal -->
-    <div v-if="showSignModal" class="modal-backdrop">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>21 CFR Part 11 Electronic Signature Sign-Off</h3>
-          <button class="modal-close-btn" @click="showSignModal = false">
-            ✕
-          </button>
-        </div>
-
-        <div class="modal-body">
-          <p class="modal-description">
-            In accordance with 21 CFR Part 11, entering your printed legal name
-            and executing this digital sign-off represents the legally binding
-            equivalent of your handwritten signature.
-          </p>
-
-          <div class="form-group">
-            <label for="signer-name">Printed Legal Name:</label>
-            <input
-              id="signer-name"
-              v-model="signaturePayload.signerName"
-              type="text"
-              class="text-input"
-              placeholder="Your full name"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="signer-role">Clinical Role:</label>
-            <input
-              id="signer-role"
-              v-model="signaturePayload.signerRole"
-              type="text"
-              class="text-input"
-              placeholder="e.g. Principal Investigator"
-            />
-          </div>
-
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Legal Confirmation Statement:</label>
-            <div class="statement-box">
-              "I certify under penalty of law that I have reviewed, understood,
-              and agree to execute clinical procedures in accordance with
-              approved Protocol Version
-              {{ activeCurriculum?.protocol_version }}."
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showSignModal = false">
-            Cancel
-          </button>
-          <button
-            class="btn btn-success"
-            :disabled="signing || !signaturePayload.signerName"
-            @click="handleSignOff"
-          >
-            <span v-if="signing">Signing &amp; Sealing...</span>
-            <span v-else>Confirm &amp; Execute Signature ✍️</span>
-          </button>
         </div>
       </div>
     </div>
@@ -869,6 +603,9 @@
             >. This operation generates an immutable SHA-256 digital seal and
             routes signed records to eTMF Zone 5 (Artifact 05.02.04).
           </p>
+          <p v-if="bulkSignError" class="badge badge-error" role="alert">
+            {{ bulkSignError }}
+          </p>
           <div class="form-group">
             <label for="bulk-signer-name">Signer Printed Name:</label>
             <input
@@ -935,93 +672,98 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { soaClient } from "../../api/soaClient";
 import { trainingApi } from "../../api/training";
+import {
+  TRAINING_ASSIGN_ROLE_REASON,
+  TRAINING_DELEGATION_SIGN_ROLE_REASON,
+  canAssignTrainingCurriculum,
+  canSignTrainingDelegations,
+} from "../../canvas/authority";
+import { useAuthStore } from "../../stores/auth";
 import {
   DELEGATION_SIGN_OFF_ACTION,
   DELEGATION_SIGN_OFF_SEMANTIC_ACTION,
   delegationBatchBindingId,
 } from "../../utils/signatureBinding";
-import { useAuthStore } from "../../stores/auth";
+
+const props = defineProps({
+  studyId: {
+    type: String,
+    default: "",
+  },
+  protocolVersion: {
+    type: String,
+    default: "",
+  },
+});
 
 const authStore = useAuthStore();
+const canAssignCurriculum = computed(() =>
+  canAssignTrainingCurriculum(authStore)
+);
+const canSignDelegations = computed(() =>
+  canSignTrainingDelegations(authStore)
+);
 
 const loading = ref(false);
 const assignments = ref([]);
+const curricula = ref([]);
 const selectedAssignmentId = ref("");
+const selectedCurriculumId = ref("");
 const activeAssignment = ref(null);
 const activeCurriculum = ref(null);
 const delegations = ref([]);
-const activeCertificate = ref(null);
 const activeTab = ref("modules");
 const selectedModuleIndex = ref(0);
-
 const isGated = ref(true);
-const totalTimeSpent = ref(0);
-const moduleTimer = ref(0);
-let timerInterval = null;
-
-const syncError = ref(false);
-const syncErrorMessage = ref("");
-const isSyncing = ref(false);
-
-const userAnswers = ref({});
-const submittingQuiz = ref(false);
-const quizResult = ref(null);
-
-const showSignModal = ref(false);
-const signing = ref(false);
-const signaturePayload = ref({
-  signerName: "",
-  signerRole: "Principal Investigator",
-});
 
 const currentModule = computed(() => {
   if (!activeCurriculum.value?.modules) return null;
   return activeCurriculum.value.modules[selectedModuleIndex.value] || null;
 });
 
-const aggregatedQuestions = computed(() => {
-  if (!activeCurriculum.value?.modules) return [];
-  const questions = [];
-  activeCurriculum.value.modules.forEach((m) => {
-    if (m.quiz_questions && Array.isArray(m.quiz_questions)) {
-      questions.push(...m.quiz_questions);
-    }
-  });
-  return questions;
-});
-
-function formatTime(seconds) {
-  const s = seconds || 0;
-  const mins = Math.floor(s / 60);
-  const rem = s % 60;
-  return `${mins}m ${rem < 10 ? "0" : ""}${rem}s`;
-}
-
 async function refreshData() {
   loading.value = true;
   try {
     // The signed-in identity is the only source of who is training (#5400): no invented user stands in for it.
     const userId = authStore.identity?.sub || authStore.identity?.username;
-    signaturePayload.value.signerName = authStore.identity?.username || "";
-    signaturePayload.value.signerRole = authStore.activeRole || "";
+    bulkSignForm.value.signerName = authStore.identity?.username || "";
+    bulkSignForm.value.signerRole = authStore.activeRole || "";
     if (!userId) {
       assignments.value = [];
+      curricula.value = [];
+      activeAssignment.value = null;
+      activeCurriculum.value = null;
       return;
     }
 
-    const asnList = await trainingApi.listAssignments({ user_id: userId });
-    assignments.value = asnList;
+    const asnQuery = { user_id: userId };
+    if (props.studyId) asnQuery.study_id = props.studyId;
 
-    if (asnList.length > 0 && !selectedAssignmentId.value) {
-      selectedAssignmentId.value = asnList[0].id;
+    const asnList = await trainingApi.listAssignments(asnQuery);
+    assignments.value = Array.isArray(asnList) ? asnList : [];
+
+    if (assignments.value.length > 0 && !selectedAssignmentId.value) {
+      selectedAssignmentId.value = assignments.value[0].id;
     }
 
     if (selectedAssignmentId.value) {
       await loadAssignmentDetails(selectedAssignmentId.value);
+    } else if (props.studyId) {
+      const curQuery = { study_id: props.studyId };
+      if (props.protocolVersion) {
+        curQuery.protocol_version = props.protocolVersion;
+      }
+      const curList = await trainingApi.listCurricula(curQuery);
+      curricula.value = Array.isArray(curList) ? curList : [];
+      if (curricula.value.length > 0) {
+        selectedCurriculumId.value = curricula.value[0].id;
+        await loadCurriculumDetails(selectedCurriculumId.value);
+      }
     }
+
     await loadDelegations();
   } catch (err) {
     console.error("Failed to load training assignments:", err);
@@ -1031,148 +773,54 @@ async function refreshData() {
 }
 
 async function loadAssignmentDetails(asnId) {
-  syncError.value = false;
-  syncErrorMessage.value = "";
   try {
     const detail = await trainingApi.getAssignmentDetail(asnId);
     activeAssignment.value = detail;
-    activeCurriculum.value = detail.curriculum;
-    totalTimeSpent.value = detail.time_spent_seconds || 0;
-
+    activeCurriculum.value = detail.curriculum || null;
     isGated.value = detail.status !== "COMPLETED";
-
-    if (detail.status === "COMPLETED") {
-      try {
-        const cert = await trainingApi.getCertificate(asnId);
-        activeCertificate.value = cert;
-      } catch {
-        // certificate not yet generated or available
-      }
-    }
   } catch (err) {
     console.error("Error loading assignment detail:", err);
   }
 }
 
-function onAssignmentChange() {
-  syncError.value = false;
-  syncErrorMessage.value = "";
-  if (selectedAssignmentId.value) {
-    loadAssignmentDetails(selectedAssignmentId.value);
-    selectedModuleIndex.value = 0;
-    moduleTimer.value = 0;
-    quizResult.value = null;
-    userAnswers.value = {};
+async function loadCurriculumDetails(curriculumId) {
+  try {
+    const detail = await trainingApi.getCurriculum(curriculumId);
+    activeCurriculum.value = detail;
+  } catch (err) {
+    console.error("Error loading curriculum detail:", err);
   }
 }
 
-async function retrySync() {
-  if (!activeAssignment.value) return;
-  isSyncing.value = true;
-  try {
-    await trainingApi.recordProgress(activeAssignment.value.id, {
-      time_spent_delta_seconds: 15,
-      reason_for_change: "Heartbeat training time-on-page recording",
-    });
-    syncError.value = false;
-    syncErrorMessage.value = "";
-  } catch (err) {
-    syncError.value = true;
-    syncErrorMessage.value =
-      err?.message ||
-      "Failed to record training progress heartbeat. Time tracking has been paused.";
-  } finally {
-    isSyncing.value = false;
+function onAssignmentChange() {
+  if (selectedAssignmentId.value) {
+    loadAssignmentDetails(selectedAssignmentId.value);
+    selectedModuleIndex.value = 0;
+  }
+}
+
+function onCurriculumChange() {
+  if (selectedCurriculumId.value) {
+    loadCurriculumDetails(selectedCurriculumId.value);
+    selectedModuleIndex.value = 0;
   }
 }
 
 function selectModule(index) {
   selectedModuleIndex.value = index;
-  moduleTimer.value = 0;
 }
 
-async function handleSubmitQuiz() {
-  if (!activeAssignment.value) return;
-  submittingQuiz.value = true;
-  try {
-    const res = await trainingApi.submitQuiz(activeAssignment.value.id, {
-      answers: userAnswers.value,
-      reason_for_change: "Submit comprehension quiz evaluation",
-    });
-    quizResult.value = res;
-    if (res.passed) {
-      activeAssignment.value.status = "IN_PROGRESS";
-      activeAssignment.value.quiz_score = res.score_percentage;
-    }
-  } catch (err) {
-    console.error("Quiz submission error:", err);
-  } finally {
-    submittingQuiz.value = false;
+watch(
+  () => [props.studyId, props.protocolVersion],
+  () => {
+    selectedAssignmentId.value = "";
+    selectedCurriculumId.value = "";
+    refreshData();
   }
-}
-
-async function handleSignOff() {
-  if (!activeAssignment.value) return;
-  signing.value = true;
-  try {
-    const cert = await trainingApi.signOffTraining(activeAssignment.value.id, {
-      signer_name: signaturePayload.value.signerName,
-      signer_role: signaturePayload.value.signerRole,
-      meaning:
-        "I certify that I have reviewed, understood, and agree to execute clinical procedures in accordance with this approved protocol curriculum.",
-      reason_for_change:
-        "21 CFR Part 11 Electronic Signature for training completion",
-    });
-    activeCertificate.value = cert;
-    activeAssignment.value.status = "COMPLETED";
-    isGated.value = false;
-    showSignModal.value = false;
-    activeTab.value = "certificate";
-  } catch (err) {
-    console.error("Sign-off error:", err);
-  } finally {
-    signing.value = false;
-  }
-}
-
-function startTimer() {
-  timerInterval = setInterval(async () => {
-    if (syncError.value) {
-      return;
-    }
-    if (
-      activeAssignment.value &&
-      activeAssignment.value.status !== "COMPLETED"
-    ) {
-      moduleTimer.value += 1;
-      totalTimeSpent.value += 1;
-
-      // Periodically sync progress every 15 seconds
-      if (moduleTimer.value % 15 === 0) {
-        try {
-          isSyncing.value = true;
-          await trainingApi.recordProgress(activeAssignment.value.id, {
-            time_spent_delta_seconds: 15,
-            reason_for_change: "Heartbeat training time-on-page recording",
-          });
-          syncError.value = false;
-          syncErrorMessage.value = "";
-        } catch (err) {
-          syncError.value = true;
-          syncErrorMessage.value =
-            err?.message ||
-            "Failed to record training progress heartbeat. Time tracking has been paused.";
-        } finally {
-          isSyncing.value = false;
-        }
-      }
-    }
-  }, 1000);
-}
+);
 
 onMounted(() => {
   refreshData();
-  startTimer();
 });
 
 // Batch Curriculum Assignment State. The audience comes from the study's delegation log (#5400): the sites and roles
@@ -1238,6 +886,7 @@ const loadingDelegations = ref(false);
 const showBulkSignModal = ref(false);
 const submittingBulkSign = ref(false);
 const bulkSignResult = ref(null);
+const bulkSignError = ref("");
 const bulkSignForm = ref({
   signerName: authStore.identity?.username || "",
   signerRole: authStore.activeRole || "",
@@ -1263,7 +912,7 @@ function toggleSelectAllDelegations() {
 }
 
 async function loadDelegations() {
-  const studyId = activeCurriculum.value?.study_id;
+  const studyId = activeCurriculum.value?.study_id || props.studyId;
   if (!studyId) {
     delegations.value = [];
     return;
@@ -1271,7 +920,7 @@ async function loadDelegations() {
   loadingDelegations.value = true;
   try {
     const res = await trainingApi.listDelegations({ study_id: studyId });
-    delegations.value = res;
+    delegations.value = Array.isArray(res) ? res : [];
   } catch (err) {
     console.error("Failed to load delegations:", err);
   } finally {
@@ -1292,6 +941,7 @@ function singleSite(delegationIds) {
 async function handleExecuteBulkSignOff() {
   if (selectedDelegationIds.value.length === 0) return;
   submittingBulkSign.value = true;
+  bulkSignError.value = "";
   try {
     const delegationIds = [...selectedDelegationIds.value];
     const verification = await soaClient.verifySignature({
@@ -1305,7 +955,7 @@ async function handleExecuteBulkSignOff() {
     const res = await trainingApi.bulkSignOffDelegations(
       {
         delegation_ids: delegationIds,
-        study_id: activeCurriculum.value?.study_id,
+        study_id: activeCurriculum.value?.study_id || props.studyId || null,
         site_id: singleSite(delegationIds),
         signature_payload: {
           meaning:
@@ -1320,15 +970,12 @@ async function handleExecuteBulkSignOff() {
     selectedDelegationIds.value = [];
     await loadDelegations();
   } catch (err) {
+    bulkSignError.value = err?.message || "Bulk delegation sign-off failed.";
     console.error("Bulk sign-off error:", err);
   } finally {
     submittingBulkSign.value = false;
   }
 }
-
-onUnmounted(() => {
-  if (timerInterval) clearInterval(timerInterval);
-});
 </script>
 
 <style scoped>
@@ -2081,5 +1728,25 @@ table,
 th,
 td {
   font-variant-numeric: tabular-nums;
+}
+
+.data-table th,
+.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--semantic-color-border);
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.alert-banner {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+.success-banner {
+  background: var(--semantic-color-success-bg);
+  border: 1px solid var(--semantic-color-success-border);
+  color: var(--semantic-color-success-dark);
 }
 </style>

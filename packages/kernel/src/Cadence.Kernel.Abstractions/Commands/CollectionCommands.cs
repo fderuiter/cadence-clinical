@@ -81,6 +81,7 @@ public sealed record RecordCollectedValues(
 /// </remarks>
 [KernelCapability("collection.sign", VerbClass.Execute, Resource = nameof(SignCollectionInstance.EnrollmentId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.ReasonForChangeRequired))]
 [RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.SignatureMeaningInvalid))]
 [RaisesKernelErrors(

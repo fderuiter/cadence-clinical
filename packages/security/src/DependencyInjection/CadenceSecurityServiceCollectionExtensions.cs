@@ -58,6 +58,7 @@ public static class CadenceSecurityServiceCollectionExtensions
             .ValidateOnStart();
 
         services.AddTransient<AuditorWriteGuardMiddleware>();
+        services.AddTransient<ExpiredSubscriptionWriteGuardMiddleware>();
         // Process-local single use by default; every host with an e-signature route replaces it with the durable
         // store, and outside Development the startup check refuses one that does not (ADR-2515, #5434).
         services.TryAddSingleton<ISigTokenUseStore>(sp => new ReplayCache(sp.GetService<IClock>()));
@@ -133,14 +134,15 @@ public static class CadenceSecurityServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds gateway-signature authentication, authorization (with the deny-by-default fallback policy)
-    /// and the auditor write guard to the pipeline.
+    /// Adds gateway-signature authentication, authorization (with the deny-by-default fallback policy),
+    /// the auditor write guard, and the expired-subscription write guard to the pipeline.
     /// </summary>
     public static IApplicationBuilder UseCadenceSecurity(this IApplicationBuilder app)
     {
         app.UseAuthentication();
         app.UseAuthorization();
-        return app.UseMiddleware<AuditorWriteGuardMiddleware>();
+        app.UseMiddleware<AuditorWriteGuardMiddleware>();
+        return app.UseMiddleware<ExpiredSubscriptionWriteGuardMiddleware>();
     }
 
     /// <summary>
@@ -230,5 +232,15 @@ public static class CadenceSecurityServiceCollectionExtensions
     public static TBuilder RequireChangeJustification<TBuilder>(this TBuilder builder) where TBuilder : IEndpointConventionBuilder
     {
         return builder.RequireAuthorization("RequireChangeJustification");
+    }
+
+    /// <summary>
+    /// Marks a commercial onboarding or subscription activation route as writable even when the caller's tenant
+    /// carries a signed <c>X-Tenant-Read-Only: true</c> assertion.
+    /// </summary>
+    public static TBuilder AllowExpiredTenantWrite<TBuilder>(this TBuilder builder) where TBuilder : IEndpointConventionBuilder
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        return builder.WithMetadata(AllowExpiredTenantWriteMetadata.Instance);
     }
 }
