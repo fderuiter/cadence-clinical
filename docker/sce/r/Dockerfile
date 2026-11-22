@@ -1,4 +1,4 @@
-FROM r-base:4.6.2@sha256:7bb56b8b7c849d1cea9a5cff981789622340326abdce817ed44c00ac45947a37
+FROM r-base:4.4.2@sha256:fe9b29520eeb5292d814b0958783c0ddfcdab37402967a3e67307604354f98d7
 
 LABEL maintainer="Cadence Clinical Platform Team <dev@cadence.clinical>"
 LABEL description="GxP-validated statistical computing execution base image for R"

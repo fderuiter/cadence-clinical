@@ -548,141 +548,143 @@
     </div>
 
     <!-- Batch Assignment Modal -->
-    <div v-if="showBatchModal" class="modal-backdrop">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>Confirm Batch Curriculum Assignment</h3>
-          <button class="modal-close-btn" @click="showBatchModal = false">
-            ✕
-          </button>
-        </div>
-        <div class="modal-body">
-          <p class="modal-description">
-            You are about to assign curriculum
-            <strong>{{
-              activeCurriculum?.title || "Protocol Training"
-            }}</strong>
-            across
-            <strong>{{ batchForm.selectedSites.length }} sites</strong> and
-            <strong>{{ batchForm.selectedRoles.length }} roles</strong> ({{
-              computedBatchCount
-            }}
-            target personnel).
-          </p>
-          <div class="form-group">
-            <label for="batch-reason">Reason for Change / Audit Note:</label>
-            <input
-              id="batch-reason"
-              v-model="batchForm.reasonForChange"
-              type="text"
-              class="text-input"
-              placeholder="e.g. Protocol Amendment V3.0 Deployment"
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showBatchModal = false">
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="submittingBatch || !batchForm.reasonForChange.trim()"
-            @click="handleExecuteBatchAssign"
-          >
-            <span v-if="submittingBatch">Deploying Batch...</span>
-            <span v-else>Confirm &amp; Deploy Batch 🚀</span>
-          </button>
-        </div>
+    <ClinicalModal
+      v-model="showBatchModal"
+      :teleport="false"
+      :dismissible="!submittingBatch"
+      dialog-class="modal-card"
+      title="Confirm Batch Curriculum Assignment"
+    >
+      <p class="modal-description">
+        You are about to assign curriculum
+        <strong>{{ activeCurriculum?.title || "Protocol Training" }}</strong>
+        across
+        <strong>{{ batchForm.selectedSites.length }} sites</strong> and
+        <strong>{{ batchForm.selectedRoles.length }} roles</strong> ({{
+          computedBatchCount
+        }}
+        target personnel).
+      </p>
+      <div class="form-group">
+        <label for="batch-reason">Reason for Change / Audit Note:</label>
+        <input
+          id="batch-reason"
+          v-model="batchForm.reasonForChange"
+          type="text"
+          class="text-input"
+          :disabled="submittingBatch"
+          placeholder="e.g. Protocol Amendment V3.0 Deployment"
+        />
       </div>
-    </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="submittingBatch"
+          @click="showBatchModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="submittingBatch || !batchForm.reasonForChange.trim()"
+          @click="handleExecuteBatchAssign"
+        >
+          <span v-if="submittingBatch">Deploying Batch...</span>
+          <span v-else>Confirm &amp; Deploy Batch 🚀</span>
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- Bulk Delegation Sign-Off Modal -->
-    <div v-if="showBulkSignModal" class="modal-backdrop">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>21 CFR Part 11 Bulk Delegation Log Sign-Off</h3>
-          <button class="modal-close-btn" @click="showBulkSignModal = false">
-            ✕
-          </button>
-        </div>
-        <div class="modal-body">
-          <p class="modal-description">
-            Executing bulk electronic sign-off for
-            <strong
-              >{{ selectedDelegationIds.length }} pending delegation
-              records</strong
-            >. This operation generates an immutable SHA-256 digital seal and
-            routes signed records to eTMF Zone 5 (Artifact 05.02.04).
-          </p>
-          <p v-if="bulkSignError" class="badge badge-error" role="alert">
-            {{ bulkSignError }}
-          </p>
-          <div class="form-group">
-            <label for="bulk-signer-name">Signer Printed Name:</label>
-            <input
-              id="bulk-signer-name"
-              v-model="bulkSignForm.signerName"
-              type="text"
-              class="text-input"
-              placeholder="Your full name"
-            />
-          </div>
-          <div class="form-group">
-            <label for="bulk-signer-role">Clinical Authority Role:</label>
-            <input
-              id="bulk-signer-role"
-              v-model="bulkSignForm.signerRole"
-              type="text"
-              class="text-input"
-              placeholder="Principal Investigator"
-            />
-          </div>
-          <div class="form-group">
-            <label for="bulk-password"
-              >21 CFR Part 11 Password Credential:</label
-            >
-            <input
-              id="bulk-password"
-              v-model="bulkSignForm.password"
-              type="password"
-              class="text-input"
-              placeholder="Enter password to verify identity"
-            />
-          </div>
-          <div class="form-group">
-            <span>Legal Attestation Statement:</span>
-            <div class="statement-box">
-              "I confirm that I have reviewed and approved the delegated duties
-              for the selected site staff personnel in accordance with 21 CFR
-              Part 11 and ICH GCP E6(R2)."
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showBulkSignModal = false">
-            Cancel
-          </button>
-          <button
-            class="btn btn-success"
-            :disabled="
-              submittingBulkSign ||
-              !bulkSignForm.password ||
-              !bulkSignForm.signerName
-            "
-            @click="handleExecuteBulkSignOff"
-          >
-            <span v-if="submittingBulkSign"
-              >Executing Part 11 Signature...</span
-            >
-            <span v-else>Confirm &amp; Execute Signature ✍️</span>
-          </button>
+    <ClinicalModal
+      v-model="showBulkSignModal"
+      :teleport="false"
+      :dismissible="!submittingBulkSign"
+      dialog-class="modal-card"
+      title="21 CFR Part 11 Bulk Delegation Log Sign-Off"
+    >
+      <p class="modal-description">
+        Executing bulk electronic sign-off for
+        <strong
+          >{{ selectedDelegationIds.length }} pending delegation records</strong
+        >. This operation generates an immutable SHA-256 digital seal and routes
+        signed records to eTMF Zone 5 (Artifact 05.02.04).
+      </p>
+      <p v-if="bulkSignError" class="badge badge-error" role="alert">
+        {{ bulkSignError }}
+      </p>
+      <div class="form-group">
+        <label for="bulk-signer-name">Signer Printed Name:</label>
+        <input
+          id="bulk-signer-name"
+          v-model="bulkSignForm.signerName"
+          type="text"
+          class="text-input"
+          :disabled="submittingBulkSign"
+          placeholder="Your full name"
+        />
+      </div>
+      <div class="form-group">
+        <label for="bulk-signer-role">Clinical Authority Role:</label>
+        <input
+          id="bulk-signer-role"
+          v-model="bulkSignForm.signerRole"
+          type="text"
+          class="text-input"
+          :disabled="submittingBulkSign"
+          placeholder="Principal Investigator"
+        />
+      </div>
+      <div class="form-group">
+        <label for="bulk-password">21 CFR Part 11 Password Credential:</label>
+        <input
+          id="bulk-password"
+          v-model="bulkSignForm.password"
+          type="password"
+          class="text-input"
+          :disabled="submittingBulkSign"
+          placeholder="Enter password to verify identity"
+        />
+      </div>
+      <div class="form-group">
+        <span>Legal Attestation Statement:</span>
+        <div class="statement-box">
+          "I confirm that I have reviewed and approved the delegated duties for
+          the selected site staff personnel in accordance with 21 CFR Part 11
+          and ICH GCP E6(R2)."
         </div>
       </div>
-    </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="submittingBulkSign"
+          @click="showBulkSignModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-success"
+          :disabled="
+            submittingBulkSign ||
+            !bulkSignForm.password ||
+            !bulkSignForm.signerName
+          "
+          @click="handleExecuteBulkSignOff"
+        >
+          <span v-if="submittingBulkSign">Executing Part 11 Signature...</span>
+          <span v-else>Confirm &amp; Execute Signature ✍️</span>
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
+import { ClinicalModal } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { soaClient } from "../../api/soaClient";
 import { trainingApi } from "../../api/training";
