@@ -359,7 +359,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     store.studyCode = "CAD-101";
     store.record.enrollmentId = ENROLLMENT_ID;
     store.record.loading = false;
-    store.record.error = null;
+    store.record.error = false;
 
     const wrapper = mount(ParticipantRecord, {
       props: {

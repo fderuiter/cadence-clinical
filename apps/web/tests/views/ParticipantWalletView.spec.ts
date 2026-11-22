@@ -2,7 +2,7 @@
  * @req: PRD-SYS-182
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { mount, flushPromises } from "@vue/test-utils";
+import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import ParticipantWalletView from "../../src/views/ParticipantWalletView.vue";
 import { useToastStore } from "../../src/stores/toasts.js";
@@ -109,7 +109,7 @@ describe("ParticipantWalletView Mutation Error Handling (@req: PRD-SYS-182)", ()
     vi.restoreAllMocks();
   });
 
-  async function mountComponent() {
+  async function mountComponent(): Promise<VueWrapper<any>> {
     const wrapper = mount(ParticipantWalletView, {
       global: {
         plugins: [pinia],

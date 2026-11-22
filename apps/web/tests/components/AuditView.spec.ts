@@ -54,7 +54,7 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
       reason_for_change:
         "Typographical error corrected against paper source chart",
       sha256_hash:
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
     },
     {
       id: "AUDIT-LOG-102",
@@ -69,7 +69,7 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
       new_value: { query_id: "QRY-208", status: "CLOSED" },
       reason_for_change: "Investigator confirmation received and verified",
       sha256_hash:
-        "3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1b",
+        "3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1b", // pragma: allowlist secret
     },
   ];
 
@@ -79,17 +79,22 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
     vi.clearAllMocks();
 
     vi.mocked(auditorService.getAuditLogs).mockResolvedValue({
-      items: mockLogs,
+      items: mockLogs as unknown as Awaited<
+        ReturnType<typeof auditorService.getAuditLogs>
+      >["items"],
       total_count: 2,
       limit: 20,
       offset: 0,
+      has_more: false,
     });
 
     vi.mocked(auditorService.getExecutionIntegrity).mockResolvedValue({
       status: "VERIFIED",
       ledger_entries: 2,
       last_sealed_at: "2026-08-21T11:30:00Z",
-    });
+    } as unknown as Awaited<
+      ReturnType<typeof auditorService.getExecutionIntegrity>
+    >);
 
     vi.mocked(etmfService.getDocuments).mockResolvedValue([]);
     vi.mocked(etmfService.getCompleteness).mockResolvedValue({
@@ -97,7 +102,7 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
       present_count: 10,
       missing_count: 0,
       completeness_percentage: 100,
-    });
+    } as unknown as Awaited<ReturnType<typeof etmfService.getCompleteness>>);
   });
 
   it("renders audit trail logs and initializes with default query params", async () => {
@@ -197,7 +202,7 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
     const sha256Block = detailsRow.find(".sha256-hash");
     expect(sha256Block.exists()).toBe(true);
     expect(sha256Block.text()).toContain(
-      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" // pragma: allowlist secret
     );
     expect(sha256Block.text()).toContain("SEAL VERIFIED");
   });
