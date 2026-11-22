@@ -1,19 +1,28 @@
 /**
- * Which canvas actions to offer the signed-in user. This is presentation only: Execution and the Kernel decide, and
- * the canvas reports any refusal (UX-6).
+ * Which canvas and operational actions to offer the signed-in user. This is presentation only:
+ * backend services enforce permissions via PermissionMatrix, and the UI surfaces any refusal (UX-6).
+ *
+ * IMPORTANT: Never delegate backend role splits to `authStore.hasRole()`, because `stores/auth.js`
+ * aliases `cra <-> monitor` and expands `sponsor_admin` to every workspace persona. Instead, normalize
+ * `auth.rawRoles` with the exact rules of `Cadence.Security.Rbac.RoleNormalization`.
  */
 interface RoleHolder {
   hasRole: (role: string) => boolean;
 }
 
-/** The realm roles and active persona/site claims as signed by the gateway to Execution. */
-interface RawRoleHolder {
+/** The realm roles and active persona/site claims as signed by the gateway to downstream .NET services. */
+export interface RawRoleHolder {
   rawRoles?: readonly string[] | null;
   currentPersona?: string | null;
   assignedSiteIds?: readonly string[] | null;
   siteIds?: readonly string[] | null;
 }
 
+/**
+ * Execution's SubjectAuthority.CanManageParticipants: investigators and coordinators. Compared with Execution's
+ * own normalisation (trimmed, lower case) and without the web app's role aliases, because Execution does not
+ * apply them: a data manager (#4981), a sponsor admin, a monitor or an auditor gets a 403.
+ */
 const PARTICIPANT_ROLES = new Set([
   "investigator",
   "site_investigator",
@@ -290,11 +299,29 @@ const BACKEND_ROLE_ALIASES: Readonly<Record<string, string>> = {
   "cra/monitor": "cra",
   cra_monitor: "cra",
   "cra-monitor": "cra",
+  subject: "subject",
+  patient: "subject",
+  epro: "subject",
   auditor: "auditor",
   inspector: "auditor",
   regulatory_inspector: "auditor",
   tmf_auditor: "auditor",
+  finance_officer: "finance_officer",
+  "finance officer": "finance_officer",
+  "finance-officer": "finance_officer",
+  financeofficer: "finance_officer",
+  "grants manager": "finance_officer",
+  grants_manager: "finance_officer",
+  "grants-manager": "finance_officer",
+  grantsmanager: "finance_officer",
 };
+
+/** Normalizes a raw realm role string using the same rules as Cadence.Security.Rbac.RoleNormalization. */
+export function normalizeBackendRole(role: string): string {
+  const norm = (role || "").trim().toLowerCase();
+  if (!norm) return "";
+  return BACKEND_ROLE_ALIASES[norm] ?? norm;
+}
 
 function canonicalBackendRoles(
   auth: AuthorityAuth | null | undefined
@@ -302,10 +329,7 @@ function canonicalBackendRoles(
   if (!auth) return [];
   const raw = auth.rawRoles ?? [];
   if (raw.length > 0) {
-    return raw
-      .map((r) => r.trim().toLowerCase())
-      .filter(Boolean)
-      .map((norm) => BACKEND_ROLE_ALIASES[norm] ?? norm);
+    return raw.map((r) => normalizeBackendRole(r)).filter(Boolean);
   }
   if (typeof auth.hasRole === "function") {
     const inferred: string[] = [];
@@ -370,6 +394,48 @@ const RANDOMIZATION_SCHEME_READ_ROLES = new Set([
   "sponsor_dm",
   "auditor",
 ]);
+const ETMF_STAGE_QC_ROLES = new Set([
+  "sysadmin",
+  "sponsor_dm",
+  "cra",
+  "monitor",
+  "crc",
+]);
+const ETMF_REVIEW_QC_ROLES = new Set([
+  "sysadmin",
+  "sponsor_dm",
+  "cra",
+  "monitor",
+]);
+const TRAINING_CURRICULUM_ASSIGN_ROLES = new Set(["sysadmin", "sponsor_dm"]);
+const TRAINING_DELEGATION_SIGN_ROLES = new Set([
+  "principal_investigator",
+  "authorized_er_physician",
+  "lead_investigator",
+]);
+
+export const SITE_ACTIVATION_ROLE_REASON =
+  "Requires Sponsor Data Manager or System Administrator role (site_compliance:activate).";
+export const GREENLIGHT_CERTIFY_ROLE_REASON =
+  "Requires Sponsor Data Manager or System Administrator role (ctms_greenlight:certify).";
+export const SITE_MILESTONE_ROLE_REASON =
+  "Requires CRA, Monitor, Sponsor Data Manager, or System Administrator role (ctms_site_milestone:update).";
+export const MONITORING_VISIT_SCHEDULE_ROLE_REASON =
+  "Requires CRA, Sponsor Data Manager, or System Administrator role (ctms_monitoring_visit:create).";
+export const MONITORING_VISIT_COMPLETE_ROLE_REASON =
+  "Requires CRA, Monitor, Sponsor Data Manager, or System Administrator role (ctms_monitoring_visit:update).";
+export const MONITORING_LETTER_COMPILE_ROLE_REASON =
+  "Requires CRA, Sponsor Data Manager, or System Administrator role (ctms_monitoring_visit:create). Monitors perform supervisory sign-off rather than scheduling visits or compiling letters.";
+export const MONITORING_VISIT_SIGNOFF_ROLE_REASON =
+  "Requires Monitor, Sponsor Data Manager, or System Administrator role (ctms_monitoring_visit:sign_off). CRAs schedule/complete visits and compile letters; Monitors sign off.";
+export const DOA_SIGNOFF_ROLE_REASON =
+  "Requires Investigator or System Administrator role (ctms_doa:sign_off).";
+export const ETMF_QC_REVIEW_ROLE_REASON =
+  "Requires CRA, Monitor, Sponsor Data Manager, or System Administrator role (etmf_document:transition_clinical_qc).";
+export const TRAINING_ASSIGN_ROLE_REASON =
+  "Requires Sponsor Data Manager or System Administrator role (training_curriculum:assign).";
+export const TRAINING_DELEGATION_SIGN_ROLE_REASON =
+  "Requires Principal Investigator role (delegation_log:sign).";
 
 /** Activate a compliant site in Execution (site_compliance:activate — sysadmin & sponsor_dm only). */
 export function canActivateSite(auth: AuthorityAuth): boolean {
@@ -386,9 +452,19 @@ export function canManageMilestones(auth: AuthorityAuth): boolean {
   return holdsBackendRole(auth, MILESTONE_WRITE_ROLES);
 }
 
-/** Schedule monitoring visits in CTMS (ctms_monitoring_visit:create). */
+/** Alias for `canManageMilestones` used across CTMS views. */
+export function canManageSiteMilestones(auth: AuthorityAuth): boolean {
+  return canManageMilestones(auth);
+}
+
+/** Schedule monitoring visits and compile visit letters in CTMS (ctms_monitoring_visit:create). */
 export function canScheduleMonitoringVisits(auth: AuthorityAuth): boolean {
   return holdsBackendRole(auth, VISIT_SCHEDULE_ROLES);
+}
+
+/** Alias for `canScheduleMonitoringVisits` (`ctms_monitoring_visit:create`). */
+export function canManageMonitoringVisits(auth: AuthorityAuth): boolean {
+  return canScheduleMonitoringVisits(auth);
 }
 
 /** Complete scheduled monitoring visits in CTMS (ctms_monitoring_visit:update). */
@@ -401,7 +477,12 @@ export function canSignOffMonitoringVisits(auth: AuthorityAuth): boolean {
   return holdsBackendRole(auth, VISIT_SIGN_OFF_ROLES);
 }
 
-/** Delegate or revoke site trial tasks in CTMS (ctms_doa:delegate/revoke). */
+/** Alias for `canSignOffMonitoringVisits`. */
+export function canSignOffMonitoringVisit(auth: AuthorityAuth): boolean {
+  return canSignOffMonitoringVisits(auth);
+}
+
+/** Delegate or revoke site trial tasks in CTMS (ctms_doa:assign/revoke). */
 export function canManageDoa(auth: AuthorityAuth): boolean {
   return holdsBackendRole(auth, DOA_MANAGE_ROLES);
 }
@@ -429,4 +510,24 @@ export function canRecordChainOfCustody(auth: AuthorityAuth): boolean {
 /** Read blinded randomization scheme configuration (randomization_scheme:read). */
 export function canReadRandomizationSchemes(auth: AuthorityAuth): boolean {
   return holdsBackendRole(auth, RANDOMIZATION_SCHEME_READ_ROLES);
+}
+
+/** Stage site startup / study documents into eTMF intelligence QC (etmf_document:create). */
+export function canStageEtmfQc(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, ETMF_STAGE_QC_ROLES);
+}
+
+/** Transition staged eTMF documents through clinical QC review (etmf_document:transition_clinical_qc). */
+export function canReviewEtmfQc(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, ETMF_REVIEW_QC_ROLES);
+}
+
+/** Assign protocol training curricula to personnel (training_curriculum:assign). */
+export function canAssignTrainingCurriculum(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, TRAINING_CURRICULUM_ASSIGN_ROLES);
+}
+
+/** Sign Knowledge site delegation logs as Principal Investigator (delegation_log:sign). */
+export function canSignTrainingDelegations(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, TRAINING_DELEGATION_SIGN_ROLES);
 }

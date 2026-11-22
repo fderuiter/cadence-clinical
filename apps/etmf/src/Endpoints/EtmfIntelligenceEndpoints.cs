@@ -86,7 +86,8 @@ public static class EtmfIntelligenceEndpoints
         [FromServices] EtmfDbContext dbContext,
         [FromServices] IClock clock,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IEtmfCompletenessWebhookPublisher? completenessPublisher = null)
     {
         if (string.IsNullOrWhiteSpace(request.ReasonForChange) || request.ReasonForChange.Length < 10)
         {
@@ -154,6 +155,17 @@ public static class EtmfIntelligenceEndpoints
         dbContext.TmfAuditLogs.Add(audit);
 
         await dbContext.SaveChangesAsync(ct);
+
+        if (completenessPublisher is not null && !string.IsNullOrWhiteSpace(request.SiteId))
+        {
+            await completenessPublisher.PublishSiteActivationCompletenessAsync(
+                dbContext: dbContext,
+                studyId: request.StudyId,
+                siteId: request.SiteId,
+                tenantId: CallerScope.TenantId(httpContext),
+                reasonForChange: request.ReasonForChange,
+                ct: ct);
+        }
 
         var stagingItem = new CraqcStagingItem(
             DocumentId: docId,
@@ -248,7 +260,8 @@ public static class EtmfIntelligenceEndpoints
         [FromServices] EtmfDbContext dbContext,
         [FromServices] IClock clock,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IEtmfCompletenessWebhookPublisher? completenessPublisher = null)
     {
         if (string.IsNullOrWhiteSpace(request.ReasonForChange) || request.ReasonForChange.Length < 10)
         {
@@ -328,6 +341,17 @@ public static class EtmfIntelligenceEndpoints
         dbContext.TmfAuditLogs.Add(audit);
 
         await dbContext.SaveChangesAsync(ct);
+
+        if (completenessPublisher is not null)
+        {
+            await completenessPublisher.PublishSiteActivationCompletenessAsync(
+                dbContext: dbContext,
+                studyId: doc.StudyId,
+                siteId: doc.SiteId,
+                tenantId: CallerScope.TenantId(httpContext),
+                reasonForChange: request.ReasonForChange,
+                ct: ct);
+        }
 
         return TypedResults.Ok(doc);
     }

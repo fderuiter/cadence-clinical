@@ -8,8 +8,8 @@
       <div>
         <h3 id="ctms-monitoring-title" class="card-title">Monitoring visits</h3>
         <p class="section-subtitle">
-          Schedule monitoring visits, record trip completion findings, review
-          generated letters, and complete supervisory sign-off.
+          Schedule monitoring visits, record structured trip findings, compile
+          Part 11 signed visit letters, and complete supervisory sign-off.
         </p>
       </div>
     </div>
@@ -38,6 +38,23 @@
     />
 
     <template v-if="loaded">
+      <p
+        v-if="!canSignOff"
+        id="ctms-visit-signoff-role-note"
+        class="muted-status"
+        role="note"
+      >
+        {{ MONITORING_VISIT_SIGNOFF_ROLE_REASON }}
+      </p>
+      <p
+        v-if="!canSchedule"
+        id="ctms-visit-schedule-role-note"
+        class="muted-status"
+        role="note"
+      >
+        {{ MONITORING_LETTER_COMPILE_ROLE_REASON }}
+      </p>
+
       <p v-if="!visits.length" class="muted-status">
         No monitoring visits scheduled yet for this scope.
       </p>
@@ -80,7 +97,17 @@
                   Letters
                 </button>
                 <button
+                  v-if="canSchedule"
+                  :data-testid="`btn-compile-letter-${visit.id}`"
+                  type="button"
+                  class="btn btn-secondary btn-sm"
+                  @click="prepareCompileLetter(visit)"
+                >
+                  Compile letter
+                </button>
+                <button
                   v-if="canComplete && visit.status === 'SCHEDULED'"
+                  :data-testid="`btn-complete-visit-${visit.id}`"
                   type="button"
                   class="btn btn-secondary btn-sm"
                   @click="prepareComplete(visit)"
@@ -89,6 +116,7 @@
                 </button>
                 <button
                   v-if="canSignOff && visit.status === 'COMPLETED'"
+                  :data-testid="`btn-signoff-visit-${visit.id}`"
                   type="button"
                   class="btn btn-primary btn-sm"
                   @click="prepareSignOff(visit)"
@@ -99,6 +127,42 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div
+        v-if="compiledLetters.length"
+        id="ctms-compiled-letters-container"
+        class="mutation-card"
+      >
+        <h4>Compiled GxP visit letters</h4>
+        <ul class="letter-list">
+          <li
+            v-for="item in compiledLetters"
+            :key="item.letterId"
+            class="letter-item"
+          >
+            <div class="card-subheader">
+              <div>
+                <strong>{{ item.letterId }}</strong> · {{ item.letterType }} ·
+                <span>{{ item.status }}</span>
+                <span v-if="item.etmfDocumentId">
+                  · Filed: {{ item.etmfDocumentId }}
+                </span>
+                <span v-if="item.pdfSha256Hash">
+                  · SHA-256: {{ item.pdfSha256Hash.slice(0, 12) }}
+                </span>
+              </div>
+              <button
+                :data-testid="`btn-download-letter-${item.letterId}`"
+                type="button"
+                class="btn btn-secondary btn-sm"
+                @click="downloadCompiledLetter(item)"
+              >
+                Download PDF
+              </button>
+            </div>
+          </li>
+        </ul>
       </div>
 
       <div
@@ -131,7 +195,11 @@
         </ul>
       </div>
 
-      <div v-if="activeCompleteVisit && canComplete" class="mutation-card">
+      <div
+        v-if="activeCompleteVisit && canComplete"
+        id="modal-complete-visit"
+        class="mutation-card"
+      >
         <h4>
           Complete {{ activeCompleteVisit.visit_type }} visit for
           {{ activeCompleteVisit.site_id }}
@@ -143,13 +211,60 @@
             v-model="completeActualDate"
             type="date"
           />
-          <label for="complete-finding-desc">Optional finding</label>
+          <label for="complete-finding-desc">Quick observation</label>
           <input
             id="complete-finding-desc"
             v-model="completeFindingDesc"
             type="text"
             placeholder="Describe any monitoring observation"
           />
+          <button
+            id="btn-add-visit-finding"
+            type="button"
+            class="btn btn-secondary btn-sm"
+            @click="addStructuredFinding"
+          >
+            + Add structured finding
+          </button>
+        </div>
+
+        <div
+          v-for="(finding, idx) in structuredFindings"
+          :key="idx"
+          class="form-row"
+        >
+          <label :for="`finding-text-${idx}`">Finding {{ idx + 1 }}</label>
+          <input
+            :id="`finding-text-${idx}`"
+            v-model="finding.text"
+            type="text"
+            placeholder="Monitoring finding description"
+          />
+          <label :for="`finding-severity-${idx}`">Severity</label>
+          <select :id="`finding-severity-${idx}`" v-model="finding.severity">
+            <option value="MINOR">Minor</option>
+            <option value="MAJOR">Major</option>
+            <option value="CRITICAL">Critical</option>
+          </select>
+          <label :for="`finding-resolution-${idx}`">Resolution</label>
+          <select
+            :id="`finding-resolution-${idx}`"
+            v-model="finding.resolution_status"
+          >
+            <option value="OPEN">Open</option>
+            <option value="IN_PROGRESS">In progress</option>
+            <option value="RESOLVED">Resolved</option>
+          </select>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            @click="removeStructuredFinding(idx)"
+          >
+            Remove
+          </button>
+        </div>
+
+        <div class="form-row">
           <label for="complete-visit-reason">Reason for change</label>
           <input
             id="complete-visit-reason"
@@ -170,6 +285,69 @@
             type="button"
             class="btn btn-secondary"
             @click="activeCompleteVisit = null"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      <div
+        v-if="activeCompileVisit && canSchedule"
+        id="modal-compile-letter"
+        class="mutation-card"
+      >
+        <h4>
+          Compile GxP visit letter for {{ activeCompileVisit.site_id }} ({{
+            activeCompileVisit.visit_type
+          }})
+        </h4>
+        <div class="form-row">
+          <label for="compile-letter-template">Template</label>
+          <select id="compile-letter-template" v-model="compileTemplateName">
+            <option value="confirmation_letter">Confirmation letter</option>
+            <option value="follow_up_letter">Follow-up letter</option>
+          </select>
+          <label class="checkbox-inline">
+            <input
+              id="compile-letter-finalize"
+              v-model="compileFinalize"
+              type="checkbox"
+            />
+            Finalize with Part 11 signature &amp; eTMF filing
+          </label>
+          <template v-if="compileFinalize">
+            <label for="compile-sig-password">Password (Part 11)</label>
+            <input
+              id="compile-sig-password"
+              v-model="compilePassword"
+              v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+              placeholder="Re-enter password to sign"
+            />
+          </template>
+          <label for="compile-letter-reason">Reason for change</label>
+          <input
+            id="compile-letter-reason"
+            v-model="compileReason"
+            type="text"
+            placeholder="Reason for issuing visit letter"
+          />
+          <button
+            id="btn-confirm-compile-letter"
+            type="button"
+            class="btn btn-primary"
+            :disabled="
+              !compileReason.trim() ||
+              (compileFinalize && !compilePassword) ||
+              saving
+            "
+            @click="confirmCompileLetter"
+          >
+            {{ saving ? "Compiling..." : "Compile letter" }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="cancelCompileLetter"
           >
             Cancel
           </button>
@@ -270,11 +448,19 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import {
+  buildStepUpVerificationPayload,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+} from "ui";
+import {
   ctmsApi,
   type GeneratedVisitLetter,
+  type MonitoringFindingCreate,
   type MonitoringVisit,
+  type VisitLetterCompilationResult,
 } from "../../api/ctmsApi";
 import {
+  MONITORING_LETTER_COMPILE_ROLE_REASON,
+  MONITORING_VISIT_SIGNOFF_ROLE_REASON,
   canCompleteMonitoringVisits,
   canScheduleMonitoringVisits,
   canSignOffMonitoringVisits,
@@ -283,8 +469,15 @@ import {
   formatIsoDateShort,
   useScopedWorkspaceSection,
 } from "../../composables/useScopedWorkspaceSection";
+import apiClient from "../../services/api";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
+
+interface StructuredFindingDraft {
+  text: string;
+  severity: string;
+  resolution_status: string;
+}
 
 const props = withDefaults(
   defineProps<{
@@ -337,7 +530,15 @@ const newReason = ref("");
 const activeCompleteVisit = ref<MonitoringVisit | null>(null);
 const completeActualDate = ref("");
 const completeFindingDesc = ref("");
+const structuredFindings = ref<StructuredFindingDraft[]>([]);
 const completeReason = ref("");
+
+const activeCompileVisit = ref<MonitoringVisit | null>(null);
+const compileTemplateName = ref("follow_up_letter");
+const compileFinalize = ref(true);
+const compilePassword = ref("");
+const compileReason = ref("");
+const compiledLetters = ref<VisitLetterCompilationResult[]>([]);
 
 const activeSignOffVisit = ref<MonitoringVisit | null>(null);
 const signOffReason = ref("");
@@ -413,25 +614,51 @@ async function scheduleVisit() {
 
 function prepareComplete(visit: MonitoringVisit) {
   activeCompleteVisit.value = visit;
+  completeActualDate.value = new Date().toISOString().slice(0, 10);
   completeFindingDesc.value = "";
+  structuredFindings.value = [];
   completeReason.value = "";
+}
+
+function addStructuredFinding() {
+  structuredFindings.value.push({
+    text: "",
+    severity: "MINOR",
+    resolution_status: "OPEN",
+  });
+}
+
+function removeStructuredFinding(index: number) {
+  structuredFindings.value.splice(index, 1);
 }
 
 async function confirmComplete() {
   const visit = activeCompleteVisit.value;
   const reason = completeReason.value.trim();
-  if (!visit || !reason || !canComplete.value) return;
+  if (!visit || !completeActualDate.value || !reason || !canComplete.value) {
+    return;
+  }
+
+  const findings: MonitoringFindingCreate[] = [];
+  if (completeFindingDesc.value.trim()) {
+    findings.push({
+      text: completeFindingDesc.value.trim(),
+      severity: "MINOR",
+      resolution_status: "OPEN",
+    });
+  }
+  for (const item of structuredFindings.value) {
+    if (item.text.trim()) {
+      findings.push({
+        text: item.text.trim(),
+        severity: item.severity,
+        resolution_status: item.resolution_status,
+      });
+    }
+  }
 
   saving.value = true;
   try {
-    const findings = completeFindingDesc.value.trim()
-      ? [
-          {
-            description: completeFindingDesc.value.trim(),
-            severity: "MINOR",
-          },
-        ]
-      : [];
     await ctmsApi.completeMonitoringVisit(
       visit.id,
       {
@@ -443,6 +670,7 @@ async function confirmComplete() {
     );
     activeCompleteVisit.value = null;
     completeReason.value = "";
+    structuredFindings.value = [];
     toasts.push({
       tone: "success",
       title: "Monitoring visit completed",
@@ -453,6 +681,121 @@ async function confirmComplete() {
     toasts.apiError("Visit could not be completed", err);
   } finally {
     saving.value = false;
+  }
+}
+
+function prepareCompileLetter(visit: MonitoringVisit) {
+  activeCompileVisit.value = visit;
+  compileTemplateName.value =
+    visit.status === "SCHEDULED" ? "confirmation_letter" : "follow_up_letter";
+  compileFinalize.value = true;
+  compilePassword.value = "";
+  compileReason.value = "";
+}
+
+function cancelCompileLetter() {
+  compilePassword.value = "";
+  activeCompileVisit.value = null;
+}
+
+async function confirmCompileLetter() {
+  const visit = activeCompileVisit.value;
+  const reason = compileReason.value.trim();
+  const password = compilePassword.value;
+  compilePassword.value = "";
+  if (!visit || !reason || !canSchedule.value) return;
+  if (compileFinalize.value && !password) return;
+
+  saving.value = true;
+  try {
+    let sigToken: string | undefined;
+    const signerUsername =
+      authStore.identity?.username ||
+      authStore.user?.username ||
+      authStore.userId ||
+      visit.cra_id;
+
+    if (compileFinalize.value) {
+      const verificationPayload = buildStepUpVerificationPayload({
+        username: signerUsername,
+        password,
+        totp: null,
+        action: "/api/v1/ctms/letters/compile",
+        semanticAction: "ctms.letter.compile",
+      });
+      const verifyRes = await apiClient.post(
+        "/api/v1/auth/signature-verification",
+        verificationPayload
+      );
+      sigToken = verifyRes?.sig_token;
+      if (!sigToken) {
+        throw new Error(
+          "Signature verification did not return a signature token."
+        );
+      }
+    }
+
+    const compiled = await ctmsApi.compileVisitLetter(
+      compileTemplateName.value,
+      {
+        craId: visit.cra_id || signerUsername,
+        createdAt: new Date().toISOString(),
+        studyId: visit.study_id || studyInput.value.trim(),
+        siteId: visit.site_id,
+        visitType: visit.visit_type,
+        scheduledDate: visit.scheduled_date,
+        actualDate: visit.actual_date ?? null,
+        findings: (visit.findings ?? []).map((f) => ({
+          text: f.text,
+          severity: f.severity,
+          resolutionStatus: f.resolution_status || "OPEN",
+        })),
+        visitId: visit.id,
+        finalize: compileFinalize.value,
+        signerName: compileFinalize.value ? signerUsername : null,
+        signingPurpose: compileFinalize.value
+          ? "Monitoring Visit Report Issuance"
+          : null,
+        investigatorEmail: null,
+        reasonForChange: reason,
+      },
+      {
+        changeReason: reason,
+        sigToken,
+      }
+    );
+
+    compiledLetters.value = [
+      compiled,
+      ...compiledLetters.value.filter((c) => c.letterId !== compiled.letterId),
+    ];
+    activeCompileVisit.value = null;
+    compileReason.value = "";
+    toasts.push({
+      tone: "success",
+      title: "Visit letter compiled",
+      message: `${compiled.letterId} (${compiled.status}) compiled.`,
+    });
+  } catch (err) {
+    toasts.apiError("Visit letter could not be compiled", err);
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function downloadCompiledLetter(letter: VisitLetterCompilationResult) {
+  try {
+    const blob = await ctmsApi.downloadVisitLetterPdf(letter.letterId);
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = `${letter.letterType}_${letter.letterId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    toasts.apiError("Visit letter PDF could not be downloaded", err);
   }
 }
 
@@ -517,7 +860,14 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
+}
+
+.checkbox-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .letter-list {

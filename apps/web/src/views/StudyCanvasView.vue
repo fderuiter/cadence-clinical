@@ -393,6 +393,18 @@
             :site-id="siteFilter"
           />
 
+          <DocumentManagerView
+            v-else-if="section?.id === 'documents'"
+            :key="`docs-${studyCode}`"
+            :study-id="studyCode"
+          />
+
+          <StudyTrainingView
+            v-else-if="section?.id === 'training'"
+            :key="`training-${studyCode}`"
+            :study-id="studyCode"
+          />
+
           <QueriesSection
             v-else-if="section?.id === 'queries'"
             :key="`queries-${studyCode}`"
@@ -948,7 +960,9 @@ import CtmsMonitoringSection from "../components/clinical/CtmsMonitoringSection.
 import RtsmSupplySection from "../components/clinical/RtsmSupplySection.vue";
 import NeedsAttention from "../components/ai/NeedsAttention.vue";
 import ProposalReview from "../components/ai/ProposalReview.vue";
+import DocumentManagerView from "./DocumentManagerView.vue";
 import ObservationView from "./ObservationView.vue";
+import StudyTrainingView from "./StudyTrainingView.vue";
 import { useAiAssistance } from "../ai/aiAssistance";
 import { demoRandomToken, isDemoBuild } from "../utils/demoMode";
 
