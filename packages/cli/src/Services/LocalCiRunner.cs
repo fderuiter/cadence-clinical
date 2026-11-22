@@ -211,13 +211,13 @@ public sealed class LocalCiEnvironment
         }
     }
 
-    /// <summary>Finds the files for <see cref="CiStep.Files"/>, the way the step's CI script does.</summary>
+    /// <summary>Finds the files for <see cref="CiStep.Files"/>, using <see cref="GitRevisionScopeService"/> for changed files.</summary>
     public static IReadOnlyList<string> DiscoverFiles(string repoRoot, CiStep step, string baseRef)
     {
         IEnumerable<string> files = step.Files switch
         {
-            CiFileSource.ChangedFiles => ChangedFiles(repoRoot, baseRef, acmrOnly: false),
-            CiFileSource.ChangedFilesAcmr => ChangedFiles(repoRoot, baseRef, acmrOnly: true),
+            CiFileSource.ChangedFiles or CiFileSource.ChangedFilesAcmr =>
+                GitRevisionScopeService.ResolveFileScanScope(repoRoot, baseRef: baseRef).Files,
             CiFileSource.Dockerfiles => FindUnderRoot(repoRoot, "Dockerfile*",
                 path => !path.Contains("/.venv/", StringComparison.Ordinal)
                     && !path.Contains("/.cadence/", StringComparison.Ordinal)
@@ -229,57 +229,7 @@ public sealed class LocalCiEnvironment
             _ => [],
         };
 
-        return [.. files.Where(path => CiPlan.MatchesFilePattern(step, path))];
-    }
-
-    private static IEnumerable<string> ChangedFiles(string repoRoot, string baseRef, bool acmrOnly)
-    {
-        string[] diff = acmrOnly
-            ? ["diff", "--name-only", "--diff-filter=ACMR", $"{baseRef}...HEAD"]
-            : ["diff", "--name-only", $"{baseRef}...HEAD"];
-        var changed = Git(repoRoot, diff);
-        if (changed.Count > 0 || acmrOnly)
-        {
-            return changed;
-        }
-
-        // CI falls back to the working tree ('git status --porcelain | awk {print $2}') when the diff is empty.
-        return Git(repoRoot, ["status", "--porcelain"])
-            .Select(line => line.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-            .Where(parts => parts.Length > 1)
-            .Select(parts => parts[1]);
-    }
-
-    private static List<string> Git(string repoRoot, string[] arguments)
-    {
-        var psi = new ProcessStartInfo("git")
-        {
-            WorkingDirectory = repoRoot,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        };
-        foreach (var argument in arguments)
-        {
-            psi.ArgumentList.Add(argument);
-        }
-
-        try
-        {
-            using var process = Process.Start(psi);
-            if (process is null) return [];
-            var stderr = process.StandardError.ReadToEndAsync();
-            string output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-            _ = stderr.Result;
-            return process.ExitCode == 0
-                ? [.. output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]
-                : [];
-        }
-        catch (Win32Exception)
-        {
-            return [];
-        }
+        return [.. files];
     }
 
     /// <summary>Like <c>find . -type f -name pattern</c>: regular files only, symbolic links are not followed.</summary>
@@ -443,7 +393,13 @@ public static class LocalCiRunner
         }
 
         var display = step.Commands
-            .Select((c, i) => i == step.Commands.Count - 1 && files.Count > 0 ? $"{c.Display} <{files.Count} files>" : c.Display)
+            .Select((c, i) =>
+            {
+                string line = c.ForwardsBaseRef && !string.IsNullOrWhiteSpace(options.BaseRef)
+                    ? $"{c.Display} --base {CiCommand.QuoteArgument(options.BaseRef)}"
+                    : c.Display;
+                return i == step.Commands.Count - 1 && files.Count > 0 ? $"{line} <{files.Count} files>" : line;
+            })
             .ToList();
         if (step.InProcess is not null)
         {
@@ -475,7 +431,7 @@ public static class LocalCiRunner
             .ToList();
         try
         {
-            return RunCommands(step, environment, note, files, variables);
+            return RunCommands(step, options, environment, note, files, variables);
         }
         finally
         {
@@ -487,13 +443,19 @@ public static class LocalCiRunner
     }
 
     private static CiStepResult RunCommands(
-        CiStep step, LocalCiEnvironment environment, string note, IReadOnlyList<string> files, IReadOnlyDictionary<string, string> variables)
+        CiStep step,
+        LocalCiOptions options,
+        LocalCiEnvironment environment,
+        string note,
+        IReadOnlyList<string> files,
+        IReadOnlyDictionary<string, string> variables)
     {
         var watch = Stopwatch.StartNew();
         for (int i = 0; i < step.Commands.Count; i++)
         {
             var command = step.Commands[i];
-            int exitCode = environment.Run(command, i == step.Commands.Count - 1 ? files : [], variables);
+            var extra = BuildExtraArguments(step, i, options, files);
+            int exitCode = environment.Run(command, extra, variables);
             bool succeeded = command.AllowedExitCodes is { Count: > 0 }
                 ? command.AllowedExitCodes.Contains(exitCode)
                 : exitCode == 0;
@@ -505,7 +467,7 @@ public static class LocalCiRunner
 
         if (step.InProcess is not null)
         {
-            int exitCode = step.InProcess(environment.RepoRoot);
+            int exitCode = step.InProcess(environment.RepoRoot, options);
             if (exitCode != 0)
             {
                 return new(step, CiOutcome.Failed, watch.Elapsed, Join(note, $"exited {exitCode}"));
@@ -513,6 +475,28 @@ public static class LocalCiRunner
         }
 
         return new(step, CiOutcome.Passed, watch.Elapsed, note);
+    }
+
+    private static List<string> BuildExtraArguments(
+        CiStep step,
+        int commandIndex,
+        LocalCiOptions options,
+        IReadOnlyList<string> files)
+    {
+        var command = step.Commands[commandIndex];
+        var extra = new List<string>();
+        if (command.ForwardsBaseRef && !string.IsNullOrWhiteSpace(options.BaseRef))
+        {
+            extra.Add("--base");
+            extra.Add(options.BaseRef);
+        }
+
+        if (commandIndex == step.Commands.Count - 1 && files.Count > 0)
+        {
+            extra.AddRange(files);
+        }
+
+        return extra;
     }
 
     private static string Join(string first, string second) => first.Length == 0 ? second : $"{first} {second}";

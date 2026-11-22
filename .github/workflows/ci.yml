@@ -187,7 +187,20 @@ jobs:
         run: dotnet build Cadence.sln
 
       - name: Run Cadence quality sentinels
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref || 'main' }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          echo "Scoping quality sentinels at ${HEAD_SHA} (event=${EVENT_NAME})"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            SCOPE_ARGS=(--base "origin/$BASE_REF")
+          else
+            SCOPE_ARGS=(--push-before "$BEFORE_SHA")
+          fi
+          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities "${SCOPE_ARGS[@]}"
 
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
@@ -353,50 +366,42 @@ jobs:
         id: run_detect_secrets
         if: always()
         env:
-          BASE_REF: ${{ github.base_ref || 'main' }}
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
           EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref || 'main' }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
         run: | # pragma: allowlist secret
+          echo "Scoping detect-secrets scan at ${HEAD_SHA} (event=${EVENT_NAME})"
           python3 -m venv "$RUNNER_TEMP/detect-secrets-venv"
           "$RUNNER_TEMP/detect-secrets-venv/bin/python" -m pip install --quiet --upgrade pip detect-secrets==1.5.0
           export PATH="$RUNNER_TEMP/detect-secrets-venv/bin:$PATH"
           if [ "$EVENT_NAME" = "pull_request" ]; then
             git fetch --no-tags origin "$BASE_REF"
-            DIFF_RANGE="origin/$BASE_REF...HEAD"
+            SCOPE_ARGS=(--base "origin/$BASE_REF")
           else
-            DIFF_RANGE="HEAD~1..HEAD"
+            SCOPE_ARGS=(--push-before "$BEFORE_SHA")
           fi
-          mapfile -d '' -t CHANGED_FILES < <(git diff --name-only --diff-filter=ACMR -z "$DIFF_RANGE")
-          if [ "${#CHANGED_FILES[@]}" -gt 0 ]; then
-            rc=0
-            detect-secrets-hook --baseline .secrets.baseline --exclude-files '(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|Migrations/[^/]+\.Designer\.cs$|Migrations/idempotent_migration\.sql$|report.*\.xml|coverage.*\.xml|\.cadence/|dist/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)' "${CHANGED_FILES[@]}" || rc=$?
-            git checkout -- .secrets.baseline
-            if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ]; then
-              exit "$rc"
-            fi
-          fi
+          node scripts/run-cli.js check detect-secrets "${SCOPE_ARGS[@]}"
 
       - name: Run DEID compliance scan
         id: run_deid_scan
         if: always()
         env:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref || 'main' }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
-          git fetch origin main --depth=1 || true
-          CHANGED_FILES=""
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt|cs)$' || true)
+          echo "Scoping DEID compliance scan at ${HEAD_SHA} (event=${EVENT_NAME})"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            SCOPE_ARGS=(--base "origin/$BASE_REF")
           else
-            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt|cs)$' || true)
+            SCOPE_ARGS=(--push-before "$BEFORE_SHA")
           fi
-          if [ -n "$CHANGED_FILES" ]; then
-            echo "Scanning changed files: $CHANGED_FILES"
-            mapfile -t DEID_FILES_ARRAY < <(printf '%s\n' "$CHANGED_FILES" | grep -v '^$')
-            if [ ${#DEID_FILES_ARRAY[@]} -gt 0 ] && [ -n "${DEID_FILES_ARRAY[0]}" ]; then
-              node scripts/run-cli.js check deid "${DEID_FILES_ARRAY[@]}"
-            fi
-          else
-            echo "No changed files to scan."
-          fi
+          node scripts/run-cli.js check deid "${SCOPE_ARGS[@]}"
 
   container-security:
     name: Container Build & Vulnerability Scan
@@ -746,7 +751,19 @@ jobs:
       - name: Check GxP Snapshot Policy
         env:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
-        run: node scripts/run-cli.js check gxp-snapshot
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref || 'main' }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          echo "Scoping GxP snapshot policy check at ${HEAD_SHA} (event=${EVENT_NAME})"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            SCOPE_ARGS=(--base "origin/$BASE_REF")
+          else
+            SCOPE_ARGS=(--push-before "$BEFORE_SHA")
+          fi
+          node scripts/run-cli.js check gxp-snapshot "${SCOPE_ARGS[@]}"
 
   ci-gate:
     name: CI Gate

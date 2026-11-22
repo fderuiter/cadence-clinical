@@ -509,7 +509,41 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         document.RootElement.GetProperty("is_complete").GetBoolean().Should().BeFalse();
+        document.RootElement.GetProperty("is_activated").GetBoolean().Should().BeFalse();
         document.RootElement.GetProperty("missing_documents").GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ActivateSite_EndToEnd_CompliantSite_PersistsActivatedStatusAcrossReloadsAndIsIdempotent()
+    {
+        using var etmf = _factory.CreateSignedClient(TestSecurityContext.Identity("svc:etmf", PermissionMatrix.EtmfServiceRole));
+        using var dm = _factory.CreateSignedClient(TestSecurityContext.Identity("sponsor-dm-9", "Data Manager") with
+        {
+            ChangeReason = "All startup artifacts verified complete"
+        });
+
+        var webhook = new EtmfCompletenessWebhookPayload("STUDY-ACT-1", "SITE-ACT-1", "SITE_ACTIVATION", true, Array.Empty<string>());
+        (await etmf.PostAsJsonAsync("/api/v1/execution/webhooks/etmf", webhook,
+            ExecutionProgramTestFactory.JsonOptions, TestContext.Current.CancellationToken)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var activateReq = new SiteActivationRequest("STUDY-ACT-1");
+        var firstAct = await dm.PostAsJsonAsync("/api/v1/execution/sites/SITE-ACT-1/activate", activateReq,
+            ExecutionProgramTestFactory.JsonOptions, TestContext.Current.CancellationToken);
+        firstAct.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var secondAct = await dm.PostAsJsonAsync("/api/v1/execution/sites/SITE-ACT-1/activate", activateReq,
+            ExecutionProgramTestFactory.JsonOptions, TestContext.Current.CancellationToken);
+        secondAct.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var statusRes = await dm.GetAsync(
+            "/api/v1/execution/sites/SITE-ACT-1/compliance-status?study_id=STUDY-ACT-1",
+            TestContext.Current.CancellationToken);
+        statusRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var statusDoc = JsonDocument.Parse(await statusRes.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        statusDoc.RootElement.GetProperty("is_complete").GetBoolean().Should().BeTrue();
+        statusDoc.RootElement.GetProperty("is_activated").GetBoolean().Should().BeTrue();
+        statusDoc.RootElement.GetProperty("activated_by").GetString().Should().Be("sponsor-dm-9");
+        statusDoc.RootElement.GetProperty("activated_at").GetString().Should().NotBeNullOrWhiteSpace();
     }
 
     /// <summary>

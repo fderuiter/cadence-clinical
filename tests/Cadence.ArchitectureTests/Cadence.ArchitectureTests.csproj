@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\packages\testing\src\Cadence.Testing.csproj" />
     <!-- K-XS-1/K-MOD-1 (tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryTests.cs) scan every Cadence.* assembly deployed next to
          this test binary, so every non-kernel production library must be referenced here to be covered. -->
+    <ProjectReference Include="..\..\packages\contracts\src\Cadence.Contracts.csproj" />
     <ProjectReference Include="..\..\packages\hexagonal\src\Cadence.Hexagonal.csproj" />
     <ProjectReference Include="..\..\packages\sentinels\src\Cadence.Sentinels.csproj" />
     <ProjectReference Include="..\..\packages\storage\src\Cadence.Storage.csproj" />

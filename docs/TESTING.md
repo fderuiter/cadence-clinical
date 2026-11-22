@@ -36,16 +36,21 @@ Some checks record pre-existing debt in a checked-in baseline instead of failing
 
 - Fix a new violation instead of recording it. `CADENCE_UPDATE_BASELINE=1` regenerates a baseline so that paid-down
   entries can be deleted; it is not a way to accept new ones.
-- The `baseline-ratchet` gate (`pnpm cadence check baseline-ratchet`) compares every baseline with its copy at
-  `git merge-base origin/main HEAD` and fails when an entry was added. Entries are compared as a multiset, so
-  reordering, comment lines and removed entries pass; a new baseline file counts as growth of all its entries.
-- When debt really must be accepted, say why in the commit that adds it, with a trailer:
-  `git commit --trailer "Baseline-Growth: <reason>"`. One such trailer on any commit of the branch admits the
-  branch's growth. The pre-commit hook runs before the message exists, so for that commit also set
-  `CADENCE_BASELINE_GROWTH="<reason>"`; the variable is honoured only in the pre-commit hook, and `pnpm cadence check`
-  and CI still require the trailer.
-- Without `origin/main` (or with a shallow clone that shares no history with it) the gate is skipped locally with a
-  message and fails in CI (`CI` or `GITHUB_ACTIONS` set to `true` or `1`), so a missing ref never lets growth through.
+- The `baseline-ratchet` gate (`pnpm cadence check baseline-ratchet`) rejects uncommitted working-tree growth, compares
+  every baseline across each commit in `compareBase..HEAD` (`git merge-base <base> HEAD` with `--base <ref>`, or
+  `<sha>..HEAD` with `--push-before <sha>`), and fails when any commit adds an entry without authorization. Entries are
+  compared as a multiset, so reordering, comment lines and removed entries pass; a new baseline file counts as growth of
+  all its entries.
+- When debt really must be accepted, say why in the exact commit that adds it, with one trailer per grown baseline file:
+  `git commit --trailer "Baseline-Growth: <path> - <reason>"` (for example
+  `Baseline-Growth: .deid-baseline.txt - legacy fixture pending #1234`). A trailer on an earlier commit never covers
+  later commits or other baseline files. In `--pre-commit`, staged baseline files are compared against `HEAD` before the
+  commit message exists, so for that commit also set `CADENCE_BASELINE_GROWTH="<reason>"`; the variable is honoured only
+  in `--pre-commit`, and `pnpm cadence check` and CI still require the per-file `Baseline-Growth: <path> - <reason>`
+  trailer on every commit that grew a baseline.
+- Without `--base` (for example `origin/main` missing or a shallow clone that shares no history with it) the gate is
+  skipped locally with a message and fails in CI (`CI` or `GITHUB_ACTIONS` set to `true` or `1`), so a missing ref never
+  lets growth through.
 
 ## Tests that need PostgreSQL
 

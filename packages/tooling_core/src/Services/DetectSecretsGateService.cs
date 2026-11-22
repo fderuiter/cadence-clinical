@@ -72,7 +72,9 @@ public static class DetectSecretsGateService
         string[]? targetFiles = null,
         bool preCommit = false,
         Func<string, string?>? getEnvironmentVariable = null,
-        GitIndexReader? indexReader = null)
+        GitIndexReader? indexReader = null,
+        string? baseRef = null,
+        string? pushBefore = null)
     {
         if (targetFiles is { Length: 0 })
         {
@@ -133,7 +135,7 @@ public static class DetectSecretsGateService
                 return 1;
             }
 
-            var filesToScan = ResolveFilesToScan(repoRoot, targetFiles, preCommit, reader);
+            var filesToScan = ResolveFilesToScan(repoRoot, targetFiles, preCommit, baseRef, pushBefore, reader);
             if (filesToScan.Count == 0)
             {
                 return 0;
@@ -211,32 +213,28 @@ public static class DetectSecretsGateService
         }
     }
 
-    private static List<string> ResolveFilesToScan(
+    public static List<string> ResolveFilesToScan(
         string repoRoot,
         string[]? targetFiles,
         bool preCommit,
-        GitIndexReader? reader)
+        string? baseRef = null,
+        string? pushBefore = null,
+        GitIndexReader? reader = null)
     {
         if (targetFiles is { Length: 0 })
         {
             return [];
         }
 
-        IEnumerable<string> rawCandidates;
-        if (preCommit)
-        {
-            rawCandidates = targetFiles ?? (IEnumerable<string>)PreCommitOpenApiService.GetStagedFiles(repoRoot);
-        }
-        else if (targetFiles is not null)
-        {
-            rawCandidates = targetFiles;
-        }
-        else
-        {
-            rawCandidates = PreCommitOpenApiService.TryGetChangedFilesSinceBase(repoRoot)
-                ?? PreCommitOpenApiService.TryGetTrackedFiles(repoRoot)
-                ?? EnumerateDirectoryFiles(repoRoot);
-        }
+        var scope = GitRevisionScopeService.ResolveFileScanScope(
+            repoRoot,
+            explicitFiles: targetFiles,
+            preCommit: preCommit,
+            baseRef: baseRef,
+            pushBefore: pushBefore);
+        IEnumerable<string> rawCandidates = scope.Kind == GitScopeKind.NonGitDirectory
+            ? EnumerateDirectoryFiles(repoRoot)
+            : scope.Files;
 
         var result = new SortedSet<string>(StringComparer.Ordinal);
         foreach (string raw in rawCandidates)

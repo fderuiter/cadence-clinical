@@ -160,9 +160,10 @@ Every PR updates what its change makes stale, in the same PR:
   URL), put a `deid-ignore` comment on that line rather than adding to the baseline. When the gate reports stale
   baseline entries, drop them with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid`.
 - Ratchet baselines (`kernel-boundaries.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline` and any other
-  `*.baseline.txt`) may only shrink. The `baseline-ratchet` gate fails when a branch adds an entry, unless a commit on
-  the branch says why in a `Baseline-Growth: <reason>` trailer (`git commit --trailer "Baseline-Growth: <reason>"`).
-  For the commit that stages the growth, set `CADENCE_BASELINE_GROWTH="<reason>"` so the pre-commit hook admits it
+  `*.baseline.txt`) may only shrink. The `baseline-ratchet` gate fails on uncommitted working-tree growth and when any
+  commit on the branch or push range adds an entry without a matching `Baseline-Growth: <path> - <reason>` trailer on
+  that commit for each grown file (`git commit --trailer "Baseline-Growth: <path> - <reason>"`). For the commit that
+  stages growth against `HEAD`, set `CADENCE_BASELINE_GROWTH="<reason>"` so the pre-commit hook admits it
   ([docs/TESTING.md](docs/TESTING.md#ratchet-baselines)).
 - Do not re-add Python code or tooling; the remaining Python reference sources are listed in
   [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) and are removed as their ports are

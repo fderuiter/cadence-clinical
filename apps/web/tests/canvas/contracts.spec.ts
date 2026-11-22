@@ -7,7 +7,13 @@ import {
   parseNodeRef,
   tryNodeRef,
 } from "../../src/canvas/nodeRef";
-import { canManageParticipants } from "../../src/canvas/authority";
+import {
+  canActivateSite,
+  canCertifyGreenlight,
+  canManageParticipants,
+  canReconcileIpKits,
+  canSignOffDoa,
+} from "../../src/canvas/authority";
 import {
   PARTICIPANT_STATES,
   PARTICIPANT_TRANSITIONS,
@@ -212,5 +218,68 @@ describe("Canvas authority mirror", () => {
       expect(canManageParticipants({ rawRoles: [role] }), role).toBe(false);
     }
     expect(canManageParticipants({ rawRoles: null })).toBe(false);
+  });
+
+  it("exposes Start and Conduct CTMS/RTSM sections without product acronyms (UX-1)", () => {
+    expect(findSection("startup-greenlight")?.stage.id).toBe("start");
+    expect(findSection("site-milestones")?.stage.id).toBe("start");
+    expect(findSection("delegation")?.stage.id).toBe("start");
+    expect(findSection("monitoring-visits")?.stage.id).toBe("conduct");
+    expect(findSection("supply")?.stage.id).toBe("conduct");
+
+    for (const stage of STAGES) {
+      for (const section of stage.sections) {
+        expect(section.label).not.toMatch(/\b(EDC|CTMS|eTMF|RTSM|P21|QMS)\b/);
+      }
+    }
+  });
+
+  it("mirrors separation-of-duties permissions in PermissionMatrix.Execution.cs and PermissionMatrix.Ctms.cs", () => {
+    // site_compliance:activate & ctms_greenlight:certify -> sysadmin, sponsor_dm only
+    for (const role of [
+      "sysadmin",
+      "sponsor_dm",
+      "Data Manager",
+      "Sponsor Admin",
+    ]) {
+      expect(canActivateSite({ rawRoles: [role] }), role).toBe(true);
+      expect(canCertifyGreenlight({ rawRoles: [role] }), role).toBe(true);
+    }
+    for (const role of [
+      "cra",
+      "crc",
+      "Site Investigator",
+      "pharmacist",
+      "auditor",
+      "sponsor_designer",
+    ]) {
+      expect(canActivateSite({ rawRoles: [role] }), role).toBe(false);
+      expect(canCertifyGreenlight({ rawRoles: [role] }), role).toBe(false);
+    }
+
+    // ctms_doa:sign_off -> sysadmin, investigator variants only (never CRC or Data Manager)
+    for (const role of [
+      "sysadmin",
+      "investigator",
+      "Site Investigator",
+      "Principal Investigator",
+    ]) {
+      expect(canSignOffDoa({ rawRoles: [role] }), role).toBe(true);
+    }
+    for (const role of ["crc", "cra", "Data Manager", "Sponsor Admin"]) {
+      expect(canSignOffDoa({ rawRoles: [role] }), role).toBe(false);
+    }
+
+    // rtsm_supply -> pharmacist only
+    expect(canReconcileIpKits({ rawRoles: ["pharmacist"] })).toBe(true);
+    for (const role of [
+      "sysadmin",
+      "Data Manager",
+      "Site Investigator",
+      "crc",
+      "cra",
+    ]) {
+      expect(canReconcileIpKits({ rawRoles: [role] }), role).toBe(false);
+    }
   });
 });
