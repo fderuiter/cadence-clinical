@@ -53,14 +53,17 @@ vi.mock("../../src/canvas/kernelStudy", async (importOriginal) => {
 });
 
 const STUDY_UUID = "0192f3c4-5e6a-7b8c-9d0e-000000000099";
+const FORM_VS_1 = "0192f3c4-5e6a-7b8c-9d0e-00000000f001";
+const FORM_VS_2 = "0192f3c4-5e6a-7b8c-9d0e-00000000f002";
+const OBS_1 = "0192f3c4-5e6a-7b8c-9d0e-00000000a001";
 
 function studyQuery(overrides = {}) {
   return {
     query_id: "query-1",
-    form_id: "form-vs-1",
+    form_id: FORM_VS_1,
     enrollment_id: "enrollment-1",
     item_id: "DIABP",
-    observation_id: "obs-1",
+    observation_id: OBS_1,
     revision: 1,
     current_revision: 1,
     value_changed: false,
@@ -121,7 +124,7 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       studyQuery(),
       studyQuery({
         query_id: "query-2",
-        form_id: "form-vs-2",
+        form_id: FORM_VS_2,
         enrollment_id: "enrollment-2",
         item_id: "SYSBP",
         status: "answered",
@@ -189,19 +192,27 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       "Value changed (now revision 2)"
     );
 
+    // Monitors see no Answer button on open queries (execution.query.answer is site-only).
+    expect(wrapper.find("#btn-answer-query-1").exists()).toBe(false);
+
+    const openObsLink = wrapper.find("#query-observation-query-1");
+    expect(openObsLink.attributes("href")).toBe(
+      `/studies/CAD-101?stage=data&section=queries&site=017&form=collection_instance:${FORM_VS_1}&item=DIABP&observation=observation:${OBS_1}`
+    );
+
     const openFormLink = wrapper.find("#query-open-form-query-1");
     expect(openFormLink.attributes("href")).toBe(
-      "/ecrf?studyId=CAD-101&subjectId=017-0001&enrollmentId=enrollment-1&formId=form-vs-1&itemId=DIABP"
+      `/studies/CAD-101?stage=data&section=queries&site=017&form=collection_instance:${FORM_VS_1}&item=DIABP`
     );
     await openFormLink.trigger("click");
     await flushPromises();
-    expect(router.currentRoute.value.path).toBe("/ecrf");
+    expect(router.currentRoute.value.path).toBe("/studies/CAD-101");
     expect(router.currentRoute.value.query).toEqual({
-      studyId: "CAD-101",
-      subjectId: "017-0001",
-      enrollmentId: "enrollment-1",
-      formId: "form-vs-1",
-      itemId: "DIABP",
+      stage: "data",
+      section: "queries",
+      site: "017",
+      form: `collection_instance:${FORM_VS_1}`,
+      item: "DIABP",
     });
   });
 
@@ -404,8 +415,9 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       .find("#query-bulk-reason")
       .setValue("Source chart verified across visits");
 
-    // Open an answer draft on query-1.
-    await wrapper.find("#btn-answer-query-1").trigger("click");
+    // Data managers see no Answer button; open a close draft on query-1.
+    expect(wrapper.find("#btn-answer-query-1").exists()).toBe(false);
+    await wrapper.find("#btn-close-query-1").trigger("click");
     await wrapper
       .find("#query-text-query-1")
       .setValue("Confirmed 82 mmHg in nursing flowsheet");
