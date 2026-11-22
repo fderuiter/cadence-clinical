@@ -1,4 +1,4 @@
-# ADR-2644: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures
+# ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

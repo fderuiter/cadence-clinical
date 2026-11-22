@@ -524,400 +524,387 @@
     </section>
 
     <!-- MODAL 1: Add / Edit Risk Factor Modal -->
-    <div v-if="isRiskModalOpen" class="modal-backdrop">
-      <div class="modal-card modal-lg">
-        <div class="modal-header">
-          <h3 class="modal-title">
-            {{
-              isEditing
-                ? "Edit Protocol Risk Factor"
-                : "Define TransCelerate Protocol Risk Factor"
-            }}
-          </h3>
-          <button class="modal-close-btn" @click="isRiskModalOpen = false">
-            ✕
-          </button>
+    <ClinicalModal
+      v-model="isRiskModalOpen"
+      :teleport="false"
+      :dismissible="!isLoading"
+      size="lg"
+      dialog-class="modal-card modal-lg"
+      :title="
+        isEditing
+          ? 'Edit Protocol Risk Factor'
+          : 'Define TransCelerate Protocol Risk Factor'
+      "
+    >
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Protocol Risk Category *</label>
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <select
+            v-model="riskForm.category"
+            class="form-control"
+            :disabled="isEditing"
+          >
+            <option value="SAFETY">Safety (Patient Safety / Toxicity)</option>
+            <option value="CONSENT">
+              Consent (Informed Consent / Vulnerable Cohorts)
+            </option>
+            <option value="STUDY_CONDUCT">
+              Study Conduct (Protocol Procedures / Windows)
+            </option>
+            <option value="DATA_INTEGRITY">
+              Data Integrity (Queries / SDV / Completeness)
+            </option>
+            <option value="IP_MANAGEMENT">
+              IP Management (Investigational Product / Cold Chain)
+            </option>
+            <option value="TECHNOLOGY">
+              Technology (eCRF / Sensor Streams / ePRO)
+            </option>
+          </select>
         </div>
 
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="form-group flex-1">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Protocol Risk Category *</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select
-                v-model="riskForm.category"
-                class="form-control"
-                :disabled="isEditing"
-              >
-                <option value="SAFETY">
-                  Safety (Patient Safety / Toxicity)
-                </option>
-                <option value="CONSENT">
-                  Consent (Informed Consent / Vulnerable Cohorts)
-                </option>
-                <option value="STUDY_CONDUCT">
-                  Study Conduct (Protocol Procedures / Windows)
-                </option>
-                <option value="DATA_INTEGRITY">
-                  Data Integrity (Queries / SDV / Completeness)
-                </option>
-                <option value="IP_MANAGEMENT">
-                  IP Management (Investigational Product / Cold Chain)
-                </option>
-                <option value="TECHNOLOGY">
-                  Technology (eCRF / Sensor Streams / ePRO)
-                </option>
-              </select>
-            </div>
+        <div class="form-group flex-2">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Risk Topic / Title *</label>
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <input
+            v-model="riskForm.risk_topic"
+            type="text"
+            class="form-control"
+            placeholder="e.g. Ultra-Cold Chain Temperature Excursions"
+          />
+        </div>
+      </div>
 
-            <div class="form-group flex-2">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Risk Topic / Title *</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="riskForm.risk_topic"
-                type="text"
-                class="form-control"
-                placeholder="e.g. Ultra-Cold Chain Temperature Excursions"
-              />
-            </div>
-          </div>
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label">Detailed Risk Description *</label>
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <textarea
+          v-model="riskForm.risk_description"
+          class="form-control textarea"
+          rows="3"
+          placeholder="Explain the potential risk, clinical operational context, and hazard to data integrity or patient safety..."
+        />
+      </div>
 
-          <div class="form-group">
+      <!-- Scoring Matrix Section -->
+      <div class="scoring-box">
+        <h4 class="scoring-title">
+          TransCelerate 3-Factor Risk Scoring (Probability x Impact x
+          Detectability)
+        </h4>
+        <div class="scoring-row">
+          <div class="score-input-group">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Detailed Risk Description *</label>
+            <label class="score-label">Probability (1-3) *</label>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <textarea
-              v-model="riskForm.risk_description"
-              class="form-control textarea"
-              rows="3"
-              placeholder="Explain the potential risk, clinical operational context, and hazard to data integrity or patient safety..."
-            />
-          </div>
-
-          <!-- Scoring Matrix Section -->
-          <div class="scoring-box">
-            <h4 class="scoring-title">
-              TransCelerate 3-Factor Risk Scoring (Probability x Impact x
-              Detectability)
-            </h4>
-            <div class="scoring-row">
-              <div class="score-input-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label class="score-label">Probability (1-3) *</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <select
-                  v-model.number="riskForm.probability_score"
-                  class="form-control"
-                >
-                  <option :value="1">1 - Low / Rare</option>
-                  <option :value="2">2 - Medium / Possible</option>
-                  <option :value="3">3 - High / Likely</option>
-                </select>
-              </div>
-
-              <div class="score-input-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label class="score-label">Impact (1-3) *</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <select
-                  v-model.number="riskForm.impact_score"
-                  class="form-control"
-                >
-                  <option :value="1">1 - Low / Minor</option>
-                  <option :value="2">2 - Medium / Moderate</option>
-                  <option :value="3">3 - High / Critical</option>
-                </select>
-              </div>
-
-              <div class="score-input-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label class="score-label">Detectability (1-3) *</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <select
-                  v-model.number="riskForm.detectability_score"
-                  class="form-control"
-                >
-                  <option :value="1">1 - High / Readily Detectable</option>
-                  <option :value="2">
-                    2 - Moderate / Detectable with Effort
-                  </option>
-                  <option :value="3">3 - Low / Difficult to Detect</option>
-                </select>
-              </div>
-
-              <div class="score-result-group">
-                <span class="preview-label">Calculated Score:</span>
-                <div class="preview-score-val">
-                  {{ computedFormScore }} / 27
-                </div>
-                <span
-                  :class="`tier-pill tier-${computedFormTier.toLowerCase()}`"
-                >
-                  {{ computedFormTier }} TIER
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label"
-              >Mitigation Controls &amp; Operational Strategy *</label
+            <select
+              v-model.number="riskForm.probability_score"
+              class="form-control"
             >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <textarea
-              v-model="riskForm.mitigation_strategy"
-              class="form-control textarea"
-              rows="2"
-              placeholder="Defined operational controls, monitoring plan rules, or automated sentinels to mitigate this risk..."
-            />
-          </div>
-
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Link Directly to Automated KRI</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select v-model="riskForm.linked_kri_code" class="form-control">
-              <option :value="null">— None / Manual Monitoring —</option>
-              <option
-                v-for="kri in kriDefinitions"
-                :key="kri.code"
-                :value="kri.code"
-              >
-                {{ kri.code }} — {{ kri.name }} (Category:
-                {{ formatCategory(kri.category) }})
-              </option>
+              <option :value="1">1 - Low / Rare</option>
+              <option :value="2">2 - Medium / Possible</option>
+              <option :value="3">3 - High / Likely</option>
             </select>
           </div>
 
-          <div class="form-group">
+          <div class="score-input-group">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">21 CFR Part 11 Reason for Change *</label>
+            <label class="score-label">Impact (1-3) *</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <select v-model.number="riskForm.impact_score" class="form-control">
+              <option :value="1">1 - Low / Minor</option>
+              <option :value="2">2 - Medium / Moderate</option>
+              <option :value="3">3 - High / Critical</option>
+            </select>
+          </div>
+
+          <div class="score-input-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label class="score-label">Detectability (1-3) *</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <select
+              v-model.number="riskForm.detectability_score"
+              class="form-control"
+            >
+              <option :value="1">1 - High / Readily Detectable</option>
+              <option :value="2">2 - Moderate / Detectable with Effort</option>
+              <option :value="3">3 - Low / Difficult to Detect</option>
+            </select>
+          </div>
+
+          <div class="score-result-group">
+            <span class="preview-label">Calculated Score:</span>
+            <div class="preview-score-val">{{ computedFormScore }} / 27</div>
+            <span :class="`tier-pill tier-${computedFormTier.toLowerCase()}`">
+              {{ computedFormTier }} TIER
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label"
+          >Mitigation Controls &amp; Operational Strategy *</label
+        >
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <textarea
+          v-model="riskForm.mitigation_strategy"
+          class="form-control textarea"
+          rows="2"
+          placeholder="Defined operational controls, monitoring plan rules, or automated sentinels to mitigate this risk..."
+        />
+      </div>
+
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label">Link Directly to Automated KRI</label>
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <select v-model="riskForm.linked_kri_code" class="form-control">
+          <option :value="null">— None / Manual Monitoring —</option>
+          <option
+            v-for="kri in kriDefinitions"
+            :key="kri.code"
+            :value="kri.code"
+          >
+            {{ kri.code }} — {{ kri.name }} (Category:
+            {{ formatCategory(kri.category) }})
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label">21 CFR Part 11 Reason for Change *</label>
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <input
+          v-model="riskForm.reason_for_change"
+          type="text"
+          class="form-control"
+          placeholder="e.g. Protocol amendment 3.0 risk calibration"
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="ract-btn ract-btn-secondary"
+          :disabled="isLoading"
+          @click="isRiskModalOpen = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="ract-btn ract-btn-primary"
+          :disabled="!isFormValid || isLoading"
+          @click="saveRiskFactor"
+        >
+          {{ isEditing ? "Update Risk Factor" : "Save Risk Factor" }}
+        </button>
+      </template>
+    </ClinicalModal>
+
+    <!-- MODAL 2: 1-Click Centralized Monitoring Inspection Dossier (21 CFR Part 11) -->
+    <ClinicalModal
+      v-model="isDossierModalOpen"
+      :teleport="false"
+      :dismissible="!isLoading"
+      size="xl"
+      dialog-class="modal-card modal-xl"
+      title="Centralized Monitoring Inspection Dossier Compilation"
+    >
+      <template #header="{ titleId }">
+        <div>
+          <h3 :id="titleId" class="modal-title">
+            Centralized Monitoring Inspection Dossier Compilation
+          </h3>
+          <span class="badge badge-gxp"
+            >21 CFR Part 11 Cryptographically Sealed Dossier</span
+          >
+        </div>
+      </template>
+
+      <div v-if="!compiledDossier" class="dossier-sign-form">
+        <div class="dossier-intro-box">
+          <h4>Inspection Snapshot Generator</h4>
+          <p>
+            Compiles on-demand Centralized Monitoring Dossier synthesizing all
+            TransCelerate protocol risk scores, KRI metrics, Site Risk Index
+            rankings, and forensics anomalies into an immutable,
+            cryptographically sealed regulatory audit package.
+          </p>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label class="form-label">Signer Full Legal Name *</label>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
-              v-model="riskForm.reason_for_change"
+              v-model="dossierSigner.name"
               type="text"
               class="form-control"
-              placeholder="e.g. Protocol amendment 3.0 risk calibration"
+              placeholder="e.g. Dr. Eleanor Vance, MD"
+            />
+          </div>
+          <div class="form-group flex-1">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label class="form-label">Signer Regulatory Role *</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="dossierSigner.role"
+              type="text"
+              class="form-control"
+              placeholder="e.g. Head of Quality Assurance / Lead Monitor"
             />
           </div>
         </div>
 
-        <div class="modal-footer">
-          <button
-            class="ract-btn ract-btn-secondary"
-            @click="isRiskModalOpen = false"
-          >
-            Cancel
-          </button>
-          <button
-            class="ract-btn ract-btn-primary"
-            :disabled="!isFormValid || isLoading"
-            @click="saveRiskFactor"
-          >
-            {{ isEditing ? "Update Risk Factor" : "Save Risk Factor" }}
-          </button>
+        <div class="form-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Custom Dossier Name (Optional)</label>
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <input
+            v-model="dossierSigner.customName"
+            type="text"
+            class="form-control"
+            placeholder="e.g. CSM-Inspection-Dossier-Q3-2026"
+          />
+        </div>
+
+        <div class="signature-intent-box">
+          <div class="intent-title">
+            21 CFR Part 11 Electronic Signature Attestation
+          </div>
+          <div class="intent-text">
+            "I hereby review and formally certify this Centralized Monitoring
+            Inspection Dossier as an accurate, complete, and immutable
+            reflection of trial surveillance data, protocol risk
+            classifications, and automated KRI evaluations in compliance with
+            GCP ICH E6(R3) and 21 CFR Part 11."
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="ract-btn ract-btn-primary ract-btn-lg"
+          :disabled="!dossierSigner.name || !dossierSigner.role || isLoading"
+          @click="compileDossier"
+        >
+          🔒 Compile &amp; Cryptographically Sign Dossier
+        </button>
+      </div>
+
+      <!-- Compiled Dossier Preview -->
+      <div v-else class="dossier-view">
+        <div class="dossier-seal-banner">
+          <div class="seal-icon">🛡️</div>
+          <div class="seal-details">
+            <div class="seal-title">
+              {{ compiledDossier.dossier_name }}
+            </div>
+            <div class="seal-meta">
+              Status: <strong>{{ compiledDossier.status }}</strong> | Merkle
+              Root: <code>{{ compiledDossier.merkle_seal }}</code>
+            </div>
+          </div>
+        </div>
+
+        <div class="dossier-sections-grid">
+          <div class="dossier-section-card">
+            <h5>TransCelerate RACT Executive Summary</h5>
+            <p>
+              Total Risk Factors:
+              <strong>{{
+                compiledDossier.ract_summary?.total_risk_factors
+              }}</strong>
+              ({{ compiledDossier.ract_summary?.high_risk_count }} High /
+              {{ compiledDossier.ract_summary?.medium_risk_count }} Medium /
+              {{ compiledDossier.ract_summary?.low_risk_count }} Low)
+            </p>
+            <p>
+              KRI Linkage Coverage:
+              <strong
+                >{{
+                  compiledDossier.ract_summary?.linked_kri_coverage_percentage
+                }}%</strong
+              >
+            </p>
+          </div>
+
+          <div class="dossier-section-card">
+            <h5>KRI Surveillance Summary</h5>
+            <p>
+              Active KRIs:
+              <strong>{{
+                compiledDossier.kri_surveillance_summary?.total_kris_defined
+              }}</strong>
+            </p>
+            <p>
+              High / Critical Breach Count:
+              <strong>{{
+                compiledDossier.kri_surveillance_summary
+                  ?.high_or_critical_evaluations_count
+              }}</strong>
+            </p>
+          </div>
+        </div>
+
+        <!-- Electronic Signature Certificate -->
+        <div class="signature-cert-box">
+          <h5>21 CFR Part 11 Electronic Signature Certificate</h5>
+          <div class="cert-grid">
+            <div>
+              Signer:
+              <strong>{{
+                compiledDossier.electronic_signature?.signer_name
+              }}</strong>
+            </div>
+            <div>
+              Role:
+              <strong>{{
+                compiledDossier.electronic_signature?.signer_role
+              }}</strong>
+            </div>
+            <div>
+              Timestamp:
+              <strong>{{
+                compiledDossier.electronic_signature?.signed_at
+              }}</strong>
+            </div>
+            <div>
+              Signature Hash:
+              <code>{{
+                compiledDossier.electronic_signature?.signature_hash
+              }}</code>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- MODAL 2: 1-Click Centralized Monitoring Inspection Dossier (21 CFR Part 11) -->
-    <div v-if="isDossierModalOpen" class="modal-backdrop">
-      <div class="modal-card modal-xl">
-        <div class="modal-header">
-          <div>
-            <h3 class="modal-title">
-              Centralized Monitoring Inspection Dossier Compilation
-            </h3>
-            <span class="badge badge-gxp"
-              >21 CFR Part 11 Cryptographically Sealed Dossier</span
-            >
-          </div>
-          <button class="modal-close-btn" @click="isDossierModalOpen = false">
-            ✕
-          </button>
-        </div>
-
-        <div class="modal-body">
-          <div v-if="!compiledDossier" class="dossier-sign-form">
-            <div class="dossier-intro-box">
-              <h4>Inspection Snapshot Generator</h4>
-              <p>
-                Compiles on-demand Centralized Monitoring Dossier synthesizing
-                all TransCelerate protocol risk scores, KRI metrics, Site Risk
-                Index rankings, and forensics anomalies into an immutable,
-                cryptographically sealed regulatory audit package.
-              </p>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label class="form-label">Signer Full Legal Name *</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="dossierSigner.name"
-                  type="text"
-                  class="form-control"
-                  placeholder="e.g. Dr. Eleanor Vance, MD"
-                />
-              </div>
-              <div class="form-group flex-1">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label class="form-label">Signer Regulatory Role *</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="dossierSigner.role"
-                  type="text"
-                  class="form-control"
-                  placeholder="e.g. Head of Quality Assurance / Lead Monitor"
-                />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Custom Dossier Name (Optional)</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="dossierSigner.customName"
-                type="text"
-                class="form-control"
-                placeholder="e.g. CSM-Inspection-Dossier-Q3-2026"
-              />
-            </div>
-
-            <div class="signature-intent-box">
-              <div class="intent-title">
-                21 CFR Part 11 Electronic Signature Attestation
-              </div>
-              <div class="intent-text">
-                "I hereby review and formally certify this Centralized
-                Monitoring Inspection Dossier as an accurate, complete, and
-                immutable reflection of trial surveillance data, protocol risk
-                classifications, and automated KRI evaluations in compliance
-                with GCP ICH E6(R3) and 21 CFR Part 11."
-              </div>
-            </div>
-
-            <button
-              class="ract-btn ract-btn-primary ract-btn-lg"
-              :disabled="
-                !dossierSigner.name || !dossierSigner.role || isLoading
-              "
-              @click="compileDossier"
-            >
-              🔒 Compile &amp; Cryptographically Sign Dossier
-            </button>
-          </div>
-
-          <!-- Compiled Dossier Preview -->
-          <div v-else class="dossier-view">
-            <div class="dossier-seal-banner">
-              <div class="seal-icon">🛡️</div>
-              <div class="seal-details">
-                <div class="seal-title">
-                  {{ compiledDossier.dossier_name }}
-                </div>
-                <div class="seal-meta">
-                  Status: <strong>{{ compiledDossier.status }}</strong> | Merkle
-                  Root: <code>{{ compiledDossier.merkle_seal }}</code>
-                </div>
-              </div>
-            </div>
-
-            <div class="dossier-sections-grid">
-              <div class="dossier-section-card">
-                <h5>TransCelerate RACT Executive Summary</h5>
-                <p>
-                  Total Risk Factors:
-                  <strong>{{
-                    compiledDossier.ract_summary?.total_risk_factors
-                  }}</strong>
-                  ({{ compiledDossier.ract_summary?.high_risk_count }} High /
-                  {{ compiledDossier.ract_summary?.medium_risk_count }} Medium /
-                  {{ compiledDossier.ract_summary?.low_risk_count }} Low)
-                </p>
-                <p>
-                  KRI Linkage Coverage:
-                  <strong
-                    >{{
-                      compiledDossier.ract_summary
-                        ?.linked_kri_coverage_percentage
-                    }}%</strong
-                  >
-                </p>
-              </div>
-
-              <div class="dossier-section-card">
-                <h5>KRI Surveillance Summary</h5>
-                <p>
-                  Active KRIs:
-                  <strong>{{
-                    compiledDossier.kri_surveillance_summary?.total_kris_defined
-                  }}</strong>
-                </p>
-                <p>
-                  High / Critical Breach Count:
-                  <strong>{{
-                    compiledDossier.kri_surveillance_summary
-                      ?.high_or_critical_evaluations_count
-                  }}</strong>
-                </p>
-              </div>
-            </div>
-
-            <!-- Electronic Signature Certificate -->
-            <div class="signature-cert-box">
-              <h5>21 CFR Part 11 Electronic Signature Certificate</h5>
-              <div class="cert-grid">
-                <div>
-                  Signer:
-                  <strong>{{
-                    compiledDossier.electronic_signature?.signer_name
-                  }}</strong>
-                </div>
-                <div>
-                  Role:
-                  <strong>{{
-                    compiledDossier.electronic_signature?.signer_role
-                  }}</strong>
-                </div>
-                <div>
-                  Timestamp:
-                  <strong>{{
-                    compiledDossier.electronic_signature?.signed_at
-                  }}</strong>
-                </div>
-                <div>
-                  Signature Hash:
-                  <code>{{
-                    compiledDossier.electronic_signature?.signature_hash
-                  }}</code>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button
-            class="ract-btn ract-btn-secondary"
-            @click="isDossierModalOpen = false"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
+      <template #footer>
+        <button
+          type="button"
+          class="ract-btn ract-btn-secondary"
+          :disabled="isLoading"
+          @click="isDossierModalOpen = false"
+        >
+          Close
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { encodeChangeReason } from "../../api/changeReason";
 import { ref, computed, onMounted } from "vue";
+import { ClinicalModal } from "ui";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
 
 interface RACTFactor {
