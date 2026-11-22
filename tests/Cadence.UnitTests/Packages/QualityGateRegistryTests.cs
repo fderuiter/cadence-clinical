@@ -457,6 +457,17 @@ public sealed class QualityGateRegistryTests : IDisposable
 
         QualityGates.Find("branch-freshness")!.Run(Context())
             .Should().BeTrue("feature branch descending from origin/main satisfies branch-freshness");
+
+        Git("checkout", "-q", "main");
+        Write("README.md", "# Cadence advanced on main\n");
+        Git("commit", "-q", "-am", "advance main");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+        Git("checkout", "-q", "feature");
+
+        QualityGates.Find("branch-freshness")!.Run(Context(pushBefore: "0000000000000000000000000000000000000000"))
+            .Should().BeTrue("push-scoped CI runs (--push-before) skip branch-freshness so historical tag and release pushes succeed");
+        QualityGates.Find("branch-freshness")!.Run(Context(baseRef: "refs/remotes/origin/release/1.0"))
+            .Should().BeFalse("missing custom --base ref fails closed");
     }
 
     [Fact]
@@ -515,7 +526,8 @@ public sealed class QualityGateRegistryTests : IDisposable
             .Should().Be(0, "a delete-only commit has zero surviving staged files and must complete all pre-commit file gates without scanning the full repository");
     }
 
-    private GateContext Context(string[]? files = null, bool preCommit = false) => new(_root, files, preCommit);
+    private GateContext Context(string[]? files = null, bool preCommit = false, string? baseRef = null, string? pushBefore = null) =>
+        new(_root, files, preCommit, baseRef, pushBefore);
 
     private static string Region(string body) => $"{GateDocs.BeginMarker}\n\n{body.TrimEnd('\n')}\n\n{GateDocs.EndMarker}\n";
 
