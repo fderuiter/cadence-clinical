@@ -52,6 +52,8 @@ public sealed class BaselineRatchetServiceTests : IDisposable
     [InlineData("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries.baseline.txt", true)]
     [InlineData("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage.baseline.txt", true)]
     [InlineData(".deid-baseline.txt", true)]
+    [InlineData("eslint-warnings.baseline.txt", true)]
+    [InlineData("code-duplication.baseline.txt", true)]
     [InlineData(".secrets.baseline", true)]
     [InlineData(".cadence/snapshots/baseline-test.tar.gz", false)]
     [InlineData("docs/baseline.md", false)]
@@ -256,6 +258,27 @@ public sealed class BaselineRatchetServiceTests : IDisposable
         BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment).Should().Be(0);
         BaselineRatchetService.Check(_dir, preCommit: false, environment: name => name == "CI" ? "true" : null).Should().Be(1);
         BaselineRatchetService.Check(_dir, preCommit: false, environment: name => name == "GITHUB_ACTIONS" ? "true" : null).Should().Be(1);
+    }
+
+    [Fact]
+    public void EslintAndCodeDuplicationBaselines_RejectUntraileredGrowth_AndAdmitPerFileTrailers()
+    {
+        Write(BaselineRatchetService.EslintWarningsBaseline, "# eslint\napps/web/src/App.vue|no-alert|0123456789abcdef\n");
+        Write(BaselineRatchetService.CodeDuplicationBaseline, "# duplication\napps/web/src/A.ts|apps/web/src/B.ts|fedcba9876543210\n");
+        Commit("chore: seed eslint and duplication baselines without trailers");
+
+        Check().Should().Be(1, "untrailered growth in eslint-warnings.baseline.txt and code-duplication.baseline.txt must fail");
+
+        Git("commit", "--amend", "-q", "-m",
+            "chore: seed eslint and duplication baselines\n\n" +
+            $"Baseline-Growth: {BaselineRatchetService.EslintWarningsBaseline} - freeze pre-existing warnings\n" +
+            $"Baseline-Growth: {BaselineRatchetService.CodeDuplicationBaseline} - freeze pre-existing frontend clones");
+
+        Check().Should().Be(0, "per-file Baseline-Growth trailers admit initial baseline freeze");
+
+        Write(BaselineRatchetService.EslintWarningsBaseline,
+            "# eslint\napps/web/src/App.vue|no-alert|0123456789abcdef\napps/web/src/App.vue|no-alert|1111222233334444\n");
+        Check().Should().Be(1, "dirty working-tree growth in eslint-warnings.baseline.txt must fail");
     }
 
     private int Check() => BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment);

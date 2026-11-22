@@ -12,12 +12,12 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:bef136a371963aaa46ec97882845ef
 
 # Install curl, ffmpeg, libreoffice, git, procps for developer introspection
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ffmpeg \
-    libreoffice \
-    git \
-    procps \
-    netcat-traditional \
+    curl=8.5.0-2ubuntu10.16 \
+    ffmpeg=7:6.1.1-3ubuntu5 \
+    libreoffice=4:24.2.7-0ubuntu0.24.04.7 \
+    git=1:2.43.0-1ubuntu7.4 \
+    procps=2:4.0.4-4ubuntu3.3 \
+    netcat-traditional=1.10-48 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install global tools in container
@@ -65,9 +65,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0.15@sha256:12b1135f5f8b3c0a214f2a680ff2
 
 # Install curl, ffmpeg, libreoffice for container health check parity and background workers
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ffmpeg \
-    libreoffice \
+    curl=8.5.0-2ubuntu10.16 \
+    ffmpeg=7:6.1.1-3ubuntu5 \
+    libreoffice=4:24.2.7-0ubuntu0.24.04.7 \
     && rm -rf /var/lib/apt/lists/*
 
 ARG APP_NAME=gateway
@@ -83,7 +83,7 @@ EXPOSE 8080
 
 # Liveness only; orchestrators should gate traffic on /healthz/ready.
 HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=5 \
-    CMD curl -fsS http://localhost:8080/healthz/live || exit 1
+    CMD ["curl", "-fsS", "http://localhost:8080/healthz/live"]
 
 # The service's own assembly, recorded at publish time (a service can ship other Cadence.Apps.* assemblies).
 ENTRYPOINT ["sh", "-c", "exec dotnet \"$(cat entrypoint-assembly).dll\""]

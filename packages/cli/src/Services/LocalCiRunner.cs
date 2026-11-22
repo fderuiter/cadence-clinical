@@ -222,14 +222,55 @@ public sealed class LocalCiEnvironment
                 path => !path.Contains("/.venv/", StringComparison.Ordinal)
                     && !path.Contains("/.cadence/", StringComparison.Ordinal)
                     && !path.Contains("/node_modules/", StringComparison.Ordinal)),
-            CiFileSource.ShellScripts => FindUnderRoot(repoRoot, "*.sh",
-                path => !path.Contains("/.venv/", StringComparison.Ordinal)
-                    && !path.Contains("/.cadence/", StringComparison.Ordinal)
-                    && !path.Contains("/node_modules/", StringComparison.Ordinal)),
+            CiFileSource.ShellScripts => DiscoverShellScriptFiles(repoRoot),
             _ => [],
         };
 
         return [.. files];
+    }
+
+    private static IEnumerable<string> DiscoverShellScriptFiles(string repoRoot)
+    {
+        var found = new SortedSet<string>(
+            FindUnderRoot(repoRoot, "*.sh",
+                path => !path.Contains("/.venv/", StringComparison.Ordinal)
+                    && !path.Contains("/.cadence/", StringComparison.Ordinal)
+                    && !path.Contains("/node_modules/", StringComparison.Ordinal)),
+            StringComparer.Ordinal);
+
+        var tracked = GitRevisionScopeService.TryGetTrackedFiles(repoRoot);
+        if (tracked is not null)
+        {
+            foreach (string rel in tracked)
+            {
+                string fileName = Path.GetFileName(rel);
+                if (!fileName.Contains('.', StringComparison.Ordinal) &&
+                    File.Exists(Path.Combine(repoRoot, rel)) &&
+                    CliLinterGateService.IsShellScript(repoRoot, rel))
+                {
+                    found.Add("./" + rel);
+                }
+            }
+        }
+        else
+        {
+            foreach (string path in FindUnderRoot(repoRoot, "*",
+                         p => !p.Contains("/.git/", StringComparison.Ordinal)
+                             && !p.Contains("/.venv/", StringComparison.Ordinal)
+                             && !p.Contains("/.cadence/", StringComparison.Ordinal)
+                             && !p.Contains("/node_modules/", StringComparison.Ordinal)))
+            {
+                string rel = path[2..];
+                string fileName = Path.GetFileName(rel);
+                if (!fileName.Contains('.', StringComparison.Ordinal) &&
+                    CliLinterGateService.IsShellScript(repoRoot, rel))
+                {
+                    found.Add(path);
+                }
+            }
+        }
+
+        return found;
     }
 
     /// <summary>Like <c>find . -type f -name pattern</c>: regular files only, symbolic links are not followed.</summary>

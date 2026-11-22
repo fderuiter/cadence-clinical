@@ -12,6 +12,13 @@ namespace Cadence.ToolingCore.Services;
 
 public static class DuplicationDetectorService
 {
+    public const string BaselineFile = "code-duplication.baseline.txt";
+
+    public sealed record DuplicateBlockPair(
+        (string File, int Start, int End, string Preview) Loc1,
+        (string File, int Start, int End, string Preview) Loc2,
+        string Key);
+
     private static readonly string[] IgnoredPathKeywords =
     [
         "node_modules", "tests", ".venv", ".cadence", "__pycache__", "dist", "build", "bin", "obj", "Migrations", "migrations", ".git", "mockServiceWorker.js"
@@ -40,11 +47,15 @@ public static class DuplicationDetectorService
             return 0;
         }
 
+        bool fullScan = targetFiles is null && !preCommit;
+        bool updateBaseline = fullScan &&
+                              string.Equals(Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE"), "1", StringComparison.Ordinal);
+
         var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
         using (ownedReader)
         {
             int windowSize = 15;
-            var allRelativeFiles = new List<string>();
+            var allRelativeSet = new SortedSet<string>(StringComparer.Ordinal);
 
             HashSet<string>? targetSet = null;
             if (targetFiles is not null)
@@ -70,7 +81,29 @@ public static class DuplicationDetectorService
 
             if (reader is { HasAuthoritativeIndex: true })
             {
-                allRelativeFiles.AddRange(reader.Paths.Where(IsScannableDuplicationPath));
+                foreach (string rel in reader.Paths.Where(IsScannableDuplicationPath))
+                {
+                    allRelativeSet.Add(rel);
+                }
+            }
+            else if (GitRevisionScopeService.TryGetTrackedFiles(repoRoot) is { } trackedFiles)
+            {
+                foreach (string raw in trackedFiles)
+                {
+                    string rel = raw.Replace('\\', '/');
+                    if (IsScannableDuplicationPath(rel) && File.Exists(Path.Combine(repoRoot, rel)))
+                    {
+                        allRelativeSet.Add(rel);
+                    }
+                }
+
+                if (targetSet is not null)
+                {
+                    foreach (string rel in targetSet)
+                    {
+                        allRelativeSet.Add(rel);
+                    }
+                }
             }
             else
             {
@@ -87,11 +120,13 @@ public static class DuplicationDetectorService
                         string rel = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
                         if (IsScannableDuplicationPath(rel))
                         {
-                            allRelativeFiles.Add(rel);
+                            allRelativeSet.Add(rel);
                         }
                     }
                 }
             }
+
+            var allRelativeFiles = allRelativeSet.ToList();
 
             var seenBlocks = new Dictionary<string, List<(string RelPath, int StartLine, int EndLine, string Preview)>>();
 
@@ -157,10 +192,10 @@ public static class DuplicationDetectorService
                 }
             }
 
-            var duplicatesFound = new List<((string File, int Start, int End, string Preview) Loc1, (string File, int Start, int End, string Preview) Loc2)>();
-            var uniqueDupsReported = new HashSet<string>();
+            var duplicatesFound = new List<DuplicateBlockPair>();
+            var uniqueDupsReported = new HashSet<string>(StringComparer.Ordinal);
 
-            foreach (var locs in seenBlocks.Values)
+            foreach (var (blockHash, locs) in seenBlocks)
             {
                 if (locs.Count > 1)
                 {
@@ -202,13 +237,13 @@ public static class DuplicationDetectorService
                                     continue;
                                 }
 
-                                string dupKey = string.Join("|", new[] { $"{rel1}:{l1.StartLine}", $"{rel2}:{l2.StartLine}" }.OrderBy(x => x));
+                                string dupKey = string.Join("|", new[] { $"{rel1}:{l1.StartLine}", $"{rel2}:{l2.StartLine}" }.OrderBy(x => x, StringComparer.Ordinal));
                                 if (uniqueDupsReported.Add(dupKey))
                                 {
-                                    duplicatesFound.Add((
+                                    duplicatesFound.Add(new DuplicateBlockPair(
                                         (rel1, l1.StartLine, l1.EndLine, l1.Preview),
-                                        (rel2, l2.StartLine, l2.EndLine, l2.Preview)
-                                    ));
+                                        (rel2, l2.StartLine, l2.EndLine, l2.Preview),
+                                        BaselineKey(rel1, rel2, blockHash)));
                                 }
                             }
                         }
@@ -252,25 +287,113 @@ public static class DuplicationDetectorService
                 }
             }
 
-            // The pre-commit gate passes every staged file; like the full scan, only duplicates involving a C# file fail.
-            bool csDuplicatesFound = duplicatesFound.Any(d => d.Loc1.File.EndsWith(".cs", StringComparison.Ordinal) || d.Loc2.File.EndsWith(".cs", StringComparison.Ordinal));
-
-            if (csDuplicatesFound)
+            string baselinePath = Path.Combine(repoRoot, BaselineFile);
+            if (updateBaseline)
             {
-                Console.WriteLine($"[ERROR] Code duplication detected above threshold ({duplicatesFound.Count} duplicates found).");
+                WriteBaseline(baselinePath, duplicatesFound.Select(d => d.Key));
+                Console.WriteLine($"✔ Wrote {duplicatesFound.Count} entries to {BaselineFile} ({allRelativeFiles.Count} files scanned).");
+                return 0;
+            }
+
+            var allBaseline = ReadBaseline(baselinePath, reader);
+            List<string> scopedBaseline = targetSet is null
+                ? allBaseline
+                : allBaseline.Where(entry => EntryMatchesTargetSet(entry, targetSet)).ToList();
+
+            var (newDuplicates, staleEntries) = CompareWithBaseline(duplicatesFound, scopedBaseline);
+
+            foreach (var dup in newDuplicates.Take(25))
+            {
+                Console.WriteLine($"[DUPLICATION] {dup.Loc1.File}:{dup.Loc1.Start}-{dup.Loc1.End} <-> {dup.Loc2.File}:{dup.Loc2.Start}-{dup.Loc2.End}");
+            }
+
+            if (newDuplicates.Count > 25)
+            {
+                Console.WriteLine($"[DUPLICATION] ... and {newDuplicates.Count - 25} more unbaselined duplicate block(s).");
+            }
+
+            foreach (string stale in staleEntries.Take(25))
+            {
+                Console.WriteLine($"[DUPLICATION STALE BASELINE] {stale}");
+            }
+
+            if (staleEntries.Count > 25)
+            {
+                Console.WriteLine($"[DUPLICATION STALE BASELINE] ... and {staleEntries.Count - 25} more stale entries.");
+            }
+
+            if (newDuplicates.Count > 0 || staleEntries.Count > 0)
+            {
+                if (newDuplicates.Count > 0)
+                {
+                    Console.WriteLine($"[ERROR] Code duplication detected above baseline ({newDuplicates.Count} unbaselined duplicate block(s) found; {BaselineFile} may only shrink).");
+                }
+
+                if (staleEntries.Count > 0)
+                {
+                    Console.WriteLine($"[ERROR] {staleEntries.Count} {BaselineFile} entr(y/ies) no longer match; the baseline may only shrink. Run 'CADENCE_UPDATE_BASELINE=1 pnpm cadence check duplication' to drop them.");
+                }
+
                 return 1;
             }
 
-            Console.WriteLine("✔ Code duplication check passed cleanly.");
+            Console.WriteLine($"✔ Code duplication check passed cleanly ({allRelativeFiles.Count} files scanned; {scopedBaseline.Count} baselined blocks).");
             return 0;
         }
     }
 
-    private static bool IsScannableDuplicationPath(string relativePath)
+    public static string BaselineKey(string file1, string file2, string blockHash)
+    {
+        (string minFile, string maxFile) = string.CompareOrdinal(file1, file2) <= 0
+            ? (file1, file2)
+            : (file2, file1);
+        return $"{minFile}|{maxFile}|{blockHash.ToLowerInvariant()[..16]}";
+    }
+
+    public static (IReadOnlyList<DuplicateBlockPair> NewDuplicates, IReadOnlyList<string> StaleEntries) CompareWithBaseline(
+        IReadOnlyList<DuplicateBlockPair> duplicates,
+        IReadOnlyList<string> baseline)
+    {
+        ArgumentNullException.ThrowIfNull(duplicates);
+        ArgumentNullException.ThrowIfNull(baseline);
+
+        var remaining = baseline
+            .GroupBy(k => k, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+        var newDuplicates = new List<DuplicateBlockPair>();
+
+        foreach (var dup in duplicates)
+        {
+            if (remaining.TryGetValue(dup.Key, out int count) && count > 0)
+            {
+                remaining[dup.Key] = count - 1;
+            }
+            else
+            {
+                newDuplicates.Add(dup);
+            }
+        }
+
+        var stale = remaining
+            .Where(kv => kv.Value > 0)
+            .SelectMany(kv => Enumerable.Repeat(kv.Key, kv.Value))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        return (newDuplicates, stale);
+    }
+
+    public static bool IsScannableDuplicationPath(string relativePath)
     {
         string norm = "/" + relativePath.Replace('\\', '/').TrimStart('/');
         if (!norm.StartsWith("/apps/", StringComparison.OrdinalIgnoreCase) &&
             !norm.StartsWith("/packages/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (norm.StartsWith("/apps/web/src/api/generated/", StringComparison.OrdinalIgnoreCase) ||
+            norm.Equals("/packages/demo-fixtures/src/manifest.d.ts", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -281,10 +404,57 @@ public static class DuplicationDetectorService
         }
 
         // Python files are porting references, not live code (#4789), so they are not scanned.
-        return norm.EndsWith(".js", StringComparison.Ordinal) ||
-               norm.EndsWith(".vue", StringComparison.Ordinal) ||
-               norm.EndsWith(".css", StringComparison.Ordinal) ||
-               norm.EndsWith(".cs", StringComparison.Ordinal);
+        return norm.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+               norm.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
+               norm.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase) ||
+               norm.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) ||
+               norm.EndsWith(".css", StringComparison.OrdinalIgnoreCase) ||
+               norm.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool EntryMatchesTargetSet(string entry, HashSet<string> targetSet)
+    {
+        int firstPipe = entry.IndexOf('|', StringComparison.Ordinal);
+        if (firstPipe <= 0)
+        {
+            return false;
+        }
+
+        int secondPipe = entry.IndexOf('|', firstPipe + 1);
+        if (secondPipe <= firstPipe + 1)
+        {
+            return false;
+        }
+
+        string file1 = entry[..firstPipe];
+        string file2 = entry[(firstPipe + 1)..secondPipe];
+        return targetSet.Contains(file1) || targetSet.Contains(file2);
+    }
+
+    private static List<string> ReadBaseline(string baselinePath, GitIndexReader? reader)
+    {
+        if (reader is not null)
+        {
+            return reader.TryReadLines(BaselineFile, out string[] indexedLines)
+                ? [.. indexedLines.Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))]
+                : [];
+        }
+
+        return File.Exists(baselinePath)
+            ? [.. File.ReadAllLines(baselinePath).Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))]
+            : [];
+    }
+
+    private static void WriteBaseline(string baselinePath, IEnumerable<string> keys)
+    {
+        var lines = new List<string>
+        {
+            "# Code duplication ratchet baseline (pnpm cadence check duplication). Pre-existing frontend and TypeScript clones frozen behind a shrink-only baseline.",
+            "# One per line: minFile|maxFile|first 16 hex digits of SHA-256(normalized 15-line block). Sorted ordinally. The list may only shrink.",
+            "# Regenerate with CADENCE_UPDATE_BASELINE=1 pnpm cadence check duplication (docs/cli.md).",
+        };
+        lines.AddRange(keys.Order(StringComparer.Ordinal));
+        File.WriteAllText(baselinePath, string.Join('\n', lines) + "\n");
     }
 
     private static string NormalizeLine(string line)

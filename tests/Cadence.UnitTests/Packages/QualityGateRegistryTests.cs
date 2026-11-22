@@ -91,6 +91,11 @@ public sealed class QualityGateRegistryTests : IDisposable
             Write("Dockerfile", "FROM ubuntu:24.04\nWORKDIR relative/path\nEXPOSE 99999\n");
             return Context();
         },
+        ["shellcheck"] = () =>
+        {
+            Write("scripts/broken.sh", "#!/usr/bin/env bash\nPATH=/bad\necho $UNQUOTED_VAR\n");
+            return Context();
+        },
         ["yaml"] = () =>
         {
             Write(".github/workflows/broken.yml", "name: \"unclosed\njobs:\n\tbad: true\n");
@@ -332,7 +337,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(39);
+        QualityGates.All.Should().HaveCount(40);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }
@@ -508,6 +513,121 @@ public sealed class QualityGateRegistryTests : IDisposable
             .ToArray();
         QualityGateOrchestrator.RunQualityGates(excludedGates: nonFileGates, preCommit: true, repoRoot: _root)
             .Should().Be(0, "a delete-only commit has zero surviving staged files and must complete all pre-commit file gates without scanning the full repository");
+    }
+
+    [Fact]
+    public void ShellcheckGate_DiscoversExtensionlessPosixAndBashShebangScripts_AndEnforcesWarnings()
+    {
+        Write(".githooks/pre-commit", "#!/bin/sh\nset -eu\nPATH=/bad\n");
+        Write("docs/README.md", "# Not a shell script\n");
+        CommitOnMainThenBranch();
+
+        string repoShellcheck = Path.Combine(
+            QualityGateOrchestrator.FindRepoRoot(),
+            ".cadence",
+            "bin",
+            OperatingSystem.IsWindows() ? "shellcheck.exe" : "shellcheck");
+
+        if (File.Exists(repoShellcheck))
+        {
+            string localBinDir = Path.Combine(_root, ".cadence", "bin");
+            Directory.CreateDirectory(localBinDir);
+            File.Copy(repoShellcheck, Path.Combine(localBinDir, Path.GetFileName(repoShellcheck)), overwrite: true);
+            if (!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(
+                    Path.Combine(localBinDir, Path.GetFileName(repoShellcheck)),
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            }
+
+            Cadence.ToolingCore.Services.CliLinterGateService.RunShellcheck(_root).Should().Be(1,
+                "extensionless POSIX shebang scripts with SC2123 warnings must fail shellcheck");
+
+            Write(".githooks/pre-commit", "#!/bin/sh\nset -eu\nexport PATH=\"/usr/local/bin:$PATH\"\n");
+            Cadence.ToolingCore.Services.CliLinterGateService.RunShellcheck(_root).Should().Be(0,
+                "clean extensionless POSIX shebang scripts must pass shellcheck");
+        }
+        else
+        {
+            var emptyEnv = new Dictionary<string, string?>(StringComparer.Ordinal) { ["PATH"] = string.Empty };
+            Cadence.ToolingCore.Services.CliLinterGateService.RunShellcheck(
+                    _root,
+                    getEnvironmentVariable: k => emptyEnv.GetValueOrDefault(k))
+                .Should().Be(1, "shellcheck gate must fail closed when shellcheck is missing");
+        }
+    }
+
+    [Fact]
+    public void PathPatternsGate_ScansAllTrackedSubdirectories_AndRejectsMisplacedShellScripts()
+    {
+        Write("scripts/valid.sh", "#!/bin/sh\necho ok\n");
+        Write("nested/tools/misplaced.sh", "#!/bin/sh\necho bad\n");
+        CommitOnMainThenBranch();
+
+        var gate = QualityGates.Find("path-patterns")!;
+        gate.Run(Context()).Should().BeFalse("unscoped path-patterns scan must detect .sh files in tracked subdirectories outside scripts/");
+
+        Git("mv", "nested/tools/misplaced.sh", "scripts/misplaced.sh");
+        gate.Run(Context()).Should().BeTrue("relocating .sh files under scripts/ satisfies path-patterns across all tracked subdirectories");
+    }
+
+    [Fact]
+    public void DuplicationGate_ScansTypeScriptAndFrontendFiles_ExcludesGeneratedClients_AndEnforcesRatchetBaseline()
+    {
+        string tsBody = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  const metricValue{i} = computeRisk({i}, {i * 3});"));
+        string tsBlock = $"export function evaluatePanel() {{\n{tsBody}\n  return metricValue1;\n}}\n";
+
+        Write("apps/web/src/api/generated/execution.ts", tsBlock);
+        Write("packages/demo-fixtures/src/manifest.d.ts", tsBlock);
+
+        var gate = QualityGates.Find("duplication")!;
+        gate.Run(Context()).Should().BeTrue("generated OpenAPI clients and manifest.d.ts are excluded from duplication scans");
+
+        Write("apps/web/src/components/PanelOne.ts", tsBlock);
+        Write("apps/web/src/components/PanelTwo.tsx", tsBlock);
+        gate.Run(Context()).Should().BeFalse("unbaselined hand-written .ts and .tsx clones must fail the duplication gate");
+
+        string? prevUpdate = Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE");
+        try
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", "1");
+            gate.Run(Context()).Should().BeTrue("CADENCE_UPDATE_BASELINE=1 records the current duplication baseline");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", prevUpdate);
+        }
+
+        gate.Run(Context()).Should().BeTrue("baselined frontend/TypeScript clones pass until paid down");
+
+        Write("apps/web/src/components/PanelTwo.tsx", "export const distinct = 42;\n");
+        gate.Run(Context()).Should().BeFalse("paying down a baselined clone without shrinking code-duplication.baseline.txt fails as stale");
+    }
+
+    [Fact]
+    public void EslintWarningBaselineComparison_CountsMultisetEntries_AndFlagsNewAndStaleWarnings()
+    {
+        string keyA = Cadence.ToolingCore.Services.FrontendQualityGateService.EslintWarningBaselineKey(
+            "apps/web/src/View.vue", "no-alert", "  window.alert('confirm');");
+        string keyB = Cadence.ToolingCore.Services.FrontendQualityGateService.EslintWarningBaselineKey(
+            "apps/web/src/View.vue", "vue/html-indent", "    <div>");
+
+        var findingA1 = new Cadence.ToolingCore.Services.FrontendQualityGateService.EslintFinding(
+            "apps/web/src/View.vue", 10, 3, 1, "no-alert", "Unexpected alert.");
+        var findingA2 = new Cadence.ToolingCore.Services.FrontendQualityGateService.EslintFinding(
+            "apps/web/src/View.vue", 42, 3, 1, "no-alert", "Unexpected alert.");
+
+        var (cleanNew, cleanStale) = Cadence.ToolingCore.Services.FrontendQualityGateService.CompareEslintWarningsWithBaseline(
+            [(findingA1, keyA)],
+            [keyA]);
+        cleanNew.Should().BeEmpty();
+        cleanStale.Should().BeEmpty();
+
+        var (dupNew, dupStale) = Cadence.ToolingCore.Services.FrontendQualityGateService.CompareEslintWarningsWithBaseline(
+            [(findingA1, keyA), (findingA2, keyA)],
+            [keyA, keyB]);
+        dupNew.Should().Equal(findingA2);
+        dupStale.Should().Equal(keyB);
     }
 
     private GateContext Context(string[]? files = null, bool preCommit = false) => new(_root, files, preCommit);

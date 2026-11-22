@@ -27,35 +27,40 @@ public static class PathPatternValidatorService
             int violations = 0;
             string[] forbiddenSubdirs = ["tmp", "temp", "scratch", "old_src"];
 
-            System.Collections.Generic.List<string> relativeAllFiles;
-            System.Collections.Generic.List<string> relativeBoundaryFiles;
+            System.Collections.Generic.List<string> relativeFiles;
 
             if (files is not null)
             {
-                relativeAllFiles = files
+                relativeFiles = files
                     .Select(f => GitIndexReader.TryNormalizeRelativePath(repoRoot, f))
                     .Where(rel => !string.IsNullOrEmpty(rel) &&
                                   (reader is not null ? reader.FileExists(rel) : File.Exists(Path.Combine(repoRoot, rel))))
                     .Select(rel => rel!)
                     .ToList();
-                relativeBoundaryFiles = relativeAllFiles;
+            }
+            else if (reader is { HasAuthoritativeIndex: true })
+            {
+                relativeFiles = [.. reader.Paths];
+            }
+            else if (GitRevisionScopeService.TryGetTrackedFiles(repoRoot) is { } trackedFiles)
+            {
+                relativeFiles = trackedFiles
+                    .Select(rel => rel.Replace('\\', '/'))
+                    .Where(rel => File.Exists(Path.Combine(repoRoot, rel)))
+                    .Order(StringComparer.Ordinal)
+                    .ToList();
             }
             else
             {
-                relativeAllFiles = Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.AllDirectories)
-                    .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}") &&
-                                !f.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}") &&
-                                !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") &&
-                                !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
+                relativeFiles = Directory.EnumerateFiles(repoRoot, "*", SearchOption.AllDirectories)
                     .Select(f => Path.GetRelativePath(repoRoot, f).Replace('\\', '/'))
-                    .ToList();
-                relativeBoundaryFiles = Directory.GetFiles(repoRoot, "*.*", SearchOption.TopDirectoryOnly)
-                    .Select(f => Path.GetRelativePath(repoRoot, f).Replace('\\', '/'))
+                    .Where(rel => !IsIgnoredFallbackPath(rel))
+                    .Order(StringComparer.Ordinal)
                     .ToList();
             }
 
             // Rule 1: Check forbidden subdirectories across all files
-            foreach (string rel in relativeAllFiles)
+            foreach (string rel in relativeFiles)
             {
                 var parts = rel.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
@@ -66,8 +71,8 @@ public static class PathPatternValidatorService
                 }
             }
 
-            // Rule 2: Check Vue and Shell script boundaries
-            foreach (string rel in relativeBoundaryFiles)
+            // Rule 2: Check Vue and Shell script boundaries across all tracked paths
+            foreach (string rel in relativeFiles)
             {
                 if (rel.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) &&
                     !rel.StartsWith("apps/", StringComparison.Ordinal) &&
@@ -95,6 +100,20 @@ public static class PathPatternValidatorService
             Console.WriteLine("✔ Path patterns validated cleanly.");
             return 0;
         }
+    }
+
+    private static bool IsIgnoredFallbackPath(string relativePath)
+    {
+        string[] segments = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < segments.Length - 1; i++)
+        {
+            if (segments[i] is ".git" or "node_modules" or ".venv" or "venv" or ".cadence" or "bin" or "obj" or "dist" or "coverage" or "playwright-report" or "test-results" or "TestResults")
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();

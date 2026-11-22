@@ -56,10 +56,30 @@ jobs:
       - name: Build frontend workspace
         run: pnpm build
 
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            global.json
+            Directory.Build.props
+            Directory.Packages.props
+            **/*.csproj
+
+      - name: Cache Cadence CLI
+        id: cadence-cli-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ./bin/cadence
+          key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/engine_core/src/**', 'packages/database/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/core-models/src/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
+
       - name: Run frontend style and lint
+        env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
         run: |
           pnpm exec prettier --check --ignore-path .prettierignore "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}"
-          pnpm -r lint
+          node scripts/run-cli.js check eslint
 
       - name: Run Hadolint on Dockerfiles
         run: |
@@ -95,7 +115,7 @@ jobs:
             if [ ${#DOCKERFILES[@]} -gt 0 ] && [ -n "${DOCKERFILES[0]}" ]; then
               echo "Linting Dockerfiles:"
               printf '%s\n' "${DOCKERFILES[@]}"
-              hadolint --failure-threshold error "${DOCKERFILES[@]}"
+              hadolint --failure-threshold warning "${DOCKERFILES[@]}"
             else
               echo "No Dockerfiles found to lint."
             fi
@@ -114,7 +134,21 @@ jobs:
             fi
           fi
           if command -v shellcheck >/dev/null 2>&1; then
-            mapfile -t SHELL_SCRIPTS < <(find . -type f -name "*.sh" -not -path "*/.venv/*" -not -path "*/.cadence/*" -not -path "*/node_modules/*")
+            mapfile -t SHELL_SCRIPTS < <(
+              {
+                find . -type f -name "*.sh" -not -path "*/.git/*" -not -path "*/.venv/*" -not -path "*/.cadence/*" -not -path "*/node_modules/*"
+                while IFS= read -r -d '' f; do
+                  base="${f##*/}"
+                  if [[ "$base" != *.* ]] && [ -f "$f" ]; then
+                    IFS= read -r first_line < "$f" || first_line=""
+                    first_line="${first_line#$'\xef\xbb\xbf'}"
+                    if [[ "$first_line" =~ ^#![[:space:]]*(/usr/bin/env[[:space:]]+(-[^[:space:]]+[[:space:]]+)*(sh|bash|dash|ash|ksh)|/(usr/)?bin/(sh|bash|dash|ash|ksh))([[:space:]]|$) ]]; then
+                      printf './%s\n' "$f"
+                    fi
+                  fi
+                done < <(git ls-files -z)
+              } | LC_ALL=C sort -u
+            )
             if [ ${#SHELL_SCRIPTS[@]} -gt 0 ] && [ -n "${SHELL_SCRIPTS[0]}" ]; then
               echo "Linting shell scripts:"
               printf '%s\n' "${SHELL_SCRIPTS[@]}"
@@ -128,25 +162,7 @@ jobs:
           fi
 
       - name: Run installer checksum tests
-        run: bash tests/test_installer_checksums.sh
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
-        with:
-          global-json-file: global.json
-          cache: true
-          cache-dependency-path: |
-            global.json
-            Directory.Build.props
-            Directory.Packages.props
-            **/*.csproj
-
-      - name: Cache Cadence CLI
-        id: cadence-cli-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ./bin/cadence
-          key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/engine_core/src/**', 'packages/database/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/core-models/src/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
+        run: bash scripts/test_installer_checksums.sh
 
       - name: Run Markdown validation
         env:
@@ -200,7 +216,7 @@ jobs:
           else
             SCOPE_ARGS=(--push-before "$BEFORE_SHA")
           fi
-          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle "${SCOPE_ARGS[@]}"
+          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude shellcheck --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle "${SCOPE_ARGS[@]}"
 
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build

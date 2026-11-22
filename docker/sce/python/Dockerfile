@@ -5,26 +5,26 @@ LABEL description="GxP-validated statistical computing execution base image for 
 LABEL version="2026.1"
 
 RUN apt-get update \
-    && apt-get install -y --only-upgrade --no-install-recommends zlib1g \
+    && apt-get install -y --only-upgrade --no-install-recommends zlib1g=1:1.3.dfsg+really1.3.1-1+deb13u1 \
     && apt-get install -y --no-install-recommends \
-        build-essential \
-        libgomp1 \
+        build-essential=12.12 \
+        libgomp1=14.2.0-19 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir --upgrade \
-    pip \
-    setuptools \
-    urllib3 \
-    msgpack \
+    pip==26.3 \
+    setuptools==84.2.1 \
+    urllib3==2.8.0 \
+    msgpack==1.2.4 \
     && pip install --no-cache-dir \
-    pandas \
-    numpy \
-    scipy \
-    polars \
-    scikit-learn \
-    statsmodels \
-    matplotlib \
-    seaborn \
+    pandas==3.1.1 \
+    numpy==2.5.5 \
+    scipy==1.18.1 \
+    polars==2.1.0 \
+    scikit-learn==1.9.1 \
+    statsmodels==0.15.0 \
+    matplotlib==3.11.2 \
+    seaborn==0.13.2 \
     && pip uninstall -y pip
 
 RUN groupadd --system --gid 10001 sce \

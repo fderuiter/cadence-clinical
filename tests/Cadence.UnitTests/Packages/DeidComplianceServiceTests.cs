@@ -116,6 +116,8 @@ public sealed class DeidComplianceServiceTests : IDisposable
     [InlineData("apps/execution/src/bin/Debug/app.json", true)]
     [InlineData("apps/web/src/views/Home.test.ts", true)]
     [InlineData(".deid-baseline.txt", true)]
+    [InlineData("eslint-warnings.baseline.txt", true)]
+    [InlineData("code-duplication.baseline.txt", true)]
     [InlineData("packages/deid/src/DeidDetector.cs", true)]
     [InlineData("README.md", false)]
     [InlineData("AGENTS.md", false)]

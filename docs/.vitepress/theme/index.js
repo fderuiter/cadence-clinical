@@ -197,7 +197,9 @@ export default {
         activePointers.delete(e.pointerId);
         try {
           wrapper.releasePointerCapture(e.pointerId);
-        } catch (err) {}
+        } catch {
+          // Pointer capture may already have been released by the browser.
+        }
 
         if (activePointers.size === 0) {
           cleanupDrag();
@@ -214,7 +216,9 @@ export default {
         activePointers.delete(e.pointerId);
         try {
           wrapper.releasePointerCapture(e.pointerId);
-        } catch (err) {}
+        } catch {
+          // Pointer capture may already have been released by the browser.
+        }
 
         if (activePointers.size === 0) {
           cleanupDrag();
@@ -256,7 +260,9 @@ export default {
 
         try {
           wrapper.setPointerCapture(e.pointerId);
-        } catch (err) {}
+        } catch {
+          // Synthetic or detached pointer events may reject pointer capture.
+        }
 
         if (activePointers.size === 1) {
           lastSinglePointerPos = { x: e.clientX, y: e.clientY };

@@ -89,12 +89,12 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "streams staged JS, TS, Vue, CSS, JSON, Markdown and YAML blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
         },
-        new("eslint", [], "ESLint and duplicate store identifier checks across JS, TS and Vue files",
+        new("eslint", [], "ESLint and duplicate store identifier checks across tracked JS, TS and Vue files against `eslint-warnings.baseline.txt`",
             ctx => FrontendQualityGateService.CheckEslint(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "lints staged JS, TS and Vue blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
+            PreCommitNote = "lints staged JS, TS and Vue blobs over stdin against `eslint-warnings.baseline.txt`; fails closed when `pnpm` or `node_modules` is missing",
         },
         new("actionlint", ["validate-workflows"],
             "GitHub Actions workflow and composite-action static analysis via `actionlint` from `.cadence/bin` or `PATH` (fails closed when missing)",
@@ -105,12 +105,20 @@ public static class QualityGates
             PreCommitNote = "validates staged `.github/workflows` and `.github/actions` blobs; fails closed when `actionlint` is missing",
         },
         new("hadolint", ["hadolint-docker", "validate-dockerfiles"],
-            "Dockerfile best-practice and syntax linting (`hadolint --failure-threshold error`) from `.cadence/bin` or `PATH` (fails closed when missing)",
+            "Dockerfile best-practice and syntax linting (`hadolint --failure-threshold warning`) from `.cadence/bin` or `PATH` (fails closed when missing)",
             ctx => CliLinterGateService.RunHadolint(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "lints staged `Dockerfile*` blobs; fails closed when `hadolint` is missing",
+        },
+        new("shellcheck", ["validate-shell-scripts"],
+            "Shell script and POSIX/Bash shebang hook linting via `shellcheck` from `.cadence/bin` or `PATH` (fails closed when missing)",
+            ctx => CliLinterGateService.RunShellcheck(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "lints staged `*.sh` and POSIX/Bash shebang hook blobs; fails closed when `shellcheck` is missing",
         },
         new("yaml", ["check-yaml", "validate-yaml"],
             "YAML 1.2 syntax, indentation, quoted scalars, flow brackets and duplicate mapping keys",
@@ -139,7 +147,7 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "scans materialized staged blobs instead of the working tree",
         },
-        new("duplication", ["detect-code-duplication"], "Duplicated code blocks over 15 normalized lines involving a C# file",
+        new("duplication", ["detect-code-duplication"], "Duplicated code blocks over 15 normalized lines across C#, JS, TS, TSX, Vue and CSS files against `code-duplication.baseline.txt`",
             ctx => DuplicationDetectorService.DetectDuplication(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("cli-docs", ["validate-cli-docs"],

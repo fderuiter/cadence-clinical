@@ -628,17 +628,23 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         InitGitRepo();
         Write(".github/workflows/ci.yml", "name: CI\non: INVALID_WORKFLOW_MARKER\n");
         Write("docker/Dockerfile.api", "FROM ubuntu:24.04\n# INVALID_DOCKERFILE_MARKER\n");
+        Write("scripts/check.sh", "#!/usr/bin/env bash\n# INVALID_SHELL_MARKER\n");
+        Write(".githooks/pre-commit", "#!/bin/sh\n# INVALID_SHELL_MARKER\n");
         RunGit("add", ".");
 
-        // Mask both files on disk with clean content so only staged index inspection catches them.
+        // Mask files on disk with clean content so only staged index inspection catches them.
         Write(".github/workflows/ci.yml", "name: CI\non: push\n");
         Write("docker/Dockerfile.api", "FROM ubuntu:24.04\n");
+        Write("scripts/check.sh", "#!/usr/bin/env bash\necho ok\n");
+        Write(".githooks/pre-commit", "#!/bin/sh\necho ok\n");
 
         var emptyPathEnv = new Dictionary<string, string?>(StringComparer.Ordinal) { ["PATH"] = _tempDir };
         CliLinterGateService.RunActionlint(_tempDir, [".github/workflows/ci.yml"], preCommit: true, getEnvironmentVariable: k => emptyPathEnv.GetValueOrDefault(k))
             .Should().Be(1, "actionlint gate must fail closed when binary is missing");
         CliLinterGateService.RunHadolint(_tempDir, ["docker/Dockerfile.api"], preCommit: true, getEnvironmentVariable: k => emptyPathEnv.GetValueOrDefault(k))
             .Should().Be(1, "hadolint gate must fail closed when binary is missing");
+        CliLinterGateService.RunShellcheck(_tempDir, [".githooks/pre-commit"], preCommit: true, getEnvironmentVariable: k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(1, "shellcheck gate must fail closed when binary is missing");
 
         CreateCadenceBinLinterStubs();
         using var reader = GitIndexReader.TryOpen(_tempDir);
@@ -646,13 +652,19 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             .Should().Be(1, "actionlint must validate staged workflow blob even when working tree is clean");
         CliLinterGateService.RunHadolint(_tempDir, ["docker/Dockerfile.api"], preCommit: true, reader, k => emptyPathEnv.GetValueOrDefault(k))
             .Should().Be(1, "hadolint must validate staged Dockerfile blob even when working tree is clean");
+        CliLinterGateService.RunShellcheck(_tempDir, ["scripts/check.sh"], preCommit: true, reader, k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(1, "shellcheck must validate staged .sh blob even when working tree is clean");
+        CliLinterGateService.RunShellcheck(_tempDir, [".githooks/pre-commit"], preCommit: true, reader, k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(1, "shellcheck must validate staged extensionless shebang hook blob even when working tree is clean");
 
-        // Now stage the clean versions and verify both pass.
+        // Now stage the clean versions and verify all three pass.
         RunGit("add", ".");
         using var cleanReader = GitIndexReader.TryOpen(_tempDir);
         CliLinterGateService.RunActionlint(_tempDir, [".github/workflows/ci.yml"], preCommit: true, cleanReader, k => emptyPathEnv.GetValueOrDefault(k))
             .Should().Be(0);
         CliLinterGateService.RunHadolint(_tempDir, ["docker/Dockerfile.api"], preCommit: true, cleanReader, k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(0);
+        CliLinterGateService.RunShellcheck(_tempDir, ["scripts/check.sh", ".githooks/pre-commit"], preCommit: true, cleanReader, k => emptyPathEnv.GetValueOrDefault(k))
             .Should().Be(0);
     }
 
@@ -719,6 +731,9 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             File.WriteAllText(
                 Path.Combine(binDir, "hadolint.exe"),
                 "stub");
+            File.WriteAllText(
+                Path.Combine(binDir, "shellcheck.exe"),
+                "stub");
             return;
         }
 
@@ -741,14 +756,30 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             hadolintPath,
             "#!/bin/sh\n" +
             "if [ \"${1:-}\" = \"--version\" ]; then echo 'Haskell Dockerfile Linter 2.15.1'; exit 0; fi\n" +
+            "if [ \"${1:-}\" != \"--failure-threshold\" ] || [ \"${2:-}\" != \"warning\" ]; then echo 'expected --failure-threshold warning'; exit 2; fi\n" +
+            "shift 2\n" +
             "for f in \"$@\"; do\n" +
             "  if [ -f \"$f\" ] && grep -q 'INVALID_DOCKERFILE_MARKER' \"$f\" 2>/dev/null; then\n" +
-            "    echo \"$f:2 DL3000 error: invalid dockerfile marker\"\n" +
+            "    echo \"$f:2 DL3000 warning: invalid dockerfile marker\"\n" +
             "    exit 1\n" +
             "  fi\n" +
             "done\n" +
             "exit 0\n");
         File.SetUnixFileMode(hadolintPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        string shellcheckPath = Path.Combine(binDir, "shellcheck");
+        File.WriteAllText(
+            shellcheckPath,
+            "#!/bin/sh\n" +
+            "if [ \"${1:-}\" = \"--version\" ]; then printf 'ShellCheck - shell script analysis tool\\nversion: 0.11.0\\n'; exit 0; fi\n" +
+            "for f in \"$@\"; do\n" +
+            "  if [ -f \"$f\" ] && grep -q 'INVALID_SHELL_MARKER' \"$f\" 2>/dev/null; then\n" +
+            "    echo \"$f:2:1: warning: invalid shell marker [SC2123]\"\n" +
+            "    exit 1\n" +
+            "  fi\n" +
+            "done\n" +
+            "exit 0\n");
+        File.SetUnixFileMode(shellcheckPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
     }
 
     [Fact]
@@ -1001,23 +1032,138 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         File.WriteAllText(hadolintPayload, "#!/bin/sh\necho 'Haskell Dockerfile Linter 2.15.1'\n");
         File.SetUnixFileMode(hadolintPayload, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
 
+        string shellcheckStageDir = Path.Combine(payloadDir, "shellcheck-v0.11.0");
+        Directory.CreateDirectory(shellcheckStageDir);
+        string fakeShellcheck = Path.Combine(shellcheckStageDir, "shellcheck");
+        File.WriteAllText(fakeShellcheck, "#!/bin/sh\nprintf 'ShellCheck - shell script analysis tool\\nversion: 0.11.0\\n'\n");
+        File.SetUnixFileMode(fakeShellcheck, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        string scTarXzPath = Path.Combine(payloadDir, "shellcheck.tar.xz");
+        var scTarPsi = new ProcessStartInfo("tar")
+        {
+            WorkingDirectory = payloadDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        scTarPsi.ArgumentList.Add("-cJf");
+        scTarPsi.ArgumentList.Add(scTarXzPath);
+        scTarPsi.ArgumentList.Add("shellcheck-v0.11.0/shellcheck");
+        using (var scTarProc = Process.Start(scTarPsi)!)
+        {
+            scTarProc.WaitForExit();
+            scTarProc.ExitCode.Should().Be(0);
+        }
+
         string alSha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(tarPath)));
         string hlSha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(hadolintPayload)));
+        string scSha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(scTarXzPath)));
         string zeroSha = new('0', 64);
 
-        (int badExit, string badOut) = RunWizardLintersOnly(wizardPath, binOut, $"file://{tarPath}", zeroSha, $"file://{hadolintPayload}", zeroSha);
+        (int badExit, string badOut) = RunWizardLintersOnly(
+            wizardPath, binOut,
+            $"file://{tarPath}", zeroSha,
+            $"file://{hadolintPayload}", zeroSha,
+            $"file://{scTarXzPath}", zeroSha);
         badExit.Should().Be(1);
         badOut.Should().Contain("Checksum verification failed for actionlint");
         badOut.Should().Contain("Checksum verification failed for hadolint");
+        badOut.Should().Contain("Checksum verification failed for shellcheck");
         File.Exists(Path.Combine(binOut, "actionlint")).Should().BeFalse();
         File.Exists(Path.Combine(binOut, "hadolint")).Should().BeFalse();
+        File.Exists(Path.Combine(binOut, "shellcheck")).Should().BeFalse();
 
-        (int okExit, string okOut) = RunWizardLintersOnly(wizardPath, binOut, $"file://{tarPath}", alSha, $"file://{hadolintPayload}", hlSha);
+        (int okExit, string okOut) = RunWizardLintersOnly(
+            wizardPath, binOut,
+            $"file://{tarPath}", alSha,
+            $"file://{hadolintPayload}", hlSha,
+            $"file://{scTarXzPath}", scSha);
         okExit.Should().Be(0, okOut);
         okOut.Should().Contain("actionlint 1.7.12 SHA-256 verified");
         okOut.Should().Contain("hadolint 2.15.1 SHA-256 verified");
+        okOut.Should().Contain("shellcheck 0.11.0 SHA-256 verified");
         File.Exists(Path.Combine(binOut, "actionlint")).Should().BeTrue();
         File.Exists(Path.Combine(binOut, "hadolint")).Should().BeTrue();
+        File.Exists(Path.Combine(binOut, "shellcheck")).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShellDiscovery_AndFullPathPatternScan_CoverTrackedSubdirectoriesAndShebangHooks()
+    {
+        InitGitRepo();
+        Write("scripts/valid.sh", "#!/usr/bin/env bash\necho ok\n");
+        Write(".githooks/pre-commit", "#!/bin/sh\necho hook\n");
+        Write("LICENSE", "Proprietary license text\n");
+        Write("docs/notes/rogue.sh", "#!/bin/sh\necho misplaced\n");
+        Write("tools/Widget.vue", "<template><div /></template>\n");
+        RunGit("add", ".");
+        RunGit("commit", "-q", "-m", "initial");
+
+        var shellStep = new CiStep("lint-and-static", "Run ShellCheck on shell scripts") { Files = CiFileSource.ShellScripts };
+        LocalCiEnvironment.DiscoverFiles(_tempDir, shellStep, "origin/main")
+            .Should().Equal("./.githooks/pre-commit", "./docs/notes/rogue.sh", "./scripts/valid.sh");
+
+        PathPatternValidatorService.ValidatePathPatterns(files: null, repoRoot: _tempDir)
+            .Should().Be(1, "full path-patterns scan must inspect nested tracked directories and flag misplaced .sh and .vue files");
+
+        Directory.CreateDirectory(Path.Combine(_tempDir, "apps", "web", "src"));
+        RunGit("mv", "docs/notes/rogue.sh", "scripts/rogue.sh");
+        RunGit("mv", "tools/Widget.vue", "apps/web/src/Widget.vue");
+        PathPatternValidatorService.ValidatePathPatterns(files: null, repoRoot: _tempDir)
+            .Should().Be(0, "relocating .sh into scripts/ and .vue into apps/ must satisfy path-patterns");
+    }
+
+    [Fact]
+    public void EslintBaselineAndDuplicationDetector_EnforceShrinkOnlyFrontendAndTypeScriptRatchets()
+    {
+        string keyA = FrontendQualityGateService.EslintWarningBaselineKey("apps/web/src/App.vue", "no-alert", "  window.alert('legacy');");
+        string keyB = FrontendQualityGateService.EslintWarningBaselineKey("apps/web/src/App.vue", "vue/max-attributes-per-line", "  <div a=\"1\" b=\"2\" />");
+        var findingA = new FrontendQualityGateService.EslintFinding("apps/web/src/App.vue", 10, 3, 1, "no-alert", "Unexpected alert.");
+        var findingB = new FrontendQualityGateService.EslintFinding("apps/web/src/App.vue", 20, 3, 1, "vue/max-attributes-per-line", "Too many attributes.");
+
+        var (unbaselined, staleWhenEmpty) = FrontendQualityGateService.CompareEslintWarningsWithBaseline([(findingA, keyA), (findingB, keyB)], [keyA]);
+        unbaselined.Should().ContainSingle().Which.Should().Be(findingB);
+        staleWhenEmpty.Should().BeEmpty();
+
+        var (noneNew, staleEntries) = FrontendQualityGateService.CompareEslintWarningsWithBaseline([(findingA, keyA)], [keyA, keyB]);
+        noneNew.Should().BeEmpty();
+        staleEntries.Should().Equal(keyB);
+
+        InitGitRepo();
+        string tsClone = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  const computedRow{i} = normalizeMetric(input, {i}, {i * 3});"));
+        Write("apps/web/src/composables/useAlpha.ts", $"export function useAlpha(input: number) {{\n{tsClone}\n  return computedRow1;\n}}\n");
+        Write("apps/web/src/composables/useBeta.tsx", $"export function useBeta(input: number) {{\n{tsClone}\n  return computedRow1;\n}}\n");
+        // Generated OpenAPI clients and demo-fixtures manifest declarations must be excluded even with identical lines.
+        Write("apps/web/src/api/generated/execution.ts", $"export function generatedA(input: number) {{\n{tsClone}\n  return computedRow1;\n}}\n");
+        Write("packages/demo-fixtures/src/manifest.d.ts", $"export function generatedB(input: number) {{\n{tsClone}\n  return computedRow1;\n}}\n");
+        RunGit("add", ".");
+
+        DuplicationDetectorService.DetectDuplication(repoRoot: _tempDir)
+            .Should().Be(1, "unbaselined hand-written .ts/.tsx clones must fail closed");
+
+        string? prevUpdate = Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE");
+        try
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", "1");
+            DuplicationDetectorService.DetectDuplication(repoRoot: _tempDir).Should().Be(0);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", prevUpdate);
+        }
+
+        string baselineContent = File.ReadAllText(Path.Combine(_tempDir, DuplicationDetectorService.BaselineFile));
+        baselineContent.Should().Contain("apps/web/src/composables/useAlpha.ts|apps/web/src/composables/useBeta.tsx|")
+            .And.NotContain("api/generated")
+            .And.NotContain("manifest.d.ts");
+
+        DuplicationDetectorService.DetectDuplication(repoRoot: _tempDir)
+            .Should().Be(0, "baselined clones must pass when unchanged");
+
+        // Removing the clone without updating the baseline must fail as a stale entry so the baseline shrinks.
+        Write("apps/web/src/composables/useBeta.tsx", "export const useBeta = () => 0;\n");
+        DuplicationDetectorService.DetectDuplication(repoRoot: _tempDir)
+            .Should().Be(1, "stale entries in code-duplication.baseline.txt must fail until shrunk");
     }
 
     private static (int ExitCode, string CombinedOutput) RunWizardLintersOnly(
@@ -1026,7 +1172,9 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string actionlintUrl,
         string actionlintSha,
         string hadolintUrl,
-        string hadolintSha)
+        string hadolintSha,
+        string shellcheckUrl,
+        string shellcheckSha)
     {
         var psi = new ProcessStartInfo("/bin/bash")
         {
@@ -1041,6 +1189,8 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         psi.Environment["ACTIONLINT_SHA256"] = actionlintSha;
         psi.Environment["HADOLINT_DOWNLOAD_URL"] = hadolintUrl;
         psi.Environment["HADOLINT_SHA256"] = hadolintSha;
+        psi.Environment["SHELLCHECK_DOWNLOAD_URL"] = shellcheckUrl;
+        psi.Environment["SHELLCHECK_SHA256"] = shellcheckSha;
 
         using var proc = Process.Start(psi)!;
         var stderrTask = proc.StandardError.ReadToEndAsync();

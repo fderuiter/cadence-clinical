@@ -74,14 +74,14 @@ dotnet format Cadence.sln --verify-no-changes
 pnpm cadence check
 ```
 
-Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `actionlint`, `hadolint`, `workflow-security`, `rulesets`,
+Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `actionlint`, `hadolint`, `shellcheck`, `workflow-security`, `rulesets`,
 `yaml`, `detect-secrets`, `adrs`, `markdown`, `readmes`, `arch-drift`, `env-vars`, `openapi`, `rtm`,
-`duplication`, `security`, `deid`, `vulnerabilities`.
+`duplication`, `path-patterns`, `security`, `deid`, `vulnerabilities`, `baseline-ratchet`.
 
 **Before merging, run `pnpm cadence ci`** (or `make ci`). GitHub Actions does not run jobs for this repository until
 2027, so this is the check that stands in for CI: it runs the pull-request jobs of `.github/workflows/ci.yml` locally
-(including `actionlint`) with the same commands, and fails when a required binary (`actionlint` or `hadolint` in `.cadence/bin` or `PATH`,
-`shellcheck`, `detect-secrets-hook` in `.cadence/venv`, `.venv` or `PATH`, `bash`) is missing or the .NET tests have no
+(including `actionlint`) with the same commands, and fails when a required binary (`actionlint`, `hadolint`, or `shellcheck` in `.cadence/bin` or `PATH`,
+`detect-secrets-hook` in `.cadence/venv`, `.venv` or `PATH`, `bash`) is missing or the .NET tests have no
 PostgreSQL unless `--allow-skip` is passed ([docs/cli.md](docs/cli.md#cadence-ci)). A full run takes about 20 minutes:
 
 ```bash
@@ -159,11 +159,14 @@ Every PR updates what its change makes stale, in the same PR:
   `.deid-baseline.txt`. That baseline may only shrink. When a flagged line is not PHI (demo data, a code-system
   URL), put a `deid-ignore` comment on that line rather than adding to the baseline. When the gate reports stale
   baseline entries, drop them with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid`.
-- Ratchet baselines (`kernel-boundaries.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline` and any other
-  `*.baseline.txt`) may only shrink. The `baseline-ratchet` gate fails on uncommitted working-tree growth and when any
-  commit on the branch or push range adds an entry without a matching `Baseline-Growth: <path> - <reason>` trailer on
-  that commit for each grown file (`git commit --trailer "Baseline-Growth: <path> - <reason>"`). For the commit that
-  stages growth against `HEAD`, set `CADENCE_BASELINE_GROWTH="<reason>"` so the pre-commit hook admits it
+- Ratchet baselines (`kernel-boundaries.baseline.txt`, `.deid-baseline.txt`, `eslint-warnings.baseline.txt`,
+  `code-duplication.baseline.txt`, `.secrets.baseline` and any other `*.baseline.txt`) may only shrink. The
+  `baseline-ratchet` gate fails on uncommitted working-tree growth and when any commit on the branch or push range adds
+  an entry without a matching `Baseline-Growth: <path> - <reason>` trailer on that commit for each grown file
+  (`git commit --trailer "Baseline-Growth: <path> - <reason>"`). When resolving baselined ESLint warnings or code
+  clones, drop stale entries with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check eslint` or
+  `CADENCE_UPDATE_BASELINE=1 pnpm cadence check duplication`. For the commit that stages growth against `HEAD`, set
+  `CADENCE_BASELINE_GROWTH="<reason>"` so the pre-commit hook admits it
   ([docs/TESTING.md](docs/TESTING.md#ratchet-baselines)).
 - Do not re-add Python code or tooling; the remaining Python reference sources are listed in
   [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) and are removed as their ports are

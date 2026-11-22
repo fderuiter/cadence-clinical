@@ -9,9 +9,9 @@ set -eu
 if [ -n "${HOME:-}" ] && [ -d "$HOME/.dotnet/tools" ]; then
     case ":${PATH:-}:" in
         *":$HOME/.dotnet/tools:"*) ;;
-        *) PATH="$HOME/.dotnet/tools${PATH:+:$PATH}" ;;
+        "::") export PATH="$HOME/.dotnet/tools:/usr/bin:/bin" ;;
+        *) export PATH="$HOME/.dotnet/tools:$PATH" ;;
     esac
-    export PATH
 fi
 
 if ! command -v dotnet >/dev/null 2>&1 &&
@@ -20,8 +20,11 @@ if ! command -v dotnet >/dev/null 2>&1 &&
    [ -d "$HOME/.dotnet/host/fxr" ]; then
     DOTNET_ROOT="${DOTNET_ROOT:-$HOME/.dotnet}"
     export DOTNET_ROOT
-    PATH="$HOME/.dotnet${PATH:+:$PATH}"
-    export PATH
+    case ":${PATH:-}:" in
+        *":$HOME/.dotnet:"*) ;;
+        "::") export PATH="$HOME/.dotnet:/usr/bin:/bin" ;;
+        *) export PATH="$HOME/.dotnet:$PATH" ;;
+    esac
 fi
 
 if ! command -v node >/dev/null 2>&1; then

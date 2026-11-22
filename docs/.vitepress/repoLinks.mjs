@@ -10,10 +10,19 @@ const REPO_URL = "https://github.com/fderuiter/cadence-clinical";
 const BRANCH = "main";
 const GENERATED_STATIC_ENDPOINTS = new Set([BLOG_FEED_PATH]);
 
-const CONTROL_CHARS_RE = /[\u0000-\u001f]/g;
 const COMBINING_MARKS_RE = /[\u0300-\u036f]/g;
 const SPECIAL_CHARS_RE = /[\s~`!@#$%^&*()\-_+=[\]{}|\\;:"'<>,.?/]+/g;
 const HTML_ID_ATTR_RE = /\b(?:id|name)\s*=\s*["']([^"']+)["']/gi;
+
+function stripControlChars(value) {
+  let out = "";
+  for (let i = 0; i < value.length; i++) {
+    if (value.charCodeAt(i) > 0x1f) {
+      out += value[i];
+    }
+  }
+  return out;
+}
 
 const anchorCache = new Map();
 
@@ -47,10 +56,9 @@ export function stripInlineMarkdown(rawHeading) {
  * @returns {string}
  */
 export function vitepressSlugify(text) {
-  return stripInlineMarkdown(text)
-    .normalize("NFKD")
-    .replace(COMBINING_MARKS_RE, "")
-    .replace(CONTROL_CHARS_RE, "")
+  return stripControlChars(
+    stripInlineMarkdown(text).normalize("NFKD").replace(COMBINING_MARKS_RE, "")
+  )
     .replace(SPECIAL_CHARS_RE, "-")
     .replace(/-{2,}/g, "-")
     .replace(/^-+|-+$/g, "")

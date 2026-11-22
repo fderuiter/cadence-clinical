@@ -10,7 +10,8 @@ namespace Cadence.Cli.Services;
 
 /// <summary>
 /// The <c>baseline-ratchet</c> gate (#5318): a ratchet baseline may only shrink. Every tracked ratchet baseline (the
-/// kernel-boundary baseline, <c>.deid-baseline.txt</c>, <c>.secrets.baseline</c> and any other <c>*.baseline.txt</c> or
+/// kernel-boundary baseline, <c>.deid-baseline.txt</c>, <c>eslint-warnings.baseline.txt</c>,
+/// <c>code-duplication.baseline.txt</c>, <c>.secrets.baseline</c> and any other <c>*.baseline.txt</c> or
 /// <c>*-baseline.txt</c> file) is checked across every commit in <c>compareBase..HEAD</c> and in the working tree.
 /// Any commit that grows a baseline must carry a <c>Baseline-Growth: &lt;path&gt; - &lt;reason&gt;</c> trailer for each
 /// baseline file it grew, and dirty working-tree baseline growth is always rejected. In <c>--pre-commit</c>, staged
@@ -26,6 +27,12 @@ public static class BaselineRatchetService
 
     /// <summary>Admits staged baseline growth in the pre-commit hook, before the commit (and its trailer) exists.</summary>
     public const string GrowthEnvironmentVariable = "CADENCE_BASELINE_GROWTH";
+
+    /// <summary>Root-level ESLint warning ratchet baseline enforced alongside <c>check eslint</c>.</summary>
+    public const string EslintWarningsBaseline = FrontendQualityGateService.EslintWarningsBaselineFile;
+
+    /// <summary>Root-level code duplication ratchet baseline enforced alongside <c>check duplication</c>.</summary>
+    public const string CodeDuplicationBaseline = DuplicationDetectorService.BaselineFile;
 
     private const string Tag = "[BASELINE RATCHET]";
     private const string SecretsBaseline = ".secrets.baseline";
@@ -44,6 +51,8 @@ public static class BaselineRatchetService
     {
         string name = Path.GetFileName(NormalizeBaselinePath(path));
         return name.Equals(SecretsBaseline, StringComparison.Ordinal)
+            || name.Equals(EslintWarningsBaseline, StringComparison.Ordinal)
+            || name.Equals(CodeDuplicationBaseline, StringComparison.Ordinal)
             || name.EndsWith(".baseline.txt", StringComparison.Ordinal)
             || name.EndsWith("-baseline.txt", StringComparison.Ordinal);
     }

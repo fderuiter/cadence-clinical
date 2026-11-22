@@ -379,7 +379,7 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
     [InlineData(".github/pull_request_template.md", false)]
     [InlineData(".github/workflows/ci.yml", false)]
     [InlineData("scripts/setup_wizard.sh", false)]
-    [InlineData("docs/migration/phase0/04_scaffold_solution.sh", false)]
+    [InlineData("scripts/04_scaffold_solution.sh", false)]
     [InlineData("README.md", true)]
     [InlineData("CONTRIBUTING.md", true)]
     [InlineData("docs/CI.md", true)]

@@ -397,6 +397,7 @@ public static partial class DeidComplianceService
             || name.EndsWith(".test.jsx", StringComparison.Ordinal)
             || name.EndsWith(".test.tsx", StringComparison.Ordinal)
             || name.EndsWith(".css", StringComparison.Ordinal)
+            || name.EndsWith(".baseline.txt", StringComparison.Ordinal)
             || ExcludedFileNames.Contains(name);
     }
 

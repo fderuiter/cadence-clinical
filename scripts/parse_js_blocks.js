@@ -25,7 +25,7 @@ function getBabelParser() {
   }
   try {
     return require("@babel/parser");
-  } catch (e) {
+  } catch (cause) {
     const repoRoot = path.dirname(__dirname);
     const webNodeModules = path.join(
       repoRoot,
@@ -34,7 +34,7 @@ function getBabelParser() {
     if (fs.existsSync(webNodeModules)) {
       return require(webNodeModules);
     }
-    throw new Error("Could not find @babel/parser");
+    throw new Error("Could not find @babel/parser", { cause });
   }
 }
 

@@ -8,12 +8,13 @@ using System.Linq;
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
-/// Fail-closed <c>actionlint</c> and <c>hadolint</c> quality gates for <c>cadence check</c> and <c>cadence check --pre-commit</c>.
+/// Fail-closed <c>actionlint</c>, <c>hadolint</c>, and <c>shellcheck</c> quality gates for <c>cadence check</c> and <c>cadence check --pre-commit</c>.
 /// </summary>
 public static class CliLinterGateService
 {
     public const string ActionlintVersion = "1.7.12";
     public const string HadolintVersion = "2.15.1";
+    public const string ShellcheckVersion = "0.11.0";
     private const int MaxFilesPerBatch = 100;
 
     private static readonly string[] ExcludedDirectories =
@@ -35,6 +36,11 @@ public static class CliLinterGateService
         string repoRoot,
         Func<string, string?>? getEnvironmentVariable = null) =>
         ResolveBinary(repoRoot, "hadolint", "--version", getEnvironmentVariable);
+
+    public static ResolvedLinterTool? ResolveShellcheck(
+        string repoRoot,
+        Func<string, string?>? getEnvironmentVariable = null) =>
+        ResolveBinary(repoRoot, "shellcheck", "--version", getEnvironmentVariable);
 
     public static int RunActionlint(
         string? repoRoot = null,
@@ -252,6 +258,113 @@ public static class CliLinterGateService
         }
     }
 
+    public static int RunShellcheck(
+        string? repoRoot = null,
+        string[]? targetFiles = null,
+        bool preCommit = false,
+        GitIndexReader? indexReader = null,
+        Func<string, string?>? getEnvironmentVariable = null)
+    {
+        repoRoot ??= FindRepoRoot();
+        if (targetFiles is { Length: 0 })
+        {
+            return 0;
+        }
+
+        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
+        using (ownedReader)
+        {
+            if (preCommit || targetFiles is not null)
+            {
+                var rawFiles = preCommit && targetFiles is null
+                    ? PreCommitOpenApiService.GetStagedFiles(repoRoot)
+                    : (IReadOnlyList<string>)targetFiles!;
+
+                if (rawFiles.Count == 0)
+                {
+                    return 0;
+                }
+
+                var tool = ResolveShellcheck(repoRoot, getEnvironmentVariable);
+                if (tool is null)
+                {
+                    PrintMissingToolError("shellcheck", ShellcheckVersion);
+                    return 1;
+                }
+
+                var matchedScripts = new List<string>();
+                bool configChanged = false;
+
+                foreach (string raw in rawFiles)
+                {
+                    string? rel = GitIndexReader.TryNormalizeRelativePath(repoRoot, raw);
+                    if (string.IsNullOrEmpty(rel) || !ExistsInSnapshot(repoRoot, rel, reader))
+                    {
+                        continue;
+                    }
+
+                    if (IsShellScript(repoRoot, rel, reader))
+                    {
+                        matchedScripts.Add(rel);
+                    }
+                    else if (IsShellcheckConfig(rel))
+                    {
+                        configChanged = true;
+                    }
+                }
+
+                if (matchedScripts.Count == 0 && !configChanged)
+                {
+                    return 0;
+                }
+
+                if (reader is { HasAuthoritativeIndex: true })
+                {
+                    var scriptsToValidate = configChanged
+                        ? reader.Paths.Where(p => IsShellScript(repoRoot, p, reader)).Order(StringComparer.Ordinal).ToList()
+                        : matchedScripts.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+
+                    if (scriptsToValidate.Count == 0)
+                    {
+                        return 0;
+                    }
+
+                    var materializePaths = new List<string>(scriptsToValidate);
+                    materializePaths.AddRange(reader.Paths.Where(IsShellcheckConfig));
+
+                    using var workspace = reader.Materialize(materializePaths);
+                    return ExecuteShellcheckBatches(workspace.RootPath, tool.FileName, scriptsToValidate);
+                }
+
+                var diskScripts = configChanged
+                    ? DiscoverShellScripts(repoRoot)
+                    : matchedScripts.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+
+                if (diskScripts.Count == 0)
+                {
+                    return 0;
+                }
+
+                return ExecuteShellcheckBatches(repoRoot, tool.FileName, diskScripts);
+            }
+
+            var fullScanTool = ResolveShellcheck(repoRoot, getEnvironmentVariable);
+            if (fullScanTool is null)
+            {
+                PrintMissingToolError("shellcheck", ShellcheckVersion);
+                return 1;
+            }
+
+            var allScripts = DiscoverShellScripts(repoRoot);
+            if (allScripts.Count == 0)
+            {
+                return 0;
+            }
+
+            return ExecuteShellcheckBatches(repoRoot, fullScanTool.FileName, allScripts);
+        }
+    }
+
     public static bool IsWorkflowYaml(string relativePath)
     {
         string normalized = relativePath.Replace('\\', '/');
@@ -310,6 +423,211 @@ public static class CliLinterGateService
         string normalized = relativePath.Replace('\\', '/');
         return string.Equals(normalized, ".hadolint.yaml", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(normalized, ".hadolint.yml", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsShellcheckConfig(string relativePath)
+    {
+        string normalized = relativePath.Replace('\\', '/');
+        return string.Equals(normalized, ".shellcheckrc", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsShellScript(string repoRoot, string relativePath, GitIndexReader? reader = null)
+    {
+        string normalized = relativePath.Replace('\\', '/');
+        string[] segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length == 0)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < segments.Length - 1; i++)
+        {
+            if (ExcludedDirectories.Contains(segments[i], StringComparer.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        string fileName = segments[^1];
+        if (fileName.EndsWith(".sh", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (fileName.Contains('.', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        string? firstLine = ReadFirstLine(repoRoot, normalized, reader);
+        return IsPosixOrBashShebang(firstLine);
+    }
+
+    public static bool IsPosixOrBashShebang(string? firstLine)
+    {
+        if (string.IsNullOrEmpty(firstLine))
+        {
+            return false;
+        }
+
+        ReadOnlySpan<char> span = firstLine.AsSpan();
+        if (span.Length > 0 && span[0] == '\uFEFF')
+        {
+            span = span[1..];
+        }
+
+        span = span.TrimEnd(['\r', '\n']);
+        if (!span.StartsWith("#!", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        span = span[2..].TrimStart([' ', '\t']);
+        string line = span.ToString();
+        string[] tokens = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+        if (tokens.Length == 0)
+        {
+            return false;
+        }
+
+        string interpreter = tokens[0];
+        if (interpreter is "/usr/bin/env" or "/bin/env")
+        {
+            int idx = 1;
+            while (idx < tokens.Length && tokens[idx].StartsWith('-'))
+            {
+                idx++;
+            }
+
+            if (idx >= tokens.Length)
+            {
+                return false;
+            }
+
+            return IsShellName(tokens[idx]);
+        }
+
+        if (interpreter.StartsWith('/'))
+        {
+            int slash = interpreter.LastIndexOf('/');
+            return slash >= 0 && IsShellName(interpreter[(slash + 1)..]);
+        }
+
+        return false;
+    }
+
+    private static bool IsShellName(string name) =>
+        name is "sh" or "bash" or "dash" or "ash" or "ksh";
+
+    private static string? ReadFirstLine(string repoRoot, string relativePath, GitIndexReader? reader)
+    {
+        if (reader is not null)
+        {
+            if (!reader.TryReadBytes(relativePath, out byte[] bytes) || bytes.Length == 0)
+            {
+                return null;
+            }
+
+            int limit = Math.Min(bytes.Length, 256);
+            for (int i = 0; i < limit; i++)
+            {
+                if (bytes[i] == 0)
+                {
+                    return null;
+                }
+
+                if (bytes[i] == (byte)'\n')
+                {
+                    limit = i;
+                    break;
+                }
+            }
+
+            return System.Text.Encoding.UTF8.GetString(bytes, 0, limit);
+        }
+
+        string fullPath = Path.Combine(repoRoot, relativePath);
+        if (!File.Exists(fullPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            Span<byte> buffer = stackalloc byte[256];
+            using var stream = File.OpenRead(fullPath);
+            int read = stream.Read(buffer);
+            if (read <= 0)
+            {
+                return null;
+            }
+
+            int limit = read;
+            for (int i = 0; i < read; i++)
+            {
+                if (buffer[i] == 0)
+                {
+                    return null;
+                }
+
+                if (buffer[i] == (byte)'\n')
+                {
+                    limit = i;
+                    break;
+                }
+            }
+
+            return System.Text.Encoding.UTF8.GetString(buffer[..limit]);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    public static List<string> DiscoverShellScripts(string repoRoot)
+    {
+        var tracked = GitRevisionScopeService.TryGetTrackedFiles(repoRoot);
+        if (tracked is not null)
+        {
+            return tracked
+                .Where(rel => File.Exists(Path.Combine(repoRoot, rel)) && IsShellScript(repoRoot, rel))
+                .Order(StringComparer.Ordinal)
+                .ToList();
+        }
+
+        var results = new List<string>();
+        CollectShellScriptsRecursive(repoRoot, repoRoot, results);
+        results.Sort(StringComparer.Ordinal);
+        return results;
+    }
+
+    private static void CollectShellScriptsRecursive(string repoRoot, string currentDir, List<string> results)
+    {
+        if (!Directory.Exists(currentDir))
+        {
+            return;
+        }
+
+        foreach (string file in Directory.EnumerateFiles(currentDir))
+        {
+            string rel = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+            if (IsShellScript(repoRoot, rel))
+            {
+                results.Add(rel);
+            }
+        }
+
+        foreach (string subDir in Directory.EnumerateDirectories(currentDir))
+        {
+            string dirName = Path.GetFileName(subDir);
+            if (ExcludedDirectories.Contains(dirName, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            CollectShellScriptsRecursive(repoRoot, subDir, results);
+        }
     }
 
     private static bool ExistsInSnapshot(string repoRoot, string relativePath, GitIndexReader? reader) =>
@@ -392,7 +710,7 @@ public static class CliLinterGateService
         bool failed = false;
         foreach (string[] batch in dockerfiles.Chunk(MaxFilesPerBatch))
         {
-            var args = new List<string>(batch.Length + 2) { "--failure-threshold", "error" };
+            var args = new List<string>(batch.Length + 2) { "--failure-threshold", "warning" };
             args.AddRange(batch);
             if (RunLinterProcess(workingDirectory, executable, args) != 0)
             {
@@ -402,11 +720,32 @@ public static class CliLinterGateService
 
         if (failed)
         {
-            Console.WriteLine("[ERROR] hadolint reported Dockerfile error-level violations.");
+            Console.WriteLine("[ERROR] hadolint reported Dockerfile warning-or-error violations.");
             return 1;
         }
 
         Console.WriteLine($"✔ hadolint validated {dockerfiles.Count} Dockerfile(s).");
+        return 0;
+    }
+
+    private static int ExecuteShellcheckBatches(string workingDirectory, string executable, List<string> scripts)
+    {
+        bool failed = false;
+        foreach (string[] batch in scripts.Chunk(MaxFilesPerBatch))
+        {
+            if (RunLinterProcess(workingDirectory, executable, batch) != 0)
+            {
+                failed = true;
+            }
+        }
+
+        if (failed)
+        {
+            Console.WriteLine("[ERROR] shellcheck reported shell script violations.");
+            return 1;
+        }
+
+        Console.WriteLine($"✔ shellcheck validated {scripts.Count} shell script(s).");
         return 0;
     }
 
@@ -467,9 +806,11 @@ public static class CliLinterGateService
             }
 
             string combined = string.IsNullOrWhiteSpace(stdout) ? stderr : stdout;
-            versionOutput = combined
-                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .FirstOrDefault() ?? "available";
+            string[] lines = combined.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            string? explicitVersion = lines.FirstOrDefault(l => l.StartsWith("version:", StringComparison.OrdinalIgnoreCase));
+            versionOutput = explicitVersion is not null
+                ? explicitVersion["version:".Length..].Trim()
+                : lines.FirstOrDefault() ?? "available";
             return true;
         }
         catch (Exception ex) when (ex is Win32Exception or IOException or InvalidOperationException)
