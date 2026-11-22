@@ -634,7 +634,18 @@ async function executeModalSign(sigToken: string, signingReason: string) {
 .checkbox-label {
   display: inline-flex;
   align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
   gap: 6px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
+  margin: 0;
+  cursor: pointer;
 }
 
 .apply-card {
@@ -676,12 +687,15 @@ async function executeModalSign(sigToken: string, signingReason: string) {
 .field-group select,
 .release-reason-bar input,
 .study-locks-filters input[type="text"] {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
+  box-sizing: border-box;
 }
 
 .apply-actions {

@@ -674,19 +674,24 @@ onUnmounted(() => {
   font-size: 0.85rem;
   background-color: white;
   color: var(--primary);
-  outline: none;
+  box-sizing: border-box;
 }
 
-.search-input:focus {
+.search-input:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
 }
 
 .btn-clear-search {
   position: absolute;
-  right: 8px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background: transparent;
   border: none;
+  border-radius: 4px;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   font-size: 0.85rem;

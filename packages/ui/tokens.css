@@ -66,8 +66,9 @@
   --breakpoint-tablet: 768px;
   --breakpoint-desktop: 1024px;
 
-  /* Touch Target Minimums */
+  /* Touch & Control Target Minimums (WCAG 2.2 SC 2.5.5 / SC 2.5.8) */
   --touch-target-min: 48px;
+  --control-target-min: 24px;
 
   /* Drawer Width Tier Tokens */
   --drawer-width-sm: min(100vw, 440px);
@@ -225,8 +226,9 @@
   --semantic-spacing-3xl: var(--spacing-3xl);
   --semantic-spacing-4xl: var(--spacing-4xl);
 
-  /* Touch Target */
+  /* Touch & Control Targets */
   --semantic-touch-target-min: var(--touch-target-min);
+  --semantic-control-target-min: var(--control-target-min);
 
   /* Semantic Drawer Width Tiers */
   --semantic-drawer-width-sm: var(--drawer-width-sm);
@@ -423,6 +425,47 @@ td,
   align-items: center;
 }
 
+/* WCAG 2.2 SC 2.5.8 Target Size (Minimum) (24x24px via Technique C42).
+   Excludes inline <a> links under the Inline exception; preserves 48px on .clinical-input and .touch-target. */
+:where(button, [role="button"], input:not([type="hidden"]), select, textarea) {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  box-sizing: border-box;
+}
+
+:where([role="button"]) {
+  display: inline-flex;
+  align-items: center;
+}
+
+:where(input[type="checkbox"], input[type="radio"]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
+  flex-shrink: 0;
+}
+
+/* Shared two-color :focus-visible indicator (WCAG 2.2 SC 2.4.7 / SC 1.4.11 via Techniques C40, C45, G195).
+   2px --semantic-color-text-on-solid (#ffffff) inner halo + 3px --semantic-color-accent outer outline. */
+:where(
+  button,
+  input,
+  select,
+  textarea,
+  a[href],
+  summary,
+  [role="button"],
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: 3px solid var(--semantic-color-accent) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
+}
+
 /* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px and SC 1.4.11 >= 3:1 boundary contrast */
 .clinical-input input[type="text"],
 .clinical-input input[type="number"],
@@ -445,14 +488,14 @@ td,
   box-sizing: border-box;
 }
 
-.clinical-input input[type="text"]:focus,
-.clinical-input input[type="number"]:focus,
-.clinical-input input[type="date"]:focus,
-.clinical-input input[type="email"]:focus,
-.clinical-input input[type="tel"]:focus,
-.clinical-input select:focus,
-.clinical-input textarea:focus,
-.clinical-input .clinical-input-control:focus {
+.clinical-input input[type="text"]:focus:not(:focus-visible),
+.clinical-input input[type="number"]:focus:not(:focus-visible),
+.clinical-input input[type="date"]:focus:not(:focus-visible),
+.clinical-input input[type="email"]:focus:not(:focus-visible),
+.clinical-input input[type="tel"]:focus:not(:focus-visible),
+.clinical-input select:focus:not(:focus-visible),
+.clinical-input textarea:focus:not(:focus-visible),
+.clinical-input .clinical-input-control:focus:not(:focus-visible) {
   outline: none;
   box-shadow: none;
   border-color: var(--semantic-color-border-control);
@@ -468,6 +511,7 @@ td,
 .clinical-input .clinical-input-control:focus-visible {
   outline: 3px solid var(--semantic-color-accent) !important;
   outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
   border-color: var(--semantic-color-accent) !important;
 }
 
@@ -481,21 +525,41 @@ textarea[aria-invalid="true"] {
   background-color: var(--semantic-color-error-bg) !important;
 }
 
-.clinical-input.has-error input[type="text"]:focus,
 .clinical-input.has-error input[type="text"]:focus-visible,
-.clinical-input.has-error .clinical-input-control:focus,
 .clinical-input.has-error .clinical-input-control:focus-visible,
-input[aria-invalid="true"]:focus,
 input[aria-invalid="true"]:focus-visible,
-select[aria-invalid="true"]:focus,
 select[aria-invalid="true"]:focus-visible,
-textarea[aria-invalid="true"]:focus,
 textarea[aria-invalid="true"]:focus-visible {
   border: 1px solid var(--semantic-color-error) !important;
   background-color: var(--semantic-color-error-bg) !important;
-  box-shadow: none !important;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
   outline: 3px solid var(--semantic-color-error) !important;
   outline-offset: 2px !important;
+}
+
+@media (forced-colors: active) {
+  :where(
+    button,
+    input,
+    select,
+    textarea,
+    a[href],
+    summary,
+    [role="button"],
+    [tabindex]:not([tabindex="-1"])
+  ):focus-visible,
+  .clinical-input input[type="text"]:focus-visible,
+  .clinical-input input[type="number"]:focus-visible,
+  .clinical-input input[type="date"]:focus-visible,
+  .clinical-input input[type="email"]:focus-visible,
+  .clinical-input input[type="tel"]:focus-visible,
+  .clinical-input select:focus-visible,
+  .clinical-input textarea:focus-visible,
+  .clinical-input .clinical-input-control:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
+    box-shadow: none !important;
+  }
 }
 
 .validation-error-msg {
@@ -528,22 +592,33 @@ textarea[aria-invalid="true"]:focus-visible {
 }
 
 .radio-option {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--semantic-spacing-xs, 8px);
   cursor: pointer;
   /* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px for interactive elements */
   min-height: var(--semantic-touch-target-min, 48px);
+  font-weight: 500;
+  font-size: var(--semantic-font-size-base, 15px);
+  color: var(--semantic-color-text);
 }
 
 .radio-option input[type="radio"] {
-  width: 20px;
-  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   accent-color: var(--semantic-color-accent);
   cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
 }
 
-.radio-option label {
+.radio-option label,
+.radio-option .radio-option-label {
   cursor: pointer;
   font-weight: 500;
   font-size: var(--semantic-font-size-base, 15px);

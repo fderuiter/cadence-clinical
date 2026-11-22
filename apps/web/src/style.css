@@ -112,10 +112,9 @@ body {
   }
 
   .mobile-menu-btn:hover,
-  .mobile-menu-btn:focus {
+  .mobile-menu-btn:focus-visible {
     background-color: var(--semantic-color-border-inverse);
     border-color: var(--semantic-color-accent-inverse);
-    outline: none;
   }
 
   /* Hide regulatory badges on mobile screens (<768px) */
@@ -283,18 +282,13 @@ body {
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  outline: none;
   transition: all 0.15s;
   min-height: 44px;
 }
 
-.persona-select:hover {
+.persona-select:hover,
+.persona-select:focus-visible {
   border-color: var(--semantic-color-accent-inverse);
-}
-
-.persona-select:focus {
-  border-color: var(--semantic-color-accent-inverse);
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }
 
 /* User Card in Header */
@@ -1272,7 +1266,29 @@ main {
 
 /* Accessibility & Unified Token Enforcement (WCAG 2.2 AA) */
 
-/* 1. Touch Target Compliance (Requirement 4) - Opt-in helpers only */
+/* 1. Touch & Control Target Compliance (WCAG 2.2 SC 2.5.8 24px minimum via Technique C42 + opt-in 48px touch helpers) */
+:where(button, [role="button"], input:not([type="hidden"]), select, textarea) {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  box-sizing: border-box;
+}
+
+:where([role="button"]) {
+  display: inline-flex;
+  align-items: center;
+}
+
+:where(input[type="checkbox"], input[type="radio"]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
+  flex-shrink: 0;
+}
+
 .touch-target,
 .min-touch-target,
 .touch-target-interactive {
@@ -1280,17 +1296,35 @@ main {
   min-width: var(--touch-target-min, 48px) !important;
 }
 
-/* 2. Keyboard Navigation Focus Indicators (Requirement 2) */
+/* 2. Keyboard Navigation Two-Color Focus Indicators (WCAG 2.2 SC 2.4.7 / SC 1.4.11 via Techniques C40, C45, G195) */
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 a:focus-visible,
+summary:focus-visible,
 [role="button"]:focus-visible,
-[tabindex]:focus-visible {
+[tabindex]:not([tabindex="-1"]):focus-visible {
   outline: 3px solid var(--semantic-color-accent) !important;
   outline-offset: 2px !important;
-  box-shadow: none !important;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
+}
+
+@media (forced-colors: active) {
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  a:focus-visible,
+  summary:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex]:not([tabindex="-1"]):focus-visible,
+  .skip-link:focus,
+  .skip-link:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
+    box-shadow: none !important;
+  }
 }
 
 /* 3. Color Contrast Adjustments (Requirement 3) */
@@ -1355,6 +1389,7 @@ a:focus-visible,
   z-index: 10000 !important;
   text-decoration: none !important;
   box-shadow:
+    0 0 0 2px var(--semantic-color-text-on-solid),
     0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
   outline: 3px solid var(--semantic-color-accent) !important;
@@ -1793,15 +1828,13 @@ a:focus-visible,
   font-size: 0.82rem;
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
-  outline: none;
   transition: all 0.15s;
   box-sizing: border-box;
 }
 
-.inspector-input:focus,
-.inspector-select:focus {
+.inspector-input:focus-visible,
+.inspector-select:focus-visible {
   border-color: var(--semantic-color-primary);
-  box-shadow: 0 0 0 2px rgba(2, 101, 151, 0.15);
 }
 
 .btn-compile-schema {

@@ -1367,11 +1367,14 @@ export default {
 .expand-btn {
   background: none;
   border: none;
+  border-radius: 4px;
   cursor: pointer;
   font-size: 0.75rem;
   color: var(--semantic-color-text-secondary);
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   display: flex;
   align-items: center;
   justify-content: center;

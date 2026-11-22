@@ -668,8 +668,8 @@ defineExpose({
 }
 
 .option-row input[type="radio"] {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
   cursor: pointer;
 }
 
@@ -837,8 +837,8 @@ defineExpose({
 }
 
 .assessment-option-label input[type="radio"] {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
   cursor: pointer;
 }
 

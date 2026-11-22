@@ -182,6 +182,29 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.protocol-filter-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--semantic-color-text-dark);
+}
+
+.protocol-filter-input {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 6px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  box-sizing: border-box;
 }
 
 .header-badge-row {

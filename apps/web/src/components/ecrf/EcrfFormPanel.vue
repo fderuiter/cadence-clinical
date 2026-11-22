@@ -1774,6 +1774,30 @@ onUnmounted(() => {
   grid-column: 2;
   justify-self: start;
 }
+.ecrf-form-panel input:not([type="checkbox"]):not([type="radio"]),
+.ecrf-form-panel select {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 4px 8px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 4px;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  box-sizing: border-box;
+}
+.ecrf-form-panel input[type="checkbox"],
+.ecrf-form-panel input[type="radio"] {
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
+  margin: 0;
+  cursor: pointer;
+}
+.ecrf-form-panel button {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+}
 .ecrf-form-summary {
   display: grid;
   grid-template-columns: max-content 1fr;
@@ -1786,11 +1810,12 @@ onUnmounted(() => {
 .ecrf-table-scroll {
   overflow-x: auto;
   max-width: 100%;
-  padding: 2px;
+  padding: 4px;
 }
 .ecrf-table-scroll:focus-visible {
-  outline: 2px solid var(--semantic-color-accent);
+  outline: 3px solid var(--semantic-color-accent);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid);
   border-radius: 4px;
 }
 .ecrf-form-items {

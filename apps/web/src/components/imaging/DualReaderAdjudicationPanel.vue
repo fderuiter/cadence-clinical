@@ -1151,7 +1151,6 @@ function executeChairSignoff() {
   border-radius: 6px;
   padding: 8px 10px;
   font-size: 0.8rem;
-  outline: none;
   font-family: inherit;
 }
 

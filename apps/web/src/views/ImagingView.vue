@@ -829,7 +829,6 @@ function handleBatchIngested(result) {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--semantic-color-text-dark);
-  outline: none;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 

@@ -2220,12 +2220,10 @@ onMounted(() => {
   border-radius: 6px;
   background-color: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text);
-  outline: none;
 }
 
-.csm-select:focus {
+.csm-select:focus-visible {
   border-color: var(--semantic-color-primary);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
 }
 
 .status-pill {
