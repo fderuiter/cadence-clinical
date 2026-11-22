@@ -169,7 +169,7 @@
             <span
               style="
                 font-weight: 700;
-                color: var(--semantic-color-warning-dark);
+                color: var(--semantic-color-warning-text);
                 margin-left: 4px;
               "
               >{{ openQueriesCount }}</span
@@ -912,7 +912,7 @@ function confirmCloseQuery() {
 }
 
 .modal {
-  background: white;
+  background: var(--semantic-color-surface);
   border-radius: 8px;
   width: 100%;
   max-width: 500px;

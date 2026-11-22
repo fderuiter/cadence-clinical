@@ -618,7 +618,7 @@ defineExpose({
 .etmf-tab-btn.active {
   background: var(--semantic-color-primary-dark);
   border-color: var(--semantic-color-primary-dark);
-  color: var(--semantic-color-text-on-solid);
+  color: var(--semantic-color-surface);
 }
 
 .etmf-study-chip {
@@ -647,7 +647,7 @@ defineExpose({
 .qc-role-note {
   margin: 0;
   font-size: 11px;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   background: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
   border-radius: 4px;

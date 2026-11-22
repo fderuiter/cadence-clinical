@@ -555,6 +555,7 @@ export default [
       "**/node_modules/**",
       "**/.venv/**",
       "**/.cadence/**",
+      "**/.claude/**",
       "**/venv/**",
       "**/.pytest_cache/**",
       "**/playwright-report/**",
@@ -564,6 +565,11 @@ export default [
       "docs/.vitepress/**",
       "**/mockServiceWorker.js",
     ],
+  },
+  {
+    linterOptions: {
+      reportUnusedDisableDirectives: "error",
+    },
   },
   js.configs.recommended,
   ...vuePlugin.configs["flat/recommended"],
@@ -582,6 +588,12 @@ export default [
       "custom-vue": customVuePlugin,
     },
     rules: {
+      "vue/comment-directive": [
+        "error",
+        {
+          reportUnusedDisableDirectives: true,
+        },
+      ],
       "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-raw-overlays": "error",

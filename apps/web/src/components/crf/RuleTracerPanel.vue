@@ -415,7 +415,7 @@ function resetSimulation() {
 .rule-type-badge.cross_form_check,
 .rule-type-badge.edit_check {
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .rule-target-name {

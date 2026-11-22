@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import {
+  formatAccessibilityViolations,
+  getControlBorderContrast,
+  runWcag22Audit,
+} from "ui/playwright";
 
 async function completeInitialPinSetupIfOpen(page) {
   const skipLink = page.locator("#app .skip-link");
@@ -30,28 +34,17 @@ async function completeInitialPinSetupIfOpen(page) {
   }
 }
 
-const WCAG_AA_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-
-async function getControlBorderContrast(page, selector) {
-  return page.locator(selector).evaluate((el) => {
-    function parseRgb(str) {
-      const m = str.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-      return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [255, 255, 255];
-    }
-    function luminance([r, g, b]) {
-      const [rl, gl, bl] = [r, g, b].map((v) => {
-        const s = v / 255;
-        return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-      });
-      return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
-    }
-    const style = window.getComputedStyle(el);
-    const borderRgb = parseRgb(style.borderTopColor);
-    const bgRgb = parseRgb(style.backgroundColor);
-    const l1 = luminance(borderRgb);
-    const l2 = luminance(bgRgb);
-    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-  });
+async function expectPortalAccessible(page, contextLabel, options = {}) {
+  const { violations, borderViolations } = await runWcag22Audit(page, options);
+  const summary = formatAccessibilityViolations(violations, borderViolations);
+  expect(
+    violations,
+    `WCAG 2.2 AA violations on ${contextLabel}:\n${summary}`
+  ).toEqual([]);
+  expect(
+    borderViolations,
+    `SC 1.4.11 control border contrast violations on ${contextLabel}:\n${summary}`
+  ).toEqual([]);
 }
 
 // Dedicated end-to-end accessibility testing suite verifying full WCAG 2.2 AA compliance across all views
@@ -264,12 +257,8 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     // Ensure landing page is loaded
     await expect(page.locator(".portal-header h1")).toContainText("My Cadence");
 
-    // Run Axe automated accessibility audit on the whole page
-    const auditResults = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-
-    expect(auditResults.violations).toEqual([]);
+    // Run WCAG 2.2 AA + SC 1.4.11 automated accessibility audit on the whole page
+    await expectPortalAccessible(page, "Portal landing page (#view-tasks)");
   });
 
   test("should pass accessibility audits in questionnaire form view", async ({
@@ -288,13 +277,10 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       "Daily Health & Vital Diary"
     );
 
-    // Run Axe automated accessibility audit on the questionnaire view
-    const auditResults = await new AxeBuilder({ page })
-      .include("#view-questionnaire")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-
-    expect(auditResults.violations).toEqual([]);
+    // Run WCAG 2.2 AA + SC 1.4.11 automated accessibility audit on the questionnaire view
+    await expectPortalAccessible(page, "Questionnaire view", {
+      include: "#view-questionnaire",
+    });
   });
 
   test("should pass accessibility audits when showing validation error messages", async ({
@@ -316,13 +302,10 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(errorContainer).toHaveClass(/has-error/);
     await expect(errorContainer.locator(".validation-error-msg")).toBeVisible();
 
-    // Run Axe automated accessibility audit on the validation errors and active input elements
-    const auditResults = await new AxeBuilder({ page })
-      .include("#view-questionnaire")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-
-    expect(auditResults.violations).toEqual([]);
+    // Run WCAG 2.2 AA + SC 1.4.11 automated accessibility audit on validation errors and active inputs
+    await expectPortalAccessible(page, "Questionnaire validation errors", {
+      include: "#view-questionnaire",
+    });
   });
 
   test("should pass accessibility audits on compliance score and history view", async ({
@@ -337,13 +320,10 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     // Verify compliance view is active
     await expect(page.locator("#view-compliance")).toBeVisible();
 
-    // Run Axe automated accessibility audit on compliance panel
-    const auditResults = await new AxeBuilder({ page })
-      .include("#view-compliance")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-
-    expect(auditResults.violations).toEqual([]);
+    // Run WCAG 2.2 AA + SC 1.4.11 automated accessibility audit on compliance panel
+    await expectPortalAccessible(page, "Compliance view", {
+      include: "#view-compliance",
+    });
   });
 
   test("should pass accessibility audits on inbox notifications view", async ({
@@ -358,13 +338,10 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     // Verify inbox view is active
     await expect(page.locator("#view-inbox")).toBeVisible();
 
-    // Run Axe automated accessibility audit on inbox panel
-    const auditResults = await new AxeBuilder({ page })
-      .include("#view-inbox")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-
-    expect(auditResults.violations).toEqual([]);
+    // Run WCAG 2.2 AA + SC 1.4.11 automated accessibility audit on inbox panel
+    await expectPortalAccessible(page, "Inbox view", {
+      include: "#view-inbox",
+    });
   });
 
   test("should verify specific WCAG 2.1 AA remediation elements (skip link, main landmark, unavailable guard, forms, aria-live)", async ({
@@ -392,11 +369,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await page.goto("lay-summaries");
     await completeInitialPinSetupIfOpen(page);
     await expect(page.locator("#view-unavailable")).toBeVisible();
-    const unavailableAudit = await new AxeBuilder({ page })
-      .include("#view-unavailable")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-    expect(unavailableAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "Unavailable workflow guard", {
+      include: "#view-unavailable",
+    });
     await page.click("#btn-unavailable-return-tasks");
 
     // 4. Form wrappers and numeric input attributes
@@ -425,11 +400,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(page.locator("#btn-pin-unlock-signout")).toBeVisible();
     await expect(page.locator("#btn-pin-unlock-reset")).toBeVisible();
 
-    const unlockAudit = await new AxeBuilder({ page })
-      .include("#portal-pin-unlock-modal")
-      .withTags(WCAG_AA_TAGS)
-      .analyze();
-    expect(unlockAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "PIN unlock modal", {
+      include: "#portal-pin-unlock-modal",
+    });
 
     // Sign out from PinUnlockModal transitions cleanly to unauthenticated login prompt
     await page.evaluate(() => sessionStorage.clear());
@@ -437,10 +410,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(page.locator("#tasks-signin-prompt")).toBeVisible();
     await expect(page.locator("#btn-login")).toBeVisible();
 
-    const unauthAudit = await new AxeBuilder({ page })
-      .withTags(WCAG_AA_TAGS)
-      .analyze();
-    expect(unauthAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "Unauthenticated login prompt");
   });
 
   test("should pass WCAG 2.2 AA contrast audits on ReconsentBanner, ReconsentModal, queued & quarantined sync badges, and SyncDrawer", async ({
@@ -498,11 +468,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     // 1. Re-consent modal opens automatically when pending requirement exists
     const reconsentModal = page.locator("#portal-reconsent-modal");
     await expect(reconsentModal).toBeVisible();
-    const modalAudit = await new AxeBuilder({ page })
-      .include("#portal-reconsent-modal")
-      .withTags(WCAG_AA_TAGS)
-      .analyze();
-    expect(modalAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "ReconsentModal", {
+      include: "#portal-reconsent-modal",
+    });
 
     // Dismiss modal to reveal persistent ReconsentBanner (#reconsent-urgent-banner + #btn-open-reconsent-modal)
     await page.click("#btn-reconsent-cancel");
@@ -510,10 +478,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(page.locator("#reconsent-urgent-banner")).toBeVisible();
     await expect(page.locator("#btn-open-reconsent-modal")).toBeVisible();
 
-    const bannerAudit = await new AxeBuilder({ page })
-      .withTags(WCAG_AA_TAGS)
-      .analyze();
-    expect(bannerAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "ReconsentBanner");
 
     // 2. Queue an offline submission to render .sync-badge in queued amber state
     await page.evaluate(async () => {
@@ -534,35 +499,27 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
 
     const syncBadge = page.locator("#header-sync-badge");
     await expect(syncBadge).toBeVisible();
-    const queuedHeaderAudit = await new AxeBuilder({ page })
-      .include(".portal-header")
-      .withTags(WCAG_AA_TAGS)
-      .analyze();
-    expect(queuedHeaderAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "Portal header queued sync badge", {
+      include: ".portal-header",
+    });
 
     // 3. Open SyncDrawer, audit queued state, then trigger server 422 quarantine and audit quarantined badge + recovery card
     await page.click("#btn-global-sync-drawer");
     await expect(page.locator("#global-sync-drawer")).toHaveClass(/active/);
-    const queuedDrawerAudit = await new AxeBuilder({ page })
-      .include("#global-sync-drawer")
-      .withTags(WCAG_AA_TAGS)
-      .analyze();
-    expect(queuedDrawerAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "SyncDrawer queued state", {
+      include: "#global-sync-drawer",
+    });
 
     await page.click("#btn-drawer-sync-now");
     await expect(syncBadge).toHaveClass(/sync-badge-quarantined/);
 
-    const quarantinedHeaderAudit = await new AxeBuilder({ page })
-      .include(".portal-header")
-      .withTags(WCAG_AA_TAGS)
-      .analyze();
-    expect(quarantinedHeaderAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "Portal header quarantined sync badge", {
+      include: ".portal-header",
+    });
 
-    const quarantinedDrawerAudit = await new AxeBuilder({ page })
-      .include("#global-sync-drawer")
-      .withTags(WCAG_AA_TAGS)
-      .analyze();
-    expect(quarantinedDrawerAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "SyncDrawer quarantined state", {
+      include: "#global-sync-drawer",
+    });
   });
 
   test("should pass WCAG 2.2 AA contrast and SC 1.4.11 >= 3:1 control border audits on demo-mode WalletView, ConsentView, and LaySummariesView", async ({
@@ -574,11 +531,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     // 1. WalletView: gradient stipend card, receipt upload zone, and expense form controls
     await page.click("#tab-btn-wallet button");
     await expect(page.locator("#view-wallet")).toBeVisible();
-    const walletAudit = await new AxeBuilder({ page })
-      .include("#view-wallet")
-      .withTags(WCAG_AA_TAGS)
-      .analyze();
-    expect(walletAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "WalletView (light)", {
+      include: "#view-wallet",
+    });
 
     const walletSelect = page.locator("#view-wallet select").first();
     if ((await walletSelect.count()) > 0) {
@@ -590,11 +545,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     // 2. ConsentView: language selector, comprehension radio grid, and liveness verification controls
     await page.click("#tab-btn-consent button");
     await expect(page.locator("#view-consent")).toBeVisible();
-    const consentAudit = await new AxeBuilder({ page })
-      .include("#view-consent")
-      .withTags(WCAG_AA_TAGS)
-      .analyze();
-    expect(consentAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "ConsentView (light)", {
+      include: "#view-consent",
+    });
 
     const consentSelect = page.locator("#view-consent select").first();
     if ((await consentSelect.count()) > 0) {
@@ -620,11 +573,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(
       page.locator("#view-lay-summaries .badge-regulatory")
     ).toBeVisible();
-    const laySummaryAudit = await new AxeBuilder({ page })
-      .include("#view-lay-summaries")
-      .withTags(WCAG_AA_TAGS)
-      .analyze();
-    expect(laySummaryAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "LaySummariesView (light)", {
+      include: "#view-lay-summaries",
+    });
   });
 
   test("should exclude closed SyncDrawer from Tab order, trap focus when open, and restore focus on Escape", async ({
@@ -673,11 +624,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       expect(stillInside).toBe(true);
     }
 
-    const drawerAudit = await new AxeBuilder({ page })
-      .include(".global-drawer")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-    expect(drawerAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "SyncDrawer focus trap", {
+      include: ".global-drawer",
+    });
 
     await page.keyboard.press("Escape");
     await expect(syncDrawer).not.toHaveClass(/active/);
@@ -715,11 +664,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await sigPassword.fill("SecretSignPin123!");
     await expect(sigPassword).toHaveValue("SecretSignPin123!");
 
-    const modalAudit = await new AxeBuilder({ page })
-      .include("#portal-sign-modal")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-    expect(modalAudit.violations).toEqual([]);
+    await expectPortalAccessible(page, "SignatureModal focus trap", {
+      include: "#portal-sign-modal",
+    });
 
     await page.keyboard.press("Escape");
     await expect(sigModal).toBeHidden();
@@ -816,11 +763,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       await expect(activePanel).toHaveAttribute("aria-labelledby", current.id);
       await expect(activePanel).toBeVisible();
 
-      const panelAudit = await new AxeBuilder({ page })
-        .include(`#${current.panel}`)
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze();
-      expect(panelAudit.violations).toEqual([]);
+      await expectPortalAccessible(page, `Portal tab panel #${current.panel}`, {
+        include: `#${current.panel}`,
+      });
 
       await page.keyboard.press("ArrowRight");
     }
@@ -878,5 +823,61 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(motionStyles.animationIterationCount).toBe("1");
     expect(motionStyles.animSeconds).toBeLessThanOrEqual(0.001);
     expect(motionStyles.drawerTransitionSec).toBeLessThanOrEqual(0.001);
+  });
+
+  test("enforces zero WCAG 2.2 AA and SC 1.4.11 control border violations across all 7 portal views in light and dark themes", async ({
+    page,
+  }) => {
+    await page.goto("http://127.0.0.1:5175/subject-portal/");
+    await completeInitialPinSetupIfOpen(page);
+
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate((activeTheme) => {
+        document.documentElement.setAttribute("data-theme", activeTheme);
+      }, theme);
+
+      // 1. tasks (#view-tasks)
+      await page.click("#tab-btn-tasks button");
+      await expect(page.locator("#view-tasks")).toBeVisible();
+      await expectPortalAccessible(page, `Portal tasks view (${theme})`);
+
+      // 2. questionnaire (#view-questionnaire)
+      await page.locator("#task-card-assign_01 .btn-start-task").click();
+      await expect(page.locator("#view-questionnaire")).toBeVisible();
+      await expectPortalAccessible(
+        page,
+        `Portal questionnaire view (${theme})`
+      );
+      await page.click("#btn-back-to-tasks");
+      await expect(page.locator("#view-tasks")).toBeVisible();
+
+      // 3. compliance (#view-compliance)
+      await page.click("#tab-btn-compliance button");
+      await expect(page.locator("#view-compliance")).toBeVisible();
+      await expectPortalAccessible(page, `Portal compliance view (${theme})`);
+
+      // 4. inbox (#view-inbox)
+      await page.click("#tab-btn-inbox button");
+      await expect(page.locator("#view-inbox")).toBeVisible();
+      await expectPortalAccessible(page, `Portal inbox view (${theme})`);
+
+      // 5. consent (#view-consent)
+      await page.click("#tab-btn-consent button");
+      await expect(page.locator("#view-consent")).toBeVisible();
+      await expectPortalAccessible(page, `Portal consent view (${theme})`);
+
+      // 6. wallet (#view-wallet)
+      await page.click("#tab-btn-wallet button");
+      await expect(page.locator("#view-wallet")).toBeVisible();
+      await expectPortalAccessible(page, `Portal wallet view (${theme})`);
+
+      // 7. lay-summaries (#view-lay-summaries)
+      await page.click("#tab-btn-lay-summaries button");
+      await expect(page.locator("#view-lay-summaries")).toBeVisible();
+      await expectPortalAccessible(
+        page,
+        `Portal lay-summaries view (${theme})`
+      );
+    }
   });
 });

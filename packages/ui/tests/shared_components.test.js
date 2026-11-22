@@ -1,16 +1,58 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createSSRApp, h } from "vue";
+import { createApp, createSSRApp, h, nextTick } from "vue";
 import { renderToString } from "vue/server-renderer";
 import {
+  AiActionButton,
+  AiSuggestionDrawer,
   AuditLogViewer,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalFieldLayout,
+  ClinicalFormField,
+  ClinicalInput,
+  ClinicalLookupInput,
   ClinicalModal,
+  ClinicalQueryFlag,
+  ClinicalQueryPanel,
+  ClinicalRadioGroup,
+  ConfidenceBadge,
   EmptyState,
+  FileUploadModal,
   MediaPlayer,
+  ModalErrorAlert,
   PersonaSwitcher,
+  SignOutConfirmModal,
+  toBeAccessible,
+  WCAG_22_AA_TAGS,
 } from "../index.js";
+import {
+  createWcag22AxeBuilder,
+  DEFAULT_WATERMARK_EXCLUSIONS,
+  formatAccessibilityViolations,
+  runWcag22Audit,
+} from "../playwright-accessibility.js";
+
+expect.extend({ toBeAccessible });
+
+async function mountComponentDOM(Component, props = {}, slots = {}) {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const app = createApp({
+    render: () => h(Component, props, slots),
+  });
+  app.mount(host);
+  await nextTick();
+  return {
+    host,
+    cleanup() {
+      app.unmount();
+      if (host.parentNode) {
+        host.parentNode.removeChild(host);
+      }
+    },
+  };
+}
 
 async function mountSetupSSR(Component, props = {}, emit = vi.fn()) {
   let state;
@@ -28,6 +70,365 @@ async function mountSetupSSR(Component, props = {}, emit = vi.fn()) {
   const html = await renderToString(createSSRApp(Harness));
   return { state, html };
 }
+
+describe("WCAG 2.2 AA Accessibility Audit Across All 20 Shared Vue Components", () => {
+  const SHARED_COMPONENT_FIXTURES = [
+    {
+      name: "AiActionButton",
+      component: AiActionButton,
+      props: { label: "Generate Summary" },
+    },
+    {
+      name: "AiSuggestionDrawer",
+      component: AiSuggestionDrawer,
+      props: {
+        isOpen: true,
+        fieldLabel: "Adverse Event Verbatim",
+        currentValue: "Mild headache",
+        suggestedValue: "Headache (MedDRA 10019211)",
+        confidenceScore: 94,
+        rationale: "Mapped verbatim term to preferred MedDRA PT.",
+      },
+      auditBody: true,
+    },
+    {
+      name: "AuditLogViewer",
+      component: AuditLogViewer,
+      props: {
+        logs: [
+          {
+            id: "aud-1",
+            timestamp: "2026-11-19T10:00:00Z",
+            user_id: "crc_jones",
+            action: "UPDATE",
+            entity_type: "VitalSigns",
+            entity_id: "vs-101",
+            reason_for_change: "Corrected transcription typo",
+            changes: [{ field: "sysbp", old_val: "120", new_val: "128" }],
+          },
+        ],
+      },
+    },
+    {
+      name: "ClinicalDataTable",
+      component: ClinicalDataTable,
+      props: {
+        title: "Subject Vital Signs",
+        selectable: true,
+        columns: [
+          { key: "id", label: "Subject ID", sortable: true },
+          { key: "sysbp", label: "Systolic BP", sortable: true },
+        ],
+        data: [{ id: "SUBJ-001", sysbp: 120 }],
+      },
+    },
+    {
+      name: "ClinicalDrawer",
+      component: ClinicalDrawer,
+      props: {
+        isOpen: true,
+        teleport: false,
+        title: "Artifact Metadata",
+      },
+      slots: {
+        default: () => h("p", "21 CFR Part 11 audit trail details"),
+      },
+    },
+    {
+      name: "ClinicalFieldLayout",
+      component: ClinicalFieldLayout,
+      props: {
+        id: "field-layout-hr",
+        label: "Heart Rate (bpm)",
+      },
+      slots: {
+        default: ({ id }) => h("input", { id, type: "number", value: "72" }),
+      },
+    },
+    {
+      name: "ClinicalFormField",
+      component: ClinicalFormField,
+      props: {
+        field: {
+          id: "cff-sysbp",
+          label: "Systolic Blood Pressure",
+          type: "text",
+        },
+        modelValue: "120",
+      },
+    },
+    {
+      name: "ClinicalInput",
+      component: ClinicalInput,
+      props: {
+        id: "ci-weight",
+        label: "Body Weight (kg)",
+        modelValue: "70.5",
+      },
+    },
+    {
+      name: "ClinicalLookupInput",
+      component: ClinicalLookupInput,
+      props: {
+        id: "cli-meddra",
+        label: "MedDRA Preferred Term",
+        modelValue: "10019211",
+        status: "valid",
+        statusMessage: "Verified MedDRA term.",
+      },
+    },
+    {
+      name: "ClinicalModal",
+      component: ClinicalModal,
+      props: {
+        open: true,
+        teleport: false,
+        title: "Confirm Electronic Signature",
+      },
+      slots: {
+        default: () => h("p", "Sign record version 1.0."),
+      },
+    },
+    {
+      name: "ClinicalQueryFlag",
+      component: ClinicalQueryFlag,
+      props: {
+        id: "sysbp-flag",
+        canManageQueries: true,
+        query: { status: "OPEN", message: "Verify source monitor reading" },
+      },
+    },
+    {
+      name: "ClinicalQueryPanel",
+      component: ClinicalQueryPanel,
+      props: {
+        id: "sysbp-panel",
+        isOpen: true,
+        canManageQueries: true,
+        query: {
+          status: "OPEN",
+          message: "Out of physiological range",
+          created_by: "dm.lead",
+        },
+      },
+    },
+    {
+      name: "ClinicalRadioGroup",
+      component: ClinicalRadioGroup,
+      props: {
+        id: "crg-fasting",
+        label: "Fasting Status",
+        modelValue: "yes",
+        options: [
+          { value: "yes", label: "Fasting" },
+          { value: "no", label: "Non-fasting" },
+        ],
+      },
+    },
+    {
+      name: "ConfidenceBadge",
+      component: ConfidenceBadge,
+      props: { score: 92 },
+    },
+    {
+      name: "EmptyState",
+      component: EmptyState,
+      props: {
+        icon: "📋",
+        title: "No Open Discrepancies",
+        message: "All eCRF fields have passed validation checks.",
+        actionText: "Refresh View",
+      },
+    },
+    {
+      name: "FileUploadModal",
+      component: FileUploadModal,
+      props: {
+        modelValue: true,
+        studyId: "STUDY-001",
+        title: "Upload Clinical Document",
+      },
+      auditBody: true,
+    },
+    {
+      name: "MediaPlayer",
+      component: MediaPlayer,
+      props: {
+        src: "/files/chest-xray.png",
+        mimeType: "image/png",
+        title: "Radiology Baseline Scan",
+        isWatermarked: true,
+      },
+    },
+    {
+      name: "ModalErrorAlert",
+      component: ModalErrorAlert,
+      props: {
+        error: "Gateway signature verification timed out.",
+        title: "Submission Failed",
+      },
+    },
+    {
+      name: "PersonaSwitcher",
+      component: PersonaSwitcher,
+      props: {
+        modelValue: "super_admin",
+      },
+    },
+    {
+      name: "SignOutConfirmModal",
+      component: SignOutConfirmModal,
+      props: {
+        open: true,
+        teleport: false,
+      },
+    },
+  ];
+
+  it("covers all 20 shared components exported by packages/ui", () => {
+    expect(SHARED_COMPONENT_FIXTURES).toHaveLength(20);
+    expect(SHARED_COMPONENT_FIXTURES.map((f) => f.name).sort()).toEqual([
+      "AiActionButton",
+      "AiSuggestionDrawer",
+      "AuditLogViewer",
+      "ClinicalDataTable",
+      "ClinicalDrawer",
+      "ClinicalFieldLayout",
+      "ClinicalFormField",
+      "ClinicalInput",
+      "ClinicalLookupInput",
+      "ClinicalModal",
+      "ClinicalQueryFlag",
+      "ClinicalQueryPanel",
+      "ClinicalRadioGroup",
+      "ConfidenceBadge",
+      "EmptyState",
+      "FileUploadModal",
+      "MediaPlayer",
+      "ModalErrorAlert",
+      "PersonaSwitcher",
+      "SignOutConfirmModal",
+    ]);
+  });
+
+  for (const fixture of SHARED_COMPONENT_FIXTURES) {
+    it(`mounts ${fixture.name} and passes WCAG 2.2 AA toBeAccessible`, async () => {
+      const { host, cleanup } = await mountComponentDOM(
+        fixture.component,
+        fixture.props,
+        fixture.slots || {}
+      );
+      try {
+        const target = fixture.auditBody ? document.body : host;
+        expect(target.innerHTML.trim().length).toBeGreaterThan(0);
+        await expect(target).toBeAccessible();
+      } finally {
+        cleanup();
+      }
+    });
+  }
+
+  it("runs wcag22aa by default and preserves defaultRules when customOptions.rules is passed", async () => {
+    expect(WCAG_22_AA_TAGS).toEqual([
+      "wcag2a",
+      "wcag2aa",
+      "wcag21a",
+      "wcag21aa",
+      "wcag22aa",
+    ]);
+
+    const axeMod = await import("axe-core");
+    const axeInstance = axeMod.default || axeMod;
+    const runSpy = vi.spyOn(axeInstance, "run");
+
+    try {
+      // Default call must include wcag22aa in runOnly.values
+      const defaultResult = await toBeAccessible(
+        '<button type="button">Save Observation</button>'
+      );
+      expect(defaultResult.pass).toBe(true);
+      const defaultPassedOpts = runSpy.mock.calls.at(-1)?.[1];
+      expect(defaultPassedOpts?.runOnly).toEqual({
+        type: "tag",
+        values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
+      });
+
+      // Passing customOptions.rules must preserve defaultRules (e.g. landmark-one-main, page-has-heading-one, region remain disabled)
+      const customRuleResult = await toBeAccessible(
+        '<button type="button">Save Observation</button>',
+        {
+          rules: {
+            "button-name": { enabled: true },
+          },
+        }
+      );
+      expect(customRuleResult.pass).toBe(true);
+      const mergedPassedOpts = runSpy.mock.calls.at(-1)?.[1];
+      expect(mergedPassedOpts?.rules).toMatchObject({
+        "document-title": { enabled: false },
+        "html-has-lang": { enabled: false },
+        "landmark-one-main": { enabled: false },
+        "page-has-heading-one": { enabled: false },
+        region: { enabled: false },
+        "button-name": { enabled: true },
+      });
+    } finally {
+      runSpy.mockRestore();
+    }
+
+    // Structural SC 4.1.2 (Failure F68) unlabeled input must fail
+    const unlabeledInputResult = await toBeAccessible('<input type="text" />');
+    expect(unlabeledInputResult.pass).toBe(false);
+    expect(unlabeledInputResult.message()).toContain("label");
+  });
+
+  it("configures shared Playwright accessibility helper with WCAG_22_AA_TAGS and watermark exclusions", async () => {
+    expect(DEFAULT_WATERMARK_EXCLUSIONS).toEqual([
+      ".watermark-overlay-container",
+    ]);
+
+    const mockPage = {
+      evaluate: vi.fn().mockResolvedValue([]),
+    };
+    const builder = createWcag22AxeBuilder(mockPage, {
+      include: "#app",
+      disableRules: ["region"],
+    });
+    expect(builder).toBeDefined();
+
+    const formatted = formatAccessibilityViolations(
+      [
+        {
+          id: "label",
+          impact: "critical",
+          help: "Form elements must have labels",
+          nodes: [{ target: [".search-input"] }],
+        },
+      ],
+      [
+        {
+          id: "non-text-contrast-control-border",
+          impact: "serious",
+          target: ["select.zone-filter-select"],
+          ratio: 1.24,
+          borderColor: "rgb(226, 232, 240)",
+          html: "<select />",
+        },
+      ]
+    );
+    expect(formatted).toContain("[label] (critical)");
+    expect(formatted).toContain("SC 1.4.11 control border contrast 1.24:1");
+
+    const auditPromise = runWcag22Audit(
+      {
+        ...mockPage,
+        mainFrame: () => ({}),
+      },
+      { checkControlBorders: false }
+    ).catch((err) => err);
+    expect(await auditPromise).toBeDefined();
+  });
+});
 
 describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
   describe("ClinicalDataTable", () => {

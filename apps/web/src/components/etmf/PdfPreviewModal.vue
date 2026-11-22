@@ -508,7 +508,7 @@ function formatDate(dateStr) {
 .manifest-card.unsigned {
   background-color: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .sign-status {

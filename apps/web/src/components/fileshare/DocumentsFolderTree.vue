@@ -1,5 +1,5 @@
 <template>
-  <!-- eslint-disable vuejs-accessibility/interactive-supports-focus, vuejs-accessibility/click-events-have-key-events -->
+  <!-- eslint-disable vuejs-accessibility/click-events-have-key-events -->
   <div class="documents-tree-container">
     <div class="tree-header">
       <div class="tree-title-row">

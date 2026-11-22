@@ -75,7 +75,9 @@
             style="
               width: 100%;
               padding: 8px;
-              border: 1px solid var(--border);
+              border: 1px solid var(--semantic-color-border-control);
+              background-color: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
               border-radius: 4px;
             "
             @change="
@@ -109,7 +111,9 @@
             style="
               width: 100%;
               padding: 8px;
-              border: 1px solid var(--border);
+              border: 1px solid var(--semantic-color-border-control);
+              background-color: var(--semantic-color-surface);
+              color: var(--semantic-color-text);
               border-radius: 4px;
             "
             @change="
@@ -149,7 +153,7 @@
             style="
               font-size: 1.05rem;
               font-weight: 700;
-              color: var(--semantic-color-warning-dark);
+              color: var(--semantic-color-warning-text);
               display: flex;
               align-items: center;
               gap: 8px;
@@ -162,7 +166,7 @@
             style="
               margin: 4px 0 0 0;
               font-size: 0.875rem;
-              color: var(--semantic-color-warning-dark);
+              color: var(--semantic-color-warning-text);
             "
           >
             {{ $t("ecrf.form.trainingGatedDesc") }}
@@ -241,7 +245,7 @@
             class="btn btn-primary"
             style="
               background-color: var(--semantic-color-error);
-              color: white;
+              color: var(--semantic-color-surface);
               font-weight: bold;
               padding: 8px 14px;
               font-size: 0.85rem;
@@ -298,7 +302,7 @@
             align-items: center;
             gap: 8px;
             font-size: 0.875rem;
-            color: var(--semantic-color-warning-dark);
+            color: var(--semantic-color-warning-text);
             font-weight: 600;
           "
         >
@@ -308,7 +312,7 @@
             class="badge badge-discrepancy"
             style="
               background-color: var(--semantic-color-error);
-              color: white;
+              color: var(--semantic-color-surface);
               padding: 2px 6px;
               border-radius: 4px;
               font-size: 0.75rem;
@@ -380,7 +384,7 @@
             class="badge badge-draft"
             style="
               background-color: var(--semantic-color-interactive-primary);
-              color: white;
+              color: var(--semantic-color-surface);
               padding: 2px 6px;
               border-radius: 4px;
               font-size: 0.75rem;
@@ -403,12 +407,10 @@
         class="clinical-form responsive-grid"
         @submit.prevent
       >
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <fieldset
+          ref="fieldsetRef"
           :disabled="isReconsentGated"
           style="border: none; padding: 0; margin: 0; display: contents"
-          @click="handleFieldsetInteraction"
         >
           <template v-for="field in renderedFields" :key="field.id">
             <div
@@ -852,12 +854,13 @@
         <strong>{{ selectedSubjectId }}</strong>.
       </p>
       <div class="form-group" style="margin-bottom: 12px">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label style="font-size: 0.85rem; font-weight: 600"
+        <label
+          for="paper-icf-date-input"
+          style="font-size: 0.85rem; font-weight: 600"
           >Date ICF Signed by Subject:</label
         >
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
+          id="paper-icf-date-input"
           :value="paperIcfDate"
           type="date"
           class="form-control"
@@ -872,12 +875,13 @@
         />
       </div>
       <div class="form-group" style="margin-bottom: 12px">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label style="font-size: 0.85rem; font-weight: 600"
+        <label
+          for="paper-icf-note-input"
+          style="font-size: 0.85rem; font-weight: 600"
           >Investigator Verification Note:</label
         >
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
+          id="paper-icf-note-input"
           :value="paperIcfNote"
           type="text"
           class="form-control"
@@ -919,7 +923,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { ClinicalFormField, ClinicalModal } from "ui";
 import { isScreenAvailable } from "../../router/availability.js";
 import { useClinicalStore } from "../../stores/clinical";
@@ -976,6 +980,7 @@ const emit = defineEmits([
 ]);
 
 // Subject Enrollment Modal State
+const fieldsetRef = ref(null);
 const showEnrollModal = ref(false);
 const showReconsentGateModal = ref(false);
 const enrollForm = reactive({
@@ -1104,6 +1109,14 @@ function handleFieldsetInteraction() {
     showReconsentGateModal.value = true;
   }
 }
+
+onMounted(() => {
+  fieldsetRef.value?.addEventListener("click", handleFieldsetInteraction);
+});
+
+onBeforeUnmount(() => {
+  fieldsetRef.value?.removeEventListener("click", handleFieldsetInteraction);
+});
 
 function handleSubmitClick() {
   if (props.isReconsentGated) {

@@ -638,12 +638,14 @@ onUnmounted(() => {
   cursor: pointer;
   font-size: 1rem;
   transition: all 0.15s;
+  color: var(--semantic-color-text-primary);
 }
 
 .btn-icon-toggle:hover,
 .btn-icon-toggle.active {
   background-color: var(--semantic-color-surface-header);
   border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text-primary);
 }
 
 .btn-close {
@@ -859,7 +861,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 0.78rem;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .anchor-icon {
@@ -1070,6 +1072,7 @@ onUnmounted(() => {
 .search-result-card:hover {
   border-color: var(--accent);
   background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-primary);
 }
 
 .search-result-card.active {
@@ -1174,6 +1177,7 @@ onUnmounted(() => {
 
 .btn-secondary:hover {
   background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-primary);
 }
 
 .btn-escalate {

@@ -40,7 +40,7 @@ function landingRouteFor(roles) {
 
 const PRIMARY_FALLBACK_SCREENS = new Set(["ecrf", "ctms", "ssu"]);
 
-const routes = [
+export const routes = [
   {
     path: "/",
     name: "landing",

@@ -77,7 +77,9 @@
           style="
             padding: 4px 8px;
             border-radius: 4px;
-            border: 1px solid var(--border);
+            border: 1px solid var(--semantic-color-border-control);
+            background-color: var(--semantic-color-surface);
+            color: var(--semantic-color-text);
           "
         >
           <option value="site_investigator">{{ $t("ecrf.roleCrc") }}</option>

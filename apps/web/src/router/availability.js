@@ -65,7 +65,7 @@ export const DEMO_AVAILABLE_SCREENS = new Set([
 ]);
 
 /** Routes that do not depend on study-scoped module APIs (public plans, onboarding, sign-in, error pages). */
-const ALWAYS_AVAILABLE = new Set([
+export const ALWAYS_AVAILABLE = new Set([
   "landing",
   "overview",
   "plans",

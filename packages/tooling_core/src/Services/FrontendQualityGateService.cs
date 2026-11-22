@@ -4,6 +4,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -12,7 +14,22 @@ namespace Cadence.ToolingCore.Services;
 /// </summary>
 public static class FrontendQualityGateService
 {
+    public const string AccessibilityDisablesBaselinePath = "ArchitectureBaselines/eslint-a11y-disables.baseline.txt";
+    public const string UpdateBaselineEnvVar = "CADENCE_UPDATE_BASELINE";
+
     private const int MaxFilesPerBatch = 400;
+
+    private static readonly Regex HtmlEslintDisableRegex = new(
+        @"<!--\s*eslint-disable(?:-next-line|-line)?\b([\s\S]*?)-->",
+        RegexOptions.Compiled);
+
+    private static readonly Regex BlockEslintDisableRegex = new(
+        @"/\*\s*eslint-disable(?:-next-line|-line)?\b([\s\S]*?)\*/",
+        RegexOptions.Compiled);
+
+    private static readonly Regex LineEslintDisableRegex = new(
+        @"//\s*eslint-disable(?:-next-line|-line)?\b([^\r\n]*)",
+        RegexOptions.Compiled);
 
     private static readonly HashSet<string> PrettierExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -232,7 +249,7 @@ public static class FrontendQualityGateService
                         }
                     }
 
-                    return 0;
+                    return ValidateAccessibilityDisablesIfConfigured(repoRoot, matching, reader);
                 }
 
                 foreach (string[] batch in matching.Chunk(MaxFilesPerBatch))
@@ -246,7 +263,7 @@ public static class FrontendQualityGateService
                     }
                 }
 
-                return 0;
+                return ValidateAccessibilityDisablesIfConfigured(repoRoot, matching, reader);
             }
         }
 
@@ -256,7 +273,7 @@ public static class FrontendQualityGateService
             return 1;
         }
 
-        return 0;
+        return ValidateAccessibilityDisablesBaseline(repoRoot);
     }
 
     private static string? ResolveUsablePnpm(string repoRoot)
@@ -506,6 +523,283 @@ public static class FrontendQualityGateService
             Console.WriteLine($"[ERROR] Could not start '{fileName}': {ex.Message}");
             return 1;
         }
+    }
+
+    private static int ValidateAccessibilityDisablesIfConfigured(
+        string repoRoot,
+        IReadOnlyList<string> scopedFiles,
+        GitIndexReader? reader)
+    {
+        bool baselineExists = reader is { HasAuthoritativeIndex: true }
+            ? reader.FileExists(AccessibilityDisablesBaselinePath) ||
+              File.Exists(Path.Combine(repoRoot, AccessibilityDisablesBaselinePath))
+            : File.Exists(Path.Combine(repoRoot, AccessibilityDisablesBaselinePath));
+        if (!baselineExists)
+        {
+            return 0;
+        }
+
+        return ValidateAccessibilityDisablesBaseline(repoRoot, scopedFiles, reader);
+    }
+
+    public static int ValidateAccessibilityDisablesBaseline(
+        string repoRoot,
+        IReadOnlyList<string>? scopedFiles = null,
+        GitIndexReader? reader = null,
+        Func<string, string?>? getEnvironmentVariable = null)
+    {
+        getEnvironmentVariable ??= Environment.GetEnvironmentVariable;
+        bool updateBaseline = scopedFiles is null &&
+                              string.Equals(getEnvironmentVariable(UpdateBaselineEnvVar), "1", StringComparison.Ordinal);
+
+        IReadOnlyList<string> candidateFiles;
+        if (scopedFiles is not null)
+        {
+            candidateFiles = scopedFiles
+                .Select(f => GitIndexReader.TryNormalizeRelativePath(repoRoot, f))
+                .Where(f => !string.IsNullOrEmpty(f) && IsAccessibilityScopedFile(f!))
+                .Cast<string>()
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(f => f, StringComparer.Ordinal)
+                .ToArray();
+            if (candidateFiles.Count == 0)
+            {
+                return 0;
+            }
+        }
+        else
+        {
+            var rawFiles = PreCommitOpenApiService.TryGetTrackedFiles(repoRoot)
+                           ?? EnumerateRepositoryFiles(repoRoot)
+                               .Select(full => Path.GetRelativePath(repoRoot, full).Replace('\\', '/'));
+            candidateFiles = rawFiles
+                .Select(f => f.Replace('\\', '/'))
+                .Where(IsAccessibilityScopedFile)
+                .Where(rel => File.Exists(Path.Combine(repoRoot, rel)))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(f => f, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        var actualEntries = new List<string>();
+        var zeroToleranceViolations = new List<string>();
+        foreach (string rel in candidateFiles)
+        {
+            string? source = TryReadSourceText(repoRoot, rel, reader);
+            if (source is null)
+            {
+                continue;
+            }
+
+            foreach (string rule in ExtractAccessibilityDisableRules(source))
+            {
+                string entry = $"{rel}|{rule}";
+                if (IsZeroToleranceAccessibilityPath(rel))
+                {
+                    zeroToleranceViolations.Add(entry);
+                }
+
+                actualEntries.Add(entry);
+            }
+        }
+
+        actualEntries.Sort(StringComparer.Ordinal);
+
+        if (zeroToleranceViolations.Count > 0)
+        {
+            Console.WriteLine("[ERROR] vuejs-accessibility ESLint suppressions are prohibited in shared UI and subject-portal packages:");
+            foreach (string violation in zeroToleranceViolations.Take(20))
+            {
+                Console.WriteLine($"  + {violation}");
+            }
+
+            return 1;
+        }
+
+        string baselineFullPath = Path.Combine(repoRoot, AccessibilityDisablesBaselinePath);
+        if (updateBaseline)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(baselineFullPath)!);
+            var sb = new StringBuilder();
+            sb.AppendLine("# Ratcheted vuejs-accessibility ESLint suppressions (<path>|<rule>, one line per occurrence).");
+            sb.AppendLine("# Shrink-only: live routes, packages/ui, and apps/subject-portal must retain 0 suppressions.");
+            foreach (string entry in actualEntries)
+            {
+                sb.AppendLine(entry);
+            }
+
+            File.WriteAllText(baselineFullPath, sb.ToString());
+            return 0;
+        }
+
+        string? baselineContent = TryReadSourceText(repoRoot, AccessibilityDisablesBaselinePath, reader);
+        if (baselineContent is null)
+        {
+            Console.WriteLine($"[ERROR] Missing accessibility ESLint suppression baseline '{AccessibilityDisablesBaselinePath}'.");
+            return 1;
+        }
+
+        var baselineEntries = ParseBaselineEntries(baselineContent);
+        if (scopedFiles is not null)
+        {
+            var scopedSet = new HashSet<string>(candidateFiles, StringComparer.Ordinal);
+            baselineEntries = baselineEntries
+                .Where(entry =>
+                {
+                    int sep = entry.IndexOf('|');
+                    return sep > 0 && scopedSet.Contains(entry[..sep]);
+                })
+                .ToList();
+        }
+
+        var unapprovedAdditions = MultisetDiff(baselineEntries, actualEntries);
+        if (unapprovedAdditions.Count > 0)
+        {
+            Console.WriteLine($"[ERROR] Unapproved vuejs-accessibility ESLint suppression(s) detected relative to '{AccessibilityDisablesBaselinePath}':");
+            foreach (string added in unapprovedAdditions.Take(20))
+            {
+                Console.WriteLine($"  + {added}");
+            }
+
+            Console.WriteLine("  Remediate the underlying accessibility violation instead of suppressing eslint-plugin-vuejs-accessibility.");
+            return 1;
+        }
+
+        if (scopedFiles is null)
+        {
+            var staleEntries = MultisetDiff(actualEntries, baselineEntries);
+            if (staleEntries.Count > 0)
+            {
+                Console.WriteLine($"[ERROR] Stale entries remain in '{AccessibilityDisablesBaselinePath}' after accessibility fixes (shrink the baseline):");
+                foreach (string stale in staleEntries.Take(20))
+                {
+                    Console.WriteLine($"  - {stale}");
+                }
+
+                Console.WriteLine($"  Remove the resolved entries or run '{UpdateBaselineEnvVar}=1 pnpm cadence check eslint'.");
+                return 1;
+            }
+        }
+
+        return 0;
+    }
+
+    public static IReadOnlyList<string> ExtractAccessibilityDisableRules(string sourceText)
+    {
+        var rules = new List<string>();
+        if (string.IsNullOrEmpty(sourceText) || !sourceText.Contains("eslint-disable", StringComparison.Ordinal))
+        {
+            return rules;
+        }
+
+        CollectRulesFromMatches(HtmlEslintDisableRegex.Matches(sourceText), rules);
+        CollectRulesFromMatches(BlockEslintDisableRegex.Matches(sourceText), rules);
+        CollectRulesFromMatches(LineEslintDisableRegex.Matches(sourceText), rules);
+        return rules;
+    }
+
+    private static void CollectRulesFromMatches(MatchCollection matches, List<string> output)
+    {
+        foreach (Match match in matches)
+        {
+            string rawBody = match.Groups[1].Value;
+            int justificationIndex = rawBody.IndexOf(" --", StringComparison.Ordinal);
+            if (justificationIndex >= 0)
+            {
+                rawBody = rawBody[..justificationIndex];
+            }
+
+            string trimmed = rawBody.Trim();
+            if (trimmed.Length == 0 || trimmed.StartsWith("--", StringComparison.Ordinal))
+            {
+                output.Add("vuejs-accessibility/*");
+                continue;
+            }
+
+            foreach (string part in trimmed.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (part.Equals("vuejs-accessibility", StringComparison.Ordinal) ||
+                    part.StartsWith("vuejs-accessibility/", StringComparison.Ordinal))
+                {
+                    output.Add(part);
+                }
+            }
+        }
+    }
+
+    private static bool IsAccessibilityScopedFile(string relPath)
+    {
+        if (!relPath.StartsWith("apps/", StringComparison.Ordinal) &&
+            !relPath.StartsWith("packages/", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!EslintExtensions.Contains(Path.GetExtension(relPath)))
+        {
+            return false;
+        }
+
+        string fileName = Path.GetFileName(relPath);
+        if (fileName.Equals("mockServiceWorker.js", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Contains(".test.", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Contains(".spec.", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return !relPath.Contains("/tests/", StringComparison.OrdinalIgnoreCase) &&
+               !relPath.Contains("/__tests__/", StringComparison.OrdinalIgnoreCase) &&
+               !relPath.Contains("/dist/", StringComparison.OrdinalIgnoreCase) &&
+               !relPath.Contains("/node_modules/", StringComparison.OrdinalIgnoreCase) &&
+               !relPath.Contains("/coverage/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsZeroToleranceAccessibilityPath(string relPath) =>
+        relPath.StartsWith("packages/ui/", StringComparison.Ordinal) ||
+        relPath.StartsWith("apps/subject-portal/", StringComparison.Ordinal);
+
+    private static string? TryReadSourceText(string repoRoot, string relPath, GitIndexReader? reader)
+    {
+        if (reader is { HasAuthoritativeIndex: true } && reader.TryReadBytes(relPath, out byte[] blobBytes))
+        {
+            return Encoding.UTF8.GetString(blobBytes);
+        }
+
+        string fullPath = Path.Combine(repoRoot, relPath);
+        return File.Exists(fullPath) ? File.ReadAllText(fullPath) : null;
+    }
+
+    private static List<string> ParseBaselineEntries(string content) =>
+        content
+            .Split('\n')
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0 && !line.StartsWith('#'))
+            .ToList();
+
+    private static List<string> MultisetDiff(IEnumerable<string> baseline, IEnumerable<string> target)
+    {
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (string item in baseline)
+        {
+            counts[item] = counts.GetValueOrDefault(item) + 1;
+        }
+
+        var diff = new List<string>();
+        foreach (string item in target)
+        {
+            if (counts.TryGetValue(item, out int remaining) && remaining > 0)
+            {
+                counts[item] = remaining - 1;
+            }
+            else
+            {
+                diff.Add(item);
+            }
+        }
+
+        diff.Sort(StringComparer.Ordinal);
+        return diff;
     }
 
     public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();

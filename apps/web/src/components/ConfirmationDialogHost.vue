@@ -126,6 +126,7 @@ const handleCancel = () => {
 
 .btn-secondary:hover {
   background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-primary);
 }
 
 .btn-danger {

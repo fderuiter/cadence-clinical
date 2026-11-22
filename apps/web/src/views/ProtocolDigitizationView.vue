@@ -21,7 +21,6 @@
     <!-- Stepper Navigation -->
     <div class="wizard-stepper">
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="step-item"
         :class="{ active: currentStep === 1, completed: currentStep > 1 }"
@@ -31,7 +30,6 @@
         <div class="step-label">Document Ingestion</div>
       </div>
       <div class="step-divider" :class="{ completed: currentStep > 1 }" />
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="step-item"
@@ -43,7 +41,6 @@
       </div>
       <div class="step-divider" :class="{ completed: currentStep > 2 }" />
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="step-item"
         :class="{ active: currentStep === 3, completed: currentStep > 3 }"
@@ -53,7 +50,6 @@
         <div class="step-label">Interactive SoA &amp; Verification</div>
       </div>
       <div class="step-divider" :class="{ completed: currentStep > 3 }" />
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="step-item"
@@ -88,7 +84,6 @@
 
       <!-- Mode A: Document Ingestion Dropzone -->
       <div v-if="step1Mode === 'upload'" class="card upload-card">
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
           class="dropzone"
@@ -387,7 +382,7 @@
             <h4
               style="
                 margin: 0 0 6px 0;
-                color: var(--semantic-color-warning-dark);
+                color: var(--semantic-color-warning-text);
               "
             >
               📥 USDM Concept Staging Required
@@ -396,7 +391,7 @@
               style="
                 margin: 0 0 12px 0;
                 font-size: 0.85rem;
-                color: var(--semantic-color-warning-dark);
+                color: var(--semantic-color-warning-text);
               "
             >
               Detected {{ unmappedConceptTokens.length }} unmapped Biomedical
@@ -1791,7 +1786,7 @@ const commitAndActivateEDC = async () => {
 
 .escalation-header h4 {
   margin: 0;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   font-size: 1.1rem;
 }
 
@@ -1805,7 +1800,7 @@ const commitAndActivateEDC = async () => {
 }
 
 .escalation-description {
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   margin-bottom: 12px;
 }
 
@@ -1820,7 +1815,7 @@ const commitAndActivateEDC = async () => {
 .validation-errors-box ul {
   margin: 6px 0 0 16px;
   padding: 0;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .correction-fields-grid {
@@ -1895,6 +1890,7 @@ const commitAndActivateEDC = async () => {
 .btn-mode:hover {
   background-color: var(--semantic-color-surface-header);
   border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text-primary);
 }
 
 .btn-mode.active {

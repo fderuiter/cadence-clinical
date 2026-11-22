@@ -92,7 +92,7 @@
     </div>
 
     <!-- Main Contenteditable Editor -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events -->
     <div
       ref="editorRef"
       class="editor-canvas"

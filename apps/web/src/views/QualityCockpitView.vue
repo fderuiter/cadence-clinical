@@ -62,7 +62,6 @@
     <!-- Quick Stats Cards Grid -->
     <div class="stats-grid">
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="activeTab = 'deviations'">
         <div class="stat-icon alert-icon">⚠️</div>
         <div class="stat-details">
@@ -76,7 +75,6 @@
         </div>
       </div>
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="activeTab = 'capa'">
         <div class="stat-icon capa-icon">🔄</div>
         <div class="stat-details">
@@ -86,7 +84,6 @@
           <div class="stat-label">Active CAPAs (6-Stage Gates)</div>
         </div>
       </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="activeTab = 'rbqm'">
         <div class="stat-icon rbqm-icon">🎯</div>
@@ -98,7 +95,6 @@
         </div>
       </div>
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="activeTab = 'rbqm'">
         <div class="stat-icon qtl-icon">📊</div>
         <div class="stat-details">
@@ -108,7 +104,6 @@
           <div class="stat-label">QTL Breaches (CSR 9.6 Alerts)</div>
         </div>
       </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="activeTab = 'serious-breaches'">
         <div class="stat-icon breach-icon">🚨</div>
@@ -131,7 +126,6 @@
           <div class="stat-label">7-Day Serious Breach Clock</div>
         </div>
       </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="openDossierModal">
         <div class="stat-icon seal-icon">🔒</div>

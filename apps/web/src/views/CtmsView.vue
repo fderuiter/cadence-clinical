@@ -995,7 +995,7 @@
               class="btn btn-primary"
               style="
                 background: var(--semantic-color-primary-dark);
-                color: var(--semantic-color-text-on-solid);
+                color: var(--semantic-color-surface);
               "
               :disabled="!siteId.trim()"
               @click="exportDoaPdf"
@@ -2714,9 +2714,15 @@
         </div>
 
         <div class="form-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-          <label>Delegated Duty Task Codes</label>
+          <span
+            id="del-duty-task-codes-label"
+            style="display: block; font-weight: 600"
+          >
+            Delegated Duty Task Codes
+          </span>
           <div
+            role="group"
+            aria-labelledby="del-duty-task-codes-label"
             style="
               display: flex;
               flex-direction: column;
@@ -4774,7 +4780,7 @@ async function approveAdjustment(adj) {
   font-weight: 600;
   font-size: 16px;
   background: var(--semantic-color-primary-dark);
-  color: white;
+  color: var(--semantic-color-surface);
 }
 
 .modal-body {
@@ -4849,16 +4855,18 @@ textarea {
 .btn-secondary {
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-primary);
 }
 
 .btn-primary {
   background: var(--semantic-color-primary-dark);
-  color: white;
+  color: var(--semantic-color-surface);
   border: none;
 }
 
 .tab-btn:hover {
   background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-primary);
 }
 
 .doa-load-error {

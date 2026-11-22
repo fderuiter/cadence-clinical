@@ -60,6 +60,7 @@ const rotation = ref(0);
 const panOffset = ref({ x: 0, y: 0 });
 const isDragging = ref(false);
 const dragStart = ref({ x: 0, y: 0 });
+const viewportRef = ref(null);
 
 const zoomIn = () => {
   zoomLevel.value = Math.min(zoomLevel.value + 0.25, 4.0);
@@ -101,6 +102,24 @@ const handleMouseMove = (e) => {
 
 const handleMouseUp = () => {
   isDragging.value = false;
+};
+
+const handleViewportKeyDown = (e) => {
+  if (mediaCategory.value !== "image") return;
+  const step = 20;
+  if (e.key === "ArrowLeft") {
+    e.preventDefault();
+    panOffset.value = { x: panOffset.value.x - step, y: panOffset.value.y };
+  } else if (e.key === "ArrowRight") {
+    e.preventDefault();
+    panOffset.value = { x: panOffset.value.x + step, y: panOffset.value.y };
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    panOffset.value = { x: panOffset.value.x, y: panOffset.value.y - step };
+  } else if (e.key === "ArrowDown") {
+    e.preventDefault();
+    panOffset.value = { x: panOffset.value.x, y: panOffset.value.y + step };
+  }
 };
 
 // Audio & Video player states
@@ -204,10 +223,20 @@ watch(
 );
 
 onMounted(() => {
+  if (viewportRef.value) {
+    viewportRef.value.addEventListener("mousedown", handleMouseDown);
+    viewportRef.value.addEventListener("mousemove", handleMouseMove);
+    viewportRef.value.addEventListener("keydown", handleViewportKeyDown);
+  }
   window.addEventListener("mouseup", handleMouseUp);
 });
 
 onUnmounted(() => {
+  if (viewportRef.value) {
+    viewportRef.value.removeEventListener("mousedown", handleMouseDown);
+    viewportRef.value.removeEventListener("mousemove", handleMouseMove);
+    viewportRef.value.removeEventListener("keydown", handleViewportKeyDown);
+  }
   window.removeEventListener("mouseup", handleMouseUp);
 });
 </script>
@@ -272,14 +301,12 @@ onUnmounted(() => {
     </div>
 
     <!-- Media Viewport Container -->
-    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
     <div
+      ref="viewportRef"
       class="player-viewport"
       role="region"
       aria-label="Media preview viewport"
       tabindex="0"
-      @mousedown="handleMouseDown"
-      @mousemove="handleMouseMove"
     >
       <!-- Watermark Overlay (GxP Compliance Policy) -->
       <div

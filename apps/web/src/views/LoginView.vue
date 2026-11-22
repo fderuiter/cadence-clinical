@@ -10,7 +10,7 @@
       style="
         background: var(--semantic-color-warning-bg-soft);
         border: 1px solid var(--semantic-color-warning-border-strong);
-        color: var(--semantic-color-warning-dark);
+        color: var(--semantic-color-warning-text);
         border-radius: 8px;
         padding: 10px 14px;
         font-size: 0.86rem;

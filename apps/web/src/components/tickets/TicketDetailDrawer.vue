@@ -1301,7 +1301,7 @@ const onTicketSigned = (sigPayload) => {
 .rca-category-pill {
   display: inline-block;
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 3px 8px;

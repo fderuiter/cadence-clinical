@@ -141,26 +141,32 @@
         <div class="module-sidebar">
           <h4 class="sidebar-heading">Curriculum Sections</h4>
           <ul class="module-list">
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <li
               v-for="(mod, idx) in activeCurriculum.modules"
               :key="mod.id"
-              class="module-item"
-              :class="{ active: selectedModuleIndex === idx }"
-              @click="selectModule(idx)"
+              class="module-list-entry"
             >
-              <span class="module-num">{{ idx + 1 }}</span>
-              <div class="module-meta">
-                <span class="module-title">{{ mod.title }}</span>
-                <span
-                  class="badge badge-sm"
-                  :class="
-                    'badge-mod-' + (mod.module_type || 'default').toLowerCase()
-                  "
-                >
-                  {{ mod.module_type }}
-                </span>
-              </div>
+              <button
+                type="button"
+                class="module-item"
+                :class="{ active: selectedModuleIndex === idx }"
+                :aria-current="selectedModuleIndex === idx ? 'true' : undefined"
+                @click="selectModule(idx)"
+              >
+                <span class="module-num">{{ idx + 1 }}</span>
+                <div class="module-meta">
+                  <span class="module-title">{{ mod.title }}</span>
+                  <span
+                    class="badge badge-sm"
+                    :class="
+                      'badge-mod-' +
+                      (mod.module_type || 'default').toLowerCase()
+                    "
+                  >
+                    {{ mod.module_type }}
+                  </span>
+                </div>
+              </button>
             </li>
           </ul>
         </div>
@@ -1058,9 +1064,10 @@ async function handleExecuteBulkSignOff() {
 
 .select-input {
   padding: 8px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: var(--radius-sm, 4px);
   background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   font-size: 0.9rem;
   min-width: 320px;
 }
@@ -1157,10 +1164,20 @@ async function handleExecuteBulkSignOff() {
   gap: 6px;
 }
 
+.module-list-entry {
+  margin: 0;
+  padding: 0;
+}
+
 .module-item {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  font: inherit;
+  color: inherit;
   padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
@@ -1200,7 +1217,7 @@ async function handleExecuteBulkSignOff() {
 
 .badge-mod-procedure_delta {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .badge-mod-protocol_overview {
@@ -1684,7 +1701,7 @@ async function handleExecuteBulkSignOff() {
 }
 .warning-pill {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .info-pill {
   background: var(--semantic-color-primary-light);

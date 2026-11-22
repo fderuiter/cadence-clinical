@@ -1,27 +1,35 @@
 <template>
-  <!-- eslint-disable vuejs-accessibility/interactive-supports-focus, vuejs-accessibility/click-events-have-key-events -->
   <div class="tmf-binder-tree-container">
     <div class="binder-export-header">
       <button
+        type="button"
         class="btn-export-full-binder"
-        aria-label="Export complete eTMF study binder"
         @click="exportFullBinder"
       >
-        <span>📦</span> Export Complete Study Binder
+        <span aria-hidden="true">📦</span> Export Complete Study Binder
       </button>
     </div>
 
     <div class="tree-search-bar">
-      <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+      <label for="tmf-binder-search-input" class="sr-only">
+        Search TMF binder zones, sections, or artifacts
+      </label>
       <input
+        id="tmf-binder-search-input"
         v-model="searchQuery"
         type="text"
         placeholder="Search zones, sections, or artifacts..."
         class="search-input"
       />
       <div class="filter-controls">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="selectedZoneFilter" class="zone-filter-select">
+        <label for="tmf-zone-filter-select" class="sr-only">
+          Filter TMF binder by DIA zone
+        </label>
+        <select
+          id="tmf-zone-filter-select"
+          v-model="selectedZoneFilter"
+          class="zone-filter-select"
+        >
           <option value="">All Zones</option>
           <option v-for="node in tree" :key="node.id" :value="node.code">
             Zone {{ node.code }}: {{ node.name }}
@@ -35,6 +43,7 @@
       role="tree"
       tabindex="-1"
       aria-label="TMF Binder Folder Tree"
+      @click="handleTreeClick"
       @keydown="handleTreeKeyDown"
     >
       <div v-if="filteredTree.length === 0" class="empty-tree-message">
@@ -45,21 +54,22 @@
         :key="zone.id"
         class="tree-node zone-node"
       >
-        <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
         <div
           :id="'tree-node-' + zone.id"
           :ref="(el) => setNodeRef(zone.id, el)"
+          :data-tree-node-id="zone.id"
           class="node-header zone-header"
           role="treeitem"
           :aria-expanded="isExpanded(zone.id)"
           :aria-selected="false"
           :tabindex="activeFocusedNodeId === zone.id ? 0 : -1"
           :class="{ 'is-expanded': isExpanded(zone.id) }"
-          @click="clickZone(zone)"
           @focus="activeFocusedNodeId = zone.id"
         >
-          <span class="toggle-icon">{{ isExpanded(zone.id) ? "▼" : "▶" }}</span>
-          <span class="folder-icon">📂</span>
+          <span class="toggle-icon" aria-hidden="true">{{
+            isExpanded(zone.id) ? "▼" : "▶"
+          }}</span>
+          <span class="folder-icon" aria-hidden="true">📂</span>
           <span class="zone-label">Zone {{ zone.code }}:</span>
           <span class="node-name">{{ zone.name }}</span>
           <span
@@ -69,12 +79,13 @@
             {{ getUnreadBadgeCount(zone) }}
           </span>
           <button
+            type="button"
             class="btn-node-export"
             title="Export Zone documents"
             :aria-label="'Export Zone ' + zone.code + ' documents'"
             @click.stop="exportZone(zone)"
           >
-            📥
+            <span aria-hidden="true">📥</span>
           </button>
         </div>
 
@@ -88,23 +99,22 @@
             :key="section.id"
             class="tree-node section-node"
           >
-            <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
             <div
               :id="'tree-node-' + section.id"
               :ref="(el) => setNodeRef(section.id, el)"
+              :data-tree-node-id="section.id"
               class="node-header section-header"
               role="treeitem"
               :aria-expanded="isExpanded(section.id)"
               :aria-selected="false"
               :tabindex="activeFocusedNodeId === section.id ? 0 : -1"
               :class="{ 'is-expanded': isExpanded(section.id) }"
-              @click="clickSection(section)"
               @focus="activeFocusedNodeId = section.id"
             >
-              <span class="toggle-icon">{{
+              <span class="toggle-icon" aria-hidden="true">{{
                 isExpanded(section.id) ? "▼" : "▶"
               }}</span>
-              <span class="folder-icon">📁</span>
+              <span class="folder-icon" aria-hidden="true">📁</span>
               <span class="section-label">Section {{ section.code }}:</span>
               <span class="node-name">{{ section.name }}</span>
               <span
@@ -114,12 +124,13 @@
                 {{ getUnreadBadgeCount(section) }}
               </span>
               <button
+                type="button"
                 class="btn-node-export"
                 title="Export Section documents"
                 :aria-label="'Export Section ' + section.code + ' documents'"
                 @click.stop="exportSection(section)"
               >
-                📥
+                <span aria-hidden="true">📥</span>
               </button>
             </div>
 
@@ -128,22 +139,21 @@
               class="node-children section-children"
               role="group"
             >
-              <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
               <div
                 v-for="artifact in section.children"
                 :id="'tree-node-' + artifact.id"
                 :ref="(el) => setNodeRef(artifact.id, el)"
                 :key="artifact.id"
+                :data-tree-node-id="artifact.id"
                 class="tree-node artifact-node"
                 role="treeitem"
                 :aria-selected="selectedArtifactId === artifact.code"
                 :tabindex="activeFocusedNodeId === artifact.id ? 0 : -1"
                 :class="{ 'is-selected': selectedArtifactId === artifact.code }"
-                @click="clickArtifact(artifact)"
                 @focus="activeFocusedNodeId = artifact.id"
               >
                 <div class="node-header artifact-header">
-                  <span class="file-icon">📄</span>
+                  <span class="file-icon" aria-hidden="true">📄</span>
                   <span class="artifact-code">[{{ artifact.code }}]</span>
                   <span class="node-name">{{ artifact.name }}</span>
                   <span
@@ -392,6 +402,26 @@ function clickArtifact(artifact) {
   selectArtifact(artifact);
 }
 
+function handleTreeClick(e) {
+  const rawTarget = e.target;
+  if (!rawTarget || typeof rawTarget.closest !== "function") return;
+  if (rawTarget.closest("button")) return;
+  const itemEl = rawTarget.closest("[data-tree-node-id]");
+  if (!itemEl) return;
+  const nodeId = itemEl.getAttribute("data-tree-node-id");
+  const entry = visibleNodesList.value.find(
+    (item) => String(item.id) === String(nodeId)
+  );
+  if (!entry) return;
+  if (entry.type === "zone") {
+    clickZone(entry.node);
+  } else if (entry.type === "section") {
+    clickSection(entry.node);
+  } else if (entry.type === "artifact") {
+    clickArtifact(entry.node);
+  }
+}
+
 // Master Keydown Handler for W3C ARIA Tree conformance
 function handleTreeKeyDown(e) {
   const list = visibleNodesList.value;
@@ -527,14 +557,35 @@ function getUnreadBadgeCount(node) {
 }
 
 .btn-node-export {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+  box-sizing: border-box;
+  flex-shrink: 0;
   background: transparent;
   border: none;
   font-size: 0.85rem;
+  line-height: 1;
   cursor: pointer;
-  opacity: 0.6;
+  opacity: 0.75;
   padding: 2px 4px;
   border-radius: 4px;
   margin-left: 4px;
+  color: var(--semantic-color-text-primary);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .btn-node-export:hover {
@@ -571,6 +622,7 @@ function getUnreadBadgeCount(node) {
   font-size: 0.85rem;
   background-color: var(--semantic-color-surface-muted);
   outline: 2px solid transparent;
+  color: var(--semantic-color-text-primary);
 }
 
 .tree-root-nodes {
@@ -594,7 +646,8 @@ function getUnreadBadgeCount(node) {
 .node-header {
   display: flex;
   align-items: center;
-  padding: 8px 10px;
+  min-height: 28px;
+  padding: 5px 10px;
   border-radius: 6px;
   cursor: pointer;
   user-select: none;

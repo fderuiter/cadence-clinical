@@ -202,7 +202,6 @@
     <!-- Stepper Navigation -->
     <nav class="stepper-nav" aria-label="Export Wizard Steps">
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         v-for="step in STEPS"
         :key="step.number"
@@ -236,7 +235,6 @@
         </p>
 
         <div class="format-grid">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             v-for="fmt in FORMAT_OPTIONS"
@@ -496,7 +494,6 @@
         </p>
 
         <div class="privacy-profiles-grid">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             v-for="p in PRIVACY_PROFILES"

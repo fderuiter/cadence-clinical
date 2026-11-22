@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { test, expect } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { formatAccessibilityViolations, runWcag22Audit } from "ui/playwright";
 
 const AUDIT_OUTPUT_PATH = "/tmp/artifacts/epro-sync-recovery-audit.json";
 
@@ -436,11 +436,17 @@ test.describe
     expect(drawerText).not.toContain('{"');
     expect(drawerText).not.toContain("subject_mocked_001");
 
-    const axeResults = await new AxeBuilder({ page })
-      .include("#global-sync-drawer")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-    expect(axeResults.violations).toEqual([]);
+    const axeResults = await runWcag22Audit(page, {
+      include: "#global-sync-drawer",
+    });
+    expect(
+      axeResults.violations,
+      formatAccessibilityViolations(
+        axeResults.violations,
+        axeResults.borderViolations
+      )
+    ).toEqual([]);
+    expect(axeResults.borderViolations).toEqual([]);
 
     await page.screenshot({
       path: "/tmp/epro-sync-drawer-quarantine.png",
@@ -557,11 +563,17 @@ test.describe
     const cancelDialog = page.locator("#questionnaire-cancel-confirm");
     await expect(cancelDialog).toBeVisible();
 
-    const cancelAxe = await new AxeBuilder({ page })
-      .include("#view-questionnaire")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-    expect(cancelAxe.violations).toEqual([]);
+    const cancelAxe = await runWcag22Audit(page, {
+      include: "#view-questionnaire",
+    });
+    expect(
+      cancelAxe.violations,
+      formatAccessibilityViolations(
+        cancelAxe.violations,
+        cancelAxe.borderViolations
+      )
+    ).toEqual([]);
+    expect(cancelAxe.borderViolations).toEqual([]);
 
     await page.screenshot({
       path: "/tmp/epro-cancel-confirm-dialog.png",
@@ -632,11 +644,17 @@ test.describe
     await expect(page.locator("#unlock-pin")).toBeDisabled();
     await expect(page.locator("#btn-pin-unlock-confirm")).toBeDisabled();
 
-    const lockoutAxe = await new AxeBuilder({ page })
-      .include("#portal-pin-unlock-modal")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-    expect(lockoutAxe.violations).toEqual([]);
+    const lockoutAxe = await runWcag22Audit(page, {
+      include: "#portal-pin-unlock-modal",
+    });
+    expect(
+      lockoutAxe.violations,
+      formatAccessibilityViolations(
+        lockoutAxe.violations,
+        lockoutAxe.borderViolations
+      )
+    ).toEqual([]);
+    expect(lockoutAxe.borderViolations).toEqual([]);
 
     await page.screenshot({
       path: "/tmp/epro-pin-lockout-recovery.png",
@@ -717,11 +735,17 @@ test.describe
     await assertPhoneAndEmail("#participant-site-contacts");
     await assertPhoneAndEmail("#inbox-site-contacts");
 
-    const inboxAxe = await new AxeBuilder({ page })
-      .include("#view-inbox")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-    expect(inboxAxe.violations).toEqual([]);
+    const inboxAxe = await runWcag22Audit(page, {
+      include: "#view-inbox",
+    });
+    expect(
+      inboxAxe.violations,
+      formatAccessibilityViolations(
+        inboxAxe.violations,
+        inboxAxe.borderViolations
+      )
+    ).toEqual([]);
+    expect(inboxAxe.borderViolations).toEqual([]);
 
     await page.screenshot({
       path: "/tmp/epro-inbox-offline-contacts.png",

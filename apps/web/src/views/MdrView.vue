@@ -698,7 +698,6 @@
                   "
                 >
                   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <div
                     v-for="sug in armSuggestions"
                     :key="sug.concept_code"
@@ -859,7 +858,6 @@
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                   "
                 >
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <div
                     v-for="sug in encSuggestions"
@@ -1296,7 +1294,6 @@
               "
             >
               <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
               <li
                 v-for="c in conceptResults"
                 :key="c.concept_code"
@@ -1675,7 +1672,6 @@
           </p>
 
           <!-- Dropzone Area -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             class="dropzone-area"

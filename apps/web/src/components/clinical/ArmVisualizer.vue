@@ -214,7 +214,7 @@ const formatArmType = (type) => {
 }
 .type-active_comparator {
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .type-placebo_comparator {
   background-color: var(--semantic-color-surface-header);

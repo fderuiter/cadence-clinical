@@ -94,7 +94,6 @@
             <!-- Study Level Node -->
             <div class="tree-node study-node">
               <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
               <div
                 class="node-row"
                 :class="{ selected: selectedNode?.id === studyTree.id }"
@@ -150,7 +149,6 @@
                   :key="site.id"
                   class="tree-node site-node"
                 >
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <div
                     class="node-row"
@@ -208,7 +206,6 @@
                       class="tree-node subject-node"
                     >
                       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-                      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                       <div
                         class="node-row"
                         :class="{ selected: selectedNode?.id === subject.id }"
@@ -257,7 +254,6 @@
                           class="tree-node visit-node"
                         >
                           <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-                          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                           <div
                             class="node-row"
                             :class="{ selected: selectedNode?.id === visit.id }"
@@ -305,7 +301,6 @@
                               :key="form.id"
                               class="tree-node form-node"
                             >
-                              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                               <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                               <div
                                 class="node-row"
@@ -358,7 +353,6 @@
                                   :key="field.id"
                                   class="tree-node field-node"
                                 >
-                                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                                   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                                   <div
                                     class="node-row"
@@ -1424,6 +1418,7 @@ export default {
   padding: 2px 6px;
   background-color: var(--semantic-color-surface);
   transition: transform 0.1s;
+  color: var(--semantic-color-text-primary);
 }
 
 .btn-mini:hover {
@@ -1590,7 +1585,7 @@ export default {
   gap: 12px;
   background-color: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   padding: 12px;
   border-radius: 6px;
   margin-bottom: 16px;

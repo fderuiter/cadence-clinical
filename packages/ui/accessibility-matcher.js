@@ -31,6 +31,14 @@ function runAxeSerialized(axe, element, options) {
   return nextRun;
 }
 
+export const WCAG_22_AA_TAGS = [
+  "wcag2a",
+  "wcag2aa",
+  "wcag21a",
+  "wcag21aa",
+  "wcag22aa",
+];
+
 /**
  * Asserts that a standard DOM Element, raw HTML string, or Vue test wrapper is WCAG accessible.
  * Runs an asynchronous accessibility audit using axe-core and reports violations clearly.
@@ -61,10 +69,17 @@ export async function toBeAccessible(received, customOptions = {}) {
     };
   }
 
+  const {
+    strictLayoutMode = false,
+    runOnly: customRunOnly,
+    rules: customRules,
+    ...restCustomOptions
+  } = customOptions || {};
+
   // Strict Layout Mode validation checks (WCAG 2.4.1 Bypass Blocks & Landmark requirements)
   if (
-    customOptions.strictLayoutMode ||
-    (customOptions.rules && customOptions.rules["landmark-one-main"]?.enabled)
+    strictLayoutMode ||
+    (customRules && customRules["landmark-one-main"]?.enabled)
   ) {
     const hasMain = element.querySelector("main#main-content");
     const hasSkipLink = element.querySelector(
@@ -94,17 +109,17 @@ export async function toBeAccessible(received, customOptions = {}) {
     region: { enabled: false },
   };
 
-  // Merge default rules with user-provided options
+  // Spread customOptions first so default/merged rules and runOnly are never clobbered
   const finalOptions = {
-    runOnly: customOptions.runOnly || {
+    ...restCustomOptions,
+    runOnly: customRunOnly || {
       type: "tag",
-      values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+      values: [...WCAG_22_AA_TAGS],
     },
     rules: {
       ...defaultRules,
-      ...(customOptions.rules || {}),
+      ...(customRules || {}),
     },
-    ...customOptions,
   };
 
   try {

@@ -1,0 +1,34 @@
+# Pre-release demo routes WCAG 2.2 Level A & AA violation ratchet baseline.
+# Format: <routeName>|<axeRuleId>|<targetSelector> (sorted ordinally; enforced by web-accessibility.spec.ts and BaselineRatchetService).
+# Live routes (AVAILABLE_SCREENS + ALWAYS_AVAILABLE) enforce zero violations and may never appear in this file.
+# Regenerate after fixing demo defects: CADENCE_UPDATE_BASELINE=1 pnpm --filter web test:e2e
+auditor|label|.filter-end-date
+auditor|label|.filter-start-date
+auditor|select-name|.filter-action-type
+digitization|color-contrast|.step-item:nth-child(3) > .step-label
+digitization|color-contrast|.step-item:nth-child(5) > .step-label
+digitization|color-contrast|.step-item:nth-child(7) > .step-label
+icf-builder|aria-input-field-name|.editor-canvas
+imaging|color-contrast|.btn-clear-all
+imaging|color-contrast|.coronal-badge
+imaging|color-contrast|.status-text
+imaging|color-contrast|.tp-c2d1
+imaging|color-contrast|.trajectory-count
+imaging|color-contrast|p
+knowledge|scrollable-region-focusable|.articles-stream
+knowledge|target-size|.tag-chip[type="button"]:nth-child(10)
+knowledge|target-size|.tag-chip[type="button"]:nth-child(11)
+knowledge|target-size|.tag-chip[type="button"]:nth-child(13)
+knowledge|target-size|.tag-chip[type="button"]:nth-child(15)
+knowledge|target-size|.tag-chip[type="button"]:nth-child(16)
+knowledge|target-size|.tag-chip[type="button"]:nth-child(17)
+knowledge|target-size|.tag-chip[type="button"]:nth-child(19)
+knowledge|target-size|.tag-chip[type="button"]:nth-child(20)
+knowledge|target-size|.tag-chip[type="button"]:nth-child(21)
+knowledge|target-size|.tag-chip[type="button"]:nth-child(23)
+knowledge|target-size|.tag-chip[type="button"]:nth-child(24)
+knowledge|target-size|.tag-chip[type="button"]:nth-child(25)
+knowledge|target-size|.tag-chip[type="button"]:nth-child(9)
+tickets|select-name|.filter-select:nth-child(1)
+tickets|select-name|.filter-select:nth-child(2)
+tickets|select-name|.filter-select:nth-child(3)

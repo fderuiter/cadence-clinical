@@ -14,34 +14,35 @@
       <div style="display: flex; gap: 8px">
         <button
           v-if="selectedDocumentIds.length > 0"
+          type="button"
           class="btn btn-outline-primary export-selected-btn"
-          :aria-label="
-            'Download ' +
-            selectedDocumentIds.length +
-            ' selected documents as ZIP package'
-          "
+          title="Download selected documents as ZIP package"
           @click="handleExportSelected"
         >
-          <span>📦</span> Download Selected ({{ selectedDocumentIds.length }})
+          <span aria-hidden="true">📦</span> Download Selected ({{
+            selectedDocumentIds.length
+          }})
         </button>
         <button
+          type="button"
           class="btn btn-secondary batch-upload-trigger-btn"
-          aria-label="Batch Ingestion multi-file upload"
+          title="Multi-file batch ingestion"
           @click="isBatchDrawerOpen = true"
         >
-          <span>📤</span> Batch Ingestion
+          <span aria-hidden="true">📤</span> Batch Ingestion
         </button>
         <button
+          type="button"
           class="btn btn-primary upload-trigger-btn"
           :disabled="!selectedArtifactCode"
-          :aria-label="
+          :title="
             selectedArtifactCode
               ? 'Upload Regulated Document for artifact ' + selectedArtifactCode
               : 'Upload Regulated Document'
           "
           @click="openUploadModal"
         >
-          <span>📄</span> Upload Single Document
+          <span aria-hidden="true">📄</span> Upload Single Document
         </button>
       </div>
     </div>
@@ -100,14 +101,14 @@
                     :disabled="!selectedArtifactCode"
                     @click="openUploadModal"
                   >
-                    <span>📄</span> Upload Single Document
+                    <span aria-hidden="true">📄</span> Upload Single Document
                   </button>
                   <button
                     type="button"
                     class="btn btn-secondary btn-sm batch-empty-btn"
                     @click="isBatchDrawerOpen = true"
                   >
-                    <span>📤</span> Batch Ingestion
+                    <span aria-hidden="true">📤</span> Batch Ingestion
                   </button>
                 </template>
               </EmptyState>
@@ -170,10 +171,10 @@
                   v-if="isEditing && isCellActive(rIndex, 1)"
                   class="inline-edit-container"
                 >
-                  <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                   <select
                     ref="inlineSelectRef"
                     v-model="tempTaxonomyCode"
+                    aria-label="Select DIA TMF taxonomy artifact"
                     class="form-control inline-select"
                     @change="commitTaxonomy(doc)"
                     @keydown="handleSelectKeyDown($event, doc)"
@@ -266,14 +267,16 @@
               >
                 <div style="display: flex; gap: 4px; justify-content: flex-end">
                   <button
+                    type="button"
                     class="btn btn-sm btn-outline-secondary btn-inspect-doc"
                     title="Inspect 21 CFR Part 11 Metadata"
                     :aria-label="'Inspect metadata for ' + doc.filename"
                     @click.stop="$emit('inspect', doc)"
                   >
-                    📋 Inspect
+                    <span aria-hidden="true">📋</span> Inspect
                   </button>
                   <button
+                    type="button"
                     class="btn btn-sm btn-outline-primary btn-preview-doc"
                     title="View Watermarked PDF Preview"
                     :aria-label="
@@ -281,7 +284,7 @@
                     "
                     @click.stop="$emit('preview', doc)"
                   >
-                    👁️ Preview
+                    <span aria-hidden="true">👁️</span> Preview
                   </button>
                 </div>
               </td>
@@ -308,18 +311,20 @@
 
       <div class="pagination-buttons">
         <button
+          type="button"
           class="btn btn-sm btn-outline-secondary prev-btn"
           :disabled="currentPage === 1"
           aria-label="Previous page"
           @click="prevPage"
         >
-          ◀ Previous
+          <span aria-hidden="true">◀</span> Previous
         </button>
 
         <div class="page-numbers">
           <button
             v-for="page in totalPages"
             :key="page"
+            type="button"
             class="btn btn-sm page-num-btn"
             :class="{ active: currentPage === page }"
             :aria-label="'Go to page ' + page"
@@ -331,12 +336,13 @@
         </div>
 
         <button
+          type="button"
           class="btn btn-sm btn-outline-secondary next-btn"
           :disabled="currentPage === totalPages"
           aria-label="Next page"
           @click="nextPage"
         >
-          Next ▶
+          Next <span aria-hidden="true">▶</span>
         </button>
       </div>
     </div>
@@ -373,12 +379,22 @@
           </div>
 
           <!-- Drag and Drop Target -->
+          <input
+            id="etmf-single-upload-file"
+            ref="fileInputRef"
+            type="file"
+            class="hidden-file-input"
+            aria-label="Select regulated PDF document"
+            tabindex="-1"
+            accept=".pdf"
+            @change="onFileSelected"
+          />
           <div
             class="drag-drop-zone"
             :class="{ 'is-dragging': isDragging }"
             tabindex="0"
             role="button"
-            aria-label="Drag and drop your regulated PDF here, or press Enter or Space to browse."
+            aria-label="Drag and drop your regulated PDF here, or browse"
             @dragover.prevent="onDragOver"
             @dragleave.prevent="onDragLeave"
             @drop.prevent="onDrop"
@@ -386,14 +402,6 @@
             @keydown.enter="triggerFileSelect"
             @keydown.space.prevent="triggerFileSelect"
           >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input
-              ref="fileInputRef"
-              type="file"
-              class="hidden-file-input"
-              accept=".pdf"
-              @change="onFileSelected"
-            />
             <div class="drop-prompt-content" aria-hidden="true">
               <span class="upload-cloud-icon">☁️</span>
               <p v-if="!selectedFile" class="drop-text">
@@ -414,10 +422,9 @@
           <form class="upload-meta-form" @submit.prevent="submitUpload">
             <div class="form-group-row">
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Target Study ID</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="etmf-upload-study-id">Target Study ID</label>
                 <input
+                  id="etmf-upload-study-id"
                   v-model="studyId"
                   type="text"
                   class="form-control"
@@ -425,10 +432,9 @@
                 />
               </div>
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Site ID (Optional)</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="etmf-upload-site-id">Site ID (Optional)</label>
                 <input
+                  id="etmf-upload-site-id"
                   v-model="siteId"
                   type="text"
                   placeholder="e.g. SITE-01"
@@ -439,10 +445,11 @@
 
             <div class="form-group-row">
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>DIA TMF Artifact Code</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="etmf-upload-artifact-code">
+                  DIA TMF Artifact Code
+                </label>
                 <input
+                  id="etmf-upload-artifact-code"
                   v-model="artifactCode"
                   type="text"
                   class="form-control"
@@ -450,10 +457,11 @@
                 />
               </div>
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Artifact Type (Label)</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="etmf-upload-artifact-type">
+                  Artifact Type (Label)
+                </label>
                 <input
+                  id="etmf-upload-artifact-type"
                   v-model="artifactType"
                   type="text"
                   class="form-control"
@@ -464,12 +472,11 @@
 
             <!-- Mandatory Reason for Change under 21 CFR Part 11 -->
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="required-label">
+              <label for="etmf-upload-reason" class="required-label">
                 Reason for Change / Upload Justification
               </label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <textarea
+                id="etmf-upload-reason"
                 v-model="reasonForChange"
                 rows="3"
                 placeholder="Specify the regulatory or scientific justification for ingesting this record version (e.g. 'Initial Approved protocol for site initiation', 'Site license renewal')."
@@ -1218,7 +1225,7 @@ async function submitUpload() {
   padding: 12px 16px;
   border-radius: 6px;
   font-size: 0.85rem;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   margin-bottom: 20px;
   line-height: 1.4;
 }
@@ -1315,6 +1322,7 @@ async function submitUpload() {
   outline: 2px solid transparent;
   transition: border-color 0.2s;
   background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-primary);
 }
 
 .form-control:focus {
@@ -1391,6 +1399,7 @@ async function submitUpload() {
 
 .btn-outline-secondary:hover {
   background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-primary);
 }
 
 .btn-sm {
@@ -1440,6 +1449,7 @@ async function submitUpload() {
 .page-num-btn:hover {
   background-color: var(--semantic-color-surface-header); /* deid-ignore */
   border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text-primary);
 }
 
 .page-num-btn.active {

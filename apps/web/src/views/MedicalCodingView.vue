@@ -308,7 +308,6 @@
 
           <!-- Dictionary Filter -->
           <div class="dict-select-box">
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <select
               v-model="codingStore.filters.dictionaryType"
               class="form-control-sm"
@@ -322,7 +321,6 @@
 
           <!-- Confidence Threshold Filter -->
           <div class="confidence-select-box">
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <select
               v-model="codingStore.confidenceThreshold"
               class="form-control-sm confidence-select"

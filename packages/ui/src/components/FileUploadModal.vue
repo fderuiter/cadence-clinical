@@ -272,12 +272,20 @@ defineExpose({
       />
 
       <!-- Dropzone -->
+      <input
+        ref="fileInputRef"
+        type="file"
+        class="hidden-file-input"
+        aria-label="Upload file"
+        tabindex="-1"
+        @change="onFileChange"
+      />
       <div
         class="dropzone"
         :class="{ 'is-dragging': isDragging, 'has-file': !!selectedFile }"
         role="button"
         tabindex="0"
-        aria-label="File dropzone"
+        aria-label="Click to select or drag and drop file"
         @dragover="onDragOver"
         @dragleave="onDragLeave"
         @drop="onDrop"
@@ -285,14 +293,6 @@ defineExpose({
         @keydown.enter.prevent="triggerFileInput"
         @keydown.space.prevent="triggerFileInput"
       >
-        <input
-          ref="fileInputRef"
-          type="file"
-          class="hidden-file-input"
-          aria-label="Upload file"
-          @change="onFileChange"
-        />
-
         <div v-if="!selectedFile" class="dropzone-empty">
           <span class="upload-icon">📁</span>
           <p class="dropzone-title">Click to select or drag and drop file</p>

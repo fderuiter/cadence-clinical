@@ -498,6 +498,7 @@ defineExpose({ checkStatus, loadStudySites });
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-primary);
 }
 
 .assigned-scope {
@@ -561,7 +562,7 @@ defineExpose({ checkStatus, loadStudySites });
 }
 
 .status-incomplete {
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   font-weight: 600;
 }
 
@@ -575,7 +576,7 @@ defineExpose({ checkStatus, loadStudySites });
   border-radius: 6px;
   border: 1px solid var(--semantic-color-warning-border-strong);
   background: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .scope-guidance-text {
@@ -620,7 +621,7 @@ defineExpose({ checkStatus, loadStudySites });
 .unavailable-note {
   margin: 0;
   font-size: 0.875rem;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   background: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
   border-radius: 4px;

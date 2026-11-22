@@ -1653,7 +1653,7 @@ onMounted(() => {
 
 .badge-gxp {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .badge-regulatory {
@@ -1704,7 +1704,7 @@ onMounted(() => {
   margin: 0;
   padding: 8px 12px;
   font-size: 0.85rem;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   background: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
   border-radius: 6px;
@@ -1857,6 +1857,7 @@ onMounted(() => {
 
 .btn-secondary:hover:not(:disabled) {
   background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-primary);
 }
 
 .btn-override {
@@ -2139,7 +2140,7 @@ onMounted(() => {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .form-row {

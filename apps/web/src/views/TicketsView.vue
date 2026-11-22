@@ -46,7 +46,6 @@
     <!-- KRI Metric Cards Grid -->
     <div class="stats-grid">
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="filterStatus = 'ALL'">
         <div class="stat-icon alert-icon">🎫</div>
         <div class="stat-details">
@@ -56,7 +55,6 @@
           <div class="stat-label">Active Clinical Issues</div>
         </div>
       </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="filterSeverity = 'CRITICAL'">
         <div class="stat-icon capa-icon">🚨</div>
@@ -85,7 +83,6 @@
           <div class="stat-label">Mean Resolution Time (MTTR)</div>
         </div>
       </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="filterStatus = 'WAITING_ON_SITE'">
         <div class="stat-icon breach-icon">⏸</div>
@@ -231,7 +228,6 @@
         </div>
         <div class="column-cards">
           <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             v-for="t in getColumnTickets('OPEN')"
             :key="t.id"
@@ -279,7 +275,6 @@
           }}</span>
         </div>
         <div class="column-cards">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             v-for="t in getColumnTickets('IN_PROGRESS')"
@@ -333,7 +328,6 @@
         </div>
         <div class="column-cards">
           <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             v-for="t in getColumnTickets([
               'WAITING_ON_SITE',
@@ -377,7 +371,6 @@
           }}</span>
         </div>
         <div class="column-cards">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             v-for="t in getColumnTickets('RESOLVED')"
@@ -423,7 +416,6 @@
           }}</span>
         </div>
         <div class="column-cards">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             v-for="t in getColumnTickets('CLOSED')"

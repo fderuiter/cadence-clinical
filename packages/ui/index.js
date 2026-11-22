@@ -808,7 +808,7 @@ export function createClinicalVisitMatrix(visitsOrSoa, forms = []) {
   return tableHtml;
 }
 
-export { toBeAccessible } from "./accessibility-matcher.js";
+export { toBeAccessible, WCAG_22_AA_TAGS } from "./accessibility-matcher.js";
 
 import {
   AiActionButton,

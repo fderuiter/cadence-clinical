@@ -712,7 +712,7 @@ function startGuidedTour() {
   gap: 8px;
   font-weight: 600;
   font-size: 0.85rem;
-  color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-inverse);
   margin-bottom: 12px;
 }
 
@@ -734,7 +734,7 @@ function startGuidedTour() {
 
 .toggle-text {
   font-size: 0.8rem;
-  color: var(--semantic-color-border);
+  color: var(--semantic-color-text-inverse-muted);
   line-height: 1.4;
 }
 

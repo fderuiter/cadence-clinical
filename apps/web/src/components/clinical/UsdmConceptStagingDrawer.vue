@@ -556,7 +556,7 @@ const confirmAndApply = () => {
 .alert-warning-inline {
   background-color: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.8rem;

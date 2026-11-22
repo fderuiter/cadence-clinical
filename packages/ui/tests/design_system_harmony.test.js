@@ -825,5 +825,129 @@ const open = ref(true);
       );
       expect(compliantErrors).toEqual([]);
     });
+
+    it("retains 0 vuejs-accessibility disable comments across packages/ui, subject-portal, and live web routes", async () => {
+      const a11yDisableRe = /eslint-disable[^\r\n]*vuejs-accessibility/;
+
+      const uiSourceFiles = walkFiles(path.join(uiDir, "src"), [
+        ".vue",
+        ".js",
+        ".ts",
+      ]);
+      const portalSourceFiles = walkFiles(portalSrcDir, [".vue", ".js", ".ts"]);
+
+      for (const file of [...uiSourceFiles, ...portalSourceFiles]) {
+        const relPath = path.relative(repoRoot, file);
+        expect(
+          a11yDisableRe.test(fs.readFileSync(file, "utf-8")),
+          `${relPath} must retain 0 vuejs-accessibility disable comments`
+        ).toBe(false);
+      }
+
+      const routerIndexPath = path.join(webSrcDir, "router/index.js");
+      const availabilitySource = fs.readFileSync(
+        path.join(webSrcDir, "router/availability.js"),
+        "utf-8"
+      );
+      const routerSource = fs.readFileSync(routerIndexPath, "utf-8");
+
+      const parseSetItems = (varName) => {
+        const m = availabilitySource.match(
+          new RegExp(
+            `export const ${varName} = new Set\\(\\[([\\s\\S]*?)\\]\\)`
+          )
+        );
+        if (!m) return [];
+        return Array.from(m[1].matchAll(/"([^"]+)"/g), (hit) => hit[1]);
+      };
+
+      const liveRouteNames = new Set([
+        ...parseSetItems("AVAILABLE_SCREENS"),
+        ...parseSetItems("ALWAYS_AVAILABLE"),
+      ]);
+      expect(liveRouteNames.size).toBeGreaterThanOrEqual(13);
+
+      const routeViewEntrypoints = [path.join(webSrcDir, "App.vue")];
+      for (const block of routerSource.matchAll(
+        /name:\s*"([^"]+)"[\s\S]*?import\("([^"]+)"\)/g
+      )) {
+        const [, routeName, importSpec] = block;
+        if (liveRouteNames.has(routeName)) {
+          routeViewEntrypoints.push(
+            path.resolve(path.dirname(routerIndexPath), importSpec)
+          );
+        }
+      }
+
+      const resolveLocalImport = (fromFile, spec) => {
+        if (!spec.startsWith(".")) return null;
+        const base = path.resolve(path.dirname(fromFile), spec);
+        for (const candidate of [
+          base,
+          `${base}.vue`,
+          `${base}.js`,
+          `${base}.ts`,
+          path.join(base, "index.js"),
+          path.join(base, "index.ts"),
+        ]) {
+          if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+            return candidate;
+          }
+        }
+        return null;
+      };
+
+      const visitedLiveFiles = new Set();
+      const queue = [...routeViewEntrypoints];
+      while (queue.length > 0) {
+        const cur = queue.shift();
+        if (
+          !cur ||
+          cur === routerIndexPath ||
+          visitedLiveFiles.has(cur) ||
+          !fs.existsSync(cur)
+        ) {
+          continue;
+        }
+        visitedLiveFiles.add(cur);
+        const content = fs.readFileSync(cur, "utf-8");
+        for (const imp of content.matchAll(
+          /(?:import\s+(?:[\s\S]*?from\s+)?|import\s*\(\s*)["']([^"']+)["']/g
+        )) {
+          const resolved = resolveLocalImport(cur, imp[1]);
+          if (
+            resolved &&
+            resolved !== routerIndexPath &&
+            !visitedLiveFiles.has(resolved)
+          ) {
+            queue.push(resolved);
+          }
+        }
+      }
+
+      const liveDisableViolations = [...visitedLiveFiles]
+        .filter((file) => a11yDisableRe.test(fs.readFileSync(file, "utf-8")))
+        .map((file) => path.relative(repoRoot, file));
+      expect(liveDisableViolations).toEqual([]);
+
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+      const unusedDisableCheck = await eslint.lintText(
+        `<template>
+  <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+  <button type="button">Clean button</button>
+</template>
+`,
+        { filePath: path.join(webSrcDir, "views/__SyntheticUnusedDisable.vue") }
+      );
+      expect(
+        unusedDisableCheck[0].messages.some(
+          (m) => m.severity === 2 && m.message.includes("Unused eslint-disable")
+        )
+      ).toBe(true);
+    });
   });
 });

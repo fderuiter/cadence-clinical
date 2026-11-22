@@ -105,7 +105,6 @@
               :key="optIndex"
               class="option-row"
             >
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 type="radio"
                 :name="'correct-opt-' + q.id"
@@ -869,7 +868,7 @@ defineExpose({
   align-items: center;
   background-color: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.85rem;

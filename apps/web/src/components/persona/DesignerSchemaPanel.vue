@@ -82,7 +82,9 @@
           style="
             width: 100%;
             padding: 8px;
-            border: 1px solid var(--border);
+            border: 1px solid var(--semantic-color-border-control);
+            background-color: var(--semantic-color-surface);
+            color: var(--semantic-color-text);
             border-radius: 4px;
             font-size: 0.85rem;
             box-sizing: border-box;
@@ -463,12 +465,13 @@
               class="item-edit-section"
             >
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label style="font-size: 0.75rem"
+                <label
+                  :for="`edit-item-value-${item.id}`"
+                  style="font-size: 0.75rem"
                   >Modify Candidate Name/Label</label
                 >
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
+                  :id="`edit-item-value-${item.id}`"
                   :value="editItemValue"
                   type="text"
                   style="
@@ -483,12 +486,13 @@
                 />
               </div>
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label style="font-size: 0.75rem"
+                <label
+                  :for="`edit-item-reason-${item.id}`"
+                  style="font-size: 0.75rem"
                   >Change Reason Justification (Mandatory)</label
                 >
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
+                  :id="`edit-item-reason-${item.id}`"
                   :value="editItemReason"
                   type="text"
                   placeholder="Enter mandatory reason..."
@@ -530,8 +534,8 @@
               class="item-reject-section"
             >
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label
+                  :for="`reject-item-reason-${item.id}`"
                   style="
                     font-size: 0.75rem;
                     color: var(--semantic-color-error);
@@ -539,8 +543,8 @@
                   "
                   >Provide Rejection Reason (Mandatory)</label
                 >
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
+                  :id="`reject-item-reason-${item.id}`"
                   :value="rejectItemReason"
                   type="text"
                   placeholder="Provide justification for rejecting candidate..."

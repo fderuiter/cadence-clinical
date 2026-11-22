@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { formatAccessibilityViolations, runWcag22Audit } from "ui/playwright";
 
 async function completeInitialPinSetupIfOpen(page, pin = "246810") {
   const pinSetupModal = page.locator("#portal-pin-setup-modal");
@@ -280,21 +280,33 @@ test.describe("Idempotent Wallet Recovery, Payout Confirmation, and 48px Touch T
       "€135.00"
     );
 
-    const axeResults = await new AxeBuilder({ page })
-      .include("#view-wallet")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-      .analyze();
-    expect(axeResults.violations).toEqual([]);
+    const axeResults = await runWcag22Audit(page, {
+      include: "#view-wallet",
+    });
+    expect(
+      axeResults.violations,
+      formatAccessibilityViolations(
+        axeResults.violations,
+        axeResults.borderViolations
+      )
+    ).toEqual([]);
+    expect(axeResults.borderViolations).toEqual([]);
 
     // Verify paired dark-theme semantic tokens also pass WCAG 2.2 AA contrast
     await page.evaluate(() => {
       document.documentElement.setAttribute("data-theme", "dark");
     });
-    const darkAxeResults = await new AxeBuilder({ page })
-      .include("#view-wallet")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-      .analyze();
-    expect(darkAxeResults.violations).toEqual([]);
+    const darkAxeResults = await runWcag22Audit(page, {
+      include: "#view-wallet",
+    });
+    expect(
+      darkAxeResults.violations,
+      formatAccessibilityViolations(
+        darkAxeResults.violations,
+        darkAxeResults.borderViolations
+      )
+    ).toEqual([]);
+    expect(darkAxeResults.borderViolations).toEqual([]);
     await page.evaluate(() => {
       document.documentElement.removeAttribute("data-theme");
     });
@@ -579,11 +591,17 @@ test.describe("Idempotent Wallet Recovery, Payout Confirmation, and 48px Touch T
 
     // Enter valid partial payout ($50.00), run Axe WCAG check, capture screenshot, and confirm
     await page.fill("#disburse-amount-input", "50.00");
-    const modalAxe = await new AxeBuilder({ page })
-      .include("#wallet-disburse-modal")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-      .analyze();
-    expect(modalAxe.violations).toEqual([]);
+    const modalAxe = await runWcag22Audit(page, {
+      include: "#wallet-disburse-modal",
+    });
+    expect(
+      modalAxe.violations,
+      formatAccessibilityViolations(
+        modalAxe.violations,
+        modalAxe.borderViolations
+      )
+    ).toEqual([]);
+    expect(modalAxe.borderViolations).toEqual([]);
 
     await page.screenshot({
       path: "/tmp/wallet-disburse-confirmation-modal.png",

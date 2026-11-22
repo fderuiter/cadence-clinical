@@ -206,7 +206,7 @@
     </div>
 
     <!-- High Density Matrix Table -->
-    <!-- eslint-disable vuejs-accessibility/mouse-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable vuejs-accessibility/mouse-events-have-key-events -->
     <div class="matrix-table-container">
       <table class="soa-interactive-table">
         <thead>

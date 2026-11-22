@@ -97,7 +97,6 @@
     <!-- KPI Summary Grid -->
     <div class="kpi-grid">
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="kpi-card"
         :class="{ 'kpi-card-active': selectedCategory === 'ALL' }"

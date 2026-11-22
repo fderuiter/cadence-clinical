@@ -668,7 +668,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 16px;
-  color: var(--semantic-color-border);
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .ledger-timeline {
@@ -698,7 +698,7 @@ body {
 }
 
 .ledger-item-details {
-  color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-inverse);
 }
 
 .ledger-verification-details {
@@ -789,11 +789,11 @@ a:focus-visible,
 
 /* 3. Color Contrast Adjustments (Requirement 3) */
 .portal-footer {
-  color: var(--semantic-color-primary-light) !important;
+  color: var(--semantic-color-text-inverse-muted) !important;
 }
 
 .ledger-item-details {
-  color: var(--semantic-color-surface-header) !important;
+  color: var(--semantic-color-text-inverse) !important;
 }
 
 .badge-gxp {

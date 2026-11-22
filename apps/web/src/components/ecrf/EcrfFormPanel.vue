@@ -1854,7 +1854,7 @@ onUnmounted(() => {
   padding: 0 8px;
   border-radius: 999px;
   background-color: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -1893,7 +1893,7 @@ onUnmounted(() => {
 }
 .ecrf-sdv-badge--reverify {
   background-color: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .ecrf-sdv-badge--unverified {
   background-color: var(--semantic-color-surface-header);
@@ -1937,7 +1937,7 @@ onUnmounted(() => {
   font-weight: 600;
 }
 .ecrf-form-incomplete {
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .ecrf-form-locks {
   background-color: var(--semantic-color-surface-header);
@@ -1992,7 +1992,7 @@ onUnmounted(() => {
 }
 .ecrf-signature-state--superseded {
   background-color: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .ecrf-signed-values {
   margin-top: 6px;

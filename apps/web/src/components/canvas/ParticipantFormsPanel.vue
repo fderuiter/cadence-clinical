@@ -1153,7 +1153,7 @@ watch(
 .cb-badge--partial-sdv,
 .cb-badge--sig-superseded {
   background: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .cb-badge--query-answered {
@@ -1242,7 +1242,7 @@ watch(
   font-size: 0.75rem;
   font-weight: 600;
   background: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .forms-status[data-complete="true"] {

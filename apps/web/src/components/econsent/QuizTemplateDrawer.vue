@@ -666,7 +666,7 @@ defineExpose({
   border-left: 3px solid var(--semantic-color-warning-border-strong);
   border-radius: 4px;
   font-size: 0.8rem;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   display: flex;
   align-items: center;
   gap: 6px;

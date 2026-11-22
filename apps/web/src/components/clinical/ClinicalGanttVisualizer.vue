@@ -218,7 +218,6 @@
 
                   <!-- Visit Node Circle -->
                   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <circle
                     :cx="
                       getVisitX(

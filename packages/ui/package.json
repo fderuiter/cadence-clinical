@@ -6,6 +6,14 @@
   "types": "./index.d.ts",
   "exports": {
     ".": "./index.js",
+    "./accessibility-matcher": {
+      "types": "./accessibility-matcher.d.ts",
+      "default": "./accessibility-matcher.js"
+    },
+    "./playwright": {
+      "types": "./playwright-accessibility.d.ts",
+      "default": "./playwright-accessibility.js"
+    },
     "./testing": "./mockGateway.js",
     "./tokens.css": "./tokens.css",
     "./responsive.css": "./responsive.css",
@@ -28,8 +36,10 @@
     "vue": "catalog:"
   },
   "devDependencies": {
+    "@axe-core/playwright": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "jsdom": "catalog:",
     "pinia": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

@@ -217,7 +217,6 @@
 
           <div class="dossier-list" role="list">
             <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               v-for="item in filteredDossiers"
               :key="item.dossier_id"

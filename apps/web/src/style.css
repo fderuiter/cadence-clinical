@@ -53,7 +53,7 @@ body {
    ========================================================================== */
 .app-header {
   background-color: var(--semantic-color-surface-inverse);
-  color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-inverse-muted);
   padding: 12px 24px;
   display: flex;
   justify-content: space-between;
@@ -102,7 +102,7 @@ body {
     background-color: var(--semantic-color-surface-elevated);
     border: 1px solid var(--semantic-color-border-inverse);
     border-radius: 6px;
-    color: var(--semantic-color-surface-muted);
+    color: var(--semantic-color-text-inverse);
     padding: 6px 10px;
     font-size: 1.1rem;
     cursor: pointer;
@@ -276,7 +276,7 @@ body {
 
 .persona-select {
   background-color: var(--semantic-color-surface-elevated);
-  color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-inverse);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 6px 12px;
@@ -330,7 +330,7 @@ body {
 .user-name {
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-inverse);
 }
 
 .user-role-label {
@@ -459,6 +459,7 @@ body {
 .portal-nav-item .portal-link-btn {
   background-color: var(--semantic-color-surface-muted);
   border: 1px dashed var(--semantic-color-border-control);
+  color: var(--semantic-color-text-primary);
 }
 
 .portal-nav-item .portal-link-btn:hover {
@@ -882,7 +883,7 @@ main {
 .badge-reopened,
 .query-status-reopened {
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   border: 1px solid var(--semantic-color-warning-border-strong);
 }
 
@@ -943,6 +944,18 @@ main {
 .can-hover .btn-primary:hover {
   background-color: var(--primary-dark);
   border-color: var(--primary-dark);
+}
+
+.btn-secondary {
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  border-color: var(--semantic-color-border-control);
+  text-decoration: none;
+}
+
+.can-hover .btn-secondary:hover {
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
 }
 
 /* Modals */
@@ -1295,7 +1308,7 @@ a:focus-visible,
 
 /* 3. Color Contrast Adjustments (Requirement 3) */
 .header-title-area p {
-  color: var(--semantic-color-primary-light) !important;
+  color: var(--semantic-color-text-inverse-muted) !important;
 }
 
 .query-meta,
@@ -1647,6 +1660,7 @@ a:focus-visible,
   transition: all 0.15s ease;
   margin-bottom: 8px;
   cursor: pointer;
+  color: var(--semantic-color-text-primary);
 }
 
 .canvas-field-widget:hover {
@@ -1752,7 +1766,7 @@ a:focus-visible,
 
 .warning-count-badge {
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   font-size: 0.68rem;
   font-weight: 700;
   padding: 1px 6px;
@@ -1896,4 +1910,16 @@ html {
 
 .clinical-input .query-flag {
   flex-shrink: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

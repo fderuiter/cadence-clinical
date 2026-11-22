@@ -82,7 +82,6 @@
           <h4>Modular Consent Clauses</h4>
           <ul id="consent-clauses-list">
             <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <li
               v-for="(sec, sIdx) in econsentStore.sections"
               :key="sec.id"
@@ -149,7 +148,6 @@
         <div class="outline-group separator">
           <h4>Interactive Checks</h4>
           <ul>
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <li
               :class="['outline-item', { active: showQuiz }]"

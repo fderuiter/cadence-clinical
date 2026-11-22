@@ -1167,6 +1167,7 @@ function submitCohortTransition(): void {
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
+  color: var(--semantic-color-text-primary);
 }
 
 .btn-submit {

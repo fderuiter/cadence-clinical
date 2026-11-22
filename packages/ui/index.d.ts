@@ -450,7 +450,8 @@ export function initHoverDetection(): void;
 export function normalizeApprovedConsent(approved: any): any;
 export function shapeComprehensionAnswers(answers: any): any;
 export function interpretComprehensionResult(result: any): any;
-export function toBeAccessible(received: any): any;
+export const WCAG_22_AA_TAGS: string[];
+export function toBeAccessible(received: any, customOptions?: any): any;
 
 export function canonicalSerialize(obj: any): string;
 export function generateCanonicalSignature(

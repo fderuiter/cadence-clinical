@@ -3,7 +3,7 @@ import { EtmfPage } from "./pages/EtmfPage";
 import * as path from "path";
 import * as fs from "fs";
 import { fileURLToPath } from "url";
-import AxeBuilder from "@axe-core/playwright";
+import { formatAccessibilityViolations, runWcag22Audit } from "ui/playwright";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,19 +83,29 @@ test.describe("eTMF Document Management Workflow", () => {
       await expect(previewPanel).toBeVisible();
       await expect(previewPanel).toContainText("sample_protocol.pdf");
 
-      // Verify page layout complies with basic WCAG standards
-      const pageAudit = await new AxeBuilder({ page })
-        .include("#app")
-        .exclude(".watermark-overlay-container")
-        .analyze();
-      expect(pageAudit.violations).toEqual([]);
+      // Verify page layout complies with WCAG 2.2 AA and SC 1.4.11 control border contrast
+      const pageAudit = await runWcag22Audit(page, { include: "#app" });
+      expect(
+        pageAudit.violations,
+        formatAccessibilityViolations(
+          pageAudit.violations,
+          pageAudit.borderViolations
+        )
+      ).toEqual([]);
+      expect(pageAudit.borderViolations).toEqual([]);
 
       // Verify preview modal behaves accessibly under active state
-      const previewAudit = await new AxeBuilder({ page })
-        .include(".secure-preview-panel")
-        .exclude(".watermark-overlay-container")
-        .analyze();
-      expect(previewAudit.violations).toEqual([]);
+      const previewAudit = await runWcag22Audit(page, {
+        include: ".secure-preview-panel",
+      });
+      expect(
+        previewAudit.violations,
+        formatAccessibilityViolations(
+          previewAudit.violations,
+          previewAudit.borderViolations
+        )
+      ).toEqual([]);
+      expect(previewAudit.borderViolations).toEqual([]);
     } finally {
       // Clean up temp file
       if (fs.existsSync(tempFilePath)) {
@@ -129,12 +139,18 @@ test.describe("eTMF Document Management Workflow", () => {
       const modal = page.locator("#signature-capture-modal");
       await expect(modal).toBeVisible();
 
-      // Verify signature capture modal complies with basic WCAG standards in its active state
-      const modalAudit = await new AxeBuilder({ page })
-        .include("#signature-capture-modal")
-        .exclude(".watermark-overlay-container")
-        .analyze();
-      expect(modalAudit.violations).toEqual([]);
+      // Verify signature capture modal complies with WCAG 2.2 AA and SC 1.4.11 in its active state
+      const modalAudit = await runWcag22Audit(page, {
+        include: "#signature-capture-modal",
+      });
+      expect(
+        modalAudit.violations,
+        formatAccessibilityViolations(
+          modalAudit.violations,
+          modalAudit.borderViolations
+        )
+      ).toEqual([]);
+      expect(modalAudit.borderViolations).toEqual([]);
 
       await page.fill("#sig-username", "admin@cadence.clinical");
       await page.fill("#sig-password", "admin_password");

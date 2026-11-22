@@ -783,6 +783,91 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
+    public void AccessibilityDisablesBaseline_EnforcesShrinkOnlyRatchetAndZeroTolerancePackages()
+    {
+        Write(
+            "apps/web/src/views/DemoLegacyView.vue",
+            """
+            <template>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input type="text" />
+            </template>
+            """);
+        Write("packages/ui/src/components/CleanButton.vue", "<template><button type=\"button\">OK</button></template>\n");
+
+        // Generate baseline via CADENCE_UPDATE_BASELINE=1
+        FrontendQualityGateService.ValidateAccessibilityDisablesBaseline(
+            _tempDir,
+            getEnvironmentVariable: key => key == FrontendQualityGateService.UpdateBaselineEnvVar ? "1" : null)
+            .Should().Be(0);
+
+        string baselinePath = Path.Combine(_tempDir, FrontendQualityGateService.AccessibilityDisablesBaselinePath);
+        File.Exists(baselinePath).Should().BeTrue();
+        BaselineRatchetService.IsRatchetBaseline(FrontendQualityGateService.AccessibilityDisablesBaselinePath).Should().BeTrue();
+        BaselineRatchetService.Entries(
+            FrontendQualityGateService.AccessibilityDisablesBaselinePath,
+            File.ReadAllText(baselinePath))
+            .Should().Equal("apps/web/src/views/DemoLegacyView.vue|vuejs-accessibility/form-control-has-label");
+
+        // Matching baseline passes in both full and scoped modes
+        FrontendQualityGateService.ValidateAccessibilityDisablesBaseline(_tempDir).Should().Be(0);
+        FrontendQualityGateService.ValidateAccessibilityDisablesBaseline(
+            _tempDir,
+            ["apps/web/src/views/DemoLegacyView.vue"]).Should().Be(0);
+
+        // Adding a second unapproved suppression in the same file fails multiset comparison
+        Write(
+            "apps/web/src/views/DemoLegacyView.vue",
+            """
+            <template>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input type="text" />
+              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events -->
+              <div @click="noop">x</div>
+            </template>
+            """);
+        FrontendQualityGateService.ValidateAccessibilityDisablesBaseline(
+            _tempDir,
+            ["apps/web/src/views/DemoLegacyView.vue"]).Should().Be(1);
+
+        // Blanket ruleless eslint-disable is also rejected
+        Write(
+            "apps/web/src/views/DemoLegacyView.vue",
+            """
+            <template>
+              <!-- eslint-disable -->
+              <input type="text" />
+            </template>
+            """);
+        FrontendQualityGateService.ValidateAccessibilityDisablesBaseline(_tempDir).Should().Be(1);
+
+        // Removing the suppression without shrinking the baseline fails full-mode stale entry check
+        Write("apps/web/src/views/DemoLegacyView.vue", "<template><label for=\"x\">X</label><input id=\"x\" type=\"text\" /></template>\n");
+        FrontendQualityGateService.ValidateAccessibilityDisablesBaseline(_tempDir).Should().Be(1);
+
+        // Zero-tolerance packages (packages/ui and apps/subject-portal) fail even during CADENCE_UPDATE_BASELINE=1
+        Write(
+            "packages/ui/src/components/CleanButton.vue",
+            """
+            <template>
+              <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+              <div @mousedown="noop">Bad</div>
+            </template>
+            """);
+        FrontendQualityGateService.ValidateAccessibilityDisablesBaseline(
+            _tempDir,
+            getEnvironmentVariable: key => key == FrontendQualityGateService.UpdateBaselineEnvVar ? "1" : null)
+            .Should().Be(1);
+    }
+
+    [Fact]
+    public void RepositoryAccessibilityDisablesBaseline_MatchesTrackedWorkspaceFiles()
+    {
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        FrontendQualityGateService.ValidateAccessibilityDisablesBaseline(repoRoot).Should().Be(0);
+    }
+
+    [Fact]
     public void FindRepoRoot_ResolvesRepositoryFromNestedSubdirectory()
     {
         Write("Cadence.sln", "\n");
