@@ -592,6 +592,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2527: Enforce Dependency Alignment with MSBuild Properties and pnpm Catalogs](adr/2026-11-21-enforce-dependency-alignment-with-msbuild-and-pnpm-catalogs.md) | Current | - Status: Accepted |
 | [ADR-2624: Outbox Collection Edit Checks, Stateless Pre-Commit Form Preview, and ODM Rule Compilation](adr/2026-11-21-outbox-collection-edit-checks-and-pre-commit-preview.md) | Current | - Status: Accepted |
 | [ADR-2604: Signed Gateway Expiry Guard and Scoped Trial Upgrades](adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md) | Current | - Status: Accepted |
+| [ADR-2821: Migrate Web Overlays to Clinical Primitives and Enforce AST Guardrails](adr/2026-11-22-migrate-web-overlays-to-clinical-primitives-and-enforce-ast-guardrails.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

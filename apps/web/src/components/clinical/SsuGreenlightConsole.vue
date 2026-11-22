@@ -19,71 +19,72 @@
     </div>
 
     <!-- Upload Document Modal (Global Level) -->
-    <div v-if="showUploadDocModal" class="modal-backdrop">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>Upload Essential Document</h3>
-          <button class="btn-icon-only" @click="showUploadDocModal = false">
-            ✖
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="doc-type-select">Document Type:</label>
-            <select
-              id="doc-type-select"
-              v-model="docForm.type"
-              class="select-input"
-            >
-              <option value="FDA_1572">Form FDA 1572 (05.02.02)</option>
-              <option value="IRB_APPROVAL">
-                IRB Approval Letter (04.01.02)
-              </option>
-              <option value="CTA_AGREEMENT">
-                Clinical Trial Agreement (05.02.12)
-              </option>
-              <option value="PROTOCOL_SIGNATURE">
-                Protocol Signature Page (05.02.03)
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="doc-file-input">File:</label>
-            <input
-              id="doc-file-input"
-              data-testid="ssu-doc-file"
-              type="file"
-              class="text-input"
-              @change="onDocFileSelected"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="doc-upload-reason">Reason for Change:</label>
-            <input
-              id="doc-upload-reason"
-              v-model="docForm.reasonForChange"
-              type="text"
-              class="text-input"
-              placeholder="Stage essential startup document for clinical QC"
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showUploadDocModal = false">
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="isSubmitting"
-            @click="submitDoc"
-          >
-            {{ isSubmitting ? "Uploading..." : "Upload Document" }}
-          </button>
-        </div>
+    <ClinicalModal
+      v-model="showUploadDocModal"
+      :teleport="false"
+      :dismissible="!isSubmitting"
+      dialog-class="modal-card"
+      title="Upload Essential Document"
+    >
+      <div class="form-group">
+        <label for="doc-type-select">Document Type:</label>
+        <select
+          id="doc-type-select"
+          v-model="docForm.type"
+          class="select-input"
+        >
+          <option value="FDA_1572">Form FDA 1572 (05.02.02)</option>
+          <option value="IRB_APPROVAL">IRB Approval Letter (04.01.02)</option>
+          <option value="CTA_AGREEMENT">
+            Clinical Trial Agreement (05.02.12)
+          </option>
+          <option value="PROTOCOL_SIGNATURE">
+            Protocol Signature Page (05.02.03)
+          </option>
+        </select>
       </div>
-    </div>
+
+      <div class="form-group">
+        <label for="doc-file-input">File:</label>
+        <input
+          id="doc-file-input"
+          data-testid="ssu-doc-file"
+          type="file"
+          class="text-input"
+          @change="onDocFileSelected"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="doc-upload-reason">Reason for Change:</label>
+        <input
+          id="doc-upload-reason"
+          v-model="docForm.reasonForChange"
+          type="text"
+          class="text-input"
+          placeholder="Stage essential startup document for clinical QC"
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="showUploadDocModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="isSubmitting"
+          @click="submitDoc"
+        >
+          {{ isSubmitting ? "Uploading..." : "Upload Document" }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- ========================================================================= -->
     <!-- VIEW 1: COUNTRY-LEVEL MULTI-SITE ACTIVATION MATRIX VIEW                   -->
@@ -530,125 +531,117 @@
       </div>
 
       <!-- Batch Certification Modal -->
-      <div v-if="showBatchCertifyModal" class="modal-backdrop">
-        <div class="modal-card modal-lg">
-          <div class="modal-header">
-            <h3>21 CFR Part 11 Country-Level Batch Greenlight Certification</h3>
-            <button
-              class="btn-icon-only"
-              @click="showBatchCertifyModal = false"
-            >
-              ✖
-            </button>
-          </div>
-
-          <div class="modal-body">
-            <div
-              v-if="batchErrorMessage"
-              class="alert alert-danger"
-              role="alert"
-            >
-              <span class="alert-icon">⚠️</span>
-              <div>
-                <strong>Batch Certification Rejected:</strong>
-                {{ batchErrorMessage }}
-              </div>
-            </div>
-
-            <div class="alert alert-info">
-              <span class="alert-icon">🛡️</span>
-              <div>
-                <strong>Legal Certification Scope:</strong>
-                You are applying a single 21 CFR Part 11 compliant electronic
-                signature to batch-certify greenlight activation for
-                <strong>{{ selectedSiteIds.size }} compliant site(s)</strong> in
-                <strong>{{ activeCountry }}</strong> for study
-                <strong>{{ activeStudyId }}</strong>.
-              </div>
-            </div>
-
-            <div class="batch-summary-box">
-              <h4>Selected Cohort Sites ({{ selectedSiteIds.size }}):</h4>
-              <div class="selected-sites-grid">
-                <div
-                  v-for="siteIdItem in Array.from(selectedSiteIds)"
-                  :key="siteIdItem"
-                  class="selected-site-tag"
-                >
-                  <span class="site-tag-id">✓ {{ siteIdItem }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="esign-form">
-              <h4 class="esign-title">Electronic Signature Credentials</h4>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="batch-sig-name">Signer Full Name:</label>
-                  <input
-                    id="batch-sig-name"
-                    v-model="batchSigForm.name"
-                    type="text"
-                    class="text-input"
-                    placeholder="e.g. Dr. Eleanor Vance"
-                  />
-                </div>
-                <div class="form-group">
-                  <label for="batch-sig-role">Role / Title:</label>
-                  <input
-                    id="batch-sig-role"
-                    v-model="batchSigForm.role"
-                    type="text"
-                    class="text-input"
-                    placeholder="e.g. VP of Clinical Operations"
-                  />
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="batch-sig-reason"
-                  >Certification Statement / Change Reason:</label
-                >
-                <textarea
-                  id="batch-sig-reason"
-                  v-model="batchSigForm.changeReason"
-                  class="textarea-input"
-                  rows="3"
-                  placeholder="Provide GxP certification statement..."
-                />
-              </div>
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button
-              class="btn btn-secondary"
-              @click="showBatchCertifyModal = false"
-            >
-              Cancel
-            </button>
-            <button
-              class="btn btn-primary btn-submit-batch-certify"
-              :disabled="
-                !canCertify ||
-                !batchSigForm.name ||
-                !batchSigForm.role ||
-                !batchSigForm.changeReason.trim() ||
-                isSubmitting
-              "
-              :title="!canCertify ? GREENLIGHT_CERTIFY_ROLE_REASON : undefined"
-              @click="executeBatchCertification"
-            >
-              {{
-                isSubmitting
-                  ? "Certifying Cohort..."
-                  : "Sign & Batch Certify Country Sites"
-              }}
-            </button>
+      <ClinicalModal
+        v-model="showBatchCertifyModal"
+        :teleport="false"
+        :dismissible="!isSubmitting"
+        size="lg"
+        dialog-class="modal-card modal-lg"
+        title="21 CFR Part 11 Country-Level Batch Greenlight Certification"
+      >
+        <div v-if="batchErrorMessage" class="alert alert-danger" role="alert">
+          <span class="alert-icon">⚠️</span>
+          <div>
+            <strong>Batch Certification Rejected:</strong>
+            {{ batchErrorMessage }}
           </div>
         </div>
-      </div>
+
+        <div class="alert alert-info">
+          <span class="alert-icon">🛡️</span>
+          <div>
+            <strong>Legal Certification Scope:</strong>
+            You are applying a single 21 CFR Part 11 compliant electronic
+            signature to batch-certify greenlight activation for
+            <strong>{{ selectedSiteIds.size }} compliant site(s)</strong> in
+            <strong>{{ activeCountry }}</strong> for study
+            <strong>{{ activeStudyId }}</strong>.
+          </div>
+        </div>
+
+        <div class="batch-summary-box">
+          <h4>Selected Cohort Sites ({{ selectedSiteIds.size }}):</h4>
+          <div class="selected-sites-grid">
+            <div
+              v-for="siteIdItem in Array.from(selectedSiteIds)"
+              :key="siteIdItem"
+              class="selected-site-tag"
+            >
+              <span class="site-tag-id">✓ {{ siteIdItem }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="esign-form">
+          <h4 class="esign-title">Electronic Signature Credentials</h4>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="batch-sig-name">Signer Full Name:</label>
+              <input
+                id="batch-sig-name"
+                v-model="batchSigForm.name"
+                type="text"
+                class="text-input"
+                placeholder="e.g. Dr. Eleanor Vance"
+              />
+            </div>
+            <div class="form-group">
+              <label for="batch-sig-role">Role / Title:</label>
+              <input
+                id="batch-sig-role"
+                v-model="batchSigForm.role"
+                type="text"
+                class="text-input"
+                placeholder="e.g. VP of Clinical Operations"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="batch-sig-reason"
+              >Certification Statement / Change Reason:</label
+            >
+            <textarea
+              id="batch-sig-reason"
+              v-model="batchSigForm.changeReason"
+              class="textarea-input"
+              rows="3"
+              placeholder="Provide GxP certification statement..."
+            />
+          </div>
+        </div>
+
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="isSubmitting"
+            @click="showBatchCertifyModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary btn-submit-batch-certify"
+            :disabled="
+              !canCertify ||
+              !batchSigForm.name ||
+              !batchSigForm.role ||
+              !batchSigForm.changeReason.trim() ||
+              isSubmitting
+            "
+            :title="!canCertify ? GREENLIGHT_CERTIFY_ROLE_REASON : undefined"
+            @click="executeBatchCertification"
+          >
+            {{
+              isSubmitting
+                ? "Certifying Cohort..."
+                : "Sign & Batch Certify Country Sites"
+            }}
+          </button>
+        </template>
+      </ClinicalModal>
     </div>
 
     <!-- ========================================================================= -->
@@ -981,82 +974,82 @@
       </div>
 
       <!-- Single Site Certification Modal -->
-      <div v-if="showCertifyModal" class="modal-backdrop">
-        <div class="modal-card">
-          <div class="modal-header">
-            <h3>21 CFR Part 11 Single-Site Greenlight Certification</h3>
-            <button class="btn-icon-only" @click="showCertifyModal = false">
-              ✖
-            </button>
-          </div>
-          <div class="modal-body">
-            <div
-              v-if="certifyErrorMessage"
-              class="alert alert-danger"
-              role="alert"
-            >
-              <span class="alert-icon">⚠️</span>
-              <div>
-                <strong>Certification Rejected:</strong>
-                {{ certifyErrorMessage }}
-              </div>
-            </div>
-            <p>
-              You are certifying regulatory greenlight activation for site
-              <strong>{{ activeSiteId }}</strong> in
-              <strong>{{ activeCountry }}</strong>.
-            </p>
-            <div class="form-group">
-              <label for="ssu-sig-name">Signer Name:</label>
-              <input
-                id="ssu-sig-name"
-                v-model="sigForm.name"
-                type="text"
-                class="text-input"
-              />
-            </div>
-            <div class="form-group">
-              <label for="ssu-sig-role">Role:</label>
-              <input
-                id="ssu-sig-role"
-                v-model="sigForm.role"
-                type="text"
-                class="text-input"
-              />
-            </div>
-            <div class="form-group">
-              <label for="ssu-sig-reason">Change Reason:</label>
-              <input
-                id="ssu-sig-reason"
-                v-model="sigForm.changeReason"
-                type="text"
-                class="text-input"
-              />
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" @click="showCertifyModal = false">
-              Cancel
-            </button>
-            <button
-              id="btn-confirm-single-certify"
-              class="btn btn-primary"
-              :disabled="
-                !canCertify || !sigForm.changeReason.trim() || isSubmitting
-              "
-              :title="!canCertify ? GREENLIGHT_CERTIFY_ROLE_REASON : undefined"
-              @click="executeGreenlightCertification"
-            >
-              {{ isSubmitting ? "Certifying..." : "Sign & Certify Greenlight" }}
-            </button>
+      <ClinicalModal
+        v-model="showCertifyModal"
+        :teleport="false"
+        :dismissible="!isSubmitting"
+        dialog-class="modal-card"
+        title="21 CFR Part 11 Single-Site Greenlight Certification"
+      >
+        <div v-if="certifyErrorMessage" class="alert alert-danger" role="alert">
+          <span class="alert-icon">⚠️</span>
+          <div>
+            <strong>Certification Rejected:</strong>
+            {{ certifyErrorMessage }}
           </div>
         </div>
-      </div>
+        <p>
+          You are certifying regulatory greenlight activation for site
+          <strong>{{ activeSiteId }}</strong> in
+          <strong>{{ activeCountry }}</strong>.
+        </p>
+        <div class="form-group">
+          <label for="ssu-sig-name">Signer Name:</label>
+          <input
+            id="ssu-sig-name"
+            v-model="sigForm.name"
+            type="text"
+            class="text-input"
+          />
+        </div>
+        <div class="form-group">
+          <label for="ssu-sig-role">Role:</label>
+          <input
+            id="ssu-sig-role"
+            v-model="sigForm.role"
+            type="text"
+            class="text-input"
+          />
+        </div>
+        <div class="form-group">
+          <label for="ssu-sig-reason">Change Reason:</label>
+          <input
+            id="ssu-sig-reason"
+            v-model="sigForm.changeReason"
+            type="text"
+            class="text-input"
+          />
+        </div>
+
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="isSubmitting"
+            @click="showCertifyModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            id="btn-confirm-single-certify"
+            type="button"
+            class="btn btn-primary"
+            :disabled="
+              !canCertify || !sigForm.changeReason.trim() || isSubmitting
+            "
+            :title="!canCertify ? GREENLIGHT_CERTIFY_ROLE_REASON : undefined"
+            @click="executeGreenlightCertification"
+          >
+            {{ isSubmitting ? "Certifying..." : "Sign & Certify Greenlight" }}
+          </button>
+        </template>
+      </ClinicalModal>
     </div>
   </div>
 </template>
 
 <script setup>
+import { ClinicalModal } from "ui";
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ctmsApi } from "../../api/ctmsApi";
 import { etmfService } from "../../api/etmf";

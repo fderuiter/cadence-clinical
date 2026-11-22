@@ -434,220 +434,230 @@
     </div>
 
     <!-- Delegate Site Duties Modal -->
-    <div
-      v-if="showDelegateModal"
-      class="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="delegate-modal-title"
+    <ClinicalModal
+      v-model="showDelegateModal"
+      :teleport="false"
+      :dismissible="!submittingDelegate"
+      :show-footer="false"
+      title="Delegate clinical site duties"
       data-testid="org-delegate-modal"
     >
-      <div class="modal-card">
-        <h3 id="delegate-modal-title">Delegate clinical site duties</h3>
-        <p class="card-hint">
-          Issues a bounded child grant derived from your held site authority.
-          Scope, capabilities, and validity cannot exceed your parent grant.
-        </p>
+      <p class="card-hint">
+        Issues a bounded child grant derived from your held site authority.
+        Scope, capabilities, and validity cannot exceed your parent grant.
+      </p>
 
-        <form @submit.prevent="submitDelegation">
-          <div class="form-field">
-            <label for="delegate-email">Delegatee work email</label>
-            <input
-              id="delegate-email"
-              v-model="delegateEmail"
-              type="email"
-              required
-              placeholder="Delegatee work email"
-            />
-          </div>
+      <form @submit.prevent="submitDelegation">
+        <div class="form-field">
+          <label for="delegate-email">Delegatee work email</label>
+          <input
+            id="delegate-email"
+            v-model="delegateEmail"
+            type="email"
+            required
+            placeholder="Delegatee work email"
+            :disabled="submittingDelegate"
+          />
+        </div>
 
-          <div class="form-field">
-            <label for="delegate-name">Full name (optional)</label>
-            <input
-              id="delegate-name"
-              v-model="delegateFullName"
-              type="text"
-              placeholder="Sealed in IdentityVault"
-            />
-          </div>
+        <div class="form-field">
+          <label for="delegate-name">Full name (optional)</label>
+          <input
+            id="delegate-name"
+            v-model="delegateFullName"
+            type="text"
+            placeholder="Sealed in IdentityVault"
+            :disabled="submittingDelegate"
+          />
+        </div>
 
-          <div class="form-field">
-            <label for="delegate-site">Site code</label>
-            <select id="delegate-site" v-model="delegateSiteCode" required>
-              <option
-                v-for="site in siteScopeOptions"
-                :key="site.code"
-                :value="site.code"
-              >
-                {{ site.label }}
-              </option>
-            </select>
-          </div>
-
-          <fieldset class="duties-fieldset">
-            <legend>Delegated clinical duties</legend>
-            <div
-              v-for="duty in dutyOptions"
-              :key="duty.code"
-              class="checkbox-row"
+        <div class="form-field">
+          <label for="delegate-site">Site code</label>
+          <select
+            id="delegate-site"
+            v-model="delegateSiteCode"
+            required
+            :disabled="submittingDelegate"
+          >
+            <option
+              v-for="site in siteScopeOptions"
+              :key="site.code"
+              :value="site.code"
             >
-              <input
-                :id="`duty-${duty.code}`"
-                v-model="delegateDuties"
-                type="checkbox"
-                :value="duty.code"
-              />
-              <label :for="`duty-${duty.code}`">
-                {{ duty.label }} (<code>{{ duty.capabilitiesLabel }}</code
-                >)
-              </label>
-            </div>
-          </fieldset>
+              {{ site.label }}
+            </option>
+          </select>
+        </div>
 
-          <div class="form-field">
-            <label for="delegate-valid-to">Valid until (optional)</label>
+        <fieldset class="duties-fieldset" :disabled="submittingDelegate">
+          <legend>Delegated clinical duties</legend>
+          <div
+            v-for="duty in dutyOptions"
+            :key="duty.code"
+            class="checkbox-row"
+          >
             <input
-              id="delegate-valid-to"
-              v-model="delegateValidTo"
-              type="date"
+              :id="`duty-${duty.code}`"
+              v-model="delegateDuties"
+              type="checkbox"
+              :value="duty.code"
             />
+            <label :for="`duty-${duty.code}`">
+              {{ duty.label }} (<code>{{ duty.capabilitiesLabel }}</code
+              >)
+            </label>
           </div>
+        </fieldset>
 
-          <div class="form-field">
-            <label for="delegate-reason">Reason for change</label>
-            <textarea
-              id="delegate-reason"
-              v-model="delegateReason"
-              rows="2"
-              required
-              placeholder="Justification for delegating these clinical duties..."
-            />
-          </div>
+        <div class="form-field">
+          <label for="delegate-valid-to">Valid until (optional)</label>
+          <input
+            id="delegate-valid-to"
+            v-model="delegateValidTo"
+            type="date"
+            :disabled="submittingDelegate"
+          />
+        </div>
 
-          <div class="modal-actions">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="showDelegateModal = false"
-            >
-              Cancel
-            </button>
-            <button
-              id="btn-confirm-delegate"
-              type="submit"
-              class="btn btn-primary"
-              :disabled="submittingDelegate"
-            >
-              {{ submittingDelegate ? "Delegating…" : "Confirm delegation" }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class="form-field">
+          <label for="delegate-reason">Reason for change</label>
+          <textarea
+            id="delegate-reason"
+            v-model="delegateReason"
+            rows="2"
+            required
+            placeholder="Justification for delegating these clinical duties..."
+            :disabled="submittingDelegate"
+          />
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="submittingDelegate"
+            @click="showDelegateModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            id="btn-confirm-delegate"
+            type="submit"
+            class="btn btn-primary"
+            :disabled="submittingDelegate"
+          >
+            {{ submittingDelegate ? "Delegating…" : "Confirm delegation" }}
+          </button>
+        </div>
+      </form>
+    </ClinicalModal>
 
     <!-- Audited Reveal Identity Modal -->
-    <div
-      v-if="revealTarget"
-      class="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="reveal-modal-title"
+    <ClinicalModal
+      :open="Boolean(revealTarget)"
+      :teleport="false"
+      :dismissible="!submittingReveal"
+      :show-footer="false"
+      :title="
+        revealTarget
+          ? `Reveal sealed identity (${formatMemberName(revealTarget)})`
+          : 'Reveal sealed identity'
+      "
       data-testid="reveal-identity-modal"
+      @close="revealTarget = null"
     >
-      <div class="modal-card">
-        <h3 id="reveal-modal-title">
-          Reveal sealed identity ({{ formatMemberName(revealTarget) }})
-        </h3>
-        <p class="card-hint">
-          Disclosing direct identifiers writes an immutable Part 11 audit entry
-          against <code>identity.reveal.person</code>.
-        </p>
-        <form @submit.prevent="confirmRevealIdentity">
-          <div class="form-field">
-            <label for="reveal-reason">Disclosure justification</label>
-            <textarea
-              id="reveal-reason"
-              v-model="revealReason"
-              rows="2"
-              required
-              placeholder="State regulatory or operational reason for disclosing identity..."
-            />
-          </div>
-          <div class="modal-actions">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="revealTarget = null"
-            >
-              Cancel
-            </button>
-            <button
-              id="btn-confirm-reveal"
-              type="submit"
-              class="btn btn-primary"
-              :disabled="submittingReveal"
-            >
-              {{ submittingReveal ? "Disclosing…" : "Disclose identity" }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      <p class="card-hint">
+        Disclosing direct identifiers writes an immutable Part 11 audit entry
+        against <code>identity.reveal.person</code>.
+      </p>
+      <form @submit.prevent="confirmRevealIdentity">
+        <div class="form-field">
+          <label for="reveal-reason">Disclosure justification</label>
+          <textarea
+            id="reveal-reason"
+            v-model="revealReason"
+            rows="2"
+            required
+            placeholder="State regulatory or operational reason for disclosing identity..."
+            :disabled="submittingReveal"
+          />
+        </div>
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="submittingReveal"
+            @click="revealTarget = null"
+          >
+            Cancel
+          </button>
+          <button
+            id="btn-confirm-reveal"
+            type="submit"
+            class="btn btn-primary"
+            :disabled="submittingReveal"
+          >
+            {{ submittingReveal ? "Disclosing…" : "Disclose identity" }}
+          </button>
+        </div>
+      </form>
+    </ClinicalModal>
 
     <!-- Revoke Grant Modal -->
-    <div
-      v-if="revokeTarget"
-      class="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="revoke-modal-title"
+    <ClinicalModal
+      :open="Boolean(revokeTarget)"
+      :teleport="false"
+      :dismissible="!submittingRevoke"
+      :show-footer="false"
+      title="Revoke clinical grant"
       data-testid="revoke-grant-modal"
+      @close="revokeTarget = null"
     >
-      <div class="modal-card">
-        <h3 id="revoke-modal-title">Revoke clinical grant</h3>
-        <p class="card-hint">
-          Immediately ends
-          <strong>{{ formatGrantSummary(revokeTarget) }}</strong> at
-          <strong>{{ formatGrantScope(revokeTarget) }}</strong> and cascades to
-          any child delegations while preserving historical audit and
-          <code>grant_periods</code> provenance.
-        </p>
-        <form @submit.prevent="confirmRevokeGrant">
-          <div class="form-field">
-            <label for="revoke-reason">Revocation reason</label>
-            <textarea
-              id="revoke-reason"
-              v-model="revokeReason"
-              rows="2"
-              required
-              placeholder="Record reason for ending this grant..."
-            />
-          </div>
-          <div class="modal-actions">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="revokeTarget = null"
-            >
-              Cancel
-            </button>
-            <button
-              id="btn-confirm-revoke"
-              type="submit"
-              class="btn btn-danger"
-              :disabled="submittingRevoke"
-            >
-              {{ submittingRevoke ? "Revoking…" : "Revoke grant" }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      <p v-if="revokeTarget" class="card-hint">
+        Immediately ends
+        <strong>{{ formatGrantSummary(revokeTarget) }}</strong> at
+        <strong>{{ formatGrantScope(revokeTarget) }}</strong> and cascades to
+        any child delegations while preserving historical audit and
+        <code>grant_periods</code> provenance.
+      </p>
+      <form @submit.prevent="confirmRevokeGrant">
+        <div class="form-field">
+          <label for="revoke-reason">Revocation reason</label>
+          <textarea
+            id="revoke-reason"
+            v-model="revokeReason"
+            rows="2"
+            required
+            placeholder="Record reason for ending this grant..."
+            :disabled="submittingRevoke"
+          />
+        </div>
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="submittingRevoke"
+            @click="revokeTarget = null"
+          >
+            Cancel
+          </button>
+          <button
+            id="btn-confirm-revoke"
+            type="submit"
+            class="btn btn-danger"
+            :disabled="submittingRevoke"
+          >
+            {{ submittingRevoke ? "Revoking…" : "Revoke grant" }}
+          </button>
+        </div>
+      </form>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
+import { ClinicalModal } from "ui";
 import { extractOrgProblem, orgApi } from "../api/orgApi";
 
 const loading = ref(false);
@@ -1383,26 +1393,6 @@ onMounted(() => {
   font-weight: 600;
   font-size: 0.85rem;
   padding: 0 4px;
-}
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgb(15 23 42 / 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  z-index: 50;
-}
-
-.modal-card {
-  background: var(--semantic-color-surface);
-  border-radius: 12px;
-  padding: 22px;
-  width: 100%;
-  max-width: 520px;
-  box-shadow: 0 12px 32px rgb(15 23 42 / 0.2);
 }
 
 .modal-actions {

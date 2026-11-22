@@ -681,456 +681,382 @@
     </div>
 
     <!-- Modal 1: Create New Article Modal -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="isCreateArticleModalOpen"
-      class="modal-overlay"
-      @click.self="isCreateArticleModalOpen = false"
+    <ClinicalModal
+      v-model="isCreateArticleModalOpen"
+      :teleport="false"
+      :show-footer="false"
+      size="lg"
+      dialog-class="modal-card modal-lg"
+      aria-labelledby="create-art-modal-title"
     >
-      <div
-        ref="createArticleModalRef"
-        class="modal-card modal-lg"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="create-art-modal-title"
-      >
-        <div class="modal-header">
-          <h3 id="create-art-modal-title">
-            ➕ Author New Knowledge SOP Article
-          </h3>
+      <template #header>
+        <h3 id="create-art-modal-title">➕ Author New Knowledge SOP Article</h3>
+      </template>
+
+      <form @submit.prevent="handleCreateArticle">
+        <div class="form-group">
+          <label for="new-art-title">SOP Title *</label>
+          <input
+            id="new-art-title"
+            v-model="newArticleForm.title"
+            type="text"
+            class="form-control"
+            placeholder="e.g. SOP-ECRF-301: Adverse Event Severity Grading"
+            required
+            @input="autoGenerateSlug"
+          />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col">
+            <label for="new-art-slug">Document Slug *</label>
+            <input
+              id="new-art-slug"
+              v-model="newArticleForm.slug"
+              type="text"
+              class="form-control"
+              placeholder="sop-ecrf-301-adverse-events"
+              required
+            />
+          </div>
+          <div class="form-group col">
+            <label for="new-art-category">Category *</label>
+            <select
+              id="new-art-category"
+              v-model="newArticleForm.category_id"
+              class="form-control"
+              required
+            >
+              <option
+                v-for="cat in visibleCategories"
+                :key="cat.id"
+                :value="cat.id"
+              >
+                {{ cat.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col">
+            <label for="new-art-version">Initial Version Label</label>
+            <input
+              id="new-art-version"
+              v-model="newArticleForm.version_label"
+              type="text"
+              class="form-control"
+              placeholder="0.1"
+            />
+          </div>
+          <div class="form-group col">
+            <label for="new-art-tags">Tags (comma-separated)</label>
+            <input
+              id="new-art-tags"
+              v-model="newArticleForm.tagsInput"
+              type="text"
+              class="form-control"
+              placeholder="ecrf, safety, adverse-events"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="new-art-body">Markdown SOP Body *</label>
+          <textarea
+            id="new-art-body"
+            v-model="newArticleForm.body_markdown"
+            class="form-control code-textarea"
+            rows="8"
+            placeholder="## Purpose & Scope&#10;Describe procedural guidance, regulatory backing (21 CFR Part 11), and responsibilities..."
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="new-art-reason">GxP Reason for Change *</label>
+          <input
+            id="new-art-reason"
+            v-model="newArticleForm.reason_for_change"
+            type="text"
+            class="form-control"
+            placeholder="Initial authoring of standard operating procedure"
+            required
+          />
+        </div>
+
+        <div class="modal-footer">
           <button
             type="button"
-            class="modal-close-btn"
+            class="btn btn-secondary"
             @click="isCreateArticleModalOpen = false"
           >
-            ✕
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Save Working Draft
           </button>
         </div>
-
-        <form @submit.prevent="handleCreateArticle">
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="new-art-title">SOP Title *</label>
-              <input
-                id="new-art-title"
-                v-model="newArticleForm.title"
-                type="text"
-                class="form-control"
-                placeholder="e.g. SOP-ECRF-301: Adverse Event Severity Grading"
-                required
-                @input="autoGenerateSlug"
-              />
-            </div>
-
-            <div class="form-row">
-              <div class="form-group col">
-                <label for="new-art-slug">Document Slug *</label>
-                <input
-                  id="new-art-slug"
-                  v-model="newArticleForm.slug"
-                  type="text"
-                  class="form-control"
-                  placeholder="sop-ecrf-301-adverse-events"
-                  required
-                />
-              </div>
-              <div class="form-group col">
-                <label for="new-art-category">Category *</label>
-                <select
-                  id="new-art-category"
-                  v-model="newArticleForm.category_id"
-                  class="form-control"
-                  required
-                >
-                  <option
-                    v-for="cat in visibleCategories"
-                    :key="cat.id"
-                    :value="cat.id"
-                  >
-                    {{ cat.name }}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group col">
-                <label for="new-art-version">Initial Version Label</label>
-                <input
-                  id="new-art-version"
-                  v-model="newArticleForm.version_label"
-                  type="text"
-                  class="form-control"
-                  placeholder="0.1"
-                />
-              </div>
-              <div class="form-group col">
-                <label for="new-art-tags">Tags (comma-separated)</label>
-                <input
-                  id="new-art-tags"
-                  v-model="newArticleForm.tagsInput"
-                  type="text"
-                  class="form-control"
-                  placeholder="ecrf, safety, adverse-events"
-                />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="new-art-body">Markdown SOP Body *</label>
-              <textarea
-                id="new-art-body"
-                v-model="newArticleForm.body_markdown"
-                class="form-control code-textarea"
-                rows="8"
-                placeholder="## Purpose & Scope&#10;Describe procedural guidance, regulatory backing (21 CFR Part 11), and responsibilities..."
-                required
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="new-art-reason">GxP Reason for Change *</label>
-              <input
-                id="new-art-reason"
-                v-model="newArticleForm.reason_for_change"
-                type="text"
-                class="form-control"
-                placeholder="Initial authoring of standard operating procedure"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="isCreateArticleModalOpen = false"
-            >
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary">
-              Save Working Draft
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </ClinicalModal>
 
     <!-- Modal 2: Edit Working Draft Modal -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="isEditDraftModalOpen"
-      class="modal-overlay"
-      @click.self="isEditDraftModalOpen = false"
+    <ClinicalModal
+      v-model="isEditDraftModalOpen"
+      :teleport="false"
+      :show-footer="false"
+      size="lg"
+      dialog-class="modal-card modal-lg"
+      aria-labelledby="edit-draft-modal-title"
     >
-      <div
-        ref="editDraftModalRef"
-        class="modal-card modal-lg"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="edit-draft-modal-title"
-      >
-        <div class="modal-header">
-          <h3 id="edit-draft-modal-title">✏️ Edit Working Draft SOP</h3>
+      <template #header>
+        <h3 id="edit-draft-modal-title">✏️ Edit Working Draft SOP</h3>
+      </template>
+
+      <form @submit.prevent="handleSaveDraft">
+        <div class="form-group">
+          <label for="edit-art-title">SOP Title *</label>
+          <input
+            id="edit-art-title"
+            v-model="editDraftForm.title"
+            type="text"
+            class="form-control"
+            required
+          />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col">
+            <label for="edit-art-category">Category</label>
+            <select
+              id="edit-art-category"
+              v-model="editDraftForm.category_id"
+              class="form-control"
+            >
+              <option
+                v-for="cat in visibleCategories"
+                :key="cat.id"
+                :value="cat.id"
+              >
+                {{ cat.name }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group col">
+            <label for="edit-art-tags">Tags</label>
+            <input
+              id="edit-art-tags"
+              v-model="editDraftForm.tagsInput"
+              type="text"
+              class="form-control"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="textarea-label-row">
+            <label for="edit-art-body">Markdown SOP Content *</label>
+            <button
+              type="button"
+              class="btn-text-toggle"
+              @click="isPreviewMode = !isPreviewMode"
+            >
+              {{
+                isPreviewMode ? "👁️ Show Raw Markdown" : "🔍 Show Live Preview"
+              }}
+            </button>
+          </div>
+
+          <div
+            v-if="isPreviewMode"
+            class="preview-container prose-content"
+            v-html="renderPreviewHtml(editDraftForm.body_markdown)"
+          />
+          <textarea
+            v-else
+            id="edit-art-body"
+            v-model="editDraftForm.body_markdown"
+            class="form-control code-textarea"
+            rows="10"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="edit-art-reason">GxP Reason for Change *</label>
+          <input
+            id="edit-art-reason"
+            v-model="editDraftForm.reason_for_change"
+            type="text"
+            class="form-control"
+            placeholder="Updated procedural guidelines and regulatory notes"
+            required
+          />
+        </div>
+
+        <div class="modal-footer">
           <button
             type="button"
-            class="modal-close-btn"
+            class="btn btn-secondary"
             @click="isEditDraftModalOpen = false"
           >
-            ✕
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Save Draft Changes
           </button>
         </div>
-
-        <form @submit.prevent="handleSaveDraft">
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="edit-art-title">SOP Title *</label>
-              <input
-                id="edit-art-title"
-                v-model="editDraftForm.title"
-                type="text"
-                class="form-control"
-                required
-              />
-            </div>
-
-            <div class="form-row">
-              <div class="form-group col">
-                <label for="edit-art-category">Category</label>
-                <select
-                  id="edit-art-category"
-                  v-model="editDraftForm.category_id"
-                  class="form-control"
-                >
-                  <option
-                    v-for="cat in visibleCategories"
-                    :key="cat.id"
-                    :value="cat.id"
-                  >
-                    {{ cat.name }}
-                  </option>
-                </select>
-              </div>
-              <div class="form-group col">
-                <label for="edit-art-tags">Tags</label>
-                <input
-                  id="edit-art-tags"
-                  v-model="editDraftForm.tagsInput"
-                  type="text"
-                  class="form-control"
-                />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <div class="textarea-label-row">
-                <label for="edit-art-body">Markdown SOP Content *</label>
-                <button
-                  type="button"
-                  class="btn-text-toggle"
-                  @click="isPreviewMode = !isPreviewMode"
-                >
-                  {{
-                    isPreviewMode
-                      ? "👁️ Show Raw Markdown"
-                      : "🔍 Show Live Preview"
-                  }}
-                </button>
-              </div>
-
-              <div
-                v-if="isPreviewMode"
-                class="preview-container prose-content"
-                v-html="renderPreviewHtml(editDraftForm.body_markdown)"
-              />
-              <textarea
-                v-else
-                id="edit-art-body"
-                v-model="editDraftForm.body_markdown"
-                class="form-control code-textarea"
-                rows="10"
-                required
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="edit-art-reason">GxP Reason for Change *</label>
-              <input
-                id="edit-art-reason"
-                v-model="editDraftForm.reason_for_change"
-                type="text"
-                class="form-control"
-                placeholder="Updated procedural guidelines and regulatory notes"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="isEditDraftModalOpen = false"
-            >
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary">
-              Save Draft Changes
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </ClinicalModal>
 
     <!-- Modal 3: Part 11 Action Justification / Reason Modal -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="isReasonModalOpen"
-      class="modal-overlay"
-      @click.self="isReasonModalOpen = false"
+    <ClinicalModal
+      v-model="isReasonModalOpen"
+      :teleport="false"
+      :show-footer="false"
+      dialog-class="modal-card"
+      aria-labelledby="reason-modal-title"
     >
-      <div
-        ref="reasonModalRef"
-        class="modal-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="reason-modal-title"
-      >
-        <div class="modal-header">
-          <h3 id="reason-modal-title">
-            {{ actionModalTitle }}
-          </h3>
+      <template #header>
+        <h3 id="reason-modal-title">
+          {{ actionModalTitle }}
+        </h3>
+      </template>
+
+      <form @submit.prevent="executeActionWithReason">
+        <p class="reason-modal-intro">
+          {{ actionModalIntro }}
+        </p>
+
+        <div v-if="actionModalType === 'publish'" class="form-group">
+          <label for="action-version-label">Published Version Label *</label>
+          <input
+            id="action-version-label"
+            v-model="actionVersionLabel"
+            type="text"
+            class="form-control"
+            placeholder="e.g. 1.0 or 2.0"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="action-reason-input"
+            >21 CFR Part 11 Reason for Change *</label
+          >
+          <textarea
+            id="action-reason-input"
+            v-model="actionReason"
+            class="form-control"
+            rows="3"
+            placeholder="Mandatory regulatory reason for executing this document state change..."
+            required
+          />
+        </div>
+
+        <div class="modal-footer">
           <button
             type="button"
-            class="modal-close-btn"
+            class="btn btn-secondary"
             @click="isReasonModalOpen = false"
           >
-            ✕
+            Cancel
+          </button>
+          <button type="submit" class="btn" :class="actionButtonClass">
+            {{ actionButtonLabel }}
           </button>
         </div>
-
-        <form @submit.prevent="executeActionWithReason">
-          <div class="modal-body">
-            <p class="reason-modal-intro">
-              {{ actionModalIntro }}
-            </p>
-
-            <div v-if="actionModalType === 'publish'" class="form-group">
-              <label for="action-version-label"
-                >Published Version Label *</label
-              >
-              <input
-                id="action-version-label"
-                v-model="actionVersionLabel"
-                type="text"
-                class="form-control"
-                placeholder="e.g. 1.0 or 2.0"
-                required
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="action-reason-input"
-                >21 CFR Part 11 Reason for Change *</label
-              >
-              <textarea
-                id="action-reason-input"
-                v-model="actionReason"
-                class="form-control"
-                rows="3"
-                placeholder="Mandatory regulatory reason for executing this document state change..."
-                required
-              />
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="isReasonModalOpen = false"
-            >
-              Cancel
-            </button>
-            <button type="submit" class="btn" :class="actionButtonClass">
-              {{ actionButtonLabel }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </ClinicalModal>
 
     <!-- Modal 4: Create Category Modal -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="isCreateCategoryModalOpen"
-      class="modal-overlay"
-      @click.self="isCreateCategoryModalOpen = false"
+    <ClinicalModal
+      v-model="isCreateCategoryModalOpen"
+      :teleport="false"
+      :show-footer="false"
+      dialog-class="modal-card"
+      aria-labelledby="create-cat-modal-title"
     >
-      <div
-        ref="createCategoryModalRef"
-        class="modal-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="create-cat-modal-title"
-      >
-        <div class="modal-header">
-          <h3 id="create-cat-modal-title">📁 Create Knowledge Category</h3>
-          <button
-            type="button"
-            class="modal-close-btn"
-            @click="isCreateCategoryModalOpen = false"
-          >
-            ✕
-          </button>
+      <template #header>
+        <h3 id="create-cat-modal-title">📁 Create Knowledge Category</h3>
+      </template>
+
+      <form @submit.prevent="handleCreateCategory">
+        <div class="form-group">
+          <label for="new-cat-name">Category Name *</label>
+          <input
+            id="new-cat-name"
+            v-model="newCategoryForm.name"
+            type="text"
+            class="form-control"
+            placeholder="e.g. Safety & Pharmacovigilance"
+            required
+            @input="autoGenerateCategorySlug"
+          />
         </div>
 
-        <form @submit.prevent="handleCreateCategory">
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="new-cat-name">Category Name *</label>
-              <input
-                id="new-cat-name"
-                v-model="newCategoryForm.name"
-                type="text"
-                class="form-control"
-                placeholder="e.g. Safety & Pharmacovigilance"
-                required
-                @input="autoGenerateCategorySlug"
-              />
-            </div>
+        <div class="form-group">
+          <label for="new-cat-slug">Category Slug *</label>
+          <input
+            id="new-cat-slug"
+            v-model="newCategoryForm.slug"
+            type="text"
+            class="form-control"
+            placeholder="safety-pharmacovigilance"
+            required
+          />
+        </div>
 
-            <div class="form-group">
-              <label for="new-cat-slug">Category Slug *</label>
-              <input
-                id="new-cat-slug"
-                v-model="newCategoryForm.slug"
-                type="text"
-                class="form-control"
-                placeholder="safety-pharmacovigilance"
-                required
-              />
-            </div>
+        <div class="form-group">
+          <label for="new-cat-desc">Description</label>
+          <input
+            id="new-cat-desc"
+            v-model="newCategoryForm.description"
+            type="text"
+            class="form-control"
+            placeholder="Guidelines for safety event intake, triage, and expedited reporting."
+          />
+        </div>
 
-            <div class="form-group">
-              <label for="new-cat-desc">Description</label>
-              <input
-                id="new-cat-desc"
-                v-model="newCategoryForm.description"
-                type="text"
-                class="form-control"
-                placeholder="Guidelines for safety event intake, triage, and expedited reporting."
-              />
-            </div>
-
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label"
-                >Persona Visibility (All by default if empty)</label
-              >
-              <div class="persona-checkbox-grid">
-                <label
-                  v-for="p in PERSONA_PRESETS"
-                  :key="p.key"
-                  class="checkbox-label"
-                >
-                  <input
-                    v-model="newCategoryForm.persona_visibility"
-                    type="checkbox"
-                    :value="p.key"
-                  />
-                  <span>{{ p.label }}</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="isCreateCategoryModalOpen = false"
+        <div class="form-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label"
+            >Persona Visibility (All by default if empty)</label
+          >
+          <div class="persona-checkbox-grid">
+            <label
+              v-for="p in PERSONA_PRESETS"
+              :key="p.key"
+              class="checkbox-label"
             >
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary">
-              Create Category
-            </button>
+              <input
+                v-model="newCategoryForm.persona_visibility"
+                type="checkbox"
+                :value="p.key"
+              />
+              <span>{{ p.label }}</span>
+            </label>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="isCreateCategoryModalOpen = false"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">Create Category</button>
+        </div>
+      </form>
+    </ClinicalModal>
   </div>
 </template>
 
 <script>
 import { computed, onMounted, ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 import {
   knowledgeService,
   DEFAULT_CATEGORIES,
@@ -1142,6 +1068,9 @@ import { isDemoBuild } from "../utils/demoMode.js";
 
 export default {
   name: "KnowledgeView",
+  components: {
+    ClinicalModal,
+  },
   setup() {
     const authStore = useAuthStore();
     const toastStore = useToastStore();
@@ -1171,35 +1100,7 @@ export default {
     const isEditDraftModalOpen = ref(false);
     const isReasonModalOpen = ref(false);
     const isCreateCategoryModalOpen = ref(false);
-    const createArticleModalRef = ref(null);
-    const editDraftModalRef = ref(null);
-    const reasonModalRef = ref(null);
-    const createCategoryModalRef = ref(null);
     const isPreviewMode = ref(false);
-
-    useFocusTrap(createArticleModalRef, isCreateArticleModalOpen, {
-      onEscape: () => {
-        isCreateArticleModalOpen.value = false;
-      },
-    });
-
-    useFocusTrap(editDraftModalRef, isEditDraftModalOpen, {
-      onEscape: () => {
-        isEditDraftModalOpen.value = false;
-      },
-    });
-
-    useFocusTrap(reasonModalRef, isReasonModalOpen, {
-      onEscape: () => {
-        isReasonModalOpen.value = false;
-      },
-    });
-
-    useFocusTrap(createCategoryModalRef, isCreateCategoryModalOpen, {
-      onEscape: () => {
-        isCreateCategoryModalOpen.value = false;
-      },
-    });
 
     // Forms
     const newArticleForm = ref({
@@ -1835,10 +1736,6 @@ export default {
       isEditDraftModalOpen,
       isReasonModalOpen,
       isCreateCategoryModalOpen,
-      createArticleModalRef,
-      editDraftModalRef,
-      reasonModalRef,
-      createCategoryModalRef,
       isPreviewMode,
       newArticleForm,
       editDraftForm,

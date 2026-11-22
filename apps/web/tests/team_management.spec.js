@@ -255,6 +255,59 @@ describe("TeamManagementView & CTMS Email Delegation", () => {
     );
   });
 
+  it("locks Escape dismissal while submitting regulated TeamManagementView ClinicalModal actions and restores focus on Escape", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(sampleDirectory), { status: 200 })
+    );
+
+    const mountEl = document.createElement("div");
+    document.body.appendChild(mountEl);
+    const wrapper = mount(TeamManagementView, { attachTo: mountEl });
+    await flushPromises();
+
+    const triggerBtn = wrapper.get("#btn-open-delegate-modal");
+    triggerBtn.element.focus();
+    expect(document.activeElement).toBe(triggerBtn.element);
+
+    await triggerBtn.trigger("click");
+    await flushPromises();
+
+    const dialog = wrapper.get('[data-testid="org-delegate-modal"]');
+    expect(dialog.attributes("role")).toBe("dialog");
+    expect(dialog.attributes("aria-modal")).toBe("true");
+
+    // Lock Escape dismissal while delegation mutation is in-flight (PRD-SYS-001)
+    wrapper.vm.submittingDelegate = true;
+    await wrapper.vm.$nextTick();
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await wrapper.vm.$nextTick();
+    expect(wrapper.vm.showDelegateModal).toBe(true);
+
+    // Unlock and press Escape -> closes ClinicalModal and restores focus to trigger button
+    wrapper.vm.submittingDelegate = false;
+    await wrapper.vm.$nextTick();
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.vm.showDelegateModal).toBe(false);
+    expect(document.activeElement).toBe(triggerBtn.element);
+
+    wrapper.unmount();
+    mountEl.remove();
+  });
+
   it("retries orgApi mutations once after single-flight 401 token refresh while preserving Idempotency-Key and X-Change-Reason", async () => {
     vi.spyOn(authorization, "getBearerToken").mockResolvedValue("expired-tok");
     const refreshSpy = vi
