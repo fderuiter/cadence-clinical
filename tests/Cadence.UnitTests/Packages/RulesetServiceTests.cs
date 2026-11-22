@@ -303,6 +303,26 @@ public sealed class RulesetServiceTests : IDisposable
     }
 
     [Fact]
+    public void Validate_WhenRulesetsDirectoryIsAbsent_StillEnforcesCiGateCoverage_WhileSyncFailsClosed()
+    {
+        Directory.Delete(Path.Combine(_root, ".github", "rulesets"), recursive: true);
+
+        using var validWriter = new StringWriter();
+        RulesetService.Validate(_root, validWriter).Should().Be(0, validWriter.ToString());
+        validWriter.ToString().Should().Contain("Validated CI Gate workflow coverage");
+
+        using var syncWriter = new StringWriter();
+        RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: syncWriter)
+            .Should().Be(1, "cadence rulesets sync requires declarative ruleset files");
+        syncWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
+
+        WriteCiWorkflow(ciGateNeeds: "[unit-tests]", ciGateIf: "always()", checkComplianceResult: false);
+        using var brokenCiWriter = new StringWriter();
+        RulesetService.Validate(_root, brokenCiWriter).Should().Be(1);
+        brokenCiWriter.ToString().Should().Contain("compliance");
+    }
+
+    [Fact]
     public void Validate_PassesWithoutRulesetsDirectory_WhenCiGateCoverageIsValid()
     {
         Directory.Delete(Path.Combine(_root, ".github", "rulesets"), recursive: true);
