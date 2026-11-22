@@ -18,6 +18,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Authorization;
@@ -49,7 +50,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// PostgreSQL verification of batched scope lookups over shared connection leases (<c>KernelAuthorityStore</c>,
 /// <c>GrantNodeVisibility</c>, <c>GrantChain</c>, <c>KernelLineageStore</c>, and <c>RequesterBoundVisibility</c>):
 /// one connection lease and two <c>pg_catalog.set_config</c> statements per bulk authority call (K-ID-2), one set-based
-/// <c>SELECT</c> per present kind, exact parity with single-node lookups across all 13 path-bearing kinds, lineage
+/// <c>SELECT</c> per present kind, exact parity with single-node lookups across all 15 path-bearing kinds, lineage
 /// version deduplication with preserved <c>masked:n</c> handles, and the 2,000-node waterfall benchmark.
 /// </summary>
 [Trait("Category", "Integration")]
@@ -76,15 +77,15 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
     private readonly KernelProtocolScenario _scenario = new(fixture);
 
     /// <summary>
-    /// Validates <see cref="IAuthorityStore.PathsOfAsync"/> across all 13 path-bearing kinds, every scope level on
+    /// Validates <see cref="IAuthorityStore.PathsOfAsync"/> across all 15 path-bearing kinds, every scope level on
     /// grants, qualification requirements and effectivities, versioned references, missing ids, and non-path kinds:
     /// every returned <see cref="ScopePath"/> matches <see cref="IAuthorityStore.PathOfAsync"/>, while opening 1
     /// connection lease, running 2 <c>pg_catalog.set_config</c> statements, and executing 1 <c>SELECT</c> per present kind.
     /// </summary>
-    [Fact(DisplayName = "PathsOfAsync_AllThirteenPathBearingKinds_MatchesSingleLookupInOneLeaseAndOneQueryPerKind")]
+    [Fact(DisplayName = "PathsOfAsync_AllFifteenPathBearingKinds_MatchesSingleLookupInOneLeaseAndOneQueryPerKind")]
     [KernelRule("K-ID-2")]
     [KernelRule("K-AUTH-2")]
-    public async Task PathsOfAsyncAllThirteenPathBearingKindsMatchesSingleLookupInOneLeaseAndOneQueryPerKind()
+    public async Task PathsOfAsyncAllFifteenPathBearingKindsMatchesSingleLookupInOneLeaseAndOneQueryPerKind()
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
@@ -100,7 +101,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             NodeRef.For(world.ParticipantBoston),
             NodeRef.For(PersonId.New()),
             NodeRef.For(ConceptId.New(), 1),
-            NodeRef.For(ObservationId.New(), 2),
+            NodeRef.For(AttestationId.New(), 2),
         ];
         var nonPathResult = await harness.AuthorityStore.PathsOfAsync(world.Tenant, nonPathOnly, ct);
         nonPathResult.Values.Should().AllSatisfy(p => p.Should().Be(ScopePath.TenantWide));
@@ -108,7 +109,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         harness.Recorder.SetConfigStatements.Should().Be(0);
         harness.Recorder.SelectStatements.Should().Be(0);
 
-        // Full batch spanning all 13 path-bearing kinds + versioned duplicates + missing ids + non-path kinds.
+        // Full batch spanning all 15 path-bearing kinds + versioned duplicates + missing ids + non-path kinds.
         NodeRef[] resources =
         [
             NodeRef.For(world.Sponsor),
@@ -120,6 +121,10 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             NodeRef.For(world.BerlinSite),
             NodeRef.For(world.EnrollmentBoston, 1),
             NodeRef.For(world.EnrollmentBoston, 2),
+            NodeRef.For(world.CollectionBoston, 1),
+            NodeRef.For(world.CollectionBoston, 2),
+            NodeRef.For(world.ObservationBoston, 1),
+            NodeRef.For(world.ObservationBoston, 2),
             NodeRef.For(world.ProtocolVersionA, 1),
             NodeRef.For(world.ProtocolVersionA, 3),
             new(NodeKinds.ProtocolElement, world.ProtocolElementAId, 1),
@@ -142,6 +147,8 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             NodeRef.For(world.SiteEffectivity),
             NodeRef.For(world.ProposalA, 1),
             NodeRef.For(StudyId.New()),
+            NodeRef.For(CollectionInstanceId.New()),
+            NodeRef.For(ObservationId.New()),
             .. nonPathOnly,
         ];
 
@@ -154,7 +161,11 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
 
         bulkLeaseCount.Should().Be(1, "PathsOfAsync holds a single connection lease across all per-kind queries");
         bulkSetConfigs.Should().Be(2, "KernelTenantConnectionInterceptor sets the tenant once on open and clears it once on close");
-        bulkSelects.Should().Be(13, "each of the 13 path-bearing kinds resolves in 1 set-based SELECT");
+        bulkSelects.Should().Be(15, "each of the 15 path-bearing kinds resolves in 1 set-based SELECT");
+
+        var expectedBostonPath = new ScopePath(world.Sponsor, world.StudyA, "US", world.BostonSite);
+        bulkPaths[NodeRef.For(world.CollectionBoston, 1)].Should().Be(expectedBostonPath);
+        bulkPaths[NodeRef.For(world.ObservationBoston, 1)].Should().Be(expectedBostonPath);
 
         // Verify exact parity against single-node PathOfAsync for every distinct NodeRef.
         foreach (var resource in resources.Distinct())
@@ -440,7 +451,19 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == studyA).Select(s => s.SponsorId).SingleAsync(ct);
         }
 
-        var protocolVersionA = await ApproveDesignAsync(tenant, studyA, ct);
+        var systolicConcept = await _scenario.OkAsync(
+            new DefineConcept(
+                tenant,
+                ConceptId.New(),
+                ConceptOrigin.Sponsor,
+                null,
+                ConceptKind.BiomedicalConcept,
+                "Systolic blood pressure",
+                "Systolic arterial blood pressure.",
+                KernelProtocolScenario.Key(),
+                "Batch test concept"),
+            ct);
+        var protocolVersionA = await ApproveDesignAsync(tenant, studyA, systolicConcept, ct);
         NodeRef protocolElementA;
         await using (var db = fixture.CreateContext(tenant))
         {
@@ -478,6 +501,39 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         await _scenario.OkAsync(
             new DeclareEffectivity(tenant, siteEffectivity, protocolVersionA, EffectivityScope.At(bostonSite), Tick(), KernelProtocolScenario.Key(), "Boston IRB"),
             ct);
+        await _scenario.OkAsync(
+            new ChangeEffectivityStatus(
+                tenant,
+                siteEffectivity,
+                EffectivityStatus.Effective,
+                Tick(),
+                [studyArtifactVersion],
+                KernelProtocolScenario.Key(),
+                "Boston IRB effective"),
+            ct);
+
+        var collectionBoston = CollectionInstanceId.New();
+        await _scenario.OkAsync(
+            new OpenCollectionInstance(
+                tenant,
+                collectionBoston,
+                enrollmentBoston,
+                "cs.vitals",
+                PlannedActivityId: null,
+                Tick(),
+                KernelProtocolScenario.Key(),
+                "Open Boston vitals"),
+            ct);
+        var recordedValues = await _scenario.OkAsync(
+            new RecordCollectedValues(
+                tenant,
+                collectionBoston,
+                enrollmentBoston,
+                [new CollectedValue("item.sbp", new QuantityValue(120m, "mm[Hg]"), ExpectedRevision: 0)],
+                KernelProtocolScenario.Key(),
+                "Initial vitals entry"),
+            ct);
+        var observationBoston = recordedValues.Values.Single().ObservationId;
 
         var reader = Actor.Person("kinds-reader@visibility.test");
         var tenantGrant = await IssueGrantAsync(tenant, reader, AuthorityScope.Tenant(), ct);
@@ -545,6 +601,8 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             participantBoston,
             participantChicago,
             enrollmentBoston,
+            collectionBoston,
+            observationBoston,
             protocolVersionA,
             protocolElementA.Id,
             studyArtifact,
@@ -680,10 +738,20 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             nodes.Distinct().Count());
     }
 
-    private async Task<ProtocolVersionId> ApproveDesignAsync(TenantId tenant, StudyId study, CancellationToken ct)
+    private async Task<ProtocolVersionId> ApproveDesignAsync(TenantId tenant, StudyId study, ConceptRef systolicConcept, CancellationToken ct)
     {
         var id = ProtocolVersionId.New();
-        (await _scenario.CreateDraftAsync(tenant, study, id, ct, ProtocolDesignDocument.Write(SampleDesign))).IsSuccess.Should().BeTrue();
+        var design = SampleDesign with
+        {
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "cs.vitals",
+                    "Vital signs",
+                    [new CollectionItem("item.sbp", systolicConcept, "mm[Hg]", Required: true)]),
+            ],
+        };
+        (await _scenario.CreateDraftAsync(tenant, study, id, ct, ProtocolDesignDocument.Write(design))).IsSuccess.Should().BeTrue();
         var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Review"), ct);
         var attestation = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
         await _scenario.OkAsync(new ApproveProtocolVersion(tenant, id, attestation, KernelProtocolScenario.Key(), "Approve"), ct);
@@ -776,6 +844,8 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         ParticipantId ParticipantBoston,
         ParticipantId ParticipantChicago,
         EnrollmentId EnrollmentBoston,
+        CollectionInstanceId CollectionBoston,
+        ObservationId ObservationBoston,
         ProtocolVersionId ProtocolVersionA,
         Guid ProtocolElementAId,
         ArtifactId StudyArtifact,

@@ -85,6 +85,61 @@ public sealed class KernelGrantVisibilityPostgresTests(KernelPostgresFixture fix
         (await visibility.MaskAsync(tenant, Crc, nodes, ct)).Should().HaveCount(nodes.Length);
     }
 
+    /// <summary>
+    /// Validates that <see cref="CollectionInstance"/> and <see cref="Observation"/> scope paths participate in
+    /// <see cref="GrantNodeVisibility"/>: a coordinator granted at one study site sees forms and observations recorded
+    /// at that site while forms and observations at another site (and unpathed attestations) remain masked.
+    /// </summary>
+    [Fact(DisplayName = "GrantVisibility_CollectionInstancesAndObservations_FollowStudySiteScope")]
+    public async Task GrantVisibilityCollectionInstancesAndObservationsFollowStudySiteScope()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var collectionScenario = new KernelCollectionScenario(fixture);
+        var bostonForm = await collectionScenario.NewFormAsync(ct);
+        var tenant = bostonForm.Subject.Tenant;
+        var study = bostonForm.Subject.Study;
+        var bostonSaved = await collectionScenario.Protocol.OkAsync(
+            KernelCollectionScenario.Save(
+                bostonForm,
+                KernelCollectionScenario.Value(KernelCollectionScenario.Systolic, KernelCollectionScenario.Mmhg(118))),
+            ct);
+        var bostonObservation = bostonSaved.Values.Single().ObservationId;
+
+        var (chicago, _) = await AddStudySiteAsync(tenant, study, "US", ct);
+        var (_, chicagoEnrollment) = await ScreenAsync(tenant, chicago, "VIS-FORM-2", ct);
+        var chicagoSubject = new KernelObservationScenario.Subject(tenant, study, chicago, chicagoEnrollment);
+        var chicagoInstance = CollectionInstanceId.New();
+        await _scenario.OkAsync(KernelCollectionScenario.Open(chicagoSubject, chicagoInstance, Tick()), ct);
+        var chicagoForm = new KernelCollectionScenario.Form(chicagoSubject, bostonForm.Version, chicagoInstance);
+        var chicagoSaved = await collectionScenario.Protocol.OkAsync(
+            KernelCollectionScenario.Save(
+                chicagoForm,
+                KernelCollectionScenario.Value(KernelCollectionScenario.Systolic, KernelCollectionScenario.Mmhg(126))),
+            ct);
+        var chicagoObservation = chicagoSaved.Values.Single().ObservationId;
+        var unpathedAttestation = NodeRef.For(AttestationId.New());
+
+        await IssueAsync(tenant, Crc, AuthorityScope.StudySite(bostonForm.Subject.StudySite), ct);
+        await IssueAsync(tenant, Monitor, AuthorityScope.StudyCountry(study, "US"), ct);
+        Tick();
+
+        NodeRef[] nodes =
+        [
+            NodeRef.For(bostonForm.Instance),
+            NodeRef.For(bostonObservation),
+            NodeRef.For(chicagoInstance),
+            NodeRef.For(chicagoObservation),
+            unpathedAttestation,
+        ];
+        var visibility = new GrantNodeVisibility(fixture.AuthorityStore, fixture.Clock);
+
+        (await visibility.MaskAsync(tenant, Crc, nodes, ct)).Keys.Should().BeEquivalentTo(
+            [NodeRef.For(chicagoInstance), NodeRef.For(chicagoObservation), unpathedAttestation]);
+        (await visibility.MaskAsync(tenant, Monitor, nodes, ct)).Keys.Should().BeEquivalentTo(
+            [unpathedAttestation]);
+    }
+
     private DateTimeOffset Tick() => fixture.Clock.Advance(TimeSpan.FromSeconds(1));
 
     private async Task<GrantId> IssueAsync(TenantId tenant, Actor grantee, AuthorityScope scope, CancellationToken ct)

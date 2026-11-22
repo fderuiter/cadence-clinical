@@ -27,9 +27,10 @@ namespace Cadence.Kernel.Persistence.Navigation;
 /// <summary>
 /// Reads the zoom hierarchy from the kernel tables (ADR-2481 §4.3). Read-only (<c>AsNoTracking</c>), through a context
 /// bound to the caller's tenant by Row-Level Security (K-ID-2), with the tenant also in every predicate. Enrollments sit
-/// under their study site; protocol versions and study standards under their study; a protocol element under the version
-/// that last governed it (ADR-2474); an attestation under the object it signs (ADR-2485). Participants (identity only)
-/// and kinds whose tables do not exist yet (visit, observation, …) resolve to nothing. Current-state objects are returned
+/// under their study site; form instances (<c>collection_instance</c>) under their enrollment; observations under their
+/// form instance or enrollment; protocol versions and study standards under their study; a protocol element under the
+/// version that last governed it (ADR-2474); an attestation under the object it signs (ADR-2485). Participants (identity
+/// only) and kinds without a summary table resolve to nothing. Current-state objects are returned
 /// at their current version, whatever version the reference names; the returned <see cref="NodeSummary.Ref"/> says which
 /// version that is.
 /// </summary>
