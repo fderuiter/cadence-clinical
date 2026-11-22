@@ -51,7 +51,7 @@ public static class LetterTemplateEndpoints
             .Produces<string>(StatusCodes.Status200OK, "text/plain")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission(RenderPermission).RequireCallerStudyScope();
+            .RequirePermission(RenderPermission).RequireCallerStudyAndSiteScope();
 
         group.MapPost("/letters/compile", CompileAndDispatchLetterAsync)
             .WithName("CompileSiteVisitLetterPdf")
@@ -59,6 +59,7 @@ public static class LetterTemplateEndpoints
             .Produces<VisitLetterCompilationResultDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(RenderPermission).RequireCallerStudyAndSiteScope();
 
         group.MapGet("/letters/{letterId}/pdf", GetLetterPdfAsync)
@@ -86,16 +87,12 @@ public static class LetterTemplateEndpoints
             return UnknownTemplate(Catalog);
         }
 
-        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is { } principal
-            && (!ClinicalScopeGuard.CanAccessStudy(httpContext, request.StudyId)
-                || (!string.IsNullOrWhiteSpace(request.SiteId)
-                    && principal.AssignedSites.Count > 0
-                    && !ClinicalScopeGuard.CanAccessSite(httpContext, request.SiteId))))
+        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
+            && ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
         {
-            return TypedResults.Problem(
-                title: "Access denied",
-                detail: "You are not assigned to the requested study or site.",
-                statusCode: StatusCodes.Status403Forbidden);
+            string detail = (scopeDenied as ProblemHttpResult)?.ProblemDetails.Detail
+                ?? "You are not assigned to the requested study or site.";
+            return CtmsScopeGuard.Forbidden(detail);
         }
 
         var model = BuildTemplateModel(request, isSigned: false, signerName: null, signingTimestamp: null, signingPurpose: null, integrityHash: null);
@@ -121,25 +118,75 @@ public static class LetterTemplateEndpoints
             return UnknownTemplate(Catalog);
         }
 
-        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
-            && ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
+        bool hasAuthenticatedCaller = ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null;
+        if (hasAuthenticatedCaller
+            && CtmsScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
         {
             return scopeDenied;
+        }
+
+        if (string.IsNullOrWhiteSpace(request.StudyId) || string.IsNullOrWhiteSpace(request.SiteId))
+        {
+            return TypedResults.Problem(
+                title: "Study and site required",
+                detail: "Both studyId and siteId are required to compile a visit letter.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string trimmedStudyId = request.StudyId.Trim();
+        string trimmedSiteId = request.SiteId.Trim();
+        string visitId;
+
+        if (!string.IsNullOrWhiteSpace(request.VisitId))
+        {
+            string trimmedVisitId = request.VisitId.Trim();
+            var visit = await dbContext.CtmsMonitoringVisits.AsNoTracking()
+                .FirstOrDefaultAsync(v => v.Id == trimmedVisitId, ct);
+            if (visit is null)
+            {
+                return TypedResults.Problem(
+                    title: "Monitoring visit not found",
+                    detail: $"Monitoring visit '{trimmedVisitId}' was not found.",
+                    statusCode: StatusCodes.Status404NotFound,
+                    extensions: new Dictionary<string, object?> { ["code"] = "VISIT_NOT_FOUND" });
+            }
+
+            if (hasAuthenticatedCaller
+                && CtmsScopeGuard.RequireStudyAndSite(httpContext, visit.StudyId, visit.SiteId) is { } visitScopeDenied)
+            {
+                return visitScopeDenied;
+            }
+
+            if (!string.Equals(visit.StudyId, trimmedStudyId, StringComparison.Ordinal)
+                || !string.Equals(visit.SiteId, trimmedSiteId, StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.Problem(
+                    title: "Monitoring visit scope mismatch",
+                    detail: $"Monitoring visit '{trimmedVisitId}' does not belong to study '{trimmedStudyId}' and site '{trimmedSiteId}'.",
+                    statusCode: StatusCodes.Status404NotFound,
+                    extensions: new Dictionary<string, object?> { ["code"] = "VISIT_SCOPE_MISMATCH" });
+            }
+
+            visitId = visit.Id;
+        }
+        else
+        {
+            visitId = "VISIT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
         }
 
         var user = httpContext.User?.Identity?.Name ?? request.CraId;
         var now = clock.UtcNow;
 
+        var normalizedRequest = request with { StudyId = trimmedStudyId, SiteId = trimmedSiteId, VisitId = visitId };
         var pdfResult = await GxpPdfCompiler.CompileLetterPdfAsync(
             templateName,
-            request,
+            normalizedRequest,
             renderer,
             Catalog,
             clock);
 
         var letterId = "LTR-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
-        var visitId = string.IsNullOrWhiteSpace(request.VisitId) ? ("VISIT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()) : request.VisitId;
-        var objectKey = $"letters/{request.StudyId}/{request.SiteId}/{letterId}.pdf";
+        var objectKey = $"letters/{trimmedStudyId}/{trimmedSiteId}/{letterId}.pdf";
 
         // File to eTMF if finalized
         string? etmfDocId = null;
@@ -149,7 +196,7 @@ public static class LetterTemplateEndpoints
                 .SelectMany(a => a.GetTypes())
                 .FirstOrDefault(t => t.FullName == "Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext");
             var etmfDb = etmfDbType != null ? serviceProvider.GetService(etmfDbType) : null;
-            etmfDocId = await EtmfFilingHelper.FileToEtmfAsync(request, pdfResult, templateName, letterId, etmfDb, clock, user, ct);
+            etmfDocId = await EtmfFilingHelper.FileToEtmfAsync(normalizedRequest, pdfResult, templateName, letterId, etmfDb, clock, user, ct);
         }
 
         // Dispatch Email Notification if finalized
@@ -161,7 +208,7 @@ public static class LetterTemplateEndpoints
                 .SelectMany(a => a.GetTypes())
                 .FirstOrDefault(t => t.FullName == "Cadence.Apps.Notifications.Infrastructure.Persistence.NotificationsDbContext");
             var notifDb = notifDbType != null ? serviceProvider.GetService(notifDbType) : null;
-            recipientEmail = await EmailDispatchHelper.DispatchEmailNotificationAsync(request, pdfResult, templateName, letterId, notifDb, clock, user, ct);
+            recipientEmail = await EmailDispatchHelper.DispatchEmailNotificationAsync(normalizedRequest, pdfResult, templateName, letterId, notifDb, clock, user, ct);
             if (recipientEmail is not null)
             {
                 dispatchedAt = now;
@@ -172,6 +219,8 @@ public static class LetterTemplateEndpoints
         var letterStatus = pdfResult.IsSigned ? CtmsGeneratedLetterStatus.Finalized : CtmsGeneratedLetterStatus.Draft;
         var entity = new CtmsGeneratedLetter(letterId, letterStatus)
         {
+            StudyId = trimmedStudyId,
+            SiteId = trimmedSiteId,
             VisitId = visitId,
             LetterType = templateName,
             RenderedContent = pdfResult.RenderedHtml,
@@ -197,7 +246,12 @@ public static class LetterTemplateEndpoints
             UserId = user,
             UserRole = "CRA",
             Action = pdfResult.IsSigned ? "FINALIZE_VISIT_LETTER_PDF" : "GENERATE_VISIT_LETTER_DRAFT_PDF",
-            Details = $"Compiled visit letter PDF for {templateName} in study {request.StudyId} site {request.SiteId}. SHA256: {pdfResult.Sha256Hash}. eTMF DocId: {etmfDocId ?? "N/A"}. Status: {entity.Status}.",
+            Details = $"Compiled visit letter PDF for {templateName} in study {trimmedStudyId} site {trimmedSiteId}. SHA256: {pdfResult.Sha256Hash}. eTMF DocId: {etmfDocId ?? "N/A"}. Status: {entity.Status}.",
+            StudyId = trimmedStudyId,
+            SiteId = trimmedSiteId,
+            CreatedAt = now.UtcDateTime,
+            CreatedBy = user,
+            VersionIndex = 1,
             ReasonForChange = request.ReasonForChange ?? "Visit letter PDF compilation and audit trail persistence."
         };
 
@@ -234,29 +288,53 @@ public static class LetterTemplateEndpoints
         CancellationToken ct,
         HttpContext? httpContext = null)
     {
+        bool hasAuthenticatedCaller = httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null;
+        if (hasAuthenticatedCaller && CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
+        {
+            return missingScope;
+        }
+
         var letter = await dbContext.CtmsGeneratedLetters.AsNoTracking().FirstOrDefaultAsync(l => l.Id == letterId, ct);
         if (letter is null)
         {
             return TypedResults.NotFound(new { error = $"Letter with ID '{letterId}' not found." });
         }
 
-        if (httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
+        string? resolvedStudyId = string.IsNullOrWhiteSpace(letter.StudyId) ? null : letter.StudyId.Trim();
+        string? resolvedSiteId = string.IsNullOrWhiteSpace(letter.SiteId) ? null : letter.SiteId.Trim();
+
+        if ((resolvedStudyId is null || resolvedSiteId is null) && !string.IsNullOrWhiteSpace(letter.VisitId))
         {
-            var parts = (letter.PdfObjectKey ?? string.Empty).Split('/', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length >= 3
-                && string.Equals(parts[0], "letters", StringComparison.Ordinal)
-                && (!ClinicalScopeGuard.CanAccessStudy(httpContext, parts[1])
-                    || !ClinicalScopeGuard.CanAccessSite(httpContext, parts[2])))
+            var visit = await dbContext.CtmsMonitoringVisits.AsNoTracking()
+                .FirstOrDefaultAsync(v => v.Id == letter.VisitId, ct);
+            if (visit is not null)
             {
-                return TypedResults.NotFound(new { error = $"Letter with ID '{letterId}' not found." });
+                resolvedStudyId ??= string.IsNullOrWhiteSpace(visit.StudyId) ? null : visit.StudyId.Trim();
+                resolvedSiteId ??= string.IsNullOrWhiteSpace(visit.SiteId) ? null : visit.SiteId.Trim();
             }
+        }
+
+        if ((resolvedStudyId is null || resolvedSiteId is null) && !string.IsNullOrWhiteSpace(letter.PdfObjectKey))
+        {
+            var parts = letter.PdfObjectKey.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 3 && string.Equals(parts[0], "letters", StringComparison.Ordinal))
+            {
+                resolvedStudyId ??= string.IsNullOrWhiteSpace(parts[1]) ? null : parts[1].Trim();
+                resolvedSiteId ??= string.IsNullOrWhiteSpace(parts[2]) ? null : parts[2].Trim();
+            }
+        }
+
+        if (hasAuthenticatedCaller
+            && CtmsScopeGuard.RequireStudyAndSite(httpContext, resolvedStudyId, resolvedSiteId) is { } scopeDenied)
+        {
+            return scopeDenied;
         }
 
         var model = new SiteVisitLetterModel(
             CraId: letter.CreatedBy,
             CreatedAt: letter.CreatedAt.ToString("yyyy-MM-dd"),
-            StudyId: "STUDY",
-            SiteId: "SITE",
+            StudyId: resolvedStudyId ?? "STUDY",
+            SiteId: resolvedSiteId ?? "SITE",
             VisitId: letter.VisitId,
             Finalize: letter.IsSigned
         );
