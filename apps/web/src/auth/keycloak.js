@@ -9,7 +9,7 @@
 
 /** Local development defaults, used only by `vite` dev and test builds. */
 export const DEV_KEYCLOAK_DEFAULTS = Object.freeze({
-  url: "http://localhost:8080/",
+  url: import.meta.env.PROD ? "" : "http://localhost:8080/",
   realm: "cadence",
   clientId: "cadence-web",
 });
