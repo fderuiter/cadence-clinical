@@ -5,6 +5,7 @@ using System.Linq;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Validation;
 
 namespace Cadence.Modules.Execution.Endpoints;
 
@@ -154,6 +155,7 @@ public sealed record FormSummaryResponse(
 /// <param name="ContentHash">The hash a signature over the current values binds to: send it to sign them (#5463); null while
 /// the form has no values.</param>
 /// <param name="CollectionTitle">The CollectionSpec's title in the governing protocol version, when present.</param>
+/// <param name="CanSign">Whether the current caller holds <c>collection.sign</c> over the form's enrollment.</param>
 public sealed record FormResponse(
     Guid FormId,
     Guid EnrollmentId,
@@ -174,13 +176,14 @@ public sealed record FormResponse(
     IReadOnlyList<FormAssertionResponse> Assertions,
     IReadOnlyList<FormSignatureResponse> Signatures,
     string? ContentHash,
-    string? CollectionTitle = null)
+    string? CollectionTitle = null,
+    bool CanSign = true)
 {
     /// <summary>
     /// Shapes the kernel's record for a form screen: items in <paramref name="layout"/> order (the specification's order
     /// when null), then any item the layout does not name, and completeness derived from the required items.
     /// </summary>
-    internal static FormResponse From(CollectionInstanceRecord record, IReadOnlyList<string>? layout)
+    internal static FormResponse From(CollectionInstanceRecord record, IReadOnlyList<string>? layout, bool canSign = true)
     {
         var specification = record.Items.ToDictionary(i => i.Id, StringComparer.Ordinal);
         var values = record.Values.ToDictionary(v => v.ItemId, StringComparer.Ordinal);
@@ -217,7 +220,8 @@ public sealed record FormResponse(
                 a.AssertionId.Value, a.Kind.ToString(), a.Target.ToString(), a.Revision, a.Text, a.AssertedBy, a.AssertedAt, a.ReasonForChange, a.RetractedAt))],
             [.. record.Attestations.Select(FormSignatureResponse.From)],
             record.ContentHash,
-            record.CollectionTitle);
+            record.CollectionTitle,
+            canSign);
     }
 }
 
@@ -344,3 +348,48 @@ public sealed record FormSavedResponse(Guid FormId, long Version, IReadOnlyList<
 /// <param name="Revision">Its current revision.</param>
 /// <param name="Changed">Whether this save recorded or corrected it.</param>
 public sealed record FormSavedValueResponse(string ItemId, Guid ObservationId, ObservationValue Value, int Revision, bool Changed);
+
+/// <summary>Body of <c>POST /api/v1/execution/forms/{formId}/preview</c>: draft values to overlay in memory before saving.</summary>
+/// <param name="Values">Draft item values to overlay on the form's current values.</param>
+public sealed record PreviewFormValuesRequest(IReadOnlyList<PreviewFormItemValueRequest> Values);
+
+/// <summary>One draft item value in a pre-commit form preview request.</summary>
+/// <param name="ItemId">The item identifier on the form.</param>
+/// <param name="Value">The draft typed value, or null when cleared.</param>
+public sealed record PreviewFormItemValueRequest(string ItemId, ObservationValue? Value);
+
+/// <summary>One non-blocking edit-check warning surfaced during pre-commit form preview (K-RULE-3).</summary>
+/// <param name="PackKey">Rule pack key.</param>
+/// <param name="RuleId">Rule identifier.</param>
+/// <param name="RuleVersion">Rule version number.</param>
+/// <param name="Severity">Rule severity (<c>Error</c>, <c>Warning</c>, <c>Notice</c>).</param>
+/// <param name="Dataset">Collection specification identifier.</param>
+/// <param name="ItemId">Primary item identifier on the form.</param>
+/// <param name="Message">Inline discrepancy message.</param>
+/// <param name="RemediationGuidance">Optional guidance for resolving the discrepancy.</param>
+public sealed record FormPreviewWarningResponse(
+    string PackKey,
+    string RuleId,
+    int RuleVersion,
+    string Severity,
+    string Dataset,
+    string ItemId,
+    string Message,
+    string? RemediationGuidance = null)
+{
+    internal static FormPreviewWarningResponse From(CollectionPreviewWarning warning) =>
+        new(
+            warning.PackKey,
+            warning.RuleId,
+            warning.RuleVersion,
+            warning.Severity.ToString(),
+            warning.Dataset,
+            warning.ItemId,
+            warning.Message,
+            warning.RemediationGuidance);
+}
+
+/// <summary>Result of evaluating pinned study edit checks in memory over draft form values without mutating state.</summary>
+/// <param name="FormId">The previewed form identifier.</param>
+/// <param name="Warnings">Item-level warnings and errors detected in memory.</param>
+public sealed record FormPreviewResponse(Guid FormId, IReadOnlyList<FormPreviewWarningResponse> Warnings);

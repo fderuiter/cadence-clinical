@@ -58,6 +58,7 @@ public sealed record RecordObservation(
     nameof(ObservationErrors.VersionStale),
     nameof(ObservationErrors.ValueInvalid),
     nameof(ObservationErrors.ValueUnchanged))]
+[RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.ValuesInvalid))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record CorrectObservation(
     TenantId TenantId,

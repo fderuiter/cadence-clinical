@@ -86,6 +86,21 @@ export type KernelProtocolFormItem =
   Schemas["Kernel_KernelProtocolFormItemResponse"];
 export type KernelProtocolImportNote =
   Schemas["Kernel_KernelProtocolImportNoteResponse"];
+export type KernelImportedRulePackSummary =
+  Schemas["Kernel_KernelImportedRulePackSummaryResponse"];
+export type KernelRulePack = Schemas["Kernel_KernelRulePackResponse"];
+export type KernelStudyRulePacks =
+  Schemas["Kernel_KernelStudyRulePacksResponse"];
+export type KernelRulePackPreview =
+  Schemas["Kernel_KernelRulePackPreviewResponse"];
+export type KernelRulePackPreviewViolation =
+  Schemas["Kernel_KernelRulePackPreviewViolationResponse"];
+export type KernelValidationFinding =
+  Schemas["Kernel_KernelValidationFindingResponse"];
+export type KernelValidationFindingPage =
+  Schemas["Kernel_KernelValidationFindingPageResponse"];
+export type KernelValidationFindingDetail =
+  Schemas["Kernel_KernelValidationFindingDetailResponse"];
 export type KernelEntitlements = Schemas["Kernel_KernelEntitlementsResponse"];
 export type KernelSubscriptionScoping =
   Schemas["Kernel_KernelSubscriptionScopingResponse"];
@@ -166,6 +181,40 @@ export function extractKernelFieldErrors(
 }
 
 /** Gateway step-up target URL for `POST /api/v1/kernel/locks`. */
+export const RULE_PACK_APPROVE_SEMANTIC_ACTION = "kernel.library_item.approve";
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/library-items/{itemRef}/approve`. */
+export function rulePackApproveAction(itemRef: string): string {
+  const at = itemRef.indexOf("@");
+  const clean = at < 0 ? itemRef : itemRef.slice(0, at);
+  return `/api/v1/kernel/library-items/${clean}/approve`;
+}
+
+export interface KernelApproveLibraryItemRequest {
+  itemRef: string;
+  meaning?: KernelLockMeaning;
+  attestationId?: string | null;
+  sigToken: string;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelDeclareStudyRulePacksInput {
+  studyRef: string;
+  rulePackRefs: string[];
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelStudyValidationFindingsQuery {
+  stage?: string;
+  status?: string;
+  severity?: string;
+  dataset?: string;
+  packKey?: string;
+  limit?: number;
+}
+
 export const LOCK_APPLY_ACTION = "/api/v1/kernel/locks";
 export const LOCK_APPLY_SEMANTIC_ACTION = "kernel.lock.apply";
 export const LOCK_RELEASE_SEMANTIC_ACTION = "kernel.lock.release";
@@ -1199,6 +1248,111 @@ export const kernelApi = {
     return streamKernelDownload(
       `/api/v1/kernel/enrollments/${encodeURIComponent(cleanRef)}/casebook?${params.toString()}`,
       `participant.${ext}`
+    );
+  },
+
+  /** Lists edit-check rule packs in the tenant alongside whether each is pinned on the study. */
+  listStudyRulePacks(studyRef: string): Promise<KernelStudyRulePacks> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/studies/{studyRef}/rule-packs", {
+        params: { path: { studyRef } },
+      })
+    );
+  },
+
+  /** Dry-runs a rule pack in memory against all collection instances of a study without persisting findings. */
+  previewStudyRulePack(
+    studyRef: string,
+    itemRef: string
+  ): Promise<KernelRulePackPreview> {
+    return unwrapResponse(
+      client.POST(
+        "/api/v1/kernel/studies/{studyRef}/rule-packs/{itemRef}/preview",
+        {
+          params: { path: { studyRef, itemRef: unversioned(itemRef) } },
+        }
+      )
+    );
+  },
+
+  /** Approves a draft library item (such as a RulePack) with a step-up signature token. */
+  approveLibraryItem({
+    itemRef,
+    meaning = "Approved",
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: KernelApproveLibraryItemRequest): Promise<KernelRulePack> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/library-items/{itemRef}/approve", {
+        params: { path: { itemRef: unversioned(itemRef) } },
+        body: {
+          meaning,
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Pins the active approved rule packs on a study's standards profile. */
+  declareStudyRulePacks({
+    studyRef,
+    rulePackRefs,
+    reason,
+    idempotencyKey,
+  }: KernelDeclareStudyRulePacksInput): Promise<KernelStudyRulePacks> {
+    const normalizedRefs = rulePackRefs.map((ref) => {
+      const clean = unversioned(ref.trim());
+      return clean.includes(":") ? clean : `library_item:${clean}`;
+    });
+    return unwrapResponse(
+      client.PUT("/api/v1/kernel/studies/{studyRef}/standards", {
+        params: { path: { studyRef } },
+        body: { rule_pack_refs: normalizedRefs },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Lists validation findings recorded for a study, newest first. */
+  listStudyValidationFindings(
+    studyRef: string,
+    query: KernelStudyValidationFindingsQuery = {}
+  ): Promise<KernelValidationFindingPage> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/studies/{studyRef}/validation/findings", {
+        params: {
+          path: { studyRef },
+          query: {
+            stage: query.stage || undefined,
+            status: query.status || undefined,
+            severity: query.severity || undefined,
+            dataset: query.dataset || undefined,
+            pack_key: query.packKey || undefined,
+            limit: query.limit,
+          },
+        },
+      })
+    );
+  },
+
+  /** Reads a validation finding together with its structured explanation. */
+  getValidationFinding(
+    findingRef: string
+  ): Promise<KernelValidationFindingDetail> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/validation/findings/{findingRef}", {
+        params: { path: { findingRef: unversioned(findingRef) } },
+      })
     );
   },
 };

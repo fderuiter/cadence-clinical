@@ -44,7 +44,12 @@ public sealed record ObservationRecord(
     IReadOnlyList<LockView> Locks,
     IReadOnlyList<ObservationRevisionView> Revisions,
     IReadOnlyList<AssertionView> Assertions,
-    IReadOnlyList<ObservationAuditView> Audit);
+    IReadOnlyList<ObservationAuditView> Audit,
+    CollectionInstanceId? CollectionInstanceId = null,
+    string? ItemId = null,
+    ObservationValueKind? ExpectedValueKind = null,
+    string? ExpectedUnit = null,
+    CodeSystemVersionId? ExpectedCodeSystemVersionId = null);
 
 /// <summary>One revision of an observation's value.</summary>
 /// <remarks>

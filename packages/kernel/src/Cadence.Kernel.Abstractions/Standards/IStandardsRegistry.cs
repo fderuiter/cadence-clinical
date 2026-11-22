@@ -31,6 +31,13 @@ public interface IStandardsRegistry
     /// <summary>Every version of a library item, newest first.</summary>
     Task<IReadOnlyList<LibraryItemView>> ListLibraryItemVersionsAsync(TenantId tenant, LibraryItemKind kind, string key, CancellationToken cancellationToken);
 
+    /// <summary>Every library item version in the tenant (optionally filtered by <paramref name="kind"/>), ordered by key and newest version first.</summary>
+    Task<IReadOnlyList<LibraryItemView>> ListLibraryItemsAsync(
+        TenantId tenant,
+        LibraryItemKind? kind,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<LibraryItemView>>([]);
+
     /// <summary>The standards a study declared, or null when it has declared none.</summary>
     Task<StudyStandardsProfileView?> FindStudyStandardsAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken);
 }

@@ -59,10 +59,11 @@ export function isLiveQuery(query: FormQueryResponse): boolean {
  */
 export function queryActions(
   query: FormQueryResponse,
-  canManage: boolean
+  canManage: boolean,
+  canAnswer: boolean = !canManage
 ): FormQueryAction[] {
   const actions: FormQueryAction[] = [];
-  if (query.status === "open") actions.push("answer");
+  if (query.status === "open" && canAnswer) actions.push("answer");
   if (!canManage) return actions;
   if (query.status === "answered" || query.status === "closed")
     actions.push("reopen");
