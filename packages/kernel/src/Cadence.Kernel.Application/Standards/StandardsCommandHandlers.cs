@@ -174,6 +174,16 @@ internal sealed class DraftLibraryItemHandler(IStandardsRegistry registry, IConc
             }
         }
 
+        ProtocolVersion? governingVersion = null;
+        if (command.GoverningProtocolVersionId is { IsEmpty: false } governingVersionId)
+        {
+            governingVersion = await context.Work.ReadAsync<ProtocolVersion>(governingVersionId, cancellationToken).ConfigureAwait(false);
+            if (governingVersion is null)
+            {
+                return StandardsErrors.LibraryItemInvalid.WithMessage($"Protocol version {governingVersionId} does not exist.");
+            }
+        }
+
         var versions = await registry.ListLibraryItemVersionsAsync(command.TenantId, command.Kind, command.Key ?? string.Empty, cancellationToken).ConfigureAwait(false);
         var next = versions.Count == 0 ? 1 : versions.Max(v => v.Version) + 1;
 
@@ -193,6 +203,11 @@ internal sealed class DraftLibraryItemHandler(IStandardsRegistry registry, IConc
         foreach (var input in inputs)
         {
             context.Work.LinkInput(input, LineageEdgeKind.DefinedBy);
+        }
+
+        if (governingVersion is not null)
+        {
+            context.Work.LinkInput(NodeRef.For(governingVersion.Id, governingVersion.VersionIndex), LineageEdgeKind.GovernedBy);
         }
 
         context.Work.Raise(new LibraryItemDrafted(command.TenantId, item!.Id, item.Kind, item.Key, item.ItemVersion, item.ContentHash));

@@ -396,12 +396,11 @@ internal sealed class SignCollectionInstanceHandler : ICommandHandler<SignCollec
             return KernelErrors.NotFound;
         }
 
-        if (instance.Members.Count == 0)
+        if (await CollectionContent.HashAsync(work, instance, cancellationToken).ConfigureAwait(false) is not { } current)
         {
             return TrustErrors.TargetNotSignable;
         }
 
-        var current = await CollectionContent.HashAsync(work, instance, cancellationToken).ConfigureAwait(false);
         if (!string.Equals(current, command.ContentHash, StringComparison.Ordinal))
         {
             return TrustErrors.TargetContentChanged;
@@ -431,12 +430,18 @@ internal sealed class SignCollectionInstanceHandler : ICommandHandler<SignCollec
 /// <summary>The content a form signature binds to (#5463).</summary>
 internal static class CollectionContent
 {
-    /// <summary>The content hash of <paramref name="instance"/>'s current revisions (<see cref="CollectionInstance.ContentHashOf"/>).</summary>
-    public static async Task<string> HashAsync(IKernelUnitOfWork work, CollectionInstance instance, CancellationToken cancellationToken)
+    /// <summary>The content hash of <paramref name="instance"/>'s current signable revisions (<see cref="CollectionInstance.ContentHashOf"/>), or null when none are signable.</summary>
+    public static async Task<string?> HashAsync(IKernelUnitOfWork work, CollectionInstance instance, CancellationToken cancellationToken)
     {
+        if (instance.Members.Count == 0)
+        {
+            return null;
+        }
+
         var members = instance.Members.Select(m => m.ObservationId).ToList();
         var observations = await work.ReadAllAsync<Observation>(o => members.Contains(o.Id), cancellationToken).ConfigureAwait(false);
-        return CollectionInstance.ContentHashOf(observations.Select(o => new CollectionContentEntry(o.Id, o.Revision, o.Value)));
+        var entries = observations.Select(o => new CollectionContentEntry(o.Id, o.Revision, o.Value)).ToList();
+        return CollectionInstance.HasSignableContent(entries) ? CollectionInstance.ContentHashOf(entries) : null;
     }
 }
 

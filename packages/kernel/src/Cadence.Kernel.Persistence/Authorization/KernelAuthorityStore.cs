@@ -9,9 +9,12 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Standards;
+using Cadence.Kernel.Validation;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -40,7 +43,9 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
         NodeKinds.Grant,
         NodeKinds.QualificationRequirement,
         NodeKinds.Effectivity,
-        NodeKinds.Proposal);
+        NodeKinds.Proposal,
+        NodeKinds.LibraryItem,
+        NodeKinds.ValidationFinding);
 
     private const string ProtocolElementPathsSql = """
         SELECT DISTINCT ON (le.to_id)
@@ -262,7 +267,12 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
         if (byKind.Count > 0)
         {
             await using var db = contexts.Create(tenant);
-            await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            var isRelational = db.Database.IsRelational();
+            if (isRelational)
+            {
+                await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             try
             {
                 foreach (var group in byKind)
@@ -273,7 +283,10 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
             }
             finally
             {
-                await db.Database.CloseConnectionAsync().ConfigureAwait(false);
+                if (isRelational)
+                {
+                    await db.Database.CloseConnectionAsync().ConfigureAwait(false);
+                }
             }
         }
 
@@ -553,6 +566,125 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
                     foreach (var row in rows)
                     {
                         resolved[(kind, row.Id.Value)] = new ScopePath(row.SponsorId, row.StudyId);
+                    }
+
+                    break;
+                }
+
+            case NodeKinds.LibraryItem:
+                {
+                    // A library item governed by a study's protocol version inherits that study's scope path; unlinked items stay tenant-wide.
+                    var edges = await db.LineageEdges.AsNoTracking()
+                        .Where(e => e.TenantId == tenant
+                            && e.ToKind == NodeKinds.LibraryItem
+                            && rawIds.Contains(e.ToId)
+                            && e.FromKind == NodeKinds.ProtocolVersion
+                            && e.Kind == LineageEdgeKind.GovernedBy)
+                        .OrderByDescending(e => e.RecordedAt)
+                        .ThenByDescending(e => e.Id)
+                        .Select(e => new { e.ToId, e.FromId })
+                        .ToListAsync(ct).ConfigureAwait(false);
+                    if (edges.Count > 0)
+                    {
+                        var versionIds = edges.Select(e => ProtocolVersionId.FromGuid(e.FromId)).Distinct().ToList();
+                        var versionOwners = await (
+                                from v in db.ProtocolVersions.AsNoTracking()
+                                join study in db.Studies.AsNoTracking() on new { v.TenantId, Id = v.StudyId } equals new { study.TenantId, study.Id }
+                                where v.TenantId == tenant && versionIds.Contains(v.Id)
+                                select new { v.Id, study.SponsorId, v.StudyId })
+                            .ToDictionaryAsync(v => v.Id, ct).ConfigureAwait(false);
+                        foreach (var edge in edges)
+                        {
+                            var key = (kind, edge.ToId);
+                            if (!resolved.ContainsKey(key)
+                                && versionOwners.TryGetValue(ProtocolVersionId.FromGuid(edge.FromId), out var owner))
+                            {
+                                resolved[key] = new ScopePath(owner.SponsorId, owner.StudyId);
+                            }
+                        }
+                    }
+
+                    break;
+                }
+
+            case NodeKinds.ValidationFinding:
+                {
+                    // A finding belongs to its study, and when its target is a collection form instance, to that form's study site.
+                    var ids = rawIds.Select(ValidationFindingId.FromGuid).ToList();
+                    var detections = await (
+                            from d in db.Set<ValidationDetectionRecord>().AsNoTracking()
+                            join r in db.Set<ValidationRun>().AsNoTracking() on new { d.TenantId, Id = d.RunId } equals new { r.TenantId, r.Id }
+                            join study in db.Studies.AsNoTracking() on new { d.TenantId, Id = d.StudyId } equals new { study.TenantId, study.Id }
+                            where d.TenantId == tenant && ids.Contains(d.FindingId)
+                            orderby r.CreatedAt descending, r.Id descending
+                            select new { d.FindingId, study.SponsorId, d.StudyId, d.Stage, d.TargetKind, d.TargetKey })
+                        .ToListAsync(ct).ConfigureAwait(false);
+
+                    var latestByFinding = new List<(ValidationFindingId FindingId, OrganizationId SponsorId, StudyId StudyId, CollectionInstanceId? FormId)>();
+                    var seenFindings = new HashSet<ValidationFindingId>();
+                    var formIds = new HashSet<CollectionInstanceId>();
+                    foreach (var row in detections)
+                    {
+                        if (!seenFindings.Add(row.FindingId))
+                        {
+                            continue;
+                        }
+
+                        CollectionInstanceId? formId = null;
+                        if (row.Stage == ValidationStage.Collection
+                            && row.TargetKind == FindingTargetKind.DatasetRecord
+                            && Guid.TryParse(row.TargetKey, out var formGuid)
+                            && formGuid != Guid.Empty)
+                        {
+                            formId = CollectionInstanceId.FromGuid(formGuid);
+                            formIds.Add(formId.Value);
+                        }
+
+                        latestByFinding.Add((row.FindingId, row.SponsorId, row.StudyId, formId));
+                    }
+
+                    Dictionary<CollectionInstanceId, (StudyId StudyId, string Country, StudySiteId StudySiteId)>? formSites = null;
+                    if (formIds.Count > 0)
+                    {
+                        var formIdList = formIds.ToList();
+                        var formSiteRows = await (
+                                from c in db.CollectionInstances.AsNoTracking()
+                                join ss in db.StudySites.AsNoTracking() on new { c.TenantId, Id = c.StudySiteId } equals new { ss.TenantId, ss.Id }
+                                join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                                where c.TenantId == tenant && formIdList.Contains(c.Id)
+                                select new { c.Id, c.StudyId, site.Country, StudySiteId = ss.Id })
+                            .ToListAsync(ct).ConfigureAwait(false);
+                        formSites = formSiteRows.ToDictionary(x => x.Id, x => (x.StudyId, x.Country, x.StudySiteId));
+                    }
+
+                    foreach (var entry in latestByFinding)
+                    {
+                        if (entry.FormId is { } fid
+                            && formSites is not null
+                            && formSites.TryGetValue(fid, out var siteInfo)
+                            && siteInfo.StudyId == entry.StudyId)
+                        {
+                            resolved[(kind, entry.FindingId.Value)] = new ScopePath(entry.SponsorId, entry.StudyId, siteInfo.Country, siteInfo.StudySiteId);
+                        }
+                        else
+                        {
+                            resolved[(kind, entry.FindingId.Value)] = new ScopePath(entry.SponsorId, entry.StudyId);
+                        }
+                    }
+
+                    var unresolvedIds = ids.Where(id => !resolved.ContainsKey((kind, id.Value))).ToList();
+                    if (unresolvedIds.Count > 0)
+                    {
+                        var fallbackRows = await (
+                                from f in db.Set<ValidationFinding>().AsNoTracking()
+                                join study in db.Studies.AsNoTracking() on new { f.TenantId, Id = f.StudyId } equals new { study.TenantId, study.Id }
+                                where f.TenantId == tenant && unresolvedIds.Contains(f.Id)
+                                select new { f.Id, study.SponsorId, f.StudyId })
+                            .ToListAsync(ct).ConfigureAwait(false);
+                        foreach (var row in fallbackRows)
+                        {
+                            resolved[(kind, row.Id.Value)] = new ScopePath(row.SponsorId, row.StudyId);
+                        }
                     }
 
                     break;

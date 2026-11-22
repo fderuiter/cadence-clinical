@@ -80,6 +80,9 @@ public sealed record LibraryItemView(
 {
     /// <summary>The library item's version index (ADR-2481 §4.2), which pins a NodeRef to the version read.</summary>
     public long VersionIndex { get; init; }
+
+    /// <summary>Protocol versions linked to this library item version via <c>GovernedBy</c> lineage, or empty when unrestricted.</summary>
+    public IReadOnlyList<ProtocolVersionId> GoverningProtocolVersions { get; init; } = [];
 }
 
 /// <summary>What a study declared: standards, terminology versions and pinned library item versions.</summary>

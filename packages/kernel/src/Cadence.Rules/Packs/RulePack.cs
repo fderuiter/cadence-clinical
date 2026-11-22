@@ -75,4 +75,14 @@ public sealed record Rule(
 public sealed record RulePack(RuleAuthority Authority, string Title, IReadOnlyList<Rule> Rules);
 
 /// <summary>A released rule pack together with the library item version it was read from.</summary>
-public sealed record LoadedRulePack(LibraryItemId Id, string Key, int Version, string ContentHash, GovernanceStatus Status, RulePack Pack);
+public sealed record LoadedRulePack(
+    LibraryItemId Id,
+    string Key,
+    int Version,
+    string ContentHash,
+    GovernanceStatus Status,
+    RulePack Pack)
+{
+    /// <summary>Protocol versions explicitly governed by this rule-pack library item version via <c>GovernedBy</c> lineage, or empty when unrestricted.</summary>
+    public IReadOnlyList<Cadence.Kernel.ProtocolVersionId> GoverningProtocolVersions { get; init; } = [];
+}

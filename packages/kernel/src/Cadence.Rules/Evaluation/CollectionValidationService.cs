@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Validation;
@@ -28,7 +29,8 @@ public sealed class CollectionValidationService(
     ICollectionInstanceRecords collections,
     IValidationFindings findings,
     IKernelCommandSender? commands = null,
-    IClock? clock = null) : ICollectionValidationService
+    IClock? clock = null,
+    IProtocolVersionReader? protocolVersions = null) : ICollectionValidationService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
@@ -46,7 +48,10 @@ public sealed class CollectionValidationService(
             return [];
         }
 
-        var packs = await loader.LoadForStudyAsync(tenant, target.StudyId, cancellationToken).ConfigureAwait(false);
+        var studyVersions = await LoadStudyVersionMapAsync(tenant, target.StudyId, cancellationToken).ConfigureAwait(false);
+        var packs = (await loader.LoadForStudyAsync(tenant, target.StudyId, cancellationToken).ConfigureAwait(false))
+            .Where(p => AppliesToInstance(p.GoverningProtocolVersions, target, studyVersions))
+            .ToList();
         if (packs.Count == 0)
         {
             return [];
@@ -99,17 +104,21 @@ public sealed class CollectionValidationService(
             return new CollectionRulePackPreviewResult(0, 0, []);
         }
 
-        var instances = await collections.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
-        if (instances.Count == 0)
+        var allInstances = await collections.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        var studyVersions = await LoadStudyVersionMapAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        var governedInstances = allInstances
+            .Where(i => AppliesToInstance(item.GoverningProtocolVersions, i, studyVersions))
+            .ToList();
+        if (governedInstances.Count == 0)
         {
             return new CollectionRulePackPreviewResult(0, pack.Rules.Count, []);
         }
 
-        var byEnrollment = instances
+        var byEnrollment = allInstances
             .GroupBy(i => i.EnrollmentId)
             .ToDictionary(g => g.Key, g => (IReadOnlyList<CollectionInstanceRecord>)[.. g]);
-        var instancesByKey = instances.ToDictionary(i => i.CollectionInstanceId.Value.ToString("D"), StringComparer.Ordinal);
-        var records = instances
+        var instancesByKey = governedInstances.ToDictionary(i => i.CollectionInstanceId.Value.ToString("D"), StringComparer.Ordinal);
+        var records = governedInstances
             .Select(i => BuildRuleRecord(i, byEnrollment[i.EnrollmentId], draftOverlay: null))
             .ToList();
 
@@ -137,7 +146,7 @@ public sealed class CollectionValidationService(
                 rule?.RemediationGuidance));
         }
 
-        return new CollectionRulePackPreviewResult(instances.Count, pack.Rules.Count, violations);
+        return new CollectionRulePackPreviewResult(governedInstances.Count, pack.Rules.Count, violations);
     }
 
     /// <inheritdoc />
@@ -163,31 +172,29 @@ public sealed class CollectionValidationService(
         }
 
         var instances = await collections.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
-        var priorFindings = await findings.ListAsync(
-            tenant,
-            new FindingQuery(studyId) { Stage = ValidationStage.Collection, Take = FindingQuery.MaxTake },
-            cancellationToken).ConfigureAwait(false);
+        var studyVersions = await LoadStudyVersionMapAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        var priorFindings = await ListAllCollectionFindingsAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
 
         var datasets = instances.Select(i => i.CollectionSpecId)
             .Concat(packs.SelectMany(p => p.Pack.Rules)
                 .Where(r => r.Applicability.Stage == ValidationStage.Collection && !string.IsNullOrWhiteSpace(r.Applicability.Dataset))
                 .Select(r => r.Applicability.Dataset!))
-            .Concat(priorFindings.Findings.Select(f => f.Target.Dataset))
+            .Concat(priorFindings.Select(f => f.Target.Dataset))
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
             .ToList();
 
         if (datasets.Count == 0)
         {
-            return CommandResult<CollectionValidationResult>.Success(new CollectionValidationResult(null, priorFindings.Findings));
+            return CommandResult<CollectionValidationResult>.Success(new CollectionValidationResult(null, priorFindings));
         }
 
         var byEnrollment = instances
             .GroupBy(i => i.EnrollmentId)
             .ToDictionary(g => g.Key, g => (IReadOnlyList<CollectionInstanceRecord>)[.. g]);
         var instancesByKey = instances.ToDictionary(i => i.CollectionInstanceId.Value.ToString("D"), StringComparer.Ordinal);
-        var records = instances
-            .Select(i => BuildRuleRecord(i, byEnrollment[i.EnrollmentId], draftOverlay: null))
+        var recordsByInstance = instances
+            .Select(i => (Instance: i, Record: BuildRuleRecord(i, byEnrollment[i.EnrollmentId], draftOverlay: null)))
             .ToList();
 
         var context = new RuleEvaluationContext(ValidationStage.Collection, asOf);
@@ -195,7 +202,16 @@ public sealed class CollectionValidationService(
         var seenIdentities = new HashSet<ValidationFindingId>();
         foreach (var pack in packs)
         {
-            foreach (var violation in evaluator.Evaluate(pack.Pack, context, records))
+            var packRecords = recordsByInstance
+                .Where(x => AppliesToInstance(pack.GoverningProtocolVersions, x.Instance, studyVersions))
+                .Select(x => x.Record)
+                .ToList();
+            if (packRecords.Count == 0)
+            {
+                continue;
+            }
+
+            foreach (var violation in evaluator.Evaluate(pack.Pack, context, packRecords))
             {
                 instancesByKey.TryGetValue(violation.RecordKey, out var targetInstance);
                 var primaryVariable = targetInstance is null ? null : ResolvePrimaryItemId(targetInstance, violation);
@@ -229,6 +245,17 @@ public sealed class CollectionValidationService(
         }
 
         var runId = DeriveRunId(tenant, studyId, idempotencyKey);
+        if (findings is not null)
+        {
+            var existingRun = await findings.FindRunAsync(tenant, runId, cancellationToken).ConfigureAwait(false);
+            if (existingRun is not null)
+            {
+                var currentFindings = await ListAllCollectionFindingsAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+                return CommandResult<CollectionValidationResult>.Success(
+                    new CollectionValidationResult(new ValidationRunOutcome(existingRun.Id, existingRun.Detected, 0, 0), currentFindings));
+            }
+        }
+
         var runResult = await commands.SendAsync(
             new RecordValidationRun(
                 tenant,
@@ -254,15 +281,12 @@ public sealed class CollectionValidationService(
             return runResult.Error!;
         }
 
-        var updatedFindings = await findings.ListAsync(
-            tenant,
-            new FindingQuery(studyId) { Stage = ValidationStage.Collection, Take = FindingQuery.MaxTake },
-            cancellationToken).ConfigureAwait(false);
+        var updatedFindings = await ListAllCollectionFindingsAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
         return CommandResult<CollectionValidationResult>.Success(
-            new CollectionValidationResult(runResult.Value, updatedFindings.Findings));
+            new CollectionValidationResult(runResult.Value, updatedFindings));
     }
 
-    /// <summary>Builds the <see cref="RuleRecord"/> for <paramref name="target"/>, including cross-form variables from sibling instances on the enrollment.</summary>
+    /// <summary>Builds the <see cref="RuleRecord"/> for <paramref name="target"/>, including prior-visit and visit-aligned cross-form variables on the enrollment.</summary>
     public static RuleRecord BuildRuleRecord(
         CollectionInstanceRecord target,
         IReadOnlyList<CollectionInstanceRecord> enrollmentForms,
@@ -296,15 +320,53 @@ public sealed class CollectionValidationService(
             }
         }
 
-        // Bind latest sibling form values per CollectionSpecId on the same enrollment for cross-form edit checks.
-        var latestBySpec = enrollmentForms
+        // Bind consecutive prior-visit values (prev.*) for repeat visits of the same CollectionSpecId ordered chronologically.
+        var sameSpecForms = enrollmentForms
+            .Where(f => f.CollectionInstanceId != target.CollectionInstanceId
+                && string.Equals(f.CollectionSpecId, target.CollectionSpecId, StringComparison.Ordinal))
+            .Append(target)
+            .OrderBy(f => f.CollectedAt)
+            .ThenBy(f => f.OpenedAt)
+            .ThenBy(f => f.CollectionInstanceId)
+            .ToList();
+        var targetIndex = sameSpecForms.FindIndex(f => f.CollectionInstanceId == target.CollectionInstanceId);
+        if (targetIndex > 0)
+        {
+            var prior = sameSpecForms[targetIndex - 1];
+            var priorRecorded = prior.Values.ToDictionary(v => v.ItemId, v => (ObservationValue?)v.Value, StringComparer.Ordinal);
+            var priorItemIds = prior.Items.Select(i => i.Id)
+                .Concat(priorRecorded.Keys)
+                .Distinct(StringComparer.Ordinal);
+            foreach (var priorItemId in priorItemIds)
+            {
+                priorRecorded.TryGetValue(priorItemId, out var raw);
+                var converted = ToRuleValue(raw);
+                SetIfFits(values, $"prev.{priorItemId}", converted);
+                SetIfFits(values, $"prev.{prior.CollectionSpecId}.{priorItemId}", converted);
+                if (priorItemId.StartsWith("item.", StringComparison.Ordinal) && priorItemId.Length > 5)
+                {
+                    var shortKey = $"prev.{priorItemId[5..]}";
+                    if (!values.ContainsKey(shortKey))
+                    {
+                        SetIfFits(values, shortKey, converted);
+                    }
+                }
+            }
+        }
+
+        // Bind visit-aligned sibling form values per CollectionSpecId (same PlannedActivityId, or nearest populated log).
+        var siblingGroups = enrollmentForms
             .Where(f => f.CollectionInstanceId != target.CollectionInstanceId
                 && !string.Equals(f.CollectionSpecId, target.CollectionSpecId, StringComparison.Ordinal))
-            .GroupBy(f => f.CollectionSpecId, StringComparer.Ordinal)
-            .Select(g => g.OrderBy(f => f.OpenedAt).ThenBy(f => f.CollectionInstanceId).Last());
+            .GroupBy(f => f.CollectionSpecId, StringComparer.Ordinal);
 
-        foreach (var sibling in latestBySpec)
+        foreach (var group in siblingGroups)
         {
+            if (SelectSiblingForm(target, group) is not { } sibling)
+            {
+                continue;
+            }
+
             var siblingRecorded = sibling.Values.ToDictionary(v => v.ItemId, v => (ObservationValue?)v.Value, StringComparer.Ordinal);
             var siblingItemIds = sibling.Items.Select(i => i.Id)
                 .Concat(siblingRecorded.Keys)
@@ -313,15 +375,10 @@ public sealed class CollectionValidationService(
             {
                 siblingRecorded.TryGetValue(siblingItemId, out var raw);
                 var converted = ToRuleValue(raw);
-                var qualified = $"{sibling.CollectionSpecId}.{siblingItemId}";
-                if (qualified.Length <= FindingTarget.MaxNameLength)
+                SetIfFits(values, $"{sibling.CollectionSpecId}.{siblingItemId}", converted);
+                if (!values.ContainsKey(siblingItemId))
                 {
-                    values[qualified] = converted;
-                }
-
-                if (!values.ContainsKey(siblingItemId) && siblingItemId.Length <= FindingTarget.MaxNameLength)
-                {
-                    values[siblingItemId] = converted;
+                    SetIfFits(values, siblingItemId, converted);
                 }
             }
         }
@@ -369,6 +426,35 @@ public sealed class CollectionValidationService(
             }
         }
 
+        foreach (var variable in violation.Observed.Select(observed => observed.Variable))
+        {
+            if (!variable.StartsWith("prev.", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var withoutPrev = variable[5..];
+            if (targetItems.Contains(withoutPrev))
+            {
+                return withoutPrev;
+            }
+
+            if (withoutPrev.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                var stripped = withoutPrev[prefix.Length..];
+                if (targetItems.Contains(stripped))
+                {
+                    return stripped;
+                }
+            }
+
+            var itemPrefixed = "item." + withoutPrev;
+            if (targetItems.Contains(itemPrefixed))
+            {
+                return itemPrefixed;
+            }
+        }
+
         if (target.Items.Count > 0)
         {
             return target.Items[0].Id;
@@ -376,6 +462,148 @@ public sealed class CollectionValidationService(
 
         var fallback = violation.Observed.FirstOrDefault()?.Variable;
         return fallback is not null && fallback.Length <= FindingTarget.MaxNameLength ? fallback : null;
+    }
+
+    private async Task<IReadOnlyList<ValidationFindingView>> ListAllCollectionFindingsAsync(
+        TenantId tenant,
+        StudyId studyId,
+        CancellationToken cancellationToken)
+    {
+        var all = new List<ValidationFindingView>();
+        var skip = 0;
+        while (true)
+        {
+            var page = await findings.ListAsync(
+                tenant,
+                new FindingQuery(studyId)
+                {
+                    Stage = ValidationStage.Collection,
+                    Skip = skip,
+                    Take = FindingQuery.MaxTake,
+                },
+                cancellationToken).ConfigureAwait(false);
+            all.AddRange(page.Findings);
+            if (page.Findings.Count == 0 || all.Count >= page.Total)
+            {
+                break;
+            }
+
+            skip += page.Findings.Count;
+        }
+
+        return all;
+    }
+
+    private async Task<IReadOnlyDictionary<ProtocolVersionId, ProtocolVersionSummary>?> LoadStudyVersionMapAsync(
+        TenantId tenant,
+        StudyId studyId,
+        CancellationToken cancellationToken)
+    {
+        if (protocolVersions is null)
+        {
+            return null;
+        }
+
+        var versions = await protocolVersions.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        return versions.Count == 0
+            ? null
+            : versions.ToDictionary(v => v.Id);
+    }
+
+    private static bool AppliesToInstance(
+        IReadOnlyList<ProtocolVersionId> governingVersions,
+        CollectionInstanceRecord instance,
+        IReadOnlyDictionary<ProtocolVersionId, ProtocolVersionSummary>? studyVersions)
+    {
+        if (governingVersions.Count == 0 || governingVersions.Contains(instance.ProtocolVersionId))
+        {
+            return true;
+        }
+
+        if (studyVersions is null)
+        {
+            return false;
+        }
+
+        var anyApprovedGoverning = governingVersions.Any(id =>
+            !studyVersions.TryGetValue(id, out var summary) || summary.Status == ProtocolVersionStatus.Approved);
+        if (anyApprovedGoverning)
+        {
+            return false;
+        }
+
+        foreach (var governingId in governingVersions)
+        {
+            var visited = new HashSet<ProtocolVersionId> { governingId };
+            var current = studyVersions.GetValueOrDefault(governingId)?.ParentVersionId;
+            while (current is { } parentId && visited.Add(parentId))
+            {
+                if (!studyVersions.TryGetValue(parentId, out var parentSummary))
+                {
+                    break;
+                }
+
+                if (parentSummary.Status == ProtocolVersionStatus.Approved)
+                {
+                    if (parentId == instance.ProtocolVersionId)
+                    {
+                        return true;
+                    }
+
+                    break;
+                }
+
+                current = parentSummary.ParentVersionId;
+            }
+        }
+
+        return false;
+    }
+
+    private static CollectionInstanceRecord? SelectSiblingForm(
+        CollectionInstanceRecord target,
+        IEnumerable<CollectionInstanceRecord> candidates)
+    {
+        if (!string.IsNullOrWhiteSpace(target.PlannedActivityId))
+        {
+            var sameVisit = candidates
+                .Where(f => string.Equals(f.PlannedActivityId, target.PlannedActivityId, StringComparison.Ordinal))
+                .ToList();
+            if (sameVisit.Count > 0)
+            {
+                return SelectNearestPreferred(target, sameVisit);
+            }
+
+            var unscheduled = candidates
+                .Where(f => string.IsNullOrWhiteSpace(f.PlannedActivityId))
+                .ToList();
+            return unscheduled.Count > 0 ? SelectNearestPreferred(target, unscheduled) : null;
+        }
+
+        var list = candidates.ToList();
+        return list.Count > 0 ? SelectNearestPreferred(target, list) : null;
+    }
+
+    private static CollectionInstanceRecord SelectNearestPreferred(
+        CollectionInstanceRecord target,
+        IReadOnlyList<CollectionInstanceRecord> candidates) =>
+        candidates
+            .OrderByDescending(HasPopulatedValues)
+            .ThenBy(f => Math.Abs((f.CollectedAt - target.CollectedAt).Ticks))
+            .ThenByDescending(f => f.CollectedAt)
+            .ThenByDescending(f => f.OpenedAt)
+            .ThenByDescending(f => f.CollectionInstanceId)
+            .First();
+
+    private static bool HasPopulatedValues(CollectionInstanceRecord form) =>
+        form.Values.Any(v => v.Value is not null and not MissingValue);
+
+    private static void SetIfFits(Dictionary<string, RuleValue> values, string key, RuleValue value)
+    {
+        if (key.Length <= FindingTarget.MaxNameLength)
+        {
+            values[key] = value;
+        }
     }
 
     private static ValidationRunId DeriveRunId(TenantId tenant, StudyId study, string idempotencyKey)

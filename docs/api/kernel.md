@@ -75,4 +75,9 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `PUT` | `/api/v1/kernel/studies/{studyRef}/standards` | KernelDeclareStudyRulePacks | Declares or updates the approved rule-pack library items pinned on a study (study.declare_standards). |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/validation/findings` | KernelListStudyValidationFindings | Lists derived validation findings for a study, optionally filtered by stage, status, severity, rule pack or dataset. |
 | `GET` | `/api/v1/kernel/validation/findings/{findingRef}` | KernelGetValidationFinding | Returns one derived validation finding and its structured provenance explanation. |
+| `POST` | `/api/v1/kernel/validation/findings/{findingRef}/accept` | KernelAcceptValidationFinding | Accepts an open or investigating validation finding with a Responsibility attestation (validation_finding.accept). |
+| `POST` | `/api/v1/kernel/validation/findings/{findingRef}/classify` | KernelClassifyValidationFinding | Records the root-cause classification of a validation finding (validation_finding.classify). |
+| `POST` | `/api/v1/kernel/validation/findings/{findingRef}/explain` | KernelExplainValidationFinding | Explains an open or investigating validation finding for the reviewer guide with an Approved attestation (validation_finding.explain). |
+| `POST` | `/api/v1/kernel/validation/findings/{findingRef}/investigate` | KernelInvestigateValidationFinding | Marks an open validation finding as under investigation (validation_finding.investigate). |
+| `POST` | `/api/v1/kernel/validation/findings/{findingRef}/reopen` | KernelReopenValidationFinding | Withdraws an active investigation, acceptance, or explanation on a validation finding (validation_finding.reopen). |
 | `GET` | `/healthz` | KernelHealthCheck | Clinical Kernel API health probe. |

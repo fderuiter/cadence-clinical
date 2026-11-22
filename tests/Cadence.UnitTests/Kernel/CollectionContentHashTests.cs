@@ -61,4 +61,45 @@ public sealed class CollectionContentHashTests
             CollectionInstance.ContentHashOf(content).Should().NotBe(hash);
         }
     }
+
+    /// <summary>
+    /// Revision-1 <see cref="NullFlavor.NotAsked"/> placeholders seeded for automated discrepancy queries do not alter
+    /// the signed content hash, while any clinical missing flavor or subsequent revision supersedes the signature.
+    /// </summary>
+    [Fact(DisplayName = "ContentHashOf_ExcludesRevision1NotAskedPlaceholders_UntilClinicallyEdited")]
+    public void ContentHashOfExcludesRevision1NotAskedPlaceholdersUntilClinicallyEdited()
+    {
+        var baselineHash = CollectionInstance.ContentHashOf(Form);
+        var unaskedId = ObservationId.FromGuid(Guid.Parse("01900000-0000-7000-8000-000000000003"));
+        CollectionContentEntry[] withUnaskedPlaceholder =
+        [
+            .. Form,
+            new(unaskedId, 1, new MissingValue(NullFlavor.NotAsked)),
+        ];
+
+        CollectionInstance.HasSignableContent(withUnaskedPlaceholder).Should().BeTrue();
+        CollectionInstance.ContentHashOf(withUnaskedPlaceholder).Should().Be(baselineHash);
+
+        // Once corrected (revision 2) or recorded with a clinical missing reason (NotDone), the hash changes.
+        CollectionInstance.ContentHashOf([.. Form, new(unaskedId, 2, new QuantityValue(72m, "/min"))])
+            .Should().NotBe(baselineHash);
+        CollectionInstance.ContentHashOf([.. Form, new(unaskedId, 2, new MissingValue(NullFlavor.NotAsked))])
+            .Should().NotBe(baselineHash);
+        CollectionInstance.ContentHashOf([.. Form, new(unaskedId, 1, new MissingValue(NullFlavor.NotDone, "Refused"))])
+            .Should().NotBe(baselineHash);
+    }
+
+    /// <summary>A form whose only observations are revision-1 <see cref="NullFlavor.NotAsked"/> placeholders has no signable content.</summary>
+    [Fact(DisplayName = "HasSignableContent_IsFalse_WhenFormContainsOnlyRevision1NotAskedPlaceholders")]
+    public void HasSignableContentIsFalseWhenFormContainsOnlyRevision1NotAskedPlaceholders()
+    {
+        CollectionContentEntry[] placeholdersOnly =
+        [
+            new(ObservationId.New(), 1, new MissingValue(NullFlavor.NotAsked)),
+            new(ObservationId.New(), 1, new MissingValue(NullFlavor.NotAsked)),
+        ];
+
+        CollectionInstance.HasSignableContent([]).Should().BeFalse();
+        CollectionInstance.HasSignableContent(placeholdersOnly).Should().BeFalse();
+    }
 }

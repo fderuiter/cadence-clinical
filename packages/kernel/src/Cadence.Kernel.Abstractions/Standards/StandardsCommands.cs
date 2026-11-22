@@ -96,7 +96,8 @@ public sealed record DraftLibraryItem(
     JsonElement Content,
     IReadOnlyList<StandardVersionId> StandardVersions,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<LibraryItemVersion>;
+    string ReasonForChange,
+    ProtocolVersionId? GoverningProtocolVersionId = null) : ICommand<LibraryItemVersion>;
 
 /// <summary>Approves a draft library item version. Needs an <c>Approved</c> Attestation bound to its content hash.</summary>
 [KernelCapability("library_item.approve", VerbClass.Approve, Resource = nameof(ApproveLibraryItem.LibraryItemId))]

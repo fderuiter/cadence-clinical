@@ -7,6 +7,8 @@ using System.Reflection;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Standards;
+using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Application.Authorization;
 
@@ -83,6 +85,19 @@ public sealed class KernelCommandCatalog
             if (command.GetType() != CommandType)
             {
                 throw new ArgumentException($"Expected a {Command}, got a {command.GetType().Name}.", nameof(command));
+            }
+
+            if (command is Attest attest
+                && NodeKinds.IsRegistered(attest.Target.Kind)
+                && attest.Target.Id != Guid.Empty)
+            {
+                return new NodeRef(attest.Target.Kind, attest.Target.Id);
+            }
+
+            if (command is DraftLibraryItem draft
+                && draft.GoverningProtocolVersionId is { IsEmpty: false } governingVersionId)
+            {
+                return NodeRef.For(governingVersionId);
             }
 
             return _resource.GetValue(command) is IEntityId { IsEmpty: false } id ? NodeRef.For(id) : null;

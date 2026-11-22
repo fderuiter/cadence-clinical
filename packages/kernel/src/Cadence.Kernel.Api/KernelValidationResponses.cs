@@ -158,6 +158,8 @@ public sealed record KernelDeclareStudyRulePacksRequest(IReadOnlyList<string> Ru
 /// <param name="ItemId">Primary item identifier on the form, when resolved.</param>
 /// <param name="Message">Discrepancy message.</param>
 /// <param name="RemediationGuidance">Optional remediation guidance.</param>
+/// <param name="SiteCode">Study site code for the form's enrollment, when resolved.</param>
+/// <param name="SubjectCode">Pseudonymous subject code for the form's enrollment, when resolved.</param>
 public sealed record KernelRulePackPreviewViolationResponse(
     Guid FormId,
     string PackKey,
@@ -167,9 +169,14 @@ public sealed record KernelRulePackPreviewViolationResponse(
     string Dataset,
     string? ItemId,
     string Message,
-    string? RemediationGuidance)
+    string? RemediationGuidance,
+    string? SiteCode = null,
+    string? SubjectCode = null)
 {
-    internal static KernelRulePackPreviewViolationResponse From(CollectionRulePackPreviewViolation violation) =>
+    internal static KernelRulePackPreviewViolationResponse From(
+        CollectionRulePackPreviewViolation violation,
+        string? siteCode = null,
+        string? subjectCode = null) =>
         new(
             violation.FormId.Value,
             violation.PackKey,
@@ -179,7 +186,9 @@ public sealed record KernelRulePackPreviewViolationResponse(
             violation.Dataset,
             violation.ItemId,
             violation.Message,
-            violation.RemediationGuidance);
+            violation.RemediationGuidance,
+            siteCode,
+            subjectCode);
 }
 
 /// <summary>Response for <c>POST /api/v1/kernel/studies/{studyRef}/rule-packs/{itemRef}/preview</c>.</summary>
@@ -201,6 +210,29 @@ public sealed record KernelRulePackPreviewResponse(
 public sealed record KernelFindingObservedValueResponse(string Variable, string? Value);
 
 /// <summary>Summary of a validation finding returned by <c>GET /api/v1/kernel/studies/{studyRef}/validation/findings</c>.</summary>
+/// <param name="Ref">Finding <c>NodeRef</c> (<c>validation_finding:&lt;uuid&gt;</c>).</param>
+/// <param name="StudyRef">Study <c>NodeRef</c>.</param>
+/// <param name="Stage">Validation lifecycle stage.</param>
+/// <param name="PackKey">Rule pack key.</param>
+/// <param name="RulePackRef">Rule pack version <c>NodeRef</c>.</param>
+/// <param name="RuleId">Rule identifier.</param>
+/// <param name="RuleVersion">Rule version number.</param>
+/// <param name="Severity">Finding severity (<c>Error</c>, <c>Warning</c>, <c>Notice</c>).</param>
+/// <param name="Status">Derived finding status (<c>Open</c>, <c>Investigating</c>, <c>Accepted</c>, <c>Explained</c>, <c>Resolved</c>).</param>
+/// <param name="Blocks">True when the finding blocks its stage gate.</param>
+/// <param name="TargetKind">Target object kind (<c>DatasetRecord</c>, <c>DatasetVariable</c>, <c>Dataset</c>, <c>Specification</c>).</param>
+/// <param name="Dataset">Dataset or collection specification identifier.</param>
+/// <param name="RecordKey">Record identifier within the dataset (for example the form instance UUID).</param>
+/// <param name="Variable">Primary variable or item identifier, when scoped.</param>
+/// <param name="Message">Discrepancy message.</param>
+/// <param name="Expected">Expected constraint description, when provided.</param>
+/// <param name="Observed">Observed variable values read by the rule.</param>
+/// <param name="FirstDetectedRunRef">First detecting validation run <c>NodeRef</c>.</param>
+/// <param name="LastDetectedRunRef">Latest detecting validation run <c>NodeRef</c>.</param>
+/// <param name="ResolvedByRunRef">Resolving validation run <c>NodeRef</c>, when resolved.</param>
+/// <param name="Classification">Assigned finding classification, when recorded.</param>
+/// <param name="SiteCode">Study site code for collection record findings, when resolved.</param>
+/// <param name="SubjectCode">Pseudonymous subject code for collection record findings, when resolved.</param>
 public sealed record KernelValidationFindingResponse(
     string Ref,
     string StudyRef,
@@ -222,9 +254,14 @@ public sealed record KernelValidationFindingResponse(
     string FirstDetectedRunRef,
     string LastDetectedRunRef,
     string? ResolvedByRunRef,
-    string? Classification)
+    string? Classification,
+    string? SiteCode = null,
+    string? SubjectCode = null)
 {
-    internal static KernelValidationFindingResponse From(ValidationFindingView view) =>
+    internal static KernelValidationFindingResponse From(
+        ValidationFindingView view,
+        string? siteCode = null,
+        string? subjectCode = null) =>
         new(
             NodeRef.For(view.Id).ToString(),
             NodeRef.For(view.Study).ToString(),
@@ -246,8 +283,24 @@ public sealed record KernelValidationFindingResponse(
             NodeRef.For(view.FirstDetectedRun).ToString(),
             NodeRef.For(view.LastDetectedRun).ToString(),
             view.ResolvedBy is { } r ? NodeRef.For(r).ToString() : null,
-            view.Classification?.ToString());
+            view.Classification?.ToString(),
+            siteCode,
+            subjectCode);
 }
+
+/// <summary>Request body for <c>POST /api/v1/kernel/validation/findings/{findingRef}/classify</c>.</summary>
+/// <param name="Classification">Finding classification (<c>DataIssue</c>, <c>MappingIssue</c>, <c>MetadataIssue</c>, <c>RuleIssue</c>, <c>NotAnIssue</c>).</param>
+public sealed record KernelClassifyFindingRequest(string Classification);
+
+/// <summary>Request body for <c>POST /api/v1/kernel/validation/findings/{findingRef}/accept</c>.</summary>
+/// <param name="Rationale">Acceptance rationale bound into the signed decision hash.</param>
+/// <param name="AttestationId">Optional caller-supplied attestation identifier.</param>
+public sealed record KernelAcceptFindingRequest(string Rationale, Guid? AttestationId = null);
+
+/// <summary>Request body for <c>POST /api/v1/kernel/validation/findings/{findingRef}/explain</c>.</summary>
+/// <param name="Explanation">Reviewer-guide explanation bound into the signed decision hash.</param>
+/// <param name="AttestationId">Optional caller-supplied attestation identifier.</param>
+public sealed record KernelExplainFindingRequest(string Explanation, Guid? AttestationId = null);
 
 /// <summary>Page of validation findings for a study.</summary>
 /// <param name="Total">Total matching findings.</param>

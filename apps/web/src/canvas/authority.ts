@@ -125,6 +125,43 @@ export function canManageRulePacks(
   );
 }
 
+/** Investigate or classify validation findings (`validation_finding.investigate`, `validation_finding.classify`). */
+export function canInvestigateFindings(
+  auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
+): boolean {
+  if (!auth.isAuthenticated) return true;
+  if (canManageRulePacks(auth) || canManageQueries(auth)) return true;
+  return (auth.rawRoles ?? []).some((role) => {
+    const normalized = role.trim().toLowerCase();
+    return (
+      normalized.includes("monitor") ||
+      normalized === "cra" ||
+      normalized.includes("safety") ||
+      normalized.includes("auditor")
+    );
+  });
+}
+
+/** Accept or reopen validation findings (`validation_finding.accept`, `validation_finding.reopen`). */
+export function canAcceptOrReopenFindings(
+  auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
+): boolean {
+  if (!auth.isAuthenticated) return true;
+  return canManageRulePacks(auth);
+}
+
+/** Record an attested reviewer-guide explanation on a validation finding (`validation_finding.explain`). */
+export function canExplainFindings(
+  auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
+): boolean {
+  if (!auth.isAuthenticated) return true;
+  if (canManageRulePacks(auth) || canManageQueries(auth)) return true;
+  return (auth.rawRoles ?? []).some((role) => {
+    const normalized = role.trim().toLowerCase();
+    return normalized.includes("monitor") || normalized === "cra";
+  });
+}
+
 /** Verify observations against source, or flag them for re-verification. */
 export function canVerifySource(auth: RoleHolder): boolean {
   return MONITORING_ROLES.some((role) => auth.hasRole(role));

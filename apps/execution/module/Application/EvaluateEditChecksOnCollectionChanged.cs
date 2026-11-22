@@ -13,6 +13,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Standards;
 using Cadence.Kernel.Validation;
 using Cadence.Modules.Execution.Domain;
 using Cadence.Modules.Execution.Infrastructure;
@@ -22,11 +23,13 @@ using Microsoft.EntityFrameworkCore;
 namespace Cadence.Modules.Execution.Application;
 
 /// <summary>
-/// Post-commit collection edit-check consumer (spec §10.2, K-RULE-3, K-FIND-1): reacts to committed
-/// <see cref="CollectedValuesSaved"/> and <see cref="ObservationCorrected"/> events as <c>svc:execution-edit-checks</c>,
+/// Post-commit collection edit-check consumer (spec §10.2, §10.3, K-RULE-3, K-FIND-1): reacts to committed
+/// <see cref="CollectedValuesSaved"/>, <see cref="ObservationCorrected"/>, <see cref="StudyStandardsDeclared"/>,
+/// <see cref="FindingAccepted"/>, and <see cref="FindingExplained"/> events as <c>svc:execution-edit-checks</c>,
 /// evaluates pinned study collection rule packs via <see cref="ICollectionValidationService"/>, records an idempotent
 /// <see cref="RecordValidationRun"/>, raises one automated <see cref="FormQuery"/> per active violation on the affected
-/// form item, and closes the automated <see cref="FormQuery"/> when a later save or correction resolves the finding.
+/// form item, and closes automated <see cref="FormQuery"/> rows when packs are unpinned or findings are resolved,
+/// accepted, or explained.
 /// </summary>
 internal sealed class EvaluateEditChecksOnCollectionChanged(
     ICollectionValidationService validation,
@@ -34,20 +37,27 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
     IObservationRecords observations,
     IValidationFindings findingsReader,
     IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
-    IKernelCommandSender sender) : IKernelEventConsumer
+    IKernelCommandSender sender,
+    IStandardsRegistry? standards = null) : IKernelEventConsumer
 {
     /// <summary>The consumer's name, and so its service account <c>svc:execution-edit-checks</c>.</summary>
     public const string Name = "execution-edit-checks";
 
     private static readonly KernelEventAttribute SavedEvent = typeof(CollectedValuesSaved).GetCustomAttribute<KernelEventAttribute>()!;
     private static readonly KernelEventAttribute CorrectedEvent = typeof(ObservationCorrected).GetCustomAttribute<KernelEventAttribute>()!;
+    private static readonly KernelEventAttribute StandardsDeclaredEvent = typeof(StudyStandardsDeclared).GetCustomAttribute<KernelEventAttribute>()!;
+    private static readonly KernelEventAttribute FindingAcceptedEvent = typeof(FindingAccepted).GetCustomAttribute<KernelEventAttribute>()!;
+    private static readonly KernelEventAttribute FindingExplainedEvent = typeof(FindingExplained).GetCustomAttribute<KernelEventAttribute>()!;
     private static readonly JsonSerializerOptions EventJsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly string SelfActorId = Actor.ServiceAccount(Name).Id;
 
     public bool Handles(EventEnvelope envelope) =>
         envelope is not null
-        && ((string.Equals(envelope.Type, SavedEvent.Type, StringComparison.Ordinal) && envelope.SchemaVersion == SavedEvent.SchemaVersion)
-            || (string.Equals(envelope.Type, CorrectedEvent.Type, StringComparison.Ordinal) && envelope.SchemaVersion == CorrectedEvent.SchemaVersion));
+        && (Matches(envelope, SavedEvent)
+            || Matches(envelope, CorrectedEvent)
+            || Matches(envelope, StandardsDeclaredEvent)
+            || Matches(envelope, FindingAcceptedEvent)
+            || Matches(envelope, FindingExplainedEvent));
 
     public async Task ConsumeAsync(KernelEventDelivery delivery, CancellationToken cancellationToken)
     {
@@ -60,14 +70,41 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             return;
         }
 
+        var metadata = new CommandMetadata(delivery.Envelope.CorrelationId, delivery.Envelope.EventId);
+        if (Matches(delivery.Envelope, FindingAcceptedEvent))
+        {
+            var accepted = delivery.Envelope.Payload.Deserialize<FindingAccepted>(EventJsonOptions)
+                ?? throw new JsonException($"The payload of event {delivery.Envelope.EventId} is null.");
+            await CloseDecisionFindingQueriesAsync(accepted.TenantId, accepted.FindingId, metadata, delivery.IdempotencyKey, cancellationToken)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        if (Matches(delivery.Envelope, FindingExplainedEvent))
+        {
+            var explained = delivery.Envelope.Payload.Deserialize<FindingExplained>(EventJsonOptions)
+                ?? throw new JsonException($"The payload of event {delivery.Envelope.EventId} is null.");
+            await CloseDecisionFindingQueriesAsync(explained.TenantId, explained.FindingId, metadata, delivery.IdempotencyKey, cancellationToken)
+                .ConfigureAwait(false);
+            return;
+        }
+
         TenantId tenant;
         StudyId studyId;
-        if (string.Equals(delivery.Envelope.Type, SavedEvent.Type, StringComparison.Ordinal))
+        StudyStandardsDeclared? declaredStandards = null;
+        if (Matches(delivery.Envelope, SavedEvent))
         {
             var saved = delivery.Envelope.Payload.Deserialize<CollectedValuesSaved>(EventJsonOptions)
                 ?? throw new JsonException($"The payload of event {delivery.Envelope.EventId} is null.");
             tenant = saved.TenantId;
             studyId = saved.StudyId;
+        }
+        else if (Matches(delivery.Envelope, StandardsDeclaredEvent))
+        {
+            declaredStandards = delivery.Envelope.Payload.Deserialize<StudyStandardsDeclared>(EventJsonOptions)
+                ?? throw new JsonException($"The payload of event {delivery.Envelope.EventId} is null.");
+            tenant = declaredStandards.TenantId;
+            studyId = declaredStandards.StudyId;
         }
         else
         {
@@ -89,7 +126,9 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             studyId = formRecord.StudyId;
         }
 
-        var metadata = new CommandMetadata(delivery.Envelope.CorrelationId, delivery.Envelope.EventId);
+        var pinnedRulePackKeys = await ResolvePinnedRulePackKeysAsync(tenant, studyId, declaredStandards, cancellationToken)
+            .ConfigureAwait(false);
+
         var evaluatedAt = delivery.Envelope.Recorded;
         var asOf = DateOnly.FromDateTime(evaluatedAt.UtcDateTime);
         var runKey = $"{delivery.IdempotencyKey}:run";
@@ -108,21 +147,33 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         IReadOnlyList<ValidationFindingView> findings;
         if (validationResult.IsSuccess)
         {
-            if (validationResult.Value is not { } resultValue
-                || (resultValue.RunOutcome is null && resultValue.Findings.Count == 0))
+            if (validationResult.Value is not { } resultValue)
             {
                 return;
             }
 
-            findings = resultValue.Findings;
+            if (resultValue.RunOutcome is null && resultValue.Findings.Count == 0)
+            {
+                if (declaredStandards is null && pinnedRulePackKeys is null)
+                {
+                    return;
+                }
+
+                findings = await ListAllCollectionFindingsAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+                if (findings.Count == 0)
+                {
+                    return;
+                }
+            }
+            else
+            {
+                findings = resultValue.Findings;
+            }
         }
-        else if (validationResult.Error?.Code == KernelErrors.AlreadyExists.Code)
+        else if (validationResult.Error?.Code == KernelErrors.AlreadyExists.Code
+            || validationResult.Error?.Code == KernelErrors.IdempotencyConflict.Code)
         {
-            var page = await findingsReader.ListAsync(
-                tenant,
-                new FindingQuery(studyId) { Stage = ValidationStage.Collection, Take = FindingQuery.MaxTake },
-                cancellationToken).ConfigureAwait(false);
-            findings = page.Findings;
+            findings = await ListAllCollectionFindingsAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
         }
         else
         {
@@ -130,13 +181,99 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                 $"Collection validation run for study {studyId} failed on event {delivery.Envelope.EventId}: {validationResult.Error?.Code} ({validationResult.Error?.Message}).");
         }
 
-        await ReconcileAutomatedQueriesAsync(tenant, findings, metadata, cancellationToken).ConfigureAwait(false);
+        await ReconcileAutomatedQueriesAsync(tenant, findings, pinnedRulePackKeys, metadata, delivery.IdempotencyKey, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static bool Matches(EventEnvelope envelope, KernelEventAttribute expected) =>
+        string.Equals(envelope.Type, expected.Type, StringComparison.Ordinal) && envelope.SchemaVersion == expected.SchemaVersion;
+
+    private async Task CloseDecisionFindingQueriesAsync(
+        TenantId tenant,
+        ValidationFindingId findingId,
+        CommandMetadata metadata,
+        string deliveryKey,
+        CancellationToken cancellationToken)
+    {
+        var finding = await findingsReader.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
+        if (finding is null)
+        {
+            return;
+        }
+
+        await ReconcileAutomatedQueriesAsync(tenant, [finding], pinnedRulePackKeys: null, metadata, deliveryKey, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<HashSet<string>?> ResolvePinnedRulePackKeysAsync(
+        TenantId tenant,
+        StudyId studyId,
+        StudyStandardsDeclared? declared,
+        CancellationToken cancellationToken)
+    {
+        if (standards is null)
+        {
+            return declared is { LibraryPins.Count: 0 }
+                ? new HashSet<string>(StringComparer.Ordinal)
+                : null;
+        }
+
+        var profile = await standards.FindStudyStandardsAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        var pinIds = profile?.LibraryPins ?? declared?.LibraryPins;
+        if (pinIds is null)
+        {
+            return null;
+        }
+
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var pinId in pinIds)
+        {
+            var item = await standards.FindLibraryItemAsync(tenant, pinId, cancellationToken).ConfigureAwait(false);
+            if (item is { Kind: LibraryItemKind.RulePack })
+            {
+                keys.Add(item.Key);
+            }
+        }
+
+        return keys;
+    }
+
+    private async Task<IReadOnlyList<ValidationFindingView>> ListAllCollectionFindingsAsync(
+        TenantId tenant,
+        StudyId studyId,
+        CancellationToken cancellationToken)
+    {
+        var all = new List<ValidationFindingView>();
+        var skip = 0;
+        while (true)
+        {
+            var page = await findingsReader.ListAsync(
+                tenant,
+                new FindingQuery(studyId)
+                {
+                    Stage = ValidationStage.Collection,
+                    Skip = skip,
+                    Take = FindingQuery.MaxTake,
+                },
+                cancellationToken).ConfigureAwait(false);
+            all.AddRange(page.Findings);
+            if (page.Findings.Count == 0 || all.Count >= page.Total)
+            {
+                break;
+            }
+
+            skip += page.Findings.Count;
+        }
+
+        return all;
     }
 
     private async Task ReconcileAutomatedQueriesAsync(
         TenantId tenant,
         IReadOnlyList<ValidationFindingView> findings,
+        IReadOnlySet<string>? pinnedRulePackKeys,
         CommandMetadata metadata,
+        string deliveryKey,
         CancellationToken cancellationToken)
     {
         var candidateFindings = findings
@@ -185,13 +322,15 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             queriesByForm.TryGetValue(formId, out var formQueries);
             formQueries ??= [];
 
-            if (finding.Status is FindingStatus.Open or FindingStatus.Investigating)
+            var isUnpinned = pinnedRulePackKeys is not null && !pinnedRulePackKeys.Contains(finding.PackKey);
+            if (isUnpinned || finding.Status is FindingStatus.Resolved or FindingStatus.Accepted or FindingStatus.Explained)
+            {
+                await CloseInactiveAutoQueriesAsync(tenant, finding, formQueries, isUnpinned, metadata, deliveryKey, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else if (finding.Status is FindingStatus.Open or FindingStatus.Investigating)
             {
                 await EnsureOpenAutoQueryAsync(tenant, finding, formId, formQueries, formRecordCache, metadata, cancellationToken).ConfigureAwait(false);
-            }
-            else if (finding.Status == FindingStatus.Resolved)
-            {
-                await CloseResolvedAutoQueriesAsync(tenant, finding, formQueries, metadata, cancellationToken).ConfigureAwait(false);
             }
         }
     }
@@ -332,6 +471,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
 
         if (raiseResult.Error is { } error
             && error.Code != KernelErrors.AlreadyExists.Code
+            && error.Code != KernelErrors.IdempotencyConflict.Code
             && error.Code != AssertionErrors.Locked.Code)
         {
             throw new InvalidOperationException(
@@ -339,11 +479,13 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         }
     }
 
-    private async Task CloseResolvedAutoQueriesAsync(
+    private async Task CloseInactiveAutoQueriesAsync(
         TenantId tenant,
         ValidationFindingView finding,
         List<FormQuery> formQueries,
+        bool isUnpinned,
         CommandMetadata metadata,
+        string deliveryKey,
         CancellationToken cancellationToken)
     {
         if (formQueries.Count == 0)
@@ -363,27 +505,43 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
 
         foreach (var query in activeAutoQueries)
         {
-            var resolutionRun = finding.ResolvedBy?.Value.ToString("D") ?? "resolved";
+            var closureSuffix = isUnpinned
+                ? $"unpinned:{deliveryKey}"
+                : finding.Status switch
+                {
+                    FindingStatus.Resolved => finding.ResolvedBy?.Value.ToString("D") ?? $"resolved:{deliveryKey}",
+                    FindingStatus.Accepted => finding.Decision?.AttestationId?.Value.ToString("D") ?? $"accepted:{deliveryKey}",
+                    FindingStatus.Explained => finding.Decision?.AttestationId?.Value.ToString("D") ?? $"explained:{deliveryKey}",
+                    _ => deliveryKey,
+                };
             var closeReason = TrimText(
-                $"Automated resolution: edit check {finding.PackKey}/{finding.RuleId} passed after data update.",
+                isUnpinned
+                    ? $"Automated closure: rule pack {finding.PackKey} is no longer pinned on the study."
+                    : finding.Status switch
+                    {
+                        FindingStatus.Accepted => $"Automated closure: finding {finding.PackKey}/{finding.RuleId} accepted.",
+                        FindingStatus.Explained => $"Automated closure: finding {finding.PackKey}/{finding.RuleId} explained.",
+                        _ => $"Automated resolution: edit check {finding.PackKey}/{finding.RuleId} passed after data update.",
+                    },
                 AssertionText.MaxLength);
             var closeResult = await sender.SendAsync(
                 new CloseFormQuery(
                     tenant,
                     query.Id,
                     query.EnrollmentId,
-                    $"auto-query:close:{query.Id:D}:{resolutionRun}",
+                    $"auto-query:close:{query.Id:D}:{closureSuffix}",
                     closeReason),
                 metadata,
                 cancellationToken).ConfigureAwait(false);
 
             if (closeResult.Error is { } error
                 && error.Code != KernelErrors.AlreadyExists.Code
+                && error.Code != KernelErrors.IdempotencyConflict.Code
                 && error.Code != FormQueryErrors.InvalidTransition.Code
                 && error.Code != AssertionErrors.Locked.Code)
             {
                 throw new InvalidOperationException(
-                    $"Closing resolved automated query {query.Id:D} failed: {error.Code} ({error.Message}).");
+                    $"Closing inactive automated query {query.Id:D} failed: {error.Code} ({error.Message}).");
             }
         }
     }

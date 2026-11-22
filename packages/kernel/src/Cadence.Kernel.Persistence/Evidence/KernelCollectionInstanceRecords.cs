@@ -63,10 +63,11 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         var items = spec?.Items ?? [];
         var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
 
-        // A signature names the revisions current when it was recorded; any later revision or value supersedes it (#5463).
-        string? contentHash = values.Count == 0
-            ? null
-            : CollectionInstance.ContentHashOf(values.Select(v => new CollectionContentEntry(v.ObservationId, v.Revision, v.Value)));
+        // A signature names the revisions current when it was recorded; any later clinical revision or value supersedes it (#5463).
+        var contentEntries = values.Select(v => new CollectionContentEntry(v.ObservationId, v.Revision, v.Value)).ToList();
+        string? contentHash = CollectionInstance.HasSignableContent(contentEntries)
+            ? CollectionInstance.ContentHashOf(contentEntries)
+            : null;
         var instanceGuid = found.Id.Value;
         var signatures = await db.Attestations.AsNoTracking()
             .Where(a => a.TargetKind == NodeKinds.CollectionInstance && a.TargetId == instanceGuid)
@@ -285,9 +286,10 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 .Where(a => memberGuids.Contains(a.Target.Id))
                 .ToList();
 
-            string? contentHash = values.Count == 0
-                ? null
-                : CollectionInstance.ContentHashOf(values.Select(v => new CollectionContentEntry(v.ObservationId, v.Revision, v.Value)));
+            var contentEntries = values.Select(v => new CollectionContentEntry(v.ObservationId, v.Revision, v.Value)).ToList();
+            string? contentHash = CollectionInstance.HasSignableContent(contentEntries)
+                ? CollectionInstance.ContentHashOf(contentEntries)
+                : null;
             var attestations = signaturesByInstance[instance.Id.Value]
                 .Select(a => new FormAttestationView(
                     a.Id, a.Meaning, a.ActorId, a.RecordedAt, a.TargetContentHash, a.Reason,
@@ -365,10 +367,12 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         var locked = coveringLocks.Any(l => l.Kind == LockKind.Locked);
         var frozen = coveringLocks.Any(l => l.Kind == LockKind.Frozen);
 
-        string? contentHash = memberObservations.Count == 0
-            ? null
-            : CollectionInstance.ContentHashOf(
-                memberObservations.Select(m => new CollectionContentEntry(m.Observation.Id, m.Observation.Revision, m.Observation.Value)));
+        var summaryEntries = memberObservations
+            .Select(m => new CollectionContentEntry(m.Observation.Id, m.Observation.Revision, m.Observation.Value))
+            .ToList();
+        string? contentHash = CollectionInstance.HasSignableContent(summaryEntries)
+            ? CollectionInstance.ContentHashOf(summaryEntries)
+            : null;
         var hashes = signatureHashes.ToList();
         var signed = contentHash is not null && hashes.Any(h => string.Equals(h, contentHash, StringComparison.Ordinal));
         var signatureSuperseded = !signed && hashes.Count > 0;
@@ -413,9 +417,15 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             .Where(m => m.JoinedAt <= signedAt)
             .OrderBy(m => m.ItemId, StringComparer.Ordinal)
             .Select(m => (m.ItemId, Revision: observations[m.ObservationId].Revisions.Where(r => r.RecordedAt <= signedAt).MaxBy(r => r.Number)))
-            .Where(x => x.Revision is not null)
+            .Where(x => x.Revision is not null
+                && !CollectionInstance.IsUnaskedPlaceholder(new CollectionContentEntry(x.Revision.ObservationId, x.Revision.Number, x.Revision.Value)))
             .Select(x => new SignedValueView(x.ItemId, x.Revision!.ObservationId, x.Revision.Number, x.Revision.Value))
             .ToList();
+        if (signed.Count == 0)
+        {
+            return null;
+        }
+
         var hash = CollectionInstance.ContentHashOf(signed.Select(v => new CollectionContentEntry(v.ObservationId, v.Revision, v.Value)));
         return string.Equals(hash, signedHash, StringComparison.Ordinal) ? signed : null;
     }

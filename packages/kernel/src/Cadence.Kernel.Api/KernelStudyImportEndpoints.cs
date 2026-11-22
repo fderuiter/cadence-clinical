@@ -529,7 +529,8 @@ public static class KernelStudyImportEndpoints
                     rulePack.Content,
                     [],
                     $"{idempotencyKey}:rule-pack",
-                    reason),
+                    reason,
+                    persistedSummary.Id),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             if (!draftItemResult.IsSuccess)
             {

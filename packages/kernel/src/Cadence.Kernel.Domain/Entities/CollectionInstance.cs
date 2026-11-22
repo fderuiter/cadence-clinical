@@ -138,16 +138,37 @@ public class CollectionInstance : AggregateRoot<CollectionInstanceId>
     }
 
     /// <summary>
+    /// True when <paramref name="entry"/> is an initial system-seeded <see cref="NullFlavor.NotAsked"/> placeholder at
+    /// revision 1 recorded so an automated or manual missing-data query has a target observation without changing the
+    /// clinical values an investigator signed (spec §9.5, 21 CFR 11.70).
+    /// </summary>
+    public static bool IsUnaskedPlaceholder(CollectionContentEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        return entry.Revision == 1 && entry.Value is MissingValue { Reason: NullFlavor.NotAsked };
+    }
+
+    /// <summary>True when <paramref name="values"/> contains at least one signable clinical value beyond initial <see cref="NullFlavor.NotAsked"/> placeholders.</summary>
+    public static bool HasSignableContent(IEnumerable<CollectionContentEntry> values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        return values.Any(v => !IsUnaskedPlaceholder(v));
+    }
+
+    /// <summary>
     /// The content hash a form signature binds to (spec §9.5, 21 CFR 11.70, #5463): the kernel content hash of
-    /// <c>{"values": [{"observation_id", "revision", "value"}, …]}</c>, one entry per member ordered by observation id. A
-    /// correction is a new revision, so it changes the hash, and a signature given before it no longer matches the form
-    /// while still naming the revisions it signed.
+    /// <c>{"values": [{"observation_id", "revision", "value"}, …]}</c>, one entry per signable member ordered by
+    /// observation id (ignoring revision-1 <see cref="NullFlavor.NotAsked"/> query placeholders). A correction or clinical
+    /// value is a new revision or entry, so it changes the hash, and a signature given before it no longer matches the
+    /// form while still naming the revisions it signed.
     /// </summary>
     public static string ContentHashOf(IEnumerable<CollectionContentEntry> values)
     {
         ArgumentNullException.ThrowIfNull(values);
         var entries = new JsonArray();
-        foreach (var value in values.OrderBy(v => v.ObservationId.ToString(), StringComparer.Ordinal))
+        foreach (var value in values
+            .Where(v => !IsUnaskedPlaceholder(v))
+            .OrderBy(v => v.ObservationId.ToString(), StringComparer.Ordinal))
         {
             entries.Add(new JsonObject
             {

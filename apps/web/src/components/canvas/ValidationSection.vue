@@ -212,18 +212,41 @@
               <span v-if="previewByRef[pack.ref].violations.length === 0">
                 0 discrepancies across current study forms.
               </span>
-              <ul v-else>
+              <ul v-else class="preview-violations-list">
                 <li
                   v-for="(v, idx) in previewByRef[pack.ref].violations"
                   :key="`${v.form_id}-${v.rule_id}-${idx}`"
+                  class="preview-violation-row"
                 >
                   <strong>[{{ v.severity }}] {{ v.rule_id }}</strong>
+                  <span
+                    v-if="v.site_code"
+                    class="code-chip"
+                    data-testid="preview-violation-site"
+                  >
+                    {{ v.site_code }}
+                  </span>
+                  <span
+                    v-if="v.subject_code"
+                    class="code-chip"
+                    data-testid="preview-violation-subject"
+                  >
+                    {{ v.subject_code }}
+                  </span>
                   <template v-if="v.dataset">
                     on <code>{{ v.dataset }}</code>
                   </template>
                   <template v-if="v.item_id">
                     · <code>{{ v.item_id }}</code> </template
                   >: {{ v.message }}
+                  <router-link
+                    v-if="previewViolationFormLocation(v)"
+                    class="form-link"
+                    :data-testid="`preview-form-link-${v.form_id}-${idx}`"
+                    :to="previewViolationFormLocationOrDefault(v)"
+                  >
+                    Open {{ v.item_id ?? "form" }}
+                  </router-link>
                 </li>
               </ul>
             </div>
@@ -252,6 +275,7 @@
                 <option value="Open">Open</option>
                 <option value="Investigating">Investigating</option>
                 <option value="Accepted">Accepted</option>
+                <option value="Explained">Explained</option>
                 <option value="Resolved">Resolved</option>
               </select>
             </label>
@@ -285,13 +309,36 @@
             <div class="finding-head">
               <span class="status-pill">{{ finding.status }}</span>
               <span class="severity-tag">[{{ finding.severity }}]</span>
+              <span
+                v-if="finding.site_code"
+                class="code-chip"
+                :data-testid="`finding-site-${finding.rule_id}`"
+              >
+                {{ finding.site_code }}
+              </span>
+              <span
+                v-if="finding.subject_code"
+                class="code-chip"
+                :data-testid="`finding-subject-${finding.rule_id}`"
+              >
+                {{ finding.subject_code }}
+              </span>
+              <span
+                v-if="finding.classification"
+                class="code-chip"
+                :data-testid="`finding-classification-${finding.rule_id}`"
+              >
+                {{ finding.classification }}
+              </span>
               <code>{{ finding.rule_id }}</code>
               <span>{{ finding.message }}</span>
             </div>
+
             <div class="finding-actions">
               <router-link
                 v-if="findingFormLocation(finding)"
                 class="form-link"
+                :data-testid="`finding-form-link-${finding.rule_id}`"
                 :to="findingFormLocationOrDefault(finding)"
               >
                 Open {{ finding.variable ?? "form" }}
@@ -299,15 +346,168 @@
               <button
                 type="button"
                 class="btn btn-secondary"
+                :data-testid="`btn-inspect-finding-${finding.rule_id}`"
                 @click="inspectFinding(finding.ref)"
               >
                 {{
                   selectedFinding?.finding.ref === finding.ref
                     ? "Hide explanation"
-                    : "Explain finding"
+                    : "Inspect provenance"
                 }}
               </button>
+              <button
+                v-if="allowInvestigate && finding.status === 'Open'"
+                type="button"
+                class="btn btn-secondary"
+                :disabled="busy"
+                :data-testid="`btn-investigate-${finding.rule_id}`"
+                @click="beginDecision(finding, 'investigate')"
+              >
+                Investigate
+              </button>
+              <button
+                v-if="allowInvestigate && finding.status !== 'Resolved'"
+                type="button"
+                class="btn btn-secondary"
+                :disabled="busy"
+                :data-testid="`btn-classify-${finding.rule_id}`"
+                @click="beginDecision(finding, 'classify')"
+              >
+                Classify
+              </button>
+              <button
+                v-if="
+                  allowAcceptOrReopen &&
+                  (finding.status === 'Open' ||
+                    finding.status === 'Investigating')
+                "
+                type="button"
+                class="btn btn-primary"
+                :disabled="busy"
+                :data-testid="`btn-accept-${finding.rule_id}`"
+                @click="beginDecision(finding, 'accept')"
+              >
+                Accept
+              </button>
+              <button
+                v-if="
+                  allowExplain &&
+                  (finding.status === 'Open' ||
+                    finding.status === 'Investigating')
+                "
+                type="button"
+                class="btn btn-primary"
+                :disabled="busy"
+                :data-testid="`btn-explain-${finding.rule_id}`"
+                @click="beginDecision(finding, 'explain')"
+              >
+                Explain finding
+              </button>
+              <button
+                v-if="
+                  allowAcceptOrReopen &&
+                  (finding.status === 'Investigating' ||
+                    finding.status === 'Accepted' ||
+                    finding.status === 'Explained')
+                "
+                type="button"
+                class="btn btn-secondary"
+                :disabled="busy"
+                :data-testid="`btn-reopen-${finding.rule_id}`"
+                @click="beginDecision(finding, 'reopen')"
+              >
+                Reopen
+              </button>
             </div>
+
+            <div
+              v-if="activeDecision?.finding.ref === finding.ref"
+              class="decision-panel"
+              :data-testid="`decision-panel-${finding.rule_id}`"
+            >
+              <label
+                v-if="activeDecision.mode === 'classify'"
+                :for="`finding-classification-select-${findingKey(finding.ref)}`"
+              >
+                Classification
+                <select
+                  :id="`finding-classification-select-${findingKey(finding.ref)}`"
+                  v-model="decisionClassification"
+                  :disabled="busy"
+                >
+                  <option value="DataIssue">DataIssue</option>
+                  <option value="MappingIssue">MappingIssue</option>
+                  <option value="MetadataIssue">MetadataIssue</option>
+                  <option value="RuleIssue">RuleIssue</option>
+                  <option value="NotAnIssue">NotAnIssue</option>
+                </select>
+              </label>
+
+              <label
+                v-if="
+                  activeDecision.mode === 'accept' ||
+                  activeDecision.mode === 'explain'
+                "
+                :for="`finding-decision-text-${findingKey(finding.ref)}`"
+              >
+                {{
+                  activeDecision.mode === "accept"
+                    ? "Acceptance rationale"
+                    : "Reviewer-guide explanation"
+                }}
+                <input
+                  :id="`finding-decision-text-${findingKey(finding.ref)}`"
+                  v-model="decisionText"
+                  type="text"
+                  autocomplete="off"
+                  :placeholder="
+                    activeDecision.mode === 'accept'
+                      ? 'Clinically verified against source chart'
+                      : 'Expected protocol deviation documented in reviewer guide'
+                  "
+                  :disabled="busy"
+                />
+              </label>
+
+              <label
+                v-else
+                :for="`finding-decision-reason-${findingKey(finding.ref)}`"
+              >
+                Reason for change
+                <input
+                  :id="`finding-decision-reason-${findingKey(finding.ref)}`"
+                  v-model="decisionReason"
+                  type="text"
+                  autocomplete="off"
+                  placeholder="Document reason for this finding decision"
+                  :disabled="busy"
+                />
+              </label>
+
+              <button
+                type="button"
+                class="btn btn-primary"
+                :disabled="busy || !canSubmitDecision"
+                :data-testid="`btn-confirm-decision-${finding.rule_id}`"
+                @click="submitDecision"
+              >
+                {{
+                  activeDecision.mode === "accept" ||
+                  activeDecision.mode === "explain"
+                    ? "Sign & confirm"
+                    : "Confirm"
+                }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                :disabled="busy"
+                @click="activeDecision = null"
+              >
+                Cancel
+              </button>
+            </div>
+
             <div
               v-if="selectedFinding?.finding.ref === finding.ref"
               class="finding-explanation"
@@ -343,6 +543,20 @@
       @cancel="approvingPack = null"
       @success="approvingPack = null"
     />
+
+    <SignatureCaptureModal
+      v-if="signingDecision"
+      :is-open="Boolean(signingDecision)"
+      :username="signerUsername"
+      :signer-name="signerFullName"
+      signer-role="Clinical Quality Reviewer"
+      :reasons="FINDING_DECISION_REASONS"
+      :action-url="signingDecisionActionUrl"
+      :semantic-action="signingDecisionSemanticAction"
+      :on-sign="signDecisionWithToken"
+      @cancel="signingDecision = null"
+      @success="signingDecision = null"
+    />
   </section>
 </template>
 
@@ -351,18 +565,32 @@ import { computed, reactive, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   describeKernelError,
+  FINDING_ACCEPT_SEMANTIC_ACTION,
+  FINDING_EXPLAIN_SEMANTIC_ACTION,
+  findingAcceptAction,
+  findingExplainAction,
   kernelApi,
   RULE_PACK_APPROVE_SEMANTIC_ACTION,
   rulePackApproveAction,
+  type KernelFindingClassification,
   type KernelRulePack,
   type KernelRulePackPreview,
+  type KernelRulePackPreviewViolation,
   type KernelValidationFinding,
   type KernelValidationFindingDetail,
 } from "../../api/kernelApi";
+import {
+  canAcceptOrReopenFindings,
+  canExplainFindings,
+  canInvestigateFindings,
+} from "../../canvas/authority";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { collectionInstanceRef, parseNodeRef } from "../../canvas/nodeRef";
 import { useAuthStore } from "../../stores/auth";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
+
+type FindingDecisionMode =
+  "investigate" | "classify" | "accept" | "explain" | "reopen";
 
 const props = defineProps<{
   studyCode: string;
@@ -389,11 +617,65 @@ const approvingPack = ref<KernelRulePack | null>(null);
 const pinningPack = ref<KernelRulePack | null>(null);
 const pinReason = ref("");
 
+const activeDecision = ref<{
+  finding: KernelValidationFinding;
+  mode: FindingDecisionMode;
+} | null>(null);
+const signingDecision = ref<{
+  finding: KernelValidationFinding;
+  mode: "accept" | "explain";
+  text: string;
+} | null>(null);
+const decisionReason = ref("");
+const decisionText = ref("");
+const decisionClassification = ref<KernelFindingClassification>("DataIssue");
+
 const APPROVE_REASONS = [
   "Rule pack governance approval",
   "APPROVAL",
   "CLINICAL_QC",
 ];
+
+const FINDING_DECISION_REASONS = [
+  "Validation finding disposition",
+  "CLINICAL_QC",
+  "APPROVAL",
+];
+
+const allowInvestigate = computed(
+  () => props.canManageRules || canInvestigateFindings(authStore)
+);
+const allowAcceptOrReopen = computed(
+  () => props.canManageRules || canAcceptOrReopenFindings(authStore)
+);
+const allowExplain = computed(
+  () => props.canManageRules || canExplainFindings(authStore)
+);
+
+const canSubmitDecision = computed(() => {
+  if (!activeDecision.value) return false;
+  if (
+    activeDecision.value.mode === "accept" ||
+    activeDecision.value.mode === "explain"
+  ) {
+    return decisionText.value.trim().length > 0;
+  }
+  return decisionReason.value.trim().length > 0;
+});
+
+const signingDecisionActionUrl = computed(() => {
+  if (!signingDecision.value) return "";
+  return signingDecision.value.mode === "accept"
+    ? findingAcceptAction(signingDecision.value.finding.ref)
+    : findingExplainAction(signingDecision.value.finding.ref);
+});
+
+const signingDecisionSemanticAction = computed(() => {
+  if (!signingDecision.value) return "";
+  return signingDecision.value.mode === "accept"
+    ? FINDING_ACCEPT_SEMANTIC_ACTION
+    : FINDING_EXPLAIN_SEMANTIC_ACTION;
+});
 
 const signerUsername = computed(() => authStore.identity?.username ?? "");
 const signerFullName = computed(() => {
@@ -405,6 +687,10 @@ const signerFullName = computed(() => {
     .trim();
   return full || identity.username || "";
 });
+
+function findingKey(refText: string): string {
+  return refText.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
 
 function unversionedPackRef(refText: string): string {
   const parsed = parseNodeRef(refText);
@@ -451,6 +737,8 @@ watch(
     rulePacks.value = [];
     findings.value = [];
     selectedFinding.value = null;
+    activeDecision.value = null;
+    signingDecision.value = null;
     errorMessage.value = "";
     actionMessage.value = "";
     if (!code) return;
@@ -556,6 +844,136 @@ async function inspectFinding(findingRef: string) {
   }
 }
 
+function beginDecision(
+  finding: KernelValidationFinding,
+  mode: FindingDecisionMode
+) {
+  activeDecision.value = { finding, mode };
+  decisionReason.value = "";
+  decisionText.value = "";
+  decisionClassification.value =
+    (finding.classification as KernelFindingClassification | null) ??
+    "DataIssue";
+}
+
+async function submitDecision() {
+  const current = activeDecision.value;
+  if (!current || busy.value) return;
+
+  if (current.mode === "accept" || current.mode === "explain") {
+    const trimmed = decisionText.value.trim();
+    if (!trimmed) return;
+    signingDecision.value = {
+      finding: current.finding,
+      mode: current.mode,
+      text: trimmed,
+    };
+    activeDecision.value = null;
+    return;
+  }
+
+  const reason = decisionReason.value.trim();
+  if (!reason) return;
+  busy.value = true;
+  errorMessage.value = "";
+  try {
+    const idempotencyKey = globalThis.crypto.randomUUID();
+    if (current.mode === "investigate") {
+      await kernelApi.investigateValidationFinding({
+        findingRef: current.finding.ref,
+        reason,
+        idempotencyKey,
+      });
+      actionMessage.value = `Marked finding ${current.finding.rule_id} as investigating.`;
+    } else if (current.mode === "classify") {
+      await kernelApi.classifyValidationFinding({
+        findingRef: current.finding.ref,
+        classification: decisionClassification.value,
+        reason,
+        idempotencyKey,
+      });
+      actionMessage.value = `Classified finding ${current.finding.rule_id} as ${decisionClassification.value}.`;
+    } else if (current.mode === "reopen") {
+      await kernelApi.reopenValidationFinding({
+        findingRef: current.finding.ref,
+        reason,
+        idempotencyKey,
+      });
+      actionMessage.value = `Reopened finding ${current.finding.rule_id}.`;
+    }
+    activeDecision.value = null;
+    await loadFindings();
+  } catch (error) {
+    errorMessage.value = describeKernelError(error);
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function signDecisionWithToken(sigToken: string, reason: string) {
+  const pending = signingDecision.value;
+  if (!pending) return;
+  busy.value = true;
+  errorMessage.value = "";
+  try {
+    const idempotencyKey = globalThis.crypto.randomUUID();
+    const updated =
+      pending.mode === "accept"
+        ? await kernelApi.acceptValidationFinding({
+            findingRef: pending.finding.ref,
+            rationale: pending.text,
+            sigToken,
+            reason,
+            idempotencyKey,
+          })
+        : await kernelApi.explainValidationFinding({
+            findingRef: pending.finding.ref,
+            explanation: pending.text,
+            sigToken,
+            reason,
+            idempotencyKey,
+          });
+    actionMessage.value =
+      pending.mode === "accept"
+        ? `Accepted finding ${updated.rule_id}.`
+        : `Recorded explanation for finding ${updated.rule_id}.`;
+    await loadFindings();
+    return updated;
+  } finally {
+    busy.value = false;
+  }
+}
+
+function previewViolationFormLocationOrDefault(
+  violation: KernelRulePackPreviewViolation
+): RouteLocationRaw {
+  return (
+    previewViolationFormLocation(violation) ?? {
+      name: "study",
+      params: { studyCode: props.studyCode },
+    }
+  );
+}
+
+function previewViolationFormLocation(
+  violation: KernelRulePackPreviewViolation
+): RouteLocationRaw | null {
+  const formRef = collectionInstanceRef(violation.form_id);
+  if (!formRef) return null;
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: {
+      stage: "data",
+      section: "validation",
+      ...(violation.site_code ? { site: violation.site_code } : {}),
+      ...(violation.dataset ? { spec: violation.dataset } : {}),
+      form: formRef,
+      ...(violation.item_id ? { item: violation.item_id } : {}),
+    },
+  };
+}
+
 function findingFormLocationOrDefault(
   finding: KernelValidationFinding
 ): RouteLocationRaw {
@@ -570,7 +988,12 @@ function findingFormLocationOrDefault(
 function findingFormLocation(
   finding: KernelValidationFinding
 ): RouteLocationRaw | null {
-  if (finding.target_kind !== "Record") return null;
+  if (
+    finding.target_kind !== "DatasetRecord" &&
+    finding.target_kind !== "Record"
+  ) {
+    return null;
+  }
   const formRef = collectionInstanceRef(finding.record_key);
   if (!formRef) return null;
   return {
@@ -579,6 +1002,8 @@ function findingFormLocation(
     query: {
       stage: "data",
       section: "validation",
+      ...(finding.site_code ? { site: finding.site_code } : {}),
+      ...(finding.dataset ? { spec: finding.dataset } : {}),
       form: formRef,
       ...(finding.variable ? { item: finding.variable } : {}),
     },
@@ -599,7 +1024,9 @@ function findingFormLocation(
 .pin-reason-row,
 .findings-filters,
 .finding-head,
-.finding-actions {
+.finding-actions,
+.decision-panel,
+.preview-violation-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -609,7 +1036,9 @@ function findingFormLocation(
 .rule-pack-actions,
 .pin-reason-row,
 .finding-head,
-.finding-actions {
+.finding-actions,
+.decision-panel,
+.preview-violation-row {
   justify-content: flex-start;
 }
 .validation-subtitle,
@@ -629,7 +1058,8 @@ function findingFormLocation(
   background: var(--semantic-color-surface);
 }
 .rule-pack-list,
-.findings-list {
+.findings-list,
+.preview-violations-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -646,12 +1076,16 @@ function findingFormLocation(
   border: 1px solid var(--border);
   border-radius: 6px;
 }
-.status-pill {
+.status-pill,
+.code-chip {
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
   background: var(--neutral-light);
+}
+.code-chip {
+  font-family: var(--font-mono, monospace);
 }
 .status-pill--pinned {
   background: var(--semantic-color-success-bg-soft);
@@ -662,7 +1096,8 @@ function findingFormLocation(
   font-size: 0.8rem;
 }
 .compiled-rules-list,
-.pack-preview-box {
+.pack-preview-box,
+.decision-panel {
   margin: 4px 0 0;
   padding: 8px 12px;
   border-radius: 6px;

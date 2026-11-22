@@ -77,7 +77,12 @@ public sealed class RulePackLoader(IStandardsRegistry? registry = null)
         var (pack, problems) = RulePackJson.Read(item.Content);
         return pack is null
             ? new(null, RuleErrors.PackInvalid.WithMessage(string.Join(" ", problems)))
-            : new(new LoadedRulePack(item.Id, item.Key, item.Version, item.ContentHash, item.Status, pack), null);
+            : new(
+                new LoadedRulePack(item.Id, item.Key, item.Version, item.ContentHash, item.Status, pack)
+                {
+                    GoverningProtocolVersions = item.GoverningProtocolVersions,
+                },
+                null);
     }
 
     /// <summary>

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
@@ -323,7 +324,7 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
 /// Classifies whether an observation records blinded treatment allocation, investigational intervention, or masked
 /// drug dispensation according to protocol design elements and concept metadata (K-AUTH-4).
 /// </summary>
-internal static class BlindedObservationClassifier
+public static class BlindedObservationClassifier
 {
     private static readonly string[] TreatmentMarkers =
     [
@@ -349,6 +350,7 @@ internal static class BlindedObservationClassifier
         "study drug",
     ];
 
+    /// <summary>Returns true when the observation item or concept represents blinded treatment or randomization data.</summary>
     public static bool IsBlindedTreatment(
         ConceptId conceptId,
         ObservationValue valueAtCut,
@@ -387,6 +389,67 @@ internal static class BlindedObservationClassifier
                     bool sameItem = itemId is not null
                         ? string.Equals(item.Id, itemId, StringComparison.Ordinal)
                         : item.Concept.ConceptId == conceptId;
+                    if (sameItem && (MatchesMarkers(item.Id) || MatchesMarkers(item.Purpose?.OperationalNeed)))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return concept is not null
+            && (MatchesMarkers(concept.ExternalCode)
+                || MatchesMarkers(concept.PreferredLabel)
+                || MatchesMarkers(concept.Definition));
+    }
+
+    /// <summary>
+    /// Returns true when the observation item, collection specification, or resolved concept view represents blinded
+    /// treatment or randomization data (K-AUTH-4).
+    /// </summary>
+    public static bool IsBlindedTreatment(
+        ConceptId? conceptId,
+        ObservationValue? valueAtCut,
+        ConceptVersionView? concept,
+        string? collectionSpecId,
+        string? itemId,
+        IReadOnlyList<ProtocolDesign> designs)
+    {
+        if (valueAtCut is MissingValue { Reason: NullFlavor.Masked })
+        {
+            return true;
+        }
+
+        if (MatchesMarkers(collectionSpecId) || MatchesMarkers(itemId))
+        {
+            return true;
+        }
+
+        foreach (var design in designs)
+        {
+            if (conceptId is { } cid && design.Interventions.Any(i => i.Product?.ConceptId == cid))
+            {
+                return true;
+            }
+
+            foreach (var spec in design.CollectionSpecs)
+            {
+                if (collectionSpecId is not null && !string.Equals(spec.Id, collectionSpecId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if ((MatchesMarkers(spec.Id) || MatchesMarkers(spec.Name) || MatchesMarkers(spec.Purpose?.OperationalNeed))
+                    && (collectionSpecId is not null || (conceptId is { } specConceptId && spec.Items.Any(i => i.Concept.ConceptId == specConceptId))))
+                {
+                    return true;
+                }
+
+                foreach (var item in spec.Items)
+                {
+                    bool sameItem = itemId is not null
+                        ? string.Equals(item.Id, itemId, StringComparison.Ordinal)
+                        : conceptId is { } itemConceptId && item.Concept.ConceptId == itemConceptId;
                     if (sameItem && (MatchesMarkers(item.Id) || MatchesMarkers(item.Purpose?.OperationalNeed)))
                     {
                         return true;

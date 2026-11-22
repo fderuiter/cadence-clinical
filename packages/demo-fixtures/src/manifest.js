@@ -121,6 +121,7 @@ export const DEMO_MANIFEST = Object.freeze({
         "collection.record_unasked",
         "execution.query.raise",
         "execution.query.manage",
+        "attestation.sign",
       ]),
     }),
     Object.freeze({
@@ -138,6 +139,7 @@ export const DEMO_MANIFEST = Object.freeze({
         "execution.query.raise",
         "execution.query.manage",
         "study.declare_standards",
+        "attestation.sign",
       ]),
     }),
     Object.freeze({

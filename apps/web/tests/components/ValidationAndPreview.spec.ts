@@ -52,6 +52,11 @@ vi.mock("../../src/api/kernelApi", async (importOriginal) => {
       declareStudyRulePacks: vi.fn(),
       listStudyValidationFindings: vi.fn(),
       getValidationFinding: vi.fn(),
+      investigateValidationFinding: vi.fn(),
+      classifyValidationFinding: vi.fn(),
+      acceptValidationFinding: vi.fn(),
+      explainValidationFinding: vi.fn(),
+      reopenValidationFinding: vi.fn(),
       getObservation: vi.fn(),
     },
   };
@@ -344,6 +349,262 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
     expect(wrapper.find("#observation-new-value").exists()).toBe(true);
     expect(wrapper.find("[data-testid='observation-unit']").text()).toBe(
       "mm[Hg]"
+    );
+  });
+
+  it("renders DatasetRecord links with site/spec/form/item, displays site & subject codes on previews and findings, and executes finding decisions", async () => {
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.rawRoles = ["data_manager"];
+    auth.user = { username: "dm.lead", fullName: "Dana Manager" };
+
+    const studyUuid = "01950000-0000-7000-8000-000000000010";
+    const packUuid = "01950000-0000-7000-8000-000000000055";
+    const formUuid = "01950000-0000-7000-8000-000000000001";
+    const findingRef =
+      "validation_finding:01950000-0000-7000-8000-000000000071";
+    const acceptedFindingRef =
+      "validation_finding:01950000-0000-7000-8000-000000000072";
+
+    vi.mocked(kernelApi.search).mockResolvedValue([
+      {
+        ref: `study:${studyUuid}@1`,
+        kind: "study",
+        code: "CADENCE-101",
+        title: "Demo study",
+        exact_code: true,
+      },
+    ]);
+    vi.mocked(kernelApi.listStudyRulePacks).mockResolvedValue({
+      study_ref: `study:${studyUuid}@1`,
+      profile_ref: `study_standards_profile:01950000-0000-7000-8000-000000000066@1`,
+      pinned_rule_pack_refs: [`library_item:${packUuid}`],
+      rule_packs: [
+        {
+          ref: `library_item:${packUuid}@2`,
+          key: "cadence-101-edit-checks",
+          title: "Cardiovascular Edit Checks",
+          description: "Cardiovascular plausibility checks.",
+          version: 1,
+          status: "Approved",
+          pinned: true,
+          content_hash: "abcd",
+          rule_count: 1,
+          rules: [],
+        },
+      ],
+    });
+    const runUuid = "01950000-0000-7000-8000-000000000090";
+    const openFinding = {
+      ref: findingRef,
+      study_ref: `study:${studyUuid}`,
+      rule_pack_ref: `library_item:${packUuid}`,
+      pack_key: "cadence-101-edit-checks",
+      rule_id: "VS_SYSBP_MAX",
+      rule_version: 1,
+      stage: "Collection",
+      severity: "Warning",
+      status: "Open",
+      blocks: false,
+      target_kind: "DatasetRecord",
+      dataset: "VS",
+      record_key: formUuid,
+      variable: "SYSBP",
+      site_code: "SITE-101",
+      subject_code: "SUBJ-101-001",
+      message: "Systolic BP exceeds 220 mm[Hg].",
+      expected: null,
+      observed: [{ variable: "SYSBP", value: "245" }],
+      first_detected_run_ref: `validation_run:${runUuid}`,
+      last_detected_run_ref: `validation_run:${runUuid}`,
+      resolved_by_run_ref: null,
+      classification: null,
+    };
+    const acceptedFinding = {
+      ...openFinding,
+      ref: acceptedFindingRef,
+      rule_id: "VS_DIABP_MAX",
+      status: "Accepted",
+      classification: "DataIssue",
+    };
+    vi.mocked(kernelApi.listStudyValidationFindings).mockResolvedValue({
+      total: 2,
+      findings: [openFinding, acceptedFinding],
+    });
+    vi.mocked(kernelApi.previewStudyRulePack).mockResolvedValue({
+      item_ref: `library_item:${packUuid}`,
+      forms_evaluated: 2,
+      rules_evaluated: 1,
+      violation_count: 1,
+      violations: [
+        {
+          form_id: formUuid,
+          pack_key: "cadence-101-edit-checks",
+          rule_id: "VS_SYSBP_MAX",
+          rule_version: 1,
+          severity: "Warning",
+          dataset: "VS",
+          item_id: "SYSBP",
+          site_code: "SITE-101",
+          subject_code: "SUBJ-101-001",
+          message: "Systolic BP exceeds 220 mm[Hg].",
+          remediation_guidance: null,
+        },
+      ],
+    });
+    vi.mocked(kernelApi.investigateValidationFinding).mockResolvedValue({
+      ...openFinding,
+      status: "Investigating",
+    });
+    vi.mocked(kernelApi.classifyValidationFinding).mockResolvedValue({
+      ...openFinding,
+      classification: "RuleIssue",
+    });
+    vi.mocked(kernelApi.acceptValidationFinding).mockResolvedValue({
+      ...openFinding,
+      status: "Accepted",
+    });
+    vi.mocked(kernelApi.explainValidationFinding).mockResolvedValue({
+      ...openFinding,
+      status: "Explained",
+    });
+    vi.mocked(kernelApi.reopenValidationFinding).mockResolvedValue({
+      ...acceptedFinding,
+      status: "Open",
+    });
+
+    const router = makeRouter();
+    await router.push("/studies/CADENCE-101?stage=data&section=validation");
+    await router.isReady();
+
+    const wrapper = mount(ValidationSection, {
+      props: { studyCode: "CADENCE-101", canManageRules: true },
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    // DatasetRecord finding displays site & subject codes and links directly to the form + item.
+    expect(
+      wrapper.find("[data-testid='finding-site-VS_SYSBP_MAX']").text()
+    ).toBe("SITE-101");
+    expect(
+      wrapper.find("[data-testid='finding-subject-VS_SYSBP_MAX']").text()
+    ).toBe("SUBJ-101-001");
+    const findingLink = wrapper.find(
+      "[data-testid='finding-form-link-VS_SYSBP_MAX']"
+    );
+    expect(findingLink.exists()).toBe(true);
+    expect(findingLink.text()).toBe("Open SYSBP");
+    const href = findingLink.attributes("href") ?? "";
+    expect(href).toContain("/studies/CADENCE-101");
+    expect(href).toContain("site=SITE-101");
+    expect(href).toContain("spec=VS");
+    expect(href).toContain(`form=collection_instance:${formUuid}`);
+    expect(href).toContain("item=SYSBP");
+
+    // Rule pack preview displays site_code, subject_code, and direct form link.
+    await wrapper
+      .find("#btn-preview-pack-cadence-101-edit-checks-1")
+      .trigger("click");
+    await flushPromises();
+    expect(wrapper.find("[data-testid='preview-violation-site']").text()).toBe(
+      "SITE-101"
+    );
+    expect(
+      wrapper.find("[data-testid='preview-violation-subject']").text()
+    ).toBe("SUBJ-101-001");
+    expect(
+      wrapper.find(`[data-testid='preview-form-link-${formUuid}-0']`).exists()
+    ).toBe(true);
+
+    // Investigate action
+    await wrapper
+      .find("[data-testid='btn-investigate-VS_SYSBP_MAX']")
+      .trigger("click");
+    await wrapper
+      .find("[data-testid='decision-panel-VS_SYSBP_MAX'] input")
+      .setValue("Reviewing source vitals chart");
+    await wrapper
+      .find("[data-testid='btn-confirm-decision-VS_SYSBP_MAX']")
+      .trigger("click");
+    await flushPromises();
+    expect(kernelApi.investigateValidationFinding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        findingRef,
+        reason: "Reviewing source vitals chart",
+        idempotencyKey: expect.any(String),
+      })
+    );
+
+    // Classify action
+    await wrapper
+      .find("[data-testid='btn-classify-VS_SYSBP_MAX']")
+      .trigger("click");
+    await wrapper
+      .find("[data-testid='decision-panel-VS_SYSBP_MAX'] select")
+      .setValue("RuleIssue");
+    await wrapper
+      .find("[data-testid='decision-panel-VS_SYSBP_MAX'] input")
+      .setValue("Threshold calibrated for supine cuff");
+    await wrapper
+      .find("[data-testid='btn-confirm-decision-VS_SYSBP_MAX']")
+      .trigger("click");
+    await flushPromises();
+    expect(kernelApi.classifyValidationFinding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        findingRef,
+        classification: "RuleIssue",
+        reason: "Threshold calibrated for supine cuff",
+        idempotencyKey: expect.any(String),
+      })
+    );
+
+    // Accept action via SignatureCaptureModal callback
+    await wrapper
+      .find("[data-testid='btn-accept-VS_SYSBP_MAX']")
+      .trigger("click");
+    await wrapper
+      .find("[data-testid='decision-panel-VS_SYSBP_MAX'] input")
+      .setValue("Confirmed standing reading on paper chart");
+    await wrapper
+      .find("[data-testid='btn-confirm-decision-VS_SYSBP_MAX']")
+      .trigger("click");
+    await flushPromises();
+    const acceptModal = wrapper.findComponent({
+      name: "SignatureCaptureModal",
+    });
+    expect(acceptModal.exists()).toBe(true);
+    await (
+      acceptModal.props("onSign") as (t: string, r: string) => Promise<void>
+    )("sig-token-accept", "Validation finding disposition");
+    await flushPromises();
+    expect(kernelApi.acceptValidationFinding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        findingRef,
+        rationale: "Confirmed standing reading on paper chart",
+        sigToken: "sig-token-accept",
+        reason: "Validation finding disposition",
+        idempotencyKey: expect.any(String),
+      })
+    );
+
+    // Reopen action on Accepted finding
+    await wrapper
+      .find("[data-testid='btn-reopen-VS_DIABP_MAX']")
+      .trigger("click");
+    await wrapper
+      .find("[data-testid='decision-panel-VS_DIABP_MAX'] input")
+      .setValue("Source chart amended at monitoring visit");
+    await wrapper
+      .find("[data-testid='btn-confirm-decision-VS_DIABP_MAX']")
+      .trigger("click");
+    await flushPromises();
+    expect(kernelApi.reopenValidationFinding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        findingRef: acceptedFindingRef,
+        reason: "Source chart amended at monitoring visit",
+        idempotencyKey: expect.any(String),
+      })
     );
   });
 });

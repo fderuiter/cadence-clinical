@@ -6,7 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Domain.Standards;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 
 using Microsoft.EntityFrameworkCore;
@@ -65,7 +67,13 @@ internal sealed class KernelStandardsRegistry(KernelTenantDbContextFactory conte
         await using var db = contexts.Create(tenant);
         var item = await db.Set<LibraryItem>().AsNoTracking()
             .SingleOrDefaultAsync(i => i.Id == id, cancellationToken).ConfigureAwait(false);
-        return item is null ? null : ToView(item);
+        if (item is null)
+        {
+            return null;
+        }
+
+        var governing = await LoadGoverningVersionsAsync(db, [item.Id.Value], cancellationToken).ConfigureAwait(false);
+        return ToView(item, [.. governing[item.Id.Value]]);
     }
 
     public async Task<IReadOnlyList<LibraryItemView>> ListLibraryItemVersionsAsync(TenantId tenant, LibraryItemKind kind, string key, CancellationToken cancellationToken)
@@ -75,7 +83,8 @@ internal sealed class KernelStandardsRegistry(KernelTenantDbContextFactory conte
             .Where(i => i.Kind == kind && i.Key == key)
             .OrderByDescending(i => i.ItemVersion)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
-        return [.. items.Select(ToView)];
+        var governing = await LoadGoverningVersionsAsync(db, [.. items.Select(i => i.Id.Value)], cancellationToken).ConfigureAwait(false);
+        return [.. items.Select(i => ToView(i, [.. governing[i.Id.Value]]))];
     }
 
     public async Task<IReadOnlyList<LibraryItemView>> ListLibraryItemsAsync(TenantId tenant, LibraryItemKind? kind, CancellationToken cancellationToken)
@@ -91,7 +100,8 @@ internal sealed class KernelStandardsRegistry(KernelTenantDbContextFactory conte
             .OrderBy(i => i.Key)
             .ThenByDescending(i => i.ItemVersion)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
-        return [.. items.Select(ToView)];
+        var governing = await LoadGoverningVersionsAsync(db, [.. items.Select(i => i.Id.Value)], cancellationToken).ConfigureAwait(false);
+        return [.. items.Select(i => ToView(i, [.. governing[i.Id.Value]]))];
     }
 
     public async Task<StudyStandardsProfileView?> FindStudyStandardsAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken)
@@ -130,7 +140,32 @@ internal sealed class KernelStandardsRegistry(KernelTenantDbContextFactory conte
                 : Array.Empty<ResolvedCodeSystemVersion>())],
     };
 
-    private static LibraryItemView ToView(LibraryItem i)
+    private static async Task<ILookup<Guid, ProtocolVersionId>> LoadGoverningVersionsAsync(
+        KernelDbContext db,
+        IReadOnlyCollection<Guid> itemGuids,
+        CancellationToken cancellationToken)
+    {
+        if (itemGuids.Count == 0)
+        {
+            return Array.Empty<(Guid ToId, ProtocolVersionId VersionId)>().ToLookup(x => x.ToId, x => x.VersionId);
+        }
+
+        var edges = await db.LineageEdges.AsNoTracking()
+            .Where(e => e.ToKind == NodeKinds.LibraryItem
+                && itemGuids.Contains(e.ToId)
+                && e.FromKind == NodeKinds.ProtocolVersion
+                && e.Kind == LineageEdgeKind.GovernedBy)
+            .Select(e => new { e.ToId, e.FromId })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return edges
+            .Select(e => (e.ToId, VersionId: ProtocolVersionId.FromGuid(e.FromId)))
+            .Distinct()
+            .ToLookup(x => x.ToId, x => x.VersionId);
+    }
+
+    private static LibraryItemView ToView(LibraryItem i, IReadOnlyList<ProtocolVersionId> governingProtocolVersions)
     {
         using var content = JsonDocument.Parse(i.Content);
         return new LibraryItemView(
@@ -147,6 +182,7 @@ internal sealed class KernelStandardsRegistry(KernelTenantDbContextFactory conte
             i.DeprecationAttestationId)
         {
             VersionIndex = i.VersionIndex,
+            GoverningProtocolVersions = governingProtocolVersions,
         };
     }
 }

@@ -180,14 +180,72 @@ export function extractKernelFieldErrors(
   return normalized;
 }
 
-/** Gateway step-up target URL for `POST /api/v1/kernel/locks`. */
+/** Gateway step-up target URL for `POST /api/v1/kernel/library-items/{itemRef}/approve`. */
 export const RULE_PACK_APPROVE_SEMANTIC_ACTION = "kernel.library_item.approve";
+export const FINDING_ACCEPT_SEMANTIC_ACTION =
+  "kernel.validation_finding.accept";
+export const FINDING_EXPLAIN_SEMANTIC_ACTION =
+  "kernel.validation_finding.explain";
 
 /** Gateway step-up target URL for `POST /api/v1/kernel/library-items/{itemRef}/approve`. */
 export function rulePackApproveAction(itemRef: string): string {
   const at = itemRef.indexOf("@");
   const clean = at < 0 ? itemRef : itemRef.slice(0, at);
   return `/api/v1/kernel/library-items/${clean}/approve`;
+}
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/validation/findings/{findingRef}/accept`. */
+export function findingAcceptAction(findingRef: string): string {
+  const at = findingRef.indexOf("@");
+  const clean = at < 0 ? findingRef : findingRef.slice(0, at);
+  return `/api/v1/kernel/validation/findings/${clean}/accept`;
+}
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/validation/findings/{findingRef}/explain`. */
+export function findingExplainAction(findingRef: string): string {
+  const at = findingRef.indexOf("@");
+  const clean = at < 0 ? findingRef : findingRef.slice(0, at);
+  return `/api/v1/kernel/validation/findings/${clean}/explain`;
+}
+
+export type KernelFindingClassification =
+  "DataIssue" | "MappingIssue" | "MetadataIssue" | "RuleIssue" | "NotAnIssue";
+
+export interface KernelInvestigateFindingInput {
+  findingRef: string;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelClassifyFindingInput {
+  findingRef: string;
+  classification: KernelFindingClassification;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelAcceptFindingInput {
+  findingRef: string;
+  rationale: string;
+  attestationId?: string | null;
+  sigToken: string;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelExplainFindingInput {
+  findingRef: string;
+  explanation: string;
+  attestationId?: string | null;
+  sigToken: string;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelReopenFindingInput {
+  findingRef: string;
+  reason: string;
+  idempotencyKey: string;
 }
 
 export interface KernelApproveLibraryItemRequest {
@@ -1352,6 +1410,112 @@ export const kernelApi = {
     return unwrapResponse(
       client.GET("/api/v1/kernel/validation/findings/{findingRef}", {
         params: { path: { findingRef: unversioned(findingRef) } },
+      })
+    );
+  },
+
+  /** Marks an open validation finding as under investigation (`POST /api/v1/kernel/validation/findings/{findingRef}/investigate`). */
+  investigateValidationFinding({
+    findingRef,
+    reason,
+    idempotencyKey,
+  }: KernelInvestigateFindingInput): Promise<KernelValidationFinding> {
+    return unwrapResponse(
+      client.POST(
+        "/api/v1/kernel/validation/findings/{findingRef}/investigate",
+        {
+          params: { path: { findingRef: unversioned(findingRef) } },
+          headers: {
+            "X-Change-Reason": encodeChangeReason(reason),
+            "Idempotency-Key": idempotencyKey,
+          },
+        }
+      )
+    );
+  },
+
+  /** Records the classification of a validation finding (`POST /api/v1/kernel/validation/findings/{findingRef}/classify`). */
+  classifyValidationFinding({
+    findingRef,
+    classification,
+    reason,
+    idempotencyKey,
+  }: KernelClassifyFindingInput): Promise<KernelValidationFinding> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/validation/findings/{findingRef}/classify", {
+        params: { path: { findingRef: unversioned(findingRef) } },
+        body: { classification },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Accepts a validation finding with a step-up Responsibility signature (`POST /api/v1/kernel/validation/findings/{findingRef}/accept`). */
+  acceptValidationFinding({
+    findingRef,
+    rationale,
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: KernelAcceptFindingInput): Promise<KernelValidationFinding> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/validation/findings/{findingRef}/accept", {
+        params: { path: { findingRef: unversioned(findingRef) } },
+        body: {
+          rationale,
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Explains a validation finding with a step-up Approved signature (`POST /api/v1/kernel/validation/findings/{findingRef}/explain`). */
+  explainValidationFinding({
+    findingRef,
+    explanation,
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: KernelExplainFindingInput): Promise<KernelValidationFinding> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/validation/findings/{findingRef}/explain", {
+        params: { path: { findingRef: unversioned(findingRef) } },
+        body: {
+          explanation,
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Reopens an investigating, accepted, or explained validation finding (`POST /api/v1/kernel/validation/findings/{findingRef}/reopen`). */
+  reopenValidationFinding({
+    findingRef,
+    reason,
+    idempotencyKey,
+  }: KernelReopenFindingInput): Promise<KernelValidationFinding> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/validation/findings/{findingRef}/reopen", {
+        params: { path: { findingRef: unversioned(findingRef) } },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
       })
     );
   },
