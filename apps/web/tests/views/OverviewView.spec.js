@@ -102,8 +102,8 @@ describe("OverviewView Orientation Hub Component", () => {
       {
         roles: ["Data Manager"],
         persona: "data_manager",
-        expectedLaunchers: ["/studies", "/ecrf"],
-        expectedChecklistRoutes: ["/ecrf", "/studies", "/ecrf"],
+        expectedLaunchers: ["/studies", "/ecrf", "/ctms"],
+        expectedChecklistRoutes: ["/ecrf", "/studies", "/ecrf", "/ctms"],
       },
       {
         roles: ["CRC"],

@@ -95,4 +95,25 @@ public class SiteComplianceCacheTests
         cache.MissingDocuments.Should().Equal("1572");
         cache.MissingDocuments.Should().NotContain("INJECTED");
     }
+
+    [Fact]
+    public void MarkActivated_SetsActivationMetadataOnceWithoutTouchingVersionOrCompleteness()
+    {
+        var cache = SiteComplianceCache.Create(Study, Site, Milestone, isComplete: true, Array.Empty<string>());
+        var firstTime = new DateTimeOffset(2026, 11, 20, 12, 0, 0, TimeSpan.Zero);
+        var secondTime = firstTime.AddHours(2);
+
+        cache.IsActivated.Should().BeFalse();
+        cache.MarkActivated(firstTime, "dm-user-1").Should().BeTrue();
+        cache.IsActivated.Should().BeTrue();
+        cache.ActivatedAt.Should().Be(firstTime);
+        cache.ActivatedBy.Should().Be("dm-user-1");
+        cache.Version.Should().Be(1);
+
+        // Idempotent second call preserves original activation timestamp and actor
+        cache.MarkActivated(secondTime, "dm-user-2").Should().BeFalse();
+        cache.ActivatedAt.Should().Be(firstTime);
+        cache.ActivatedBy.Should().Be("dm-user-1");
+        cache.Version.Should().Be(1);
+    }
 }

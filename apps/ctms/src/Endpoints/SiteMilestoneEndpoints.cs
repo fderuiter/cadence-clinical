@@ -35,6 +35,7 @@ public static class SiteMilestoneEndpoints
             .WithName("ListSiteMilestones")
             .WithSummary("List site milestones filtered by study or site.")
             .Produces<List<SiteMilestoneResponseDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission(ReadPermission).RequireCallerStudyAndSiteScope();
 
         group.MapPost("/site-milestones", CreateSiteMilestoneAsync)
@@ -42,6 +43,7 @@ public static class SiteMilestoneEndpoints
             .WithSummary("Create a new site milestone.")
             .Produces<SiteMilestoneResponseDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission(CreatePermission).RequireCallerStudyAndSiteScope();
 
         group.MapPut("/site-milestones/{milestone_id}", UpdateSiteMilestoneAsync)
@@ -49,6 +51,7 @@ public static class SiteMilestoneEndpoints
             .WithSummary("Update site milestone status, planned date, or actual date.")
             .Produces<SiteMilestoneResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(UpdatePermission).RequireCallerStudyAndSiteScope();
 
@@ -59,22 +62,15 @@ public static class SiteMilestoneEndpoints
         [FromQuery(Name = "study_id")] string? studyId,
         [FromQuery(Name = "site_id")] string? siteId,
         CtmsDbContext db,
-        CancellationToken ct,
-        HttpContext? httpContext = null)
+        HttpContext httpContext,
+        CancellationToken ct)
     {
-        HashSet<string>? studyFilter = null;
-        if (httpContext is not null
-            && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
-            && !ClinicalScopeGuard.ResolveStudyAndSiteFilters(httpContext, studyId, siteId, out studyFilter, out _, out var denied))
+        if (CtmsScopeGuard.ResolveStudyAndSiteFilters(httpContext, studyId, siteId, out var studyFilter, out var siteFilter) is { } scopeDenied)
         {
-            return denied!;
+            return scopeDenied;
         }
 
         IQueryable<CtmsSiteMilestone> query = db.CtmsSiteMilestones.AsNoTracking();
-        if (studyFilter is not null)
-        {
-            query = query.Where(m => studyFilter.Contains(m.StudyId));
-        }
 
         if (!string.IsNullOrWhiteSpace(studyId))
         {
@@ -89,12 +85,9 @@ public static class SiteMilestoneEndpoints
         var milestones = await query
             .OrderBy(m => m.PlannedDate ?? new DateTimeOffset(m.CreatedAt, TimeSpan.Zero))
             .ToListAsync(ct);
-        if (httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
-        {
-            milestones = milestones.Where(m => ClinicalScopeGuard.CanAccessSite(httpContext, m.SiteId)).ToList();
-        }
 
-        var dtos = milestones.Select(ToResponseDto).ToList();
+        var scopedMilestones = CtmsScopeGuard.ApplyFilters(milestones, studyFilter, m => m.StudyId, siteFilter, m => m.SiteId);
+        var dtos = scopedMilestones.Select(ToResponseDto).ToList();
         return TypedResults.Ok(dtos);
     }
 
@@ -113,11 +106,6 @@ public static class SiteMilestoneEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
-        {
-            return problem!;
-        }
-
         if (string.IsNullOrWhiteSpace(request.Site) ||
             string.IsNullOrWhiteSpace(request.Study) ||
             string.IsNullOrWhiteSpace(request.MilestoneType))
@@ -128,10 +116,14 @@ public static class SiteMilestoneEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
-            && ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.Study, request.Site) is { } createDenied)
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, request.Study, request.Site) is { } scopeDenied)
         {
-            return createDenied;
+            return scopeDenied;
+        }
+
+        if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
+        {
+            return problem!;
         }
 
         var (user, role) = ResolveCaller(httpContext);
@@ -185,6 +177,11 @@ public static class SiteMilestoneEndpoints
         [FromServices] IClock clock,
         CancellationToken ct)
     {
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
+        {
+            return missingScope;
+        }
+
         var milestone = await db.CtmsSiteMilestones.FirstOrDefaultAsync(m => m.Id == milestoneId, ct);
         if (milestone is null)
         {
@@ -194,10 +191,9 @@ public static class SiteMilestoneEndpoints
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
-            && ClinicalScopeGuard.RequireStudyAndSite(httpContext, milestone.StudyId, milestone.SiteId) is { } updateDenied)
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, milestone.StudyId, milestone.SiteId) is { } scopeDenied)
         {
-            return updateDenied;
+            return scopeDenied;
         }
 
         if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, request?.ReasonForChange, out string reason, out var problem))

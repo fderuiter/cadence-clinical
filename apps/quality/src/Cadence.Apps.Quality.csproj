@@ -9,7 +9,6 @@
     <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\..\..\packages\telemetry\src\Cadence.Telemetry.csproj" />
-    <ProjectReference Include="..\..\..\packages\contracts\src\Cadence.Contracts.csproj" />
     <ProjectReference Include="..\..\..\packages\database\src\Cadence.Database.csproj" />
   </ItemGroup>
 

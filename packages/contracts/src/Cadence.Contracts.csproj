@@ -1,18 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Cadence.Contracts</RootNamespace>
-    <Description>Shared DTOs, cross-service REST contracts, and resilient HTTP client interfaces.</Description>
+    <Description>Zero-dependency MassTransit domain event contracts for cross-service asynchronous messaging.</Description>
     <!-- Public API for other projects: every public member needs an XML comment (CS1591). -->
     <CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>
   </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\engine_core\src\Cadence.Core.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Polly" />
-    <PackageReference Include="Microsoft.Extensions.Http.Polly" />
-  </ItemGroup>
 </Project>
-
