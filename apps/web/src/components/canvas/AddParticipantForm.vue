@@ -19,14 +19,126 @@
       autocomplete="off"
       required
     />
-    <label for="add-participant-site">Site (optional)</label>
+
+    <div class="site-label-row">
+      <label for="add-participant-site">Site (optional)</label>
+      <div class="site-shortcuts">
+        <button
+          v-if="linkedSites.length > 0"
+          id="btn-add-participant-toggle-site-mode"
+          type="button"
+          class="link-button"
+          @click="manualSiteMode = !manualSiteMode"
+        >
+          {{ manualSiteMode ? "Pick linked site" : "Enter custom code" }}
+        </button>
+        <button
+          v-if="canQuickCreateSite"
+          id="btn-add-participant-new-site"
+          type="button"
+          class="link-button"
+          @click="toggleInlineSiteForm"
+        >
+          {{
+            showInlineSiteForm ? "Cancel new site" : "+ Register & link site"
+          }}
+        </button>
+      </div>
+    </div>
+
+    <select
+      v-if="linkedSites.length > 0 && !manualSiteMode"
+      id="add-participant-site"
+      v-model="siteId"
+    >
+      <option value="">Not assigned</option>
+      <option v-for="site in linkedSites" :key="site.code" :value="site.code">
+        {{ site.label }}
+      </option>
+      <option
+        v-if="siteId && !linkedSites.some((s) => s.code === siteId)"
+        :value="siteId"
+      >
+        {{ siteId }}
+      </option>
+    </select>
     <input
+      v-else
       id="add-participant-site"
       v-model="siteId"
       type="text"
       maxlength="255"
       autocomplete="off"
     />
+
+    <fieldset
+      v-if="showInlineSiteForm"
+      id="add-participant-inline-site-panel"
+      class="inline-site-panel"
+      :disabled="creatingSite"
+    >
+      <legend>Register &amp; link site to {{ canvas.studyCode }}</legend>
+      <p v-if="inlineSiteError" class="inline-site-error" role="alert">
+        {{ inlineSiteError }}
+      </p>
+      <label for="inline-site-code">Site code</label>
+      <input
+        id="inline-site-code"
+        v-model="inlineSiteCode"
+        type="text"
+        maxlength="64"
+        autocomplete="off"
+        placeholder="e.g. SITE-01"
+      />
+      <label for="inline-site-name">Site name</label>
+      <input
+        id="inline-site-name"
+        v-model="inlineSiteName"
+        type="text"
+        maxlength="200"
+        autocomplete="off"
+        placeholder="e.g. Metro Cardiology Research Center"
+      />
+      <label for="inline-site-country">Country (2-letter ISO)</label>
+      <input
+        id="inline-site-country"
+        v-model="inlineSiteCountry"
+        type="text"
+        maxlength="2"
+        autocomplete="off"
+        placeholder="US"
+      />
+      <label for="inline-site-institution">Site institution</label>
+      <input
+        id="inline-site-institution"
+        v-model="inlineInstitutionName"
+        type="text"
+        maxlength="200"
+        autocomplete="off"
+        placeholder="e.g. Metro University Hospital"
+      />
+      <label for="inline-site-reason">Reason for site registration</label>
+      <input
+        id="inline-site-reason"
+        v-model="inlineSiteReason"
+        type="text"
+        maxlength="500"
+        autocomplete="off"
+        placeholder="e.g. Register clinical site for screening"
+      />
+      <div class="buttons">
+        <button
+          id="btn-confirm-inline-site"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="!canSubmitInlineSite"
+          @click="submitInlineSite"
+        >
+          {{ creatingSite ? "Registering…" : "Save & select site" }}
+        </button>
+      </div>
+    </fieldset>
+
     <label for="add-participant-reason">Reason</label>
     <textarea
       id="add-participant-reason"
@@ -52,9 +164,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import type { SubjectSummary } from "../../api/executionApi";
+import { describeKernelError, kernelApi } from "../../api/kernelApi";
+import { findStudySites, type StudySiteOption } from "../../canvas/kernelStudy";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
 /**
  * Adds a participant to the open study through Execution, which starts it in screening and audits the reason.
@@ -72,6 +187,105 @@ const siteId = ref(props.defaultSiteId);
 const reason = ref("");
 const busy = ref(false);
 
+const linkedSites = ref<StudySiteOption[]>([]);
+const manualSiteMode = ref(false);
+const showInlineSiteForm = ref(false);
+const creatingSite = ref(false);
+const inlineSiteError = ref("");
+const inlineSiteCode = ref("");
+const inlineSiteName = ref("");
+const inlineSiteCountry = ref("US");
+const inlineInstitutionName = ref("");
+const inlineSiteReason = ref("");
+
+const canQuickCreateSite = computed(
+  () =>
+    Boolean(canvas.studyCode) &&
+    typeof kernelApi.createSite === "function" &&
+    typeof kernelApi.linkSiteToStudy === "function"
+);
+
+const canSubmitInlineSite = computed(
+  () =>
+    !creatingSite.value &&
+    Boolean(inlineSiteCode.value.trim()) &&
+    Boolean(inlineSiteName.value.trim()) &&
+    inlineSiteCountry.value.trim().length === 2 &&
+    Boolean(inlineInstitutionName.value.trim()) &&
+    Boolean(inlineSiteReason.value.trim())
+);
+
+function nextInlineKey(prefix: string): string {
+  if (isDemoBuild()) {
+    return `${prefix}-${demoRandomToken(12, 36, `${prefix}.idempotency`)}`;
+  }
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${prefix}-${demoRandomToken(12, 36, `${prefix}.idempotency`)}`;
+}
+
+async function loadSites() {
+  if (!canvas.studyCode) return;
+  try {
+    linkedSites.value = await findStudySites(canvas.studyCode);
+  } catch {
+    linkedSites.value = [];
+  }
+}
+
+function toggleInlineSiteForm() {
+  showInlineSiteForm.value = !showInlineSiteForm.value;
+  inlineSiteError.value = "";
+}
+
+async function submitInlineSite() {
+  if (!canSubmitInlineSite.value || !canvas.studyCode) return;
+  inlineSiteError.value = "";
+  creatingSite.value = true;
+  try {
+    const created = await kernelApi.createSite({
+      code: inlineSiteCode.value.trim(),
+      name: inlineSiteName.value.trim(),
+      country: inlineSiteCountry.value.trim().toUpperCase(),
+      institutionName: inlineInstitutionName.value.trim(),
+      reason: inlineSiteReason.value.trim(),
+      idempotencyKey: nextInlineKey("inline-site"),
+    });
+    await kernelApi.linkSiteToStudy({
+      studyRef: canvas.studyCode,
+      siteRef: created.ref,
+      siteCode: created.code,
+      reason: inlineSiteReason.value.trim(),
+      idempotencyKey: nextInlineKey("inline-study-site"),
+    });
+
+    const optionLabel =
+      created.name && created.name !== created.code
+        ? `${created.code} — ${created.name}`
+        : created.code;
+    const merged = new Map<string, StudySiteOption>(
+      linkedSites.value.map((s) => [s.code, s])
+    );
+    merged.set(created.code, { code: created.code, label: optionLabel });
+    linkedSites.value = Array.from(merged.values()).sort((a, b) =>
+      a.code.localeCompare(b.code)
+    );
+
+    siteId.value = created.code;
+    manualSiteMode.value = false;
+    showInlineSiteForm.value = false;
+    inlineSiteCode.value = "";
+    inlineSiteName.value = "";
+    inlineInstitutionName.value = "";
+    inlineSiteReason.value = "";
+  } catch (err) {
+    inlineSiteError.value = describeKernelError(err);
+  } finally {
+    creatingSite.value = false;
+  }
+}
+
 async function submit() {
   const code = subjectCode.value.trim();
   const why = reason.value.trim();
@@ -85,6 +299,10 @@ async function submit() {
     busy.value = false;
   }
 }
+
+onMounted(() => {
+  loadSites();
+});
 </script>
 
 <style scoped>
@@ -92,7 +310,7 @@ async function submit() {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-width: 420px;
+  max-width: 460px;
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -109,11 +327,61 @@ async function submit() {
   font-size: 0.85rem;
 }
 
+.site-label-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.site-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.82rem;
+  color: var(--semantic-color-interactive-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .add-participant input,
+.add-participant select,
 .add-participant textarea {
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text, inherit);
+}
+
+.inline-site-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--semantic-color-surface-muted);
+}
+
+.inline-site-panel legend {
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0 4px;
+}
+
+.inline-site-error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--semantic-color-error);
 }
 
 .buttons {

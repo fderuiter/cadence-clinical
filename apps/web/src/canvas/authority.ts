@@ -37,6 +37,10 @@ const PARTICIPANT_ROLES = new Set([
   "site coordinator",
   "site_coordinator",
   "clinical research coordinator",
+  "trial_coordinator",
+  "trial coordinator",
+  "trial-coordinator",
+  "trialcoordinator",
 ]);
 
 const SIGNING_RAW_ROLES = new Set([
@@ -245,6 +249,10 @@ const BACKEND_ROLE_ALIASES: Readonly<Record<string, string>> = {
   "site coordinator": "crc",
   site_coordinator: "crc",
   "site-coordinator": "crc",
+  "trial coordinator": "trial_coordinator",
+  trial_coordinator: "trial_coordinator",
+  "trial-coordinator": "trial_coordinator",
+  trialcoordinator: "trial_coordinator",
   cra: "cra",
   "clinical research associate": "cra",
   monitor: "monitor",

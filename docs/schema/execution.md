@@ -490,11 +490,11 @@ Entity: `ClinicalSubject`
 
 Indexes:
 
-- `IX_clinical_subjects_StudyCode_EnrollmentIndex`: unique (`StudyCode`, `EnrollmentIndex`)
 - `IX_clinical_subjects_StudyCode_SiteCode_Status_EnrollmentIndex`: (`StudyCode`, `SiteCode`, `Status`, `EnrollmentIndex`)
 - `IX_clinical_subjects_StudyCode_Status_EnrollmentIndex`: (`StudyCode`, `Status`, `EnrollmentIndex`)
-- `IX_clinical_subjects_SubjectCode`: unique (`SubjectCode`)
 - `IX_clinical_subjects_tenant_id`: (`tenant_id`)
+- `IX_clinical_subjects_tenant_id_StudyCode_EnrollmentIndex`: unique (`tenant_id`, `StudyCode`, `EnrollmentIndex`)
+- `IX_clinical_subjects_tenant_id_SubjectCode`: unique (`tenant_id`, `SubjectCode`)
 
 ## edc.consumed_signature_tokens
 

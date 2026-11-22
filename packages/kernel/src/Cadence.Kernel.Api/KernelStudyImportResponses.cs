@@ -76,6 +76,109 @@ public sealed record KernelCreateStudyRequest(
     string? SponsorCode = null,
     string? SponsorName = null);
 
+/// <summary>Visible site entry returned by <c>GET /api/v1/kernel/sites</c> and <c>POST /api/v1/kernel/sites</c>.</summary>
+/// <param name="Ref">Site <c>NodeRef</c> pinned to its current version.</param>
+/// <param name="Code">Site code unique within its institution.</param>
+/// <param name="Name">Site display name.</param>
+/// <param name="Country">ISO 3166-1 alpha-2 country code.</param>
+/// <param name="IsActive">Whether the durable site is active.</param>
+/// <param name="InstitutionRef">Owning site institution organization <c>NodeRef</c>.</param>
+/// <param name="InstitutionCode">Owning site institution code.</param>
+/// <param name="InstitutionName">Owning site institution display name.</param>
+/// <param name="LinkedStudyCount">Number of studies linked to this site.</param>
+public sealed record KernelSiteSummaryResponse(
+    string Ref,
+    string Code,
+    string Name,
+    string Country,
+    bool IsActive,
+    string InstitutionRef,
+    string InstitutionCode,
+    string InstitutionName,
+    int LinkedStudyCount)
+{
+    internal static KernelSiteSummaryResponse From(SiteDirectoryEntry entry) =>
+        new(
+            NodeRef.For(entry.SiteId, entry.VersionIndex).ToString(),
+            entry.SiteCode,
+            entry.Name,
+            entry.Country,
+            entry.IsActive,
+            NodeRef.For(entry.InstitutionId, entry.InstitutionVersionIndex).ToString(),
+            entry.InstitutionCode,
+            entry.InstitutionName,
+            entry.LinkedStudyCount);
+}
+
+/// <summary>Request body for <c>POST /api/v1/kernel/sites</c>.</summary>
+/// <param name="SiteCode">Site code unique within the site institution.</param>
+/// <param name="Name">Site display name.</param>
+/// <param name="Country">ISO 3166-1 alpha-2 country code (for example <c>US</c>, <c>GB</c>, <c>DE</c>).</param>
+/// <param name="InstitutionRef">Existing <c>SiteInstitution</c> organization <c>NodeRef</c>, when selecting an existing institution.</param>
+/// <param name="InstitutionCode">Site institution organization code, when matching or registering an institution.</param>
+/// <param name="InstitutionName">Site institution organization display name, when registering or matching an institution.</param>
+public sealed record KernelCreateSiteRequest(
+    string SiteCode,
+    string Name,
+    string Country,
+    string? InstitutionRef = null,
+    string? InstitutionCode = null,
+    string? InstitutionName = null);
+
+/// <summary>Visible linked study-site entry returned by <c>GET /api/v1/kernel/studies/{studyRef}/sites</c> and <c>POST /api/v1/kernel/studies/{studyRef}/sites</c>.</summary>
+/// <param name="Ref">Study-site <c>NodeRef</c> pinned to its current version.</param>
+/// <param name="StudyRef">Study <c>NodeRef</c> pinned to its current version.</param>
+/// <param name="StudyCode">Study code.</param>
+/// <param name="SiteRef">Durable site <c>NodeRef</c> pinned to its current version.</param>
+/// <param name="SiteCode">Site code.</param>
+/// <param name="SiteName">Site display name.</param>
+/// <param name="Country">ISO 3166-1 alpha-2 country code.</param>
+/// <param name="Status">Study-site lifecycle status (<c>Selected</c> or <c>Active</c>).</param>
+/// <param name="IsActive">Whether the study-site link is active.</param>
+/// <param name="InstitutionRef">Owning site institution organization <c>NodeRef</c>.</param>
+/// <param name="InstitutionCode">Owning site institution code.</param>
+/// <param name="InstitutionName">Owning site institution display name.</param>
+public sealed record KernelStudySiteSummaryResponse(
+    string Ref,
+    string StudyRef,
+    string StudyCode,
+    string SiteRef,
+    string SiteCode,
+    string SiteName,
+    string Country,
+    string Status,
+    bool IsActive,
+    string InstitutionRef,
+    string InstitutionCode,
+    string InstitutionName)
+{
+    internal static KernelStudySiteSummaryResponse From(StudySiteDirectoryEntry entry) =>
+        new(
+            NodeRef.For(entry.StudySiteId, entry.VersionIndex).ToString(),
+            NodeRef.For(entry.StudyId, entry.StudyVersionIndex).ToString(),
+            entry.StudyCode,
+            NodeRef.For(entry.SiteId, entry.SiteVersionIndex).ToString(),
+            entry.SiteCode,
+            entry.SiteName,
+            entry.Country,
+            entry.Status,
+            entry.IsActive,
+            NodeRef.For(entry.InstitutionId, entry.InstitutionVersionIndex).ToString(),
+            entry.InstitutionCode,
+            entry.InstitutionName);
+}
+
+/// <summary>Request body for <c>POST /api/v1/kernel/studies/{studyRef}/sites</c>.</summary>
+/// <param name="SiteRef">Existing durable site <c>NodeRef</c> (<c>site:&lt;uuid&gt;</c>).</param>
+/// <param name="SiteCode">Existing durable site code, when linking by site code.</param>
+/// <param name="InstitutionRef">Optional institution <c>NodeRef</c> to disambiguate <paramref name="SiteCode"/>.</param>
+/// <param name="InstitutionCode">Optional institution code to disambiguate <paramref name="SiteCode"/>.</param>
+public sealed record KernelLinkStudySiteRequest(
+    string? SiteRef = null,
+    string? SiteCode = null,
+    string? InstitutionRef = null,
+    string? InstitutionCode = null);
+
 /// <summary>Bundled standard eCRF template entry returned by <c>GET /api/v1/kernel/protocol-templates</c>.</summary>
 /// <param name="Id">Template identifier.</param>
 /// <param name="Category">Clinical category name.</param>

@@ -94,7 +94,7 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         _world.GrantRole(
             Actor.Person(DesignerIdentity.UserId),
             "DESIGNER",
-            ["organization.register", "study.register", "concept.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"],
+            ["organization.register", "study.register", "site.register", "study_site.link", "concept.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"],
             AuthorityScope.Tenant());
 
         _world.GrantRole(
@@ -204,6 +204,128 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         }
 
         _world.Studies.Count.Should().Be(countAfterFirst, "duplicate Idempotency-Key must not create duplicate studies");
+    }
+
+    [Fact]
+    public async Task CreateSiteAndLinkToStudy_RegistersSiteInstitution_EnforcesHeaders_AndListsStudySites()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var crcClient = CreateClient(CoordinatorIdentity);
+        using var designerClient = CreateClient(DesignerIdentity);
+
+        // 1. Caller without site.register receives 403 Forbidden.
+        using (var deniedSiteReq = JsonPost("/api/v1/kernel/sites", new
+        {
+            site_code = "SITE-01",
+            name = "Boston General Hospital",
+            country = "US",
+            institution_name = "Boston General Health",
+        }, idempotencyKey: "site-denied", reason: "Unauthorized site creation"))
+        {
+            using var deniedRes = await crcClient.SendAsync(deniedSiteReq, ct);
+            deniedRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        // 2. Missing X-Change-Reason and missing Idempotency-Key fail closed with 422.
+        using (var noReasonReq = JsonPost("/api/v1/kernel/sites", new
+        {
+            site_code = "SITE-01",
+            name = "Boston General Hospital",
+            country = "US",
+            institution_name = "Boston General Health",
+        }, idempotencyKey: "site-no-reason", reason: null))
+        {
+            using var noReasonRes = await designerClient.SendAsync(noReasonReq, ct);
+            noReasonRes.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+            (await noReasonRes.Content.ReadAsStringAsync(ct)).Should().Contain("K.Command.ReasonForChangeRequired");
+        }
+
+        using (var noIdemReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/sites")
+        {
+            Content = JsonContent.Create(new
+            {
+                site_code = "SITE-01",
+                name = "Boston General Hospital",
+                country = "US",
+                institution_name = "Boston General Health",
+            }),
+        })
+        {
+            noIdemReq.Headers.Add(GatewayHeaders.ChangeReason, "Missing idempotency key");
+            using var noIdemRes = await designerClient.SendAsync(noIdemReq, ct);
+            noIdemRes.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+            (await noIdemRes.Content.ReadAsStringAsync(ct)).Should().Contain("K.Command.IdempotencyKeyRequired");
+        }
+
+        // 3. Register site when institution_name matches existing Sponsor name ("Cadence Pharma") ->
+        // disambiguates and registers OrganizationKind.SiteInstitution instead of reusing Sponsor!
+        string siteRef;
+        string institutionRef;
+        using (var createSiteReq = JsonPost("/api/v1/kernel/sites", new
+        {
+            site_code = "SITE-01",
+            name = "Cadence Boston Clinic",
+            country = "us",
+            institution_name = "Cadence Pharma",
+        }, idempotencyKey: "site-create-01", reason: "Register primary Boston site"))
+        {
+            using var createSiteRes = await designerClient.SendAsync(createSiteReq, ct);
+            createSiteRes.StatusCode.Should().Be(HttpStatusCode.Created, await createSiteRes.Content.ReadAsStringAsync(ct));
+            var siteDoc = JsonDocument.Parse(await createSiteRes.Content.ReadAsStringAsync(ct)).RootElement;
+            siteRef = siteDoc.GetProperty("ref").GetString()!;
+            institutionRef = siteDoc.GetProperty("institution_ref").GetString()!;
+            siteDoc.GetProperty("code").GetString().Should().Be("SITE-01");
+            siteDoc.GetProperty("country").GetString().Should().Be("US");
+            siteDoc.GetProperty("institution_code").GetString().Should().Be("CADENCE-PHARMA-SITE");
+        }
+
+        var siteInstitutionOrgs = await designerClient.GetFromJsonAsync<JsonElement>("/api/v1/kernel/organizations?kind=SiteInstitution", ct);
+        siteInstitutionOrgs.EnumerateArray().Select(o => o.GetProperty("ref").GetString())
+            .Should().Contain(institutionRef);
+
+        var allSites = await designerClient.GetFromJsonAsync<JsonElement>("/api/v1/kernel/sites", ct);
+        allSites.EnumerateArray().Select(s => s.GetProperty("code").GetString())
+            .Should().Contain("SITE-01");
+
+        // 4. Passing a Sponsor NodeRef as institution_ref is rejected with 422.
+        using (var wrongKindReq = JsonPost("/api/v1/kernel/sites", new
+        {
+            site_code = "SITE-02",
+            name = "Wrong Org Kind Site",
+            country = "US",
+            institution_ref = NodeRef.For(_world.DemoSponsorId).ToString(),
+        }, idempotencyKey: "site-wrong-kind", reason: "Reject sponsor org ref for site"))
+        {
+            using var wrongKindRes = await designerClient.SendAsync(wrongKindReq, ct);
+            wrongKindRes.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        }
+
+        // 5. Link SITE-01 to CADENCE-101 -> 201 Created, listed on GET /studies/CADENCE-101/sites for both designer and study-scoped coordinator.
+        using (var linkNoReason = JsonPost("/api/v1/kernel/studies/CADENCE-101/sites", new
+        {
+            site_ref = siteRef,
+        }, idempotencyKey: "link-no-reason", reason: null))
+        {
+            using var linkNoReasonRes = await designerClient.SendAsync(linkNoReason, ct);
+            linkNoReasonRes.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        }
+
+        using (var linkReq = JsonPost("/api/v1/kernel/studies/CADENCE-101/sites", new
+        {
+            site_code = "SITE-01",
+        }, idempotencyKey: "link-site-01", reason: "Link SITE-01 to CADENCE-101"))
+        {
+            using var linkRes = await designerClient.SendAsync(linkReq, ct);
+            linkRes.StatusCode.Should().Be(HttpStatusCode.Created, await linkRes.Content.ReadAsStringAsync(ct));
+            var linkDoc = JsonDocument.Parse(await linkRes.Content.ReadAsStringAsync(ct)).RootElement;
+            linkDoc.GetProperty("site_code").GetString().Should().Be("SITE-01");
+            linkDoc.GetProperty("study_code").GetString().Should().Be("CADENCE-101");
+            linkDoc.GetProperty("status").GetString().Should().Be("Selected");
+        }
+
+        var linkedSitesForCrc = await crcClient.GetFromJsonAsync<JsonElement>("/api/v1/kernel/studies/CADENCE-101/sites", ct);
+        linkedSitesForCrc.EnumerateArray().Select(s => s.GetProperty("site_code").GetString())
+            .Should().Equal("SITE-01");
     }
 
     [Fact]
@@ -426,6 +548,10 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
 
         public List<StudyDirectoryEntry> Studies { get; } = [];
 
+        public List<SiteDirectoryEntry> Sites { get; } = [];
+
+        public List<StudySiteDirectoryEntry> StudySites { get; } = [];
+
         public List<ConceptVersionView> Concepts { get; } = [];
 
         public List<StoredVersion> Versions { get; } = [];
@@ -473,6 +599,25 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 }
             }
 
+            if (resource.Kind == NodeKinds.Site)
+            {
+                var site = Sites.FirstOrDefault(x => x.SiteId == SiteId.FromGuid(resource.Id));
+                if (site is not null)
+                {
+                    return Task.FromResult(new ScopePath(site.InstitutionId, null, site.Country, null));
+                }
+            }
+
+            if (resource.Kind == NodeKinds.StudySite)
+            {
+                var ss = StudySites.FirstOrDefault(x => x.StudySiteId == StudySiteId.FromGuid(resource.Id));
+                if (ss is not null)
+                {
+                    var s = Studies.First(x => x.StudyId == ss.StudyId);
+                    return Task.FromResult(new ScopePath(s.SponsorId, s.StudyId, ss.Country, ss.StudySiteId));
+                }
+            }
+
             if (resource.Kind == NodeKinds.ProtocolVersion)
             {
                 var v = Versions.FirstOrDefault(x => x.Summary.Id == ProtocolVersionId.FromGuid(resource.Id));
@@ -512,6 +657,41 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
 
         public Task<OrganizationDirectoryEntry?> FindOrganizationByCodeAsync(TenantId tenant, string code, CancellationToken cancellationToken = default) =>
             Task.FromResult(Organizations.FirstOrDefault(o => string.Equals(o.Code, code, StringComparison.OrdinalIgnoreCase)));
+
+        public Task<IReadOnlyList<SiteDirectoryEntry>> ListSitesAsync(TenantId tenant, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<SiteDirectoryEntry>>([.. Sites.OrderBy(s => s.SiteCode, StringComparer.Ordinal)]);
+
+        public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Sites.FirstOrDefault(s => s.SiteId == siteId));
+
+        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(
+            TenantId tenant,
+            string siteCode,
+            OrganizationId? institutionId = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(Sites.FirstOrDefault(s =>
+                string.Equals(s.SiteCode, siteCode, StringComparison.OrdinalIgnoreCase)
+                && (institutionId is null || s.InstitutionId == institutionId.Value)));
+
+        public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(
+            TenantId tenant,
+            StudyId studyId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>(
+                [.. StudySites.Where(ss => ss.StudyId == studyId).OrderBy(ss => ss.SiteCode, StringComparer.Ordinal)]);
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(
+            TenantId tenant,
+            StudySiteId studySiteId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(StudySites.FirstOrDefault(ss => ss.StudySiteId == studySiteId));
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteBySiteAsync(
+            TenantId tenant,
+            StudyId studyId,
+            SiteId siteId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(StudySites.FirstOrDefault(ss => ss.StudyId == studyId && ss.SiteId == siteId));
 
         public Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ProtocolVersionSummary>>([.. Versions.Where(v => v.Summary.StudyId == study).OrderByDescending(v => v.Summary.Number).Select(v => v.Summary)]);
@@ -599,6 +779,8 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
             {
                 RegisterOrganization regOrg => ExecuteRegisterOrg(regOrg),
                 RegisterStudy regStudy => ExecuteRegisterStudy(regStudy),
+                RegisterSite regSite => ExecuteRegisterSite(regSite),
+                LinkSiteToStudy linkSite => ExecuteLinkSiteToStudy(linkSite),
                 DefineConcept defConcept => ExecuteDefineConcept(defConcept),
                 CreateProtocolDraft createDraft => ExecuteCreateDraft(createDraft),
                 ReviseProtocolDraft reviseDraft => ExecuteReviseDraft(reviseDraft),
@@ -641,6 +823,77 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
 
             world.Studies.Add(new StudyDirectoryEntry(cmd.StudyId, 1, cmd.Code, cmd.Title, cmd.Phase, sponsor.OrganizationId, sponsor.VersionIndex, sponsor.Code, sponsor.Name, 0));
             return cmd.StudyId;
+        }
+
+        private object ExecuteRegisterSite(RegisterSite cmd)
+        {
+            var institution = world.Organizations.FirstOrDefault(o => o.OrganizationId == cmd.InstitutionId);
+            if (institution is null)
+            {
+                return StudyErrors.InstitutionUnknown;
+            }
+
+            if (world.Sites.Any(s => s.InstitutionId == cmd.InstitutionId && string.Equals(s.SiteCode, cmd.Code, StringComparison.OrdinalIgnoreCase)))
+            {
+                return StudyErrors.SiteCodeTaken;
+            }
+
+            world.Sites.Add(new SiteDirectoryEntry(
+                cmd.SiteId,
+                1,
+                cmd.Code,
+                cmd.Name,
+                cmd.Country,
+                true,
+                institution.OrganizationId,
+                institution.VersionIndex,
+                institution.Code,
+                institution.Name,
+                0));
+            return cmd.SiteId;
+        }
+
+        private object ExecuteLinkSiteToStudy(LinkSiteToStudy cmd)
+        {
+            var studyIdx = world.Studies.FindIndex(s => s.StudyId == cmd.StudyId);
+            if (studyIdx < 0)
+            {
+                return StudyErrors.StudyUnknown;
+            }
+
+            var siteIdx = world.Sites.FindIndex(s => s.SiteId == cmd.SiteId);
+            if (siteIdx < 0)
+            {
+                return StudyErrors.SiteUnknown;
+            }
+
+            if (world.StudySites.Any(ss => ss.StudyId == cmd.StudyId && ss.SiteId == cmd.SiteId))
+            {
+                return StudyErrors.AlreadyLinked;
+            }
+
+            var study = world.Studies[studyIdx];
+            var site = world.Sites[siteIdx];
+            world.StudySites.Add(new StudySiteDirectoryEntry(
+                cmd.StudySiteId,
+                1,
+                study.StudyId,
+                study.VersionIndex,
+                study.StudyCode,
+                site.SiteId,
+                site.VersionIndex,
+                site.SiteCode,
+                site.Name,
+                site.Country,
+                "Selected",
+                true,
+                site.InstitutionId,
+                site.InstitutionVersionIndex,
+                site.InstitutionCode,
+                site.InstitutionName));
+            world.Studies[studyIdx] = study with { SiteCount = study.SiteCount + 1 };
+            world.Sites[siteIdx] = site with { LinkedStudyCount = site.LinkedStudyCount + 1 };
+            return cmd.StudySiteId;
         }
 
         private object ExecuteDefineConcept(DefineConcept cmd)

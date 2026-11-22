@@ -6,17 +6,19 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 
 /// <summary>
 /// EF Core adapter for <see cref="ISubjectRepository"/>. <see cref="EnrollNextIndexAsync"/> implements
 /// <c>02_technical_design.md</c> §4.2: inside the caller's <see cref="ExecutionRepositoryBase.ExecuteInTransactionAsync{TResult}"/>
-/// unit of work it takes <c>pg_advisory_xact_lock(hashtext(studyCode))</c> (see <see cref="AdvisoryLockSql"/>),
+/// unit of work it takes a tenant-and-study-scoped <c>pg_advisory_xact_lock</c> (see <see cref="AdvisoryLockSql"/>),
 /// which PostgreSQL holds until that transaction commits, so the read of the highest index and the caller's insert
-/// are serialized per study. The unit of work runs inside the context's retrying execution strategy, and a
+/// are serialized per tenant and study. The unit of work runs inside the context's retrying execution strategy, and a
 /// transient failure re-runs it whole, lock included (#5383). The advisory-lock statement is PostgreSQL-specific
 /// and is skipped when <c>ExecutionDbContext.Database</c> is not Npgsql (SQLite/InMemory in tests).
 /// Replaces <c>apps/execution/adapters/repositories.py</c> /
@@ -35,15 +37,27 @@ public sealed class SubjectRepository(ExecutionDbContext context)
                 $"{nameof(EnrollNextIndexAsync)} must run inside {nameof(ExecuteInTransactionAsync)}, which holds the per-study lock until the insert commits.");
         }
 
+        Guid? activeTenant = await ResolveActiveTenantIdAsync(cancellationToken).ConfigureAwait(false);
+
         if (Context.Database.IsNpgsql())
         {
+            FormattableString lockSql = activeTenant is { } lockTenant
+                ? AdvisoryLockSql.ForStudy(lockTenant, studyCode)
+                : AdvisoryLockSql.ForStudy(studyCode);
             await Context.Database
-                .ExecuteSqlInterpolatedAsync(AdvisoryLockSql.ForStudy(studyCode), cancellationToken)
+                .ExecuteSqlInterpolatedAsync(lockSql, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        int? maxIndex = await Context.ClinicalSubjects.AsNoTracking()
-            .Where(s => s.StudyCode == studyCode)
+        IQueryable<ClinicalSubject> scopedSubjects = Context.ClinicalSubjects.AsNoTracking()
+            .Where(s => s.StudyCode == studyCode);
+        if (Context.Database.IsRelational() && activeTenant is { } tenantId)
+        {
+            scopedSubjects = scopedSubjects.Where(s =>
+                EF.Property<Guid>(s, StandaloneTenantModelExtensions.TenantPropertyName) == tenantId);
+        }
+
+        int? maxIndex = await scopedSubjects
             .Select(s => (int?)s.EnrollmentIndex)
             .MaxAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -59,12 +73,20 @@ public sealed class SubjectRepository(ExecutionDbContext context)
         }
 
         var subjectId = new SubjectId(guid);
+        Guid? activeTenant = await ResolveActiveTenantIdAsync(cancellationToken).ConfigureAwait(false);
+
+        IQueryable<ClinicalSubject> query = Context.ClinicalSubjects;
+        if (Context.Database.IsRelational() && activeTenant is { } tenantId)
+        {
+            query = query.Where(s =>
+                EF.Property<Guid>(s, StandaloneTenantModelExtensions.TenantPropertyName) == tenantId);
+        }
 
         // Tracked (not AsNoTracking): callers such as SubjectApplicationService.AdvanceStateAsync load via
         // this method, call a mutating domain method on the result, and persist the change through a
         // subsequent SaveChangesAsync with no intervening Attach/Update call (02_technical_design.md §3.2) --
         // that flow only works if the returned entity is tracked by this repository's ExecutionDbContext.
-        return await Context.ClinicalSubjects
+        return await query
             .SingleOrDefaultAsync(s => s.Id == subjectId, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -77,17 +99,31 @@ public sealed class SubjectRepository(ExecutionDbContext context)
         }
 
         var subjectCode = new SubjectCode(code);
+        Guid? activeTenant = await ResolveActiveTenantIdAsync(cancellationToken).ConfigureAwait(false);
+
+        IQueryable<ClinicalSubject> query = Context.ClinicalSubjects;
+        if (Context.Database.IsRelational() && activeTenant is { } tenantId)
+        {
+            query = query.Where(s =>
+                EF.Property<Guid>(s, StandaloneTenantModelExtensions.TenantPropertyName) == tenantId);
+        }
 
         // Tracked -- see GetByIdAsync's comment; the same load-then-mutate-then-save flow applies here.
-        return await Context.ClinicalSubjects
+        return await query
             .SingleOrDefaultAsync(s => s.SubjectCode == subjectCode, cancellationToken)
             .ConfigureAwait(false);
     }
 
     public async Task<SubjectPage> ListAsync(SubjectListCriteria criteria, CancellationToken cancellationToken)
     {
+        Guid? activeTenant = await ResolveActiveTenantIdAsync(cancellationToken).ConfigureAwait(false);
         var query = Context.ClinicalSubjects.AsNoTracking()
             .Where(s => s.StudyCode == criteria.StudyCode);
+        if (Context.Database.IsRelational() && activeTenant is { } tenantId)
+        {
+            query = query.Where(s =>
+                EF.Property<Guid>(s, StandaloneTenantModelExtensions.TenantPropertyName) == tenantId);
+        }
 
         if (criteria.SiteCode is { } siteCode)
         {
@@ -138,4 +174,15 @@ public sealed class SubjectRepository(ExecutionDbContext context)
 
     public async Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken) =>
         await Context.ClinicalSubjects.AddAsync(subject, cancellationToken).ConfigureAwait(false);
+
+    private async ValueTask<Guid?> ResolveActiveTenantIdAsync(CancellationToken cancellationToken)
+    {
+        var ext = Context.GetService<IDbContextOptions>()?.FindExtension<StandaloneTenantOptionsExtension>();
+        if (ext?.TenantAccessor is null || ext.TenantAccessor.IsSystemSuppressed)
+        {
+            return null;
+        }
+
+        return await ext.TenantAccessor.GetCurrentTenantIdAsync(cancellationToken).ConfigureAwait(false);
+    }
 }

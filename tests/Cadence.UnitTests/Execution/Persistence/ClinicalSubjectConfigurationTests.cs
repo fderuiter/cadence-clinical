@@ -85,7 +85,7 @@ public class ClinicalSubjectConfigurationTests
         var entityType = RequireEntityType(context);
 
         entityType.GetIndexes().Should().Contain(i =>
-            i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(new[] { "SubjectCode" }));
+            i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(new[] { "TenantId", "SubjectCode" }));
     }
 
     [Fact]
@@ -95,10 +95,10 @@ public class ClinicalSubjectConfigurationTests
         using var context = CreateSqliteContext(connection);
         var entityType = RequireEntityType(context);
 
-        // Rule 5's sequential-enrollment-index invariant, DB-level backstop to the app-level advisory
-        // lock (MIG-SUBJ-013).
+        // Rule 5's sequential-enrollment-index invariant per tenant + study, DB-level backstop to the
+        // app-level advisory lock (MIG-SUBJ-013).
         entityType.GetIndexes().Should().Contain(i =>
-            i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(new[] { "StudyCode", "EnrollmentIndex" }));
+            i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(new[] { "TenantId", "StudyCode", "EnrollmentIndex" }));
     }
 
     [Fact]
@@ -309,8 +309,39 @@ public class ClinicalSubjectConfigurationTests
         var act = async () => await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Both inserts are staged in the same ChangeTracker/SaveChangesAsync call, i.e. the same
-        // transaction; the second violates the (StudyCode, EnrollmentIndex) unique index.
+        // transaction; the second violates the (TenantId, StudyCode, EnrollmentIndex) unique index.
         await act.Should().ThrowAsync<DbUpdateException>();
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_GivenTwoTenantsWithSameStudyCodeSubjectCodeAndEnrollmentIndex_Succeeds()
+    {
+        using var connection = OpenSqliteConnection();
+        await using (var setupContext = CreateSqliteContext(connection))
+        {
+            await setupContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
+        }
+
+        var tenantA = Guid.NewGuid();
+        var tenantB = Guid.NewGuid();
+
+        await using var context = CreateSqliteContext(connection);
+        var first = ClinicalSubject.Create(
+            new SubjectCode("SUBJ-001"), new StudyCode("CADENCE-101"), new SiteCode("SITE-01"),
+            enrollmentIndex: 0, encryptedDemographics: null, stratFactors: null);
+        var second = ClinicalSubject.Create(
+            new SubjectCode("SUBJ-001"), new StudyCode("CADENCE-101"), new SiteCode("SITE-01"),
+            enrollmentIndex: 0, encryptedDemographics: null, stratFactors: null);
+        context.ClinicalSubjects.AddRange(first, second);
+        context.Entry(first).Property<Guid>("TenantId").CurrentValue = tenantA;
+        context.Entry(second).Property<Guid>("TenantId").CurrentValue = tenantB;
+
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        await using var verifyContext = CreateSqliteContext(connection);
+        var persisted = await verifyContext.ClinicalSubjects.AsNoTracking()
+            .ToListAsync(TestContext.Current.CancellationToken);
+        persisted.Should().HaveCount(2);
     }
 
     [Fact]

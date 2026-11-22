@@ -440,9 +440,13 @@ export function createWebDemoStore() {
   const state = {
     studies: new Map(),
     organizations: [],
+    sites: new Map(),
+    studySites: new Map(),
     importedProtocolVersions: new Map(),
     protocolDesignSummaries: new Map(),
     idempotentStudyResponses: new Map(),
+    idempotentSiteResponses: new Map(),
+    idempotentStudySiteResponses: new Map(),
     idempotentImportResponses: new Map(),
     subjects: [],
     observations: createInitialObservations(),
@@ -513,9 +517,20 @@ export function createWebDemoStore() {
     });
 
     state.organizations = cloneJson(DEMO_ORGANIZATIONS);
+    const defaultSiteInstitution = {
+      ref: "organization:00000000-0000-4000-8000-000000000310@1", // deid-ignore
+      code: "US-CLINICAL-INST",
+      name: "US Academic Clinical Research Network",
+      kind: "SiteInstitution",
+    };
+    if (!state.organizations.some((org) => org.kind === "SiteInstitution")) {
+      state.organizations.push(defaultSiteInstitution);
+    }
     state.importedProtocolVersions = new Map();
     state.protocolDesignSummaries = new Map();
     state.idempotentStudyResponses = new Map();
+    state.idempotentSiteResponses = new Map();
+    state.idempotentStudySiteResponses = new Map();
     state.idempotentImportResponses = new Map();
 
     const canonicalStudyCode = DEMO_STUDY.code || "CADENCE-101";
@@ -567,6 +582,72 @@ export function createWebDemoStore() {
         },
       ],
     ]);
+
+    const initialSiteInst =
+      state.organizations.find((o) => o.kind === "SiteInstitution") ||
+      state.organizations[0];
+    state.sites = new Map([
+      [
+        "SITE-101",
+        {
+          ref: `site:${SITE_101_UUID}@1`,
+          code: "SITE-101",
+          name: "US Academic Clinical Research Center (SITE-101)",
+          country: "US",
+          institution_ref: initialSiteInst.ref,
+          institution_code: initialSiteInst.code,
+          institution_name: initialSiteInst.name,
+        },
+      ],
+      [
+        "SITE-102",
+        {
+          ref: `site:${SITE_102_UUID}@1`,
+          code: "SITE-102",
+          name: "US Regional Trial Unit 2",
+          country: "US",
+          institution_ref: initialSiteInst.ref,
+          institution_code: initialSiteInst.code,
+          institution_name: initialSiteInst.name,
+        },
+      ],
+    ]);
+    for (const demoSite of DEMO_SITES) {
+      if (demoSite?.code && !state.sites.has(demoSite.code)) {
+        const idx = nextCounter();
+        state.sites.set(demoSite.code, {
+          ref: `site:${makeUuidFromIndex("00000210", idx)}@1`,
+          code: demoSite.code,
+          name: demoSite.name || demoSite.code,
+          country: demoSite.country || "US",
+          institution_ref: initialSiteInst.ref,
+          institution_code: initialSiteInst.code,
+          institution_name: initialSiteInst.name,
+        });
+      }
+    }
+
+    state.studySites = new Map();
+    for (const study of state.studies.values()) {
+      const seededSites = [];
+      for (const site of state.sites.values()) {
+        seededSites.push({
+          ref: `study_site:${resolveSiteUuid(site.code)}@1`,
+          study_ref: study.ref,
+          study_code: study.code,
+          site_ref: site.ref,
+          site_code: site.code,
+          site_name: site.name,
+          country: site.country,
+          institution_ref: site.institution_ref,
+          institution_code: site.institution_code,
+          institution_name: site.institution_name,
+          status: "Active",
+          mask: null,
+        });
+      }
+      state.studySites.set(study.code.toUpperCase(), seededSites);
+    }
 
     const canonicalSubjects = DEMO_PARTICIPANTS.map((participant, idx) => ({
       id: participant.enrollmentUuid,
@@ -1442,12 +1523,25 @@ export function createWebDemoStore() {
         const studySubjects = state.subjects.filter(
           (s) => s.study_id.toUpperCase() === study.code.toUpperCase()
         );
-        const effectiveSubjects =
-          studySubjects.length > 0 ? studySubjects : state.subjects;
+        const effectiveSubjects = study.isCustomCreated
+          ? studySubjects
+          : studySubjects.length > 0
+            ? studySubjects
+            : state.subjects;
+        const linkedStudySites =
+          state.studySites.get(study.code.toUpperCase()) || [];
+        const linkedByCode = new Map(
+          linkedStudySites
+            .filter((item) => item.site_code)
+            .map((item) => [item.site_code, item])
+        );
+        const defaultCodes = study.isCustomCreated
+          ? []
+          : ["SITE-101", "SITE-102"];
         const siteCodes = [
           ...new Set([
-            "SITE-101",
-            "SITE-102",
+            ...defaultCodes,
+            ...linkedByCode.keys(),
             ...effectiveSubjects.map((s) => s.site_id).filter(Boolean),
           ]),
         ];
@@ -1455,16 +1549,20 @@ export function createWebDemoStore() {
           const siteSubjects = effectiveSubjects.filter(
             (s) => (s.site_id || "SITE-101") === siteCode
           );
+          const linkedMeta = linkedByCode.get(siteCode);
           return {
             node: {
-              ref: `study_site:${resolveSiteUuid(siteCode)}`,
+              ref: linkedMeta?.ref
+                ? linkedMeta.ref.split("@")[0]
+                : `study_site:${resolveSiteUuid(siteCode)}`,
               kind: "study_site",
               title:
-                siteCode === "SITE-102"
+                linkedMeta?.site_name ||
+                (siteCode === "SITE-102"
                   ? "US Regional Trial Unit 2"
-                  : `US Academic Clinical Research Center (${siteCode})`,
+                  : `US Academic Clinical Research Center (${siteCode})`),
               code: siteCode,
-              status: "ACTIVE",
+              status: linkedMeta?.status || "ACTIVE",
               mask: null,
             },
             child_count: siteSubjects.length,
@@ -1600,8 +1698,342 @@ export function createWebDemoStore() {
       }));
     },
 
-    listOrganizations() {
-      return cloneJson(state.organizations);
+    listOrganizations(kind = "") {
+      const trimmed = String(kind || "")
+        .trim()
+        .toLowerCase();
+      if (!trimmed) {
+        return cloneJson(state.organizations);
+      }
+      return cloneJson(
+        state.organizations.filter(
+          (org) => String(org.kind || "").toLowerCase() === trimmed
+        )
+      );
+    },
+
+    listSites() {
+      return cloneJson(
+        [...state.sites.values()].sort((a, b) => a.code.localeCompare(b.code))
+      );
+    },
+
+    createSite(body = {}, { reason = "", idempotencyKey = "" } = {}) {
+      if (!String(reason || "").trim()) {
+        return {
+          error: {
+            status: 422,
+            problem: {
+              title: "Missing X-Change-Reason",
+              status: 422,
+              code: "K.Audit.ReasonRequired",
+              detail:
+                "Header 'X-Change-Reason' is required when registering a site.",
+            },
+          },
+        };
+      }
+      if (!String(idempotencyKey || "").trim()) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Missing Idempotency-Key",
+              status: 400,
+              code: "K.Command.IdempotencyKeyRequired",
+              detail:
+                "Header 'Idempotency-Key' is required when registering a site.",
+            },
+          },
+        };
+      }
+      if (state.idempotentSiteResponses.has(idempotencyKey)) {
+        return {
+          data: cloneJson(state.idempotentSiteResponses.get(idempotencyKey)),
+          replayed: true,
+        };
+      }
+
+      const code = String(body.site_code || "").trim();
+      const name = String(body.name || "").trim();
+      const country = String(body.country || "")
+        .trim()
+        .toUpperCase();
+      if (!code || !name || country.length !== 2) {
+        return {
+          error: {
+            status: 422,
+            problem: {
+              title: "Invalid site registration request",
+              status: 422,
+              code: "K.Study.InvalidSiteRequest",
+              detail:
+                "Site code, name, and 2-letter ISO country code are required.",
+            },
+          },
+        };
+      }
+
+      for (const existing of state.sites.values()) {
+        if (existing.code.toUpperCase() === code.toUpperCase()) {
+          return {
+            error: {
+              status: 409,
+              problem: {
+                title: "Duplicate site code",
+                status: 409,
+                code: "K.Study.SiteCodeDuplicate",
+                detail: `A site with code '${code}' already exists in this tenant.`,
+              },
+            },
+          };
+        }
+      }
+
+      let org = state.organizations.find(
+        (o) =>
+          (body.institution_ref &&
+            o.ref.split("@")[0] ===
+              String(body.institution_ref).split("@")[0]) ||
+          (body.institution_code &&
+            o.code.toUpperCase() ===
+              String(body.institution_code).toUpperCase())
+      );
+      if (org && org.kind !== "SiteInstitution") {
+        if (body.institution_ref || body.institution_code) {
+          return {
+            error: {
+              status: 422,
+              problem: {
+                title: "Invalid site institution kind",
+                status: 422,
+                code: "K.Study.OrganizationKindMismatch",
+                detail: `Organization '${org.code}' has kind '${org.kind}', expected 'SiteInstitution'.`,
+              },
+            },
+          };
+        }
+        org = null;
+      }
+
+      if (!org) {
+        const instName = String(body.institution_name || "").trim();
+        if (!instName) {
+          return {
+            error: {
+              status: 422,
+              problem: {
+                title: "Missing site institution",
+                status: 422,
+                code: "K.Study.MissingInstitution",
+                detail:
+                  "Select an existing SiteInstitution or provide institution_name.",
+              },
+            },
+          };
+        }
+        const derivedBase = (
+          String(body.institution_code || "").trim() ||
+          instName.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+        ).toUpperCase();
+        const codeTaken = state.organizations.some(
+          (o) => o.code.toUpperCase() === derivedBase
+        );
+        const finalOrgCode = codeTaken ? `${derivedBase}-SITE` : derivedBase;
+        const orgIdx = nextCounter();
+        org = {
+          ref: `organization:${makeUuidFromIndex("00000310", orgIdx)}@1`,
+          code: finalOrgCode,
+          name: instName,
+          kind: "SiteInstitution",
+        };
+        state.organizations.push(org);
+      }
+
+      const idx = nextCounter();
+      const created = {
+        ref: `site:${makeUuidFromIndex("00000220", idx)}@1`,
+        code,
+        name,
+        country,
+        institution_ref: org.ref,
+        institution_code: org.code,
+        institution_name: org.name,
+      };
+      state.sites.set(code, created);
+      state.idempotentSiteResponses.set(idempotencyKey, cloneJson(created));
+      return { data: cloneJson(created) };
+    },
+
+    listStudySites(studyRefOrCode = "") {
+      const clean = String(studyRefOrCode || "").trim();
+      const unversioned = clean.split("@")[0];
+      let matchedStudy = null;
+      for (const candidate of state.studies.values()) {
+        if (
+          candidate.code.toUpperCase() === clean.toUpperCase() ||
+          candidate.ref.split("@")[0] === unversioned
+        ) {
+          matchedStudy = candidate;
+          break;
+        }
+      }
+      if (!matchedStudy) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "Study not found",
+              status: 404,
+              code: "K.Study.NotFound",
+              detail: `No visible study '${clean}' exists in this tenant.`,
+            },
+          },
+        };
+      }
+      const list = state.studySites.get(matchedStudy.code.toUpperCase()) || [];
+      return {
+        data: cloneJson(
+          [...list].sort((a, b) =>
+            String(a.site_code || "").localeCompare(String(b.site_code || ""))
+          )
+        ),
+      };
+    },
+
+    linkSiteToStudy(
+      studyRefOrCode = "",
+      body = {},
+      { reason = "", idempotencyKey = "" } = {}
+    ) {
+      if (!String(reason || "").trim()) {
+        return {
+          error: {
+            status: 422,
+            problem: {
+              title: "Missing X-Change-Reason",
+              status: 422,
+              code: "K.Audit.ReasonRequired",
+              detail:
+                "Header 'X-Change-Reason' is required when linking a site to a study.",
+            },
+          },
+        };
+      }
+      if (!String(idempotencyKey || "").trim()) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Missing Idempotency-Key",
+              status: 400,
+              code: "K.Command.IdempotencyKeyRequired",
+              detail:
+                "Header 'Idempotency-Key' is required when linking a site to a study.",
+            },
+          },
+        };
+      }
+      if (state.idempotentStudySiteResponses.has(idempotencyKey)) {
+        return {
+          data: cloneJson(
+            state.idempotentStudySiteResponses.get(idempotencyKey)
+          ),
+          replayed: true,
+        };
+      }
+
+      const clean = String(studyRefOrCode || "").trim();
+      const unversioned = clean.split("@")[0];
+      let matchedStudy = null;
+      for (const candidate of state.studies.values()) {
+        if (
+          candidate.code.toUpperCase() === clean.toUpperCase() ||
+          candidate.ref.split("@")[0] === unversioned
+        ) {
+          matchedStudy = candidate;
+          break;
+        }
+      }
+      if (!matchedStudy) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "Study not found",
+              status: 404,
+              code: "K.Study.NotFound",
+              detail: `No visible study '${clean}' exists in this tenant.`,
+            },
+          },
+        };
+      }
+
+      const reqRef = String(body.site_ref || "")
+        .trim()
+        .split("@")[0];
+      const reqCode = String(body.site_code || "").trim();
+      let site = null;
+      for (const candidate of state.sites.values()) {
+        if (
+          (reqRef && candidate.ref.split("@")[0] === reqRef) ||
+          (reqCode && candidate.code.toUpperCase() === reqCode.toUpperCase())
+        ) {
+          site = candidate;
+          break;
+        }
+      }
+      if (!site) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "Site not found",
+              status: 404,
+              code: "K.Study.SiteNotFound",
+              detail:
+                "The specified clinical site was not found in this tenant.",
+            },
+          },
+        };
+      }
+
+      const key = matchedStudy.code.toUpperCase();
+      const existingList = state.studySites.get(key) || [];
+      const existing = existingList.find(
+        (entry) => entry.site_code?.toUpperCase() === site.code.toUpperCase()
+      );
+      if (existing) {
+        state.idempotentStudySiteResponses.set(
+          idempotencyKey,
+          cloneJson(existing)
+        );
+        return { data: cloneJson(existing), replayed: true };
+      }
+
+      const idx = nextCounter();
+      const studySite = {
+        ref: `study_site:${makeUuidFromIndex("00000230", idx)}@1`,
+        study_ref: matchedStudy.ref,
+        study_code: matchedStudy.code,
+        site_ref: site.ref,
+        site_code: site.code,
+        site_name: site.name,
+        country: site.country,
+        institution_ref: site.institution_ref,
+        institution_code: site.institution_code,
+        institution_name: site.institution_name,
+        status: "Selected",
+        mask: null,
+      };
+      existingList.push(studySite);
+      state.studySites.set(key, existingList);
+      matchedStudy.site_count = existingList.length;
+      state.idempotentStudySiteResponses.set(
+        idempotencyKey,
+        cloneJson(studySite)
+      );
+      return { data: cloneJson(studySite) };
     },
 
     createStudy(body = {}, { reason = "", idempotencyKey = "" } = {}) {
@@ -3754,7 +4186,11 @@ export function createWebDemoStore() {
         membership_ref: `tenant_membership:${DEMO_TENANT_UUID}`,
         admin_role_ref: `role:${DEMO_TENANT_UUID}`,
         admin_grant_ref: `grant:${DEMO_TENANT_UUID}`,
-        assigned_roles: ["Sponsor Admin", "Sponsor Designer"],
+        assigned_roles: [
+          "Sponsor Admin",
+          "Sponsor Designer",
+          "Trial Coordinator",
+        ],
         token_refresh_required: false,
         entitlements: cloneJson(state.entitlements),
       };

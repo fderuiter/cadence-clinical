@@ -69,24 +69,41 @@ export interface StudySiteOption {
 }
 
 /**
- * Visible study sites for `studyCode` from the kernel's zoom children (`study_site`), ordered by site code.
- * Returns an empty list when the kernel has no visible study or study sites for the caller.
+ * Visible study sites for `studyCode` from the kernel's zoom children (`study_site`) or study-site directory,
+ * ordered by site code. Returns an empty list when the kernel has no visible study or study sites for the caller.
  */
 export async function findStudySites(
   studyCode: string
 ): Promise<StudySiteOption[]> {
-  if (typeof kernelApi.getChildren !== "function") return [];
-  const studyRef = await findKernelStudyRef(studyCode);
-  if (!studyRef) return [];
-  const children = await kernelApi.getChildren(studyRef);
   const byCode = new Map<string, StudySiteOption>();
-  for (const child of children) {
-    if (child.node.kind !== "study_site" || child.node.mask) continue;
-    const code = child.node.code?.trim();
-    if (!code || byCode.has(code)) continue;
-    const title = child.node.title?.trim();
-    const label = title && title !== code ? `${code} — ${title}` : code;
-    byCode.set(code, { code, label });
+  let studyRef: string | null = null;
+  if (typeof kernelApi.getChildren === "function") {
+    studyRef = await findKernelStudyRef(studyCode);
+    if (studyRef) {
+      const children = await kernelApi.getChildren(studyRef);
+      for (const child of children) {
+        if (child.node.kind !== "study_site" || child.node.mask) continue;
+        const code = child.node.code?.trim();
+        if (!code || byCode.has(code)) continue;
+        const title = child.node.title?.trim();
+        const label = title && title !== code ? `${code} — ${title}` : code;
+        byCode.set(code, { code, label });
+      }
+    }
+  }
+  if (byCode.size === 0 && typeof kernelApi.listStudySites === "function") {
+    try {
+      const linked = await kernelApi.listStudySites(studyRef ?? studyCode);
+      for (const site of linked) {
+        const code = site.site_code?.trim();
+        if (!code || byCode.has(code)) continue;
+        const name = site.site_name?.trim();
+        const label = name && name !== code ? `${code} — ${name}` : code;
+        byCode.set(code, { code, label });
+      }
+    } catch {
+      // Study may not exist in kernel yet; return empty list.
+    }
   }
   return Array.from(byCode.values()).sort((a, b) =>
     a.code.localeCompare(b.code)

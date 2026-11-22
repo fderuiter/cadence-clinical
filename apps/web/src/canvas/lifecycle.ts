@@ -16,6 +16,7 @@ export type SectionId =
   | "site-milestones"
   | "delegation"
   | "participants"
+  | "sites"
   | "monitoring-visits"
   | "supply"
   | "queries"
@@ -104,6 +105,12 @@ export const STAGES: readonly Stage[] = [
         id: "participants",
         label: "Participants",
         description: "The study's participants in enrollment order",
+      },
+      {
+        id: "sites",
+        label: "Sites",
+        description:
+          "Clinical sites registered in your workspace and linked to this study",
       },
       {
         id: "monitoring-visits",

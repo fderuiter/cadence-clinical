@@ -25,6 +25,7 @@ public static class RoleNormalization
     public const string ROLE_SPONSOR_STATISTICIAN = "sponsor_statistician";
     public const string ROLE_INVESTIGATOR = "investigator";
     public const string ROLE_CRC = "crc";
+    public const string ROLE_TRIAL_COORDINATOR = "trial_coordinator";
     public const string ROLE_CRA_CANONICAL = "cra";
     public const string ROLE_SUBJECT = "subject";
     public const string ROLE_AUDITOR_CANONICAL = "auditor";
@@ -144,6 +145,10 @@ public static class RoleNormalization
         ["site coordinator"] = ROLE_CRC,
         ["site_coordinator"] = ROLE_CRC,
         ["site-coordinator"] = ROLE_CRC,
+        ["trial coordinator"] = ROLE_TRIAL_COORDINATOR,
+        ["trial_coordinator"] = ROLE_TRIAL_COORDINATOR,
+        ["trial-coordinator"] = ROLE_TRIAL_COORDINATOR,
+        ["trialcoordinator"] = ROLE_TRIAL_COORDINATOR,
         ["cra"] = ROLE_CRA_CANONICAL,
         ["clinical research associate"] = ROLE_CRA_CANONICAL,
         ["monitor"] = "monitor",

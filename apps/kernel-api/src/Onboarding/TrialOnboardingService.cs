@@ -35,7 +35,7 @@ public sealed partial class TrialOnboardingService(
     ILogger<TrialOnboardingService> logger)
 {
     /// <summary>Initial realm roles written back to Keycloak for the workspace founder.</summary>
-    public static readonly IReadOnlyList<string> InitialKeycloakRoles = ["Sponsor Admin", "Sponsor Designer"];
+    public static readonly IReadOnlyList<string> InitialKeycloakRoles = ["Sponsor Admin", "Sponsor Designer", "Trial Coordinator"];
 
     /// <summary>Fixed valid-from anchor for initial trial grants so command payloads remain identical across retries.</summary>
     internal static readonly DateTimeOffset GrantEpoch = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
@@ -137,7 +137,7 @@ public sealed partial class TrialOnboardingService(
 
     private static readonly (string Consumer, string RoleCode, string Name, string[] Capabilities)[] ModuleServiceAccounts =
     [
-        ("execution-forms", "TRIAL_EXECUTION_FORMS", "Execution forms consumer", ["execution.form.open"]),
+        ("execution-forms", "TRIAL_EXECUTION_FORMS", "Execution forms consumer", ["execution.form.open", "participant.register"]),
         ("execution-queries", "TRIAL_EXECUTION_QUERIES", "Execution queries consumer", ["observation.query", "observation.query.answer", "assertion.retract"]),
         ("execution-edit-checks", "TRIAL_EXECUTION_EDIT_CHECKS", "Execution edit checks consumer", ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
     ];

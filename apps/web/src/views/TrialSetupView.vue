@@ -17,8 +17,9 @@
         <p class="setup-subtitle">
           Signed in as
           <strong>{{ authStore.identity?.username || "OIDC account" }}</strong>.
-          Provision an isolated tenant, sponsor organization, Sponsor Admin and
-          Sponsor Designer grants, and starter product entitlements.
+          Provision an isolated tenant, sponsor organization, Sponsor Admin,
+          Sponsor Designer, and Trial Coordinator grants, and starter product
+          entitlements.
         </p>
       </header>
 

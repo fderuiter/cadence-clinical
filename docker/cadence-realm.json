@@ -22,6 +22,10 @@
         "description": "Sponsor Study Designer responsible for designing and authoring study structures and eligibility criteria."
       },
       {
+        "name": "Trial Coordinator",
+        "description": "Self-service trial workspace coordinator permitted to screen participants and capture eCRF data within isolated trial workspaces."
+      },
+      {
         "name": "CRA",
         "description": "Clinical Research Associate responsible for monitoring sites."
       },

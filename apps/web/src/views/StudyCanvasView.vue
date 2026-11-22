@@ -329,6 +329,33 @@
             @filter="applyParticipantFilter"
           />
 
+          <SitesSection
+            v-else-if="section?.id === 'sites'"
+            :key="`sites-${studyCode}`"
+            :study-code="studyCode"
+            :site-id="siteFilter"
+            @open-participants="
+              (code) =>
+                router.push(
+                  studyLocation({
+                    stage: 'conduct',
+                    section: 'participants',
+                    site: code || undefined,
+                  })
+                )
+            "
+            @open-activation="
+              (code) =>
+                router.push(
+                  studyLocation({
+                    stage: 'start',
+                    section: 'site-activation',
+                    site: code || undefined,
+                  })
+                )
+            "
+          />
+
           <ProtocolVersionsSection
             v-else-if="section?.id === 'protocol-versions'"
             :key="studyCode"
@@ -913,6 +940,7 @@ import ValidationSection from "../components/canvas/ValidationSection.vue";
 import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
 import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
 import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
+import SitesSection from "../components/canvas/SitesSection.vue";
 import QueriesSection, {
   type StudyQueriesFilterState,
 } from "../components/canvas/QueriesSection.vue";

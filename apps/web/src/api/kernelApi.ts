@@ -76,6 +76,9 @@ export type CasebookExportFormat = "json" | "odm_xml" | "html";
 export type KernelStudySummary = Schemas["Kernel_KernelStudySummaryResponse"];
 export type KernelOrganizationSummary =
   Schemas["Kernel_KernelOrganizationSummaryResponse"];
+export type KernelSiteSummary = Schemas["Kernel_KernelSiteSummaryResponse"];
+export type KernelStudySiteSummary =
+  Schemas["Kernel_KernelStudySiteSummaryResponse"];
 export type KernelProtocolTemplate =
   Schemas["Kernel_KernelProtocolTemplateResponse"];
 export type KernelProtocolDraftSummary =
@@ -121,6 +124,25 @@ export interface KernelCreateStudyRequest {
   sponsorRef?: string | null;
   sponsorCode?: string | null;
   sponsorName?: string | null;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelCreateSiteInput {
+  code: string;
+  name: string;
+  country: string;
+  institutionRef?: string | null;
+  institutionCode?: string | null;
+  institutionName?: string | null;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelLinkStudySiteInput {
+  studyRef: string;
+  siteRef?: string | null;
+  siteCode?: string | null;
   reason: string;
   idempotencyKey: string;
 }
@@ -753,6 +775,72 @@ export const kernelApi = {
           sponsor_ref: sponsorRef ?? null,
           sponsor_code: sponsorCode ?? null,
           sponsor_name: sponsorName ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Registered clinical sites in the caller's tenant, ordered by site code (GET /api/v1/kernel/sites). */
+  listSites(): Promise<KernelSiteSummary[]> {
+    return unwrapResponse(client.GET("/api/v1/kernel/sites"));
+  },
+
+  /** Registers a new clinical site under a SiteInstitution organization with a signed reason for change (POST /api/v1/kernel/sites). */
+  createSite({
+    code,
+    name,
+    country,
+    institutionRef,
+    institutionCode,
+    institutionName,
+    reason,
+    idempotencyKey,
+  }: KernelCreateSiteInput): Promise<KernelSiteSummary> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/sites", {
+        body: {
+          site_code: code,
+          name,
+          country,
+          institution_ref: institutionRef ?? null,
+          institution_code: institutionCode ?? null,
+          institution_name: institutionName ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Study-site participations linked to a study, ordered by site code and masked per caller visibility (GET /api/v1/kernel/studies/{studyRef}/sites). */
+  listStudySites(studyRef: string): Promise<KernelStudySiteSummary[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/studies/{studyRef}/sites", {
+        params: { path: { studyRef: unversioned(studyRef) } },
+      })
+    );
+  },
+
+  /** Links a registered clinical site to a study with a signed reason for change (POST /api/v1/kernel/studies/{studyRef}/sites). */
+  linkSiteToStudy({
+    studyRef,
+    siteRef,
+    siteCode,
+    reason,
+    idempotencyKey,
+  }: KernelLinkStudySiteInput): Promise<KernelStudySiteSummary> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/studies/{studyRef}/sites", {
+        params: { path: { studyRef: unversioned(studyRef) } },
+        body: {
+          site_ref: siteRef ? unversioned(siteRef) : null,
+          site_code: siteCode ?? null,
         },
         headers: {
           "X-Change-Reason": encodeChangeReason(reason),

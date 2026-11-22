@@ -54,7 +54,8 @@ public sealed class HttpKernelEnrollmentSynchronizer(
             return Guid.Empty;
         }
 
-        string? gatewaySecret = gatewayOptions.CurrentValue.GatewaySecret;
+        string? gatewaySecret = gatewayOptions.CurrentValue.GatewaySecret
+            ?? gatewayOptions.Get(GatewayAuthenticationHandler.SchemeName).GatewaySecret;
         if (string.IsNullOrEmpty(gatewaySecret))
         {
             return DomainError.Conflict("KERNEL_SYNC_MISCONFIGURED", "Gateway secret is required to synchronize kernel enrollments.");
