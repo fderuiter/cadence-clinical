@@ -14,6 +14,8 @@ import {
   notifySessionEnded,
   peekWebReturnUrl,
   registerAuthSessionBridge,
+  rehydrateClinicalPersona,
+  resetClinicalSession,
   resolveWebRedirectUri,
   saveWebReturnUrl,
   webSessionCoordinator,
@@ -22,7 +24,6 @@ import { kernelApi } from "../api/kernelApi";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { demoNowMs, isDemoBuild } from "../utils/demoMode.js";
 import { useNotificationsStore } from "./notifications.js";
-import { useClinicalStore } from "./clinical.ts";
 import { useOnboardingStore } from "./onboarding.js";
 import {
   purgeUserScopedStorage,
@@ -238,18 +239,17 @@ export function purgeLegacyUnscopedKeys() {
   }
 }
 
-function rehydrateStoresForPersona(personaKey) {
+function rehydrateStoresForPersona(personaKey, pinia) {
   if (!personaKey) return;
   try {
-    const clinicalStore = useClinicalStore();
-    if (typeof clinicalStore.loadPersonaState === "function") {
-      clinicalStore.loadPersonaState(personaKey);
-    }
+    rehydrateClinicalPersona(personaKey, pinia);
   } catch {
     // Pinia or store not ready
   }
   try {
-    const onboardingStore = useOnboardingStore();
+    const onboardingStore = pinia
+      ? useOnboardingStore(pinia)
+      : useOnboardingStore();
     if (typeof onboardingStore.loadPersonaState === "function") {
       onboardingStore.loadPersonaState(personaKey);
     }
@@ -521,7 +521,7 @@ export const useAuthStore = defineStore("auth", {
       // this account signing in (#5369).
       purgeUserScopedStorage(storageScopeOf(this));
       if (this.currentPersona) {
-        rehydrateStoresForPersona(this.currentPersona);
+        rehydrateStoresForPersona(this.currentPersona, this._p);
       }
     },
     clearAuth() {
@@ -566,7 +566,7 @@ export const useAuthStore = defineStore("auth", {
       purgeLegacyUnscopedKeys();
       purgeUserScopedStorage(storageScopeOf(this));
       if (this.currentPersona) {
-        rehydrateStoresForPersona(this.currentPersona);
+        rehydrateStoresForPersona(this.currentPersona, this._p);
       }
     },
     /** Starts the Keycloak authorization code + PKCE sign-in redirect. */
@@ -724,7 +724,7 @@ export const useAuthStore = defineStore("auth", {
       purgeLegacyAuthStorage();
       purgeUserScopedStorage(null);
       try {
-        useClinicalStore().$reset();
+        resetClinicalSession(this._p);
       } catch {
         // Pinia or store not ready
       }
@@ -810,7 +810,7 @@ export const useAuthStore = defineStore("auth", {
       if (this.isDemoMode && isDemoBuild()) {
         this.user = { ...resolveDemoIdentity(personaKey) };
       }
-      rehydrateStoresForPersona(personaKey);
+      rehydrateStoresForPersona(personaKey, this._p);
       try {
         useNotificationsStore().fetchNotifications();
       } catch {

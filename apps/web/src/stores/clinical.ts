@@ -18,6 +18,7 @@ import {
   getDemoPersonaByWorkflow,
 } from "demo-fixtures";
 import { useAuthStore } from "./auth.js";
+import { registerClinicalSessionBridge } from "../auth/sessionCoordinator.js";
 import { useToastStore } from "./toasts.js";
 import {
   allowUnbackedAction,
@@ -1558,6 +1559,11 @@ const useClinicalStoreInner = defineStore("clinical", {
   },
 });
 
+const mountedClinicalStores = new WeakMap<
+  object,
+  ReturnType<typeof useClinicalStoreInner>
+>();
+
 export const useClinicalStore = (pinia?: unknown) => {
   const activePinia = (pinia as any) || getActivePinia();
   if (
@@ -1574,5 +1580,32 @@ export const useClinicalStore = (pinia?: unknown) => {
     }
     (activePinia as Record<string, unknown>)._hasStateTrackingPlugin = true;
   }
-  return useClinicalStoreInner(activePinia);
+  const store = useClinicalStoreInner(activePinia);
+  if (activePinia && typeof activePinia === "object") {
+    mountedClinicalStores.set(activePinia, store);
+  }
+  return store;
 };
+
+registerClinicalSessionBridge({
+  onRehydratePersona: (personaKey: string, pinia?: unknown) => {
+    const targetPinia = (pinia as object) || getActivePinia();
+    const store =
+      targetPinia && typeof targetPinia === "object"
+        ? mountedClinicalStores.get(targetPinia)
+        : undefined;
+    if (store && typeof store.loadPersonaState === "function") {
+      store.loadPersonaState(personaKey);
+    }
+  },
+  onReset: (pinia?: unknown) => {
+    const targetPinia = (pinia as object) || getActivePinia();
+    const store =
+      targetPinia && typeof targetPinia === "object"
+        ? mountedClinicalStores.get(targetPinia)
+        : undefined;
+    if (store && typeof store.$reset === "function") {
+      store.$reset();
+    }
+  },
+});

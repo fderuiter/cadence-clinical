@@ -12,6 +12,7 @@ import { getKeycloakClient } from "./keycloak.js";
 export const WEB_AUTH_RETURN_URL_KEY = "cadence_web_return_url";
 
 let authSessionBridge = null;
+let clinicalSessionBridge = null;
 let sessionEndedHandler = null;
 
 /**
@@ -54,6 +55,19 @@ export function resolveWebRedirectUri(targetPathOrUrl) {
 
 export function registerAuthSessionBridge(bridge) {
   authSessionBridge = bridge || null;
+}
+
+export function registerClinicalSessionBridge(bridge) {
+  clinicalSessionBridge = bridge || null;
+}
+
+export function rehydrateClinicalPersona(personaKey, pinia) {
+  if (!personaKey) return;
+  clinicalSessionBridge?.onRehydratePersona?.(personaKey, pinia);
+}
+
+export function resetClinicalSession(pinia) {
+  clinicalSessionBridge?.onReset?.(pinia);
 }
 
 export function setSessionEndedHandler(handler) {
