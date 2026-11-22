@@ -144,6 +144,7 @@ registerDraftSource({
 
 // 2. Questionnaire Completion
 export async function startQuestionnaire(assignmentId) {
+  state.taskActionError = null;
   const assignment = state.assignments.find((a) => a.id === assignmentId);
   if (!assignment) return;
 
@@ -173,10 +174,11 @@ export async function startQuestionnaire(assignmentId) {
         if (instrument) {
           state.instruments[assignment.instrument_id] = instrument;
         } else {
-          alert(
+          const msg =
             "Failed to retrieve questionnaire definition: " +
-              (err.message || err)
-          );
+            (err.message || err);
+          state.taskActionError = msg;
+          showToast(msg, { variant: "error" });
           return;
         }
       }
@@ -193,8 +195,16 @@ export async function startQuestionnaire(assignmentId) {
   }
 
   if (!instrument) {
-    alert("Questionnaire specification not found.");
+    const missingMsg = "Questionnaire specification not found.";
+    state.taskActionError = missingMsg;
+    showToast(missingMsg, { variant: "error" });
     return;
+  }
+
+  const formErrBanner = document.getElementById("questionnaire-form-error");
+  if (formErrBanner) {
+    formErrBanner.style.display = "none";
+    formErrBanner.textContent = "";
   }
 
   state.questionnaireCancelConfirmOpen = false;
@@ -349,6 +359,12 @@ export function validateActiveQuestionnaire() {
       isNumericField && val !== "" && !isNaN(Number(val)) ? Number(val) : val;
   });
 
+  const formErrBanner = document.getElementById("questionnaire-form-error");
+  if (allValid && formErrBanner) {
+    formErrBanner.style.display = "none";
+    formErrBanner.textContent = "";
+  }
+
   return allValid;
 }
 
@@ -419,9 +435,21 @@ export async function confirmCancelQuestionnaire() {
 
 // Sign and Submit: validates, then asks for the electronic signature.
 export function requestQuestionnaireSignature() {
+  const formErrBanner = document.getElementById("questionnaire-form-error");
   if (validateActiveQuestionnaire()) {
+    if (formErrBanner) {
+      formErrBanner.style.display = "none";
+      formErrBanner.textContent = "";
+    }
     openSignatureModal("epro");
   } else {
-    alert("Please fix all form errors before signing.");
+    const msg = "Please fix all form errors before signing.";
+    if (formErrBanner) {
+      formErrBanner.setAttribute("role", "alert");
+      formErrBanner.setAttribute("aria-live", "assertive");
+      formErrBanner.textContent = msg;
+      formErrBanner.style.display = "block";
+    }
+    showToast(msg, { variant: "error" });
   }
 }

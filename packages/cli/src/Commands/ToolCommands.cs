@@ -9,6 +9,34 @@ namespace Cadence.Cli.Commands;
 /// <summary>Options for the tool commands that take any; the rest are registered directly in <c>Program.cs</c>.</summary>
 public static class ToolCommands
 {
+    public static void ConfigureFix(Command command)
+    {
+        var full = new Option<bool>("--full")
+        {
+            Description = "Force full regeneration of EF Core schema docs, all OpenAPI specs, API docs, and web client types",
+        };
+        var openApi = new Option<bool>("--openapi")
+        {
+            Description = "Force OpenAPI specification export, API docs generation, and web client type generation",
+        };
+        command.Options.Add(full);
+        command.Options.Add(openApi);
+        command.SetAction(result => SelfHealService.ExecuteSelfHealing(
+            full: result.GetValue(full),
+            openApi: result.GetValue(openApi),
+            syncCliDocs: GateDocs.Write));
+    }
+
+    public static void ConfigureCleanSecretsBaseline(Command command)
+    {
+        var check = new Option<bool>("--check")
+        {
+            Description = "Only check that .secrets.baseline is normalized without modifying it; exit 1 when it is not",
+        };
+        command.Options.Add(check);
+        command.SetAction(result => SecretsBaselineCleanerService.CleanSecretsBaseline(check: result.GetValue(check)));
+    }
+
     public static void ConfigureExtractEnvVars(Command command)
     {
         var check = new Option<bool>("--check") { Description = "Check environment variables without modifying documentation" };

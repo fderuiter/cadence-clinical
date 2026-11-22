@@ -37,8 +37,16 @@ export const useWalletStore = defineStore("wallet", {
       recentTransactions: [],
       expenseClaims: [],
       disbursingBalance: false,
+      disburseModalOpen: false,
+      disburseForm: {
+        disbursementType: "DIRECT_ACH",
+        amount: "",
+        error: null,
+        idempotencyKey: null,
+      },
       disbursementConfirmation: null,
       expenseSubmitting: false,
+      expenseManualEntry: false,
       expenseError: null,
       expenseOcr: {
         loading: false,
@@ -59,6 +67,7 @@ export const useWalletStore = defineStore("wallet", {
         expenseDate: "",
         ocrConfidence: 0.0,
         receiptImageName: "",
+        idempotencyKey: null,
       },
       expenseResult: null,
     };

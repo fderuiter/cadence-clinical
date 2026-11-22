@@ -45,9 +45,9 @@ internal static class DevelopmentDemoData
     internal static readonly DateTimeOffset Epoch = new(2026, 1, 5, 9, 0, 0, TimeSpan.Zero);
 
     private const string Reason = "Seed the local development stack's demo study (ADR-2543)";
+    private const string DesignerLeadSubject = "8808e058-a472-4f72-9970-a027eddf35bc";
 
-    private static Actor DesignerLeadActor() =>
-        Actor.Person(Array.Find(Users, u => string.Equals(u.Username, "designer.lead", StringComparison.Ordinal)).Subject);
+    private static Actor DesignerLeadActor() => Actor.Person(DesignerLeadSubject);
 
     /// <summary>The demo sites: code, name and country; the coordinator and the monitor work at the first.</summary>
     internal static readonly (string Code, string Name, string Country)[] Sites =
@@ -88,7 +88,7 @@ internal static class DevelopmentDemoData
         ("cra.monitor", "ee2cfdb6-d893-4fb4-a10f-d50830b6728a", "DEMO_MONITOR", "SITE-101"),
         ("dm.lead", "47a9d88f-73d7-4aca-9fd6-14b8e6e9284f", "DEMO_DATA_MANAGER", null),
         ("designer_demo", "d0b6257b-57fe-420b-9526-366e83c756aa", "DEMO_DESIGNER", null),
-        ("designer.lead", "8808e058-a472-4f72-9970-a027eddf35bc", "DEMO_DESIGNER", null),
+        ("designer.lead", DesignerLeadSubject, "DEMO_DESIGNER", null),
         ("safety.officer", "3d290711-4167-4da5-b55a-4c75760bd27c", "DEMO_SAFETY", null), // deid-ignore: a demo realm user's fixed subject id, not a telephone number
         ("auditor.lead", "d43095eb-1912-40dd-a528-fa04335a2342", "DEMO_AUDITOR", null),
     ];

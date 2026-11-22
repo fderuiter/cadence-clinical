@@ -639,6 +639,7 @@ public class ParticipantExpenseClaim
 
     public string? ReceiptImageName { get; set; }
     public string? ReceiptOcrDataJson { get; set; }
+    public string? IdempotencyKey { get; set; }
     public string? ReviewedBy { get; set; }
     public DateTimeOffset? ReviewedAt { get; set; }
     public string? ReviewNotes { get; set; }
@@ -785,6 +786,7 @@ public class ParticipantDisbursement
     public decimal Amount { get; set; }
     public string DisbursementType { get; set; } = "VIRTUAL_CARD";
     public string ReferenceNumber { get; set; } = string.Empty;
+    public string? IdempotencyKey { get; set; }
 
     private string _status = ParticipantDisbursementStatus.DISPATCHED.ToString();
     public string Status
