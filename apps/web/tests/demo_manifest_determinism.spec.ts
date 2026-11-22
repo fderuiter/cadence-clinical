@@ -111,7 +111,7 @@ describe("Canonical Demo Manifest & Deterministic Demo Ledger (apps/web)", () =>
       "CRC",
     ];
     prodAuthStore.switchPersona("site_crc");
-    expect(prodAuthStore.identity.username).toBe("oidc.clinician");
+    expect(prodAuthStore.identity?.username).toBe("oidc.clinician");
   });
 
   it("produces identical SHA-256 Genesis hashes and seeded random sequences across repeated demo boots", async () => {

@@ -1507,6 +1507,15 @@ onMounted(async () => {
     await fetchRules();
   }
 });
+
+defineExpose({
+  showEditor,
+  targetField,
+  showReasonModal,
+  confirmChangeReason,
+  activeTab,
+  dictResults,
+});
 </script>
 
 <style scoped>

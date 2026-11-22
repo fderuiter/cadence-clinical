@@ -7,14 +7,14 @@ namespace Cadence.ToolingCore.Services;
 
 /// <summary>
 /// Checks that the types generated from <c>docs/openapi</c> into <c>apps/web/src/api/generated</c> are current,
-/// then typechecks the web app, which compiles every <c>apps/web/src/api</c> client against its OpenAPI types.
+/// then runs workspace typechecking (<c>pnpm run typecheck</c>) across shared frontend packages and Vue single-file components.
 /// </summary>
 public static class ApiClientValidatorService
 {
-    public static int ValidateApiClients(string? repoRoot = null)
+    public static int ValidateApiClients(string? repoRoot = null, Func<string, string?>? getEnvironmentVariable = null)
     {
         repoRoot ??= FindRepoRoot();
-        Console.WriteLine("Typechecking the web API clients against their OpenAPI types...");
+        Console.WriteLine("Typechecking web OpenAPI types and the frontend workspace...");
 
         string webDir = Path.Combine(repoRoot, "apps", "web");
         if (!File.Exists(Path.Combine(webDir, "tsconfig.json")))
@@ -24,23 +24,29 @@ public static class ApiClientValidatorService
         }
 
         string pnpmCommand = OperatingSystem.IsWindows() ? "pnpm.cmd" : "pnpm";
+        string resolvedPnpm = FrontendQualityGateService.ResolveCommandPath(pnpmCommand, getEnvironmentVariable);
 
         // A spec change without regenerated web types would leave the typed clients compiling against the old API.
-        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "run", "generate:api", "--", "--check"], "the generated web API types") != 0)
+        if (RunCommand(repoRoot, resolvedPnpm, ["--filter", "web", "run", "generate:api", "--", "--check"], "the generated web API types", getEnvironmentVariable) != 0)
         {
             return 1;
         }
 
-        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "exec", "tsc", "--noEmit"], "the web API clients") != 0)
+        if (RunCommand(repoRoot, resolvedPnpm, ["run", "typecheck"], "the frontend workspace TypeScript and Vue types", getEnvironmentVariable) != 0)
         {
             return 1;
         }
 
-        Console.WriteLine("✔ Web API clients typecheck against their OpenAPI types.");
+        Console.WriteLine("✔ Web OpenAPI types and frontend workspace typecheck passed.");
         return 0;
     }
 
-    private static int RunCommand(string workingDir, string fileName, string[] arguments, string subject)
+    private static int RunCommand(
+        string workingDir,
+        string fileName,
+        string[] arguments,
+        string subject,
+        Func<string, string?>? getEnvironmentVariable = null)
     {
         var psi = new ProcessStartInfo(fileName)
         {
@@ -49,6 +55,10 @@ public static class ApiClientValidatorService
             RedirectStandardError = true,
             UseShellExecute = false
         };
+        if (getEnvironmentVariable is not null && getEnvironmentVariable("PATH") is { } pathOverride)
+        {
+            psi.Environment["PATH"] = pathOverride;
+        }
         foreach (string arg in arguments)
         {
             psi.ArgumentList.Add(arg);

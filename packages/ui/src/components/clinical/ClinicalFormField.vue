@@ -5,11 +5,11 @@
         v-if="field.type === 'radio' || field.type === 'choice_single'"
         :id="field.id"
         :label="field.label"
-        :options="field.options"
+        :options="field.options ?? undefined"
         :model-value="modelValue"
         :query="query"
         :grid-span="field.gridSpan || 12"
-        :error="error"
+        :error="error ?? undefined"
         :can-manage-queries="canManageQueries"
         :query-label="queryLabel"
         @update:model-value="$emit('update:modelValue', $event)"
@@ -49,7 +49,7 @@
         :model-value="modelValue"
         :query="query"
         :grid-span="field.gridSpan || 12"
-        :error="error"
+        :error="error ?? undefined"
         :attributes="customAttributes"
         :can-manage-queries="canManageQueries"
         :query-label="queryLabel"
@@ -65,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from "vue";
+import { computed, ref, onMounted, onUnmounted, type CSSProperties } from "vue";
 import ClinicalInput from "./ClinicalInput.vue";
 import ClinicalRadioGroup from "./ClinicalRadioGroup.vue";
 import ClinicalLookupInput from "./ClinicalLookupInput.vue";
@@ -122,14 +122,13 @@ const shouldRender = computed(() => true);
 let io: IntersectionObserver | null = null;
 let ro: ResizeObserver | null = null;
 
-const wrapperStyle = computed(() => {
-  const styles = {
+const wrapperStyle = computed<CSSProperties>(() => {
+  const styles: CSSProperties = {
     minHeight: "44px",
     width: "100%",
     boxSizing: "border-box",
     contentVisibility: "auto",
-    containIntrinsicSize:
-      `auto ${measuredHeight.value ? measuredHeight.value + "px" : "44px"}` as any,
+    containIntrinsicSize: `auto ${measuredHeight.value ? measuredHeight.value + "px" : "44px"}`,
   };
   return styles;
 });

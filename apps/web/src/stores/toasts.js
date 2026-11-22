@@ -4,11 +4,22 @@ import { describeApiError } from "../utils/apiErrors.js";
 let nextId = 1;
 
 /**
+ * @typedef {Object} ToastItem
+ * @property {number} id
+ * @property {string} tone
+ * @property {string} [title]
+ * @property {string} [message]
+ */
+
+/**
  * Transient user-facing alerts. API failures are reported here instead of being replaced with sample data
  * (#4523); ToastHost.vue renders them.
  */
 export const useToastStore = defineStore("toasts", {
-  state: () => ({ toasts: [] }),
+  state: () => ({
+    /** @type {ToastItem[]} */
+    toasts: [],
+  }),
   actions: {
     push({ tone = "error", title, message, timeoutMs = 8000 }) {
       const id = nextId++;

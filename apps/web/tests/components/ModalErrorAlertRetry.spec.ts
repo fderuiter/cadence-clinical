@@ -46,7 +46,7 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
       });
 
       // Fill in required fields
-      wrapper.vm.password = "Secret123!";
+      wrapper.vm.password = "Secret123!"; // pragma: allowlist secret
       wrapper.vm.signingReason = "APPROVAL";
 
       // First attempt fails via mockOnSign
@@ -59,7 +59,7 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
       );
 
       // Re-enter password for GxP safety check
-      wrapper.vm.password = "Secret123!";
+      wrapper.vm.password = "Secret123!"; // pragma: allowlist secret
 
       // Click Retry button in ModalErrorAlert
       const retryBtn = wrapper.find('[data-testid="modal-error-retry-btn"]');
@@ -183,7 +183,7 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
 
       const runAnalysisSpy = vi
         .spyOn(codingStore, "runImpactAnalysis")
-        .mockResolvedValue();
+        .mockResolvedValue({});
 
       const wrapper = mount(UpversioningImpactDrawer);
 

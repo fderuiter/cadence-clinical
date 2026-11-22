@@ -15,7 +15,7 @@ function getAxe() {
   return cachedAxePromise;
 }
 
-if (typeof process !== "undefined" && process.env?.VITEST) {
+if (globalThis.process?.env?.VITEST) {
   void getAxe();
 }
 

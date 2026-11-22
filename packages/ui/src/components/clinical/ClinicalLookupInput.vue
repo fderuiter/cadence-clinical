@@ -4,7 +4,7 @@
     :label="label"
     :query="query"
     :grid-span="gridSpan"
-    :error="error"
+    :error="error ?? undefined"
     :can-manage-queries="canManageQueries"
     :query-label="queryLabel"
     tag="div"
@@ -27,11 +27,8 @@
             .join(' ') || undefined
         "
         :aria-invalid="status === 'invalid' || hasError ? 'true' : undefined"
-        @input="
-          $emit('update:modelValue', $event.target.value);
-          $emit('input', $event.target.value);
-        "
-        @change="$emit('change', $event.target.value, $event.target)"
+        @input="handleInput"
+        @change="handleChange"
       />
     </template>
 
@@ -103,11 +100,24 @@ const props = withDefaults(defineProps<Props>(), {
   queryLabel: "",
 });
 
-defineEmits<{
+const emit = defineEmits<{
   (e: "update:modelValue", value: string | number): void;
   (e: "input", value: string | number): void;
-  (e: "change", value: string | number, target: any): void;
+  (e: "change", value: string | number, target: EventTarget | null): void;
 }>();
+
+function handleInput(event: Event) {
+  if (event.target instanceof HTMLInputElement) {
+    emit("update:modelValue", event.target.value);
+    emit("input", event.target.value);
+  }
+}
+
+function handleChange(event: Event) {
+  if (event.target instanceof HTMLInputElement) {
+    emit("change", event.target.value, event.target);
+  }
+}
 
 const stateClass = computed(() => {
   if (props.status === "loading") return "lookup-loading";

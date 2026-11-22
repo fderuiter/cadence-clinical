@@ -460,6 +460,7 @@ defineExpose({
   selectedAnswers,
   assessmentSubmitted,
   evaluationResult,
+  selectAnswer,
   submitAssessment,
   resetAssessment,
   setMode,

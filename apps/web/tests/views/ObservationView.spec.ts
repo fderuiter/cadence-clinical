@@ -10,10 +10,19 @@ const OBSERVATION = "observation:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d70";
 const ENROLLMENT = "enrollment:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d71";
 
 function mmhg(value: number) {
-  return { type: "quantity", value, unit: "mm[Hg]", comparator: null };
+  return {
+    type: "quantity" as const,
+    value,
+    unit: "mm[Hg]",
+    comparator: null,
+  };
 }
 
-function observation(overrides: Record<string, unknown> = {}) {
+type ObservationRecord = Awaited<ReturnType<typeof kernelApi.getObservation>>;
+
+function observation(
+  overrides: Partial<ObservationRecord> = {}
+): ObservationRecord {
   return {
     ref: `${OBSERVATION}@1`,
     enrollment_ref: ENROLLMENT,
@@ -322,19 +331,19 @@ describe("ObservationView (ADR-2620)", () => {
     vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
       {
         level: "study",
-        node: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
+        ref: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
         label: "CAD-101",
         mask: null,
       },
       {
         level: "study_site",
-        node: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
+        ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
         label: "017",
         mask: null,
       },
       {
         level: "enrollment",
-        node: ENROLLMENT,
+        ref: ENROLLMENT,
         label: "017-0001",
         mask: null,
       },
@@ -381,9 +390,9 @@ describe("ObservationView (ADR-2620)", () => {
     vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
       {
         level: "study",
-        node: null,
+        ref: null,
         label: null,
-        mask: { kind: "study", reason: "unauthorized" },
+        mask: "unauthorized",
       },
     ]);
 

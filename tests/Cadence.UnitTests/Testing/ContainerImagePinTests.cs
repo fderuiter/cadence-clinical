@@ -290,19 +290,22 @@ public sealed partial class ContainerImagePinTests
         catalog.Should().ContainKeys(
             "@axe-core/playwright",
             "@playwright/test",
+            "@types/node",
             "@typescript-eslint/eslint-plugin",
             "@typescript-eslint/parser",
             "@vitejs/plugin-vue",
             "@vitest/coverage-v8",
             "axe-core",
             "eslint-plugin-vue",
+            "globals",
             "pinia",
             "typescript",
             "typescript-eslint",
             "vite",
             "vitest",
             "vue",
-            "vue-router");
+            "vue-router",
+            "vue-tsc");
 
         catalog["@typescript-eslint/eslint-plugin"].Should().Be("^8.73.0");
         catalog["@typescript-eslint/parser"].Should().Be("^8.73.0");

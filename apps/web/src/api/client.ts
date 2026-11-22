@@ -8,13 +8,14 @@ import {
 } from "./authorization.js";
 
 declare global {
-  interface ImportMeta {
-    readonly env: Record<string, string | undefined>;
+  interface ImportMetaEnv {
+    readonly VITE_API_BASE_URL?: string;
+    readonly VITE_DEMO_MODE?: string;
   }
 }
 
 export function getBaseUrl(): string {
-  const env = import.meta.env as Record<string, string | undefined> | undefined;
+  const env = import.meta.env;
   const configured = env?.VITE_API_BASE_URL;
   if (configured) return configured;
   if (import.meta.env?.MODE === "demo") {
@@ -161,7 +162,9 @@ async function dispatchWithDynamicBase(
   return executeWithSingleFlightRetry(input, init);
 }
 
-export function createOpenApiClient<T extends {} = paths>(baseUrl?: string) {
+export function createOpenApiClient<T extends object = paths>(
+  baseUrl?: string
+) {
   const hasExplicitBaseUrl = baseUrl !== undefined;
   let inner: ReturnType<typeof createClient<T>> | null = null;
   const pendingMiddleware: Middleware[] = [];

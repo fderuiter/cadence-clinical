@@ -3,6 +3,7 @@ import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { useEconsentStore } from "../../src/stores/econsent";
 import ComprehensionQuizBuilder from "../../src/components/econsent/ComprehensionQuizBuilder.vue";
+import QuizTemplateDrawer from "../../src/components/econsent/QuizTemplateDrawer.vue";
 
 describe("ComprehensionQuizBuilder.vue Component Tests", () => {
   beforeEach(() => {
@@ -147,7 +148,7 @@ describe("ComprehensionQuizBuilder.vue Component Tests", () => {
     await importBtn.trigger("click");
     expect(wrapper.vm.isDrawerOpen).toBe(true);
 
-    const drawer = wrapper.findComponent({ name: "QuizTemplateDrawer" });
+    const drawer = wrapper.findComponent(QuizTemplateDrawer);
     expect(drawer.exists()).toBe(true);
     expect(drawer.find(".quiz-template-drawer").exists()).toBe(true);
 
@@ -185,7 +186,7 @@ describe("ComprehensionQuizBuilder.vue Component Tests", () => {
 
     // Open drawer
     await wrapper.find(".btn-import-template").trigger("click");
-    const drawer = wrapper.findComponent({ name: "QuizTemplateDrawer" });
+    const drawer = wrapper.findComponent(QuizTemplateDrawer);
 
     // Select first two templates in filtered view
     const visibleTemplates = drawer.vm.filteredTemplates;

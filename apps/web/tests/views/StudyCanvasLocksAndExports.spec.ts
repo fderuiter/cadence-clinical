@@ -359,7 +359,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     store.studyCode = "CAD-101";
     store.record.enrollmentId = ENROLLMENT_ID;
     store.record.loading = false;
-    store.record.error = null;
+    store.record.error = false;
 
     const wrapper = mount(ParticipantRecord, {
       props: {
@@ -507,7 +507,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     const wizard = mount(ExportWizardView);
     await wizard.find(".btn-fast-export-odm").trigger("click");
     await wizard.find(".btn-fast-export-csv").trigger("click");
-    expect(toastStore.toasts.map((t: { title: string }) => t.title)).toEqual([
+    expect(toastStore.toasts.map((t) => t.title)).toEqual([
       "Exporting CDISC ODM-XML isn't available yet",
       "Exporting CSV dataset isn't available yet",
     ]);

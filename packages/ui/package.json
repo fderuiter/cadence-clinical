@@ -15,6 +15,7 @@
     "build": "node scripts/generate-types.js && vite build",
     "test": "vitest run --coverage --testTimeout=30000",
     "lint": "eslint .",
+    "typecheck": "node scripts/generate-types.js && vue-tsc --noEmit",
     "format": "prettier --write ."
   },
   "keywords": [],
@@ -28,12 +29,14 @@
     "vue": "catalog:"
   },
   "devDependencies": {
+    "@types/node": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "pinia": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "vue": "catalog:"
+    "vue": "catalog:",
+    "vue-tsc": "catalog:"
   }
 }

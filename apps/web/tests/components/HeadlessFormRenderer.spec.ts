@@ -71,8 +71,10 @@ describe("HeadlessFormRenderer.vue Skip Logic & Submission Payload Filtering", (
     // Submit form
     await wrapper.find("form").trigger("submit");
 
-    const emitted = wrapper.emitted("form-submitted");
+    const emitted =
+      wrapper.emitted<{ data: Record<string, unknown> }[]>("form-submitted");
     expect(emitted).toBeTruthy();
+    if (!emitted) throw new Error("Expected form-submitted event");
     expect(emitted.length).toBe(1);
 
     const submissionPayload = emitted[0][0];
@@ -101,8 +103,10 @@ describe("HeadlessFormRenderer.vue Skip Logic & Submission Payload Filtering", (
 
     await wrapper.find("form").trigger("submit");
 
-    const emitted = wrapper.emitted("form-submitted");
+    const emitted =
+      wrapper.emitted<{ data: Record<string, unknown> }[]>("form-submitted");
     expect(emitted).toBeTruthy();
+    if (!emitted) throw new Error("Expected form-submitted event");
     const submissionPayload = emitted[0][0];
     expect(submissionPayload.data).toEqual({
       pulse: 110,

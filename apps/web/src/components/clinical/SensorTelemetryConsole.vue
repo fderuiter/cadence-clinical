@@ -78,7 +78,7 @@
         <div class="metric-content">
           <span class="metric-label">Mean CGM Time-in-Range</span>
           <span class="metric-value">{{
-            metrics.mean_time_in_range_percent !== null
+            metrics.mean_time_in_range_percent != null
               ? metrics.mean_time_in_range_percent + "%"
               : "78.4%"
           }}</span>
@@ -93,7 +93,7 @@
         <div class="metric-content">
           <span class="metric-label">Mean Daily Steps</span>
           <span class="metric-value">{{
-            metrics.mean_daily_steps !== null
+            metrics.mean_daily_steps != null
               ? metrics.mean_daily_steps.toLocaleString()
               : "8,420"
           }}</span>
@@ -793,70 +793,18 @@
 import { ClinicalModal } from "ui";
 import { computed, onMounted, ref } from "vue";
 import { interopService } from "../../api/interop";
+import type { components } from "../../api/types";
 import { useToastStore } from "../../stores/toasts";
 import { describeApiError } from "../../utils/apiErrors";
 import { demoNowDate, demoRandom, nextDemoStep } from "../../utils/demoMode";
 
-export interface DeviceEntity {
-  device_id: string;
-  study_id: string;
-  site_id: string | null;
-  subject_id: string;
-  device_type: string;
-  vendor: string;
-  model_name: string;
-  udi_di: string;
-  mac_address_masked: string | null;
-  device_token: string;
-  calibration_status: string;
-}
-
-export interface DailySummaryEntity {
-  summary_id: string;
-  study_id: string;
-  site_id: string | null;
-  subject_id: string;
-  summary_date: string;
-  device_type: string;
-  device_token: string;
-  cgm?: {
-    tir_percentage: number;
-    mean_glucose_mg_dl: number;
-    glucose_sd: number;
-    glucose_cv_percent: number;
-    readings_count: number;
-  };
-  actigraphy?: {
-    total_steps: number;
-    resting_heart_rate_bpm: number;
-    mean_cadence_spm: number;
-  };
-  spirometry?: {
-    best_fev1_liters: number;
-    best_fvc_liters: number;
-    fev1_percent_predicted: number;
-  };
-  blood_pressure?: {
-    mean_systolic_mmhg: number;
-    mean_diastolic_mmhg: number;
-  };
-}
-
-export interface SafetyAlertEntity {
-  alert_id: string;
-  study_id: string;
-  subject_id: string;
-  device_type: string;
-  severity: string;
-  parameter_name: string;
-  observed_value: number;
-  threshold_value: number;
-  unit: string;
-  triggered_at: string;
-  is_acknowledged: boolean;
-  acknowledged_by?: string;
-  acknowledgment_notes?: string;
-}
+export type DeviceEntity = components["schemas"]["Interop_DeviceRegistration"];
+export type DailySummaryEntity =
+  components["schemas"]["Interop_DailySummaryEndpoints"];
+export type SafetyAlertEntity =
+  components["schemas"]["Interop_SensorSafetyAlert"];
+export type TelemetryMetrics =
+  components["schemas"]["Interop_SensorDashboardMetrics"];
 
 const props = withDefaults(
   defineProps<{
@@ -899,7 +847,8 @@ const ackError = ref<string | null>(null);
 const registerError = ref<string | null>(null);
 const simulateError = ref<string | null>(null);
 
-const metrics = ref({
+const metrics = ref<TelemetryMetrics>({
+  study_id: props.studyId,
   total_streams_ingested: 14,
   total_readings_ingested: 4032,
   active_devices_count: 6,
@@ -1035,8 +984,8 @@ async function refreshData() {
 
     if (devRes.status === "fulfilled") {
       domainErrors.value.devices = null;
-      if (devRes.value?.data?.devices) {
-        devices.value = devRes.value.data.devices;
+      if (devRes.value?.devices) {
+        devices.value = devRes.value.devices;
       }
     } else {
       hasError = true;
@@ -1047,8 +996,8 @@ async function refreshData() {
 
     if (sumRes.status === "fulfilled") {
       domainErrors.value.summaries = null;
-      if (sumRes.value?.data?.summaries) {
-        dailySummaries.value = sumRes.value.data.summaries;
+      if (sumRes.value?.summaries) {
+        dailySummaries.value = sumRes.value.summaries;
       }
     } else {
       hasError = true;
@@ -1059,8 +1008,8 @@ async function refreshData() {
 
     if (alertRes.status === "fulfilled") {
       domainErrors.value.alerts = null;
-      if (alertRes.value?.data?.alerts) {
-        safetyAlerts.value = alertRes.value.data.alerts;
+      if (alertRes.value?.alerts) {
+        safetyAlerts.value = alertRes.value.alerts;
       }
     } else {
       hasError = true;
@@ -1071,8 +1020,8 @@ async function refreshData() {
 
     if (metricRes.status === "fulfilled") {
       domainErrors.value.metrics = null;
-      if (metricRes.value?.data?.metrics) {
-        metrics.value = { ...metrics.value, ...metricRes.value.data.metrics };
+      if (metricRes.value?.metrics) {
+        metrics.value = { ...metrics.value, ...metricRes.value.metrics };
       }
     } else {
       hasError = true;
@@ -1111,20 +1060,21 @@ function openAcknowledgeModal(alert: SafetyAlertEntity) {
 }
 
 async function submitAcknowledgment() {
-  if (!selectedAlert.value) return;
+  const alertId = selectedAlert.value?.alert_id;
+  if (!alertId) return;
   isSubmitting.value = true;
   ackError.value = null;
   const toastStore = useToastStore();
 
   try {
-    await interopService.acknowledgeSafetyAlert(selectedAlert.value.alert_id, {
+    await interopService.acknowledgeSafetyAlert(alertId, {
       notes: ackNotes.value,
       audit_signature: `SIG-ACK-${Date.now()}`,
     });
     toastStore.push({
       tone: "success",
       title: "Alert Acknowledged",
-      message: `Safety alert ${selectedAlert.value.alert_id} acknowledged successfully.`,
+      message: `Safety alert ${alertId} acknowledged successfully.`,
     });
     showAckModal.value = false;
     await refreshData();

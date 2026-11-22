@@ -244,8 +244,8 @@
             :key="item.id"
             class="reconciliation-card"
             :class="[
-              `status-${item.status.toLowerCase()}`,
-              `disc-${item.discrepancy_type.toLowerCase()}`,
+              `status-${(item.status ?? 'PENDING_REVIEW').toLowerCase()}`,
+              `disc-${(item.discrepancy_type ?? 'NEW_FIELD').toLowerCase()}`,
             ]"
           >
             <!-- Card Header: Variable & Provenance Tag -->
@@ -274,7 +274,7 @@
                 <span
                   :class="[
                     'discrepancy-pill',
-                    `pill-${item.discrepancy_type.toLowerCase()}`,
+                    `pill-${(item.discrepancy_type ?? 'NEW_FIELD').toLowerCase()}`,
                   ]"
                 >
                   {{ formatDiscrepancy(item.discrepancy_type) }}
@@ -282,7 +282,7 @@
                 <span
                   :class="[
                     'status-pill',
-                    `status-${item.status.toLowerCase()}`,
+                    `status-${(item.status ?? 'PENDING_REVIEW').toLowerCase()}`,
                   ]"
                 >
                   {{ formatStatus(item.status) }}
@@ -324,7 +324,9 @@
                   <div class="meta-row">
                     <span class="lbl">Confidence:</span>
                     <span class="val"
-                      >{{ Math.round(item.confidence_score * 100) }}%</span
+                      >{{
+                        Math.round((item.confidence_score ?? 0) * 100)
+                      }}%</span
                     >
                   </div>
                 </div>
@@ -367,7 +369,7 @@
                     <span class="lbl">Mapping Rule:</span>
                     <span
                       class="val truncate"
-                      :title="item.mapping_provenance"
+                      :title="item.mapping_provenance ?? undefined"
                       >{{ item.mapping_provenance }}</span
                     >
                   </div>
@@ -377,9 +379,9 @@
 
             <!-- Resolution / Audit Trail Banner (If Resolved) -->
             <div
-              v-if="item.status !== 'PENDING_REVIEW'"
+              v-if="(item.status ?? 'PENDING_REVIEW') !== 'PENDING_REVIEW'"
               class="resolution-banner"
-              :class="`banner-${item.status.toLowerCase()}`"
+              :class="`banner-${(item.status ?? 'PENDING_REVIEW').toLowerCase()}`"
             >
               <div class="resolution-info">
                 <strong
@@ -746,46 +748,10 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { EmptyState, useFocusTrap } from "ui";
 import { interopService } from "../../api/interop";
+import type { components } from "../../api/types";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 
-export interface EhrCandidate {
-  id: string;
-  study_id: string;
-  site_id: string;
-  subject_id: string;
-  subject_pseudonym: string;
-  ehr_system_id: string;
-  fhir_resource_type: string;
-  fhir_resource_id: string;
-  source_timestamp: string;
-  target_domain: string;
-  target_variable: string;
-  cdash_testcd?: string;
-  cdash_test?: string;
-  candidate_value: any;
-  candidate_unit?: string;
-  current_ecrf_value?: any;
-  current_ecrf_updated_at?: string;
-  discrepancy_type:
-    | "NEW_FIELD"
-    | "EXACT_MATCH"
-    | "VALUE_MISMATCH"
-    | "UNIT_MISMATCH"
-    | "DATE_MISMATCH"
-    | "NOT_COMPARED";
-  confidence_score: number;
-  mapping_provenance: string;
-  raw_fhir_resource: Record<string, any>;
-  status: "PENDING_REVIEW" | "ACCEPTED" | "REJECTED" | "QUERIED";
-  resolution_action?: string;
-  resolution_reason?: string;
-  resolved_by?: string;
-  resolved_at?: string;
-  electronic_signature?: Record<string, any>;
-  clinical_query_id?: string;
-  created_at?: string;
-  version_index: number;
-}
+export type EhrCandidate = components["schemas"]["Interop_EhrCandidateItemDTO"];
 
 const props = defineProps<{
   isOpen: boolean;
@@ -869,7 +835,9 @@ const isAllPendingSelected = computed(() => {
 
 function selectHighConfidence() {
   const highConfPending = candidates.value
-    .filter((c) => c.status === "PENDING_REVIEW" && c.confidence_score >= 0.9)
+    .filter(
+      (c) => c.status === "PENDING_REVIEW" && (c.confidence_score ?? 0) >= 0.9
+    )
     .map((c) => c.id);
   const set = new Set([...selectedCandidateIds.value, ...highConfPending]);
   selectedCandidateIds.value = Array.from(set);
@@ -1175,7 +1143,7 @@ function formatValue(val: any): string {
   return String(val);
 }
 
-function formatDate(dt?: string): string {
+function formatDate(dt?: string | null): string {
   if (!dt) return "";
   try {
     return new Date(dt).toLocaleString();
@@ -1184,7 +1152,7 @@ function formatDate(dt?: string): string {
   }
 }
 
-function formatDiscrepancy(disc: string): string {
+function formatDiscrepancy(disc?: string | null): string {
   switch (disc) {
     case "NEW_FIELD":
       return "✨ New Field";
@@ -1199,11 +1167,11 @@ function formatDiscrepancy(disc: string): string {
     case "NOT_COMPARED":
       return "Not compared with eCRF";
     default:
-      return disc;
+      return disc || "NEW_FIELD";
   }
 }
 
-function formatStatus(st: string): string {
+function formatStatus(st?: string | null): string {
   switch (st) {
     case "PENDING_REVIEW":
       return "Pending Review";
@@ -1214,11 +1182,11 @@ function formatStatus(st: string): string {
     case "QUERIED":
       return "Query Open";
     default:
-      return st;
+      return st || "Pending Review";
   }
 }
 
-function formatResolutionAction(act?: string): string {
+function formatResolutionAction(act?: string | null): string {
   switch (act) {
     case "ACCEPT_COMMIT":
       return "Committed to eCRF";

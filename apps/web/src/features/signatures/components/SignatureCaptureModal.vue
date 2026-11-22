@@ -444,6 +444,7 @@ defineExpose({
   signerRoleVal,
   signingReason,
   needsPasswordReentry,
+  confirm,
 });
 </script>
 

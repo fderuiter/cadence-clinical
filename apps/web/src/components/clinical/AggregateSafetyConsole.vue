@@ -1750,6 +1750,12 @@ async function verifySnapshot() {
   }
 }
 
+function exportReport(format: "xml" | "html" | "json") {
+  if (!activeReportId.value) return;
+  const url = `/api/v1/safety/periodic-reports/${encodeURIComponent(activeReportId.value)}/export?format=${encodeURIComponent(format)}`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 async function executeQppvSignoff() {
   if (!qppvSecret.value) return;
   isSigning.value = true;

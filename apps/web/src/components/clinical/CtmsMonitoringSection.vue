@@ -189,8 +189,11 @@
         </p>
         <ul v-else class="letter-list">
           <li v-for="letter in letters" :key="letter.id" class="letter-item">
-            <strong>{{ letter.letter_type }}</strong> · {{ letter.subject }}
-            <pre class="letter-body">{{ letter.body_markdown }}</pre>
+            <strong>{{ letter.letter_type }}</strong> ·
+            {{ letter.subject || formatIsoDateShort(letter.created_at) }}
+            <pre class="letter-body">{{
+              letter.rendered_content || letter.body_markdown
+            }}</pre>
           </li>
         </ul>
       </div>

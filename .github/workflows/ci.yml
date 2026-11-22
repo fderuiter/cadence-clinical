@@ -57,10 +57,29 @@ jobs:
       - name: Build frontend workspace
         run: pnpm build
 
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            global.json
+            Directory.Build.props
+            Directory.Build.targets
+            Directory.Packages.props
+            NuGet.Config
+            **/*.csproj
+
+      - name: Download Cadence CLI Artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ./bin
+
       - name: Run frontend style and lint
         run: |
           pnpm exec prettier --check --ignore-path .prettierignore "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}"
-          pnpm -r lint
+          node scripts/run-cli.js check eslint
 
       - name: Run Hadolint on Dockerfiles
         run: |
@@ -130,25 +149,6 @@ jobs:
 
       - name: Run installer checksum tests
         run: bash tests/test_installer_checksums.sh
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
-        with:
-          global-json-file: global.json
-          cache: true
-          cache-dependency-path: |
-            global.json
-            Directory.Build.props
-            Directory.Build.targets
-            Directory.Packages.props
-            NuGet.Config
-            **/*.csproj
-
-      - name: Download Cadence CLI Artifact
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
-        with:
-          name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ./bin
 
       - name: Run Markdown validation
         run: node scripts/run-cli.js check markdown

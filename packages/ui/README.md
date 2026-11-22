@@ -17,11 +17,12 @@ Shared frontend package (JavaScript, TypeScript types and Vue 3 components) used
 
 ## Scripts
 
-| Command                  | Purpose                                             |
-| ------------------------ | --------------------------------------------------- |
-| `pnpm --filter ui build` | Generates types, then builds the library with Vite. |
-| `pnpm --filter ui test`  | Vitest (`tests/`) with coverage.                    |
-| `pnpm --filter ui lint`  | ESLint.                                             |
+| Command                      | Purpose                                                             |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `pnpm --filter ui build`     | Generates types, then builds the library with Vite.                 |
+| `pnpm --filter ui typecheck` | Typechecks `index.d.ts` and generated CDASH types (`tsc --noEmit`). |
+| `pnpm --filter ui test`      | Vitest (`tests/`) with coverage.                                    |
+| `pnpm --filter ui lint`      | ESLint.                                                             |
 
 ## Coverage
 

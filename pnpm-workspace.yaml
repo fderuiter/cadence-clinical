@@ -5,6 +5,7 @@ packages:
 catalog:
   "@axe-core/playwright": "^4.14.0"
   "@playwright/test": "^1.65.1"
+  "@types/node": "^26.6.6"
   "@typescript-eslint/eslint-plugin": "^8.73.0"
   "@typescript-eslint/parser": "^8.73.0"
   "@vitejs/plugin-vue": "^6.0.11"
@@ -12,6 +13,7 @@ catalog:
   axe-core: "^4.14.1"
   eslint-plugin-vue: "^10.12.1"
   fake-indexeddb: "^6.2.8"
+  globals: "^17.4.0"
   jsdom: "^31.0.1"
   keycloak-js: "^26.2.5"
   msw: "^3.0.6"
@@ -22,6 +24,7 @@ catalog:
   vitest: "^5.1.0"
   vue: "^3.5.45"
   vue-router: "^5.5.1"
+  vue-tsc: "^3.3.14"
 
 overrides:
   glob: ">=14.0.2"

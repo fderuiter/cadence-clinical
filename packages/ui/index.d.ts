@@ -1,4 +1,31 @@
-import { DefineComponent } from "vue";
+import {
+  ComponentOptionsMixin,
+  DefineComponent,
+  EmitsOptions,
+  PublicProps,
+  ResolveProps,
+  SlotsType,
+} from "vue";
+
+type UiComponentWithSlots<
+  Props extends Record<string, unknown>,
+  Slots extends Record<string, unknown>,
+  Emits extends EmitsOptions = Record<string, never>,
+> = DefineComponent<
+  Props,
+  Record<string, never>,
+  Record<string, never>,
+  Record<string, never>,
+  Record<string, never>,
+  ComponentOptionsMixin,
+  ComponentOptionsMixin,
+  Emits,
+  string,
+  PublicProps,
+  ResolveProps<Props, Emits>,
+  Record<string, never>,
+  SlotsType<Slots>
+>;
 
 // Export generated CDASH types
 export * from "./src/types/cdash.js";
@@ -64,6 +91,8 @@ export const ClinicalFormField: DefineComponent<
       status: "none" | "loading" | "valid" | "invalid" | "degraded";
       message?: string;
     } | null;
+    canManageQueries?: boolean;
+    queryLabel?: string;
   },
   {},
   any
@@ -77,7 +106,9 @@ export const ClinicalInput: DefineComponent<
     query?: any;
     gridSpan?: number | string;
     error?: string | null;
-    attributes?: Record<string, any>;
+    attributes?: Record<string, unknown>;
+    canManageQueries?: boolean;
+    queryLabel?: string;
   },
   {},
   any
@@ -92,6 +123,9 @@ export const ClinicalRadioGroup: DefineComponent<
     query?: any;
     gridSpan?: number | string;
     error?: string | null;
+    attributes?: Record<string, unknown>;
+    canManageQueries?: boolean;
+    queryLabel?: string;
   },
   {},
   any
@@ -107,7 +141,9 @@ export const ClinicalLookupInput: DefineComponent<
     gridSpan?: number | string;
     error?: string | null;
     query?: any;
-    attributes?: Record<string, any>;
+    attributes?: Record<string, unknown>;
+    canManageQueries?: boolean;
+    queryLabel?: string;
   },
   {},
   any
@@ -117,6 +153,7 @@ export const ClinicalQueryFlag: DefineComponent<
   {
     id: string;
     query?: any;
+    isOpen?: boolean;
   },
   {},
   any
@@ -126,7 +163,9 @@ export const ClinicalQueryPanel: DefineComponent<
   {
     id: string;
     query?: any;
-    label: string;
+    label?: string;
+    canManageQueries?: boolean;
+    queryLabel?: string;
   },
   {},
   any
@@ -163,18 +202,24 @@ export const ModalErrorAlert: DefineComponent<
   any
 >;
 
-export const EmptyState: DefineComponent<
+export const EmptyState: UiComponentWithSlots<
   {
     icon?: string;
     title?: string;
     message?: string;
     actionText?: string;
   },
-  {},
-  any
+  {
+    default?: () => unknown;
+    icon?: () => unknown;
+    action?: () => unknown;
+  },
+  {
+    action: () => true;
+  }
 >;
 
-export const ClinicalModal: DefineComponent<
+export const ClinicalModal: UiComponentWithSlots<
   {
     modelValue?: boolean;
     isOpen?: boolean;
@@ -195,32 +240,43 @@ export const ClinicalModal: DefineComponent<
     teleport?: boolean | string;
     id?: string;
     overlayId?: string;
-    dialogClass?: string | any[] | Record<string, boolean>;
-    backdropClass?: string | any[] | Record<string, boolean>;
-    headerClass?: string | any[] | Record<string, boolean>;
-    bodyClass?: string | any[] | Record<string, boolean>;
-    footerClass?: string | any[] | Record<string, boolean>;
+    dialogClass?: string | unknown[] | Record<string, boolean>;
+    backdropClass?: string | unknown[] | Record<string, boolean>;
+    headerClass?: string | unknown[] | Record<string, boolean>;
+    bodyClass?: string | unknown[] | Record<string, boolean>;
+    footerClass?: string | unknown[] | Record<string, boolean>;
     closeLabel?: string;
     showHeader?: boolean;
     showFooter?: boolean;
   },
-  {},
-  any
+  {
+    default?: () => unknown;
+    header?: (props: { titleId: string; close: () => void }) => unknown;
+    footer?: (props: { close: () => void }) => unknown;
+  },
+  {
+    "update:modelValue": (value: boolean) => true;
+    "update:isOpen": (value: boolean) => true;
+    "update:open": (value: boolean) => true;
+    close: () => true;
+    confirm: () => true;
+  }
 >;
 
-export const ClinicalDrawer: DefineComponent<
+export const ClinicalDrawer: UiComponentWithSlots<
   {
     modelValue?: boolean;
     isOpen?: boolean;
+    open?: boolean;
     title?: string;
     subtitle?: string;
     ariaLabel?: string;
     ariaLabelledby?: string;
     id?: string;
     overlayId?: string;
-    overlayClass?: string | any[] | Record<string, boolean>;
-    panelClass?: string | any[] | Record<string, boolean>;
-    bodyClass?: string | any[] | Record<string, boolean>;
+    overlayClass?: string | unknown[] | Record<string, boolean>;
+    panelClass?: string | unknown[] | Record<string, boolean>;
+    bodyClass?: string | unknown[] | Record<string, boolean>;
     position?: "right" | "left" | string;
     size?: "sm" | "md" | "lg" | "xl" | string;
     role?: "dialog" | "alertdialog" | string;
@@ -236,8 +292,18 @@ export const ClinicalDrawer: DefineComponent<
     closeLabel?: string;
     showHeader?: boolean;
   },
-  {},
-  any
+  {
+    default?: () => unknown;
+    header?: (props: { close: () => void; titleId: string }) => unknown;
+    subheader?: () => unknown;
+    footer?: (props: { close: () => void }) => unknown;
+    "after-panel"?: () => unknown;
+  },
+  {
+    "update:modelValue": (value: boolean) => true;
+    "update:isOpen": (value: boolean) => true;
+    close: () => true;
+  }
 >;
 
 export const AuditLogViewer: DefineComponent<
@@ -270,21 +336,34 @@ export const ClinicalDataTable: DefineComponent<
   any
 >;
 
-export const ClinicalFieldLayout: DefineComponent<
+export const ClinicalFieldLayout: UiComponentWithSlots<
   {
     id: string;
     label: string;
-    query?: any;
+    query?: unknown;
     gridSpan?: number | string;
     error?: string | null;
-    attributes?: Record<string, any>;
+    attributes?: Record<string, unknown>;
     tag?: string;
     extraClass?: string;
     canManageQueries?: boolean;
     queryLabel?: string;
   },
-  {},
-  any
+  {
+    default?: (props: {
+      id: string;
+      error: string | null;
+      errorId: string;
+      hasError: boolean;
+    }) => unknown;
+    "after-input"?: () => unknown;
+  },
+  {
+    "create-query": (message: string) => true;
+    "respond-query": (message: string) => true;
+    "close-query": () => true;
+    "reopen-query": () => true;
+  }
 >;
 
 export const MediaPlayer: DefineComponent<

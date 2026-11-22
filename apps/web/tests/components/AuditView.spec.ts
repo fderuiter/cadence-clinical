@@ -46,6 +46,7 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
       user_id: "crc.user",
       user_role: "site_crc",
       action: "UPDATE",
+      document_id: null,
       entity_type: "Observation",
       record_id: "OBS-1042",
       details: "Observation VS.VSSBP changed from 140 to 120 mmHg",
@@ -54,7 +55,7 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
       reason_for_change:
         "Typographical error corrected against paper source chart",
       sha256_hash:
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
     },
     {
       id: "AUDIT-LOG-102",
@@ -62,6 +63,7 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
       user_id: "dm.user",
       user_role: "data_manager",
       action: "SIGN",
+      document_id: null,
       entity_type: "Query",
       record_id: "QRY-208",
       details: "Electronic sign-off for discrepancy query QRY-208",
@@ -69,7 +71,7 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
       new_value: { query_id: "QRY-208", status: "CLOSED" },
       reason_for_change: "Investigator confirmation received and verified",
       sha256_hash:
-        "3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1b",
+        "3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1b", // pragma: allowlist secret
     },
   ];
 
@@ -83,6 +85,7 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
       total_count: 2,
       limit: 20,
       offset: 0,
+      has_more: false,
     });
 
     vi.mocked(auditorService.getExecutionIntegrity).mockResolvedValue({
@@ -93,10 +96,14 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
 
     vi.mocked(etmfService.getDocuments).mockResolvedValue([]);
     vi.mocked(etmfService.getCompleteness).mockResolvedValue({
-      expected_count: 10,
-      present_count: 10,
-      missing_count: 0,
-      completeness_percentage: 100,
+      study_id: "CADENCE-101",
+      site_id: null,
+      milestone: "SIV",
+      is_complete: true,
+      scope: "STUDY",
+      present_artifacts: ["01.01.01"],
+      missing_artifacts: [],
+      per_artifact_detail: [],
     });
   });
 
@@ -197,7 +204,7 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
     const sha256Block = detailsRow.find(".sha256-hash");
     expect(sha256Block.exists()).toBe(true);
     expect(sha256Block.text()).toContain(
-      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" // pragma: allowlist secret
     );
     expect(sha256Block.text()).toContain("SEAL VERIFIED");
   });

@@ -13,11 +13,16 @@
 
 <script setup>
 // Checkbox group for the channels used to notify participants who must re-consent.
-const selected = defineModel({ type: Array, default: () => [] });
+const selected = defineModel({
+  type: /** @type {import("vue").PropType<string[]>} */ (Array),
+  default: () => [],
+});
 
 defineProps({
   channels: {
-    type: Array,
+    type: /** @type {import("vue").PropType<Array<{ value: string, label: string }>>} */ (
+      Array
+    ),
     default: () => [
       { value: "SMS", label: "SMS" },
       { value: "Mobile Push", label: "Mobile Push" },

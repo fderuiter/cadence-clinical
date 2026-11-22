@@ -61,13 +61,13 @@ Run from the repository root with pnpm (the workspace is defined in `pnpm-worksp
 | `pnpm --filter web test:e2e`           | Playwright accessibility suite against the isolated demo preview server (`--project=accessibility`).                                                                                                                             |
 | `pnpm --filter web test:e2e:stack`     | Full Playwright suite across all configured projects (`accessibility`, `setup`, and `chromium`).                                                                                                                                 |
 | `pnpm --filter web test:e2e:workflows` | Playwright end-to-end clinical workflow suite (`--project=setup --project=chromium`); starts the web, demo, and subject-portal servers against Keycloak and the backend.                                                         |
-| `pnpm --filter web lint` / `typecheck` | ESLint / `tsc --noEmit`.                                                                                                                                                                                                         |
+| `pnpm --filter web lint` / `typecheck` | ESLint + duplicate store identifier check / `vue-tsc --build` across app and test configs.                                                                                                                                       |
 | `pnpm --filter web generate:api`       | Regenerates `src/api/generated/` from the .NET services' specs in `docs/openapi/`.                                                                                                                                               |
 
 ## Dependencies
 
 - Runtime: `vue`, `vue-router`, `pinia`, `keycloak-js`, `openapi-fetch`, `hls.js`, `vuedraggable`, and the workspace packages [ui](../../packages/ui/README.md) and [usdm-schemas](../../packages/usdm-schemas/README.md).
-- Development: Vite, Vitest, Playwright with `@axe-core/playwright`, MSW, `openapi-typescript`, TypeScript.
+- Development: Vite, Vitest, Playwright with `@axe-core/playwright`, MSW, `openapi-typescript`, TypeScript, `vue-tsc`.
 
 ## Running against the backend
 

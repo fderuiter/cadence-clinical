@@ -200,7 +200,7 @@ public static class QualityGates
             PreCommitNote = "exports specs only for the services the staged C# files touch, otherwise checks staged `docs/api` against staged `docs/openapi`",
         },
         new("api-clients", ["validate-api-clients"],
-            "The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them",
+            "The web API types are generated from the current `docs/openapi`, and the frontend workspace (`tsc` and `vue-tsc`) typechecks against them",
             ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot) == 0),
         new("schema-doc", ["auto-stage-schema-doc"], "`docs/schema` matches the EF Core models",
             ctx => CheckSchemaDoc(ctx))

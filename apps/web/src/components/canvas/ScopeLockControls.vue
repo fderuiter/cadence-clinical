@@ -159,7 +159,9 @@ const signerUsername = computed(
 );
 const signerFullName = computed(
   () =>
-    authStore?.user?.name || authStore?.user?.full_name || signerUsername.value
+    [authStore?.user?.firstName, authStore?.user?.lastName]
+      .filter(Boolean)
+      .join(" ") || signerUsername.value
 );
 
 const hasDirectLocked = computed(() =>

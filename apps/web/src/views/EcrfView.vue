@@ -1383,4 +1383,9 @@ async function submitEcrf() {
   });
   clearDraft();
 }
+
+defineExpose({
+  isReconsentGated,
+  handleCompleteReconsent,
+});
 </script>

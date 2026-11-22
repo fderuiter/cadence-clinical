@@ -675,11 +675,54 @@ const { presentError } = useErrorPresenter();
 const currentStep = ref(1);
 const step1Mode = ref("upload"); // 'upload' | 'wizard'
 const isDragging = ref(false);
+/** @type {import("vue").Ref<File | null>} */
 const selectedFile = ref(null);
 const fileHash = ref("");
+/** @type {import("vue").Ref<HTMLInputElement | null>} */
 const fileInputRef = ref(null);
 const extractionProgress = ref(0);
 const currentStageIndex = ref(0);
+/**
+ * @typedef {Object} ProtocolExtractionActivity
+ * @property {string} activity_name
+ * @property {string} cdash_domain
+ * @property {string} biomedical_concept_code
+ * @property {string[]} assigned_visit_names
+ */
+
+/**
+ * @typedef {Object} ProtocolExtractionData
+ * @property {string} [study_title]
+ * @property {string} [protocol_id]
+ * @property {string} [phase]
+ * @property {string} [therapeutic_area]
+ * @property {number} [confidence_score]
+ * @property {Array<Record<string, unknown>>} arms
+ * @property {Array<Record<string, unknown>>} epochs
+ * @property {Array<Record<string, unknown>>} visits
+ * @property {ProtocolExtractionActivity[]} activities
+ * @property {Array<Record<string, unknown>>} criteria
+ */
+
+/**
+ * @typedef {Object} UnmappedConceptToken
+ * @property {string} code
+ * @property {string} name
+ * @property {string} [sourceNodeId]
+ */
+
+/**
+ * @typedef {Object} ResolvedConceptMapping
+ * @property {string} [sourceNodeId]
+ * @property {string} [originalCode]
+ * @property {string} resolvedCode
+ * @property {string | null} [resolvedName]
+ * @property {string} [resolutionType]
+ * @property {string | null} [findingJustification]
+ * @property {string} [action]
+ */
+
+/** @type {import("vue").Ref<ProtocolExtractionData | null>} */
 const rawExtractionData = ref(null);
 
 const handleWizardSynthesize = (synthesizedUSDM) => {
@@ -696,7 +739,9 @@ const committed = ref(false);
 
 // USDM Concept Staging Drawer State
 const isConceptStagingOpen = ref(false);
+/** @type {import("vue").Ref<UnmappedConceptToken[]>} */
 const unmappedConceptTokens = ref([]);
+/** @type {import("vue").Ref<ResolvedConceptMapping[]>} */
 const resolvedConceptMappings = ref([]);
 
 // DAG Job & Escalation State
@@ -1006,6 +1051,9 @@ const triggerConceptStaging = (tokens = []) => {
   isConceptStagingOpen.value = true;
 };
 
+/**
+ * @param {{ resolvedMappings: ResolvedConceptMapping[], auditEntry?: Record<string, unknown> }} payload
+ */
 const handleConceptMappingsConfirmed = ({ resolvedMappings }) => {
   resolvedConceptMappings.value = resolvedMappings;
   if (rawExtractionData.value && rawExtractionData.value.activities) {
@@ -1262,6 +1310,24 @@ const commitAndActivateEDC = async () => {
     isCommitting.value = false;
   }
 };
+
+defineExpose({
+  selectedFile,
+  rawExtractionData,
+  currentStep,
+  _triggerEscalation,
+  signatureUsername,
+  signatureReason,
+  isPendingReview,
+  dagJobStatus,
+  triggerConceptStaging,
+  isConceptStagingOpen,
+  handleConceptMappingsConfirmed,
+  unmappedConceptTokens,
+  resolvedConceptMappings,
+  step1Mode,
+  handleWizardSynthesize,
+});
 </script>
 
 <style scoped>

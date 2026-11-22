@@ -1840,6 +1840,13 @@ async function submitInfusion() {
 onMounted(() => {
   fetchTraceability();
 });
+
+defineExpose({
+  cocData,
+  openMilestoneModal,
+  handleFileUpload,
+  submitMilestone,
+});
 </script>
 
 <style scoped>

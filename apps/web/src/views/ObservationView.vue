@@ -415,7 +415,7 @@ watch(
         (s) => s.level === "study" && s.mask === null
       );
       if (!props.studyRef && !props.studyCode) {
-        observationStudyRef.value = studyStep?.node ?? null;
+        observationStudyRef.value = studyStep?.ref ?? null;
       }
       const enrollmentStep = steps.find(
         (s) => s.level === "enrollment" && s.mask === null

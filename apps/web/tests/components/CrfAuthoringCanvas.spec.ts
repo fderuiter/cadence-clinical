@@ -4,7 +4,10 @@ import { createPinia, setActivePinia } from "pinia";
 import CrfAuthoringCanvas from "../../src/components/crf/CrfAuthoringCanvas.vue";
 import FormSectionContainer from "../../src/components/crf/FormSectionContainer.vue";
 import CanvasFieldWidget from "../../src/components/crf/CanvasFieldWidget.vue";
-import { useDesignerStore } from "../../src/stores/designer.js";
+import {
+  useDesignerStore,
+  type DesignerField,
+} from "../../src/stores/designer.js";
 
 // Mock draggable to make tests synchronous and easier to test without full sortablejs drag interactions
 vi.mock("vuedraggable", () => {
@@ -173,7 +176,7 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       id: "section-1",
       name: "Demographics",
       isCollapsed: false,
-      items: [],
+      items: [] as DesignerField[],
     };
 
     const store = useDesignerStore();
@@ -476,7 +479,7 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
 
       const widget = wrapper.findComponent(CanvasFieldWidget);
       // Verify standard text input doesn't have touch target helper classes
-      let inputElement = widget.find("input[type='text']");
+      const inputElement = widget.find("input[type='text']");
       expect(inputElement.classes()).not.toContain("touch-target-interactive");
 
       // Switch to tablet: touch simulation active, should append touch classes!
@@ -533,6 +536,7 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
         ],
       };
       store.activeForm = JSON.parse(JSON.stringify(formSchema));
+      if (!store.activeForm) throw new Error("Expected activeForm");
 
       const wrapper = mount(CrfAuthoringCanvas, {
         props: {
@@ -556,9 +560,9 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       await sec2MoveUp.trigger("click");
 
       // Verify order changed to Sec 2, Sec 1, Sec 3
-      expect(store.activeForm.sections[0].id).toBe("sec-2");
-      expect(store.activeForm.sections[1].id).toBe("sec-1");
-      expect(store.activeForm.sections[2].id).toBe("sec-3");
+      expect(store.activeForm?.sections[0].id).toBe("sec-2");
+      expect(store.activeForm?.sections[1].id).toBe("sec-1");
+      expect(store.activeForm?.sections[2].id).toBe("sec-3");
 
       // Now click Move Down on Section 2 (which is now at index 0)
       const sec2MoveDown = wrapper
@@ -567,9 +571,9 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       await sec2MoveDown.trigger("click");
 
       // Verify order restored to Sec 1, Sec 2, Sec 3
-      expect(store.activeForm.sections[0].id).toBe("sec-1");
-      expect(store.activeForm.sections[1].id).toBe("sec-2");
-      expect(store.activeForm.sections[2].id).toBe("sec-3");
+      expect(store.activeForm?.sections[0].id).toBe("sec-1");
+      expect(store.activeForm?.sections[1].id).toBe("sec-2");
+      expect(store.activeForm?.sections[2].id).toBe("sec-3");
     });
 
     it("reorders field widgets when move action buttons are clicked and respects boundary limits", async () => {

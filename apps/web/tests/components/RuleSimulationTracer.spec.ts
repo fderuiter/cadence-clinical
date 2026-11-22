@@ -175,9 +175,9 @@ describe("Client-Side Embedded Rule Simulation Canvas & Live Execution Tracer", 
     expect(trace.val).toBe(true);
     expect(trace.operator).toBe(">");
     expect(trace.referencedFields).toContain("VS_SYSBP");
-    expect(trace.children.length).toBe(2);
-    expect(trace.children[0].val).toBe(150);
-    expect(trace.children[1].val).toBe(140);
+    expect(trace.children?.length).toBe(2);
+    expect(trace.children?.[0].val).toBe(150);
+    expect(trace.children?.[1].val).toBe(140);
   });
 
   it("pre-fills standard mock subject profiles in simulation mode", async () => {
@@ -198,7 +198,7 @@ describe("Client-Side Embedded Rule Simulation Canvas & Live Execution Tracer", 
     await profileSelect.trigger("change");
     await wrapper.vm.$nextTick();
 
-    const sysbpInput = wrapper.find("#widget-VS_SYSBP") as any;
+    const sysbpInput = wrapper.find<HTMLInputElement>("#widget-VS_SYSBP");
     expect(sysbpInput.element.value).toBe("165");
   });
 
