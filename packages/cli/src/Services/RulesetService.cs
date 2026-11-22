@@ -28,6 +28,9 @@ public static partial class RulesetService
     /// <summary>The merge-conflict status check display name emitted by <c>.github/workflows/conflict-check.yml</c>.</summary>
     public const string ConflictCheckName = "Check for Merge Conflicts";
 
+    private const string ConflictCheckWorkflowFile = "conflict-check.yml";
+    private const string ConflictCheckJobKey = "conflict-check";
+
     private const string Tag = "[RULESETS]";
 
     private static readonly string[] RequiredRulesetFiles =
@@ -37,10 +40,17 @@ public static partial class RulesetService
         "version_tags.json",
     ];
 
+    private static readonly string[] RequiredConflictCheckTypes =
+    [
+        "opened",
+        "synchronize",
+        "reopened",
+        "edited",
+    ];
+
     private static readonly HashSet<string> ExcludedPrOrchestrationJobKeys = new(StringComparer.Ordinal)
     {
         "classify",
-        "automerge",
     };
 
     /// <summary>Outcome of a child command invocation (<c>gh</c> or <c>git</c>).</summary>
@@ -67,9 +77,14 @@ public static partial class RulesetService
         bool? StrictStatusChecks,
         IReadOnlyList<StatusCheckEntry> RequiredStatusChecks);
 
+    private sealed record PullRequestTriggerInfo(
+        bool OnPullRequest,
+        bool HasExplicitTypes,
+        IReadOnlySet<string> Types);
+
     private sealed record WorkflowJobInfo(
         string WorkflowFile,
-        bool OnPullRequest,
+        PullRequestTriggerInfo PullRequestTrigger,
         string Key,
         string Name,
         string? IfCondition,
@@ -77,11 +92,14 @@ public static partial class RulesetService
         bool HasMatrix,
         IReadOnlyList<string> Needs,
         IReadOnlyDictionary<string, string> StepEnv,
-        string StepRun);
+        string StepRun)
+    {
+        public bool OnPullRequest => PullRequestTrigger.OnPullRequest;
+    }
 
     /// <summary>
     /// Validates <c>.github/rulesets/*.json</c>, strict status check policy, <c>CI Gate</c> upstream job coverage,
-    /// and workflow check-context parity. Returns <c>0</c> when valid and <c>1</c> when any check fails.
+    /// fail-closed <c>conflict-check.yml</c> parity, and workflow check-context parity. Returns <c>0</c> when valid and <c>1</c> when any check fails.
     /// </summary>
     public static int Validate(string? repoRoot = null, TextWriter? output = null)
     {
@@ -100,6 +118,7 @@ public static partial class RulesetService
             }
 
             ValidateCiGateCoverage(workflowJobs, errors);
+            ValidateConflictCheckAndMergePolicy(workflowJobs, errors);
         }
 
         if (errors.Count > 0)
@@ -152,6 +171,7 @@ public static partial class RulesetService
             }
 
             ValidateCiGateCoverage(workflowJobs, errors);
+            ValidateConflictCheckAndMergePolicy(workflowJobs, errors);
         }
 
         if (errors.Count > 0)
@@ -722,6 +742,12 @@ public static partial class RulesetService
             errors.Add("Required workflow '.github/workflows/ci.yml' is missing.");
         }
 
+        string conflictPath = Path.Combine(workflowsDir, ConflictCheckWorkflowFile);
+        if (!File.Exists(conflictPath))
+        {
+            errors.Add($"Required workflow '.github/workflows/{ConflictCheckWorkflowFile}' is missing.");
+        }
+
         string[] workflowFiles = Directory.GetFiles(workflowsDir, "*.yml", SearchOption.TopDirectoryOnly)
             .Concat(Directory.GetFiles(workflowsDir, "*.yaml", SearchOption.TopDirectoryOnly))
             .Order(StringComparer.Ordinal)
@@ -805,6 +831,11 @@ public static partial class RulesetService
             errors.Add($".github/workflows/ci.yml: job '{CiGateJobKey}' must set 'if: always()' so failed or skipped upstream jobs fail the gate.");
         }
 
+        if (ciGate.PullRequestTrigger.HasExplicitTypes && !ciGate.PullRequestTrigger.Types.Contains("edited"))
+        {
+            errors.Add(".github/workflows/ci.yml: 'on.pull_request.types' must include 'edited' when explicit activity types are configured.");
+        }
+
         var expectedValidationJobs = ciJobs
             .Where(j => j.Key != CiGateJobKey && !IsPushOnlyJob(j) && !ExcludedPrOrchestrationJobKeys.Contains(j.Key))
             .ToList();
@@ -823,7 +854,6 @@ public static partial class RulesetService
         }
 
         ValidateCiGateResultEvaluations(ciGate, expectedValidationJobs, errors);
-        ValidateAutomergeWaitsOnCiGate(ciJobs, errors);
     }
 
     private static void ValidateCiGateResultEvaluations(
@@ -876,22 +906,67 @@ public static partial class RulesetService
         return false;
     }
 
-    private static void ValidateAutomergeWaitsOnCiGate(IReadOnlyList<WorkflowJobInfo> ciJobs, List<string> errors)
+    private static void ValidateConflictCheckAndMergePolicy(IReadOnlyList<WorkflowJobInfo> workflowJobs, List<string> errors)
     {
-        var automerge = ciJobs.FirstOrDefault(j => j.Key == "automerge");
-        if (automerge is null)
+        foreach (var job in workflowJobs)
+        {
+            if (string.Equals(job.Key, "automerge", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(job.Name, "Enable Automerge", StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add($".github/workflows/{job.WorkflowFile}: job '{job.Key}' is retired; use maintainer-attributed native GitHub auto-merge instead of workflow automerge jobs.");
+            }
+
+            if (GhPrMergeRegex().IsMatch(job.StepRun))
+            {
+                errors.Add($".github/workflows/{job.WorkflowFile}: job '{job.Key}' invokes 'gh pr merge'; GITHUB_TOKEN merges are forbidden because they suppress downstream 'push' workflows.");
+            }
+        }
+
+        var conflictJobs = workflowJobs.Where(j => j.WorkflowFile == ConflictCheckWorkflowFile).ToList();
+        if (conflictJobs.Count == 0)
         {
             return;
         }
 
-        if (!automerge.Needs.Contains(CiGateJobKey, StringComparer.Ordinal))
+        var conflictJob = conflictJobs.FirstOrDefault(j => j.Key == ConflictCheckJobKey)
+            ?? conflictJobs.FirstOrDefault(j => j.Name == ConflictCheckName);
+        if (conflictJob is null)
         {
-            errors.Add($".github/workflows/ci.yml: 'automerge' must include '{CiGateJobKey}' in 'needs'.");
+            errors.Add($".github/workflows/{ConflictCheckWorkflowFile}: missing '{ConflictCheckJobKey}' job ('name: {ConflictCheckName}').");
+            return;
         }
 
-        if (automerge.IfCondition is null || !automerge.IfCondition.Contains($"needs.{CiGateJobKey}.result == 'success'", StringComparison.Ordinal))
+        if (conflictJob.Name != ConflictCheckName)
         {
-            errors.Add($".github/workflows/ci.yml: 'automerge' must check \"needs.{CiGateJobKey}.result == 'success'\" in 'if'.");
+            errors.Add($".github/workflows/{ConflictCheckWorkflowFile}: job '{conflictJob.Key}' must have 'name: {ConflictCheckName}' (found '{conflictJob.Name}').");
+        }
+
+        if (!conflictJob.OnPullRequest || !conflictJob.PullRequestTrigger.HasExplicitTypes)
+        {
+            errors.Add($".github/workflows/{ConflictCheckWorkflowFile}: 'on.pull_request.types' must explicitly include 'opened', 'synchronize', 'reopened', and 'edited' so base-branch edits re-run '{ConflictCheckName}'.");
+        }
+        else
+        {
+            foreach (string requiredType in RequiredConflictCheckTypes)
+            {
+                if (!conflictJob.PullRequestTrigger.Types.Contains(requiredType))
+                {
+                    errors.Add($".github/workflows/{ConflictCheckWorkflowFile}: 'on.pull_request.types' is missing required activity type '{requiredType}'.");
+                }
+            }
+        }
+
+        if (!conflictJob.StepRun.Contains("git merge-tree --write-tree", StringComparison.Ordinal) ||
+            !conflictJob.StepRun.Contains("refs/pull/", StringComparison.Ordinal) ||
+            !conflictJob.StepRun.Contains("exit 1", StringComparison.Ordinal))
+        {
+            errors.Add($".github/workflows/{ConflictCheckWorkflowFile}: '{conflictJob.Key}' must fetch '$GITHUB_REPOSITORY' refs ('refs/pull/<number>/head') and fail closed ('exit 1') using 'git merge-tree --write-tree'.");
+        }
+
+        if (conflictJob.StepRun.Contains("gh pr view", StringComparison.Ordinal) ||
+            conflictJob.StepRun.Contains("UNKNOWN", StringComparison.Ordinal))
+        {
+            errors.Add($".github/workflows/{ConflictCheckWorkflowFile}: '{conflictJob.Key}' must not poll 'gh pr view' or mask 'UNKNOWN' mergeability states.");
         }
     }
 
@@ -1018,7 +1093,7 @@ public static partial class RulesetService
 
     private static List<WorkflowJobInfo> ParseWorkflowJobs(string workflowFile, string[] lines)
     {
-        bool onPullRequest = ParseOnPullRequest(lines);
+        var prTrigger = ParseOnPullRequest(lines);
         var jobs = new List<WorkflowJobInfo>();
 
         int jobsStart = Array.FindIndex(lines, l => l.TrimEnd() == "jobs:");
@@ -1057,16 +1132,22 @@ public static partial class RulesetService
                 jobEnd++;
             }
 
-            jobs.Add(BuildJobInfo(workflowFile, onPullRequest, jobKey, lines[i..jobEnd]));
+            jobs.Add(BuildJobInfo(workflowFile, prTrigger, jobKey, lines[i..jobEnd]));
             i = jobEnd;
         }
 
         return jobs;
     }
 
-    private static bool ParseOnPullRequest(string[] lines)
+    private static PullRequestTriggerInfo ParseOnPullRequest(string[] lines)
     {
         bool inOnBlock = false;
+        bool onPullRequest = false;
+        bool hasExplicitTypes = false;
+        var types = new HashSet<string>(StringComparer.Ordinal);
+        int pullRequestIndent = -1;
+        int typesIndent = -1;
+
         foreach (string raw in lines)
         {
             string line = StripYamlComment(raw);
@@ -1075,36 +1156,129 @@ public static partial class RulesetService
                 break;
             }
 
+            string trimmed = line.Trim();
+            if (trimmed.Length == 0)
+            {
+                continue;
+            }
+
+            int indent = CountLeadingSpaces(line);
             if (line.StartsWith("on:", StringComparison.Ordinal))
             {
                 inOnBlock = true;
+                pullRequestIndent = -1;
+                typesIndent = -1;
                 if (PullRequestTriggerRegex().IsMatch(line))
                 {
-                    return true;
+                    onPullRequest = true;
                 }
 
                 continue;
             }
 
-            if (inOnBlock)
+            if (!inOnBlock)
             {
-                if (line.Length > 0 && line[0] != ' ')
+                continue;
+            }
+
+            if (indent == 0)
+            {
+                inOnBlock = false;
+                pullRequestIndent = -1;
+                typesIndent = -1;
+                continue;
+            }
+
+            if (typesIndent >= 0)
+            {
+                if (indent > typesIndent)
                 {
-                    inOnBlock = false;
+                    AddTriggerTypesFromLine(trimmed, types);
+                    continue;
                 }
-                else if (PullRequestTriggerRegex().IsMatch(line))
+
+                typesIndent = -1;
+            }
+
+            if (pullRequestIndent >= 0)
+            {
+                if (indent <= pullRequestIndent)
                 {
-                    return true;
+                    pullRequestIndent = -1;
                 }
+                else if (trimmed.StartsWith("types:", StringComparison.Ordinal))
+                {
+                    hasExplicitTypes = true;
+                    string afterTypes = trimmed["types:".Length..].Trim();
+                    if (afterTypes.Length > 0 && afterTypes != "[")
+                    {
+                        AddTriggerTypesFromLine(afterTypes, types);
+                        if (afterTypes.StartsWith('[') && !afterTypes.EndsWith(']'))
+                        {
+                            typesIndent = indent;
+                        }
+                    }
+                    else
+                    {
+                        typesIndent = indent;
+                    }
+
+                    continue;
+                }
+            }
+
+            if (trimmed.StartsWith("pull_request:", StringComparison.Ordinal))
+            {
+                onPullRequest = true;
+                pullRequestIndent = indent;
+            }
+            else if (PullRequestTriggerRegex().IsMatch(trimmed) && pullRequestIndent < 0)
+            {
+                onPullRequest = true;
             }
         }
 
-        return false;
+        return new PullRequestTriggerInfo(onPullRequest, hasExplicitTypes, types);
+    }
+
+    private static void AddTriggerTypesFromLine(string text, HashSet<string> types)
+    {
+        if (text.StartsWith("- ", StringComparison.Ordinal))
+        {
+            string single = UnquoteYaml(text[2..]);
+            if (single.Length > 0)
+            {
+                types.Add(single);
+            }
+
+            return;
+        }
+
+        string cleaned = text.Trim().TrimStart('[').TrimEnd(']');
+        foreach (string part in cleaned.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            string item = UnquoteYaml(part);
+            if (item.Length > 0)
+            {
+                types.Add(item);
+            }
+        }
+    }
+
+    private static int CountLeadingSpaces(string line)
+    {
+        int count = 0;
+        while (count < line.Length && line[count] == ' ')
+        {
+            count++;
+        }
+
+        return count;
     }
 
     private static WorkflowJobInfo BuildJobInfo(
         string workflowFile,
-        bool onPullRequest,
+        PullRequestTriggerInfo prTrigger,
         string jobKey,
         string[] bodyLines)
     {
@@ -1154,7 +1328,7 @@ public static partial class RulesetService
             }
             else if (prop == "if")
             {
-                ifCond = ReadScalarOrBlock(rest, bodyLines, ref i, minIndent: 6);
+                ifCond = ReadScalarOrBlock(rest, bodyLines, ref i, parentIndent: 4);
             }
             else if (prop == "needs")
             {
@@ -1164,7 +1338,7 @@ public static partial class RulesetService
 
         return new WorkflowJobInfo(
             workflowFile,
-            onPullRequest,
+            prTrigger,
             jobKey,
             string.IsNullOrWhiteSpace(name) ? jobKey : name,
             ifCond,
@@ -1181,45 +1355,66 @@ public static partial class RulesetService
         List<string> stepRuns)
     {
         int i = 0;
-        bool inEnv = false;
+        int stepPropIndent = 8;
+        int envIndent = -1;
         while (i < stepLines.Length)
         {
             string line = stepLines[i];
-            if (line.StartsWith("      - ", StringComparison.Ordinal))
+            if (line.Trim().Length == 0)
             {
-                inEnv = false;
-            }
-
-            if (line.TrimEnd() == "        env:")
-            {
-                inEnv = true;
                 i++;
                 continue;
             }
 
-            if (inEnv)
+            int indent = CountLeadingSpaces(line);
+            string trimmedStart = line[indent..];
+            string stepPropText;
+            if (trimmedStart.StartsWith("- ", StringComparison.Ordinal))
             {
-                if (line.StartsWith("          ", StringComparison.Ordinal))
+                stepPropIndent = indent + 2;
+                envIndent = -1;
+                stepPropText = trimmedStart[2..];
+            }
+            else
+            {
+                if (envIndent >= 0)
                 {
-                    var envMatch = StepEnvEntryRegex().Match(line);
-                    if (envMatch.Success)
+                    if (indent > envIndent)
                     {
-                        stepEnv[envMatch.Groups[1].Value] = envMatch.Groups[2].Value.Trim();
+                        var envMatch = StepEnvEntryRegex().Match(trimmedStart);
+                        if (envMatch.Success)
+                        {
+                            stepEnv[envMatch.Groups[1].Value] = envMatch.Groups[2].Value.Trim();
+                        }
+
+                        i++;
+                        continue;
                     }
 
+                    envIndent = -1;
+                }
+
+                if (indent != stepPropIndent)
+                {
                     i++;
                     continue;
                 }
 
-                inEnv = false;
+                stepPropText = trimmedStart;
             }
 
-            var runMatch = StepRunRegex().Match(line);
-            if (runMatch.Success)
+            if (stepPropText.TrimEnd() == "env:")
             {
-                string inline = runMatch.Groups[1].Value.Trim();
+                envIndent = stepPropIndent;
                 i++;
-                stepRuns.Add(ReadScalarOrBlock(inline, stepLines, ref i, minIndent: 10));
+                continue;
+            }
+
+            if (stepPropText.StartsWith("run:", StringComparison.Ordinal))
+            {
+                string inline = stepPropText["run:".Length..].Trim();
+                i++;
+                stepRuns.Add(ReadScalarOrBlock(inline, stepLines, ref i, parentIndent: stepPropIndent));
                 continue;
             }
 
@@ -1227,14 +1422,14 @@ public static partial class RulesetService
         }
     }
 
-    private static string ReadScalarOrBlock(string inlineValue, string[] lines, ref int index, int minIndent)
+    private static string ReadScalarOrBlock(string inlineValue, string[] lines, ref int index, int parentIndent)
     {
-        if (inlineValue is not ("|" or "|-" or ">" or ">-"))
+        if (inlineValue is not ("|" or "|-" or "|+" or ">" or ">-" or ">+"))
         {
             return UnquoteYaml(inlineValue);
         }
 
-        string indentPrefix = new(' ', minIndent);
+        int blockIndent = -1;
         var collected = new List<string>();
         while (index < lines.Length)
         {
@@ -1246,12 +1441,22 @@ public static partial class RulesetService
                 continue;
             }
 
-            if (!line.StartsWith(indentPrefix, StringComparison.Ordinal))
+            int indent = CountLeadingSpaces(line);
+            if (blockIndent < 0)
+            {
+                if (indent <= parentIndent)
+                {
+                    break;
+                }
+
+                blockIndent = indent;
+            }
+            else if (indent < blockIndent)
             {
                 break;
             }
 
-            collected.Add(line[minIndent..]);
+            collected.Add(line[blockIndent..]);
             index++;
         }
 
@@ -1415,14 +1620,14 @@ public static partial class RulesetService
     [GeneratedRegex(@"^    ([A-Za-z0-9_-]+):(.*)$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex JobPropertyRegex();
 
-    [GeneratedRegex(@"^          ([A-Za-z0-9_]+):\s*(.+)$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex(@"^([A-Za-z0-9_]+):\s*(.+)$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex StepEnvEntryRegex();
-
-    [GeneratedRegex(@"^        run:\s*(.*)$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex StepRunRegex();
 
     [GeneratedRegex(@"\bpull_request\b", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PullRequestTriggerRegex();
+
+    [GeneratedRegex(@"\bgh\s+pr\s+merge\b", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex GhPrMergeRegex();
 
     [GeneratedRegex(@"\s+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex WhitespaceRegex();

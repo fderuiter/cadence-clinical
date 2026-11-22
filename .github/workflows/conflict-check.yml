@@ -2,7 +2,7 @@ name: Conflict Check
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, edited]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -17,38 +17,24 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          ref: ${{ github.event.pull_request.base.ref }}
+          fetch-depth: 0
 
-      - name: Check mergeable status
-        id: check_status
+      - name: Check mergeability with git merge-tree
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          STATUS="UNKNOWN"
-          for _ in {1..6}; do
-            STATUS=$(gh pr view "$PR_NUMBER" --json mergeable --jq .mergeable 2>/dev/null || echo "UNKNOWN")
-            if [ "$STATUS" != "UNKNOWN" ]; then
-              break
-            fi
-            echo "Mergeable status is UNKNOWN. Retrying in 10 seconds..."
-            sleep 10
-          done
-          echo "Final mergeable status: $STATUS"
-          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
-
-      - name: Fail on merge conflict
-        env:
-          STATUS: ${{ steps.check_status.outputs.status }}
-        run: |
-          if [ "$STATUS" = "CONFLICTING" ]; then
-            echo "::error::This pull request has merge conflicts with its base branch. Merge the base branch in and resolve them."
+          set -euo pipefail
+          git fetch --no-tags origin \
+            "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}" \
+            "+refs/pull/${PR_NUMBER}/head:refs/remotes/origin/pr/${PR_NUMBER}"
+          if ! git merge-tree --write-tree "refs/remotes/origin/${BASE_REF}" "refs/remotes/origin/pr/${PR_NUMBER}"; then
+            echo "::error::This pull request has merge conflicts with '${BASE_REF}'. Merge or rebase onto 'origin/${BASE_REF}' and resolve them."
             exit 1
           fi

@@ -369,9 +369,13 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
     [InlineData("docs/SDLC/01_Product_Requirements_Document_PRD.md", false)]
     [InlineData("docs/openapi/execution_openapi.json", false)]
     [InlineData("docs/openapi/README.md", false)]
+    [InlineData("docs/schema/README.md", false)]
+    [InlineData("docs/api/execution.md", false)]
+    [InlineData("docs/CDISC/README.md", false)]
     [InlineData("docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md", false)]
     [InlineData("docs/adr/index.md", false)]
     [InlineData("docs/SRS.md", false)]
+    [InlineData("docs/blog/posts.data.mjs", false)]
     [InlineData("AGENTS.md", false)]
     [InlineData("CLAUDE.md", false)]
     [InlineData("SECURITY.md", false)]
@@ -384,8 +388,16 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
     [InlineData("CONTRIBUTING.md", true)]
     [InlineData("docs/CI.md", true)]
     [InlineData("docs/TESTING.md", true)]
+    [InlineData("docs/blog/index.md", true)]
+    [InlineData("docs/blog/2026-11-19-keeping-cadence-in-one-repository.md", true)]
+    [InlineData("docs/agents/domain.md", true)]
+    [InlineData("docs/ai/AI_AGENTS.md", true)]
+    [InlineData("docs/specs/ecrf_designer_ide_spec.md", true)]
     [InlineData("apps/execution/README.md", true)]
+    [InlineData("apps/safety/Schemas/ich-e2b-r3/README.md", true)]
     [InlineData("packages/cli/README.md", true)]
+    [InlineData("packages/kernel/src/Cadence.Rules/README.md", true)]
+    [InlineData("tests/fixtures/soa/README.md", true)]
     public void CiWorkflowClassifyJob_ClassifiesChangedPathsWithStrictAllowlist(string changedFile, bool expectedSafe)
     {
         if (OperatingSystem.IsWindows())
@@ -427,12 +439,284 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
     }
 
     [Fact]
+    public void ValidateWorkflowSecurity_RejectsForkCheckoutsAndUntrustedHeadRefs()
+    {
+        // 1. Fork repository checkout is rejected
+        Write(".github/workflows/conflict-check.yml", $$$"""
+            name: Conflict Check
+            on:
+              pull_request:
+                types: [opened, synchronize, reopened, edited]
+            permissions:
+              contents: read
+            jobs:
+              conflict-check:
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                steps:
+                  - uses: actions/checkout@{{{ValidCheckoutSha}}} # v7
+                    with:
+                      persist-credentials: false
+                      repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(1);
+
+        // 2. Untrusted pull_request.head.ref checkout is rejected
+        Write(".github/workflows/conflict-check.yml", $$$"""
+            name: Conflict Check
+            on:
+              pull_request:
+                types: [opened, synchronize, reopened, edited]
+            permissions:
+              contents: read
+            jobs:
+              conflict-check:
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                steps:
+                  - uses: actions/checkout@{{{ValidCheckoutSha}}} # v7
+                    with:
+                      persist-credentials: false
+                      ref: ${{ github.event.pull_request.head.ref }}
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(1);
+
+        // 3. Trusted base.ref checkout on GITHUB_REPOSITORY passes
+        Write(".github/workflows/conflict-check.yml", $$$"""
+            name: Conflict Check
+            on:
+              pull_request:
+                types: [opened, synchronize, reopened, edited]
+            permissions:
+              contents: read
+            jobs:
+              conflict-check:
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                steps:
+                  - uses: actions/checkout@{{{ValidCheckoutSha}}} # v7
+                    with:
+                      persist-credentials: false
+                      ref: ${{ github.event.pull_request.base.ref }}
+                      fetch-depth: 0
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(0);
+    }
+
+    [Fact]
+    public void ValidateWorkflowSecurity_RequiresSameRepoForkGuardOnPullRequestWriteScopes()
+    {
+        // 1. Unguarded pull-requests: write with mutating gh pr edit fails
+        Write(".github/workflows/classify.yml", $$$"""
+            name: Classify
+            on:
+              pull_request:
+            permissions:
+              contents: read
+            jobs:
+              classify:
+                if: github.event_name == 'pull_request'
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                  pull-requests: write
+                steps:
+                  - name: Apply label
+                    if: steps.classify.outputs.is_safe == 'true'
+                    run: gh pr edit "$PR_NUMBER" --repo "${{ github.repository }}" --add-label "safe-change"
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(1);
+
+        // 2. Second unguarded mutating step alongside a guarded step still fails
+        Write(".github/workflows/classify.yml", $$$"""
+            name: Classify
+            on:
+              pull_request:
+            permissions:
+              contents: read
+            jobs:
+              classify:
+                if: github.event_name == 'pull_request'
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                  pull-requests: write
+                steps:
+                  - name: Apply label
+                    if: steps.classify.outputs.is_safe == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+                    run: gh pr edit "$PR_NUMBER" --repo "${{ github.repository }}" --add-label "safe-change"
+                  - name: Post comment without fork guard
+                    run: gh pr comment "$PR_NUMBER" --body "hi"
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(1);
+
+        // 3. Read-only gh api step + fork-guarded gh pr edit step passes
+        Write(".github/workflows/classify.yml", $$$"""
+            name: Classify
+            on:
+              pull_request:
+            permissions:
+              contents: read
+            jobs:
+              classify:
+                if: github.event_name == 'pull_request'
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                  pull-requests: write
+                steps:
+                  - name: Read changed files
+                    run: gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files
+                  - name: Apply label
+                    if: steps.classify.outputs.is_safe == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+                    run: gh pr edit "$PR_NUMBER" --repo "${{ github.repository }}" --add-label "safe-change"
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(0);
+    }
+
+    [Fact]
+    public void ValidateWorkflowSecurity_RejectsMaskedShellErrorsAndAllowsExpressions()
+    {
+        // 1. Masked gh pr view error ('|| echo "UNKNOWN"') fails
+        Write(".github/workflows/masked.yml", """
+            name: Masked
+            on: push
+            permissions:
+              contents: read
+            jobs:
+              check:
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                steps:
+                  - name: Masked status
+                    run: |
+                      STATUS=$(gh pr view "$PR_NUMBER" --json mergeable --jq .mergeable 2>/dev/null || echo "UNKNOWN")
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(1);
+
+        // 2. Masked inline command ('|| true') fails
+        Write(".github/workflows/masked.yml", """
+            name: Masked Inline
+            on: push
+            permissions:
+              contents: read
+            jobs:
+              check:
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                steps:
+                  - name: Swallow failure
+                    run: dotnet test || true
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(1);
+
+        // 3. GitHub expression fallbacks and conditional tests pass
+        Write(".github/workflows/masked.yml", $$$"""
+            name: Fail Closed
+            on: push
+            permissions:
+              contents: read
+            jobs:
+              check:
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                steps:
+                  - name: Scoped check
+                    env:
+                      BASE_REF: ${{ github.base_ref || 'main' }}
+                    run: |
+                      echo "Checking ${{ github.event.pull_request.number || '0' }}"
+                      if [ "$BASE_REF" = "main" ] || [ "$BASE_REF" = "release/1.0" ]; then
+                        echo "Valid target"
+                      fi
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(0);
+    }
+
+    [Fact]
+    public void ConflictCheckWorkflow_FailsClosedOnConflictsAndFetchErrorsViaGitMergeTree()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string conflictWorkflowPath = Path.Combine(RepoRoot(), ".github", "workflows", "conflict-check.yml");
+        string raw = File.ReadAllText(conflictWorkflowPath);
+        raw.Should().Contain("types: [opened, synchronize, reopened, edited]");
+        raw.Should().NotContain("pull-requests:");
+        raw.Should().NotContain("head.repo");
+        raw.Should().NotContain("gh pr view");
+
+        string mergeTreeScript = ExtractConflictCheckScript(File.ReadAllLines(conflictWorkflowPath));
+
+        string bareOrigin = Directory.CreateDirectory(Path.Combine(_root, "origin.git")).FullName;
+        string seedWork = Directory.CreateDirectory(Path.Combine(_root, "seed")).FullName;
+        string runnerClone = Path.Combine(_root, "runner");
+
+        RunGit(bareOrigin, "init", "--bare", "--initial-branch=main");
+        RunGit(seedWork, "init", "--initial-branch=main");
+        RunGit(seedWork, "config", "user.email", "ci@example.invalid");
+        RunGit(seedWork, "config", "user.name", "CI Fixture");
+        RunGit(seedWork, "remote", "add", "origin", bareOrigin);
+
+        File.WriteAllText(Path.Combine(seedWork, "shared.txt"), "line-1\nline-2\n");
+        RunGit(seedWork, "add", "shared.txt");
+        RunGit(seedWork, "commit", "-m", "initial");
+        RunGit(seedWork, "push", "origin", "main");
+
+        // PR 42: clean change on a separate file
+        RunGit(seedWork, "checkout", "-b", "pr-clean", "main");
+        File.WriteAllText(Path.Combine(seedWork, "docs.md"), "# Safe change\n");
+        RunGit(seedWork, "add", "docs.md");
+        RunGit(seedWork, "commit", "-m", "add docs");
+        RunGit(seedWork, "push", "origin", "HEAD:refs/pull/42/head");
+
+        // Advance main on shared.txt
+        RunGit(seedWork, "checkout", "main");
+        File.WriteAllText(Path.Combine(seedWork, "shared.txt"), "main-updated\nline-2\n");
+        RunGit(seedWork, "add", "shared.txt");
+        RunGit(seedWork, "commit", "-m", "advance main");
+        RunGit(seedWork, "push", "origin", "main");
+
+        // PR 43: conflicting edit to shared.txt from initial base
+        RunGit(seedWork, "checkout", "-b", "pr-conflict", "HEAD~1");
+        File.WriteAllText(Path.Combine(seedWork, "shared.txt"), "fork-conflicting-edit\nline-2\n");
+        RunGit(seedWork, "add", "shared.txt");
+        RunGit(seedWork, "commit", "-m", "conflicting edit");
+        RunGit(seedWork, "push", "origin", "HEAD:refs/pull/43/head");
+
+        RunGit(_root, "clone", "--branch", "main", bareOrigin, runnerClone);
+
+        // 1. Clean PR passes (exit 0)
+        var (cleanExit, cleanOut, cleanErr) = RunConflictScript(runnerClone, mergeTreeScript, "main", "42");
+        cleanExit.Should().Be(0, $"clean PR should merge cleanly: {cleanOut}\n{cleanErr}");
+
+        // 2. Conflicting PR fails closed (exit 1)
+        var (conflictExit, conflictOut, _) = RunConflictScript(runnerClone, mergeTreeScript, "main", "43");
+        conflictExit.Should().NotBe(0);
+        conflictOut.Should().Contain("::error::");
+
+        // 3. Missing PR ref / fetch error fails closed (exit non-zero)
+        var (missingExit, _, _) = RunConflictScript(runnerClone, mergeTreeScript, "main", "999");
+        missingExit.Should().NotBe(0);
+    }
+
+    [Fact]
     public void CiAndSanitizeWorkflows_EnforceLeastPrivilegeAndFailLoudlyOnLabels()
     {
         string ciContent = File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml"));
         ciContent.Should().NotContain("gh label create", "classify must not recreate repository labels on pull requests");
         ciContent.Should().NotContain("Failed to apply label. Ignoring.", "classify must fail loudly on label errors");
         ciContent.Should().NotContain("check-action-pinning.py", "retired Python pinning script must not be invoked");
+        ciContent.Should().NotContain("gh pr merge", "GITHUB_TOKEN automerge must remain retired so merges trigger push workflows");
+        ciContent.Should().Contain("steps.classify.outputs.is_safe == 'true' && github.event.pull_request.head.repo.full_name == github.repository");
 
         File.Exists(Path.Combine(RepoRoot(), "scripts", "check-action-pinning.py")).Should().BeFalse();
 
@@ -445,6 +729,63 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
             "GITHUB_TOKEN cannot edit issue comments authored by external GitHub Apps");
         sanitizeContent.Should().NotContain("pull-requests: write");
         sanitizeContent.Should().Contain("issues: write");
+    }
+
+    private static string ExtractConflictCheckScript(string[] lines)
+    {
+        int start = Array.FindIndex(lines, l => l.Trim() == "set -euo pipefail");
+        start.Should().BeGreaterThan(0);
+
+        var scriptLines = lines[start..]
+            .TakeWhile(l => l.Length == 0 || l.StartsWith("          ", StringComparison.Ordinal))
+            .Select(l => l.Length >= 10 ? l[10..] : string.Empty);
+        return string.Join('\n', scriptLines);
+    }
+
+    private static void RunGit(string workingDir, params string[] args)
+    {
+        var psi = new ProcessStartInfo("git")
+        {
+            WorkingDirectory = workingDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        foreach (string arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var proc = Process.Start(psi)!;
+        string stderr = proc.StandardError.ReadToEnd();
+        proc.StandardOutput.ReadToEnd();
+        proc.WaitForExit();
+        proc.ExitCode.Should().Be(0, $"git {string.Join(' ', args)} failed: {stderr}");
+    }
+
+    private static (int ExitCode, string Stdout, string Stderr) RunConflictScript(
+        string workingDir,
+        string script,
+        string baseRef,
+        string prNumber)
+    {
+        var psi = new ProcessStartInfo("bash")
+        {
+            WorkingDirectory = workingDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        psi.Environment["BASE_REF"] = baseRef;
+        psi.Environment["PR_NUMBER"] = prNumber;
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add(script);
+
+        using var proc = Process.Start(psi)!;
+        string stderr = proc.StandardError.ReadToEnd();
+        string stdout = proc.StandardOutput.ReadToEnd();
+        proc.WaitForExit();
+        return (proc.ExitCode, stdout, stderr);
     }
 
     private static string ExtractClassifyLoopFromCiWorkflow(string[] lines)

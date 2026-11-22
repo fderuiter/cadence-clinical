@@ -188,7 +188,9 @@ public static partial class WorkflowSecurityValidatorService
         if (isWorkflow)
         {
             var workflow = ParseWorkflowFile(lines);
-            ValidateWorkflowPermissionsAndTriggers(relativePath, workflow, errors);
+            bool triggersPullRequest = workflow.Triggers.Contains("pull_request") ||
+                                       workflow.Triggers.Contains("pull_request_target");
+            ValidateWorkflowPermissionsAndTriggers(relativePath, workflow, triggersPullRequest, errors);
             foreach (var uses in workflow.JobUses)
             {
                 ValidateUsesReference(relativePath, uses, errors);
@@ -196,7 +198,7 @@ public static partial class WorkflowSecurityValidatorService
 
             foreach (var step in workflow.Steps)
             {
-                ValidateStep(relativePath, step, errors);
+                ValidateStep(relativePath, step, triggersPullRequest, errors);
             }
         }
         else
@@ -209,7 +211,7 @@ public static partial class WorkflowSecurityValidatorService
 
             foreach (var step in action.Steps)
             {
-                ValidateStep(relativePath, step, errors);
+                ValidateStep(relativePath, step, triggersPullRequest: false, errors);
             }
         }
     }
@@ -217,6 +219,7 @@ public static partial class WorkflowSecurityValidatorService
     private static void ValidateWorkflowPermissionsAndTriggers(
         string relativePath,
         ParsedWorkflow workflow,
+        bool triggersPullRequest,
         List<string> errors)
     {
         if (!workflow.HasTopLevelPermissions)
@@ -228,8 +231,6 @@ public static partial class WorkflowSecurityValidatorService
             ValidateTopLevelPermissions(relativePath, workflow, errors);
         }
 
-        bool triggersPullRequest = workflow.Triggers.Contains("pull_request") ||
-                                   workflow.Triggers.Contains("pull_request_target");
         bool triggersIssueComment = workflow.Triggers.Contains("issue_comment");
 
         foreach (var job in workflow.Jobs)
@@ -295,6 +296,19 @@ public static partial class WorkflowSecurityValidatorService
             }
         }
 
+        if (triggersPullRequest && !restrictedToPushOrDispatch)
+        {
+            var nonContentsWrites = job.Permissions
+                .Where(p => !string.Equals(p.Scope, "contents", StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(p.Access, "write", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (nonContentsWrites.Count > 0 && !HasSameRepoForkGuard(jobIf))
+            {
+                ValidatePullRequestJobStepForkGuards(relativePath, job, nonContentsWrites, errors);
+            }
+        }
+
         if (triggersIssueComment && !restrictedToPushOrDispatch)
         {
             foreach (var perm in job.Permissions.Where(p =>
@@ -309,6 +323,90 @@ public static partial class WorkflowSecurityValidatorService
                 errors.Add($"{relativePath}:{job.LineNumber}: Job '{job.Key}' grants write permissions on 'issue_comment' without gating on 'github.event.comment.user.type == 'Bot'' and an explicit allowed bot login.");
             }
         }
+    }
+
+    private static void ValidatePullRequestJobStepForkGuards(
+        string relativePath,
+        ParsedJob job,
+        List<PermissionEntry> nonContentsWrites,
+        List<string> errors)
+    {
+        bool anyGuardedStep = false;
+        bool reportedUnguardedMutatingStep = false;
+        string scopesSummary = string.Join(", ", nonContentsWrites.Select(p => $"{p.Scope}: write"));
+
+        foreach (var step in job.Steps)
+        {
+            bool stepGuarded = HasSameRepoForkGuard(step.IfExpression) ||
+                               IsRestrictedToPushOrDispatchOnly(step.IfExpression);
+            if (stepGuarded)
+            {
+                anyGuardedStep = true;
+                continue;
+            }
+
+            if (IsMutatingPullRequestStep(step))
+            {
+                reportedUnguardedMutatingStep = true;
+                errors.Add(
+                    $"{relativePath}:{step.LineNumber}: Job '{job.Key}' grants write permissions ({scopesSummary}) on a pull_request workflow, and mutating step lacks a same-repository fork guard ('github.event.pull_request.head.repo.full_name == github.repository').");
+            }
+        }
+
+        if (!anyGuardedStep && !reportedUnguardedMutatingStep)
+        {
+            foreach (var perm in nonContentsWrites)
+            {
+                errors.Add(
+                    $"{relativePath}:{perm.LineNumber}: Job '{job.Key}' grants '{perm.Scope}: write' on a pull_request workflow without gating the job or its write steps on 'github.event.pull_request.head.repo.full_name == github.repository'.");
+            }
+        }
+    }
+
+    private static bool HasSameRepoForkGuard(string expression)
+    {
+        if (string.IsNullOrWhiteSpace(expression))
+        {
+            return false;
+        }
+
+        if (PullRequestEventOrBypassRegex().IsMatch(expression))
+        {
+            return false;
+        }
+
+        return SameRepoForkGuardRegex().IsMatch(expression);
+    }
+
+    private static bool IsMutatingPullRequestStep(ParsedStep step)
+    {
+        if (step.Uses is { } uses)
+        {
+            ExtractUsesRefAndComment(uses.RawValue, out string actionRef, out _);
+            int atIdx = actionRef.IndexOf('@', StringComparison.Ordinal);
+            string slug = atIdx > 0 ? actionRef[..atIdx] : actionRef;
+            if (slug.StartsWith("github/codeql-action/upload-sarif", StringComparison.OrdinalIgnoreCase) ||
+                slug.StartsWith("actions/github-script", StringComparison.OrdinalIgnoreCase) ||
+                slug.StartsWith("actions/deploy-pages", StringComparison.OrdinalIgnoreCase) ||
+                slug.StartsWith("actions/attest-build-provenance", StringComparison.OrdinalIgnoreCase) ||
+                slug.StartsWith("peter-evans/", StringComparison.OrdinalIgnoreCase) ||
+                slug.StartsWith("marocchino/", StringComparison.OrdinalIgnoreCase) ||
+                slug.StartsWith("softprops/", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        if (step.RunLines.Count == 0)
+        {
+            return false;
+        }
+
+        string combinedScript = string.Join(
+            '\n',
+            step.RunLines.Select(l => StripShellComment(StripGitHubExpressions(l.Text))));
+        return MutatingGhCliCommandRegex().IsMatch(combinedScript) ||
+               (GhApiInvocationRegex().IsMatch(combinedScript) && GhApiMutatingFlagRegex().IsMatch(combinedScript));
     }
 
     private static bool IsRestrictedToPushOrDispatchOnly(string jobIf)
@@ -338,20 +436,102 @@ public static partial class WorkflowSecurityValidatorService
         return checksBotType && checksAllowedLogin;
     }
 
-    private static void ValidateStep(string relativePath, ParsedStep step, List<string> errors)
+    private static void ValidateStep(
+        string relativePath,
+        ParsedStep step,
+        bool triggersPullRequest,
+        List<string> errors)
     {
-        if (step.Uses is not { } uses)
+        if (step.Uses is { } uses)
         {
-            return;
+            string? actionName = ValidateUsesReference(relativePath, uses, errors);
+            if (actionName is not null && IsCheckoutAction(actionName))
+            {
+                if (!string.Equals(step.PersistCredentials, "false", StringComparison.OrdinalIgnoreCase))
+                {
+                    errors.Add($"{relativePath}:{uses.LineNumber}: Step using '{actionName}' must set 'persist-credentials: false' under 'with:'.");
+                }
+
+                if (step.CheckoutRepository is { } checkoutRepo)
+                {
+                    bool isSelfRepo = SelfRepositoryExpressionRegex().IsMatch(checkoutRepo.Value);
+                    if (checkoutRepo.Value.Contains("head.repo", StringComparison.OrdinalIgnoreCase) ||
+                        checkoutRepo.Value.Contains("head_ref", StringComparison.OrdinalIgnoreCase) ||
+                        (triggersPullRequest && !isSelfRepo))
+                    {
+                        errors.Add($"{relativePath}:{checkoutRepo.LineNumber}: Step using '{actionName}' sets 'repository: {checkoutRepo.Value}'; checking out fork or external pull request repositories is forbidden.");
+                    }
+                }
+
+                if (step.CheckoutRef is { } checkoutRef &&
+                    (checkoutRef.Value.Contains("pull_request.head.", StringComparison.OrdinalIgnoreCase) ||
+                     checkoutRef.Value.Contains("github.head_ref", StringComparison.OrdinalIgnoreCase)))
+                {
+                    errors.Add($"{relativePath}:{checkoutRef.LineNumber}: Step using '{actionName}' sets 'ref: {checkoutRef.Value}'; checking out untrusted pull request head refs is forbidden (fetch refs from '$GITHUB_REPOSITORY' instead).");
+                }
+            }
         }
 
-        string? actionName = ValidateUsesReference(relativePath, uses, errors);
-        if (actionName is not null &&
-            IsCheckoutAction(actionName) &&
-            !string.Equals(step.PersistCredentials, "false", StringComparison.OrdinalIgnoreCase))
+        ValidateStepRunScript(relativePath, step, errors);
+    }
+
+    private static void ValidateStepRunScript(string relativePath, ParsedStep step, List<string> errors)
+    {
+        foreach (var (lineNumber, rawLine) in step.RunLines)
         {
-            errors.Add($"{relativePath}:{uses.LineNumber}: Step using '{actionName}' must set 'persist-credentials: false' under 'with:'.");
+            string sanitized = StripShellComment(StripGitHubExpressions(rawLine));
+            if (sanitized.Length == 0)
+            {
+                continue;
+            }
+
+            if (MaskedShellErrorRegex().IsMatch(sanitized))
+            {
+                errors.Add($"{relativePath}:{lineNumber}: Step 'run:' script masks command failure with a fallback ('|| ...'); fail closed instead of swallowing errors.");
+            }
         }
+    }
+
+    private static string StripGitHubExpressions(string line) =>
+        GitHubExpressionRegex().Replace(line, "EXPR");
+
+    private static string StripShellComment(string line)
+    {
+        char quote = '\0';
+        int index = 0;
+        while (index < line.Length)
+        {
+            char ch = line[index];
+            if (quote != '\0')
+            {
+                if (ch == '\\' && quote == '"' && index + 1 < line.Length)
+                {
+                    index += 2;
+                    continue;
+                }
+
+                if (ch == quote)
+                {
+                    quote = '\0';
+                }
+
+                index++;
+                continue;
+            }
+
+            if (ch is '\'' or '"')
+            {
+                quote = ch;
+            }
+            else if (ch == '#' && (index == 0 || char.IsWhiteSpace(line[index - 1])))
+            {
+                return line[..index].TrimEnd();
+            }
+
+            index++;
+        }
+
+        return line.Trim();
     }
 
     private static bool IsCheckoutAction(string actionName) =>
@@ -492,12 +672,17 @@ public static partial class WorkflowSecurityValidatorService
                     {
                         currentJob.AppendIf(StripInlineComment(trimmed));
                     }
+                    else
+                    {
+                        stepTracker.CaptureBlockLine(rawLine, trimmed, lineNumber);
+                    }
 
                     continue;
                 }
 
                 blockParentIndent = -1;
                 captureBlockIntoJobIf = false;
+                stepTracker.EndBlockScalar();
             }
 
             if (trimmed.Length == 0 || trimmed.StartsWith('#'))
@@ -507,7 +692,7 @@ public static partial class WorkflowSecurityValidatorService
 
             if (indent == 0 && !trimmed.StartsWith('-'))
             {
-                stepTracker.Flush(workflow.Steps);
+                stepTracker.Flush(workflow.Steps, currentJob?.Steps);
                 currentJob = null;
                 jobSection = JobSection.None;
                 topSection = ParseTopLevelLine(trimmed, lineNumber, workflow, ref blockParentIndent);
@@ -541,7 +726,7 @@ public static partial class WorkflowSecurityValidatorService
             }
         }
 
-        stepTracker.Flush(workflow.Steps);
+        stepTracker.Flush(workflow.Steps, currentJob?.Steps);
         return workflow;
     }
 
@@ -641,7 +826,7 @@ public static partial class WorkflowSecurityValidatorService
             {
                 jobsChildIndent = indent;
                 jobPropIndent = -1;
-                stepTracker.Flush(workflow.Steps);
+                stepTracker.Flush(workflow.Steps, currentJob?.Steps);
                 currentJob = new ParsedJob(jobKey, lineNumber);
                 workflow.Jobs.Add(currentJob);
                 jobSection = JobSection.None;
@@ -658,7 +843,7 @@ public static partial class WorkflowSecurityValidatorService
         if (!trimmed.StartsWith('-') && indent > jobsChildIndent && (jobPropIndent < 0 || indent == jobPropIndent))
         {
             jobPropIndent = indent;
-            stepTracker.Flush(workflow.Steps);
+            stepTracker.Flush(workflow.Steps, currentJob.Steps);
             jobSection = ParseJobPropertyLine(
                 trimmed,
                 indent,
@@ -677,7 +862,7 @@ public static partial class WorkflowSecurityValidatorService
         }
         else if (jobSection == JobSection.Steps)
         {
-            stepTracker.ProcessLine(trimmed, indent, lineNumber, workflow.Steps, ref blockParentIndent);
+            stepTracker.ProcessLine(trimmed, indent, lineNumber, workflow.Steps, currentJob.Steps, ref blockParentIndent);
         }
     }
 
@@ -773,10 +958,12 @@ public static partial class WorkflowSecurityValidatorService
             {
                 if (trimmed.Length == 0 || indent > blockParentIndent)
                 {
+                    stepTracker.CaptureBlockLine(rawLine, trimmed, lineNumber);
                     continue;
                 }
 
                 blockParentIndent = -1;
+                stepTracker.EndBlockScalar();
             }
 
             if (trimmed.Length == 0 || trimmed.StartsWith('#'))
@@ -840,7 +1027,7 @@ public static partial class WorkflowSecurityValidatorService
 
             if (inSteps)
             {
-                stepTracker.ProcessLine(trimmed, indent, lineNumber, action.Steps, ref blockParentIndent);
+                stepTracker.ProcessLine(trimmed, indent, lineNumber, action.Steps, jobSteps: null, ref blockParentIndent);
             }
         }
 
@@ -991,6 +1178,30 @@ public static partial class WorkflowSecurityValidatorService
     [GeneratedRegex(@"user\.login\s*==\s*['""][A-Za-z0-9_-]+\[bot\]['""]")]
     private static partial Regex BotLoginAllowlistRegex();
 
+    [GeneratedRegex(@"(?:github\.event\.pull_request\.head\.repo\.full_name\s*==\s*github\.repository|github\.repository\s*==\s*github\.event\.pull_request\.head\.repo\.full_name)")]
+    private static partial Regex SameRepoForkGuardRegex();
+
+    [GeneratedRegex(@"github\.event_name\s*==\s*['""]pull_request(?:_target)?['""]\s*\|\|")]
+    private static partial Regex PullRequestEventOrBypassRegex();
+
+    [GeneratedRegex(@"^\$\{\{\s*github\.repository\s*\}\}$")]
+    private static partial Regex SelfRepositoryExpressionRegex();
+
+    [GeneratedRegex(@"\$\{\{.*?\}\}")]
+    private static partial Regex GitHubExpressionRegex();
+
+    [GeneratedRegex(@"\|\|\s*(?:true\b|:(?:\s|$|;|\))|exit\s+0\b|echo\b|printf\b)")]
+    private static partial Regex MaskedShellErrorRegex();
+
+    [GeneratedRegex(@"\bgh\s+(?:pr\s+(?:edit|comment|merge|review|close|reopen|ready|lock|unlock|create)|(?:issue|label|release)\s+(?:create|edit|delete|comment|close|reopen|upload))\b")]
+    private static partial Regex MutatingGhCliCommandRegex();
+
+    [GeneratedRegex(@"\bgh\s+api\b")]
+    private static partial Regex GhApiInvocationRegex();
+
+    [GeneratedRegex(@"(?:\s-X\s*(?:POST|PUT|PATCH|DELETE)\b|--method(?:=|\s+)(?:POST|PUT|PATCH|DELETE)\b|\s-[fF]\b|--(?:raw-)?field\b|--input\b)", RegexOptions.IgnoreCase)]
+    private static partial Regex GhApiMutatingFlagRegex();
+
     private enum TopSection
     {
         None,
@@ -1006,15 +1217,49 @@ public static partial class WorkflowSecurityValidatorService
         Steps,
     }
 
+    private enum StepBlockMode
+    {
+        None,
+        If,
+        Run,
+    }
+
     private sealed record UsesEntry(int LineNumber, string RawValue);
 
     private sealed record PermissionEntry(string Scope, string Access, int LineNumber);
 
     private sealed class ParsedStep
     {
+        private readonly StringBuilder _ifBuilder = new();
+
+        public int LineNumber { get; init; } = 1;
+
         public UsesEntry? Uses { get; set; }
 
         public string? PersistCredentials { get; set; }
+
+        public (int LineNumber, string Value)? CheckoutRepository { get; set; }
+
+        public (int LineNumber, string Value)? CheckoutRef { get; set; }
+
+        public List<(int LineNumber, string Text)> RunLines { get; } = [];
+
+        public string IfExpression => _ifBuilder.ToString();
+
+        public void AppendIf(string fragment)
+        {
+            if (fragment.Length == 0)
+            {
+                return;
+            }
+
+            if (_ifBuilder.Length > 0)
+            {
+                _ifBuilder.Append(' ');
+            }
+
+            _ifBuilder.Append(fragment);
+        }
     }
 
     private sealed class ParsedJob(string key, int lineNumber)
@@ -1030,6 +1275,8 @@ public static partial class WorkflowSecurityValidatorService
         public string? PermissionsScalar { get; set; }
 
         public List<PermissionEntry> Permissions { get; } = [];
+
+        public List<ParsedStep> Steps { get; } = [];
 
         public string IfExpression => _ifBuilder.ToString();
 
@@ -1081,6 +1328,7 @@ public static partial class WorkflowSecurityValidatorService
         private int _stepDashIndent = -1;
         private int _stepPropIndent = -1;
         private bool _inWithBlock;
+        private StepBlockMode _blockMode;
         private ParsedStep? _current;
 
         public void Reset(int stepsKeyIndent)
@@ -1089,35 +1337,58 @@ public static partial class WorkflowSecurityValidatorService
             _stepDashIndent = -1;
             _stepPropIndent = -1;
             _inWithBlock = false;
+            _blockMode = StepBlockMode.None;
             _current = null;
         }
 
-        public void Flush(List<ParsedStep> steps)
+        public void Flush(List<ParsedStep> steps, List<ParsedStep>? jobSteps = null)
         {
             if (_current is not null)
             {
                 steps.Add(_current);
+                jobSteps?.Add(_current);
                 _current = null;
             }
 
             _inWithBlock = false;
+            _blockMode = StepBlockMode.None;
         }
+
+        public void CaptureBlockLine(string rawLine, string trimmed, int lineNumber)
+        {
+            if (_current is null)
+            {
+                return;
+            }
+
+            if (_blockMode == StepBlockMode.If && trimmed.Length > 0 && !trimmed.StartsWith('#'))
+            {
+                _current.AppendIf(StripInlineComment(trimmed));
+            }
+            else if (_blockMode == StepBlockMode.Run && trimmed.Length > 0)
+            {
+                _current.RunLines.Add((lineNumber, rawLine));
+            }
+        }
+
+        public void EndBlockScalar() => _blockMode = StepBlockMode.None;
 
         public void ProcessLine(
             string trimmed,
             int indent,
             int lineNumber,
             List<ParsedStep> steps,
+            List<ParsedStep>? jobSteps,
             ref int blockParentIndent)
         {
             if (trimmed.StartsWith('-') &&
                 (trimmed.Length == 1 || char.IsWhiteSpace(trimmed[1])) &&
                 (_stepDashIndent < 0 ? indent >= _stepsKeyIndent : indent == _stepDashIndent))
             {
-                Flush(steps);
+                Flush(steps, jobSteps);
                 _stepDashIndent = indent;
                 _stepPropIndent = indent + 2;
-                _current = new ParsedStep();
+                _current = new ParsedStep { LineNumber = lineNumber };
 
                 string afterDash = trimmed[1..].Trim();
                 if (afterDash.Length > 0)
@@ -1147,9 +1418,9 @@ public static partial class WorkflowSecurityValidatorService
                 {
                     blockParentIndent = indent;
                 }
-                else if (string.Equals(withKey, "persist-credentials", StringComparison.OrdinalIgnoreCase))
+                else
                 {
-                    _current.PersistCredentials = Unquote(cleanVal);
+                    RecordWithEntry(withKey, Unquote(cleanVal), lineNumber);
                 }
             }
         }
@@ -1162,6 +1433,36 @@ public static partial class WorkflowSecurityValidatorService
             }
 
             string cleanVal = StripInlineComment(rawVal);
+            if (string.Equals(key, "if", StringComparison.Ordinal))
+            {
+                if (IsBlockScalarHeader(cleanVal))
+                {
+                    _blockMode = StepBlockMode.If;
+                    blockParentIndent = propIndent;
+                }
+                else
+                {
+                    _current.AppendIf(Unquote(cleanVal));
+                }
+
+                return;
+            }
+
+            if (string.Equals(key, "run", StringComparison.Ordinal))
+            {
+                if (IsBlockScalarHeader(cleanVal))
+                {
+                    _blockMode = StepBlockMode.Run;
+                    blockParentIndent = propIndent;
+                }
+                else
+                {
+                    _current.RunLines.Add((lineNumber, Unquote(rawVal)));
+                }
+
+                return;
+            }
+
             if (IsBlockScalarHeader(cleanVal))
             {
                 blockParentIndent = propIndent;
@@ -1176,7 +1477,7 @@ public static partial class WorkflowSecurityValidatorService
             {
                 if (cleanVal.StartsWith('{') && cleanVal.EndsWith('}') && cleanVal.Length > 2)
                 {
-                    ParseFlowWith(cleanVal);
+                    ParseFlowWith(cleanVal, lineNumber);
                 }
                 else
                 {
@@ -1185,7 +1486,7 @@ public static partial class WorkflowSecurityValidatorService
             }
         }
 
-        private void ParseFlowWith(string flowText)
+        private void ParseFlowWith(string flowText, int lineNumber)
         {
             if (_current is null)
             {
@@ -1194,11 +1495,31 @@ public static partial class WorkflowSecurityValidatorService
 
             foreach (string item in flowText[1..^1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
-                if (TrySplitKeyValue(item, out string k, out string v) &&
-                    string.Equals(k, "persist-credentials", StringComparison.OrdinalIgnoreCase))
+                if (TrySplitKeyValue(item, out string k, out string v))
                 {
-                    _current.PersistCredentials = Unquote(StripInlineComment(v));
+                    RecordWithEntry(k, Unquote(StripInlineComment(v)), lineNumber);
                 }
+            }
+        }
+
+        private void RecordWithEntry(string key, string value, int lineNumber)
+        {
+            if (_current is null)
+            {
+                return;
+            }
+
+            if (string.Equals(key, "persist-credentials", StringComparison.OrdinalIgnoreCase))
+            {
+                _current.PersistCredentials = value;
+            }
+            else if (string.Equals(key, "repository", StringComparison.OrdinalIgnoreCase))
+            {
+                _current.CheckoutRepository = (lineNumber, value);
+            }
+            else if (string.Equals(key, "ref", StringComparison.OrdinalIgnoreCase))
+            {
+                _current.CheckoutRef = (lineNumber, value);
             }
         }
     }

@@ -169,18 +169,108 @@ public sealed class RulesetServiceTests : IDisposable
                 runs-on: ubuntu-latest
                 steps:
                   - run: echo ok
-              automerge:
-                name: Enable Automerge
-                needs: [classify, ci-gate]
-                if: always() && !cancelled() && github.event_name == 'pull_request' && needs.ci-gate.result == 'success'
-                runs-on: ubuntu-latest
-                steps:
-                  - run: echo ok
             """);
         using var writer = new StringWriter();
 
         RulesetService.Validate(_root, writer).Should().Be(1);
         writer.ToString().Should().Contain("must fail when required job 'compliance' is skipped");
+    }
+
+    [Fact]
+    public void Validate_FailsWhenConflictCheckOmitsEditedTrigger()
+    {
+        Write(".github/workflows/conflict-check.yml", """
+            name: Conflict Check
+            on:
+              pull_request:
+                types: [opened, synchronize, reopened]
+            jobs:
+              conflict-check:
+                name: Check for Merge Conflicts
+                runs-on: ubuntu-latest
+                steps:
+                  - run: |
+                      set -euo pipefail
+                      git fetch --no-tags origin "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF" "+refs/pull/$PR_NUMBER/head:refs/remotes/origin/pr/$PR_NUMBER"
+                      if ! git merge-tree --write-tree "refs/remotes/origin/$BASE_REF" "refs/remotes/origin/pr/$PR_NUMBER"; then
+                        exit 1
+                      fi
+            """);
+        using var writer = new StringWriter();
+
+        RulesetService.Validate(_root, writer).Should().Be(1);
+        writer.ToString().Should().Contain("edited");
+
+        // Bare pull_request without explicit types also omits 'edited' in GitHub Actions
+        Write(".github/workflows/conflict-check.yml", """
+            name: Conflict Check
+            on:
+              pull_request:
+            jobs:
+              conflict-check:
+                name: Check for Merge Conflicts
+                runs-on: ubuntu-latest
+                steps:
+                  - run: |
+                      set -euo pipefail
+                      git fetch --no-tags origin "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF" "+refs/pull/$PR_NUMBER/head:refs/remotes/origin/pr/$PR_NUMBER"
+                      if ! git merge-tree --write-tree "refs/remotes/origin/$BASE_REF" "refs/remotes/origin/pr/$PR_NUMBER"; then
+                        exit 1
+                      fi
+            """);
+        using var bareWriter = new StringWriter();
+
+        RulesetService.Validate(_root, bareWriter).Should().Be(1);
+        bareWriter.ToString().Should().Contain("edited");
+    }
+
+    [Fact]
+    public void Validate_FailsWhenConflictCheckPollsGhPrViewOrOmitsMergeTree()
+    {
+        Write(".github/workflows/conflict-check.yml", """
+            name: Conflict Check
+            on:
+              pull_request:
+                types: [opened, synchronize, reopened, edited]
+            jobs:
+              conflict-check:
+                name: Check for Merge Conflicts
+                runs-on: ubuntu-latest
+                steps:
+                  - run: |
+                      STATUS=$(gh pr view "$PR_NUMBER" --json mergeable --jq .mergeable 2>/dev/null || echo "UNKNOWN")
+                      if [ "$STATUS" = "CONFLICTING" ]; then exit 1; fi
+            """);
+        using var writer = new StringWriter();
+
+        RulesetService.Validate(_root, writer).Should().Be(1);
+        string output = writer.ToString();
+        output.Should().Contain("git merge-tree --write-tree");
+        output.Should().Contain("UNKNOWN");
+    }
+
+    [Fact]
+    public void Validate_FailsWhenWorkflowDefinesAutomergeOrGhPrMerge()
+    {
+        Write(".github/workflows/automerge-extra.yml", """
+            name: Extra Automerge
+            on:
+              pull_request:
+            jobs:
+              automerge:
+                name: Enable Automerge
+                runs-on: ubuntu-latest
+                steps:
+                  - env:
+                      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                    run: gh pr merge "$PR_NUMBER" --auto --squash
+            """);
+        using var writer = new StringWriter();
+
+        RulesetService.Validate(_root, writer).Should().Be(1);
+        string output = writer.ToString();
+        output.Should().Contain("automerge");
+        output.Should().Contain("gh pr merge");
     }
 
     [Fact]
@@ -362,13 +452,18 @@ public sealed class RulesetServiceTests : IDisposable
             name: Conflict Check
             on:
               pull_request:
-                types: [opened, synchronize, reopened]
+                types: [opened, synchronize, reopened, edited]
             jobs:
               conflict-check:
                 name: Check for Merge Conflicts
                 runs-on: ubuntu-latest
                 steps:
-                  - run: echo ok
+                  - run: |
+                      set -euo pipefail
+                      git fetch --no-tags origin "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF" "+refs/pull/$PR_NUMBER/head:refs/remotes/origin/pr/$PR_NUMBER"
+                      if ! git merge-tree --write-tree "refs/remotes/origin/$BASE_REF" "refs/remotes/origin/pr/$PR_NUMBER"; then
+                        exit 1
+                      fi
             """);
     }
 
@@ -464,13 +559,6 @@ public sealed class RulesetServiceTests : IDisposable
               classify:
                 name: Classify Change
                 if: github.event_name == 'pull_request'
-                runs-on: ubuntu-latest
-                steps:
-                  - run: echo ok
-              automerge:
-                name: Enable Automerge
-                needs: [classify, ci-gate]
-                if: always() && !cancelled() && github.event_name == 'pull_request' && needs.ci-gate.result == 'success'
                 runs-on: ubuntu-latest
                 steps:
                   - run: echo ok
