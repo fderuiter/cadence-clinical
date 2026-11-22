@@ -9,8 +9,9 @@ async function gotoHashRoute(page: Page, routePath: string) {
 
 async function expectNoWcagViolations(page: Page, contextLabel: string) {
   const results = await new AxeBuilder({ page })
-    // Exclude non-interactive regulatory watermark overlay per ADR-2388
+    // Exclude non-interactive regulatory watermark overlays per ADR-2388
     .exclude(".watermark-overlay-container")
+    .exclude(".watermark-overlay")
     .withTags(WCAG_AA_TAGS)
     .analyze();
 
@@ -57,6 +58,39 @@ async function getBorderContrastRatio(page: Page, selector: string) {
 }
 
 test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gates", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      const win = window as Window & {
+        __cadenceCspViolations?: Array<Record<string, string>>;
+      };
+      win.__cadenceCspViolations = [];
+      document.addEventListener("securitypolicyviolation", (event) => {
+        win.__cadenceCspViolations?.push({
+          effectiveDirective: event.effectiveDirective,
+          violatedDirective: event.violatedDirective,
+          blockedURI: event.blockedURI,
+          sourceFile: event.sourceFile,
+          sample: event.sample,
+        });
+      });
+    });
+  });
+
+  test.afterEach(async ({ page }) => {
+    const violations = await page
+      .evaluate(() => {
+        const win = window as Window & {
+          __cadenceCspViolations?: Array<Record<string, string>>;
+        };
+        return win.__cadenceCspViolations || [];
+      })
+      .catch(() => []);
+    expect(
+      violations,
+      `Unexpected browser Content-Security-Policy violations: ${JSON.stringify(violations, null, 2)}`
+    ).toEqual([]);
+  });
+
   test("LoginView passes WCAG 2.2 AA contrast in both authenticated session state and signed-out login prompt", async ({
     page,
   }) => {
@@ -340,5 +374,115 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     await page.keyboard.press("Escape");
     await expect(dataLockModal).toBeHidden();
+  });
+
+  test("DocumentsHubView MediaPreviewModal HLS video and blob PDF previews pass WCAG 2.2 AA and fire zero CSP violations", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_CSP_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await gotoHashRoute(page, "/documents");
+    await expect(page.locator(".documents-hub-layout")).toBeVisible();
+
+    const headCsp = await page.evaluate(() => {
+      const headHtml = document.head.innerHTML;
+      const cspMeta = document.head.querySelector(
+        'meta[http-equiv="Content-Security-Policy"]'
+      );
+      return {
+        content: cspMeta?.getAttribute("content") || "",
+        cspIndex: headHtml.search(
+          /<meta\b[^>]*http-equiv\s*=\s*["']?Content-Security-Policy/i
+        ),
+        firstScriptIndex: headHtml.search(/<script\b/i),
+        firstLinkIndex: headHtml.search(/<link\b/i),
+      };
+    });
+
+    expect(headCsp.cspIndex).toBeGreaterThanOrEqual(0);
+    if (headCsp.firstScriptIndex >= 0) {
+      expect(headCsp.cspIndex).toBeLessThan(headCsp.firstScriptIndex);
+    }
+    if (headCsp.firstLinkIndex >= 0) {
+      expect(headCsp.cspIndex).toBeLessThan(headCsp.firstLinkIndex);
+    }
+    expect(headCsp.content).toContain("script-src 'self'");
+    expect(headCsp.content).toContain("media-src 'self' blob:");
+    expect(headCsp.content).toContain("worker-src 'self' blob:");
+    expect(headCsp.content).toContain("connect-src 'self'");
+    expect(headCsp.content).toContain("frame-src 'self' blob:");
+    expect(headCsp.content).not.toContain("localhost");
+    expect(headCsp.content).not.toContain("127.0.0.1");
+
+    const ssoHtmlCsp = await page.evaluate(async () => {
+      const res = await fetch("silent-check-sso.html");
+      const html = await res.text();
+      return {
+        status: res.status,
+        cspIndex: html.search(
+          /<meta\b[^>]*http-equiv\s*=\s*["']?Content-Security-Policy/i
+        ),
+        scriptIndex: html.search(/<script\b/i),
+        hasLocalhost: html.includes("localhost") || html.includes("127.0.0.1"),
+      };
+    });
+    expect(ssoHtmlCsp.status).toBe(200);
+    expect(ssoHtmlCsp.cspIndex).toBeGreaterThanOrEqual(0);
+    expect(ssoHtmlCsp.cspIndex).toBeLessThan(ssoHtmlCsp.scriptIndex);
+    expect(ssoHtmlCsp.hasLocalhost).toBe(false);
+
+    // 1. PDF preview via blob: iframe URL inside MediaPlayer.vue (frame-src 'self' blob:)
+    const pdfPreviewBtn = page.locator(
+      'button[aria-label="Preview DEMO-01-Protocol-Synopsis.pdf"]'
+    );
+    await expect(pdfPreviewBtn).toBeVisible();
+    await pdfPreviewBtn.click();
+
+    const pdfIframe = page.locator('[data-testid="pdf-iframe"]');
+    await expect(pdfIframe).toBeVisible();
+    await expect
+      .poll(async () => (await pdfIframe.getAttribute("src")) || "")
+      .toMatch(/^blob:/);
+
+    await expectNoWcagViolations(
+      page,
+      "DocumentsHubView MediaPreviewModal PDF blob preview"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/web-pdf-blob-preview-csp.png" });
+    }
+
+    await page.locator(".media-preview-modal .close-modal-btn").click();
+    await expect(pdfIframe).toBeHidden();
+
+    // 2. HLS adaptive stream preview via MediaSource + Worker blob: URLs inside MediaPlayer.vue
+    const hlsPreviewBtn = page.locator(
+      'button[aria-label="Preview DEMO-01-Site-Initiation-Briefing.mp4"]'
+    );
+    await expect(hlsPreviewBtn).toBeVisible();
+    await hlsPreviewBtn.click();
+
+    const videoEl = page.locator(".media-preview-modal video.video-element");
+    await expect(videoEl).toBeVisible();
+    await expect(page.locator("#quality-select")).toBeVisible();
+    await expect
+      .poll(async () =>
+        videoEl.evaluate(
+          (el) =>
+            (el as HTMLVideoElement).currentSrc || el.getAttribute("src") || ""
+        )
+      )
+      .toMatch(/^blob:/);
+
+    await expectNoWcagViolations(
+      page,
+      "DocumentsHubView MediaPreviewModal HLS video preview"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/web-hls-preview-csp.png" });
+    }
+
+    await page.locator(".media-preview-modal .close-modal-btn").click();
+    await expect(videoEl).toBeHidden();
   });
 });

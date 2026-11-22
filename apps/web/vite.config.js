@@ -1,6 +1,7 @@
 // Vue SPA Vite configuration
 import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
@@ -13,6 +14,70 @@ const DEV_PORT = 3000;
 // Where the dev server's /api proxy forwards: the API gateway (the AppHost passes its endpoint).
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 const IS_E2E_BUILD = process.env.CADENCE_E2E_BUILD === "1";
+
+export function resolveWebOidcOrigin({
+  mode = "production",
+  isProduction = true,
+  env = {},
+} = {}) {
+  if (mode === "demo" || env.VITE_DEMO_MODE === "true") {
+    return "";
+  }
+  const rawUrl =
+    (env.VITE_KEYCLOAK_URL || "").trim() ||
+    (isProduction ? "" : "http://localhost:8080/");
+  if (!rawUrl) {
+    return "";
+  }
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.origin;
+    }
+  } catch {
+    // Ignore relative or malformed URLs; 'self' already covers same-origin paths
+  }
+  return "";
+}
+
+export function buildWebCspContent(options = {}) {
+  const oidcOrigin = resolveWebOidcOrigin(options);
+  const connectSources = oidcOrigin ? `'self' ${oidcOrigin}` : "'self'";
+  const frameSources = oidcOrigin
+    ? `'self' blob: ${oidcOrigin}`
+    : "'self' blob:";
+
+  return [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    "media-src 'self' blob:",
+    "worker-src 'self' blob:",
+    `connect-src ${connectSources}`,
+    `frame-src ${frameSources}`,
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+}
+
+export function injectHoistedWebCspMeta(html, cspContent) {
+  const cspTag = `<meta http-equiv="Content-Security-Policy" content="${cspContent}" />`;
+  const stripped = html.replace(
+    /\s*<meta\b[^>]*\bhttp-equiv\s*=\s*(?:"Content-Security-Policy"|'Content-Security-Policy'|Content-Security-Policy)[^>]*>/gi,
+    ""
+  );
+  if (/<head\b[^>]*>/i.test(stripped)) {
+    return stripped.replace(
+      /<head\b[^>]*>/i,
+      (headOpen) => `${headOpen}\n    ${cspTag}`
+    );
+  }
+  return `${cspTag}\n${stripped}`;
+}
 
 const E2E_BOOT_RECOVERY_SCRIPT = `(function () {
   var RETRY_KEY = "__cadence_e2e_boot_retry__";
@@ -91,20 +156,57 @@ export default defineConfig({
     },
     (() => {
       let resolvedBase = "/cadence-clinical/";
+      let resolvedOutDir = "dist";
+      let resolvedCsp = buildWebCspContent();
       return {
         name: "html-transform",
         configResolved(resolved) {
           resolvedBase = resolved.base || "/cadence-clinical/";
+          resolvedOutDir = resolved.build?.outDir || "dist";
+          const fileEnv = loadEnv(resolved.mode, __dirname, "VITE_");
+          const mergedEnv = { ...fileEnv, ...process.env };
+          resolvedCsp = buildWebCspContent({
+            mode: resolved.mode,
+            isProduction: Boolean(resolved.isProduction),
+            env: mergedEnv,
+          });
         },
-        transformIndexHtml(html) {
-          const title = process.env.VITE_APP_TITLE || "Cadence Clinical";
-          const transformed = html.replace(/%VITE_APP_TITLE%/g, title);
-          return IS_E2E_BUILD
-            ? transformed.replace(
-                "</title>",
-                `</title>\n    <script src="${resolvedBase}e2e-boot-recovery.js"></script>`
-              )
-            : transformed;
+        transformIndexHtml: {
+          order: "post",
+          handler(html) {
+            const title = process.env.VITE_APP_TITLE || "Cadence Clinical";
+            const transformed = html.replace(/%VITE_APP_TITLE%/g, title);
+            const withRecovery = IS_E2E_BUILD
+              ? transformed.replace(
+                  "</title>",
+                  `</title>\n    <script src="${resolvedBase}e2e-boot-recovery.js"></script>`
+                )
+              : transformed;
+            return injectHoistedWebCspMeta(withRecovery, resolvedCsp);
+          },
+        },
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            const cleanPath = (req.url || "").split("?")[0];
+            if (
+              cleanPath === "/silent-check-sso.html" ||
+              cleanPath ===
+                `${resolvedBase.replace(/\/?$/, "/")}silent-check-sso.html`
+            ) {
+              const ssoSrcPath = path.resolve(
+                __dirname,
+                "public/silent-check-sso.html"
+              );
+              if (fs.existsSync(ssoSrcPath)) {
+                const rawHtml = fs.readFileSync(ssoSrcPath, "utf8");
+                res.statusCode = 200;
+                res.setHeader("Content-Type", "text/html; charset=utf-8");
+                res.end(injectHoistedWebCspMeta(rawHtml, resolvedCsp));
+                return;
+              }
+            }
+            next();
+          });
         },
         generateBundle() {
           if (!IS_E2E_BUILD) return;
@@ -113,6 +215,20 @@ export default defineConfig({
             fileName: "e2e-boot-recovery.js",
             source: E2E_BOOT_RECOVERY_SCRIPT,
           });
+        },
+        writeBundle(outputOptions) {
+          const outDir = outputOptions?.dir
+            ? path.resolve(__dirname, outputOptions.dir)
+            : path.resolve(__dirname, resolvedOutDir);
+          const emittedSsoPath = path.join(outDir, "silent-check-sso.html");
+          if (fs.existsSync(emittedSsoPath)) {
+            const rawSsoHtml = fs.readFileSync(emittedSsoPath, "utf8");
+            fs.writeFileSync(
+              emittedSsoPath,
+              injectHoistedWebCspMeta(rawSsoHtml, resolvedCsp),
+              "utf8"
+            );
+          }
         },
         configurePreviewServer(server) {
           if (server.httpServer) {

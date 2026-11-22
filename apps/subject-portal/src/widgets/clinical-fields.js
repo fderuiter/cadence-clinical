@@ -47,7 +47,6 @@ export function createClinicalSlider(
         data-touched="${initialTouched}"
         class="vas-slider-input"
         style="width: 100%; cursor: pointer; accent-color: var(--semantic-color-interactive-primary); min-height: var(--touch-target-min); height: var(--touch-target-min);"
-        oninput="this.setAttribute('data-touched', 'true'); const disp = document.getElementById('${id}_display'); if (disp) disp.textContent = 'Value: ' + this.value;"
       />
       ${queryFlagHTML}
     </div>
@@ -213,11 +212,95 @@ export function createQueryPanel(fieldId, query) {
 <div class="query-panel" id="query-panel-${fieldId}" style="display: none;" role="region" aria-labelledby="query-flag-${fieldId}">
   <div class="query-panel-header">
     <span class="query-panel-title">Query Manager - ${fieldId}</span>
-    <button type="button" class="btn-close-panel" aria-label="Close query panel" onclick="document.getElementById('query-panel-${fieldId}').style.display='none'">×</button>
+    <button type="button" class="btn-close-panel" data-field-id="${fieldId}" aria-label="Close query panel">×</button>
   </div>
   <div class="query-panel-body">
     ${bodyHTML}
   </div>
 </div>
   `.trim();
+}
+
+const delegatedContainers = new WeakMap();
+
+export function bindDelegatedClinicalWidgets(container, options = {}) {
+  if (!container || typeof container.addEventListener !== "function") {
+    return;
+  }
+
+  const alreadyBound = delegatedContainers.has(container);
+  delegatedContainers.set(container, options);
+  if (alreadyBound) {
+    return;
+  }
+
+  const handleInputOrChange = (event) => {
+    const target = event?.target;
+    if (
+      target &&
+      target.tagName === "INPUT" &&
+      (target.type === "range" ||
+        target.classList?.contains("vas-slider-input"))
+    ) {
+      target.setAttribute("data-touched", "true");
+      const doc = container.ownerDocument || document;
+      const disp = target.id
+        ? doc.getElementById(`${target.id}_display`)
+        : null;
+      if (disp) {
+        disp.textContent = `Value: ${target.value}`;
+      }
+    }
+
+    const currentOptions = delegatedContainers.get(container);
+    if (typeof currentOptions?.onFieldInput === "function") {
+      currentOptions.onFieldInput(event);
+    }
+  };
+
+  const handleClick = (event) => {
+    const rawTarget = event?.target;
+    const elementTarget =
+      rawTarget && typeof rawTarget.closest === "function"
+        ? rawTarget
+        : rawTarget?.parentElement;
+    if (!elementTarget || typeof elementTarget.closest !== "function") {
+      return;
+    }
+
+    const doc = container.ownerDocument || document;
+
+    const flagBtn = elementTarget.closest(".query-flag");
+    if (flagBtn && container.contains(flagBtn)) {
+      const panelId = flagBtn.getAttribute("aria-controls");
+      const panel = panelId ? doc.getElementById(panelId) : null;
+      if (panel) {
+        const isClosed =
+          panel.style.display === "none" ||
+          panel.hidden ||
+          flagBtn.getAttribute("aria-expanded") !== "true";
+        panel.style.display = isClosed ? "block" : "none";
+        flagBtn.setAttribute("aria-expanded", isClosed ? "true" : "false");
+      }
+      return;
+    }
+
+    const closeBtn = elementTarget.closest(".btn-close-panel");
+    if (closeBtn && container.contains(closeBtn)) {
+      const panel = closeBtn.closest(".query-panel");
+      if (panel) {
+        panel.style.display = "none";
+        const flagId = panel.getAttribute("aria-labelledby");
+        const linkedFlag = flagId ? doc.getElementById(flagId) : null;
+        if (linkedFlag) {
+          linkedFlag.setAttribute("aria-expanded", "false");
+          linkedFlag.focus?.();
+        }
+      }
+    }
+  };
+
+  container.addEventListener("input", handleInputOrChange, true);
+  container.addEventListener("change", handleInputOrChange, true);
+  container.addEventListener("click", handleClick);
 }

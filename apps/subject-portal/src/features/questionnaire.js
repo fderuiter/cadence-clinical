@@ -16,6 +16,7 @@ import {
 } from "../sync-queue.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import {
+  bindDelegatedClinicalWidgets,
   createClinicalInput,
   createClinicalRadioGrid,
   createClinicalSlider,
@@ -259,15 +260,10 @@ export async function startQuestionnaire(assignmentId) {
   formHtml += `</div>`;
   formContainer.innerHTML = formHtml;
 
-  // Set up listeners for real-time background auto-saving and slider interaction tracking
-  const markSliderTouchedAndSave = (event) => {
-    if (event?.target?.type === "range") {
-      event.target.setAttribute("data-touched", "true");
-    }
-    debouncedSaveActiveDraft();
-  };
-  formContainer.addEventListener("input", markSliderTouchedAndSave);
-  formContainer.addEventListener("change", markSliderTouchedAndSave);
+  // Set up delegated listeners for real-time background auto-saving, slider badges, and query panels
+  bindDelegatedClinicalWidgets(formContainer, {
+    onFieldInput: () => debouncedSaveActiveDraft(),
+  });
 
   // Render and navigate synchronously
   showView("view-questionnaire");

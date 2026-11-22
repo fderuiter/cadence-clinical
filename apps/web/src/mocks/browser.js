@@ -88,6 +88,143 @@ export function installInProcessMswFallback(target = window) {
   };
   wrappedFetch.__cadenceMswFallback = true;
   target.fetch = wrappedFetch;
+
+  if (
+    typeof target.XMLHttpRequest === "function" &&
+    !target.XMLHttpRequest.__cadenceMswFallback
+  ) {
+    const NativeXhr = target.XMLHttpRequest;
+    class MswFallbackXmlHttpRequest extends NativeXhr {
+      constructor() {
+        super();
+        this._mswMethod = "GET";
+        this._mswUrl = "";
+        this._mswAsync = true;
+        this._mswOpenArgs = [];
+        this._mswHeaders = new Headers();
+        this._mswMockedHeaders = null;
+      }
+
+      open(method, url, async = true, ...rest) {
+        this._mswMethod = String(method || "GET").toUpperCase();
+        this._mswUrl = String(url || "");
+        this._mswAsync = async !== false;
+        this._mswOpenArgs = [method, url, async, ...rest];
+        this._mswHeaders = new Headers();
+        this._mswMockedHeaders = null;
+        if (!this._mswAsync) {
+          super.open(method, url, async, ...rest);
+        }
+      }
+
+      setRequestHeader(name, value) {
+        this._mswHeaders.append(name, value);
+        if (!this._mswAsync) {
+          super.setRequestHeader(name, value);
+        }
+      }
+
+      getResponseHeader(name) {
+        if (this._mswMockedHeaders) {
+          return this._mswMockedHeaders.get(name);
+        }
+        return super.getResponseHeader(name);
+      }
+
+      getAllResponseHeaders() {
+        if (this._mswMockedHeaders) {
+          const lines = [];
+          this._mswMockedHeaders.forEach((val, key) => {
+            lines.push(`${key}: ${val}\r\n`);
+          });
+          return lines.join("");
+        }
+        return super.getAllResponseHeaders();
+      }
+
+      send(body) {
+        if (!this._mswAsync) {
+          super.send(body);
+          return;
+        }
+
+        const baseHref =
+          target.location?.href ||
+          (typeof window !== "undefined" && window.location?.href) ||
+          "https://cadence.example/";
+        const resolvedUrl = new URL(this._mswUrl, baseHref).href;
+        const hasBody =
+          this._mswMethod !== "GET" &&
+          this._mswMethod !== "HEAD" &&
+          body !== undefined &&
+          body !== null;
+        const mswReq = new Request(resolvedUrl, {
+          method: this._mswMethod,
+          headers: this._mswHeaders,
+          body: hasBody ? body : undefined,
+        });
+
+        getResponse(gatewayHandlers, mswReq, {
+          baseUrl: target.location?.origin,
+        })
+          .then(async (mocked) => {
+            if (!mocked || isPassthroughResponse(mocked)) {
+              super.open(...this._mswOpenArgs);
+              this._mswHeaders.forEach((val, key) => {
+                super.setRequestHeader(key, val);
+              });
+              super.send(body);
+              return;
+            }
+
+            this._mswMockedHeaders = mocked.headers;
+            const respType = this.responseType || "";
+            let responsePayload;
+            let responseTextPayload = "";
+            if (respType === "arraybuffer") {
+              responsePayload = await mocked.arrayBuffer();
+            } else if (respType === "blob") {
+              responsePayload = await mocked.blob();
+            } else if (respType === "json") {
+              responsePayload = await mocked.json().catch(() => null);
+            } else {
+              responseTextPayload = await mocked.text();
+              responsePayload = responseTextPayload;
+            }
+
+            Object.defineProperties(this, {
+              readyState: { value: 4, configurable: true },
+              status: { value: mocked.status, configurable: true },
+              statusText: {
+                value: mocked.statusText || "OK",
+                configurable: true,
+              },
+              responseURL: { value: resolvedUrl, configurable: true },
+              response: { value: responsePayload, configurable: true },
+              ...(respType === "" || respType === "text"
+                ? {
+                    responseText: {
+                      value: responseTextPayload,
+                      configurable: true,
+                    },
+                  }
+                : {}),
+            });
+
+            this.dispatchEvent(new Event("readystatechange"));
+            this.dispatchEvent(new ProgressEvent("progress"));
+            this.dispatchEvent(new ProgressEvent("load"));
+            this.dispatchEvent(new ProgressEvent("loadend"));
+          })
+          .catch(() => {
+            this.dispatchEvent(new ProgressEvent("error"));
+            this.dispatchEvent(new ProgressEvent("loadend"));
+          });
+      }
+    }
+    MswFallbackXmlHttpRequest.__cadenceMswFallback = true;
+    target.XMLHttpRequest = MswFallbackXmlHttpRequest;
+  }
 }
 
 export async function ensureServiceWorkerController(timeoutMs = 1500) {

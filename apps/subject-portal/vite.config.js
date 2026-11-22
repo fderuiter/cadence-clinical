@@ -13,6 +13,67 @@ const DEV_PORT = 5174;
 // the front proxy).
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 
+export function resolvePortalOidcOrigin({
+  mode = "production",
+  isProduction = true,
+  env = {},
+} = {}) {
+  if (mode === "demo" || env.VITE_DEMO_MODE === "true") {
+    return "";
+  }
+  const rawUrl =
+    (env.VITE_KEYCLOAK_URL || "").trim() ||
+    (isProduction ? "" : "http://localhost:8080/");
+  if (!rawUrl) {
+    return "";
+  }
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.origin;
+    }
+  } catch {
+    // Ignore relative or malformed URLs
+  }
+  return "";
+}
+
+export function buildSubjectPortalCspContent(options = {}) {
+  const oidcOrigin = resolvePortalOidcOrigin(options);
+  const oidcAwareSources = oidcOrigin ? `'self' ${oidcOrigin}` : "'self'";
+
+  return [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    "media-src 'self'",
+    "worker-src 'self'",
+    `connect-src ${oidcAwareSources}`,
+    `frame-src ${oidcAwareSources}`,
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+}
+
+export function injectHoistedPortalCspMeta(html, cspContent) {
+  const cspTag = `<meta http-equiv="Content-Security-Policy" content="${cspContent}" />`;
+  const stripped = html.replace(
+    /\s*<meta\b[^>]*\bhttp-equiv\s*=\s*(?:"Content-Security-Policy"|'Content-Security-Policy'|Content-Security-Policy)[^>]*>/gi,
+    ""
+  );
+  if (/<head\b[^>]*>/i.test(stripped)) {
+    return stripped.replace(
+      /<head\b[^>]*>/i,
+      (headOpen) => `${headOpen}\n    ${cspTag}`
+    );
+  }
+  return `${cspTag}\n${stripped}`;
+}
+
 export default defineConfig(({ mode }) => ({
   base: process.env.VITE_BASE_PATH || "/subject-portal/",
   cacheDir: mode === "demo" ? "node_modules/.vite-demo" : "node_modules/.vite",
@@ -53,20 +114,36 @@ export default defineConfig(({ mode }) => ({
         }
       },
     },
-    {
-      name: "html-transform",
-      transformIndexHtml(html) {
-        const title =
-          process.env.VITE_APP_TITLE || "Subject Portal - Cadence Clinical";
-        return html.replace(/%VITE_APP_TITLE%/g, title);
-      },
-      configurePreviewServer(server) {
-        if (server.httpServer) {
-          server.httpServer.keepAliveTimeout = 65000;
-          server.httpServer.headersTimeout = 66000;
-        }
-      },
-    },
+    (() => {
+      let resolvedPortalCsp = buildSubjectPortalCspContent();
+      return {
+        name: "html-transform",
+        configResolved(resolved) {
+          const fileEnv = loadEnv(resolved.mode, __dirname, "VITE_");
+          const mergedEnv = { ...fileEnv, ...process.env };
+          resolvedPortalCsp = buildSubjectPortalCspContent({
+            mode: resolved.mode,
+            isProduction: Boolean(resolved.isProduction),
+            env: mergedEnv,
+          });
+        },
+        transformIndexHtml: {
+          order: "post",
+          handler(html) {
+            const title =
+              process.env.VITE_APP_TITLE || "Subject Portal - Cadence Clinical";
+            const withTitle = html.replace(/%VITE_APP_TITLE%/g, title);
+            return injectHoistedPortalCspMeta(withTitle, resolvedPortalCsp);
+          },
+        },
+        configurePreviewServer(server) {
+          if (server.httpServer) {
+            server.httpServer.keepAliveTimeout = 65000;
+            server.httpServer.headersTimeout = 66000;
+          }
+        },
+      };
+    })(),
     (() => {
       let isE2eProd = false;
       const indexEntry = path.resolve(__dirname, "src/index.js");

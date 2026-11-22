@@ -26,6 +26,8 @@ import {
   saveAssignmentsToDB,
 } from "../src/sync-queue.js";
 import {
+  bindDelegatedClinicalWidgets,
+  createClinicalInput,
   createClinicalRadioGrid,
   createClinicalSlider,
 } from "../src/widgets/clinical-fields.js";
@@ -252,5 +254,62 @@ describe("Non-blocking UX notifications, task busy guard, and 48px touch targets
 
     const langSelect = document.getElementById("consent-lang-selector");
     expect(langSelect?.style.minHeight).toBe("var(--touch-target-min)");
+  });
+
+  it("emits zero inline on*= event attributes and updates sliders and query panels via delegated listeners", () => {
+    const sliderHtml = createClinicalSlider(
+      "pain_scale",
+      "Pain Scale",
+      2,
+      null,
+      12,
+      {
+        min: 0,
+        max: 10,
+      }
+    );
+    const inputHtml = createClinicalInput("vssbp", "Systolic BP", "");
+    const radioHtml = createClinicalRadioGrid("comp_q1", "Voluntary?", [
+      "Yes",
+      "No",
+    ]);
+
+    for (const html of [sliderHtml, inputHtml, radioHtml]) {
+      expect(html).not.toMatch(/\bon[a-z]+\s*=/i);
+    }
+
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const onFieldInput = vi.fn();
+
+    // Bind twice to verify WeakMap idempotency (no stacked toggle handlers)
+    host.innerHTML = `${sliderHtml}${radioHtml}`;
+    bindDelegatedClinicalWidgets(host, { onFieldInput });
+    bindDelegatedClinicalWidgets(host, { onFieldInput });
+
+    const slider = host.querySelector("#pain_scale");
+    const badge = host.querySelector("#pain_scale_display");
+    slider.value = "7";
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(slider.getAttribute("data-touched")).toBe("true");
+    expect(badge.textContent.trim()).toBe("Value: 7");
+    expect(onFieldInput).toHaveBeenCalledTimes(1);
+
+    const flag = host.querySelector("#query-flag-pain_scale");
+    const panel = host.querySelector("#query-panel-pain_scale");
+    const closeBtn = panel.querySelector(".btn-close-panel");
+
+    expect(panel.style.display).toBe("none");
+    expect(flag.getAttribute("aria-expanded")).toBe("false");
+
+    flag.click();
+    expect(panel.style.display).toBe("block");
+    expect(flag.getAttribute("aria-expanded")).toBe("true");
+
+    closeBtn.click();
+    expect(panel.style.display).toBe("none");
+    expect(flag.getAttribute("aria-expanded")).toBe("false");
+
+    host.remove();
   });
 });
