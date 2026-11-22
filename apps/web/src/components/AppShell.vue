@@ -302,11 +302,12 @@ import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useClinicalStore } from "../stores/clinical";
 import { isScreenAvailable } from "../router/availability";
 import {
   buildDataCollectionPath,
   canAccessDataCollection,
-  resolveCanvasParticipantContext,
+  resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
 import OnboardingTour from "./OnboardingTour.vue";
@@ -319,6 +320,7 @@ const authStore = useAuthStore();
 const knowledgeStore = useKnowledgeStore();
 const onboardingStore = useOnboardingStore();
 const canvasStore = useStudyCanvasStore();
+const clinicalStore = useClinicalStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -341,13 +343,10 @@ function syncHeaderHeight() {
 const availablePersonas = computed(() => authStore.availablePersonas || []);
 const normalizedRoles = computed(() => authStore.normalizedRoles || []);
 
-const activeStudyCode = computed(() => {
-  const fromRoute = route?.params?.studyCode;
-  if (typeof fromRoute === "string" && fromRoute.trim()) {
-    return fromRoute.trim();
-  }
-  return canvasStore.studyCode || "";
-});
+const workspaceScope = computed(() =>
+  resolveActiveWorkspaceScope(route, canvasStore, clinicalStore)
+);
+const activeStudyCode = computed(() => workspaceScope.value.studyCode);
 
 const studiesPath = computed(() =>
   activeStudyCode.value
@@ -355,25 +354,24 @@ const studiesPath = computed(() =>
     : "/studies"
 );
 
-const dataCollectionPath = computed(() => {
-  const participantContext = resolveCanvasParticipantContext(
-    activeStudyCode.value,
-    route?.query,
-    canvasStore
-  );
-  return buildDataCollectionPath({
-    studyCode: activeStudyCode.value,
-    subjectCode: participantContext.subjectCode,
-    enrollmentId: participantContext.enrollmentId,
-  });
-});
+const dataCollectionPath = computed(() =>
+  buildDataCollectionPath({
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.explicitSiteId,
+    subjectCode: workspaceScope.value.subjectCode,
+    enrollmentId: workspaceScope.value.enrollmentId,
+  })
+);
 
 const showStudiesNav = computed(() => isScreenAvailable("study"));
 const showDataCollectionNav = computed(() =>
   canAccessDataCollection(normalizedRoles.value)
 );
 const siteReadinessPath = computed(() =>
-  resolveSiteReadinessPath(normalizedRoles.value)
+  resolveSiteReadinessPath(normalizedRoles.value, {
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.siteId,
+  })
 );
 
 const isStudiesRoute = computed(

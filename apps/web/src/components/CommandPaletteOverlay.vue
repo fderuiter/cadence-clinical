@@ -16,11 +16,12 @@ import CanvasPalette from "./canvas/CanvasPalette.vue";
 import {
   buildWorkspacePaletteItems,
   executePaletteTarget,
-  resolveCanvasParticipantContext,
+  resolveActiveWorkspaceScope,
   type PaletteTarget,
   type PaletteWorkspaceAction,
 } from "../canvas/palette";
 import { useAuthStore } from "../stores/auth";
+import { useClinicalStore } from "../stores/clinical";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
@@ -36,17 +37,15 @@ const emit = defineEmits<{
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const clinicalStore = useClinicalStore();
 const knowledgeStore = useKnowledgeStore();
 const onboardingStore = useOnboardingStore();
 const canvasStore = useStudyCanvasStore();
 
-const activeStudyCode = computed(() => {
-  const fromRoute = route?.params?.studyCode;
-  if (typeof fromRoute === "string" && fromRoute.trim()) {
-    return fromRoute.trim();
-  }
-  return canvasStore.studyCode || "";
-});
+const workspaceScope = computed(() =>
+  resolveActiveWorkspaceScope(route, canvasStore, clinicalStore)
+);
+const activeStudyCode = computed(() => workspaceScope.value.studyCode);
 
 watch(
   [() => props.isOpen, activeStudyCode],
@@ -58,21 +57,18 @@ watch(
   { immediate: true }
 );
 
-const workspaceItems = computed(() => {
-  const participantContext = resolveCanvasParticipantContext(
-    activeStudyCode.value,
-    route?.query,
-    canvasStore
-  );
-  return buildWorkspacePaletteItems({
+const workspaceItems = computed(() =>
+  buildWorkspacePaletteItems({
     isAuthenticated: Boolean(authStore.isAuthenticated),
     normalizedRoles: authStore.normalizedRoles || [],
     availablePersonas: authStore.availablePersonas || [],
-    activeStudyCode: activeStudyCode.value,
-    activeSubjectCode: participantContext.subjectCode,
-    activeEnrollmentId: participantContext.enrollmentId,
-  });
-});
+    activeStudyCode: workspaceScope.value.studyCode,
+    activeSiteId: workspaceScope.value.siteId,
+    activeExplicitSiteId: workspaceScope.value.explicitSiteId,
+    activeSubjectCode: workspaceScope.value.subjectCode,
+    activeEnrollmentId: workspaceScope.value.enrollmentId,
+  })
+);
 
 function handleAction(action: PaletteWorkspaceAction) {
   if (action.kind === "open-help") {

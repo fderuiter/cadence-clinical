@@ -431,11 +431,14 @@ describe("Clinical Canvas: a participant's data", () => {
       expect(
         wrapper.find(`#query-open-form-${QUERY_ID}`).attributes("href")
       ).toBe(
-        `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${FORM_ID}`
+        `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${FORM_ID}&item=SYSBP`
       );
     });
 
-    it("links a query directly to its target form and observation inside Clinical Canvas with zoom path and return navigation", async () => {
+    it("links a query directly to its target form and observation inside Clinical Canvas with item highlight, standalone handoff, zoom path, and return navigation", async () => {
+      const scrollSpy = vi.fn();
+      const origScroll = HTMLElement.prototype.scrollIntoView;
+      HTMLElement.prototype.scrollIntoView = scrollSpy;
       vi.mocked(ecrfFormsApi.getForm).mockResolvedValue({
         form_id: FORM_ID,
         enrollment_id: ENROLLMENT_ID,
@@ -507,50 +510,86 @@ describe("Clinical Canvas: a participant's data", () => {
         audit: [],
       });
 
-      await openRecord();
+      try {
+        await openRecord();
 
-      await wrapper.find(`#query-open-form-${QUERY_ID}`).trigger("click");
-      await flushPromises();
+        await wrapper.find(`#query-open-form-${QUERY_ID}`).trigger("click");
+        await flushPromises();
 
-      expect(router.currentRoute.value.query).toEqual({
-        stage: "conduct",
-        participant: `participant:${PARTICIPANT_ID}`,
-        form: `collection_instance:${FORM_ID}`,
-      });
-      expect(wrapper.find("#zoom-form").text()).toBe("Vital Signs · WEEK2");
-      expect(wrapper.find("#zoom-form").attributes("aria-current")).toBe(
-        "page"
-      );
+        expect(router.currentRoute.value.query).toEqual({
+          stage: "conduct",
+          participant: `participant:${PARTICIPANT_ID}`,
+          form: `collection_instance:${FORM_ID}`,
+          item: "SYSBP",
+        });
+        expect(
+          wrapper.find("#ecrf-row-SYSBP").attributes("data-highlighted")
+        ).toBe("true");
+        expect(scrollSpy).toHaveBeenCalledWith({ block: "center" });
+        expect(document.activeElement).toBe(
+          wrapper.find("#ecrf-item-SYSBP").element
+        );
+        expect(wrapper.find("#zoom-form").text()).toBe("Vital Signs · WEEK2");
+        expect(wrapper.find("#zoom-form").attributes("aria-current")).toBe(
+          "page"
+        );
 
-      await wrapper.find("#ecrf-item-observation-SYSBP").trigger("click");
-      await flushPromises();
+        const standaloneHref = wrapper
+          .find("#workspace-handoff-standalone")
+          .attributes("href");
+        const standaloneUrl = new URL(standaloneHref, "http://localhost");
+        expect(standaloneUrl.pathname).toBe("/ecrf");
+        expect(
+          Object.fromEntries(standaloneUrl.searchParams.entries())
+        ).toEqual({
+          studyId: "CAD-101",
+          siteId: "017",
+          subjectId: "017-0001",
+          enrollmentId: ENROLLMENT_ID,
+          formId: FORM_ID,
+          collectionSpecId: "VS",
+          plannedActivityId: "WEEK2",
+          visitId: "WEEK2",
+          itemId: "SYSBP",
+        });
 
-      expect(router.currentRoute.value.query).toEqual({
-        stage: "conduct",
-        participant: `participant:${PARTICIPANT_ID}`,
-        form: `collection_instance:${FORM_ID}`,
-        observation: `observation:${OBSERVATION_ID}`,
-      });
-      expect(wrapper.find("#zoom-study").text()).toBe("CAD-101");
-      expect(wrapper.find("#zoom-site").text()).toBe("Site 017");
-      expect(wrapper.find("#zoom-participant").text()).toBe("017-0001");
-      expect(wrapper.find("#zoom-form").text()).toBe("Vital Signs · WEEK2");
-      expect(wrapper.find("#zoom-observation").text()).toBe(
-        "concept:systolic@1"
-      );
-      expect(wrapper.find("[data-testid=observation-concept]").text()).toBe(
-        "concept:systolic@1"
-      );
+        await wrapper.find("#ecrf-item-observation-SYSBP").trigger("click");
+        await flushPromises();
 
-      const backLink = wrapper.find("#observation-back");
-      expect(backLink.text()).toBe("Back to Vital Signs · WEEK2");
-      await backLink.trigger("click");
-      await flushPromises();
-      expect(router.currentRoute.value.query).toEqual({
-        stage: "conduct",
-        participant: `participant:${PARTICIPANT_ID}`,
-        form: `collection_instance:${FORM_ID}`,
-      });
+        expect(router.currentRoute.value.query).toEqual({
+          stage: "conduct",
+          participant: `participant:${PARTICIPANT_ID}`,
+          form: `collection_instance:${FORM_ID}`,
+          item: "SYSBP",
+          observation: `observation:${OBSERVATION_ID}`,
+        });
+        expect(wrapper.find("#zoom-study").text()).toBe("CAD-101");
+        expect(wrapper.find("#zoom-site").text()).toBe("Site 017");
+        expect(wrapper.find("#zoom-participant").text()).toBe("017-0001");
+        expect(wrapper.find("#zoom-form").text()).toBe("Vital Signs · WEEK2");
+        expect(wrapper.find("#zoom-observation").text()).toBe(
+          "concept:systolic@1"
+        );
+        expect(wrapper.find("[data-testid=observation-concept]").text()).toBe(
+          "concept:systolic@1"
+        );
+
+        const backLink = wrapper.find("#observation-back");
+        expect(backLink.text()).toBe("Back to Vital Signs · WEEK2");
+        await backLink.trigger("click");
+        await flushPromises();
+        expect(router.currentRoute.value.query).toEqual({
+          stage: "conduct",
+          participant: `participant:${PARTICIPANT_ID}`,
+          form: `collection_instance:${FORM_ID}`,
+          item: "SYSBP",
+        });
+        expect(
+          wrapper.find("#ecrf-row-SYSBP").attributes("data-highlighted")
+        ).toBe("true");
+      } finally {
+        HTMLElement.prototype.scrollIntoView = origScroll;
+      }
     });
 
     it("lets a site user answer an open query, and nothing more", async () => {
