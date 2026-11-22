@@ -3,7 +3,9 @@ using System.CommandLine;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
+using System.Text.Json;
 
 using Cadence.Cli.Services;
 using Cadence.ToolingCore.Services;
@@ -16,17 +18,19 @@ public static class DoctorCommand
 {
     public static void Configure(Command command)
     {
-        // Accepted for compatibility with `make doctor`; the diagnostics do not remediate anything yet (docs/cli.md).
-        command.Options.Add(new Option<bool>("--auto-fix", "-f")
+        var autoFix = new Option<bool>("--auto-fix", "-f")
         {
-            Description = "Automatically remediate missing databases and recoverable environment issues",
-        });
-        command.SetAction(_ => Execute());
+            Description = "Automatically remediate missing local tools and recoverable environment issues",
+        };
+        command.Options.Add(autoFix);
+        command.SetAction(result => Execute(result.GetValue(autoFix)));
     }
 
-    private static int Execute()
+    internal static int Execute(bool autoFix = false)
     {
         AnsiConsole.MarkupLine("[cyan]=== Cadence Clinical System Diagnostics ===[/]\n");
+
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
 
         // 1. .NET SDK
         bool dotnetOk = false;
@@ -36,7 +40,7 @@ public static class DoctorCommand
             using var p = Process.Start(psi);
             string output = p?.StandardOutput.ReadToEnd().Trim() ?? "";
             p?.WaitForExit();
-            if (output.StartsWith("10."))
+            if (output.StartsWith("10.", StringComparison.Ordinal))
             {
                 AnsiConsole.MarkupLine($"  .NET 10 SDK: [green]Active ({Markup.Escape(output)})[/]");
                 dotnetOk = true;
@@ -57,41 +61,183 @@ public static class DoctorCommand
         }
 
         // 2. CPM Check
-        bool cpm = File.Exists("Directory.Packages.props");
+        bool cpm = File.Exists(Path.Combine(repoRoot, "Directory.Packages.props"));
         AnsiConsole.MarkupLine($"  Central Package Management: {(cpm ? "[green]Enforced[/]" : "[red]Missing[/]")}");
 
-        // 3. pnpm against the packageManager pin (#5331)
-        bool pnpmOk = CheckPnpm();
+        // 3. Local dotnet-ef against .config/dotnet-tools.json
+        bool dotnetEfOk = CheckDotnetEf(repoRoot, autoFix);
 
-        // 4. detect-secrets guardrail tool (.cadence/venv, PATH, or uvx)
-        bool detectSecretsOk = CheckDetectSecrets();
+        // 4. pnpm against the packageManager pin (#5331)
+        bool pnpmOk = CheckPnpm(repoRoot);
 
-        // 5. CLI linters (.cadence/bin or PATH)
-        bool actionlintOk = CheckActionlint();
-        bool hadolintOk = CheckHadolint();
+        // 5. detect-secrets guardrail tool (.cadence/venv, PATH, or uvx)
+        bool detectSecretsOk = CheckDetectSecrets(repoRoot);
 
-        // 6. PostgreSQL connectivity
+        // 6. CLI linters (.cadence/bin or PATH)
+        bool actionlintOk = CheckActionlint(repoRoot);
+        bool hadolintOk = CheckHadolint(repoRoot);
+
+        // 7. PostgreSQL connectivity (informational; local tasks may run offline)
         try
         {
             using var client = new TcpClient();
             var asyncResult = client.BeginConnect("127.0.0.1", 5432, null, null);
             bool success = asyncResult.AsyncWaitHandle.WaitOne(500, false);
             if (success && client.Connected)
+            {
                 AnsiConsole.MarkupLine("  PostgreSQL (5432): [green]Connected[/]");
+            }
             else
+            {
                 AnsiConsole.MarkupLine("  PostgreSQL (5432): [grey]Unreachable (start via docker compose -f docker/docker-compose.yml up -d postgres)[/]");
+            }
         }
         catch
         {
             AnsiConsole.MarkupLine("  PostgreSQL (5432): [grey]Unreachable[/]");
         }
 
-        return dotnetOk && pnpmOk && detectSecretsOk && actionlintOk && hadolintOk ? 0 : 1;
+        return dotnetOk && cpm && dotnetEfOk && pnpmOk && detectSecretsOk && actionlintOk && hadolintOk ? 0 : 1;
     }
 
-    private static bool CheckDetectSecrets()
+    internal static bool CheckDotnetEf(
+        string repoRoot,
+        bool autoFix,
+        Func<string, string?>? probeVersion = null,
+        Func<string, bool>? restoreTools = null)
     {
-        var tool = DetectSecretsGateService.ResolveTool(QualityGateOrchestrator.FindRepoRoot());
+        string? pinned = ReadPinnedDotnetEfVersion(repoRoot);
+        if (string.IsNullOrWhiteSpace(pinned))
+        {
+            AnsiConsole.MarkupLine("  dotnet-ef: [red].config/dotnet-tools.json declares no dotnet-ef pin[/]");
+            return false;
+        }
+
+        var probe = probeVersion ?? TryGetRestoredDotnetEfVersion;
+        var restore = restoreTools ?? TryRestoreLocalTools;
+
+        string? installed = probe(repoRoot);
+        if (!string.Equals(installed, pinned, StringComparison.Ordinal) && autoFix)
+        {
+            AnsiConsole.MarkupLine("  dotnet-ef: [yellow]Restoring local tools from .config/dotnet-tools.json...[/]");
+            if (restore(repoRoot))
+            {
+                installed = probe(repoRoot);
+            }
+        }
+
+        if (string.Equals(installed, pinned, StringComparison.Ordinal))
+        {
+            AnsiConsole.MarkupLine($"  dotnet-ef: [green]{Markup.Escape(pinned)} (matches .config/dotnet-tools.json)[/]");
+            return true;
+        }
+
+        string status = string.IsNullOrWhiteSpace(installed) ? "Missing" : installed;
+        AnsiConsole.MarkupLine(
+            $"  dotnet-ef: [red]{Markup.Escape(status)}[/] (.config/dotnet-tools.json pins {Markup.Escape(pinned)}; run 'dotnet tool restore' or 'pnpm cadence doctor --auto-fix')");
+        return false;
+    }
+
+    internal static string? ReadPinnedDotnetEfVersion(string repoRoot)
+    {
+        string manifestPath = Path.Combine(repoRoot, ".config", "dotnet-tools.json");
+        if (!File.Exists(manifestPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(manifestPath));
+            if (doc.RootElement.TryGetProperty("tools", out var tools) &&
+                tools.TryGetProperty("dotnet-ef", out var ef) &&
+                ef.TryGetProperty("version", out var version))
+            {
+                return version.GetString();
+            }
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        return null;
+    }
+
+    private static string? TryGetRestoredDotnetEfVersion(string repoRoot)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("dotnet")
+            {
+                WorkingDirectory = repoRoot,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+            psi.ArgumentList.Add("tool");
+            psi.ArgumentList.Add("run");
+            psi.ArgumentList.Add("dotnet-ef");
+            psi.ArgumentList.Add("--version");
+
+            using var process = Process.Start(psi);
+            if (process is null)
+            {
+                return null;
+            }
+
+            string stdout = process.StandardOutput.ReadToEnd();
+            process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            if (process.ExitCode != 0)
+            {
+                return null;
+            }
+
+            return stdout
+                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .LastOrDefault();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool TryRestoreLocalTools(string repoRoot)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("dotnet")
+            {
+                WorkingDirectory = repoRoot,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+            psi.ArgumentList.Add("tool");
+            psi.ArgumentList.Add("restore");
+
+            using var process = Process.Start(psi);
+            if (process is null)
+            {
+                return false;
+            }
+
+            process.StandardOutput.ReadToEnd();
+            process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            return process.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool CheckDetectSecrets(string repoRoot)
+    {
+        var tool = DetectSecretsGateService.ResolveTool(repoRoot);
         if (tool is not null)
         {
             AnsiConsole.MarkupLine($"  detect-secrets: [green]{Markup.Escape(tool.Version)} ({Markup.Escape(tool.Source)})[/]");
@@ -103,9 +249,9 @@ public static class DoctorCommand
         return false;
     }
 
-    private static bool CheckActionlint()
+    private static bool CheckActionlint(string repoRoot)
     {
-        var tool = CliLinterGateService.ResolveActionlint(QualityGateOrchestrator.FindRepoRoot());
+        var tool = CliLinterGateService.ResolveActionlint(repoRoot);
         if (tool is not null)
         {
             AnsiConsole.MarkupLine($"  actionlint: [green]{Markup.Escape(tool.VersionOutput)} ({Markup.Escape(tool.SourceLabel)})[/]");
@@ -120,9 +266,9 @@ public static class DoctorCommand
         return false;
     }
 
-    private static bool CheckHadolint()
+    private static bool CheckHadolint(string repoRoot)
     {
-        var tool = CliLinterGateService.ResolveHadolint(QualityGateOrchestrator.FindRepoRoot());
+        var tool = CliLinterGateService.ResolveHadolint(repoRoot);
         if (tool is not null)
         {
             AnsiConsole.MarkupLine($"  hadolint: [green]{Markup.Escape(tool.VersionOutput)} ({Markup.Escape(tool.SourceLabel)})[/]");
@@ -137,9 +283,10 @@ public static class DoctorCommand
         return false;
     }
 
-    private static bool CheckPnpm()
+    private static bool CheckPnpm(string repoRoot)
     {
-        string? pinned = File.Exists("package.json") ? PnpmPin.PinnedVersion(File.ReadAllText("package.json")) : null;
+        string packageJsonPath = Path.Combine(repoRoot, "package.json");
+        string? pinned = File.Exists(packageJsonPath) ? PnpmPin.PinnedVersion(File.ReadAllText(packageJsonPath)) : null;
         string? installed = null;
         try
         {

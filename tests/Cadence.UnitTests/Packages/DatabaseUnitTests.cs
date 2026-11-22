@@ -151,28 +151,53 @@ public class DatabaseUnitTests
     }
 
     /// <summary>
-    /// Issue #4765: design-time factories read --connection or POSTGRES_CONNECTION_STRING and never fall back to a credential.
-    /// Environment variables are process-wide, so this test reads rather than mutates them.
+    /// ADR-2260 / ADR-2498: design-time factories resolve --connection, then ConnectionStrings__cadence, then
+    /// POSTGRES_CONNECTION_STRING, falling back to a credential-free offline placeholder (no Username or Password).
+    /// Environment variables are process-wide, so ambient checks read rather than mutate them, while isolated
+    /// precedence branches pass an in-memory environment lookup delegate.
     /// </summary>
     [Fact]
-    public void ResolveDesignTimeConnectionString_UsesEnvironmentOrThrowsNamingTheVariable()
+    public void ResolveDesignTimeConnectionString_PrecedenceAndCredentialFreeFallback()
     {
-        string? configured = Environment.GetEnvironmentVariable(CadenceDatabaseExtensions.LegacyConnectionStringKey);
-
-        Func<string> act = () => CadenceDatabaseExtensions.ResolveDesignTimeConnectionString([]);
-
-        CadenceDatabaseExtensions.ResolveDesignTimeConnectionString(
-                [CadenceDatabaseExtensions.DesignTimeConnectionArgument, TestHostSettings.PostgresConnectionString])
+        CadenceDatabaseExtensions.ResolveDesignTimeConnectionStringCore(
+                [CadenceDatabaseExtensions.DesignTimeConnectionArgument, TestHostSettings.PostgresConnectionString],
+                _ => "Host=localhost;Database=ignored")
             .Should().Be(TestHostSettings.PostgresConnectionString);
 
-        if (string.IsNullOrEmpty(configured))
+        CadenceDatabaseExtensions.ResolveDesignTimeConnectionStringCore(
+                [],
+                key => key == "ConnectionStrings__cadence"
+                    ? "Host=localhost;Database=from_primary"
+                    : "Host=localhost;Database=from_legacy")
+            .Should().Be("Host=localhost;Database=from_primary");
+
+        CadenceDatabaseExtensions.ResolveDesignTimeConnectionStringCore(
+                [],
+                key => key == CadenceDatabaseExtensions.LegacyConnectionStringKey
+                    ? "Host=localhost;Database=from_legacy"
+                    : null)
+            .Should().Be("Host=localhost;Database=from_legacy");
+
+        string placeholder = CadenceDatabaseExtensions.ResolveDesignTimeConnectionStringCore([], _ => null);
+        placeholder.Should().Be(CadenceDatabaseExtensions.DesignTimePlaceholderConnectionString);
+
+        var placeholderBuilder = new NpgsqlConnectionStringBuilder(placeholder);
+        placeholderBuilder.Username.Should().BeNullOrEmpty("offline placeholder must never embed credentials (ADR-2260)");
+        placeholderBuilder.Password.Should().BeNullOrEmpty("offline placeholder must never embed credentials (ADR-2260)");
+
+        string? ambientPrimary = Environment.GetEnvironmentVariable("ConnectionStrings__cadence");
+        string? ambientLegacy = Environment.GetEnvironmentVariable(CadenceDatabaseExtensions.LegacyConnectionStringKey);
+        string expectedAmbient = CadenceDatabaseExtensions.DesignTimePlaceholderConnectionString;
+        if (!string.IsNullOrEmpty(ambientPrimary))
         {
-            act.Should().Throw<InvalidOperationException>().WithMessage("*POSTGRES_CONNECTION_STRING*");
+            expectedAmbient = ambientPrimary;
         }
-        else
+        else if (!string.IsNullOrEmpty(ambientLegacy))
         {
-            act().Should().Be(configured);
+            expectedAmbient = ambientLegacy;
         }
+
+        CadenceDatabaseExtensions.ResolveDesignTimeConnectionString([]).Should().Be(expectedAmbient);
     }
 
     [Fact]
@@ -223,24 +248,14 @@ public class DatabaseUnitTests
     }
 
     [Fact]
-    public void CadenceDesignTimeDbContextFactory_WithoutConnectionArgument_UsesEnvironmentOrThrowsFailClosed()
+    public void CadenceDesignTimeDbContextFactory_WithoutConnectionArgument_BuildsOfflineContextWithModuleSchema()
     {
-        string? configured = Environment.GetEnvironmentVariable(CadenceDatabaseExtensions.LegacyConnectionStringKey);
         var factory = new DefaultSchemaTestDbContextFactory();
 
-        Action act = () =>
-        {
-            using var _ = factory.CreateDbContext([]);
-        };
+        using var context = factory.CreateDbContext([]);
 
-        if (string.IsNullOrEmpty(configured))
-        {
-            act.Should().Throw<InvalidOperationException>().WithMessage("*POSTGRES_CONNECTION_STRING*");
-        }
-        else
-        {
-            act.Should().NotThrow();
-        }
+        var builder = new NpgsqlConnectionStringBuilder(context.Database.GetConnectionString());
+        builder.SearchPath.Should().Be("test,public");
     }
 
     [Fact]

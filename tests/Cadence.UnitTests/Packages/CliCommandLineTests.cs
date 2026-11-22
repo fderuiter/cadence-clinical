@@ -55,6 +55,18 @@ public class CliCommandLineTests
     [InlineData("scaffold", "post", "Ship Kernel Phase 3", "--author", "fderuiter,reviewer", "--tag", "kernel", "--tag", "architecture", "--summary", "Short excerpt", "--publish")]
     [InlineData("scaffold", "post", "Ship Kernel Phase 3", "--author=@fderuiter", "-t", "kernel")]
     [InlineData("db", "reset")]
+    [InlineData("db", "reset", "--allow-offline")]
+    [InlineData("db", "migrate")]
+    [InlineData("db", "migrate", "all")]
+    [InlineData("db", "migrate", "execution")]
+    [InlineData("db", "add", "execution", "AddVisitWindowIndex")]
+    [InlineData("db", "script")]
+    [InlineData("db", "script", "kernel")]
+    [InlineData("db", "bundle", "execution-module")]
+    [InlineData("db", "list", "intelligence")]
+    [InlineData("db", "optimize", "ctms")]
+    [InlineData("db", "seed")]
+    [InlineData("db", "seed", "execution")]
     [InlineData("wizard", "onboarding")]
     public void Parse_AcceptsEachDocumentedInvocation(params string[] args)
     {
@@ -85,6 +97,12 @@ public class CliCommandLineTests
     [InlineData("gxp", "sync", "--results-dir")]
     [InlineData("gxp", "snapshot", "--results-dir")]
     [InlineData("gxp", "snapshot", "--results-dir", "--commit")]
+    [InlineData("db")]
+    [InlineData("db", "add")]
+    [InlineData("db", "add", "execution")]
+    [InlineData("db", "add", "all", "InitialCreate")]
+    [InlineData("db", "migrate", "--no-such-option")]
+    [InlineData("db", "reset", "--no-such-option")]
     public void Parse_RejectsMissingArgumentsUnknownInputAndBareBranches(params string[] args)
     {
         Root.Parse(args).Errors.Should().NotBeEmpty();

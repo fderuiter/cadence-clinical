@@ -59,7 +59,7 @@ if (-not $sdkInstalled -and -not $SkipSdkInstall) {
 
         Invoke-WebRequest -Uri $installScriptUrl -OutFile $tempScript
 
-        $pinnedSha256 = "e8b873e18a81e5c4cd8ab69d84dac8fead291d50b3c44633cd7fddad709a13d6"
+        $pinnedSha256 = "e8b873e18a81e5c4cd8ab69d84dac8fead291d50b3c44633cd7fddad709a13d6" # pragma: allowlist secret
         $expectedHash = if ($env:DOTNET_INSTALL_PS1_SHA256) { $env:DOTNET_INSTALL_PS1_SHA256 } else { $pinnedSha256 }
 
         Write-Host "  [ACTION] Verifying SHA256 checksum for dotnet-install.ps1..." -ForegroundColor Cyan
@@ -97,18 +97,19 @@ if (-not $sdkInstalled -and -not $SkipSdkInstall) {
     Write-Host "  [OK] .NET 10 SDK successfully installed: $newVersion" -ForegroundColor Green
 }
 
-# 2. Install essential global dotnet tools
-Write-Host "`n[2/5] Checking & Installing Global .NET Tools..." -ForegroundColor Yellow
-$tools = @("dotnet-ef", "dotnet-format")
-foreach ($tool in $tools) {
-    try {
-        Write-Host "  Installing/Updating $tool..." -ForegroundColor Gray
-        & dotnet tool update --global $tool 2>$null
-        Write-Host "  [OK] $tool is up to date." -ForegroundColor Green
+# 2. Restore local .NET CLI tools (.config/dotnet-tools.json)
+Write-Host "`n[2/5] Restoring Local .NET CLI Tools (.config/dotnet-tools.json)..." -ForegroundColor Yellow
+$scriptRepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+Push-Location $scriptRepoRoot
+try {
+    & dotnet tool restore
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet tool restore exited with code $LASTEXITCODE"
     }
-    catch {
-        Write-Host "  [WARNING] Could not install tool $tool: $_" -ForegroundColor DarkYellow
-    }
+    Write-Host "  [OK] Local .NET tools restored from .config/dotnet-tools.json." -ForegroundColor Green
+}
+finally {
+    Pop-Location
 }
 
 $toolsDir = Join-Path $env:USERPROFILE ".dotnet\tools"

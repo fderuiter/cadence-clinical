@@ -103,7 +103,8 @@ docs: ## Serve the VitePress documentation portal locally
 db-reset: ## Drop and re-create the local development database schema
 	$(CADENCE_CLI) db reset
 
-db-reset-offline: db-reset ## Alias for db-reset
+db-reset-offline: ## Drop and re-create the local development database schema, tolerating an offline database
+	$(CADENCE_CLI) db reset --allow-offline
 
 ports: ## Check that all required service ports are free (cadence check-ports)
 	$(CADENCE_CLI) check-ports

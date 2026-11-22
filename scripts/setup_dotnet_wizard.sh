@@ -63,12 +63,11 @@ if [ "$SDK_FOUND" = false ]; then
   fi
 fi
 
-# Stage 2: Global Tools
-stage "Global Developer Tools" "Ensuring required dotnet CLI tools are installed..."
-for tool in dotnet-ef dotnet-format; do
-  dotnet tool update --global "$tool" 2>/dev/null || dotnet tool install --global "$tool" 2>/dev/null || true
-  printf '  %s[SUCCESS] %s is configured.%s\n' "$GREEN" "$tool" "$RESET"
-done
+# Stage 2: Local CLI Tools
+stage "Local Developer Tools" "Restoring pinned dotnet CLI tools from .config/dotnet-tools.json..."
+WIZARD_REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+(cd "$WIZARD_REPO_ROOT" && dotnet tool restore)
+printf '  %s[SUCCESS] Local .NET tools restored.%s\n' "$GREEN" "$RESET"
 
 # Stage 3: HTTPS Dev Certs
 stage "HTTPS Dev Certificates" "Configuring local development certificates..."

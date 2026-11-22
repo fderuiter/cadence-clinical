@@ -46,7 +46,7 @@ if [ "$SDK_INSTALLED" = false ]; then
         TEMP_SCRIPT="$(mktemp /tmp/dotnet-install.XXXXXX.sh)"
         curl -fsSL --connect-timeout 15 --retry 3 https://dot.net/v1/dotnet-install.sh -o "$TEMP_SCRIPT"
 
-        PINNED_DOTNET_INSTALL_SH_SHA256="082f7685e156738a1b2e2ed8381a621870d4ce8e8c59278034556f05c186eb2e"
+        PINNED_DOTNET_INSTALL_SH_SHA256="082f7685e156738a1b2e2ed8381a621870d4ce8e8c59278034556f05c186eb2e" # pragma: allowlist secret
         EXPECTED_HASH="${DOTNET_INSTALL_SH_SHA256:-$PINNED_DOTNET_INSTALL_SH_SHA256}"
 
         echo "  [ACTION] Verifying SHA256 checksum for dotnet-install.sh..."
@@ -88,14 +88,11 @@ if [ "$SDK_INSTALLED" = false ]; then
     echo -e "  \033[32m[OK] .NET 10 SDK successfully installed: $NEW_VERSION\033[0m"
 fi
 
-# 2. Install essential global dotnet tools
-echo -e "\n[2/5] Checking & Installing Global .NET Tools..."
-TOOLS=("dotnet-ef" "dotnet-format")
-for tool in "${TOOLS[@]}"; do
-    echo "  Installing/Updating $tool..."
-    dotnet tool update --global "$tool" 2>/dev/null || dotnet tool install --global "$tool" 2>/dev/null || true
-    echo -e "  \033[32m[OK] $tool is configured.\033[0m"
-done
+# 2. Restore local .NET CLI tools (.config/dotnet-tools.json)
+echo -e "\n[2/5] Restoring Local .NET CLI Tools (.config/dotnet-tools.json)..."
+SCRIPT_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+(cd "$SCRIPT_REPO_ROOT" && dotnet tool restore)
+echo -e "  \033[32m[OK] Local .NET tools restored from .config/dotnet-tools.json.\033[0m"
 
 mkdir -p "$HOME/.dotnet/tools"
 cat << "EOF" > "$HOME/.dotnet/tools/dotnet-cadence"

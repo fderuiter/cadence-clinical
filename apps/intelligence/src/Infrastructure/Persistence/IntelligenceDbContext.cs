@@ -165,13 +165,16 @@ public sealed class IntelligenceDbContext(DbContextOptions<IntelligenceDbContext
     }
 }
 
-/// <summary>Builds the context for <c>dotnet ef</c>; the connection string is only used to pick the provider.</summary>
+/// <summary>
+/// Builds <see cref="IntelligenceDbContext"/> for <c>dotnet ef</c> using <c>--connection</c>,
+/// <c>ConnectionStrings__cadence</c>, <c>POSTGRES_CONNECTION_STRING</c>, or a credential-free offline placeholder (ADR-2498).
+/// </summary>
 internal sealed class IntelligenceDbContextDesignTimeFactory : IDesignTimeDbContextFactory<IntelligenceDbContext>
 {
     public IntelligenceDbContext CreateDbContext(string[] args) =>
         new(new DbContextOptionsBuilder<IntelligenceDbContext>()
             .UseNpgsql(
-                "Host=localhost;Database=cadence_design",
+                ModuleMigrationServiceCollectionExtensions.ResolveDesignTimeConnectionString(args),
                 npgsql => npgsql.MigrationsHistoryTable(ModuleMigrationServiceCollectionExtensions.MigrationsHistoryTable, IntelligenceDbContext.Schema))
             .Options);
 }

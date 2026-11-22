@@ -21,23 +21,24 @@ pnpm cadence scaffold post "Ship Kernel Phase 3"
 
 Some commands also have a `make` target. Those targets use `pnpm cadence` and share its on-demand CLI build.
 
-| `make` target                            | Runs                                          |
-| ---------------------------------------- | --------------------------------------------- |
-| `make doctor`                            | `cadence doctor --auto-fix`                   |
-| `make ports`                             | `cadence check-ports`                         |
-| `make dev`                               | `cadence dev`                                 |
-| `make fix`                               | `cadence fix`                                 |
-| `make check`                             | `cadence check`                               |
-| `make action-pinning`                    | `cadence check workflow-security`             |
-| `make test`                              | `cadence test`                                |
-| `make verify`                            | `cadence check`, then `cadence test`          |
-| `make ci`                                | `cadence ci`                                  |
-| `make sync-gxp`, `make gxp-sync`         | `cadence gxp sync`                            |
-| `make rtm`                               | `cadence gxp validate`                        |
-| `make gxp-snapshot`                      | `CADENCE_GXP_SNAPSHOT=1 cadence gxp snapshot` |
-| `make adr TITLE="..."`                   | `cadence scaffold adr "<title>"`              |
-| `make post TITLE="..."`                  | `cadence scaffold post "<title>"`             |
-| `make db-reset`, `make db-reset-offline` | `cadence db reset`                            |
+| `make` target                    | Runs                                          |
+| -------------------------------- | --------------------------------------------- |
+| `make doctor`                    | `cadence doctor --auto-fix`                   |
+| `make ports`                     | `cadence check-ports`                         |
+| `make dev`                       | `cadence dev`                                 |
+| `make fix`                       | `cadence fix`                                 |
+| `make check`                     | `cadence check`                               |
+| `make action-pinning`            | `cadence check workflow-security`             |
+| `make test`                      | `cadence test`                                |
+| `make verify`                    | `cadence check`, then `cadence test`          |
+| `make ci`                        | `cadence ci`                                  |
+| `make sync-gxp`, `make gxp-sync` | `cadence gxp sync`                            |
+| `make rtm`                       | `cadence gxp validate`                        |
+| `make gxp-snapshot`              | `CADENCE_GXP_SNAPSHOT=1 cadence gxp snapshot` |
+| `make adr TITLE="..."`           | `cadence scaffold adr "<title>"`              |
+| `make post TITLE="..."`          | `cadence scaffold post "<title>"`             |
+| `make db-reset`                  | `cadence db reset`                            |
+| `make db-reset-offline`          | `cadence db reset --allow-offline`            |
 
 `make wizard` runs `scripts/setup_wizard.sh` directly. That is the same script as `cadence wizard onboarding`.
 
@@ -54,17 +55,18 @@ Exit code `0` means success. Any other exit code means failure. Some commands al
 Checks the local environment. It reports:
 
 - the .NET SDK version (from `dotnet --version`)
-- whether `Directory.Packages.props` exists in the current directory
+- whether `Directory.Packages.props` exists in the repository root
+- whether local `dotnet-ef` (`dotnet tool run dotnet-ef --version`) matches `.config/dotnet-tools.json` (`10.0.15`, ADR-2527)
 - whether the pnpm on the `PATH` runs and matches the `packageManager` pin in `package.json` (ADR-2508)
 - whether `detect-secrets-hook` runs from `.cadence/venv`, `.venv`, `PATH`, or `uvx`
 - whether `actionlint` and `hadolint` run from `.cadence/bin` or `PATH`
 - whether PostgreSQL answers on `127.0.0.1:5432`
 
-It exits `1` when the .NET SDK is missing, pnpm is missing/crashes/differs from the pin, or `detect-secrets`, `actionlint`, or `hadolint` is unavailable, and `0` otherwise.
+It exits `1` when the .NET SDK or `Directory.Packages.props` is missing, local `dotnet-ef` or `pnpm` is missing or mismatched, or `detect-secrets`, `actionlint`, or `hadolint` is unavailable, and `0` otherwise.
 
-| Option           | Description                                                                          |
-| ---------------- | ------------------------------------------------------------------------------------ |
-| `-f\|--auto-fix` | Declared as "remediate missing databases and recoverable issues". Currently ignored. |
+| Option           | Description                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------------- |
+| `-f\|--auto-fix` | Restores missing or mismatched local `.NET` CLI tools via `dotnet tool restore` and re-verifies status. |
 
 ### `cadence check`
 
@@ -409,20 +411,49 @@ pre-commit hook, as CI's `Check GxP Snapshot Policy` step does after regeneratin
 
 ### `cadence db`
 
-Local database commands.
+Unified database management and EF Core migration workflows across all 18 persistence modules in `PersistenceModuleRegistry` (`kernel`, `intelligence`, `execution-module`, `execution`, and the 14 standalone clinical services; [ADR-2498](adr/2026-11-22-unify-cli-database-workflows-and-design-time-fallback.md)). `scripts/manage_migrations.sh` and `scripts/manage_migrations.ps1` are thin wrappers over this command group.
 
 #### `cadence db reset`
 
-Resets the local datastores:
+Drops and recreates all 18 module schemas in the local PostgreSQL database while keeping `public` and its installed extensions (such as `btree_gist`) intact, drops legacy `audit_schema`, and removes any non-extension base tables left in `public`.
 
-1. PostgreSQL: drops and re-creates the schemas. The connection string comes from `POSTGRES_CONNECTION_STRING`, then `DATABASE_URL`, then a localhost default.
-2. SQLite: deletes every `.db` and `.sqlite` file in the repository whose path does not contain `node_modules`, `bin` or `obj`.
+The connection string resolves in order from `ConnectionStrings__cadence`, `POSTGRES_CONNECTION_STRING`, or `DATABASE_URL` (with zero hardcoded fallback credentials, [ADR-2260](adr/2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md)). Safety guardrails always refuse execution when `CADENCE_ENV`, `ASPNETCORE_ENVIRONMENT`, or `ENVIRONMENT` is `Production`/`Prod`, or when the connection string contains non-local hosts or cloud/production keywords. By default it exits `1` when no connection string is set or PostgreSQL is unreachable.
 
-It refuses to run when `CADENCE_ENV`, `ASPNETCORE_ENVIRONMENT` or `ENVIRONMENT` is `Production` or `Prod`. It also refuses connection strings that look remote (for example containing `prod`, `aws` or `azure`, or a non-local host). If a datastore cannot be reached, it prints a warning and continues. It exits `0` even when a reset step fails.
+| Option            | Description                                                                             |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| `--allow-offline` | Exit `0` with a warning when no local PostgreSQL connection is configured or reachable. |
 
 #### `cadence db migrate`
 
-Runs `dotnet ef database update --project apps/execution/src/Cadence.Apps.Execution.csproj` in the current directory. Only the execution service is migrated. Use `scripts/manage_migrations.ps1` to add migrations.
+Applies pending EF Core migrations across `[module]` or `all` (defaults to `all`, migrating `kernel` first followed by composition-host modules and standalone services). Requires `ConnectionStrings__cadence` or `POSTGRES_CONNECTION_STRING` (exits `1` when unset), ensures each target PostgreSQL schema exists (`CREATE SCHEMA IF NOT EXISTS "<schema>"`, plus `btree_gist` for `kernel`), and invokes `dotnet tool run dotnet-ef database update`.
+
+#### `cadence db add`
+
+```bash
+pnpm cadence db add <module> <name>
+```
+
+Generates a new EF Core migration in `<module>`'s migrations folder via `dotnet tool run dotnet-ef migrations add` (`all` is rejected; requires a single module name) and runs scoped `dotnet format whitespace` and `dotnet format style` on the generated C# files so `IDE0161` file-scoped namespaces and whitespace checks pass automatically. Works offline using the credential-free design-time placeholder.
+
+#### `cadence db script`
+
+Generates idempotent SQL migration scripts (`idempotent_migration.sql` in each module's migrations directory) for `[module]` or `all` (defaults to `all`). Works offline without database credentials.
+
+#### `cadence db bundle`
+
+Builds self-contained `migration_bundle` executables for `[module]` or `all` (defaults to `all`) via `dotnet tool run dotnet-ef migrations bundle --force`. Works offline without database credentials.
+
+#### `cadence db list`
+
+Lists applied and pending EF Core migrations for `[module]` or `all` (defaults to `all`). Requires `ConnectionStrings__cadence` or `POSTGRES_CONNECTION_STRING` (exits `1` when unset).
+
+#### `cadence db optimize`
+
+Generates pre-compiled EF Core models (`CompiledModels`) for `[module]` or `all` (defaults to `all`) via `dotnet tool run dotnet-ef dbcontext optimize`. Works offline without database credentials.
+
+#### `cadence db seed`
+
+Runs deterministic local development seeders for `[module]` or `all` (defaults to `all`). Requires `ConnectionStrings__cadence` or `POSTGRES_CONNECTION_STRING` (exits `1` when unset). Executes `dotnet run --project apps/execution/src/Cadence.Apps.Execution.csproj -- --seed` only for `execution`, prints startup bootstrap instructions referencing `DevelopmentTenantBootstrap` (`Kernel__DevelopmentTenant__Code` and `Kernel__DevelopmentTenant__DemoData=true` on `apps/kernel-api`) for `kernel`, and cleanly skips web hosts that have no standalone `--seed` entrypoint without hanging.
 
 ### `cadence settings`
 

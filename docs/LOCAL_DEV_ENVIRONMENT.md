@@ -23,7 +23,8 @@ make wizard                                  # bash scripts/setup_wizard.sh; Win
 bash scripts/setup_wizard.sh --dev --minimal # no prompts, no Playwright browser download
 ```
 
-It installs or validates the SDK and HTTPS dev certificate, runs `pnpm install --frozen-lockfile`, sets
+It installs or validates the SDK and HTTPS dev certificate, runs `dotnet tool restore` (for pinned local
+`dotnet-ef` in `.config/dotnet-tools.json`) and `pnpm install --frozen-lockfile`, sets
 `git config core.hooksPath .githooks`, creates `.env` from `.env.example`, and finishes with
 `cadence doctor`.
 
@@ -148,18 +149,18 @@ The host ports are the defaults the gateway routes to (`apps/gateway/src/Program
 services started with `dotnet run` and the compose stack alike. Inside compose, every .NET service listens on
 8080 in its own container.
 
-| Service                       | Host port | Database schema | Service                    | Host port   | Database schema          |
-| ----------------------------- | --------- | --------------- | -------------------------- | ----------- | ------------------------ |
-| front proxy (nginx) → gateway | 8000      | none            | eisf                       | 8010        | `eisf`                   |
-| designer                      | 8001      | none            | econsent                   | 8011        | `econsent`               |
-| execution                     | 8002      | `edc`           | org                        | 8012        | `org`                    |
-| etmf                          | 8003      | `etmf`          | fileshare                  | 8013        | `fileshare`              |
-| interop                       | 8004      | `interop`       | imaging                    | 8014        | `imaging`                |
-| quality                       | 8005      | `quality`       | knowledge                  | 8015        | `knowledge`              |
-| notifications                 | 8006      | `notifications` | payments                   | 8016        | `payments`               |
-| ctms                          | 8007      | `ctms`          | kernel (`apps/kernel-api`) | 8018        | `kernel`, `intelligence` |
-| safety                        | 8008      | `safety`        | Keycloak                   | 8080        | (own store)              |
-| tickets                       | 8009      | `tickets`       | web / subject portal       | 5173 / 5174 | none                     |
+| Service                       | Host port | Database schema | Service                    | Host port   | Database schema                       |
+| ----------------------------- | --------- | --------------- | -------------------------- | ----------- | ------------------------------------- |
+| front proxy (nginx) → gateway | 8000      | none            | eisf                       | 8010        | `eisf`                                |
+| designer                      | 8001      | none            | econsent                   | 8011        | `econsent`                            |
+| execution                     | 8002      | `edc`           | org                        | 8012        | `org`                                 |
+| etmf                          | 8003      | `etmf`          | fileshare                  | 8013        | `fileshare`                           |
+| interop                       | 8004      | `interop`       | imaging                    | 8014        | `imaging`                             |
+| quality                       | 8005      | `quality`       | knowledge                  | 8015        | `knowledge`                           |
+| notifications                 | 8006      | `notifications` | payments                   | 8016        | `payments`                            |
+| ctms                          | 8007      | `ctms`          | kernel (`apps/kernel-api`) | 8018        | `kernel`, `intelligence`, `execution` |
+| safety                        | 8008      | `safety`        | Keycloak                   | 8080        | (own store)                           |
+| tickets                       | 8009      | `tickets`       | web / subject portal       | 5173 / 5174 | none                                  |
 
 PostgreSQL listens on 5432 (database `cadence`). What each service does and how mature it is:
 [ARCHITECTURE.md §3](../ARCHITECTURE.md#3-running-services-today). Check for port clashes with
@@ -174,11 +175,16 @@ model. Agent tasks call one only when a provider is configured: `Intelligence__A
 
 ## 5. Database tasks
 
-| Task                             | Command                                                            |
-| -------------------------------- | ------------------------------------------------------------------ |
-| Add a migration                  | `pwsh scripts/manage_migrations.ps1 add <service> <MigrationName>` |
-| Idempotent SQL script for review | `pwsh scripts/manage_migrations.ps1 script <service>`              |
-| Reset local databases            | `pnpm cadence db reset`                                            |
+| Task                                    | Command                                                                   |
+| --------------------------------------- | ------------------------------------------------------------------------- |
+| Add a migration (offline-capable)       | `pnpm cadence db add <module> <MigrationName>`                            |
+| Idempotent SQL script for review        | `pnpm cadence db script [<module\|all>]`                                  |
+| Reset all 18 local PostgreSQL schemas   | `pnpm cadence db reset` (`--allow-offline` tolerates an offline database) |
+| Apply pending migrations across schemas | `pnpm cadence db migrate [<module\|all>]`                                 |
+| List applied and pending migrations     | `pnpm cadence db list [<module\|all>]`                                    |
+| Seed local development data             | `pnpm cadence db seed [<module\|all>]`                                    |
+
+`scripts/manage_migrations.sh` and `scripts/manage_migrations.ps1` are thin wrappers that forward directly to `cadence db`.
 
 ## 6. Quality gates and GxP sync
 

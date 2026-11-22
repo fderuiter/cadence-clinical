@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Compile Include="..\Services\PersistenceModuleRegistry.cs" Link="PersistenceModuleRegistry.cs" />
   </ItemGroup>
 
   <!-- Every assembly that owns a DbContext with a design-time factory; Program.ModuleAssemblies lists the same set.

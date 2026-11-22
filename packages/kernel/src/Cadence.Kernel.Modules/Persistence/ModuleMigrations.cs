@@ -33,6 +33,40 @@ public static partial class ModuleMigrationServiceCollectionExtensions
     /// <summary>The migrations history table in every module schema, named like the kernel's.</summary>
     public const string MigrationsHistoryTable = "__ef_migrations_history";
 
+    /// <summary>Credential-free placeholder connection string for offline EF Core design-time model building (ADR-2260, ADR-2498).</summary>
+    public const string DesignTimePlaceholderConnectionString = "Host=localhost;Database=cadence_design";
+
+    /// <summary>
+    /// Resolves the PostgreSQL connection string for module <c>IDesignTimeDbContextFactory</c> implementations in order:
+    /// <c>--connection</c> argument, <c>ConnectionStrings__cadence</c>, <c>POSTGRES_CONNECTION_STRING</c>, or the
+    /// credential-free offline placeholder <see cref="DesignTimePlaceholderConnectionString"/> (ADR-2260, ADR-2498).
+    /// </summary>
+    /// <param name="args">Design-time CLI arguments passed after <c>--</c>.</param>
+    public static string ResolveDesignTimeConnectionString(string[]? args = null) =>
+        ResolveDesignTimeConnectionStringCore(
+            args,
+            static key => key == "ConnectionStrings__cadence"
+                ? Environment.GetEnvironmentVariable("ConnectionStrings__cadence")
+                : Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING"));
+
+    internal static string ResolveDesignTimeConnectionStringCore(string[]? args, Func<string, string?> getEnvironmentVariable)
+    {
+        int argIdx = args is null ? -1 : Array.IndexOf(args, "--connection");
+        if (args is not null && argIdx >= 0 && argIdx + 1 < args.Length && args[argIdx + 1] is { Length: > 0 } fromArgs)
+        {
+            return fromArgs;
+        }
+
+        if (getEnvironmentVariable("ConnectionStrings__cadence") is { Length: > 0 } named)
+        {
+            return named;
+        }
+
+        return getEnvironmentVariable("POSTGRES_CONNECTION_STRING") is { Length: > 0 } legacy
+            ? legacy
+            : DesignTimePlaceholderConnectionString;
+    }
+
     /// <summary>
     /// Registers <typeparamref name="TContext"/>'s migrations as <paramref name="module"/>'s. The host applies them after
     /// the kernel's when <c>Database:MigrateOnStartup</c> or <c>Database:MigrateOnly</c> is set; a deployment that

@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="Cadence.UnitTests" />
   </ItemGroup>
 
   <ItemGroup>

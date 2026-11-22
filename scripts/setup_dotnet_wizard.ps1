@@ -78,19 +78,21 @@ if (-not $sdkFound) {
 }
 
 # ------------------------------------------------------------------------------
-# Stage 2: Global CLI Tools
+# Stage 2: Local CLI Tools
 # ------------------------------------------------------------------------------
-Invoke-Stage -Number 2 -Total 6 -Title "Global Developer Tools" -Description "Ensuring required dotnet CLI tools are installed..."
+Invoke-Stage -Number 2 -Total 6 -Title "Local Developer Tools" -Description "Restoring pinned dotnet CLI tools from .config/dotnet-tools.json..."
 
-$tools = @("dotnet-ef", "dotnet-format")
-foreach ($tool in $tools) {
-    Write-Host "  Checking $tool..." -ForegroundColor Gray
-    try {
-        & dotnet tool update --global $tool 2>$null
-        Write-Host "  [SUCCESS] $tool is configured." -ForegroundColor Green
-    } catch {
-        Write-Host "  [INFO] Tool configuration note: $_" -ForegroundColor DarkGray
+$wizardRepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+Push-Location $wizardRepoRoot
+try {
+    & dotnet tool restore
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [WARNING] dotnet tool restore exited with code $LASTEXITCODE" -ForegroundColor Yellow
+    } else {
+        Write-Host "  [SUCCESS] Local .NET tools restored." -ForegroundColor Green
     }
+} finally {
+    Pop-Location
 }
 
 # ------------------------------------------------------------------------------

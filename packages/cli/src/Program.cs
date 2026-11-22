@@ -91,9 +91,15 @@ public static class Program
         AddCommand(gxp, "diff", "Compares the regenerated RTM and IQ/OQ/PQ report with the committed copies, ignoring the evidence block",
             () => Services.GxpDocsDiffService.Compare(Services.QualityGateOrchestrator.FindRepoRoot()));
 
-        var db = AddBranch(root, "db", "Database management and migrations");
-        AddCommand(db, "reset", "Resets the local PostgreSQL and SQLite datastores", DbCommands.Reset);
-        AddCommand(db, "migrate", "Runs pre-boot EF Core database migrations", DbCommands.Migrate);
+        var db = AddBranch(root, "db", "Database management and migrations across all 18 persistence modules");
+        AddCommand(db, "reset", "Drops and recreates all 18 local PostgreSQL module schemas while preserving public extensions", DbCommands.ConfigureReset);
+        AddCommand(db, "migrate", "Applies pending EF Core migrations across a persistence module or all 18 modules", DbCommands.ConfigureMigrate);
+        AddCommand(db, "add", "Creates a new EF Core migration in a persistence module and formats generated files", DbCommands.ConfigureAdd);
+        AddCommand(db, "script", "Generates idempotent SQL migration scripts for a persistence module or all 18 modules", DbCommands.ConfigureScript);
+        AddCommand(db, "bundle", "Builds self-contained EF Core migration bundles for a persistence module or all 18 modules", DbCommands.ConfigureBundle);
+        AddCommand(db, "list", "Lists applied and pending EF Core migrations for a persistence module or all 18 modules", DbCommands.ConfigureList);
+        AddCommand(db, "optimize", "Generates pre-compiled EF Core models for a persistence module or all 18 modules", DbCommands.ConfigureOptimize);
+        AddCommand(db, "seed", "Runs deterministic development seeders where supported and prints bootstrap guidance", DbCommands.ConfigureSeed);
 
         var settings = AddBranch(root, "settings", "Manage microservice configuration settings models and template exports");
         AddCommand(settings, "export", "Checks that environment variables read in code are listed in .env.example and docs", ToolCommands.ConfigureExtractEnvVars);

@@ -58,7 +58,7 @@ if (-not $NonInteractive) {
 
 # 1. .NET 10 SDK
 Write-Host "`n[1/6] .NET 10 SDK" -ForegroundColor Cyan
-Write-Host "  Installing/validating the .NET 10 SDK, global tools, and dev certs..." -ForegroundColor Gray
+Write-Host "  Installing/validating the .NET 10 SDK, local tools, and dev certs..." -ForegroundColor Gray
 try {
     & (Join-Path $RepoRoot "scripts\setup_dotnet_env.ps1")
 }
@@ -66,6 +66,16 @@ catch {
     Write-Failed ".NET SDK setup step failed ($_) — continuing with remaining stages."
 }
 if (Get-Command dotnet -ErrorAction SilentlyContinue) {
+    Push-Location $RepoRoot
+    try {
+        & dotnet tool restore
+        if ($LASTEXITCODE -ne 0) {
+            Write-Failed "dotnet tool restore failed (exit code $LASTEXITCODE)."
+        }
+    }
+    finally {
+        Pop-Location
+    }
     & dotnet restore (Join-Path $RepoRoot "Cadence.sln")
     if ($LASTEXITCODE -ne 0) {
         Write-Info "Some projects failed to restore (see Directory.Packages.props pins)."

@@ -30,12 +30,14 @@ migration application.
   There is no fallback in any environment: a missing value fails startup with a message naming both keys (ADR-2260).
 - `CadenceDesignTimeDbContextFactory<TDbContext>`: abstract `IDesignTimeDbContextFactory<TDbContext>` base class for
   service design-time factories (`dotnet ef` and `Cadence.SchemaDocExporter`). Resolves the connection string
-  fail-closed via `ResolveDesignTimeConnectionString(args)` (ADR-2260), scopes Npgsql to the module's schema
+  via `ResolveDesignTimeConnectionString(args)` ([ADR-2498](../../docs/adr/2026-11-22-unify-cli-database-workflows-and-design-time-fallback.md)), scopes Npgsql to the module's schema
   (`ModuleSchemaFor<TDbContext>()` by default or an explicit schema such as `"edc"`, ADR-2447), and invokes a typed
   constructor delegate, with a second constructor overload supplying `DesignTimeFieldEncryptor.Instance` for
   field-encrypting contexts (ADR-2494).
 - `ResolveDesignTimeConnectionString(args)`: used by `CadenceDesignTimeDbContextFactory<TDbContext>` (`dotnet ef`). Reads
-  `--connection "..."` passed after `--`, then `POSTGRES_CONNECTION_STRING`, and throws when neither is set.
+  `--connection "..."` passed after `--`, then `ConnectionStrings__cadence`, then `POSTGRES_CONNECTION_STRING`, and falls
+  back to the credential-free placeholder `Host=localhost;Database=cadence_design` so offline model commands (`add`,
+  `script`, `bundle`, `optimize`) succeed without embedding credentials in source control (ADR-2260, ADR-2498).
 - `AddCadenceMigrations<TContext>()`: applies migrations according to the `Database` configuration section.
 - `AddCadenceDurableSigTokenStore<TContext>()` (`Cadence.Database.Signatures`): replaces the process-local e-signature
   `ReplayCache` with `PostgresSigTokenUseStore<TContext>`, which records each used token id in the context's

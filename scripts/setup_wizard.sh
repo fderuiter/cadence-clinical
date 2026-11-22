@@ -252,15 +252,13 @@ fi
 # --------------------------------------------------------------------------
 # Stage 1: .NET 10 SDK
 # --------------------------------------------------------------------------
-stage ".NET 10 SDK" "Installing/validating the .NET 10 SDK, global tools, and dev certs..."
+stage ".NET 10 SDK" "Installing/validating the .NET 10 SDK, local tools, and dev certs..."
 bash "$REPO_ROOT/scripts/setup_dotnet_env.sh" || warn_failed ".NET SDK setup step failed — see output above. Continuing with remaining stages."
 if [[ "$MINIMAL" == "1" ]]; then
   info "Skipped HTTPS dev-cert trust prompt handling (--minimal)."
 fi
-# Warm the NuGet cache for a faster first build. Some projects currently fail
-# to restore due to pinned preview package versions in Directory.Packages.props
-# (a pre-existing repo issue, not caused by this wizard) — don't fail on it.
 if command -v dotnet >/dev/null 2>&1; then
+  (cd "$REPO_ROOT" && dotnet tool restore) || warn_failed "dotnet tool restore failed — run 'dotnet tool restore' from the repo root."
   dotnet restore "$REPO_ROOT/Cadence.sln" || info "Some projects failed to restore (see Directory.Packages.props pins)."
 fi
 

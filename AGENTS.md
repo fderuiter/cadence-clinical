@@ -223,10 +223,12 @@ Inside each project, `Domain/` has no dependency on `Infrastructure/`, `Endpoint
 
 ### 10. Database migrations
 
-- Add a migration: `pwsh scripts/manage_migrations.ps1 add <service> <MigrationName>` (or
-  `scripts/manage_migrations.sh`). Migrations go to `Infrastructure/Persistence/Migrations/`.
-- Generate an idempotent SQL script for review: `pwsh scripts/manage_migrations.ps1 script <service>`.
-- Verify migrations against real PostgreSQL (see pattern 7).
+- Add a migration (works offline; auto-formats generated C# files): `pnpm cadence db add <module> <MigrationName>`
+  (or thin wrappers `scripts/manage_migrations.sh` / `pwsh scripts/manage_migrations.ps1`). Module names cover all 18
+  persistence modules (`kernel`, `intelligence`, `execution-module`, `execution`, and the 14 standalone services).
+- Generate an idempotent SQL script for review: `pnpm cadence db script <module|all>`.
+- Reset and apply all 18 schemas against local PostgreSQL: `pnpm cadence db reset && pnpm cadence db migrate`
+  (requires `ConnectionStrings__cadence` or `POSTGRES_CONNECTION_STRING`; see pattern 7 and ADR-2498).
 - Regenerate the schema reference after a model change: `pnpm cadence generate-schema-doc` rewrites
   [docs/schema](docs/schema/README.md), and the `schema-doc` gate fails while it is stale.
 
@@ -305,8 +307,8 @@ The CLI is not installed as a `dotnet` tool. Run it as `pnpm cadence <command>` 
 | Traceability validation (branch)                                              | `pnpm cadence gxp sync` (from existing TRX + `*.database.txt`: `pnpm cadence gxp sync --results-dir <dir>`; no tests: `pnpm cadence gxp validate`)                                                                                                                                                                                                                                                                                                                      |
 | GxP snapshot (integration owner / release pipeline)                           | `CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot` (from verified CI evidence: `pnpm cadence gxp snapshot --results-dir <dir>`)                                                                                                                                                                                                                                                                                                                                         |
 | Onboarding wizard                                                             | `pnpm cadence wizard onboarding` or `make wizard`                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Database reset / migrate                                                      | `pnpm cadence db reset`, `db migrate`                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| Migrations                                                                    | `pwsh scripts/manage_migrations.ps1 add <service> <name>`                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Database reset / migrate / seed                                               | `pnpm cadence db reset [--allow-offline]`, `pnpm cadence db migrate [<module\|all>]`, `pnpm cadence db seed [<module\|all>]`                                                                                                                                                                                                                                                                                                                                            |
+| Migrations (`add`, `script`, `bundle`, `list`, `optimize`)                    | `pnpm cadence db add <module> <name>`, `pnpm cadence db script [<module\|all>]` (also forwarded by `scripts/manage_migrations.{sh,ps1}`)                                                                                                                                                                                                                                                                                                                                |
 
 The generated reference for every command is [docs/cli.md](docs/cli.md).
 

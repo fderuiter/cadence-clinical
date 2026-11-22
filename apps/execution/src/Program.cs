@@ -26,6 +26,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Database;
 using Cadence.Database.Signatures;
+using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
@@ -268,7 +269,27 @@ app.MapIpKitEndpoints();
 
 if (args.Contains("--seed"))
 {
-    using var scope = app.Services.CreateScope();
+    await using var scope = app.Services.CreateAsyncScope();
+    scope.ServiceProvider.GetRequiredService<IAuditActorScope>()
+        .RunAs(new ServiceAccount("svc:execution-db-seeder", "seed_reference_data"));
+
+    string tenantCode = app.Configuration["Kernel:DevelopmentTenant:Code"] is { Length: > 0 } configuredTenantCode
+        ? configuredTenantCode
+        : "cadence-local";
+    var tenantResolver = scope.ServiceProvider.GetRequiredService<ITenantCodeResolver>();
+    Guid? resolvedTenantId = await tenantResolver.ResolveTenantIdAsync(tenantCode);
+    if (resolvedTenantId is null)
+    {
+        var activeTenants = await tenantResolver.ListActiveTenantIdsAsync();
+        if (activeTenants.Count > 0)
+        {
+            resolvedTenantId = activeTenants[0];
+        }
+    }
+
+    Guid seedTenantId = resolvedTenantId ?? DeterministicTenantCodeResolver.ComputeDeterministicGuid(tenantCode);
+    using var tenantBinding = scope.ServiceProvider.GetRequiredService<ITenantScope>().Bind(seedTenantId);
+
     var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
     await ExecutionDbSeeder.SeedAsync(dbContext);
     Console.WriteLine("[SUCCESS] ExecutionDbContext seeded successfully.");

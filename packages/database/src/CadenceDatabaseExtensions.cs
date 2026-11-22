@@ -153,14 +153,21 @@ public static partial class CadenceDatabaseExtensions
     /// <summary>Design-time argument that supplies the connection string: <c>dotnet ef ... -- --connection "..."</c>.</summary>
     public const string DesignTimeConnectionArgument = "--connection";
 
+    /// <summary>Credential-free placeholder connection string for offline EF Core design-time model building (ADR-2260, ADR-2498).</summary>
+    public const string DesignTimePlaceholderConnectionString = "Host=localhost;Database=cadence_design";
+
     /// <summary>
     /// Resolves the connection string for <c>IDesignTimeDbContextFactory</c> implementations (the
     /// <c>dotnet ef</c> tooling process, which has no host configuration): the value after
-    /// <see cref="DesignTimeConnectionArgument"/> in <paramref name="args"/>, otherwise the
-    /// <c>POSTGRES_CONNECTION_STRING</c> environment variable. Throws when neither is set rather than falling
-    /// back to a hardcoded credential (ADR-2260).
+    /// <see cref="DesignTimeConnectionArgument"/> in <paramref name="args"/>, then
+    /// <c>ConnectionStrings__cadence</c>, then <c>POSTGRES_CONNECTION_STRING</c>, otherwise the credential-free
+    /// placeholder <see cref="DesignTimePlaceholderConnectionString"/> so offline model commands succeed without
+    /// embedding credentials in source control (ADR-2260, ADR-2498).
     /// </summary>
-    public static string ResolveDesignTimeConnectionString(string[]? args = null)
+    public static string ResolveDesignTimeConnectionString(string[]? args = null) =>
+        ResolveDesignTimeConnectionStringCore(args, Environment.GetEnvironmentVariable);
+
+    internal static string ResolveDesignTimeConnectionStringCore(string[]? args, Func<string, string?> getEnvironmentVariable)
     {
         if (args is not null)
         {
@@ -171,11 +178,17 @@ public static partial class CadenceDatabaseExtensions
             }
         }
 
-        return Environment.GetEnvironmentVariable(LegacyConnectionStringKey) is { Length: > 0 } configured
+        // Literal names preserved for EnvVarExtractorService:
+        // Environment.GetEnvironmentVariable("ConnectionStrings__cadence")
+        // Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
+        if (getEnvironmentVariable("ConnectionStrings__cadence") is { Length: > 0 } named)
+        {
+            return named;
+        }
+
+        return getEnvironmentVariable(LegacyConnectionStringKey) is { Length: > 0 } configured
             ? configured
-            : throw new InvalidOperationException(
-                $"{LegacyConnectionStringKey} is not set. Export it, or pass {DesignTimeConnectionArgument} \"...\" " +
-                "after -- on the dotnet ef command line.");
+            : DesignTimePlaceholderConnectionString;
     }
 
     /// <summary>

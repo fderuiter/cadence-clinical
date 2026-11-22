@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 
 using Cadence.Database;
+using Cadence.ToolingCore.Services;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -20,29 +21,6 @@ public static class Program
 {
     public const string GeneratorCommand = "pnpm cadence generate-schema-doc";
 
-    /// <summary>Assemblies that own a DbContext with a design-time factory; the project references the same set.</summary>
-    private static readonly string[] ModuleAssemblies =
-    [
-        "Cadence.Kernel.Persistence",
-        "Cadence.Apps.Ctms",
-        "Cadence.Apps.Econsent",
-        "Cadence.Apps.Eisf",
-        "Cadence.Apps.Etmf",
-        "Cadence.Apps.Execution",
-        "Cadence.Apps.Fileshare",
-        "Cadence.Apps.Imaging",
-        "Cadence.Apps.Interop",
-        "Cadence.Apps.Knowledge",
-        "Cadence.Apps.Notifications",
-        "Cadence.Apps.Org",
-        "Cadence.Apps.Payments",
-        "Cadence.Apps.Quality",
-        "Cadence.Apps.Safety",
-        "Cadence.Apps.Tickets",
-        "Cadence.Modules.Intelligence",
-        "Cadence.Modules.Execution",
-    ];
-
     public static int Main(string[] args)
     {
         int outputFlag = Array.FindIndex(args, a => a is "--output-dir" or "-o");
@@ -52,8 +30,8 @@ public static class Program
 
         try
         {
-            var modules = ModuleAssemblies
-                .SelectMany(name => DesignTimeFactories(Assembly.Load(name)))
+            var modules = PersistenceModuleRegistry.All
+                .SelectMany(m => DesignTimeFactories(Assembly.Load(m.AssemblyName)))
                 .Select(Document)
                 .OrderBy(m => m.Module, StringComparer.Ordinal)
                 .ToList();
@@ -90,8 +68,8 @@ public static class Program
         }
     }
 
-    // Design-time factories have no fallback connection string (ADR-2260). Building the model never opens a
-    // connection, so a credential-free placeholder is enough.
+    // Building the model never opens a connection; passing --connection keeps schema export deterministic even
+    // when ConnectionStrings__cadence or POSTGRES_CONNECTION_STRING is set in the caller's environment.
     private static readonly string[] DesignTimeArguments = ["--connection", "Host=localhost;Database=cadence_schema_export"];
 
     private static IEnumerable<Type> DesignTimeFactories(Assembly assembly) =>
