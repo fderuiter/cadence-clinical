@@ -9,8 +9,41 @@
       </p>
     </div>
 
-    <!-- Outside demo builds only site activation has a backend (Execution); the rest waits on #4829. -->
-    <SiteActivationPanel v-if="!demoBuild" />
+    <!-- Outside demo builds, expose backed Execution & CTMS workspaces and gate unbacked actions (#4829). -->
+    <div v-if="!demoBuild" id="ctms-live-workspace" class="live-workspace">
+      <nav
+        id="ctms-live-tabs"
+        class="live-tabs"
+        aria-label="Site readiness workspaces"
+      >
+        <button
+          v-for="tab in liveTabs"
+          :id="`ctms-tab-${tab.id}`"
+          :key="tab.id"
+          type="button"
+          class="live-tab-btn"
+          :class="{ active: liveTab === tab.id }"
+          :aria-pressed="liveTab === tab.id"
+          @click="liveTab = tab.id"
+        >
+          {{ tab.label }}
+        </button>
+      </nav>
+
+      <SiteActivationPanel v-if="liveTab === 'activation'" />
+      <CtmsGreenlightSection v-else-if="liveTab === 'startup'" />
+      <CtmsMilestonesSection v-else-if="liveTab === 'milestones'" />
+      <CtmsMonitoringSection v-else-if="liveTab === 'monitoring'" />
+      <CtmsDelegationSection v-else-if="liveTab === 'delegation'" />
+      <RtsmSupplySection v-else-if="liveTab === 'supply'" />
+
+      <p id="ctms-unbacked-scope-note" class="live-unbacked-note">
+        Grant financials, CRA workload allocation, recruitment target updates,
+        and adaptive dose escalation remain gated to demo builds in this
+        pre-release environment (Orbit and Allocate roadmap). See
+        <PlansRoadmapLink />.
+      </p>
+    </div>
 
     <template v-else>
       <!-- Live CTMS KPI Metric Cards Grid -->
@@ -2647,7 +2680,14 @@ import AdaptiveDoseEscalationConsole from "../components/clinical/AdaptiveDoseEs
 import CellGeneTherapyCocConsole from "../components/clinical/CellGeneTherapyCocConsole.vue";
 import BulkIpKitReconciliationDrawer from "../components/clinical/BulkIpKitReconciliationDrawer.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
+import PlansRoadmapLink from "../components/clinical/PlansRoadmapLink.vue";
+import CtmsGreenlightSection from "../components/clinical/CtmsGreenlightSection.vue";
+import CtmsMilestonesSection from "../components/clinical/CtmsMilestonesSection.vue";
+import CtmsMonitoringSection from "../components/clinical/CtmsMonitoringSection.vue";
+import CtmsDelegationSection from "../components/clinical/CtmsDelegationSection.vue";
+import RtsmSupplySection from "../components/clinical/RtsmSupplySection.vue";
 import { isDemoBuild } from "../utils/demoMode.js";
+import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import apiClient from "../services/api";
 import { getBaseUrl } from "../api/apiClient";
 import { useToastStore } from "../stores/toasts.js";
@@ -2657,6 +2697,23 @@ const store = useClinicalStore();
 const route = useRoute();
 const demoBuild = isDemoBuild();
 const isIpKitReconciliationDrawerOpen = ref(false);
+
+const liveTabs = [
+  { id: "activation", label: "Site activation" },
+  { id: "startup", label: "Startup readiness" },
+  { id: "milestones", label: "Site milestones" },
+  { id: "monitoring", label: "Monitoring visits" },
+  { id: "delegation", label: "Delegation log" },
+  { id: "supply", label: "Investigational supply" },
+];
+const liveTab = ref(
+  route?.path === "/ssu" || route?.query?.tab === "startup"
+    ? "startup"
+    : typeof route?.query?.tab === "string" &&
+        liveTabs.some((t) => t.id === route.query.tab)
+      ? route.query.tab
+      : "activation"
+);
 
 // Scope comes from the route; apply it before the first render so the site activation panel sees it.
 if (route && route.query) {
@@ -3239,6 +3296,7 @@ function signOffVisit(visit) {
 
 // 4. CRA Allocation Update
 function openReallocate() {
+  if (!allowUnbackedAction("CRA workload allocation")) return;
   allocCraId.value = "cra_alice";
   allocStatus.value = "ACTIVE";
   allocReason.value = "";
@@ -3247,6 +3305,7 @@ function openReallocate() {
 }
 
 async function confirmReallocate() {
+  if (!allowUnbackedAction("CRA workload allocation")) return;
   if (!allocReason.value.trim()) {
     allocError.value = "Reason for change is required.";
     return;
@@ -3271,6 +3330,7 @@ async function confirmReallocate() {
 
 // 5. Recruitment Update
 function openRecruitment() {
+  if (!allowUnbackedAction("Recruitment target update")) return;
   if (recruitment.value && recruitment.value.length > 0) {
     const lastRec = recruitment.value[0];
     recScreened.value = lastRec.screened_count;
@@ -3287,6 +3347,7 @@ function openRecruitment() {
 }
 
 async function confirmRecruitment() {
+  if (!allowUnbackedAction("Recruitment target update")) return;
   if (!recReason.value.trim()) {
     recError.value = "Reason for change is required.";
     return;
@@ -3539,6 +3600,7 @@ async function calculatePayables() {
 }
 
 async function confirmCreateTemplate() {
+  if (!allowUnbackedAction("Create investigator grant budget template")) return;
   if (!newTmplName.value.trim()) return;
   try {
     const payload = {
@@ -3592,6 +3654,7 @@ async function confirmCreateTemplate() {
 }
 
 async function applyTemplate() {
+  if (!allowUnbackedAction("Apply investigator grant budget template")) return;
   if (!selectedTemplateId.value || !investigatorGrant.value) return;
   try {
     await apiClient.post(
@@ -3609,6 +3672,7 @@ async function applyTemplate() {
 }
 
 function openAddProcedureModal() {
+  if (!allowUnbackedAction("Add procedure to grant fee grid")) return;
   newProcCode.value = "";
   newProcName.value = "";
   newProcBase.value = 250.0;
@@ -3626,6 +3690,7 @@ function openAddProcedureModal() {
 }
 
 async function confirmAddProcedure() {
+  if (!allowUnbackedAction("Add procedure to grant fee grid")) return;
   if (
     !newProcCode.value.trim() ||
     !newProcName.value.trim() ||
@@ -3658,6 +3723,7 @@ async function confirmAddProcedure() {
 }
 
 function openAmendmentModal() {
+  if (!allowUnbackedAction("Execute grant contract amendment")) return;
   if (!investigatorGrant.value) return;
   amendRevisedBudget.value =
     Number(investigatorGrant.value.total_budget || 0) + 50000;
@@ -3667,6 +3733,7 @@ function openAmendmentModal() {
 }
 
 async function confirmExecuteAmendment() {
+  if (!allowUnbackedAction("Execute grant contract amendment")) return;
   if (!investigatorGrant.value || !amendSummary.value.trim()) return;
   promptSignature(async (sigToken, reason) => {
     try {
@@ -3700,6 +3767,7 @@ async function confirmExecuteAmendment() {
 }
 
 async function confirmCreateAdjustment() {
+  if (!allowUnbackedAction("Create grant budget adjustment")) return;
   if (!investigatorGrant.value || !adjDescription.value.trim()) return;
   try {
     const payload = {
@@ -3724,6 +3792,7 @@ async function confirmCreateAdjustment() {
 }
 
 async function approveAdjustment(adj) {
+  if (!allowUnbackedAction("Approve grant budget adjustment")) return;
   const appPath = `/api/v1/ctms/financials/adjustments/${adj.id}/approve`;
   promptSignature(async (sigToken, reason) => {
     try {
@@ -3746,6 +3815,47 @@ async function approveAdjustment(adj) {
 </script>
 
 <style scoped>
+.live-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.live-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--semantic-color-border);
+  padding-bottom: 10px;
+}
+
+.live-tab-btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border-control);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-body);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.live-tab-btn.active {
+  background: var(--semantic-color-primary);
+  border-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
+}
+
+.live-unbacked-note {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-secondary);
+  font-size: 0.88rem;
+}
+
 .modal-overlay {
   display: flex;
   position: fixed;

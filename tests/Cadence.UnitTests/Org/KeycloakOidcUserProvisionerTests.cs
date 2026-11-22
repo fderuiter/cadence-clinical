@@ -15,6 +15,9 @@ using Cadence.Kernel;
 using Cadence.Kernel.Time;
 using Cadence.Modules.Org;
 using Cadence.Modules.Org.Provisioning;
+using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
+using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
@@ -276,6 +279,15 @@ public sealed class KeycloakOidcUserProvisionerTests
         await using var sp = services.BuildServiceProvider();
 
         var httpContext = new DefaultHttpContext { RequestServices = sp };
+        httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
+        {
+            UserId = "pi.site101",
+            TenantId = TestSecurityContext.TenantCode,
+            Roles = RoleNormalization.GetNormalizedRoles([RoleNormalization.ROLE_INVESTIGATOR]),
+            RawRoles = [RoleNormalization.ROLE_INVESTIGATOR],
+            AssignedStudies = ["CADENCE-101"],
+            AssignedSites = ["SITE-101"],
+        };
         httpContext.Request.Headers["X-Change-Reason"] = "Delegate screening to site coordinator";
 
         var createdResult = await DoaEndpoints.DelegateTasksAsync(

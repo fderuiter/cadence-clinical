@@ -68,6 +68,7 @@ public static class DoaEndpoints
             .WithSummary("Endorse Delegation of Authority task assignment with Principal Investigator eSignature.")
             .Produces<DelegationResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope();
 
@@ -137,14 +138,14 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
+        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, request.Site, ct) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
         if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
         {
             return problem!;
-        }
-
-        if (await AuthorizeSiteAccessAsync(db, httpContext, request.Site, ct) is { } delegateSiteDenied)
-        {
-            return delegateSiteDenied;
         }
 
         var siteGate = await db.CtmsSiteGreenlightGates.AsNoTracking()
@@ -245,9 +246,9 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
         {
-            return problem!;
+            return missingScope;
         }
 
         var delegation = await db.CtmsDelegations.FirstOrDefaultAsync(d => d.Id == request.RecordId, ct);
@@ -259,9 +260,14 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (await AuthorizeSiteAccessAsync(db, httpContext, delegation.SiteId, ct) is { } revokeSiteDenied)
+        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, delegation.SiteId, ct) is { } scopeDenied)
         {
-            return revokeSiteDenied;
+            return scopeDenied;
+        }
+
+        if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
+        {
+            return problem!;
         }
 
         if (!delegation.IsActive)
@@ -327,9 +333,9 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
         {
-            return problem!;
+            return missingScope;
         }
 
         var delegation = await db.CtmsDelegations.FirstOrDefaultAsync(d => d.Id == request.RecordId, ct);
@@ -341,9 +347,14 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (await AuthorizeSiteAccessAsync(db, httpContext, delegation.SiteId, ct) is { } signOffSiteDenied)
+        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, delegation.SiteId, ct) is { } scopeDenied)
         {
-            return signOffSiteDenied;
+            return scopeDenied;
+        }
+
+        if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
+        {
+            return problem!;
         }
 
         if (!delegation.IsActive)
@@ -391,12 +402,12 @@ public static class DoaEndpoints
     public static async Task<IResult> GetSiteDoaLogAsync(
         [FromRoute(Name = "site_id")] string siteId,
         CtmsDbContext db,
-        CancellationToken ct,
-        HttpContext? httpContext = null)
+        HttpContext httpContext,
+        CancellationToken ct)
     {
-        if (httpContext is not null && await AuthorizeSiteAccessAsync(db, httpContext, siteId, ct) is { } logSiteDenied)
+        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, siteId, ct) is { } scopeDenied)
         {
-            return logSiteDenied;
+            return scopeDenied;
         }
 
         if (string.IsNullOrWhiteSpace(siteId) || !await SiteExistsAsync(db, siteId, ct))
@@ -440,9 +451,9 @@ public static class DoaEndpoints
         [FromServices] IClock clock,
         CancellationToken ct)
     {
-        if (await AuthorizeSiteAccessAsync(db, httpContext, siteId, ct) is { } exportSiteDenied)
+        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, siteId, ct) is { } scopeDenied)
         {
-            return exportSiteDenied;
+            return scopeDenied;
         }
 
         if (string.IsNullOrWhiteSpace(siteId) || !await SiteExistsAsync(db, siteId, ct))
@@ -535,42 +546,6 @@ public static class DoaEndpoints
         await db.SaveChangesAsync(ct);
 
         return Results.File(signedPdfBytes, "application/pdf", $"DOA_Log_{siteId}.pdf");
-    }
-
-    private static async Task<IResult?> AuthorizeSiteAccessAsync(
-        CtmsDbContext db,
-        HttpContext httpContext,
-        string siteId,
-        CancellationToken ct)
-    {
-        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is null)
-        {
-            return null;
-        }
-
-        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext) is { } noStudy)
-        {
-            return noStudy;
-        }
-
-        if (!string.IsNullOrWhiteSpace(siteId) && ClinicalScopeGuard.RequireSite(httpContext, siteId) is { } siteDenied)
-        {
-            return siteDenied;
-        }
-
-        if (!string.IsNullOrWhiteSpace(siteId))
-        {
-            var gate = await db.CtmsSiteGreenlightGates.AsNoTracking()
-                .FirstOrDefaultAsync(g => g.SiteId == siteId, ct);
-            if (gate is not null
-                && !string.IsNullOrWhiteSpace(gate.StudyId)
-                && ClinicalScopeGuard.RequireStudy(httpContext, gate.StudyId) is { } studyDenied)
-            {
-                return studyDenied;
-            }
-        }
-
-        return null;
     }
 
     public static async Task<bool> SiteExistsAsync(CtmsDbContext db, string siteId, CancellationToken ct)

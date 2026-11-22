@@ -3,9 +3,12 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import TeamManagementView from "../src/views/TeamManagementView.vue";
 import CtmsView from "../src/views/CtmsView.vue";
+import CtmsDelegationSection from "../src/components/clinical/CtmsDelegationSection.vue";
 import { apiClient, ApiError } from "../src/api/apiClient";
+import { ctmsApi } from "../src/api/ctmsApi";
 import * as authorization from "../src/api/authorization.js";
 import { orgApi } from "../src/api/orgApi";
+import { useAuthStore } from "../src/stores/auth";
 
 const sampleDirectory = {
   tenant_code: "cadence-local",
@@ -359,6 +362,94 @@ describe("TeamManagementView & CTMS Email Delegation", () => {
       expect.objectContaining({
         changeReason: "Delegate screening duties to new coordinator",
       })
+    );
+
+    const refusal = wrapper.get('[data-testid="ctms-refusal-explanation"]');
+    expect(refusal.text()).toContain(
+      "Requested duty capability exceeds parent grant."
+    );
+    expect(refusal.text()).toContain("parent_grant_capabilities");
+  });
+
+  it("allows live CtmsDelegationSection delegation by colleague email and renders kernel refusal explanations", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore();
+    authStore.rawRoles = ["Site Investigator"];
+    authStore.assignedSites = ["SITE-101"];
+
+    vi.spyOn(ctmsApi, "getSiteDoaLog").mockResolvedValue({
+      site_id: "SITE-101",
+      pi_name: "PI Lead",
+      delegated_staff: [
+        {
+          record_id: "rec-01",
+          site_id: "SITE-101",
+          staff_user_id: "person:01950000-0000-7000-8000-000000000042", // deid-ignore
+          task_codes: ["CRF_DATA_ENTRY"],
+          start_date: "2026-11-20", // deid-ignore
+          end_date: null,
+          is_active: true,
+          signed_off: false,
+          reason_for_change: "Initial site staffing",
+          created_by: "pi-01",
+          version_index: 1,
+          kernel_grant_ids: [],
+        },
+      ],
+      audit_history: [],
+    });
+
+    const delegateSpy = vi
+      .spyOn(ctmsApi, "delegateSiteTasks")
+      .mockRejectedValueOnce(
+        new ApiError(
+          "Delegation exceeds held authority",
+          422,
+          "Unprocessable",
+          {
+            title: "Delegation exceeds held authority",
+            explanation: {
+              claim: "Requested duty capability exceeds parent grant.",
+              conditions: [
+                {
+                  code: "parent_grant_capabilities",
+                  description: "Parent grant must hold observation.lock.",
+                  met: false,
+                },
+              ],
+              next_actions: [
+                { action: "Select only duties held at SITE-101." },
+              ],
+            },
+          }
+        )
+      );
+
+    const wrapper = mount(CtmsDelegationSection, {
+      props: { studyCode: "CAD-101", siteId: "SITE-101" },
+      global: { plugins: [pinia] },
+    });
+    await flushPromises();
+
+    expect(wrapper.find(".doa-pending_pi_signature").exists()).toBe(true);
+
+    await wrapper.get("#del-staff-email").setValue("crc.live@example.com"); // deid-ignore
+    await wrapper.get("#del-start-date").setValue("2026-11-20"); // deid-ignore
+    await wrapper
+      .get("#del-change-reason")
+      .setValue("Delegate CRF entry duty to new site coordinator");
+    await wrapper.get("#delegate-task-form").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(delegateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        site_id: "SITE-101",
+        study_id: "CAD-101",
+        staff_email: "crc.live@example.com", // deid-ignore
+        staff_user_id: null,
+      }),
+      "Delegate CRF entry duty to new site coordinator"
     );
 
     const refusal = wrapper.get('[data-testid="ctms-refusal-explanation"]');

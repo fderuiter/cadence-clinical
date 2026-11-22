@@ -458,8 +458,6 @@ K-XS-1|Cadence.Contracts|Cadence.Contracts.EtmfDocumentFilingRequested.SiteId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.EtmfDocumentFilingRequested.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.Grade3ToxicityDetected.SiteId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.Grade3ToxicityDetected.StudyId
-K-XS-1|Cadence.Contracts|Cadence.Contracts.PublishAmendmentRequestDto.StudyId
-K-XS-1|Cadence.Contracts|Cadence.Contracts.SubjectSummaryDto.SiteId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationRequest.SiteId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationRequest.StudyId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationResult.StudyId

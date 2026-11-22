@@ -14,7 +14,7 @@ using Microsoft.Extensions.Hosting;
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Profiles (#4991). `full` (the default) runs every service. `core` runs what the Clinical Canvas calls today: the
-// kernel API host, execution, the gateway and the web app. Choose one with `-- --AppHost:Profile=core` or
+// kernel API host, execution, ctms, the gateway and the web app. Choose one with `-- --AppHost:Profile=core` or
 // AppHost__Profile=core.
 string profile = (builder.Configuration["AppHost:Profile"] ?? "full").Trim().ToLowerInvariant();
 if (profile is not ("full" or "core"))
@@ -156,6 +156,7 @@ IResourceBuilder<ProjectResource> Service(IResourceBuilder<ProjectResource> proj
 var execution = Service(builder.AddProject<Projects.Cadence_Apps_Execution>("execution"))
     .WithEnvironment("DemographicsEncryption__KeyBase64", demographicsEncryptionKey)
     .WithEnvironment("RANDOMIZATION_ALLOCATION_KEY", randomizationAllocationKey);
+var ctms = Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));
 // The local realm's users sign in with tenant code cadence-local (ADR-2514); the kernel host provisions that tenant on
 // start, in Development only (ADR-2542), with the demo study and the realm users' grants (ADR-2543). A project resource
 // does not inherit the AppHost's environment, so the kernel is given it, and the tenant settings only when that
@@ -164,6 +165,7 @@ var kernel = Service(builder.AddProject<Projects.Cadence_Kernel_Host>("kernel"))
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
 useKeycloakAdminOnKernel(kernel);
 execution.WithEnvironment("KERNEL_SERVICE_URL", kernel.GetEndpoint("http"));
+ctms.WithEnvironment("KERNEL_SERVICE_URL", kernel.GetEndpoint("http"));
 if (builder.Environment.IsDevelopment())
 {
     kernel.WithEnvironment("Kernel__DevelopmentTenant__Code", "cadence-local");
@@ -199,8 +201,6 @@ if (full)
         .WithEnvironment("CADENCE_SCE_SIGNING_KEY", sceSigningKey);
     Service(builder.AddProject<Projects.Cadence_Apps_Quality>("quality"));
     Service(builder.AddProject<Projects.Cadence_Apps_Notifications>("notifications"));
-    Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"))
-        .WithEnvironment("KERNEL_SERVICE_URL", kernel.GetEndpoint("http"));
     Service(builder.AddProject<Projects.Cadence_Apps_Safety>("safety"));
     Service(builder.AddProject<Projects.Cadence_Apps_Tickets>("tickets"));
     Service(builder.AddProject<Projects.Cadence_Apps_Eisf>("eisf"));

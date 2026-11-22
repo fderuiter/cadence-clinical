@@ -43,15 +43,22 @@ public sealed class MonitoringVisitEndpointsTests
         _clock = new FakeClock(new DateTimeOffset(2026, 10, 15, 10, 0, 0, TimeSpan.Zero));
     }
 
-    private static DefaultHttpContext Caller(string role = RoleNormalization.ROLE_SYSADMIN, string userId = "user-1")
+    private static DefaultHttpContext Caller(
+        string role = RoleNormalization.ROLE_SYSADMIN,
+        string userId = "user-1",
+        string[]? studies = null,
+        string[]? sites = null)
     {
+        var normalized = RoleNormalization.GetNormalizedRoles([role]);
+        bool siteScoped = normalized.Any(SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains);
         var httpContext = new DefaultHttpContext();
         httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
         {
             UserId = userId,
-            Roles = [role],
-            AssignedStudies = [StudyId],
-            AssignedSites = [SiteId],
+            Roles = normalized,
+            RawRoles = [role],
+            AssignedStudies = studies ?? [StudyId],
+            AssignedSites = sites ?? (siteScoped ? [SiteId] : []),
         };
         return httpContext;
     }
@@ -165,7 +172,7 @@ public sealed class MonitoringVisitEndpointsTests
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var result = await MonitoringVisitEndpoints.GetMonitoringVisitsAsync(
-            StudyId, SiteId, null, null, _db, TestContext.Current.CancellationToken);
+            StudyId, SiteId, null, null, _db, Caller(), TestContext.Current.CancellationToken);
 
         var ok = result.Should().BeOfType<Ok<List<MonitoringVisitResponseDto>>>().Subject;
         ok.Value.Should().HaveCount(1);
@@ -339,6 +346,18 @@ public sealed class MonitoringVisitEndpointsTests
     [Fact]
     public async Task MonitoringVisitLetters_ReturnsLettersForVisit()
     {
+        var visit = new CtmsMonitoringVisit("VISIT-001", CtmsMonitoringVisitStatus.Completed)
+        {
+            StudyId = StudyId,
+            SiteId = SiteId,
+            CraId = CraId,
+            VisitType = "IMV",
+            ScheduledDate = _clock.UtcNow.AddDays(-1),
+            ActualDate = _clock.UtcNow,
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+            CreatedBy = "cra-1",
+            ReasonForChange = "Completed"
+        };
         var letter = new CtmsGeneratedLetter("LTR-001")
         {
             VisitId = "VISIT-001",
@@ -348,23 +367,66 @@ public sealed class MonitoringVisitEndpointsTests
             CreatedBy = "cra-1",
             ReasonForChange = "Generated letter"
         };
+        _db.CtmsMonitoringVisits.Add(visit);
         _db.CtmsGeneratedLetters.Add(letter);
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
+        var caller = Caller();
         var listResult = await MonitoringVisitEndpoints.GetMonitoringVisitLettersAsync(
-            "VISIT-001", _db, TestContext.Current.CancellationToken);
+            "VISIT-001", _db, caller, TestContext.Current.CancellationToken);
         var okList = listResult.Should().BeOfType<Ok<List<GeneratedLetterResponseDto>>>().Subject;
         okList.Value.Should().HaveCount(1);
         okList.Value![0].LetterType.Should().Be("confirmation_letter");
 
         var itemResult = await MonitoringVisitEndpoints.GetMonitoringVisitLetterByTypeAsync(
-            "VISIT-001", "confirmation_letter", _db, TestContext.Current.CancellationToken);
+            "VISIT-001", "confirmation_letter", _db, caller, TestContext.Current.CancellationToken);
         var okItem = itemResult.Should().BeOfType<Ok<GeneratedLetterResponseDto>>().Subject;
         okItem.Value!.Id.Should().Be("LTR-001");
 
         var missingResult = await MonitoringVisitEndpoints.GetMonitoringVisitLetterByTypeAsync(
-            "VISIT-001", "follow_up_letter", _db, TestContext.Current.CancellationToken);
+            "VISIT-001", "follow_up_letter", _db, caller, TestContext.Current.CancellationToken);
         missingResult.Should().BeOfType<ProblemHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    public async Task MonitoringVisits_EnforcesCallerScopeIsolation()
+    {
+        var foreignVisit = new CtmsMonitoringVisit("VISIT-FOREIGN", CtmsMonitoringVisitStatus.Completed)
+        {
+            StudyId = StudyId,
+            SiteId = "SITE-999",
+            CraId = CraId,
+            VisitType = "IMV",
+            ScheduledDate = _clock.UtcNow.AddDays(-2),
+            ActualDate = _clock.UtcNow.AddDays(-1),
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+            CreatedBy = "cra-2",
+            ReasonForChange = "Completed"
+        };
+        _db.CtmsMonitoringVisits.Add(foreignVisit);
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var scopedCra = Caller("CRA", "cra-1", [StudyId], [SiteId]);
+        scopedCra.Request.Headers["X-Change-Reason"] = "Attempt cross-site action";
+
+        var schedDenied = await MonitoringVisitEndpoints.ScheduleMonitoringVisitAsync(
+            new MonitoringVisitCreateDto(StudyId, "SITE-999", CraId, "IMV", _clock.UtcNow.AddDays(5)),
+            _db, scopedCra, _clock, TestContext.Current.CancellationToken);
+        schedDenied.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+
+        var completeDenied = await MonitoringVisitEndpoints.CompleteMonitoringVisitAsync(
+            foreignVisit.Id, new MonitoringVisitCompleteDto(_clock.UtcNow), _db, scopedCra, _clock, TestContext.Current.CancellationToken);
+        completeDenied.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+
+        var signDenied = await MonitoringVisitEndpoints.SignOffMonitoringVisitAsync(
+            foreignVisit.Id, _db, Caller("monitor", "mon-1", [StudyId], [SiteId]), _clock, TestContext.Current.CancellationToken);
+        signDenied.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+
+        var lettersDenied = await MonitoringVisitEndpoints.GetMonitoringVisitLettersAsync(
+            foreignVisit.Id, _db, scopedCra, TestContext.Current.CancellationToken);
+        var problem = lettersDenied.Should().BeOfType<ProblemHttpResult>().Subject;
+        problem.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        problem.ProblemDetails.Extensions.Should().ContainKey("code").WhoseValue.Should().Be(CtmsScopeGuard.ForbiddenCode);
     }
 }

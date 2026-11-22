@@ -1331,10 +1331,10 @@ _Avoid_: Direct synchronous cross-service HTTP calls during database transaction
 Automated build- and test-time unit tests that introspect compiled C# assemblies to mathematically assert Clean Architecture layer purity (e.g. `Domain` having zero dependencies on `Infrastructure` or `Endpoints`) and regulatory compliance (e.g. mandatory `IGxPAuditable` interfaces on mutating aggregate roots).
 _Avoid_: Relying exclusively on manual pull request reviews to catch architectural erosion and boundary leaks.
 
-### Cross-Service Typed API Contracts (Cadence.Contracts)
+### Cross-Service Event Contracts (Cadence.Contracts)
 
-A shared contract library containing canonical DTO records and strongly-typed HTTP client interfaces (`IHttpClientFactory`) configured with Polly resilience policies (exponential backoff, circuit breaking), eliminating brittle string-based URLs and unvalidated JSON payloads across internal microservice boundaries.
-_Avoid_: Ad-hoc, hardcoded string URLs and raw untyped HTTP clients in individual service codebases.
+A zero-dependency contract library containing canonical MassTransit domain event records published through the EF Core transactional outbox across asynchronous service boundaries, while synchronous cross-module clinical mutations run in-process through the kernel command path (ADR-2244, ADR-2600).
+_Avoid_: Dead cross-service HTTP client interfaces or unvalidated ad-hoc event payloads duplicated across individual service codebases.
 
 ### Interactive Developer Wizards (Cadence.Cli Wizard)
 

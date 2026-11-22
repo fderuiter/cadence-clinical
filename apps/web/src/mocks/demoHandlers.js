@@ -1,9 +1,9 @@
 import { DEMO_STUDY } from "demo-fixtures";
 import { http, HttpResponse } from "msw";
 import { isValidSemanticAction, isValidStepUpAction } from "ui";
-import { demoNowIso } from "../utils/demoMode.js";
 import { webDemoStore } from "./demoStore.js";
 import { parseDemoProtocolImportRequest } from "./demoStudyImport.js";
+import { demoNowIso, demoNowMs } from "../utils/demoMode.js";
 
 const DEFAULT_STUDY_REF = "study:00000000-0000-0000-0000-000000000001"; // deid-ignore
 
@@ -1038,6 +1038,150 @@ export function createWebDemoHandlers(store = webDemoStore) {
         )
       )
     ),
+    http.get(
+      "*/api/v1/execution/rtsm/kits/inventory/:studyId/:siteId",
+      ({ params }) =>
+        HttpResponse.json(
+          store.state.ipKits.filter(
+            (k) => k.site_id === params.siteId || params.siteId === "SITE-101"
+          )
+        )
+    ),
+    http.post(
+      "*/api/v1/execution/rtsm/kits/seed-inventory",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        const items = Array.isArray(body?.kits) ? body.kits : [];
+        for (const [idx, kit] of items.entries()) {
+          store.state.ipKits.push({
+            id: `kit-${demoNowMs(idx)}`,
+            study_id: body?.study_id || "DEMO-01",
+            site_id: body?.site_id || "SITE-101",
+            kit_number: kit.kit_number || "KIT-DEMO-99",
+            lot_number: kit.lot_number || "LOT-DEMO",
+            status: "AVAILABLE",
+            expiration_date: kit.expiration_date || null,
+          });
+        }
+        return HttpResponse.json({ seeded: items.length }, { status: 201 });
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/rtsm/kits/validate-scan",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        const kit = store.state.ipKits.find(
+          (k) => k.kit_number === body?.kit_number
+        );
+        const scannedLot = body?.scanned_lot_number || null;
+        const mismatch = Boolean(
+          kit && scannedLot && kit.lot_number !== scannedLot
+        );
+        return HttpResponse.json({
+          kit_number: body?.kit_number || "",
+          study_id: body?.study_id || "DEMO-01",
+          site_id: body?.site_id || "SITE-101",
+          found_in_inventory: Boolean(kit),
+          expected_lot_number: kit?.lot_number || null,
+          scanned_lot_number: scannedLot,
+          lot_mismatch_detected: mismatch,
+          current_status: kit?.status || "UNKNOWN",
+          recommended_disposition: mismatch
+            ? "QUARANTINED"
+            : "RETURNED_TO_DEPOT",
+          warning: mismatch ? "Lot mismatch detected during scan." : null,
+        });
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/rtsm/kits/reconcile-batch",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        const items = Array.isArray(body?.items) ? body.items : [];
+        return HttpResponse.json({
+          certificate: {
+            certificate_id: `cert-${demoNowMs()}`,
+            study_id: body?.study_id || "DEMO-01",
+            site_id: body?.site_id || "SITE-101",
+            processed_by: body?.processed_by || "usr-pharm-01",
+            processed_at: demoNowIso(),
+            total_kits_reconciled: items.length,
+            items,
+          },
+        });
+      }
+    ),
+    http.get(
+      "*/api/v1/execution/rtsm/kits/certificates/:certificateId",
+      ({ params }) =>
+        HttpResponse.json({
+          certificate_id: String(params.certificateId),
+          study_id: "DEMO-01",
+          site_id: "SITE-101",
+          total_kits_reconciled: 1,
+        })
+    ),
+    http.get("*/api/v1/execution/randomization/schemes", ({ request }) => {
+      const url = new URL(request.url);
+      const studyId = url.searchParams.get("study_id") || "DEMO-01";
+      return HttpResponse.json([
+        {
+          id: "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5",
+          study_id: studyId,
+          version: 1,
+          method: "PERMUTED_BLOCK",
+          status: "APPROVED",
+          requires_kit: true,
+          approved_by: "usr-stat-01",
+          approved_at: "2026-07-10T12:00:00Z",
+        },
+      ]);
+    }),
+    http.get(
+      "*/api/v1/execution/rtsm/cgt/chain-of-custody/:studyId/:subjectId",
+      ({ params }) =>
+        HttpResponse.json({
+          study_id: String(params.studyId),
+          subject_id: String(params.subjectId),
+          din: "DIN-DEMO-ALPHA",
+          current_stage: "MANUFACTURING_RELEASED",
+          status: "IN_CUSTODY",
+          milestones: [
+            {
+              id: "cgt-ms-01",
+              stage: "APHERESIS",
+              milestone_type: "COLLECTION_VERIFIED",
+              location_name: "Clinical Site Apheresis Unit",
+            },
+          ],
+        })
+    ),
+    http.post("*/api/v1/execution/rtsm/cgt/apheresis", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(
+        {
+          id: `cgt-${demoNowMs()}`,
+          study_id: body?.study_id || "DEMO-01",
+          subject_id: body?.subject_id || "SUBJ-1001",
+          din: body?.din || "DIN-DEMO-BETA",
+          current_stage: "APHERESIS",
+        },
+        { status: 201 }
+      );
+    }),
+    http.post("*/api/v1/execution/rtsm/cgt/milestone", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(
+        { status: "RECORDED", ...body },
+        { status: 201 }
+      );
+    }),
+    http.get("*/api/v1/execution/rtsm/cgt/certificates/:studyId", () =>
+      HttpResponse.json([])
+    ),
+    http.get("*/api/v1/execution/rtsm/cgt/reconciliations/:studyId", () =>
+      HttpResponse.json([])
+    ),
     http.get("*/api/v1/execution/locks", () =>
       HttpResponse.json(store.state.locks)
     ),
@@ -1119,6 +1263,15 @@ export function createWebDemoHandlers(store = webDemoStore) {
         return HttpResponse.json(found || { id: params.id, ...body });
       }
     ),
+    http.put(
+      "*/api/v1/ctms/site-milestones/:id",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const found = store.state.milestones.find((m) => m.id === params.id);
+        if (found) Object.assign(found, body);
+        return HttpResponse.json(found || { id: params.id, ...body });
+      }
+    ),
     http.get("*/api/v1/ctms/monitoring-visits", () =>
       HttpResponse.json(store.state.monitoringVisits)
     ),
@@ -1132,6 +1285,26 @@ export function createWebDemoHandlers(store = webDemoStore) {
       store.state.monitoringVisits.push(visit);
       return HttpResponse.json(visit, { status: 201 });
     }),
+    http.get("*/api/v1/ctms/monitoring-visits/:id/letters", ({ params }) =>
+      HttpResponse.json([
+        {
+          id: `ltr-${params.id}`,
+          visit_id: String(params.id),
+          letter_type: "CONFIRMATION",
+          generated_at: "2026-07-18T10:00:00Z",
+        },
+      ])
+    ),
+    http.get(
+      "*/api/v1/ctms/monitoring-visits/:id/letters/:letterType",
+      ({ params }) =>
+        HttpResponse.json({
+          id: `ltr-${params.id}-${params.letterType}`,
+          visit_id: String(params.id),
+          letter_type: String(params.letterType),
+          generated_at: "2026-07-18T10:00:00Z",
+        })
+    ),
     http.post("*/api/v1/ctms/monitoring-visits/:id/:action", ({ params }) => {
       const found = store.state.monitoringVisits.find(
         (v) => v.id === params.id
@@ -1172,16 +1345,35 @@ export function createWebDemoHandlers(store = webDemoStore) {
         store.state.doaLogs.get(siteId) || store.state.doaLogs.get("SITE-101")
       );
     }),
+    http.get("*/api/v1/ctms/doa/sites/:siteId/export-pdf", () => {
+      return new HttpResponse("%PDF-1.4 synthetic DoA export", {
+        status: 200,
+        headers: { "Content-Type": "application/pdf" },
+      });
+    }),
     http.post("*/api/v1/ctms/doa/:action", async ({ params, request }) => {
       const body = await readJsonBody(request);
-      const log = store.state.doaLogs.get("SITE-101");
+      const siteKey = body?.site_id || "SITE-101";
+      const log =
+        store.state.doaLogs.get(siteKey) || store.state.doaLogs.get("SITE-101");
       if (params.action === "delegate" && log) {
+        const recId = `doa-${demoNowMs()}`;
+        const staffId = body?.staff_user_id || body?.staff_id || "usr-crc-02";
+        const taskCodes = body?.task_codes || body?.tasks || ["CRF_DATA_ENTRY"];
         log.delegated_staff.push({
-          id: `doa-${Date.now()}`,
-          staff_id: body?.staff_id || "usr-crc-02",
+          id: recId,
+          record_id: recId,
+          site_id: siteKey,
+          staff_id: staffId,
+          staff_user_id: staffId,
           staff_name: body?.staff_name || "Delegated Site Coordinator",
           role: body?.role || "CRC",
-          tasks: body?.tasks || ["CRF_DATA_ENTRY"],
+          tasks: taskCodes,
+          task_codes: taskCodes,
+          start_date: body?.start_date || demoNowIso().slice(0, 10),
+          end_date: body?.end_date || null,
+          is_active: true,
+          signed_off: false,
           status: "PENDING_PI_SIGNATURE",
           signed_at: null,
         });
