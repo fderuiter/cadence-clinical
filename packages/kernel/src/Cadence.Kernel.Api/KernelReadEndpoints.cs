@@ -136,8 +136,9 @@ public static class KernelReadEndpoints
             return KernelProblems.NotFound(node);
         }
 
-        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [summary.Ref], cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok(KernelNodeResponse.From(summary, masks.For(summary.Ref)));
+        var maskTarget = await VisibilityTargetAsync(navigator, tenant, summary.Ref, cancellationToken).ConfigureAwait(false);
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [maskTarget], cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(KernelNodeResponse.From(summary, masks.For(maskTarget)));
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelZoomStepResponse>>, ProblemHttpResult>> GetZoomPathAsync(
@@ -155,8 +156,11 @@ public static class KernelReadEndpoints
             return KernelProblems.NotFound(node);
         }
 
-        var masks = await KernelReadMasking.MaskAsync(
-            visibility, actor, tenant, path.Where(s => s.Ref is not null).Select(s => s.Ref!), cancellationToken).ConfigureAwait(false);
+        var maskRefs = path
+            .Select(s => s.Ref)
+            .Where(r => r is not null && !InheritsEnrollmentVisibility(r.Kind))
+            .Select(r => r!);
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, maskRefs, cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok<IReadOnlyList<KernelZoomStepResponse>>([.. path.Select((s, i) => KernelZoomStepResponse.From(s, MaskOfStep(path, i, masks)))]);
     }
 
@@ -362,11 +366,41 @@ public static class KernelReadEndpoints
     }
 
     /// <summary>
-    /// A grouping level (a country) describes the object below it, so it is masked with that object; any other level
-    /// is masked when its own object is.
+    /// Collection instances and observations inherit their visibility from the enrollment they belong to (ADR-2457),
+    /// because <see cref="GrantNodeVisibility"/> evaluates paths down to enrollments.
     /// </summary>
-    private static MaskReason? MaskOfStep(IReadOnlyList<ZoomStep> path, int index, IReadOnlyDictionary<NodeRef, MaskReason> masks) =>
-        path[index].Ref is { } own
-            ? masks.For(own)
-            : masks.For(path.Skip(index + 1).Select(s => s.Ref).FirstOrDefault(r => r is not null));
+    private static bool InheritsEnrollmentVisibility(string kind) =>
+        kind is NodeKinds.CollectionInstance or NodeKinds.Observation;
+
+    private static async ValueTask<NodeRef> VisibilityTargetAsync(
+        IKernelNavigator navigator, TenantId tenant, NodeRef node, CancellationToken cancellationToken)
+    {
+        if (!InheritsEnrollmentVisibility(node.Kind))
+        {
+            return node;
+        }
+
+        var path = await navigator.GetZoomPathAsync(tenant, node, cancellationToken).ConfigureAwait(false);
+        return path?.Select(s => s.Ref).LastOrDefault(r => r?.Kind == NodeKinds.Enrollment) ?? node;
+    }
+
+    /// <summary>
+    /// A grouping level (a country) describes the object below it, so it is masked with that object; collection instances
+    /// and observations inherit their governing enrollment's mask; any other level is masked when its own object is.
+    /// </summary>
+    private static MaskReason? MaskOfStep(IReadOnlyList<ZoomStep> path, int index, IReadOnlyDictionary<NodeRef, MaskReason> masks)
+    {
+        if (path[index].Ref is not { } own)
+        {
+            return masks.For(path.Skip(index + 1).Select(s => s.Ref).FirstOrDefault(r => r is not null));
+        }
+
+        if (InheritsEnrollmentVisibility(own.Kind)
+            && path.Take(index).Select(s => s.Ref).LastOrDefault(r => r?.Kind == NodeKinds.Enrollment) is { } enrollment)
+        {
+            return masks.For(enrollment);
+        }
+
+        return masks.For(own);
+    }
 }

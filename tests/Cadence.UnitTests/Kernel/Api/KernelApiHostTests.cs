@@ -57,6 +57,10 @@ public sealed class KernelApiHostTests : IDisposable
     private static readonly DateTimeOffset GrantedFrom = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
     private static readonly NodeRef Study = NodeRef.For(StudyId.New());
     private static readonly NodeRef StudySite = NodeRef.For(StudySiteId.New());
+    private static readonly NodeRef Enrollment = NodeRef.For(EnrollmentId.New());
+    private static readonly NodeRef Concept = NodeRef.For(ConceptId.New());
+    private static readonly NodeRef FormInstance = NodeRef.For(CollectionInstanceId.New());
+    private static readonly NodeRef RecordedObservation = NodeRef.For(ObservationId.New());
     private static readonly ProtocolVersionSummary FirstVersion = new(
         ProtocolVersionId.New(), StudyId.FromGuid(Study.Id), 1, null, ProtocolVersionStatus.Approved, "sha256:abc", null,
         AttestationId.New(), null);
@@ -207,6 +211,43 @@ public sealed class KernelApiHostTests : IDisposable
 
         _navigator.Tenants.Should().NotBeEmpty().And.OnlyContain(t => t == Tenant);
         _directory.Codes.Should().NotBeEmpty().And.OnlyContain(c => c == TestSecurityContext.TenantCode);
+    }
+
+    /// <summary>
+    /// Concept, collection_instance, and observation NodeRefs resolve their human summaries, and collection_instance /
+    /// observation nodes mask in place when the caller may not see their governing enrollment.
+    /// </summary>
+    [Fact]
+    public async Task ConceptCollectionInstanceAndObservationNodes_ResolveAndInheritEnrollmentMasking()
+    {
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        using var conceptDoc = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{Concept.AtVersion(1)}", ct);
+        conceptDoc.RootElement.GetProperty("title").GetString().Should().Be("Systolic Blood Pressure");
+        conceptDoc.RootElement.GetProperty("code").GetString().Should().Be("C25298");
+        conceptDoc.RootElement.GetProperty("mask").ValueKind.Should().Be(JsonValueKind.Null);
+
+        using var formDoc = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{FormInstance}", ct);
+        formDoc.RootElement.GetProperty("title").GetString().Should().Be("Vital Signs (Screening)");
+        formDoc.RootElement.GetProperty("mask").ValueKind.Should().Be(JsonValueKind.Null);
+
+        using var obsDoc = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{RecordedObservation}", ct);
+        obsDoc.RootElement.GetProperty("title").GetString().Should().Be("Systolic Blood Pressure: 120 mm[Hg]");
+        obsDoc.RootElement.GetProperty("mask").ValueKind.Should().Be(JsonValueKind.Null);
+
+        _visibility.Hidden[Enrollment.AtVersion(1)] = MaskReason.NotPermitted;
+
+        using var maskedFormDoc = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{FormInstance}", ct);
+        maskedFormDoc.RootElement.GetProperty("mask").GetString().Should().Be("NotPermitted");
+        maskedFormDoc.RootElement.GetProperty("title").ValueKind.Should().Be(JsonValueKind.Null);
+
+        using var maskedObsDoc = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{RecordedObservation}", ct);
+        maskedObsDoc.RootElement.GetProperty("mask").GetString().Should().Be("NotPermitted");
+        maskedObsDoc.RootElement.GetProperty("title").ValueKind.Should().Be(JsonValueKind.Null);
+
+        using var maskedObsPath = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{RecordedObservation}/path", ct);
+        maskedObsPath.RootElement[4].GetProperty("mask").GetString().Should().Be("NotPermitted");
     }
 
     /// <summary>A malformed NodeRef is a 400 and an object the tenant does not hold is a 404, both as problem details.</summary>
@@ -1182,6 +1223,10 @@ public sealed class KernelApiHostTests : IDisposable
     {
         private static readonly NodeSummary StudySummary = new(Study.AtVersion(3), "Cadence 101", "CAD-101", "Active");
         private static readonly NodeSummary SiteSummary = new(StudySite.AtVersion(1), "Hamburg Clinic", "017", "Active");
+        private static readonly NodeSummary EnrollmentSummary = new(Enrollment.AtVersion(1), "017-001", "017-001", "Enrolled");
+        private static readonly NodeSummary ConceptSummary = new(Concept.AtVersion(1), "Systolic Blood Pressure", "C25298", "Active");
+        private static readonly NodeSummary FormSummary = new(FormInstance.AtVersion(1), "Vital Signs (Screening)");
+        private static readonly NodeSummary ObservationSummary = new(RecordedObservation.AtVersion(1), "Systolic Blood Pressure: 120 mm[Hg]");
 
         public List<TenantId> Tenants { get; } = [];
 
@@ -1194,14 +1239,30 @@ public sealed class KernelApiHostTests : IDisposable
         public Task<IReadOnlyList<ZoomStep>?> GetZoomPathAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default)
         {
             Tenants.Add(tenant);
-            IReadOnlyList<ZoomStep>? path = Find(node) is null
-                ? null
-                : [
+            if (Find(node) is not { } found)
+            {
+                return Task.FromResult<IReadOnlyList<ZoomStep>?>(null);
+            }
+
+            IReadOnlyList<ZoomStep> path = found.Ref.Kind switch
+            {
+                NodeKinds.Concept => [new ZoomStep(NodeKinds.Concept, "C25298", ConceptSummary.Ref)],
+                NodeKinds.CollectionInstance or NodeKinds.Observation =>
+                [
                     new ZoomStep(NodeKinds.Study, "CAD-101", StudySummary.Ref),
                     new ZoomStep(ZoomLevels.Country, "DE", null),
                     new ZoomStep(NodeKinds.StudySite, "017", SiteSummary.Ref),
-                ];
-            return Task.FromResult(path);
+                    new ZoomStep(NodeKinds.Enrollment, "017-001", EnrollmentSummary.Ref),
+                    new ZoomStep(found.Ref.Kind, found.Title, found.Ref),
+                ],
+                _ =>
+                [
+                    new ZoomStep(NodeKinds.Study, "CAD-101", StudySummary.Ref),
+                    new ZoomStep(ZoomLevels.Country, "DE", null),
+                    new ZoomStep(NodeKinds.StudySite, "017", SiteSummary.Ref),
+                ],
+            };
+            return Task.FromResult<IReadOnlyList<ZoomStep>?>(path);
         }
 
         public int ChildReads { get; private set; }
@@ -1216,12 +1277,33 @@ public sealed class KernelApiHostTests : IDisposable
 
         private static NodeSummary? Find(NodeRef node)
         {
-            if (node.Unversioned() == Study)
+            var unversioned = node.Unversioned();
+            if (unversioned == Study)
             {
                 return StudySummary;
             }
 
-            return node.Unversioned() == StudySite ? SiteSummary : null;
+            if (unversioned == StudySite)
+            {
+                return SiteSummary;
+            }
+
+            if (unversioned == Enrollment)
+            {
+                return EnrollmentSummary;
+            }
+
+            if (unversioned == Concept)
+            {
+                return ConceptSummary;
+            }
+
+            if (unversioned == FormInstance)
+            {
+                return FormSummary;
+            }
+
+            return unversioned == RecordedObservation ? ObservationSummary : null;
         }
     }
 

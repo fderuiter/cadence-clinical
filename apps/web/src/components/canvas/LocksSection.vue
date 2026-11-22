@@ -86,26 +86,91 @@
             </select>
           </div>
 
-          <div class="field-group">
-            <label for="lock-apply-scope-ref">Target reference</label>
-            <input
-              id="lock-apply-scope-ref"
-              v-model="applyScopeRef"
-              type="text"
-              autocomplete="off"
-              list="lock-known-scopes"
-              :readonly="applyScopeKind === 'study'"
-              placeholder="kind:uuid"
-            />
-            <datalist id="lock-known-scopes">
+          <div v-if="applyScopeKind === 'study'" class="field-group">
+            <span class="field-label">Target scope</span>
+            <span class="scope-static-value" data-testid="lock-study-target">
+              Study {{ studyCode }}
+            </span>
+          </div>
+
+          <div
+            v-if="
+              applyScopeKind === 'study_site' ||
+              applyScopeKind === 'enrollment' ||
+              applyScopeKind === 'collection_instance'
+            "
+            class="field-group"
+          >
+            <label for="lock-apply-site">Study site</label>
+            <select
+              id="lock-apply-site"
+              v-model="selectedSiteRef"
+              @change="onSiteSelectChange"
+            >
+              <option value="">Select study site…</option>
               <option
-                v-for="opt in scopeSuggestions"
-                :key="opt.ref"
-                :value="opt.ref"
+                v-for="site in siteOptions"
+                :key="site.ref"
+                :value="site.ref"
               >
-                {{ opt.label }}
+                {{ site.label }}
               </option>
-            </datalist>
+            </select>
+          </div>
+
+          <div
+            v-if="
+              applyScopeKind === 'enrollment' ||
+              applyScopeKind === 'collection_instance'
+            "
+            class="field-group"
+          >
+            <label for="lock-apply-enrollment">Participant</label>
+            <select
+              id="lock-apply-enrollment"
+              v-model="selectedEnrollmentRef"
+              :disabled="!selectedSiteRef || enrollmentsLoading"
+              @change="onEnrollmentSelectChange"
+            >
+              <option value="">
+                {{
+                  enrollmentsLoading
+                    ? "Loading participants…"
+                    : "Select participant…"
+                }}
+              </option>
+              <option
+                v-for="enr in enrollmentOptions"
+                :key="enr.ref"
+                :value="enr.ref"
+              >
+                {{ enr.label }}
+              </option>
+            </select>
+          </div>
+
+          <div
+            v-if="applyScopeKind === 'collection_instance'"
+            class="field-group"
+          >
+            <label for="lock-apply-form">Case report form</label>
+            <select
+              id="lock-apply-form"
+              v-model="selectedFormRef"
+              :disabled="!selectedEnrollmentRef || formsLoading"
+              @change="onFormSelectChange"
+            >
+              <option value="">
+                {{ formsLoading ? "Loading forms…" : "Select form…" }}
+              </option>
+              <option
+                v-for="frm in formOptions"
+                :key="frm.ref"
+                :value="frm.ref"
+              >
+                {{ frm.label }}
+              </option>
+            </select>
           </div>
 
           <div class="field-group">
@@ -128,6 +193,26 @@
               placeholder="Interim analysis cut / database lock after query closure"
             />
           </div>
+
+          <details
+            class="direct-ref-disclosure field-group--wide"
+            :open="applyScopeKind === 'observation' ? true : undefined"
+          >
+            <summary class="direct-ref-summary">
+              Enter target reference ID directly
+            </summary>
+            <div class="field-group direct-ref-field">
+              <label for="lock-apply-scope-ref">Target reference ID</label>
+              <input
+                id="lock-apply-scope-ref"
+                v-model="applyScopeRef"
+                type="text"
+                autocomplete="off"
+                :readonly="applyScopeKind === 'study'"
+                placeholder="Paste target reference ID"
+              />
+            </div>
+          </details>
         </div>
         <div class="apply-actions">
           <button
@@ -237,8 +322,10 @@
               <template v-if="entry.masked"> masked </template>
               <template v-else>
                 <NodeRefChip
-                  v-if="entry.locked_by && parseNodeRef(entry.locked_by)"
-                  :node-ref="entry.locked_by"
+                  v-if="
+                    entry.locked_by && normalizeLookupNodeRef(entry.locked_by)
+                  "
+                  :node-ref="normalizeLookupNodeRef(entry.locked_by)!"
                 />
                 <template v-else>{{ entry.locked_by ?? "—" }}</template>
                 <span v-if="entry.attestation_meaning" class="meaning-note">
@@ -318,9 +405,14 @@ import {
   type KernelLockKind,
   type KernelLockMeaning,
 } from "../../api/kernelApi";
+import { ecrfFormsApi, type EcrfFormSummary } from "../../api/ecrfFormsApi";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
-import { getNodeDisplay, seedNodeSummary } from "../../canvas/nodeResolver";
+import {
+  getNodeDisplay,
+  normalizeLookupNodeRef,
+  seedNodeSummary,
+} from "../../canvas/nodeResolver";
 import { useAuthStore } from "../../stores/auth.js";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import NodeRefChip from "./NodeRefChip.vue";
@@ -355,6 +447,13 @@ const asOfInput = ref("");
 const canApply = ref(false);
 const canRelease = ref(false);
 const studyChildren = ref<KernelChild[]>([]);
+const selectedSiteRef = ref("");
+const selectedEnrollmentRef = ref("");
+const selectedFormRef = ref("");
+const siteEnrollments = ref<KernelChild[]>([]);
+const enrollmentsLoading = ref(false);
+const enrollmentForms = ref<EcrfFormSummary[]>([]);
+const formsLoading = ref(false);
 
 const applyScopeKind = ref<string>("study");
 const applyScopeRef = ref<string>("");
@@ -390,23 +489,52 @@ const signerFullName = computed(
     authStore?.user?.name || authStore?.user?.full_name || signerUsername.value
 );
 
-const scopeSuggestions = computed(() => {
-  const items: Array<{ ref: string; label: string }> = [];
-  if (studyRef.value) {
-    items.push({ ref: studyRef.value, label: `Study ${props.studyCode}` });
-  }
-  for (const child of studyChildren.value) {
-    if (child.node.ref && !child.node.mask) {
-      items.push({
-        ref: child.node.ref,
-        label: child.node.code || child.node.title || child.node.ref,
-      });
-    }
-  }
-  return items.filter((item) =>
-    item.ref.startsWith(`${applyScopeKind.value}:`)
-  );
-});
+const siteOptions = computed(() =>
+  studyChildren.value
+    .filter(
+      (child) =>
+        Boolean(child.node.ref) &&
+        !child.node.mask &&
+        child.node.ref!.startsWith("study_site:")
+    )
+    .map((child) => ({
+      ref: child.node.ref as string,
+      label:
+        child.node.code ||
+        child.node.title ||
+        getNodeDisplay(child.node.ref).label,
+    }))
+);
+
+const enrollmentOptions = computed(() =>
+  siteEnrollments.value
+    .filter(
+      (child) =>
+        Boolean(child.node.ref) &&
+        !child.node.mask &&
+        child.node.ref!.startsWith("enrollment:")
+    )
+    .map((child) => ({
+      ref: child.node.ref as string,
+      label:
+        child.node.code ||
+        child.node.title ||
+        getNodeDisplay(child.node.ref).label,
+    }))
+);
+
+const formOptions = computed(() =>
+  enrollmentForms.value.map((summary) => {
+    const base = summary.collection_title || summary.collection_spec_id;
+    const label = summary.planned_activity_id
+      ? `${base} · ${summary.planned_activity_id}`
+      : base;
+    return {
+      ref: `collection_instance:${summary.form_id}`,
+      label,
+    };
+  })
+);
 
 const modalActionUrl = computed(() => {
   if (!modalOp.value) return LOCK_APPLY_ACTION;
@@ -425,12 +553,141 @@ function scopeLabel(kind: string): string {
   return SCOPE_LABELS[kind] ?? kind;
 }
 
+async function loadSiteEnrollments(siteRef: string) {
+  siteEnrollments.value = [];
+  if (!siteRef || typeof kernelApi.getChildren !== "function") return;
+  enrollmentsLoading.value = true;
+  try {
+    const children = await kernelApi.getChildren(siteRef);
+    siteEnrollments.value = children ?? [];
+    for (const child of siteEnrollments.value) {
+      if (child.node.ref && !child.node.mask) {
+        seedNodeSummary(child.node.ref, {
+          kind: child.node.kind,
+          code: child.node.code,
+          title: child.node.title,
+          status: child.node.status,
+        });
+      }
+    }
+    if (
+      (applyScopeKind.value === "enrollment" ||
+        applyScopeKind.value === "collection_instance") &&
+      !selectedEnrollmentRef.value &&
+      enrollmentOptions.value.length > 0
+    ) {
+      selectedEnrollmentRef.value = enrollmentOptions.value[0].ref;
+      if (applyScopeKind.value === "enrollment") {
+        applyScopeRef.value = selectedEnrollmentRef.value;
+      } else {
+        await loadEnrollmentForms(selectedEnrollmentRef.value);
+      }
+    }
+  } catch {
+    siteEnrollments.value = [];
+  } finally {
+    enrollmentsLoading.value = false;
+  }
+}
+
+async function loadEnrollmentForms(enrollmentRef: string) {
+  enrollmentForms.value = [];
+  const parsed = parseNodeRef(enrollmentRef);
+  const enrollmentId = parsed?.id ?? "";
+  if (!enrollmentId || typeof ecrfFormsApi.listForEnrollment !== "function") {
+    return;
+  }
+  formsLoading.value = true;
+  try {
+    const summaries = await ecrfFormsApi.listForEnrollment(enrollmentId);
+    enrollmentForms.value = Array.isArray(summaries) ? summaries : [];
+    for (const summary of enrollmentForms.value) {
+      const base = summary.collection_title || summary.collection_spec_id;
+      const title = summary.planned_activity_id
+        ? `${base} · ${summary.planned_activity_id}`
+        : base;
+      seedNodeSummary(`collection_instance:${summary.form_id}`, {
+        kind: "collection_instance",
+        title,
+      });
+    }
+    if (
+      applyScopeKind.value === "collection_instance" &&
+      !selectedFormRef.value &&
+      formOptions.value.length > 0
+    ) {
+      selectedFormRef.value = formOptions.value[0].ref;
+      applyScopeRef.value = selectedFormRef.value;
+    }
+  } catch {
+    enrollmentForms.value = [];
+  } finally {
+    formsLoading.value = false;
+  }
+}
+
 function onScopeKindChange() {
   if (applyScopeKind.value === "study" && studyRef.value) {
     applyScopeRef.value = studyRef.value;
+    return;
+  }
+  if (applyScopeKind.value === "study_site") {
+    if (!selectedSiteRef.value && siteOptions.value.length > 0) {
+      selectedSiteRef.value = siteOptions.value[0].ref;
+    }
+    applyScopeRef.value = selectedSiteRef.value;
+    return;
+  }
+  if (
+    applyScopeKind.value === "enrollment" ||
+    applyScopeKind.value === "collection_instance"
+  ) {
+    if (!selectedSiteRef.value && siteOptions.value.length > 0) {
+      selectedSiteRef.value = siteOptions.value[0].ref;
+    }
+    applyScopeRef.value =
+      applyScopeKind.value === "enrollment"
+        ? selectedEnrollmentRef.value
+        : selectedFormRef.value;
+    if (selectedSiteRef.value && siteEnrollments.value.length === 0) {
+      void loadSiteEnrollments(selectedSiteRef.value);
+    } else if (
+      applyScopeKind.value === "collection_instance" &&
+      selectedEnrollmentRef.value &&
+      enrollmentForms.value.length === 0
+    ) {
+      void loadEnrollmentForms(selectedEnrollmentRef.value);
+    }
+    return;
+  }
+  applyScopeRef.value = "";
+}
+
+function onSiteSelectChange() {
+  selectedEnrollmentRef.value = "";
+  selectedFormRef.value = "";
+  enrollmentForms.value = [];
+  if (applyScopeKind.value === "study_site") {
+    applyScopeRef.value = selectedSiteRef.value;
   } else {
-    const first = scopeSuggestions.value[0];
-    applyScopeRef.value = first ? first.ref : "";
+    applyScopeRef.value = "";
+    void loadSiteEnrollments(selectedSiteRef.value);
+  }
+}
+
+function onEnrollmentSelectChange() {
+  selectedFormRef.value = "";
+  if (applyScopeKind.value === "enrollment") {
+    applyScopeRef.value = selectedEnrollmentRef.value;
+  } else {
+    applyScopeRef.value = "";
+    void loadEnrollmentForms(selectedEnrollmentRef.value);
+  }
+}
+
+function onFormSelectChange() {
+  if (applyScopeKind.value === "collection_instance") {
+    applyScopeRef.value = selectedFormRef.value;
   }
 }
 
@@ -461,6 +718,11 @@ watch(
     studyError.value = null;
     locks.value = [];
     outcome.value = null;
+    selectedSiteRef.value = "";
+    selectedEnrollmentRef.value = "";
+    selectedFormRef.value = "";
+    siteEnrollments.value = [];
+    enrollmentForms.value = [];
     if (!code) return;
 
     studyLoading.value = true;
@@ -666,10 +928,35 @@ async function executeModalSign(sigToken: string, signingReason: string) {
 }
 
 .field-group label,
+.field-label,
 .release-reason-bar label {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--semantic-color-text-dark);
+}
+
+.scope-static-value {
+  padding: 6px 10px;
+  border: 1px solid var(--semantic-color-border-muted);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-dark);
+  background: var(--semantic-color-surface);
+}
+
+.direct-ref-disclosure {
+  font-size: 0.82rem;
+  color: var(--semantic-color-text-body);
+}
+
+.direct-ref-summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--semantic-color-text-muted);
+}
+
+.direct-ref-field {
+  margin-top: 6px;
 }
 
 .field-group input,

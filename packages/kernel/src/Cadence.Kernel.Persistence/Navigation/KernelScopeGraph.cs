@@ -6,12 +6,16 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Simulation;
+using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Domain.Standards;
 using Cadence.Kernel.Domain.Validation;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Validation;
@@ -25,15 +29,17 @@ namespace Cadence.Kernel.Persistence.Navigation;
 /// <summary>
 /// Reads the zoom hierarchy from the kernel tables (ADR-2481 §4.3). Read-only (<c>AsNoTracking</c>), through a context
 /// bound to the caller's tenant by Row-Level Security (K-ID-2), with the tenant also in every predicate. Enrollments sit
-/// under their study site; protocol versions and study standards under their study; a protocol element under the version
+/// under their study site; collection instances and observations under their enrollment; concepts under their tenant;
+/// protocol versions and study standards under their study; a protocol element under the version
 /// that last governed it (ADR-2474); an attestation under the object it signs (ADR-2485). Participants (identity only)
-/// and kinds whose tables do not exist yet (visit, observation, …) resolve to nothing. Current-state objects are returned
+/// and kinds whose tables do not exist yet (visit, …) resolve to nothing. Current-state objects are returned
 /// at their current version, whatever version the reference names; the returned <see cref="NodeSummary.Ref"/> says which
 /// version that is.
 /// </summary>
 internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : IKernelScopeGraph
 {
     private const int ProposalLabelLength = 80;
+    private const int ObservationValueLabelLength = 60;
 
     public async Task<ScopeNode?> FindAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken)
     {
@@ -191,6 +197,15 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                     new NodeSummary(NodeRef.For(findingId, decisions), $"Finding {detection.RuleId} on {detection.Dataset} {detection.TargetKey}", detection.RuleId),
                     NodeRef.For(detection.StudyId));
 
+            case NodeKinds.Concept:
+                return await ConceptAsync(db, tenant, tenantRef, node, cancellationToken).ConfigureAwait(false);
+
+            case NodeKinds.CollectionInstance:
+                return await CollectionInstanceAsync(db, tenant, CollectionInstanceId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false);
+
+            case NodeKinds.Observation:
+                return await ObservationAsync(db, tenant, ObservationId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false);
+
             default:
                 return null;
         }
@@ -315,6 +330,123 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
     {
         var line = intent.ReplaceLineEndings(" ").Trim();
         return line.Length <= ProposalLabelLength ? $"Proposal: {line}" : $"Proposal: {line[..(ProposalLabelLength - 1)]}…";
+    }
+
+    private static async Task<ScopeNode?> ConceptAsync(
+        KernelDbContext db, TenantId tenant, NodeRef tenantRef, NodeRef node, CancellationToken cancellationToken)
+    {
+        var conceptId = ConceptId.FromGuid(node.Id);
+        var concept = await db.Concepts.AsNoTracking()
+            .Where(c => c.TenantId == tenant && c.Id == conceptId)
+            .Select(c => new { c.PreferredLabel, c.ExternalCode, c.Status, c.Version })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (concept is null)
+        {
+            return null;
+        }
+
+        var label = concept.PreferredLabel;
+        long resolvedVersion = concept.Version;
+        if (node.Version is { } requestedVersion && requestedVersion != concept.Version && requestedVersion <= int.MaxValue)
+        {
+            var revisionLabel = await db.ConceptRevisions.AsNoTracking()
+                .Where(r => r.TenantId == tenant && r.ConceptId == conceptId && r.Version == (int)requestedVersion)
+                .Select(r => r.PreferredLabel)
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(revisionLabel))
+            {
+                label = revisionLabel;
+                resolvedVersion = requestedVersion;
+            }
+        }
+
+        return new ScopeNode(
+            new NodeSummary(NodeRef.For(conceptId, resolvedVersion), label, concept.ExternalCode, concept.Status.ToString()),
+            tenantRef);
+    }
+
+    private static async Task<ScopeNode?> CollectionInstanceAsync(
+        KernelDbContext db, TenantId tenant, CollectionInstanceId instanceId, CancellationToken cancellationToken)
+    {
+        var instance = await db.CollectionInstances.AsNoTracking()
+            .Where(c => c.TenantId == tenant && c.Id == instanceId)
+            .Select(c => new { c.EnrollmentId, c.ProtocolVersionId, c.CollectionSpecId, c.PlannedActivityId, c.VersionIndex })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (instance is null)
+        {
+            return null;
+        }
+
+        var content = await db.ProtocolVersions.AsNoTracking()
+            .Where(v => v.TenantId == tenant && v.Id == instance.ProtocolVersionId)
+            .Select(v => v.Content)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var design = content is null ? null : ProtocolDesignDocument.Read(content).Design;
+        var specName = design?.CollectionSpecs
+            .FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal))?.Name;
+        var formTitle = string.IsNullOrWhiteSpace(specName) ? instance.CollectionSpecId : specName.Trim();
+
+        string? visitTitle = null;
+        if (!string.IsNullOrWhiteSpace(instance.PlannedActivityId))
+        {
+            var activityName = design?.PlannedActivities
+                .FirstOrDefault(a => string.Equals(a.Id, instance.PlannedActivityId, StringComparison.Ordinal))?.Name;
+            visitTitle = string.IsNullOrWhiteSpace(activityName) ? instance.PlannedActivityId.Trim() : activityName.Trim();
+        }
+
+        var title = string.IsNullOrWhiteSpace(visitTitle) ? formTitle : $"{formTitle} ({visitTitle})";
+        return new ScopeNode(
+            new NodeSummary(NodeRef.For(instanceId, instance.VersionIndex), title, Code: null),
+            NodeRef.For(instance.EnrollmentId));
+    }
+
+    private static async Task<ScopeNode?> ObservationAsync(
+        KernelDbContext db, TenantId tenant, ObservationId observationId, CancellationToken cancellationToken)
+    {
+        var observation = await db.Observations.AsNoTracking()
+            .Where(o => o.TenantId == tenant && o.Id == observationId)
+            .Select(o => new { o.EnrollmentId, o.ConceptId, o.ConceptVersion, o.Value, o.VersionIndex })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (observation is null)
+        {
+            return null;
+        }
+
+        var conceptLabel = await db.ConceptRevisions.AsNoTracking()
+                .Where(r => r.TenantId == tenant && r.ConceptId == observation.ConceptId && r.Version == observation.ConceptVersion)
+                .Select(r => r.PreferredLabel)
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
+            ?? await db.Concepts.AsNoTracking()
+                .Where(c => c.TenantId == tenant && c.Id == observation.ConceptId)
+                .Select(c => c.PreferredLabel)
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        return new ScopeNode(
+            new NodeSummary(NodeRef.For(observationId, observation.VersionIndex), ObservationLabel(conceptLabel, observation.Value), Code: null),
+            NodeRef.For(observation.EnrollmentId));
+    }
+
+    private static string ObservationLabel(string? conceptLabel, ObservationValue value)
+    {
+        var cleanConcept = string.IsNullOrWhiteSpace(conceptLabel) ? null : conceptLabel.Trim();
+        string? valueText = null;
+        if (value is not MissingValue { Reason: NullFlavor.NotAsked })
+        {
+            var singleLine = value.ToDisplayString().ReplaceLineEndings(" ").Trim();
+            if (singleLine.Length > 0)
+            {
+                valueText = singleLine.Length <= ObservationValueLabelLength
+                    ? singleLine
+                    : $"{singleLine[..(ObservationValueLabelLength - 1)]}…";
+            }
+        }
+
+        if (cleanConcept is not null && valueText is not null)
+        {
+            return $"{cleanConcept}: {valueText}";
+        }
+
+        return cleanConcept ?? valueText ?? "Observation";
     }
 
     private static IQueryable<StudySiteRow> StudySitesWithSites(KernelDbContext db, TenantId tenant) =>

@@ -89,12 +89,16 @@ public static partial class RulesetService
         output ??= Console.Out;
 
         var errors = new List<string>();
-        var definitions = LoadAndValidateRulesetFiles(repoRoot, errors);
+        var definitions = LoadAndValidateRulesetFiles(repoRoot, errors, requireDirectory: false);
         var workflowJobs = LoadAndValidateWorkflows(repoRoot, errors);
 
-        if (definitions.Count > 0 && workflowJobs.Count > 0)
+        if (workflowJobs.Count > 0)
         {
-            ValidateWorkflowParity(definitions, workflowJobs, errors);
+            if (definitions.Count > 0)
+            {
+                ValidateWorkflowParity(definitions, workflowJobs, errors);
+            }
+
             ValidateCiGateCoverage(workflowJobs, errors);
         }
 
@@ -108,7 +112,9 @@ public static partial class RulesetService
             return 1;
         }
 
-        output.WriteLine($"{Tag} ✔ Validated {definitions.Count} declarative rulesets and CI Gate workflow parity.");
+        output.WriteLine(definitions.Count > 0
+            ? $"{Tag} ✔ Validated {definitions.Count} declarative rulesets and CI Gate workflow parity."
+            : $"{Tag} ✔ Validated CI Gate workflow coverage (no '.github/rulesets' directory configured).");
         return 0;
     }
 
@@ -130,7 +136,7 @@ public static partial class RulesetService
         output ??= Console.Out;
 
         var errors = new List<string>();
-        var definitions = LoadAndValidateRulesetFiles(repoRoot, errors);
+        var definitions = LoadAndValidateRulesetFiles(repoRoot, errors, requireDirectory: true);
         var workflowJobs = LoadAndValidateWorkflows(repoRoot, errors);
         if (definitions.Count > 0 && workflowJobs.Count > 0)
         {
@@ -382,13 +388,17 @@ public static partial class RulesetService
         }
     }
 
-    private static List<RulesetDefinition> LoadAndValidateRulesetFiles(string repoRoot, List<string> errors)
+    private static List<RulesetDefinition> LoadAndValidateRulesetFiles(string repoRoot, List<string> errors, bool requireDirectory)
     {
         var definitions = new List<RulesetDefinition>();
         string rulesetsDir = Path.Combine(repoRoot, ".github", "rulesets");
         if (!Directory.Exists(rulesetsDir))
         {
-            errors.Add("Directory '.github/rulesets' does not exist.");
+            if (requireDirectory)
+            {
+                errors.Add("Directory '.github/rulesets' does not exist.");
+            }
+
             return definitions;
         }
 

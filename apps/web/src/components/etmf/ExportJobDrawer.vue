@@ -20,7 +20,7 @@
           <div>
             <h3 class="drawer-title">eTMF Study Binder Export</h3>
             <p class="drawer-subtitle">
-              Dual-mode synchronous streaming &amp; background async export jobs
+              Prepare and download complete eTMF study binder archives
             </p>
           </div>
         </div>
@@ -38,14 +38,14 @@
         <div v-if="activeJob" class="active-job-card">
           <div class="card-header">
             <div>
-              <span class="job-id-tag">{{ activeJob.job_id }}</span>
+              <span class="job-id-tag">Study Binder Export</span>
               <span class="study-id-text">Study: {{ activeJob.study_id }}</span>
             </div>
             <span
               :class="getStatusBadgeClass(activeJob.status)"
               class="status-badge"
             >
-              {{ activeJob.status }}
+              {{ formatClinicalStatus(activeJob.status) }}
             </span>
           </div>
 
@@ -80,15 +80,19 @@
                 Requested {{ formatDate(activeJob.created_at) }}
               </span>
             </div>
+            <SupportDetails
+              v-if="activeJob.job_id"
+              summary-label="Export reference"
+              :reference="activeJob.job_id"
+            />
           </div>
 
           <!-- Download Action Area -->
           <div v-if="activeJob.status === 'COMPLETED'" class="completion-box">
             <div class="completion-message">
               <span
-                >✅ ZIP package successfully generated with root
-                <code>manifest.json</code> &amp;
-                <code>manifest.csv</code>.</span
+                >✅ Study binder archive is ready for download with complete
+                document index and verification inventory.</span
               >
             </div>
             <a
@@ -128,18 +132,24 @@
               :class="{ 'is-active': activeJob &amp;&amp; activeJob.job_id === job.job_id }"
             >
               <div class="history-item-header">
-                <span class="history-job-id">{{ job.job_id }}</span>
+                <span class="history-job-id"
+                  >Binder archive · {{ job.total_documents }} documents</span
+                >
                 <span
                   :class="getStatusBadgeClass(job.status)"
                   class="status-badge-sm"
                 >
-                  {{ job.status }}
+                  {{ formatClinicalStatus(job.status) }}
                 </span>
               </div>
               <div class="history-item-meta">
-                <span>{{ job.total_documents }} documents</span>
-                <span>{{ formatDate(job.created_at) }}</span>
+                <span>Requested {{ formatDate(job.created_at) }}</span>
               </div>
+              <SupportDetails
+                v-if="job.job_id"
+                summary-label="Export reference"
+                :reference="job.job_id"
+              />
               <div
                 v-if="job.status === 'COMPLETED' &amp;&amp; job.download_url"
                 class="history-item-action"
@@ -166,7 +176,9 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useFocusTrap } from "ui";
+import SupportDetails from "../canvas/SupportDetails.vue";
 import { useEtmfStore } from "../../stores/etmf.js";
+import { formatClinicalStatus } from "../../utils/clinicalLabels";
 
 const store = useEtmfStore();
 const drawerRef = ref(null);
@@ -306,7 +318,6 @@ function formatDate(dt) {
 }
 
 .job-id-tag {
-  font-family: monospace;
   font-weight: 700;
   font-size: 13px;
   background: var(--semantic-color-surface-header);
@@ -326,8 +337,7 @@ function formatDate(dt) {
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.2px;
 }
 
 .status-badge-sm {
@@ -335,7 +345,6 @@ function formatDate(dt) {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 8px;
-  text-transform: uppercase;
 }
 
 .badge-completed {

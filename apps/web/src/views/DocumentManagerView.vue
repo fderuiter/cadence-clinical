@@ -108,7 +108,7 @@
               <div class="meta-item">
                 <span class="meta-label">Lifecycle Status</span>
                 <span class="meta-val badge status-approved">{{
-                  inspectedDoc.status || "DRAFT"
+                  formatClinicalStatus(inspectedDoc.status || "DRAFT")
                 }}</span>
               </div>
             </div>
@@ -166,15 +166,16 @@
                 "
               >
                 <span style="font-size: 11px; font-weight: 600"
-                  >SHA-256 Checksum Digest</span
+                  >Cryptographic Integrity Verification</span
                 >
-                <span class="badge status-approved" style="font-size: 9px"
-                  >LEDGER SEALED</span
-                >
+                <span class="badge status-approved" style="font-size: 9px">{{
+                  formatClinicalStatus("LEDGER_SEALED")
+                }}</span>
               </div>
-              <code class="sha256-hash-display">{{
-                getDocSha256(inspectedDoc)
-              }}</code>
+              <SupportDetails
+                summary-label="SHA-256 verification digest"
+                :reference="getDocSha256(inspectedDoc)"
+              />
             </div>
           </div>
 
@@ -220,7 +221,7 @@
                 <div class="meta-item">
                   <span class="meta-label">Detected Modality</span>
                   <span class="meta-val">{{
-                    getDocModality(inspectedDoc)
+                    formatDocumentModality(getDocModality(inspectedDoc))
                   }}</span>
                 </div>
                 <div class="meta-item">
@@ -350,10 +351,15 @@ import DocumentGrid from "../components/etmf/DocumentGrid.vue";
 import ExportJobDrawer from "../components/etmf/ExportJobDrawer.vue";
 import PdfPreviewModal from "../components/etmf/PdfPreviewModal.vue";
 import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
+import SupportDetails from "../components/canvas/SupportDetails.vue";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useEtmfStore } from "../stores/etmf";
 import { useToastStore } from "../stores/toasts.js";
+import {
+  formatClinicalStatus,
+  formatDocumentModality,
+} from "../utils/clinicalLabels";
 
 const props = defineProps({
   studyId: {

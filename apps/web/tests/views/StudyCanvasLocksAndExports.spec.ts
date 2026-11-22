@@ -514,4 +514,66 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     expect(mockTriggerDownload).not.toHaveBeenCalled();
     wizard.unmount();
   });
+
+  it("offers human study site and participant selectors in LocksSection while keeping direct reference ID entry collapsed", async () => {
+    const siteRef = "study_site:01960000-0000-7000-8000-000000000017";
+    mockGetChildren.mockImplementation(async (parentRef: string) => {
+      if (parentRef === STUDY_REF) {
+        return [
+          {
+            node: {
+              ref: siteRef,
+              kind: "study_site",
+              code: "017",
+              title: "Boston General",
+              status: "Active",
+              mask: null,
+            },
+            edge_kind: "Contains",
+          },
+        ];
+      }
+      if (parentRef === siteRef) {
+        return [
+          {
+            node: {
+              ref: ENROLLMENT_REF,
+              kind: "enrollment",
+              code: "SUBJ-017-01",
+              title: "SUBJ-017-01",
+              status: "Enrolled",
+              mask: null,
+            },
+            edge_kind: "Contains",
+          },
+        ];
+      }
+      return [];
+    });
+
+    const wrapper = mount(LocksSection, {
+      props: { studyCode: "CAD-101" },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    const disclosure = wrapper.find("details.direct-ref-disclosure");
+    expect(disclosure.exists()).toBe(true);
+    expect(disclosure.attributes("open")).toBeUndefined();
+    expect(wrapper.html()).not.toContain('placeholder="kind:uuid"');
+
+    await wrapper.find("#lock-apply-scope-kind").setValue("enrollment");
+    await flushPromises();
+
+    const siteSelect = wrapper.find("#lock-apply-site");
+    expect(siteSelect.exists()).toBe(true);
+    expect(siteSelect.text()).toContain("017");
+
+    const enrollmentSelect = wrapper.find("#lock-apply-enrollment");
+    expect(enrollmentSelect.exists()).toBe(true);
+    expect(enrollmentSelect.text()).toContain("SUBJ-017-01");
+
+    await expectNoAxeViolations(wrapper.element);
+    wrapper.unmount();
+  });
 });
