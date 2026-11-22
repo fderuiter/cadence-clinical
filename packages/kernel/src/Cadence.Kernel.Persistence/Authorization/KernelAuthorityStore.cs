@@ -40,7 +40,12 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
         NodeKinds.Grant,
         NodeKinds.QualificationRequirement,
         NodeKinds.Effectivity,
-        NodeKinds.Proposal);
+        NodeKinds.Proposal,
+        NodeKinds.CollectionInstance,
+        NodeKinds.Observation,
+        NodeKinds.Assertion,
+        NodeKinds.Attestation,
+        NodeKinds.ValidationFinding);
 
     private const string ProtocolElementPathsSql = """
         SELECT DISTINCT ON (le.to_id)
@@ -159,6 +164,206 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
         LEFT JOIN kernel.sites AS ss_site
             ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
         WHERE e.tenant_id = @tenant AND e.id = ANY(@ids)
+        """;
+
+    private const string CollectionInstancePathsSql = """
+        SELECT
+            ci.id AS "Id",
+            s.sponsor_id AS "OrganizationId",
+            ci.study_id AS "StudyId",
+            ss_site.country AS "Country",
+            ss.id AS "StudySiteId"
+        FROM kernel.collection_instances AS ci
+        JOIN kernel.studies AS s
+            ON s.tenant_id = ci.tenant_id AND s.id = ci.study_id
+        JOIN kernel.study_sites AS ss
+            ON ss.tenant_id = ci.tenant_id AND ss.id = ci.study_site_id
+        JOIN kernel.sites AS ss_site
+            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
+        WHERE ci.tenant_id = @tenant AND ci.id = ANY(@ids)
+        """;
+
+    private const string ObservationPathsSql = """
+        SELECT
+            o.id AS "Id",
+            s.sponsor_id AS "OrganizationId",
+            o.study_id AS "StudyId",
+            ss_site.country AS "Country",
+            ss.id AS "StudySiteId"
+        FROM kernel.observations AS o
+        JOIN kernel.enrollments AS e
+            ON e.tenant_id = o.tenant_id AND e.id = o.enrollment_id
+        JOIN kernel.studies AS s
+            ON s.tenant_id = o.tenant_id AND s.id = o.study_id
+        JOIN kernel.study_sites AS ss
+            ON ss.tenant_id = e.tenant_id AND ss.id = e.study_site_id
+        JOIN kernel.sites AS ss_site
+            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
+        WHERE o.tenant_id = @tenant AND o.id = ANY(@ids)
+        """;
+
+    private const string AssertionPathsSql = """
+        SELECT
+            a.id AS "Id",
+            s.sponsor_id AS "OrganizationId",
+            s.id AS "StudyId",
+            ss_site.country AS "Country",
+            ss.id AS "StudySiteId"
+        FROM kernel.assertions AS a
+        JOIN kernel.studies AS s
+            ON s.tenant_id = a.tenant_id AND s.id = a.study_id
+        LEFT JOIN kernel.enrollments AS e
+            ON a.enrollment_id IS NOT NULL AND e.tenant_id = a.tenant_id AND e.id = a.enrollment_id
+        LEFT JOIN kernel.study_sites AS ss
+            ON ss.tenant_id = a.tenant_id
+           AND ss.study_id = a.study_id
+           AND ss.id = COALESCE(e.study_site_id, CASE WHEN a.target_kind = 'study_site' THEN a.target_id END)
+        LEFT JOIN kernel.sites AS ss_site
+            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
+        WHERE a.tenant_id = @tenant AND a.id = ANY(@ids)
+        """;
+
+    // SqlQueryRaw passes SQL through string.Format, so regex quantifiers double their braces ({{n}} -> {n} in SQL).
+    private const string UuidPatternSql = "[0-9a-f]{{8}}-[0-9a-f]{{4}}-[0-9a-f]{{4}}-[0-9a-f]{{4}}-[0-9a-f]{{12}}";
+
+    private const string FindingTargetParseColumnsSql = $"""
+            CASE
+                WHEN d.target_kind = 'DatasetRecord'
+                 AND d.target_key ~* '^{UuidPatternSql}$'
+                    THEN d.target_key::uuid
+                WHEN d.target_key ~* '^collection_instance:{UuidPatternSql}$'
+                    THEN split_part(d.target_key, ':', 2)::uuid
+            END AS collection_instance_id,
+            CASE
+                WHEN d.target_key ~* '^observation:{UuidPatternSql}$'
+                    THEN split_part(d.target_key, ':', 2)::uuid
+            END AS observation_id,
+            CASE
+                WHEN d.target_key ~* '^enrollment:{UuidPatternSql}$'
+                    THEN split_part(d.target_key, ':', 2)::uuid
+            END AS enrollment_id,
+            CASE
+                WHEN d.target_key ~* '^study_site:{UuidPatternSql}$'
+                    THEN split_part(d.target_key, ':', 2)::uuid
+            END AS direct_study_site_id
+        """;
+
+    private const string FindingTargetSiteJoinsSql = """
+        LEFT JOIN kernel.collection_instances AS vf_ci
+            ON d.collection_instance_id IS NOT NULL
+           AND vf_ci.tenant_id = d.tenant_id AND vf_ci.id = d.collection_instance_id AND vf_ci.study_id = d.study_id
+        LEFT JOIN kernel.observations AS vf_obs
+            ON d.observation_id IS NOT NULL
+           AND vf_obs.tenant_id = d.tenant_id AND vf_obs.id = d.observation_id AND vf_obs.study_id = d.study_id
+        LEFT JOIN kernel.enrollments AS vf_enr
+            ON COALESCE(vf_obs.enrollment_id, d.enrollment_id) IS NOT NULL
+           AND vf_enr.tenant_id = d.tenant_id AND vf_enr.id = COALESCE(vf_obs.enrollment_id, d.enrollment_id) AND vf_enr.study_id = d.study_id
+        """;
+
+    private const string ValidationFindingPathsSql = $"""
+        WITH detected AS (
+            SELECT DISTINCT ON (d.finding_id)
+                d.tenant_id,
+                d.finding_id,
+                d.study_id,
+        {FindingTargetParseColumnsSql}
+            FROM kernel.validation_detections AS d
+            WHERE d.tenant_id = @tenant AND d.finding_id = ANY(@ids)
+            ORDER BY d.finding_id
+        )
+        SELECT
+            d.finding_id AS "Id",
+            s.sponsor_id AS "OrganizationId",
+            s.id AS "StudyId",
+            ss_site.country AS "Country",
+            ss.id AS "StudySiteId"
+        FROM detected AS d
+        JOIN kernel.studies AS s
+            ON s.tenant_id = d.tenant_id AND s.id = d.study_id
+        {FindingTargetSiteJoinsSql}
+        LEFT JOIN kernel.study_sites AS ss
+            ON ss.tenant_id = d.tenant_id
+           AND ss.study_id = d.study_id
+           AND ss.id = COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, d.direct_study_site_id)
+        LEFT JOIN kernel.sites AS ss_site
+            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
+        """;
+
+    private const string AttestationPathsSql = $"""
+        WITH requested AS (
+            SELECT
+                att.id,
+                att.tenant_id,
+                att.target_kind,
+                att.target_id
+            FROM kernel.attestations AS att
+            WHERE att.tenant_id = @tenant AND att.id = ANY(@ids)
+        ),
+        vf_detected AS (
+            SELECT DISTINCT ON (d.finding_id)
+                d.tenant_id,
+                d.finding_id,
+                d.study_id,
+        {FindingTargetParseColumnsSql}
+            FROM requested AS req
+            JOIN kernel.validation_detections AS d
+                ON req.target_kind = 'validation_finding'
+               AND d.tenant_id = req.tenant_id AND d.finding_id = req.target_id
+            ORDER BY d.finding_id
+        ),
+        vf_scoped AS (
+            SELECT
+                d.tenant_id,
+                d.finding_id,
+                d.study_id,
+                COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, d.direct_study_site_id) AS study_site_id
+            FROM vf_detected AS d
+        {FindingTargetSiteJoinsSql}
+        ),
+        resolved_targets AS (
+            SELECT
+                req.id,
+                req.tenant_id,
+                COALESCE(pv.study_id, enr.study_id, art.study_id, ci.study_id, asrt.study_id, prop.study_id, vf.study_id) AS study_id,
+                COALESCE(
+                    enr.study_site_id,
+                    ci.study_site_id,
+                    asrt_enr.study_site_id,
+                    CASE WHEN asrt.id IS NOT NULL AND asrt.target_kind = 'study_site' THEN asrt.target_id END,
+                    vf.study_site_id) AS study_site_id
+            FROM requested AS req
+            LEFT JOIN kernel.protocol_versions AS pv
+                ON req.target_kind = 'protocol_version' AND pv.tenant_id = req.tenant_id AND pv.id = req.target_id
+            LEFT JOIN kernel.enrollments AS enr
+                ON req.target_kind = 'enrollment' AND enr.tenant_id = req.tenant_id AND enr.id = req.target_id
+            LEFT JOIN kernel.artifact_versions AS av
+                ON req.target_kind = 'artifact_version' AND av.tenant_id = req.tenant_id AND av.id = req.target_id
+            LEFT JOIN kernel.artifacts AS art
+                ON art.tenant_id = av.tenant_id AND art.id = av.artifact_id AND art.study_id IS NOT NULL
+            LEFT JOIN kernel.collection_instances AS ci
+                ON req.target_kind = 'collection_instance' AND ci.tenant_id = req.tenant_id AND ci.id = req.target_id
+            LEFT JOIN kernel.assertions AS asrt
+                ON req.target_kind = 'assertion' AND asrt.tenant_id = req.tenant_id AND asrt.id = req.target_id
+            LEFT JOIN kernel.enrollments AS asrt_enr
+                ON asrt.enrollment_id IS NOT NULL AND asrt_enr.tenant_id = asrt.tenant_id AND asrt_enr.id = asrt.enrollment_id
+            LEFT JOIN kernel.proposals AS prop
+                ON req.target_kind = 'proposal' AND prop.tenant_id = req.tenant_id AND prop.id = req.target_id
+            LEFT JOIN vf_scoped AS vf
+                ON req.target_kind = 'validation_finding' AND vf.tenant_id = req.tenant_id AND vf.finding_id = req.target_id
+        )
+        SELECT
+            t.id AS "Id",
+            s.sponsor_id AS "OrganizationId",
+            s.id AS "StudyId",
+            ss_site.country AS "Country",
+            ss.id AS "StudySiteId"
+        FROM resolved_targets AS t
+        JOIN kernel.studies AS s
+            ON t.study_id IS NOT NULL AND s.tenant_id = t.tenant_id AND s.id = t.study_id
+        LEFT JOIN kernel.study_sites AS ss
+            ON t.study_site_id IS NOT NULL AND ss.tenant_id = t.tenant_id AND ss.study_id = t.study_id AND ss.id = t.study_site_id
+        LEFT JOIN kernel.sites AS ss_site
+            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
         """;
 
     public async Task<IReadOnlyList<Grant>> GrantsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken)
@@ -558,9 +763,29 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
                     break;
                 }
 
+            case NodeKinds.CollectionInstance:
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, CollectionInstancePathsSql, resolved, ct).ConfigureAwait(false);
+                break;
+
+            case NodeKinds.Observation:
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, ObservationPathsSql, resolved, ct).ConfigureAwait(false);
+                break;
+
+            case NodeKinds.Assertion:
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, AssertionPathsSql, resolved, ct).ConfigureAwait(false);
+                break;
+
+            case NodeKinds.Attestation:
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, AttestationPathsSql, resolved, ct).ConfigureAwait(false);
+                break;
+
+            case NodeKinds.ValidationFinding:
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, ValidationFindingPathsSql, resolved, ct).ConfigureAwait(false);
+                break;
+
             default:
                 // Tenants, participants (who may be in several studies), roles, qualifications (held by a person across
-                // studies), attestations and reference data belong to no organization or study.
+                // studies), task configurations and reference data belong to no organization or study.
                 break;
         }
     }

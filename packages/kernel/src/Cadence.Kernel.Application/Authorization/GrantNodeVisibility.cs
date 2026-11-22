@@ -46,7 +46,8 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
         NodeKinds.Concept,
         NodeKinds.ConceptMapping,
         NodeKinds.StandardVersion,
-        NodeKinds.LibraryItem);
+        NodeKinds.LibraryItem,
+        NodeKinds.TaskConfiguration);
 
     public async ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
         TenantId tenant, Actor reader, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken)
