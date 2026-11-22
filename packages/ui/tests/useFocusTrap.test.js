@@ -648,6 +648,66 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     expect(dom.doc.activeElement).toBe(emptyModal);
   });
 
+  it("suppresses premature trigger restoration when restoreFocus resolves to false and preserves external trigger across modal/non-modal transitions", async () => {
+    const launchBtn = dom.body.appendChild(
+      new MockElement("button", { id: "tour-launch-btn" })
+    );
+    const popover = dom.body.appendChild(
+      new MockElement("div", { id: "tour-popover", tabindex: "-1" })
+    );
+    const dismissBtn = popover.appendChild(
+      new MockElement("button", { id: "tour-dismiss-btn" })
+    );
+    const nextBtn = popover.appendChild(
+      new MockElement("button", { id: "tour-next-btn" })
+    );
+
+    const isTourOpen = ref(false);
+    const isModalStep = ref(false);
+    let trapHandle;
+
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      trapHandle = useFocusTrap(ref(popover), {
+        isOpen: isModalStep,
+        restoreFocus: () => (isTourOpen.value ? false : launchBtn),
+      });
+    });
+
+    // 1. Launch on modal step 1 from external trigger
+    launchBtn.focus();
+    isTourOpen.value = true;
+    isModalStep.value = true;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(dismissBtn);
+
+    // 2. Advance to non-modal step 2 while tour stays open:
+    // deactivate() must NOT yank focus back to launchBtn
+    nextBtn.focus();
+    isModalStep.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(nextBtn);
+
+    // 3. Re-entering a modal step while focus is already inside popover
+    // preserves launchBtn as candidateTrigger and restores focus on final close
+    isModalStep.value = true;
+    await nextTick();
+    isTourOpen.value = false;
+    isModalStep.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(launchBtn);
+
+    // 4. Direct deactivate({ restoreFocus: false }) override also suppresses focus return
+    launchBtn.focus();
+    isTourOpen.value = false;
+    isModalStep.value = true;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(dismissBtn);
+    trapHandle.deactivate({ restoreFocus: false });
+    expect(dom.doc.activeElement).toBe(dismissBtn);
+  });
+
   it("defines prefers-reduced-motion rules in tokens.css while keeping default tokens intact", () => {
     const tokensCss = fs.readFileSync(
       path.resolve(__dirname, "../tokens.css"),

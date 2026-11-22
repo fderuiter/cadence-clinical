@@ -42,6 +42,8 @@
                 class="btn-icon-toggle"
                 :class="{ active: isSearchOpen }"
                 title="Toggle Search SOPs"
+                aria-label="Toggle Search SOPs"
+                :aria-expanded="isSearchOpen"
                 @click="toggleSearch"
               >
                 🔍
@@ -64,6 +66,7 @@
               v-model="searchInput"
               type="text"
               class="search-input"
+              aria-label="Search SOPs, guidelines, or topics"
               placeholder="Search SOPs, guidelines, or topics..."
               @input="onSearchInput"
             />
@@ -71,6 +74,7 @@
               v-if="searchInput"
               type="button"
               class="btn-clear-search"
+              aria-label="Clear search"
               @click="clearSearch"
             >
               ✕

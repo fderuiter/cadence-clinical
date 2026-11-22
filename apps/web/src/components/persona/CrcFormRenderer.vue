@@ -852,12 +852,13 @@
         <strong>{{ selectedSubjectId }}</strong>.
       </p>
       <div class="form-group" style="margin-bottom: 12px">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label style="font-size: 0.85rem; font-weight: 600"
+        <label
+          for="paper-icf-signed-date"
+          style="font-size: 0.85rem; font-weight: 600"
           >Date ICF Signed by Subject:</label
         >
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
+          id="paper-icf-signed-date"
           :value="paperIcfDate"
           type="date"
           class="form-control"
@@ -872,12 +873,13 @@
         />
       </div>
       <div class="form-group" style="margin-bottom: 12px">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label style="font-size: 0.85rem; font-weight: 600"
+        <label
+          for="paper-icf-verification-note"
+          style="font-size: 0.85rem; font-weight: 600"
           >Investigator Verification Note:</label
         >
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
+          id="paper-icf-verification-note"
           :value="paperIcfNote"
           type="text"
           class="form-control"

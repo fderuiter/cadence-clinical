@@ -235,8 +235,8 @@ function openOrientationHub() {
 }
 
 function startGuidedTour() {
-  onboardingStore.startTour();
   onboardingStore.closeDrawer();
+  onboardingStore.startTour();
 }
 </script>
 

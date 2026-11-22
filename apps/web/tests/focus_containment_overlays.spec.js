@@ -758,4 +758,186 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
     expect(wrapper.vm.showBulkSignModal).toBe(false);
     expect(document.activeElement).toBe(signTriggerBtn.element);
   });
+
+  it("retains focus inside OnboardingTour on step 1 -> step 2 transition, supports G59 target focus shortcut, and hands off cleanly from OnboardingChecklistDrawer", async () => {
+    const OnboardingChecklistDrawer = (
+      await import("../src/components/OnboardingChecklistDrawer.vue")
+    ).default;
+    const { useAuthStore } = await import("../src/stores/auth.js");
+    const { signInAs } = await import("./helpers/signIn.js");
+
+    signInAs(useAuthStore(), ["Sponsor Admin"]);
+
+    const checklistTrigger = document.createElement("button");
+    checklistTrigger.id = "btn-onboarding-checklist-trigger";
+    checklistTrigger.textContent = "Orientation";
+    document.body.appendChild(checklistTrigger);
+
+    const navStudies = document.createElement("a");
+    navStudies.id = "nav-studies";
+    navStudies.href = "#studies";
+    navStudies.textContent = "Studies";
+    navStudies.getBoundingClientRect = () => ({
+      top: 80,
+      bottom: 112,
+      left: 120,
+      right: 220,
+      width: 100,
+      height: 32,
+    });
+    document.body.appendChild(navStudies);
+
+    const drawerMount = document.createElement("div");
+    const tourMount = document.createElement("div");
+    document.body.appendChild(drawerMount);
+    document.body.appendChild(tourMount);
+
+    const onboardingStore = useOnboardingStore();
+    checklistTrigger.focus();
+    onboardingStore.openDrawer();
+
+    const drawerWrapper = trackWrapper(
+      mount(OnboardingChecklistDrawer, {
+        attachTo: drawerMount,
+        global: { plugins: [pinia, router] },
+      })
+    );
+    const tourWrapper = trackWrapper(
+      mount(OnboardingTour, {
+        attachTo: tourMount,
+        global: { plugins: [pinia, router] },
+      })
+    );
+    await nextTick();
+    await nextTick();
+
+    // Launch guided tour from OnboardingChecklistDrawer: drawer closes first, focus enters Step 1 popover
+    await drawerWrapper.find("#btn-drawer-start-tour").trigger("click");
+    await nextTick();
+    await nextTick();
+
+    expect(onboardingStore.isDrawerOpen).toBe(false);
+    expect(onboardingStore.isActive).toBe(true);
+    expect(onboardingStore.currentStep).toBe(1);
+
+    const popover = tourWrapper.find(".onboarding-popover-card");
+    expect(popover.exists()).toBe(true);
+    expect(popover.element.contains(document.activeElement)).toBe(true);
+
+    // Click Next to advance to anchored Step 2 (#nav-studies):
+    // focus must remain inside .onboarding-popover-card (not document.body and not checklistTrigger)
+    await popover.find(".btn-tour-next").trigger("click");
+    await nextTick();
+    await nextTick();
+    await nextTick();
+
+    expect(onboardingStore.currentStep).toBe(2);
+    expect(popover.attributes("aria-modal")).toBeUndefined();
+    expect(navStudies.hasAttribute("inert")).toBe(false);
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).not.toBe(checklistTrigger);
+    expect(popover.element.contains(document.activeElement)).toBe(true);
+
+    // WCAG G59 target shortcut button moves focus directly to anchored #nav-studies, and F6 toggles back
+    const focusTargetBtn = popover.find(".btn-tour-focus-target");
+    expect(focusTargetBtn.exists()).toBe(true);
+    await focusTargetBtn.trigger("click");
+    expect(document.activeElement).toBe(navStudies);
+
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "F6",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await nextTick();
+    expect(popover.element.contains(document.activeElement)).toBe(true);
+
+    // Pressing Escape on anchored Step 2 dismisses the tour and restores focus to checklistTrigger
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await nextTick();
+    await nextTick();
+    expect(onboardingStore.isActive).toBe(false);
+    expect(document.activeElement).toBe(checklistTrigger);
+  });
+
+  it("enforces custom-vue/no-raw-overlays AST rule against raw overlay divs, unnamed dialogs, and backdrop suppressions", async () => {
+    const { ESLint } = await import("eslint");
+    const path = await import("node:path");
+    const repoRoot = path.resolve(process.cwd(), "../..");
+    const eslint = new ESLint({
+      cwd: repoRoot,
+      overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+    });
+
+    const invalidOverlayResults = await eslint.lintText(
+      `<template>
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+  <div class="modal-overlay" @click="close">
+    <div role="dialog" aria-modal="true">
+      <p>Untrapped raw modal</p>
+    </div>
+  </div>
+</template>
+<script setup>
+const close = () => {};
+</script>
+`,
+      {
+        filePath: path.join(
+          repoRoot,
+          "apps/web/src/views/__RawOverlayFixture.vue"
+        ),
+      }
+    );
+
+    const ruleIds = invalidOverlayResults[0].messages.map((m) => m.ruleId);
+    expect(ruleIds).toContain("custom-vue/no-raw-overlays");
+    const messages = invalidOverlayResults[0].messages
+      .filter((m) => m.ruleId === "custom-vue/no-raw-overlays")
+      .map((m) => m.message);
+    expect(
+      messages.some((msg) =>
+        msg.includes('Raw overlay container "modal-overlay"')
+      )
+    ).toBe(true);
+    expect(
+      messages.some((msg) => msg.includes("must expose an accessible name"))
+    ).toBe(true);
+    expect(
+      messages.some((msg) => msg.includes("Suppressing vuejs-accessibility"))
+    ).toBe(true);
+
+    const validModalResults = await eslint.lintText(
+      `<template>
+  <ClinicalModal :open="isOpen" title="Inspection Modal" @close="isOpen = false">
+    <p>Shared clinical modal primitive</p>
+  </ClinicalModal>
+</template>
+<script setup>
+import { ref } from "vue";
+import { ClinicalModal } from "ui";
+const isOpen = ref(true);
+</script>
+`,
+      {
+        filePath: path.join(
+          repoRoot,
+          "apps/web/src/views/__ValidModalFixture.vue"
+        ),
+      }
+    );
+
+    const validOverlayErrors = validModalResults[0].messages.filter(
+      (m) => m.ruleId === "custom-vue/no-raw-overlays"
+    );
+    expect(validOverlayErrors).toEqual([]);
+  });
 });

@@ -269,6 +269,50 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     expect(mobileMenu.classes()).not.toContain("is-open");
   });
 
+  it("closes #mobile-nav-menu on Escape, sets aria-expanded=false, and restores focus to #btn-mobile-menu-toggle", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const mountNode = document.createElement("div");
+    document.body.appendChild(mountNode);
+
+    const wrapper = mount(AppShell, {
+      attachTo: mountNode,
+      global: {
+        plugins: [router],
+      },
+    });
+
+    const toggleBtn = wrapper.find("#btn-mobile-menu-toggle");
+    const mobileMenu = wrapper.find("#mobile-nav-menu");
+
+    await toggleBtn.trigger("click");
+    expect(toggleBtn.attributes("aria-expanded")).toBe("true");
+    expect(mobileMenu.classes()).toContain("is-open");
+
+    const firstMobileLink = wrapper.find("#mobile-nav-menu a");
+    firstMobileLink.element.focus();
+    expect(document.activeElement).toBe(firstMobileLink.element);
+
+    const escEvent = new KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(escEvent);
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick();
+
+    expect(escEvent.defaultPrevented).toBe(true);
+    expect(toggleBtn.attributes("aria-expanded")).toBe("false");
+    expect(mobileMenu.classes()).not.toContain("is-open");
+    expect(document.activeElement).toBe(toggleBtn.element);
+
+    wrapper.unmount();
+    mountNode.remove();
+  });
+
   it("switches persona view without altering underlying security roles (UX-6) and announces to live region", async () => {
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;

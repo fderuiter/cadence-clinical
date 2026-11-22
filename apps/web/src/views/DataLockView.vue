@@ -580,9 +580,11 @@
         <p><strong>Study ID:</strong> {{ lockForm.study_id }}</p>
       </div>
 
-      <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label">Lock Mode:</label>
+      <fieldset
+        class="form-group"
+        style="border: 0; padding: 0; margin-left: 0; margin-right: 0"
+      >
+        <legend class="form-label">Lock Mode:</legend>
         <div class="radio-row">
           <label class="radio-label">
             <input v-model="lockForm.action" type="radio" value="FREEZE" />
@@ -593,15 +595,14 @@
             <span>HARD_LOCK (21 CFR Part 11 Seal)</span>
           </label>
         </div>
-      </div>
+      </fieldset>
 
       <div v-if="lockForm.action === 'HARD_LOCK'" class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label"
+        <label class="form-label" for="datalock-sig-token"
           >Step-Up Dual Signature Token (<code>X-Sig-Token</code>):</label
         >
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
+          id="datalock-sig-token"
           v-model="lockForm.sig_token"
           type="password"
           class="form-input"
@@ -613,12 +614,11 @@
       </div>
 
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label"
+        <label class="form-label" for="datalock-lock-reason"
           >GxP Reason for Change: <span class="required-star">*</span></label
         >
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <textarea
+          id="datalock-lock-reason"
           v-model="lockForm.reason"
           class="form-textarea"
           rows="3"
@@ -677,13 +677,12 @@
       </div>
 
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label">
+        <label class="form-label" for="datalock-unlock-justification">
           Mandatory Unlock Justification (&ge; 50 Characters):
           <span class="required-star">*</span>
         </label>
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <textarea
+          id="datalock-unlock-justification"
           v-model="unlockForm.justification"
           class="form-textarea"
           :class="{
@@ -714,10 +713,14 @@
       </div>
 
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label">GxP Reason for Change Code:</label>
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="unlockForm.reason_code" class="form-select">
+        <label class="form-label" for="datalock-unlock-reason-code"
+          >GxP Reason for Change Code:</label
+        >
+        <select
+          id="datalock-unlock-reason-code"
+          v-model="unlockForm.reason_code"
+          class="form-select"
+        >
           <option value="CRA_QUERY_CORRECTION">
             CRA Monitor Query Resolution
           </option>

@@ -331,13 +331,19 @@
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="oncology-calipers-signoff-title"
     >
       <div class="modal-card">
         <div class="modal-header">
-          <h4 class="modal-title">
+          <h4 id="oncology-calipers-signoff-title" class="modal-title">
             Electronic Signature - Tumor Assessment Sign-off
           </h4>
-          <button type="button" class="btn-close" @click="closeSignoffModal">
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Close tumor assessment sign-off dialog"
+            @click="closeSignoffModal"
+          >
             ✕
           </button>
         </div>

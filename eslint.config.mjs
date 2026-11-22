@@ -404,11 +404,20 @@ function hasClickDirective(elementNode) {
   );
 }
 
+function hasAccessibleDialogName(node) {
+  return (
+    hasStaticOrBoundAttr(node, "aria-label") ||
+    hasStaticOrBoundAttr(node, "aria-labelledby")
+  );
+}
+
 function isDialogVElement(node) {
   if (!node || node.type !== "VElement") return false;
   const role = getStaticAttrValue(node, "role");
   if (role !== "dialog" && role !== "alertdialog") return false;
-  return hasStaticOrBoundAttr(node, "aria-modal");
+  return (
+    hasStaticOrBoundAttr(node, "aria-modal") && hasAccessibleDialogName(node)
+  );
 }
 
 function hasDialogDescendantOrSelf(node) {
@@ -434,12 +443,14 @@ const noRawOverlaysRule = {
     type: "problem",
     docs: {
       description:
-        "Disallow raw unguarded modal/drawer overlay divs and vuejs-accessibility backdrop suppressions outside packages/ui primitives.",
+        "Disallow raw unguarded modal/drawer overlay divs, unnamed dialog elements, and vuejs-accessibility backdrop suppressions outside packages/ui primitives.",
       category: "Accessibility",
     },
     messages: {
       noRawOverlay:
         'Raw overlay container "{{className}}" is prohibited. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2545).',
+      missingDialogName:
+        'Dialog element with role="{{role}}" must expose an accessible name via aria-labelledby or aria-label (WCAG 4.1.2 / ARIA16).',
       noBackdropSuppression:
         'Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer (or use role="presentation" on focus-trapped backdrops).',
     },
@@ -474,7 +485,21 @@ const noRawOverlaysRule = {
       {
         VElement(node) {
           const rawTag = node.rawName || node.name;
-          if (!["div", "section", "aside"].includes(rawTag)) return;
+          if (!["div", "section", "aside", "dialog"].includes(rawTag)) return;
+
+          const role = getStaticAttrValue(node, "role");
+          if (
+            (role === "dialog" || role === "alertdialog") &&
+            !hasAccessibleDialogName(node)
+          ) {
+            context.report({
+              node: node.startTag,
+              messageId: "missingDialogName",
+              data: { role },
+            });
+          }
+
+          if (rawTag === "dialog") return;
 
           const overlayClass = getElementOverlayClassToken(
             node,
@@ -487,7 +512,6 @@ const noRawOverlaysRule = {
           const hasGuardedDialog =
             importsFocusTrap &&
             (hasDialogDescendantOrSelf(node) || hasDialogSibling(node));
-          const role = getStaticAttrValue(node, "role");
           const validBackdropInteraction =
             isDialogVElement(node) ||
             !hasClickDirective(node) ||

@@ -467,13 +467,19 @@
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="irc-chair-signoff-modal-title"
     >
       <div class="modal-card">
         <div class="modal-header">
-          <h4 class="modal-title">
+          <h4 id="irc-chair-signoff-modal-title" class="modal-title">
             21 CFR Part 11 Adjudication Chair Sign-off
           </h4>
-          <button type="button" class="btn-close" @click="closeSignoffModal">
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Close adjudication sign-off dialog"
+            @click="closeSignoffModal"
+          >
             ✕
           </button>
         </div>
@@ -550,15 +556,17 @@
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="irc-edc-binding-modal-title"
     >
       <div class="modal-card modal-large">
         <div class="modal-header">
-          <h4 class="modal-title">
+          <h4 id="irc-edc-binding-modal-title" class="modal-title">
             Direct EDC eCRF Binding (Form: eCRF_TUMOR_ASSESSMENT)
           </h4>
           <button
             type="button"
             class="btn-close"
+            aria-label="Close EDC binding preview dialog"
             @click="isEdcModalOpen = false"
           >
             ✕
@@ -592,13 +600,17 @@
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="irc-sdtm-export-modal-title"
     >
       <div class="modal-card modal-large">
         <div class="modal-header">
-          <h4 class="modal-title">CDISC SDTM Dataset Package (TU, TR, RS)</h4>
+          <h4 id="irc-sdtm-export-modal-title" class="modal-title">
+            CDISC SDTM Dataset Package (TU, TR, RS)
+          </h4>
           <button
             type="button"
             class="btn-close"
+            aria-label="Close SDTM export preview dialog"
             @click="isSdtmModalOpen = false"
           >
             ✕

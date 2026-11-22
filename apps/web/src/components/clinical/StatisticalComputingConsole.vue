@@ -910,6 +910,7 @@
     <ClinicalModal
       v-model="showIssueTokenModal"
       :teleport="false"
+      :dismissible="!isIssuingToken"
       dialog-class="modal-dialog card"
       title="Issue Database Lock Authorization Token"
     >
@@ -983,6 +984,7 @@
         <button
           type="button"
           class="btn btn-secondary"
+          :disabled="isIssuingToken"
           @click="showIssueTokenModal = false"
         >
           Cancel
@@ -990,7 +992,12 @@
         <button
           type="button"
           class="btn btn-primary"
-          :disabled="!newTokenLockId || !newTokenIssuedTo || !newTokenReason"
+          :disabled="
+            isIssuingToken ||
+            !newTokenLockId ||
+            !newTokenIssuedTo ||
+            !newTokenReason
+          "
           @click="confirmIssueToken"
         >
           Issue &amp; Cryptographically Sign Token
@@ -1058,6 +1065,7 @@ const newTokenHours = ref(24);
 const newTokenReason = ref(
   "Authorized for interim unblinded efficacy evaluation per protocol SOP."
 );
+const isIssuingToken = ref(false);
 
 // Lockfile Testing
 const testLockType = ref("UV_LOCK");
@@ -1400,6 +1408,8 @@ function openIssueTokenModal() {
 }
 
 async function confirmIssueToken() {
+  if (isIssuingToken.value) return;
+  isIssuingToken.value = true;
   try {
     const payload = {
       study_id: props.studyId,
@@ -1419,6 +1429,8 @@ async function confirmIssueToken() {
     alert(
       `Failed to issue token: ${err?.response?.data?.detail || err.message}`
     );
+  } finally {
+    isIssuingToken.value = false;
   }
 }
 

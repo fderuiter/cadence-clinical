@@ -949,18 +949,18 @@
         Number (TIN) provided below is accurate.
       </p>
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label>Legal Taxpayer Name:</label>
+        <label for="w9-full-legal-name">Legal Taxpayer Name:</label>
         <input
+          id="w9-full-legal-name"
           v-model="w9Form.full_legal_name"
           class="form-input"
           placeholder="e.g. Jane Doe"
         />
       </div>
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label>Last 4 Digits of SSN / ITIN:</label>
+        <label for="w9-tax-id-last-four">Last 4 Digits of SSN / ITIN:</label>
         <input
+          id="w9-tax-id-last-four"
           v-model="w9Form.tax_id_last_four"
           maxlength="4"
           class="form-input"
@@ -968,9 +968,9 @@
         />
       </div>
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label>Mailing Address:</label>
+        <label for="w9-mailing-address">Mailing Address:</label>
         <input
+          id="w9-mailing-address"
           v-model="w9Form.address"
           class="form-input"
           placeholder="123 Clinical Way, City, State"

@@ -56,6 +56,56 @@ async function getBorderContrastRatio(page: Page, selector: string) {
     });
 }
 
+async function expectFocusInside(
+  page: Page,
+  containerSelector: string,
+  contextLabel: string
+) {
+  const isInside = await page.evaluate((sel) => {
+    const container = document.querySelector(sel);
+    const active = document.activeElement;
+    return Boolean(
+      container &&
+      active &&
+      active !== document.body &&
+      container.contains(active)
+    );
+  }, containerSelector);
+  expect(
+    isInside,
+    `Expected document.activeElement to stay inside ${containerSelector} (${contextLabel})`
+  ).toBe(true);
+}
+
+async function expectFocusContainedOnTabCycle(
+  page: Page,
+  containerSelector: string,
+  contextLabel: string,
+  tabPresses = 6
+) {
+  await expectFocusInside(
+    page,
+    containerSelector,
+    `${contextLabel} initial focus`
+  );
+  for (let i = 0; i < tabPresses; i++) {
+    await page.keyboard.press("Tab");
+    await expectFocusInside(
+      page,
+      containerSelector,
+      `${contextLabel} after Tab #${i + 1}`
+    );
+  }
+  for (let i = 0; i < 2; i++) {
+    await page.keyboard.press("Shift+Tab");
+    await expectFocusInside(
+      page,
+      containerSelector,
+      `${contextLabel} after Shift+Tab #${i + 1}`
+    );
+  }
+}
+
 test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gates", () => {
   test("LoginView passes WCAG 2.2 AA contrast in both authenticated session state and signed-out login prompt", async ({
     page,
@@ -213,11 +263,18 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     const inspectBtn = page.locator(".btn-inspect-doc").first();
     await expect(inspectBtn).toBeVisible();
+    await inspectBtn.focus();
     await inspectBtn.click();
 
     const drawerDialog = page.locator('.metadata-drawer[role="dialog"]');
     await expect(drawerDialog).toBeVisible();
     await expect(drawerDialog).toHaveAttribute("aria-modal", "true");
+    await expectFocusContainedOnTabCycle(
+      page,
+      '.metadata-drawer[role="dialog"]',
+      "DocumentManagerView ClinicalDrawer (/etmf)",
+      6
+    );
 
     const animationDurationSec = await drawerDialog.evaluate((el) =>
       parseFloat(window.getComputedStyle(el).animationDuration)
@@ -233,20 +290,32 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     }
 
     // Launch stacked PdfPreviewModal from inside open ClinicalDrawer
-    await drawerDialog.locator(".btn-preview-from-drawer").click();
+    const previewFromDrawerBtn = drawerDialog.locator(
+      ".btn-preview-from-drawer"
+    );
+    await previewFromDrawerBtn.focus();
+    await previewFromDrawerBtn.click();
     const pdfDialog = page.locator('.pdf-preview-modal[role="dialog"]');
     await expect(pdfDialog).toBeVisible();
+    await expectFocusContainedOnTabCycle(
+      page,
+      '.pdf-preview-modal[role="dialog"]',
+      "Stacked PdfPreviewModal (/etmf)",
+      4
+    );
 
-    // First Escape closes ONLY top PdfPreviewModal while ClinicalDrawer stays open
+    // First Escape closes ONLY top PdfPreviewModal while ClinicalDrawer stays open and restores focus inside drawer
     await page.keyboard.press("Escape");
     await expect(pdfDialog).toBeHidden();
     await expect(drawerDialog).toBeVisible();
+    await expect(previewFromDrawerBtn).toBeFocused();
 
-    // Second Escape closes ClinicalDrawer
+    // Second Escape closes ClinicalDrawer and restores focus to .btn-inspect-doc
     await page.keyboard.press("Escape");
     await expect(drawerDialog).toBeHidden();
+    await expect(inspectBtn).toBeFocused();
 
-    // 2. /training: StudyTrainingView -> ProtocolTrainingConsole ClinicalModal
+    // 2. /training: StudyTrainingView -> ProtocolTrainingConsole showBatchModal & showBulkSignModal
     await page.evaluate(() => {
       const origFetch = window.fetch.bind(window);
       window.fetch = async (input, init) => {
@@ -301,6 +370,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     const openBatchBtn = page.locator(".batch-preview-bar button");
     await expect(openBatchBtn).toBeEnabled();
+    await openBatchBtn.focus();
     await openBatchBtn.click();
 
     const trainingModal = page.locator(
@@ -308,6 +378,12 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     );
     await expect(trainingModal).toBeVisible();
     await expect(trainingModal).toHaveAttribute("aria-modal", "true");
+    await expectFocusContainedOnTabCycle(
+      page,
+      '#section-study-training [role="dialog"]',
+      "ProtocolTrainingConsole showBatchModal (/training)",
+      5
+    );
     await expectNoWcagViolations(
       page,
       "ProtocolTrainingConsole Batch Assignment ClinicalModal (/training)"
@@ -318,18 +394,94 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     await page.keyboard.press("Escape");
     await expect(trainingModal).toBeHidden();
+    await expect(openBatchBtn).toBeFocused();
 
-    // 3. /data-lock: DataLockView ClinicalModal (formerly suppressed backdrop)
+    // Switch to Delegation Bulk Sign-Off tab and test showBulkSignModal
+    const delegationTab = page
+      .locator(".tab-btn")
+      .filter({ hasText: "Delegation" });
+    await expect(delegationTab).toBeVisible();
+    await delegationTab.click();
+
+    const selectAllDelegations = page
+      .locator("#section-study-training thead input[type='checkbox']")
+      .first();
+    await expect(selectAllDelegations).toBeVisible();
+    await selectAllDelegations.check();
+
+    const openBulkSignBtn = page.locator(".delegation-actions-bar button");
+    await expect(openBulkSignBtn).toBeEnabled();
+    await openBulkSignBtn.focus();
+    await openBulkSignBtn.click();
+
+    await expect(trainingModal).toBeVisible();
+    await expect(trainingModal).toHaveAttribute("aria-modal", "true");
+    await expectFocusContainedOnTabCycle(
+      page,
+      '#section-study-training [role="dialog"]',
+      "ProtocolTrainingConsole showBulkSignModal (/training)",
+      6
+    );
+    await expectNoWcagViolations(
+      page,
+      "ProtocolTrainingConsole Bulk Delegation Sign-Off ClinicalModal (/training)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/training-bulk-sign-modal.png" });
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(trainingModal).toBeHidden();
+    await expect(openBulkSignBtn).toBeFocused();
+
+    // 3. /ctms: CtmsView ClinicalModal Tab containment, Escape dismissal, and trigger focus return
+    await gotoHashRoute(page, "/ctms");
+    await expect(page.locator("#section-ctms")).toBeVisible();
+    await page.locator("#tab-financials").click();
+    const createTemplateBtn = page.locator("#btn-create-template");
+    await expect(createTemplateBtn).toBeVisible();
+    await createTemplateBtn.focus();
+    await createTemplateBtn.click();
+
+    const ctmsModal = page.locator('[role="dialog"]').first();
+    await expect(ctmsModal).toBeVisible();
+    await expect(ctmsModal).toHaveAttribute("aria-modal", "true");
+    await expectFocusContainedOnTabCycle(
+      page,
+      '[role="dialog"]',
+      "CtmsView Create Budget Template ClinicalModal (/ctms)",
+      8
+    );
+    await expectNoWcagViolations(
+      page,
+      "CtmsView Create Budget Template ClinicalModal (/ctms)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/ctms-clinical-modal.png" });
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(ctmsModal).toBeHidden();
+    await expect(createTemplateBtn).toBeFocused();
+
+    // 4. /data-lock: DataLockView ClinicalModal (formerly suppressed backdrop)
     await gotoHashRoute(page, "/data-lock");
     const lockTrigger = page
       .locator(".btn-mini-lock, .btn-mini-freeze, .btn-mini-unlock")
       .first();
     await expect(lockTrigger).toBeVisible();
+    await lockTrigger.focus();
     await lockTrigger.click();
 
     const dataLockModal = page.locator('[role="dialog"]').first();
     await expect(dataLockModal).toBeVisible();
     await expect(dataLockModal).toHaveAttribute("aria-modal", "true");
+    await expectFocusContainedOnTabCycle(
+      page,
+      '[role="dialog"]',
+      "DataLockView ClinicalModal (/data-lock)",
+      5
+    );
     await expectNoWcagViolations(
       page,
       "DataLockView ClinicalModal (/data-lock)"
@@ -340,5 +492,91 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     await page.keyboard.press("Escape");
     await expect(dataLockModal).toBeHidden();
+    await expect(lockTrigger).toBeFocused();
+  });
+
+  test("OnboardingTour retains focus on step-2 transition with G59 target shortcut, and #mobile-nav-menu closes on Escape with trigger focus restoration", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await gotoHashRoute(page, "/overview");
+    await expect(page.locator("#overview-hub-root")).toBeVisible();
+
+    const checklistTrigger = page.locator("#btn-onboarding-checklist-trigger");
+    await expect(checklistTrigger).toBeVisible();
+    await checklistTrigger.focus();
+    await checklistTrigger.click();
+
+    const checklistDrawer = page.locator("#onboarding-checklist-drawer");
+    await expect(checklistDrawer).toBeVisible();
+    await expectFocusContainedOnTabCycle(
+      page,
+      "#onboarding-checklist-drawer",
+      "OnboardingChecklistDrawer",
+      5
+    );
+
+    await page.locator("#btn-drawer-start-tour").click();
+    const tourPopover = page.locator(".onboarding-popover-card");
+    await expect(tourPopover).toBeVisible();
+    await expect(tourPopover).toHaveAttribute("aria-modal", "true");
+    await expectFocusContainedOnTabCycle(
+      page,
+      ".onboarding-popover-card",
+      "OnboardingTour (Step 1 modal)",
+      5
+    );
+
+    // Advance to anchored Step 2 (#nav-studies): focus must stay inside .onboarding-popover-card (never dropping to document.body)
+    await tourPopover.locator(".btn-tour-next").click();
+    await expect(tourPopover.locator(".btn-tour-focus-target")).toBeVisible();
+    const step2AriaModal = await tourPopover.getAttribute("aria-modal");
+    expect(step2AriaModal).toBeNull();
+    await expectFocusInside(
+      page,
+      ".onboarding-popover-card",
+      "OnboardingTour (Step 2 anchored transition)"
+    );
+    await expectNoWcagViolations(page, "OnboardingTour (Step 2 anchored)");
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/onboarding-tour-step2.png" });
+    }
+
+    // WCAG G59 target focus shortcut focuses #nav-studies while keeping it non-inert, and F6 returns focus to popover
+    await tourPopover.locator(".btn-tour-focus-target").click();
+    await expect(page.locator("#nav-studies")).toBeFocused();
+    await page.keyboard.press("F6");
+    await expectFocusInside(
+      page,
+      ".onboarding-popover-card",
+      "OnboardingTour (Step 2 after F6 return)"
+    );
+
+    // Escape dismisses anchored Step 2 and restores focus to #btn-onboarding-checklist-trigger
+    await page.keyboard.press("Escape");
+    await expect(tourPopover).toBeHidden();
+    await expect(checklistTrigger).toBeFocused();
+
+    // Mobile viewport: #mobile-nav-menu closes on Escape, sets aria-expanded="false", and restores focus to #btn-mobile-menu-toggle
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileToggle = page.locator("#btn-mobile-menu-toggle");
+    const mobileMenu = page.locator("#mobile-nav-menu");
+    await expect(mobileToggle).toBeVisible();
+    await expect(mobileToggle).toHaveAttribute("aria-expanded", "false");
+
+    await mobileToggle.click();
+    await expect(mobileToggle).toHaveAttribute("aria-expanded", "true");
+    await expect(mobileMenu).toHaveClass(/is-open/);
+    await expectNoWcagViolations(page, "AppShell #mobile-nav-menu open");
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/mobile-nav-menu.png" });
+    }
+
+    await mobileMenu.locator("a").first().focus();
+    await page.keyboard.press("Escape");
+    await expect(mobileToggle).toHaveAttribute("aria-expanded", "false");
+    await expect(mobileMenu).not.toHaveClass(/is-open/);
+    await expect(mobileToggle).toBeFocused();
   });
 });

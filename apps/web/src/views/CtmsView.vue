@@ -1413,6 +1413,7 @@
                 <select
                   id="select-budget-template"
                   v-model="selectedTemplateId"
+                  aria-label="Select budget template"
                   style="padding: 4px 8px; font-size: 12px"
                 >
                   <option value="">-- Select Template --</option>
@@ -1452,6 +1453,7 @@
               <select
                 id="select-grid-version"
                 v-model="filteredVersionIndex"
+                aria-label="Filter procedure fee schedule version"
                 style="padding: 4px 8px; font-size: 12px"
                 @change="loadProcedureGrids"
               >
@@ -1537,10 +1539,12 @@
                   </td>
                   <td>{{ grid.procedure_name }}</td>
                   <td style="font-weight: 700">
-                    ${{ grid.base_amount.toFixed(2) }}
+                    ${{
+                      Number(grid.base_amount ?? grid.unit_cost ?? 0).toFixed(2)
+                    }}
                   </td>
-                  <td>{{ grid.overhead_percentage }}%</td>
-                  <td>{{ grid.withholding_percentage }}%</td>
+                  <td>{{ grid.overhead_percentage ?? 0 }}%</td>
+                  <td>{{ grid.withholding_percentage ?? 0 }}%</td>
                   <td>${{ (grid.patient_stipend || 0).toFixed(2) }}</td>
                   <td>${{ (grid.travel_reimbursement || 0).toFixed(2) }}</td>
                   <td>
@@ -1848,8 +1852,8 @@
                           : { color: 'var(--semantic-color-error)' }
                       "
                     >
-                      {{ adj.amount >= 0 ? "+" : "" }}${{
-                        adj.amount.toFixed(2)
+                      {{ Number(adj.amount ?? 0) >= 0 ? "+" : "" }}${{
+                        Number(adj.amount ?? 0).toFixed(2)
                       }}
                       {{ adj.currency }}
                     </td>
@@ -2713,9 +2717,13 @@
           <input id="del-start-date" v-model="delStartDate" type="date" />
         </div>
 
-        <div class="form-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-          <label>Delegated Duty Task Codes</label>
+        <fieldset
+          class="form-group"
+          style="border: 0; padding: 0; margin-left: 0; margin-right: 0"
+        >
+          <legend style="font-weight: 600; font-size: 0.85rem; padding: 0">
+            Delegated Duty Task Codes
+          </legend>
           <div
             style="
               display: flex;
@@ -2745,7 +2753,7 @@
               >)
             </label>
           </div>
-        </div>
+        </fieldset>
 
         <div class="form-group">
           <label for="del-reason"

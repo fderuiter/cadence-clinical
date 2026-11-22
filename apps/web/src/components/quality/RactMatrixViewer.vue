@@ -538,10 +538,11 @@
     >
       <div class="form-row">
         <div class="form-group flex-1">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-          <label class="form-label">Protocol Risk Category *</label>
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <label class="form-label" for="ract-risk-category"
+            >Protocol Risk Category *</label
+          >
           <select
+            id="ract-risk-category"
             v-model="riskForm.category"
             class="form-control"
             :disabled="isEditing"
@@ -566,10 +567,11 @@
         </div>
 
         <div class="form-group flex-2">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-          <label class="form-label">Risk Topic / Title *</label>
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <label class="form-label" for="ract-risk-topic"
+            >Risk Topic / Title *</label
+          >
           <input
+            id="ract-risk-topic"
             v-model="riskForm.risk_topic"
             type="text"
             class="form-control"
@@ -579,10 +581,11 @@
       </div>
 
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label">Detailed Risk Description *</label>
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <label class="form-label" for="ract-risk-description"
+          >Detailed Risk Description *</label
+        >
         <textarea
+          id="ract-risk-description"
           v-model="riskForm.risk_description"
           class="form-control textarea"
           rows="3"
@@ -598,10 +601,11 @@
         </h4>
         <div class="scoring-row">
           <div class="score-input-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="score-label">Probability (1-3) *</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label class="score-label" for="ract-probability-score"
+              >Probability (1-3) *</label
+            >
             <select
+              id="ract-probability-score"
               v-model.number="riskForm.probability_score"
               class="form-control"
             >
@@ -612,10 +616,14 @@
           </div>
 
           <div class="score-input-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="score-label">Impact (1-3) *</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select v-model.number="riskForm.impact_score" class="form-control">
+            <label class="score-label" for="ract-impact-score"
+              >Impact (1-3) *</label
+            >
+            <select
+              id="ract-impact-score"
+              v-model.number="riskForm.impact_score"
+              class="form-control"
+            >
               <option :value="1">1 - Low / Minor</option>
               <option :value="2">2 - Medium / Moderate</option>
               <option :value="3">3 - High / Critical</option>
@@ -623,10 +631,11 @@
           </div>
 
           <div class="score-input-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="score-label">Detectability (1-3) *</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label class="score-label" for="ract-detectability-score"
+              >Detectability (1-3) *</label
+            >
             <select
+              id="ract-detectability-score"
               v-model.number="riskForm.detectability_score"
               class="form-control"
             >
@@ -647,12 +656,11 @@
       </div>
 
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label"
+        <label class="form-label" for="ract-mitigation-strategy"
           >Mitigation Controls &amp; Operational Strategy *</label
         >
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <textarea
+          id="ract-mitigation-strategy"
           v-model="riskForm.mitigation_strategy"
           class="form-control textarea"
           rows="2"
@@ -661,10 +669,14 @@
       </div>
 
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label">Link Directly to Automated KRI</label>
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="riskForm.linked_kri_code" class="form-control">
+        <label class="form-label" for="ract-linked-kri"
+          >Link Directly to Automated KRI</label
+        >
+        <select
+          id="ract-linked-kri"
+          v-model="riskForm.linked_kri_code"
+          class="form-control"
+        >
           <option :value="null">— None / Manual Monitoring —</option>
           <option
             v-for="kri in kriDefinitions"
@@ -678,10 +690,11 @@
       </div>
 
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label">21 CFR Part 11 Reason for Change *</label>
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <label class="form-label" for="ract-reason-for-change"
+          >21 CFR Part 11 Reason for Change *</label
+        >
         <input
+          id="ract-reason-for-change"
           v-model="riskForm.reason_for_change"
           type="text"
           class="form-control"
@@ -742,10 +755,11 @@
 
         <div class="form-row">
           <div class="form-group flex-1">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Signer Full Legal Name *</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label class="form-label" for="ract-dossier-signer-name"
+              >Signer Full Legal Name *</label
+            >
             <input
+              id="ract-dossier-signer-name"
               v-model="dossierSigner.name"
               type="text"
               class="form-control"
@@ -753,10 +767,11 @@
             />
           </div>
           <div class="form-group flex-1">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Signer Regulatory Role *</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label class="form-label" for="ract-dossier-signer-role"
+              >Signer Regulatory Role *</label
+            >
             <input
+              id="ract-dossier-signer-role"
               v-model="dossierSigner.role"
               type="text"
               class="form-control"
@@ -766,10 +781,11 @@
         </div>
 
         <div class="form-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-          <label class="form-label">Custom Dossier Name (Optional)</label>
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <label class="form-label" for="ract-dossier-custom-name"
+            >Custom Dossier Name (Optional)</label
+          >
           <input
+            id="ract-dossier-custom-name"
             v-model="dossierSigner.customName"
             type="text"
             class="form-control"

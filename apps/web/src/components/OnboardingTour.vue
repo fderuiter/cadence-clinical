@@ -118,6 +118,33 @@
         <p>{{ stepDescription }}</p>
       </div>
 
+      <!-- Keyboard shortcut to reach anchored non-modal target (WCAG G59) -->
+      <div
+        v-if="
+          !isModalStep && hasTargetElement && currentStepConfig?.targetSelector
+        "
+        class="onboarding-target-shortcut-row"
+        style="margin-bottom: 12px"
+      >
+        <button
+          type="button"
+          class="btn btn-secondary btn-tour-focus-target"
+          aria-keyshortcuts="F6"
+          style="
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            border: 1px solid var(--semantic-color-border-control);
+            border-radius: 6px;
+            cursor: pointer;
+            background: var(--semantic-color-surface);
+            color: var(--semantic-color-text);
+          "
+          @click="focusAnchoredTarget"
+        >
+          Focus target (F6)
+        </button>
+      </div>
+
       <!-- Popover Action Buttons -->
       <div
         style="
@@ -222,9 +249,9 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, watch } from "vue";
+import { computed, nextTick, ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { useFocusTrap, useEscapeClose } from "ui";
+import { getFocusableElements, useFocusTrap, useEscapeClose } from "ui";
 import {
   isTourRouteAuthorized,
   useOnboardingStore,
@@ -343,8 +370,123 @@ const isModalStep = computed(
       !hasTargetElement.value)
 );
 
+let tourTriggerEl =
+  typeof document !== "undefined" ? document.activeElement : null;
+
+function resolveTourReturnTrigger() {
+  if (typeof document === "undefined") return null;
+  if (
+    tourTriggerEl &&
+    tourTriggerEl !== document.body &&
+    document.contains(tourTriggerEl) &&
+    (!popoverRef.value || !popoverRef.value.contains(tourTriggerEl))
+  ) {
+    return tourTriggerEl;
+  }
+  const checklistTrigger = document.getElementById(
+    "btn-onboarding-checklist-trigger"
+  );
+  if (checklistTrigger && document.contains(checklistTrigger)) {
+    return checklistTrigger;
+  }
+  return null;
+}
+
+function ensurePopoverFocus(force = false) {
+  if (typeof document === "undefined" || !isTourOpen.value) return;
+  const container = popoverRef.value;
+  if (!container) return;
+  const activeEl = document.activeElement;
+  if (!force && activeEl && container.contains(activeEl)) {
+    return;
+  }
+  const preferredBtn =
+    container.querySelector(".btn-tour-next") ||
+    container.querySelector(".btn-tour-complete");
+  if (preferredBtn && typeof preferredBtn.focus === "function") {
+    preferredBtn.focus();
+    return;
+  }
+  const focusables = getFocusableElements(container);
+  if (focusables.length > 0) {
+    focusables[0].focus();
+  } else if (typeof container.focus === "function") {
+    container.focus();
+  }
+}
+
+function resolveAnchoredTargetEl() {
+  if (typeof document === "undefined") return null;
+  const selector = currentStepConfig.value?.targetSelector;
+  if (!selector) return null;
+  return document.querySelector(selector);
+}
+
+function focusAnchoredTarget() {
+  const targetEl = resolveAnchoredTargetEl();
+  if (!targetEl || typeof targetEl.focus !== "function") return false;
+  const nativelyFocusable =
+    targetEl.tabIndex >= 0 ||
+    ["A", "BUTTON", "INPUT", "SELECT", "TEXTAREA"].includes(targetEl.tagName);
+  if (!nativelyFocusable && !targetEl.hasAttribute("tabindex")) {
+    targetEl.setAttribute("tabindex", "-1");
+  }
+  targetEl.focus();
+  return document.activeElement === targetEl;
+}
+
+function handleTourShortcutKeydown(event) {
+  if (
+    !event ||
+    event.key !== "F6" ||
+    !isTourOpen.value ||
+    isModalStep.value ||
+    !hasTargetElement.value
+  ) {
+    return;
+  }
+  const container = popoverRef.value;
+  if (!container) return;
+  event.preventDefault();
+  if (container.contains(document.activeElement)) {
+    focusAnchoredTarget();
+  } else {
+    ensurePopoverFocus(true);
+  }
+}
+
+watch(
+  isTourOpen,
+  (open, prevOpen) => {
+    if (typeof document === "undefined") return;
+    if (open && !prevOpen) {
+      const currentActive = document.activeElement;
+      if (
+        currentActive &&
+        currentActive !== document.body &&
+        (!popoverRef.value || !popoverRef.value.contains(currentActive))
+      ) {
+        tourTriggerEl = currentActive;
+      }
+    } else if (!open && prevOpen) {
+      const targetToFocus = resolveTourReturnTrigger();
+      if (
+        targetToFocus &&
+        typeof targetToFocus.focus === "function" &&
+        (!document.activeElement ||
+          document.activeElement === document.body ||
+          popoverRef.value?.contains(document.activeElement))
+      ) {
+        targetToFocus.focus();
+      }
+    }
+  },
+  { flush: "sync", immediate: true }
+);
+
 useFocusTrap(popoverRef, {
   isOpen: isModalStep,
+  restoreFocus: () => (isTourOpen.value ? false : resolveTourReturnTrigger()),
   onEscape: () => onboardingStore.dismissTour(),
 });
 
@@ -477,6 +619,14 @@ const updatePosition = () => {
         };
         hasTargetElement.value = true;
         currentRafId = null;
+        nextTick(() => {
+          if (
+            !document.activeElement ||
+            document.activeElement === document.body
+          ) {
+            ensurePopoverFocus();
+          }
+        });
         return;
       }
     }
@@ -526,9 +676,19 @@ watch(currentStep, async () => {
   if (config?.query?.tab) {
     emit("update:activeTab", config.query.tab);
   }
+  updatePosition();
   await syncStepRoute();
   updatePosition();
+  await nextTick();
+  ensurePopoverFocus();
   schedulePositionUpdate(50);
+});
+
+watch(isModalStep, async (modal, prevModal) => {
+  if (!modal && prevModal && isTourOpen.value) {
+    await nextTick();
+    ensurePopoverFocus();
+  }
 });
 
 watch(
@@ -578,8 +738,13 @@ watch(
 onMounted(async () => {
   isDisposed = false;
   window.addEventListener("resize", updatePosition);
+  document.addEventListener("keydown", handleTourShortcutKeydown);
   await syncStepRoute();
   updatePosition();
+  await nextTick();
+  if (isTourOpen.value) {
+    ensurePopoverFocus();
+  }
   schedulePositionUpdate(100);
   if (
     onboardingStore.isActive &&
@@ -598,6 +763,9 @@ onUnmounted(() => {
   isDisposed = true;
   if (typeof window !== "undefined") {
     window.removeEventListener("resize", updatePosition);
+  }
+  if (typeof document !== "undefined") {
+    document.removeEventListener("keydown", handleTourShortcutKeydown);
   }
   for (const timerId of pendingTimers) {
     clearTimeout(timerId);

@@ -178,6 +178,7 @@
         <button
           v-if="authStore.isAuthenticated"
           id="btn-mobile-menu-toggle"
+          ref="mobileMenuToggleRef"
           type="button"
           class="mobile-menu-toggle"
           aria-label="Toggle navigation menu"
@@ -295,7 +296,7 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import { SignOutConfirmModal, useEscapeClose, useSignOutGuard } from "ui";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -324,7 +325,30 @@ const router = useRouter();
 
 const isCommandPaletteOpen = ref(false);
 const isMobileMenuOpen = ref(false);
+const mobileMenuToggleRef = ref(null);
 const statusAnnouncement = ref("");
+
+function closeMobileMenuAndRestoreFocus() {
+  if (!isMobileMenuOpen.value) return;
+  isMobileMenuOpen.value = false;
+  const toggleEl =
+    mobileMenuToggleRef.value ||
+    (typeof document !== "undefined"
+      ? document.getElementById("btn-mobile-menu-toggle")
+      : null);
+  if (toggleEl && typeof toggleEl.focus === "function") {
+    toggleEl.focus();
+  }
+}
+
+useEscapeClose(
+  () => {
+    closeMobileMenuAndRestoreFocus();
+  },
+  {
+    isOpen: () => Boolean(authStore.isAuthenticated && isMobileMenuOpen.value),
+  }
+);
 const headerRef = ref(null);
 const headerHeight = ref(57);
 let headerResizeObserver = null;

@@ -191,7 +191,10 @@ export const ClinicalModal: DefineComponent<
       | (() => HTMLElement | null)
       | string
       | null;
-    restoreFocus?: boolean | (() => HTMLElement | null);
+    restoreFocus?:
+      | boolean
+      | import("vue").Ref<boolean | HTMLElement | null>
+      | (() => boolean | HTMLElement | null);
     teleport?: boolean | string;
     id?: string;
     overlayId?: string;
@@ -232,7 +235,10 @@ export const ClinicalDrawer: DefineComponent<
       | (() => HTMLElement | null)
       | string
       | null;
-    restoreFocus?: boolean | (() => HTMLElement | null);
+    restoreFocus?:
+      | boolean
+      | import("vue").Ref<boolean | HTMLElement | null>
+      | (() => boolean | HTMLElement | null);
     closeLabel?: string;
     showHeader?: boolean;
   },
@@ -339,7 +345,10 @@ export interface FocusTrapOptions {
   escapeDeactivates?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   initialFocus?:
     import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null) | string;
-  restoreFocus?: boolean | (() => HTMLElement | null);
+  restoreFocus?:
+    | boolean
+    | import("vue").Ref<boolean | HTMLElement | null>
+    | (() => boolean | HTMLElement | null);
 }
 
 export function useFocusTrap(
@@ -349,7 +358,12 @@ export function useFocusTrap(
   options?: Omit<FocusTrapOptions, "isOpen">
 ): {
   activate: () => void;
-  deactivate: () => void;
+  deactivate: (options?: {
+    restoreFocus?:
+      | boolean
+      | import("vue").Ref<boolean | HTMLElement | null>
+      | (() => boolean | HTMLElement | null);
+  }) => void;
 };
 
 export function getFocusableElements(

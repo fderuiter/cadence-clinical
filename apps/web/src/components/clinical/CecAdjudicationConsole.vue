@@ -1341,9 +1341,13 @@
         />
       </div>
 
-      <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label>Diagnostic Criteria Satisfied:</label>
+      <fieldset
+        class="form-group"
+        style="border: 0; padding: 0; margin-left: 0; margin-right: 0"
+      >
+        <legend style="font-weight: 600; font-size: 0.85rem; padding: 0">
+          Diagnostic Criteria Satisfied:
+        </legend>
         <div class="criteria-checkbox-list">
           <label
             v-for="(crit, idx) in availableCriteria"
@@ -1358,7 +1362,7 @@
             <span>{{ crit }}</span>
           </label>
         </div>
-      </div>
+      </fieldset>
 
       <div class="form-group">
         <label for="modal-conf-input">Confidence Level (1-5):</label>

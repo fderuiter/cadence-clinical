@@ -913,6 +913,7 @@
     <ClinicalModal
       v-model="isReasonModalOpen"
       :teleport="false"
+      :dismissible="!isSubmittingAction"
       :show-footer="false"
       dialog-class="modal-card"
       aria-labelledby="reason-modal-title"
@@ -958,11 +959,17 @@
           <button
             type="button"
             class="btn btn-secondary"
+            :disabled="isSubmittingAction"
             @click="isReasonModalOpen = false"
           >
             Cancel
           </button>
-          <button type="submit" class="btn" :class="actionButtonClass">
+          <button
+            type="submit"
+            class="btn"
+            :class="actionButtonClass"
+            :disabled="isSubmittingAction"
+          >
             {{ actionButtonLabel }}
           </button>
         </div>
@@ -1018,11 +1025,13 @@
           />
         </div>
 
-        <div class="form-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-          <label class="form-label"
-            >Persona Visibility (All by default if empty)</label
-          >
+        <fieldset
+          class="form-group"
+          style="border: 0; padding: 0; margin-left: 0; margin-right: 0"
+        >
+          <legend class="form-label">
+            Persona Visibility (All by default if empty)
+          </legend>
           <div class="persona-checkbox-grid">
             <label
               v-for="p in PERSONA_PRESETS"
@@ -1037,7 +1046,7 @@
               <span>{{ p.label }}</span>
             </label>
           </div>
-        </div>
+        </fieldset>
 
         <div class="modal-footer">
           <button
@@ -1600,11 +1609,14 @@ export default {
       isReasonModalOpen.value = true;
     }
 
+    const isSubmittingAction = ref(false);
+
     async function executeActionWithReason() {
-      if (!selectedArticle.value) return;
+      if (!selectedArticle.value || isSubmittingAction.value) return;
       const artId = selectedArticle.value.id;
       const reason = actionReason.value;
 
+      isSubmittingAction.value = true;
       try {
         let updated = null;
         if (actionModalType.value === "submit_review") {
@@ -1642,6 +1654,8 @@ export default {
         isReasonModalOpen.value = false;
       } catch (err) {
         toastStore.apiError("Could not update article status", err);
+      } finally {
+        isSubmittingAction.value = false;
       }
     }
 
@@ -1747,6 +1761,7 @@ export default {
       actionVersionLabel,
       actionButtonLabel,
       actionButtonClass,
+      isSubmittingAction,
 
       // Computeds
       PERSONA_PRESETS,

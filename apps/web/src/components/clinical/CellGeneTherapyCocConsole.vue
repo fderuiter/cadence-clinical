@@ -374,6 +374,7 @@
     <ClinicalModal
       v-model="showApheresisModal"
       :teleport="false"
+      :dismissible="!isSubmitting"
       :show-footer="false"
       backdrop-class="modal-overlay"
       dialog-class="modal-card"
@@ -382,54 +383,65 @@
       <form @submit.prevent="submitApheresis">
         <div class="form-grid">
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Study Protocol</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="apheresisForm.study_id" type="text" required />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>{{ formatDatabaseKey("site_id") }}</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="apheresisForm.site_id" type="text" required />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>{{ formatDatabaseKey("subject_id") }}</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="apheresisForm.subject_id" type="text" required />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Donation ID (ISBT 128 DIN)</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-aph-study">Study Protocol</label>
             <input
+              id="cgt-aph-study"
+              v-model="apheresisForm.study_id"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="cgt-aph-site">{{ formatDatabaseKey("site_id") }}</label>
+            <input
+              id="cgt-aph-site"
+              v-model="apheresisForm.site_id"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="cgt-aph-subject">{{
+              formatDatabaseKey("subject_id")
+            }}</label>
+            <input
+              id="cgt-aph-subject"
+              v-model="apheresisForm.subject_id"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="cgt-aph-din">Donation ID (ISBT 128 DIN)</label>
+            <input
+              id="cgt-aph-din"
               v-model="apheresisForm.din"
               type="text"
               placeholder="Auto-generated if empty"
             />
           </div>
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Collector User ID</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="apheresisForm.collector_id" type="text" required />
+            <label for="cgt-aph-collector-id">Collector User ID</label>
+            <input
+              id="cgt-aph-collector-id"
+              v-model="apheresisForm.collector_id"
+              type="text"
+              required
+            />
           </div>
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Collector Name</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-aph-collector-name">Collector Name</label>
             <input
+              id="cgt-aph-collector-name"
               v-model="apheresisForm.collector_name"
               type="text"
               required
             />
           </div>
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Initial Cryo Temp (°C)</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-aph-initial-temp">Initial Cryo Temp (°C)</label>
             <input
+              id="cgt-aph-initial-temp"
               v-model.number="apheresisForm.initial_temp_celsius"
               type="number"
               step="0.1"
@@ -437,10 +449,9 @@
             />
           </div>
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Dry Shipper / Dewar ID</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-aph-shipper-id">Dry Shipper / Dewar ID</label>
             <input
+              id="cgt-aph-shipper-id"
               v-model="apheresisForm.dry_shipper_id"
               type="text"
               placeholder="e.g. MVE-LN2-9901"
@@ -451,11 +462,16 @@
           <button
             type="button"
             class="btn btn-secondary"
+            :disabled="isSubmitting"
             @click="showApheresisModal = false"
           >
             Cancel
           </button>
-          <button type="submit" class="btn btn-primary">
+          <button
+            type="submit"
+            class="btn btn-primary"
+            :disabled="isSubmitting"
+          >
             Initialize Chain of Custody
           </button>
         </footer>
@@ -466,6 +482,7 @@
     <ClinicalModal
       v-model="showBedsideModal"
       :teleport="false"
+      :dismissible="!isSubmitting"
       :show-footer="false"
       size="lg"
       backdrop-class="modal-overlay"
@@ -481,10 +498,11 @@
 
         <div class="form-grid">
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Scanned Patient Wristband Subject Identifier</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-bedside-wristband"
+              >Scanned Patient Wristband Subject Identifier</label
+            >
             <input
+              id="cgt-bedside-wristband"
               v-model="bedsideForm.scanned_wristband_subject_id"
               type="text"
               required
@@ -492,10 +510,11 @@
             />
           </div>
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Scanned Cell Infusion Bag Cryptographic Barcode</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-bedside-barcode"
+              >Scanned Cell Infusion Bag Cryptographic Barcode</label
+            >
             <textarea
+              id="cgt-bedside-barcode"
               v-model="bedsideForm.scanned_bag_barcode"
               rows="2"
               required
@@ -507,30 +526,29 @@
           <div class="verifier-panel col-half">
             <h4 class="verifier-title">Primary Verifier (Bedside Nurse)</h4>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>User ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-bedside-primary-id">User ID</label>
               <input
+                id="cgt-bedside-primary-id"
                 v-model="bedsideForm.primary_verifier_id"
                 type="text"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Full Name</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-bedside-primary-name">Full Name</label>
               <input
+                id="cgt-bedside-primary-name"
                 v-model="bedsideForm.primary_verifier_name"
                 type="text"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>E-Signature Step-Up Token</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-bedside-primary-sig"
+                >E-Signature Step-Up Token</label
+              >
               <input
+                id="cgt-bedside-primary-sig"
                 v-model="bedsideForm.primary_signature_token"
                 type="password"
                 required
@@ -544,30 +562,29 @@
               Secondary Verifier (Principal Investigator)
             </h4>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>User ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-bedside-secondary-id">User ID</label>
               <input
+                id="cgt-bedside-secondary-id"
                 v-model="bedsideForm.secondary_verifier_id"
                 type="text"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Full Name</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-bedside-secondary-name">Full Name</label>
               <input
+                id="cgt-bedside-secondary-name"
                 v-model="bedsideForm.secondary_verifier_name"
                 type="text"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>E-Signature Step-Up Token</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-bedside-secondary-sig"
+                >E-Signature Step-Up Token</label
+              >
               <input
+                id="cgt-bedside-secondary-sig"
                 v-model="bedsideForm.secondary_signature_token"
                 type="password"
                 required
@@ -580,11 +597,12 @@
           <button
             type="button"
             class="btn btn-secondary"
+            :disabled="isSubmitting"
             @click="showBedsideModal = false"
           >
             Cancel
           </button>
-          <button type="submit" class="btn btn-stepup">
+          <button type="submit" class="btn btn-stepup" :disabled="isSubmitting">
             Execute Dual Electronic Signature
           </button>
         </footer>
@@ -595,6 +613,7 @@
     <ClinicalModal
       v-model="showDestructionModal"
       :teleport="false"
+      :dismissible="!isSubmitting"
       :show-footer="false"
       size="lg"
       backdrop-class="modal-overlay"
@@ -604,28 +623,36 @@
       <form @submit.prevent="submitDestruction">
         <div class="form-grid">
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Study Protocol</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="destructionForm.study_id" type="text" required />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Site ID</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="destructionForm.site_id" type="text" required />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Lot Number</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="destructionForm.lot_number" type="text" required />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Kit Numbers (Comma-separated)</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-dest-study">Study Protocol</label>
             <input
+              id="cgt-dest-study"
+              v-model="destructionForm.study_id"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="cgt-dest-site">Site ID</label>
+            <input
+              id="cgt-dest-site"
+              v-model="destructionForm.site_id"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="cgt-dest-lot">Lot Number</label>
+            <input
+              id="cgt-dest-lot"
+              v-model="destructionForm.lot_number"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="cgt-dest-kits">Kit Numbers (Comma-separated)</label>
+            <input
+              id="cgt-dest-kits"
               v-model="destructionForm.kit_numbers_str"
               type="text"
               required
@@ -633,10 +660,11 @@
             />
           </div>
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Vial Identifiers (Comma-separated)</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-dest-vials"
+              >Vial Identifiers (Comma-separated)</label
+            >
             <input
+              id="cgt-dest-vials"
               v-model="destructionForm.vial_identifiers_str"
               type="text"
               required
@@ -644,10 +672,12 @@
             />
           </div>
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Destruction Method</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select v-model="destructionForm.destruction_method" required>
+            <label for="cgt-dest-method">Destruction Method</label>
+            <select
+              id="cgt-dest-method"
+              v-model="destructionForm.destruction_method"
+              required
+            >
               <option value="HIGH_TEMPERATURE_INCINERATION">
                 High Temperature Incineration
               </option>
@@ -663,10 +693,9 @@
             </select>
           </div>
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Destruction Facility</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-dest-facility">Destruction Facility</label>
             <input
+              id="cgt-dest-facility"
               v-model="destructionForm.destruction_facility"
               type="text"
               required
@@ -674,10 +703,9 @@
             />
           </div>
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Destruction Reason</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-dest-reason">Destruction Reason</label>
             <input
+              id="cgt-dest-reason"
               v-model="destructionForm.destruction_reason"
               type="text"
               required
@@ -689,30 +717,27 @@
           <div class="verifier-panel col-half">
             <h4 class="verifier-title">Witness 1 (Site Pharmacist / CRC)</h4>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>User ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-dest-witness1-id">User ID</label>
               <input
+                id="cgt-dest-witness1-id"
                 v-model="destructionForm.witness_1_id"
                 type="text"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Full Name</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-dest-witness1-name">Full Name</label>
               <input
+                id="cgt-dest-witness1-name"
                 v-model="destructionForm.witness_1_name"
                 type="text"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>E-Signature Token</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-dest-witness1-sig">E-Signature Token</label>
               <input
+                id="cgt-dest-witness1-sig"
                 v-model="destructionForm.witness_1_signature_token"
                 type="password"
                 required
@@ -726,30 +751,27 @@
               Witness 2 (Principal Investigator / QA)
             </h4>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>User ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-dest-witness2-id">User ID</label>
               <input
+                id="cgt-dest-witness2-id"
                 v-model="destructionForm.witness_2_id"
                 type="text"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Full Name</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-dest-witness2-name">Full Name</label>
               <input
+                id="cgt-dest-witness2-name"
                 v-model="destructionForm.witness_2_name"
                 type="text"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>E-Signature Token</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-dest-witness2-sig">E-Signature Token</label>
               <input
+                id="cgt-dest-witness2-sig"
                 v-model="destructionForm.witness_2_signature_token"
                 type="password"
                 required
@@ -762,11 +784,12 @@
           <button
             type="button"
             class="btn btn-secondary"
+            :disabled="isSubmitting"
             @click="showDestructionModal = false"
           >
             Cancel
           </button>
-          <button type="submit" class="btn btn-danger">
+          <button type="submit" class="btn btn-danger" :disabled="isSubmitting">
             Issue Dual-Witness Certificate
           </button>
         </footer>
@@ -777,6 +800,7 @@
     <ClinicalModal
       v-model="showMilestoneModal"
       :teleport="false"
+      :dismissible="!isSubmitting && !isParsing"
       :show-footer="false"
       size="xl"
       backdrop-class="modal-overlay"
@@ -796,8 +820,7 @@
       <div class="milestone-modal-content">
         <!-- File Dropzone Section -->
         <div class="dropzone-section">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-          <label class="section-label"
+          <label class="section-label" for="cgt-telemetry-file-input"
             >Logger Telemetry Upload (Sensitech / TempTale CSV or JSON)</label
           >
           <div
@@ -817,11 +840,12 @@
             @keydown.enter="triggerFileInput"
             @keydown.space="triggerFileInput"
           >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
+              id="cgt-telemetry-file-input"
               ref="fileInputRef"
               type="file"
               accept=".csv,.json,.txt"
+              aria-label="Logger Telemetry Upload (Sensitech or TempTale CSV or JSON)"
               class="hidden-file-input"
               @change="handleFileSelect"
             />
@@ -1055,10 +1079,8 @@
         <form class="milestone-form" @submit.prevent="submitMilestone">
           <div class="form-grid">
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Transit Stage</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select v-model="milestoneForm.stage" required>
+              <label for="cgt-ms-stage">Transit Stage</label>
+              <select id="cgt-ms-stage" v-model="milestoneForm.stage" required>
                 <option value="APHERESIS_COLLECTION">
                   1. Apheresis Collection
                 </option>
@@ -1079,10 +1101,12 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Milestone Event Type</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select v-model="milestoneForm.milestone_type" required>
+              <label for="cgt-ms-type">Milestone Event Type</label>
+              <select
+                id="cgt-ms-type"
+                v-model="milestoneForm.milestone_type"
+                required
+              >
                 <option value="TRANSIT_CHECKPOINT">Transit Checkpoint</option>
                 <option value="FACILITY_HANDOVER">Facility Handover</option>
                 <option value="TEMPERATURE_AUDIT">Temperature Audit</option>
@@ -1091,10 +1115,9 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Location / Waypoint</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-ms-location">Location / Waypoint</label>
               <input
+                id="cgt-ms-location"
                 v-model="milestoneForm.location_name"
                 type="text"
                 required
@@ -1103,10 +1126,9 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Recorded Checkpoint Temp (°C)</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-ms-temp">Recorded Checkpoint Temp (°C)</label>
               <input
+                id="cgt-ms-temp"
                 v-model.number="milestoneForm.temperature_celsius"
                 type="number"
                 step="0.1"
@@ -1115,10 +1137,9 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Custodian User ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-ms-custodian-id">Custodian User ID</label>
               <input
+                id="cgt-ms-custodian-id"
                 v-model="milestoneForm.custodian_id"
                 type="text"
                 required
@@ -1126,10 +1147,9 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Custodian Full Name</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-ms-custodian-name">Custodian Full Name</label>
               <input
+                id="cgt-ms-custodian-name"
                 v-model="milestoneForm.custodian_name"
                 type="text"
                 required
@@ -1137,10 +1157,9 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Courier / Carrier</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-ms-carrier">Courier / Carrier</label>
               <input
+                id="cgt-ms-carrier"
                 v-model="milestoneForm.carrier"
                 type="text"
                 placeholder="e.g. WorldCourier Cryo"
@@ -1148,10 +1167,9 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Tracking Number</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-ms-tracking">Tracking Number</label>
               <input
+                id="cgt-ms-tracking"
                 v-model="milestoneForm.tracking_number"
                 type="text"
                 placeholder="e.g. WC-TRACK-01"
@@ -1159,10 +1177,9 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Dry Shipper / Dewar ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-ms-shipper">Dry Shipper / Dewar ID</label>
               <input
+                id="cgt-ms-shipper"
                 v-model="milestoneForm.dry_shipper_id"
                 type="text"
                 placeholder="e.g. DEWAR-LN2-9901"
@@ -1170,10 +1187,9 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Tamper Seal ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="cgt-ms-seal">Tamper Seal ID</label>
               <input
+                id="cgt-ms-seal"
                 v-model="milestoneForm.seal_id"
                 type="text"
                 placeholder="e.g. SEAL-4482"
@@ -1181,8 +1197,7 @@
             </div>
 
             <div class="form-group col-full">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>
+              <label for="cgt-ms-notes">
                 GxP Justification Notes &amp; Observations
                 <span
                   v-if="parsedTelemetry && parsedTelemetry.excursionCount > 0"
@@ -1190,8 +1205,8 @@
                   >* (Required for Excursion)</span
                 >
               </label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <textarea
+                id="cgt-ms-notes"
                 v-model="milestoneForm.notes"
                 rows="3"
                 :required="
@@ -1206,11 +1221,16 @@
             <button
               type="button"
               class="btn btn-secondary"
+              :disabled="isSubmitting || isParsing"
               @click="showMilestoneModal = false"
             >
               Cancel
             </button>
-            <button type="submit" class="btn btn-primary">
+            <button
+              type="submit"
+              class="btn btn-primary"
+              :disabled="isSubmitting || isParsing"
+            >
               Log Milestone &amp; Update Ledger
             </button>
           </footer>
@@ -1222,6 +1242,7 @@
     <ClinicalModal
       v-model="showManufacturingModal"
       :teleport="false"
+      :dismissible="!isSubmitting"
       :show-footer="false"
       backdrop-class="modal-overlay"
       dialog-class="modal-card"
@@ -1230,16 +1251,18 @@
       <form @submit.prevent="submitManufacturingBind">
         <div class="form-grid">
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Manufacturing Batch ID</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="manufacturingForm.batch_id" type="text" required />
+            <label for="cgt-mfg-batch-id">Manufacturing Batch ID</label>
+            <input
+              id="cgt-mfg-batch-id"
+              v-model="manufacturingForm.batch_id"
+              type="text"
+              required
+            />
           </div>
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Manufacturing Facility ID</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-mfg-facility-id">Manufacturing Facility ID</label>
             <input
+              id="cgt-mfg-facility-id"
               v-model="manufacturingForm.manufacturing_facility_id"
               type="text"
               required
@@ -1250,11 +1273,16 @@
           <button
             type="button"
             class="btn btn-secondary"
+            :disabled="isSubmitting"
             @click="showManufacturingModal = false"
           >
             Cancel
           </button>
-          <button type="submit" class="btn btn-primary">
+          <button
+            type="submit"
+            class="btn btn-primary"
+            :disabled="isSubmitting"
+          >
             Bind Batch to Chain of Custody
           </button>
         </footer>
@@ -1265,6 +1293,7 @@
     <ClinicalModal
       v-model="showInfusionModal"
       :teleport="false"
+      :dismissible="!isSubmitting"
       :show-footer="false"
       backdrop-class="modal-overlay"
       dialog-class="modal-card"
@@ -1273,30 +1302,27 @@
       <form @submit.prevent="submitInfusion">
         <div class="form-grid">
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Administrator ID</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-inf-admin-id">Administrator ID</label>
             <input
+              id="cgt-inf-admin-id"
               v-model="infusionForm.administrator_id"
               type="text"
               required
             />
           </div>
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Administrator Name</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-inf-admin-name">Administrator Name</label>
             <input
+              id="cgt-inf-admin-name"
               v-model="infusionForm.administrator_name"
               type="text"
               required
             />
           </div>
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>E-Signature Step-Up Token</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-inf-sig-token">E-Signature Step-Up Token</label>
             <input
+              id="cgt-inf-sig-token"
               v-model="infusionForm.signature_token"
               type="password"
               required
@@ -1307,11 +1333,12 @@
           <button
             type="button"
             class="btn btn-secondary"
+            :disabled="isSubmitting"
             @click="showInfusionModal = false"
           >
             Cancel
           </button>
-          <button type="submit" class="btn btn-infuse">
+          <button type="submit" class="btn btn-infuse" :disabled="isSubmitting">
             Confirm Infusion Administration
           </button>
         </footer>
@@ -1399,6 +1426,7 @@ const filters = reactive({
 const cocData = ref<CGTChainOfCustody | null>(null);
 const milestones = ref<CGTMilestone[]>([]);
 const isLoading = ref(false);
+const isSubmitting = ref(false);
 
 const scanTestInput = ref("");
 const scanResult = ref<{ is_valid: boolean; failure_reason?: string } | null>(
@@ -1574,6 +1602,8 @@ function openApheresisModal() {
 }
 
 async function submitApheresis() {
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
   try {
     const res = await fetch("/api/v1/execution/rtsm/cgt/apheresis", {
       method: "POST",
@@ -1589,6 +1619,8 @@ async function submitApheresis() {
     }
   } catch (err) {
     console.error("Failed to initialize apheresis", err);
+  } finally {
+    isSubmitting.value = false;
   }
 }
 
@@ -1597,7 +1629,8 @@ function openBedsideModal() {
 }
 
 async function submitBedsideVerify() {
-  if (!cocData.value) return;
+  if (!cocData.value || isSubmitting.value) return;
+  isSubmitting.value = true;
   try {
     const res = await fetch("/api/v1/execution/rtsm/cgt/bedside-verify", {
       method: "POST",
@@ -1616,6 +1649,8 @@ async function submitBedsideVerify() {
     }
   } catch (err) {
     console.error("Bedside verification failed", err);
+  } finally {
+    isSubmitting.value = false;
   }
 }
 
@@ -1627,6 +1662,8 @@ function openDestructionModal() {
 }
 
 async function submitDestruction() {
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
   try {
     const kit_numbers = destructionForm.kit_numbers_str
       .split(",")
@@ -1671,6 +1708,8 @@ async function submitDestruction() {
     }
   } catch (err) {
     console.error("Destruction certification failed", err);
+  } finally {
+    isSubmitting.value = false;
   }
 }
 
@@ -1733,10 +1772,12 @@ async function handleFileUpload(file: File) {
 }
 
 async function submitMilestone() {
+  if (isSubmitting.value || isParsing.value) return;
   if (!milestoneForm.chain_of_custody_id && cocData.value) {
     milestoneForm.chain_of_custody_id = cocData.value.id;
   }
 
+  isSubmitting.value = true;
   try {
     const res = await fetch("/api/v1/execution/rtsm/cgt/milestone", {
       method: "POST",
@@ -1779,6 +1820,8 @@ async function submitMilestone() {
   } catch (err: any) {
     console.error("Milestone log submission failed", err);
     parsingError.value = "Network error submitting milestone.";
+  } finally {
+    isSubmitting.value = false;
   }
 }
 
@@ -1791,6 +1834,8 @@ function openManufacturingModal() {
 }
 
 async function submitManufacturingBind() {
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
   try {
     const res = await fetch("/api/v1/execution/rtsm/cgt/manufacturing-bind", {
       method: "POST",
@@ -1806,6 +1851,8 @@ async function submitManufacturingBind() {
     }
   } catch (err) {
     console.error("Manufacturing bind failed", err);
+  } finally {
+    isSubmitting.value = false;
   }
 }
 
@@ -1819,6 +1866,8 @@ function openInfusionModal() {
 }
 
 async function submitInfusion() {
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
   try {
     const res = await fetch("/api/v1/execution/rtsm/cgt/infuse", {
       method: "POST",
@@ -1834,6 +1883,8 @@ async function submitInfusion() {
     }
   } catch (err) {
     console.error("Infusion administration failed", err);
+  } finally {
+    isSubmitting.value = false;
   }
 }
 

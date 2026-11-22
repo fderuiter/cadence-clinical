@@ -1048,9 +1048,12 @@
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="device-dispense-modal-title"
     >
       <div class="modal-card">
-        <h3 class="modal-title">Dispense Investigational Device to Subject</h3>
+        <h3 id="device-dispense-modal-title" class="modal-title">
+          Dispense Investigational Device to Subject
+        </h3>
         <p class="modal-subtitle">
           Device: <strong>{{ activeModalDevice?.brand_name }}</strong> (SN:
           {{ activeModalDevice?.serial_number }})
@@ -1107,9 +1110,12 @@
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="device-quarantine-modal-title"
     >
       <div class="modal-card">
-        <h3 class="modal-title text-danger">⚠️ Initiate Device Quarantine</h3>
+        <h3 id="device-quarantine-modal-title" class="modal-title text-danger">
+          ⚠️ Initiate Device Quarantine
+        </h3>
         <p class="modal-subtitle">
           Target: <strong>{{ activeModalDevice?.brand_name }}</strong> (Lot:
           {{ activeModalDevice?.lot_number }})
@@ -1171,9 +1177,12 @@
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="device-release-modal-title"
     >
       <div class="modal-card">
-        <h3 class="modal-title">🔓 Release Device Quarantine</h3>
+        <h3 id="device-release-modal-title" class="modal-title">
+          🔓 Release Device Quarantine
+        </h3>
         <p class="modal-subtitle">
           Quarantine ID: {{ activeModalQuarantine?.id }}
         </p>
@@ -1232,9 +1241,12 @@
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="device-adjudicate-modal-title"
     >
       <div class="modal-card">
-        <h3 class="modal-title">✍️ Safety Physician Formal Adjudication</h3>
+        <h3 id="device-adjudicate-modal-title" class="modal-title">
+          ✍️ Safety Physician Formal Adjudication
+        </h3>
         <p class="modal-subtitle">
           Case: {{ activeModalCase?.case_number }} | Device:
           {{ activeModalCase?.device_name }}

@@ -1126,11 +1126,21 @@
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="qppv-sign-modal-title"
     >
       <div class="modal-dialog">
         <div class="modal-header">
-          <h3>Executive QPPV 21 CFR Part 11 Electronic Signature</h3>
-          <button class="close-btn" @click="closeQppvModal">&times;</button>
+          <h3 id="qppv-sign-modal-title">
+            Executive QPPV 21 CFR Part 11 Electronic Signature
+          </h3>
+          <button
+            type="button"
+            class="close-btn"
+            aria-label="Close QPPV signature dialog"
+            @click="closeQppvModal"
+          >
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <div class="alert-info-box">
@@ -1229,11 +1239,19 @@
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="physician-sign-modal-title"
     >
       <div class="modal-dialog">
         <div class="modal-header">
-          <h3>Safety Physician 21 CFR Part 11 Electronic Signature</h3>
-          <button class="close-btn" @click="closePhysicianSignModal">
+          <h3 id="physician-sign-modal-title">
+            Safety Physician 21 CFR Part 11 Electronic Signature
+          </h3>
+          <button
+            type="button"
+            class="close-btn"
+            aria-label="Close Safety Physician signature dialog"
+            @click="closePhysicianSignModal"
+          >
             &times;
           </button>
         </div>

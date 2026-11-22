@@ -1191,11 +1191,17 @@
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="lab-ingest-modal-title"
     >
       <div class="modal-box modal-lg">
         <div class="modal-header">
-          <h3>Ingest Laboratory Batch Feed</h3>
-          <button class="close-btn" @click="showIngestModal = false">
+          <h3 id="lab-ingest-modal-title">Ingest Laboratory Batch Feed</h3>
+          <button
+            type="button"
+            class="close-btn"
+            aria-label="Close laboratory batch ingestion dialog"
+            @click="showIngestModal = false"
+          >
             &times;
           </button>
         </div>
@@ -1300,14 +1306,20 @@
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="lab-action-modal-title"
     >
       <div class="modal-box">
         <div class="modal-header">
-          <h3>
+          <h3 id="lab-action-modal-title">
             Investigator Sign-off: Grade
             {{ selectedReview.ctcae_grade }} Toxicity
           </h3>
-          <button class="close-btn" @click="showActionModal = false">
+          <button
+            type="button"
+            class="close-btn"
+            aria-label="Close investigator sign-off dialog"
+            @click="showActionModal = false"
+          >
             &times;
           </button>
         </div>
@@ -1400,11 +1412,19 @@
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="lab-bulk-import-modal-title"
     >
       <div class="modal-box modal-lg">
         <div class="modal-header">
-          <h3>Bulk Laboratory Reference Range Import (CSV / XLSX)</h3>
-          <button class="close-btn" @click="closeBulkImportModal">
+          <h3 id="lab-bulk-import-modal-title">
+            Bulk Laboratory Reference Range Import (CSV / XLSX)
+          </h3>
+          <button
+            type="button"
+            class="close-btn"
+            aria-label="Close bulk reference range import dialog"
+            @click="closeBulkImportModal"
+          >
             &times;
           </button>
         </div>

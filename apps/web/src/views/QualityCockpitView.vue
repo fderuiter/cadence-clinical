@@ -887,40 +887,45 @@
       <!-- 5-Whys Tree Visualizer -->
       <div v-if="rcaMethod === 'FIVE_WHYS'" class="five-whys-container">
         <div class="why-step">
-          <div class="why-badge">Why 1</div>
+          <label class="why-badge" for="rca-why-1">Why 1</label>
           <input
+            id="rca-why-1"
             v-model="rcaForm.five_whys.why_1"
             class="form-input"
             placeholder="Primary direct symptom / immediate cause"
           />
         </div>
         <div class="why-step">
-          <div class="why-badge">Why 2</div>
+          <label class="why-badge" for="rca-why-2">Why 2</label>
           <input
+            id="rca-why-2"
             v-model="rcaForm.five_whys.why_2"
             class="form-input"
             placeholder="Second causal layer"
           />
         </div>
         <div class="why-step">
-          <div class="why-badge">Why 3</div>
+          <label class="why-badge" for="rca-why-3">Why 3</label>
           <input
+            id="rca-why-3"
             v-model="rcaForm.five_whys.why_3"
             class="form-input"
             placeholder="Third causal layer"
           />
         </div>
         <div class="why-step">
-          <div class="why-badge">Why 4</div>
+          <label class="why-badge" for="rca-why-4">Why 4</label>
           <input
+            id="rca-why-4"
             v-model="rcaForm.five_whys.why_4"
             class="form-input"
             placeholder="Fourth causal layer"
           />
         </div>
         <div class="why-step">
-          <div class="why-badge">Why 5</div>
+          <label class="why-badge" for="rca-why-5">Why 5</label>
           <input
+            id="rca-why-5"
             v-model="rcaForm.five_whys.why_5"
             class="form-input"
             placeholder="Root system / process failure"
@@ -932,55 +937,67 @@
       <div v-if="rcaMethod === 'ISHIKAWA'" class="fishbone-container">
         <div class="fishbone-grid">
           <div class="fishbone-branch">
-            <h5>👨 Man (Personnel / Human Factor)</h5>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <h5 id="rca-fishbone-man-label">
+              👨 Man (Personnel / Human Factor)
+            </h5>
             <textarea
               v-model="rcaForm.fishbone.man"
+              aria-labelledby="rca-fishbone-man-label"
               class="form-textarea"
               placeholder="Staffing, training gaps, fatigue..."
             />
           </div>
           <div class="fishbone-branch">
-            <h5>⚙️ Machine (Equipment / Systems)</h5>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <h5 id="rca-fishbone-machine-label">
+              ⚙️ Machine (Equipment / Systems)
+            </h5>
             <textarea
               v-model="rcaForm.fishbone.machine"
+              aria-labelledby="rca-fishbone-machine-label"
               class="form-textarea"
               placeholder="Hardware faults, software bugs, EDC validation..."
             />
           </div>
           <div class="fishbone-branch">
-            <h5>📦 Material (Investigational Product / Supplies)</h5>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <h5 id="rca-fishbone-material-label">
+              📦 Material (Investigational Product / Supplies)
+            </h5>
             <textarea
               v-model="rcaForm.fishbone.material"
+              aria-labelledby="rca-fishbone-material-label"
               class="form-textarea"
               placeholder="IP batch quality, temperature logs, lab kits..."
             />
           </div>
           <div class="fishbone-branch">
-            <h5>📜 Method (SOPs / Protocol Procedures)</h5>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <h5 id="rca-fishbone-method-label">
+              📜 Method (SOPs / Protocol Procedures)
+            </h5>
             <textarea
               v-model="rcaForm.fishbone.method"
+              aria-labelledby="rca-fishbone-method-label"
               class="form-textarea"
               placeholder="Ambiguous study protocol, outdated SOPs..."
             />
           </div>
           <div class="fishbone-branch">
-            <h5>📏 Measurement (Calibration / Metrics)</h5>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <h5 id="rca-fishbone-measurement-label">
+              📏 Measurement (Calibration / Metrics)
+            </h5>
             <textarea
               v-model="rcaForm.fishbone.measurement"
+              aria-labelledby="rca-fishbone-measurement-label"
               class="form-textarea"
               placeholder="Thermometer calibration, lab precision..."
             />
           </div>
           <div class="fishbone-branch">
-            <h5>🌍 Milieu (Environment / Clinic Context)</h5>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <h5 id="rca-fishbone-milieu-label">
+              🌍 Milieu (Environment / Clinic Context)
+            </h5>
             <textarea
               v-model="rcaForm.fishbone.milieu"
+              aria-labelledby="rca-fishbone-milieu-label"
               class="form-textarea"
               placeholder="Clinic layout, weather, regional transport..."
             />
@@ -989,9 +1006,11 @@
       </div>
 
       <div class="form-group mt-3">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label">Root Cause Summary Statement:</label>
+        <label class="form-label" for="rca-root-cause-summary"
+          >Root Cause Summary Statement:</label
+        >
         <input
+          id="rca-root-cause-summary"
           v-model="rcaForm.root_cause_summary"
           class="form-input"
           placeholder="Synthesized root cause finding"
@@ -1092,9 +1111,9 @@
       dialog-class="modal-content"
       title="CSR Section 9.6 Quality Tolerance Limit Summary"
     >
-      <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
       <textarea
         readonly
+        aria-label="CSR Section 9.6 Quality Tolerance Limit Summary Narrative"
         class="form-textarea"
         rows="10"
         :value="activeCsrNarrative"
@@ -1125,20 +1144,22 @@
         {{ activeFindingToPromote?.condition }}
       </div>
       <div class="form-group mt-2">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label">Action Plan:</label>
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <label class="form-label" for="promote-capa-action-plan"
+          >Action Plan:</label
+        >
         <textarea
+          id="promote-capa-action-plan"
           v-model="promoteForm.action_plan"
           class="form-textarea"
           placeholder="Corrective actions to remediate finding..."
         />
       </div>
       <div class="form-group mt-2">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label">Preventive Measures:</label>
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <label class="form-label" for="promote-capa-preventive-measures"
+          >Preventive Measures:</label
+        >
         <textarea
+          id="promote-capa-preventive-measures"
           v-model="promoteForm.preventive_measures"
           class="form-textarea"
           placeholder="Systemic prevention measures..."

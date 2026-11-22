@@ -781,13 +781,17 @@
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="telehealth-schedule-modal-title"
     >
       <div class="modal-card">
         <div class="modal-header">
-          <h3>Schedule WebRTC Telehealth Consultation</h3>
+          <h3 id="telehealth-schedule-modal-title">
+            Schedule WebRTC Telehealth Consultation
+          </h3>
           <button
             type="button"
             class="btn-close"
+            aria-label="Close schedule telehealth consultation dialog"
             @click="isScheduleSessionModalOpen = false"
           >
             ✕
@@ -857,13 +861,17 @@
       class="modal-backdrop"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="telehealth-dispatch-dtp-modal-title"
     >
       <div class="modal-card">
         <div class="modal-header">
-          <h3>Dispatch Direct-to-Patient (DTP) Drug Kit</h3>
+          <h3 id="telehealth-dispatch-dtp-modal-title">
+            Dispatch Direct-to-Patient (DTP) Drug Kit
+          </h3>
           <button
             type="button"
             class="btn-close"
+            aria-label="Close dispatch DTP shipment dialog"
             @click="isDispatchDtpModalOpen = false"
           >
             ✕

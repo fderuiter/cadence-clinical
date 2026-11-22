@@ -368,7 +368,7 @@ const handleTrapKeyDown = (e, trapEntry) => {
  * @param {(event: KeyboardEvent) => void} [options.onEscape]
  * @param {import("vue").Ref<boolean> | (() => boolean) | boolean} [options.escapeDeactivates=true]
  * @param {import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null) | string} [options.initialFocus]
- * @param {boolean | (() => HTMLElement | null)} [options.restoreFocus=true]
+ * @param {boolean | import("vue").Ref<boolean | HTMLElement | null> | (() => boolean | HTMLElement | null)} [options.restoreFocus=true]
  */
 export function useFocusTrap(
   targetRef,
@@ -545,7 +545,7 @@ export function useFocusTrap(
     }
   };
 
-  const deactivate = () => {
+  const deactivate = (deactivateOptions = {}) => {
     if (!isActive) return;
     isActive = false;
 
@@ -563,12 +563,19 @@ export function useFocusTrap(
 
     reconcileBackgroundInert();
 
-    if (options.restoreFocus !== false && typeof document !== "undefined") {
-      const customRestore =
-        typeof options.restoreFocus === "function"
-          ? options.restoreFocus()
-          : null;
-      const targetToFocus = customRestore || previousActiveElement;
+    const rawRestoreOption =
+      deactivateOptions && deactivateOptions.restoreFocus !== undefined
+        ? deactivateOptions.restoreFocus
+        : options.restoreFocus;
+    const resolvedRestore = resolveOption(rawRestoreOption, true);
+
+    if (resolvedRestore !== false && typeof document !== "undefined") {
+      const targetToFocus =
+        resolvedRestore &&
+        typeof resolvedRestore === "object" &&
+        typeof resolvedRestore.focus === "function"
+          ? resolvedRestore
+          : previousActiveElement;
       if (
         targetToFocus &&
         typeof targetToFocus.focus === "function" &&
@@ -586,9 +593,11 @@ export function useFocusTrap(
       () => getIsOpen(),
       (open, prevOpen) => {
         if (open && !prevOpen && typeof document !== "undefined") {
+          const container = getContainer();
           if (
             document.activeElement &&
-            document.activeElement !== document.body
+            document.activeElement !== document.body &&
+            (!container || !container.contains(document.activeElement))
           ) {
             candidateTrigger = document.activeElement;
           }
