@@ -16,6 +16,8 @@ import {
   FINDING_EXPLAIN_SEMANTIC_ACTION,
   kernelApi,
   PROTOCOL_VERSION_APPROVE_SEMANTIC_ACTION,
+  type KernelStudySiteSummary,
+  type KernelValidationFinding,
 } from "../../src/api/kernelApi";
 import { useAuthStore } from "../../src/stores/auth";
 
@@ -420,6 +422,8 @@ describe("Kernel study-build UI workflows", () => {
       expect.objectContaining({
         intent: "Add safety check",
         impactedElements: ["VS"],
+        classification: "Substantial",
+        transitionPolicy: "NewParticipantsOnly",
       })
     );
   });
@@ -503,7 +507,7 @@ describe("Kernel study-build UI workflows", () => {
       institution_code: "INST-SITE-201",
       institution_name: "SITE-201 Medical Institution",
     });
-    const linkedSummary = {
+    const linkedSummary: KernelStudySiteSummary = {
       ref: `study_site:${studySiteUuid}@1`,
       study_ref: `study:${studyUuid}@1`,
       study_code: "STUDY-201",
@@ -513,12 +517,8 @@ describe("Kernel study-build UI workflows", () => {
       country: "US",
       institution_ref: "organization:01950000-0000-7000-8000-000000000079@1",
       institution_name: "SITE-201 Medical Institution",
-      status: "Pending",
-      effective_versions: [] as {
-        protocol_version_ref: string;
-        protocol_version_number: number;
-        scope_level: string;
-      }[],
+      status: "Selected",
+      effective_versions: [],
     };
     linkedSites = [linkedSummary];
     vi.mocked(kernelApi.linkSiteToStudy).mockResolvedValue(linkedSummary);
@@ -556,14 +556,14 @@ describe("Kernel study-build UI workflows", () => {
 
     // 3. Declare & mark protocol effective at site
     vi.mocked(kernelApi.declareEffectivity).mockResolvedValue({
-      ref: `protocol_effectivity:${effUuid}@1`,
+      ref: `effectivity:${effUuid}@1`,
       study_ref: `study:${studyUuid}@1`,
       protocol_version_ref: `protocol_version:${v1Uuid}@3`,
       protocol_version_number: 1,
-      scope_level: "Site",
+      scope_level: "StudySite",
       scope_country: null,
       scope_study_site_ref: `study_site:${studySiteUuid}@1`,
-      status: "Planned",
+      status: "Pending",
       status_since: "2026-11-22T10:01:00Z",
       evidence_version_refs: [],
     });
@@ -572,19 +572,19 @@ describe("Kernel study-build UI workflows", () => {
         ...linkedSummary,
         effective_versions: [
           {
-            protocol_version_ref: `protocol_version:${v1Uuid}@3`,
-            protocol_version_number: 1,
-            scope_level: "Site",
+            version_ref: `protocol_version:${v1Uuid}@3`,
+            number: 1,
+            scope_level: "StudySite",
           },
         ],
       },
     ];
     vi.mocked(kernelApi.changeEffectivityStatus).mockResolvedValue({
-      ref: `protocol_effectivity:${effUuid}@2`,
+      ref: `effectivity:${effUuid}@2`,
       study_ref: `study:${studyUuid}@1`,
       protocol_version_ref: `protocol_version:${v1Uuid}@3`,
       protocol_version_number: 1,
-      scope_level: "Site",
+      scope_level: "StudySite",
       scope_country: null,
       scope_study_site_ref: `study_site:${studySiteUuid}@1`,
       status: "Effective",
@@ -594,7 +594,12 @@ describe("Kernel study-build UI workflows", () => {
 
     await wrapper.find("#btn-kernel-make-effective").trigger("click");
     await flushPromises();
-    expect(kernelApi.declareEffectivity).toHaveBeenCalled();
+    expect(kernelApi.declareEffectivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scopeLevel: "StudySite",
+        studySiteRef: `study_site:${studySiteUuid}@1`,
+      })
+    );
     expect(kernelApi.changeEffectivityStatus).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "Effective",
@@ -639,28 +644,33 @@ describe("Kernel study-build UI workflows", () => {
       rule_packs: [],
     });
 
-    const baseFinding = {
+    const baseFinding: KernelValidationFinding = {
       ref: `validation_finding:${findingUuid}@1`,
-      id: findingUuid,
       stage: "Collection",
       status: "Open",
       severity: "Warning",
-      rule_pack_key: "study-201-checks",
+      pack_key: "study-201-checks",
+      rule_pack_ref: "library_item:01950000-0000-7000-8000-000000000051@1",
       rule_id: "VS_SYSBP_MAX",
       rule_version: 1,
       message: "Systolic BP exceeds 220 mm[Hg].",
       remediation_guidance: "Verify cuff reading.",
-      target_kind: "Record",
+      blocks: false,
+      target_kind: "DatasetRecord",
       dataset: "VS",
       record_key: "01950000-0000-7000-8000-000000000095",
       variable: "SYSBP",
-      classification: null as string | null,
-      rationale: null as string | null,
-      reviewer_explanation: null as string | null,
-      detected_at: "2026-11-22T10:05:00Z",
-      last_seen_at: "2026-11-22T10:05:00Z",
-      resolved_at: null,
-      observed_values: [],
+      observed: null,
+      first_detected_run_ref:
+        "validation_run:01950000-0000-7000-8000-000000000088@1",
+      last_detected_run_ref:
+        "validation_run:01950000-0000-7000-8000-000000000088@1",
+      resolved_by_run_ref: null,
+      classification: null,
+      decision_text: null,
+      decided_by: null,
+      decided_at: null,
+      decision_attestation_ref: null,
     };
     let findingsList = [baseFinding];
     vi.mocked(kernelApi.listStudyValidationFindings).mockImplementation(
@@ -746,12 +756,20 @@ describe("Kernel study-build UI workflows", () => {
     vi.mocked(etmfService.verifySignature).mockResolvedValueOnce({
       sig_token: "sig-accept-1",
     });
-    findingsList = [{ ...baseFinding, status: "Accepted" }];
+    findingsList = [
+      {
+        ...baseFinding,
+        status: "Accepted",
+        decision_text:
+          "Confirmed transient white-coat hypertension with site PI",
+      },
+    ];
     vi.mocked(kernelApi.acceptFinding).mockResolvedValue(
       makeDetail({
         status: "Accepted",
         classification: "NotAnIssue",
-        rationale: "Confirmed transient white-coat hypertension with site PI",
+        decision_text:
+          "Confirmed transient white-coat hypertension with site PI",
       })
     );
     await wrapper.find("#btn-accept-finding").trigger("click");
@@ -772,11 +790,14 @@ describe("Kernel study-build UI workflows", () => {
         sigToken: "sig-accept-1",
       })
     );
+    expect(
+      wrapper.find("[data-testid='finding-acceptance-rationale']").text()
+    ).toContain("Confirmed transient white-coat hypertension with site PI");
 
-    // 5. Reopen finding -> Open -> Sign reviewer explanation (Approved meaning)
-    findingsList = [{ ...baseFinding, status: "Open" }];
+    // 5. Reopen finding -> Investigating -> Sign reviewer explanation (Approved meaning)
+    findingsList = [{ ...baseFinding, status: "Investigating" }];
     vi.mocked(kernelApi.reopenFinding).mockResolvedValue(
-      makeDetail({ status: "Open", classification: "NotAnIssue" })
+      makeDetail({ status: "Investigating", classification: "NotAnIssue" })
     );
     await wrapper.find("#btn-reopen-finding").trigger("click");
     await flushPromises();
@@ -785,12 +806,19 @@ describe("Kernel study-build UI workflows", () => {
     vi.mocked(etmfService.verifySignature).mockResolvedValueOnce({
       sig_token: "sig-explain-1",
     });
-    findingsList = [{ ...baseFinding, status: "Explained" }];
+    findingsList = [
+      {
+        ...baseFinding,
+        status: "Explained",
+        decision_text:
+          "Confirmed transient white-coat hypertension with site PI",
+      },
+    ];
     vi.mocked(kernelApi.explainFinding).mockResolvedValue(
       makeDetail({
         status: "Explained",
         classification: "NotAnIssue",
-        reviewer_explanation:
+        decision_text:
           "Confirmed transient white-coat hypertension with site PI",
       })
     );
@@ -812,5 +840,8 @@ describe("Kernel study-build UI workflows", () => {
         sigToken: "sig-explain-1",
       })
     );
+    expect(
+      wrapper.find("[data-testid='finding-reviewer-explanation']").text()
+    ).toContain("Confirmed transient white-coat hypertension with site PI");
   });
 });

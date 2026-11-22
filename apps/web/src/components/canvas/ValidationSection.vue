@@ -351,12 +351,25 @@
                 Classification:
                 <strong>{{ selectedFinding.finding.classification }}</strong>
               </p>
-              <p v-if="selectedFinding.finding.rationale">
-                Acceptance rationale: {{ selectedFinding.finding.rationale }}
+              <p
+                v-if="
+                  selectedFinding.finding.status === 'Accepted' &&
+                  selectedFinding.finding.decision_text
+                "
+                data-testid="finding-acceptance-rationale"
+              >
+                Acceptance rationale:
+                {{ selectedFinding.finding.decision_text }}
               </p>
-              <p v-if="selectedFinding.finding.reviewer_explanation">
+              <p
+                v-else-if="
+                  selectedFinding.finding.status === 'Explained' &&
+                  selectedFinding.finding.decision_text
+                "
+                data-testid="finding-reviewer-explanation"
+              >
                 Reviewer explanation:
-                {{ selectedFinding.finding.reviewer_explanation }}
+                {{ selectedFinding.finding.decision_text }}
               </p>
               <ul v-if="selectedFinding.explanation.steps.length > 0">
                 <li
@@ -372,10 +385,12 @@
                 class="finding-triage-controls"
                 data-testid="finding-triage-controls"
               >
-                <label :for="`finding-triage-reason-${finding.id}`">
+                <label
+                  :for="`finding-triage-reason-${findingDomKey(finding.ref)}`"
+                >
                   Triage rationale / explanation
                   <input
-                    :id="`finding-triage-reason-${finding.id}`"
+                    :id="`finding-triage-reason-${findingDomKey(finding.ref)}`"
                     v-model="triageReason"
                     type="text"
                     autocomplete="off"
@@ -396,10 +411,12 @@
                     Start investigation
                   </button>
 
-                  <label :for="`finding-classification-${finding.id}`">
+                  <label
+                    :for="`finding-classification-${findingDomKey(finding.ref)}`"
+                  >
                     Classification
                     <select
-                      :id="`finding-classification-${finding.id}`"
+                      :id="`finding-classification-${findingDomKey(finding.ref)}`"
                       v-model="triageClassification"
                       :disabled="busy"
                     >
@@ -586,6 +603,10 @@ const signerFullName = computed(() => {
 function unversionedPackRef(refText: string): string {
   const parsed = parseNodeRef(refText);
   return parsed ? `${parsed.kind}:${parsed.id}` : refText;
+}
+
+function findingDomKey(refText: string): string {
+  return parseNodeRef(refText)?.id ?? refText;
 }
 
 function toggleExpanded(refText: string) {

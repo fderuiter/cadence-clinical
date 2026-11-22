@@ -327,9 +327,7 @@
         >
           Version
           {{
-            kernelStudySite.effective_versions
-              .map((v) => v.protocol_version_number)
-              .join(", ")
+            kernelStudySite.effective_versions.map((v) => v.number).join(", ")
           }}
           effective at {{ kernelStudySite.site_code }}
         </span>
@@ -628,7 +626,7 @@ async function declareAndMakeProtocolEffective() {
   try {
     const declared = await kernelApi.declareEffectivity({
       protocolVersionRef: selectedProtocolVersionRef.value,
-      scopeLevel: "Site",
+      scopeLevel: "StudySite",
       studySiteRef: kernelStudySite.value.ref,
       reason: `Declare protocol effective scope at ${site}`,
       idempotencyKey: makeKernelIdempotencyKey(),

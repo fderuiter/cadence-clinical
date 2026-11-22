@@ -362,6 +362,7 @@
             >
               <option value="Substantial">Substantial</option>
               <option value="NonSubstantial">NonSubstantial</option>
+              <option value="UrgentSafetyMeasure">UrgentSafetyMeasure</option>
             </select>
           </div>
           <div class="field-row">
@@ -374,10 +375,10 @@
               class="text-input"
               :disabled="governanceBusy"
             >
-              <option value="NewEnrollmentsOnly">NewEnrollmentsOnly</option>
-              <option value="NextPlannedActivity">NextPlannedActivity</option>
-              <option value="ImmediateOnReconsent">ImmediateOnReconsent</option>
-              <option value="RemainOnCurrent">RemainOnCurrent</option>
+              <option value="NewParticipantsOnly">NewParticipantsOnly</option>
+              <option value="RequiresReconsent">RequiresReconsent</option>
+              <option value="Automatic">Automatic</option>
+              <option value="ByCohort">ByCohort</option>
             </select>
           </div>
         </div>
@@ -467,7 +468,7 @@ const amendmentRationale = ref("");
 const amendmentSummary = ref("");
 const amendmentElements = ref("");
 const amendmentClassification = ref("Substantial");
-const amendmentTransitionPolicy = ref("NewEnrollmentsOnly");
+const amendmentTransitionPolicy = ref("NewParticipantsOnly");
 
 type SignatureMode =
   | "approve-protocol"

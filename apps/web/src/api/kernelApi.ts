@@ -2100,7 +2100,7 @@ export const kernelApi = {
     );
   },
 
-  /** Declares a protocol version's effectivity at Study, Country, or Site scope. */
+  /** Declares a protocol version's effectivity at Study, Country, or StudySite scope. */
   declareEffectivity({
     protocolVersionRef,
     scopeLevel,
@@ -2259,7 +2259,7 @@ export const kernelApi = {
     );
   },
 
-  /** Classifies a validation finding (TrueIssue, DataException, RuleDefect, MappingGap, StandardLimitation). */
+  /** Classifies a validation finding (DataIssue, MappingIssue, MetadataIssue, RuleIssue, NotAnIssue). */
   classifyFinding({
     findingRef,
     classification,
