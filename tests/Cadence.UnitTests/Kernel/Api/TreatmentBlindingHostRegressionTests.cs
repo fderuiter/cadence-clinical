@@ -63,8 +63,8 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
 {
     private const string CanaryArm = "ARM-ACTIVE-CANARY-100MG";
     private const string AlternateCanaryArm = "ARM-PLACEBO-CANARY-0MG";
-    private const string BlindedAssertionSecret = "Query mentions ARM-ACTIVE-CANARY-100MG kit";
-    private const string BlindedAnswerSecret = "Confirmed ARM-ACTIVE-CANARY-100MG dispensed";
+    private const string BlindedAssertionCanaryText = "Query mentions ARM-ACTIVE-CANARY-100MG kit";
+    private const string BlindedAnswerCanaryText = "Confirmed ARM-ACTIVE-CANARY-100MG dispensed";
     private const string BlindedRuleId = "EC-BLIND-01";
     private const string NonBlindedRuleId = "EC-VS-01";
     private const string UnblindQualificationType = "unblinded_pharmacist_training";
@@ -149,22 +149,22 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         var (cbStatus, cbBody) = await SendAsync(client, HttpMethod.Get, $"/api/v1/kernel/enrollments/{enrollmentRef}/casebook?format=json", ct: ct);
         cbStatus.Should().Be(HttpStatusCode.OK, cbBody);
         cbBody.Should().NotContain(CanaryArm)
-            .And.NotContain(BlindedAssertionSecret)
-            .And.NotContain(BlindedAnswerSecret)
+            .And.NotContain(BlindedAssertionCanaryText)
+            .And.NotContain(BlindedAnswerCanaryText)
             .And.NotContain(_state.BlindedObservationNode.ToString());
 
         var (cbOdmStatus, cbOdmBody) = await SendAsync(client, HttpMethod.Get, $"/api/v1/kernel/enrollments/{enrollmentRef}/casebook?format=odm_xml", ct: ct);
         cbOdmStatus.Should().Be(HttpStatusCode.OK, cbOdmBody);
         cbOdmBody.Should().NotContain(CanaryArm)
-            .And.NotContain(BlindedAssertionSecret)
-            .And.NotContain(BlindedAnswerSecret)
+            .And.NotContain(BlindedAssertionCanaryText)
+            .And.NotContain(BlindedAnswerCanaryText)
             .And.NotContain(_state.BlindedObservationNode.ToString());
 
         var (cbHtmlStatus, cbHtmlBody) = await SendAsync(client, HttpMethod.Get, $"/api/v1/kernel/enrollments/{enrollmentRef}/casebook?format=html", ct: ct);
         cbHtmlStatus.Should().Be(HttpStatusCode.OK, cbHtmlBody);
         cbHtmlBody.Should().NotContain(CanaryArm)
-            .And.NotContain(BlindedAssertionSecret)
-            .And.NotContain(BlindedAnswerSecret)
+            .And.NotContain(BlindedAssertionCanaryText)
+            .And.NotContain(BlindedAnswerCanaryText)
             .And.NotContain(_state.BlindedObservationNode.ToString());
 
         using var cbDoc = JsonDocument.Parse(cbBody);
@@ -216,8 +216,8 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         var (formStatus, formBody) = await SendAsync(client, HttpMethod.Get, $"/api/v1/execution/forms/{_state.FormId.Value:D}", ct: ct);
         formStatus.Should().Be(HttpStatusCode.OK, formBody);
         formBody.Should().NotContain(CanaryArm)
-            .And.NotContain(BlindedAssertionSecret)
-            .And.NotContain(BlindedAnswerSecret)
+            .And.NotContain(BlindedAssertionCanaryText)
+            .And.NotContain(BlindedAnswerCanaryText)
             .And.NotContain(_state.BlindedObservationId.Value.ToString("D"));
 
         using var formDoc = JsonDocument.Parse(formBody);
@@ -357,7 +357,7 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
 
         var (cbStatus, cbBody) = await SendAsync(client, HttpMethod.Get, $"/api/v1/kernel/enrollments/{enrollmentRef}/casebook?format=json", ct: ct);
         cbStatus.Should().Be(HttpStatusCode.OK, cbBody);
-        cbBody.Should().Contain(CanaryArm).And.Contain(BlindedAssertionSecret).And.Contain(BlindedAnswerSecret);
+        cbBody.Should().Contain(CanaryArm).And.Contain(BlindedAssertionCanaryText).And.Contain(BlindedAnswerCanaryText);
 
         var (obsStatus, obsBody) = await SendAsync(client, HttpMethod.Get, $"/api/v1/kernel/observations/{blindedObsRef}", ct: ct);
         obsStatus.Should().Be(HttpStatusCode.OK, obsBody);
@@ -754,8 +754,8 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
             AssertionView[] blindedAssertions =
             [
                 new(blindedVerifyId, AssertionKind.Verified, blindedObsNode, 1, null, "unblinded-cra@sponsor.test", T0.AddMinutes(1), "Verified kit log", null, null),
-                new(blindedQueryId, AssertionKind.Queried, blindedObsNode, null, BlindedAssertionSecret, "unblinded-dm@sponsor.test", T0.AddMinutes(2), "Kit check", null, null),
-                new(blindedAnswerId, AssertionKind.QueryAnswered, NodeRef.For(blindedQueryId), null, BlindedAnswerSecret, "pharmacist@site.test", T0.AddMinutes(3), "Kit confirmed", null, null),
+                new(blindedQueryId, AssertionKind.Queried, blindedObsNode, null, BlindedAssertionCanaryText, "unblinded-dm@sponsor.test", T0.AddMinutes(2), "Kit check", null, null),
+                new(blindedAnswerId, AssertionKind.QueryAnswered, NodeRef.For(blindedQueryId), null, BlindedAnswerCanaryText, "pharmacist@site.test", T0.AddMinutes(3), "Kit confirmed", null, null),
             ];
 
             AssertionView[] sbpAssertions =
