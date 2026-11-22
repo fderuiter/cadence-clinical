@@ -746,7 +746,7 @@ onUnmounted(() => {
 .shell-control-btn:hover {
   background: var(--semantic-color-surface-header);
   border-color: var(--semantic-color-border-control);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .setup-progress-pill {

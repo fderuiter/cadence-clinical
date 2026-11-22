@@ -1322,7 +1322,7 @@ async function submitUpload() {
   outline: 2px solid transparent;
   transition: border-color 0.2s;
   background-color: var(--semantic-color-surface);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .form-control:focus {
@@ -1399,7 +1399,7 @@ async function submitUpload() {
 
 .btn-outline-secondary:hover {
   background-color: var(--semantic-color-surface-muted);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn-sm {
@@ -1449,7 +1449,7 @@ async function submitUpload() {
 .page-num-btn:hover {
   background-color: var(--semantic-color-surface-header); /* deid-ignore */
   border-color: var(--semantic-color-border-control);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .page-num-btn.active {

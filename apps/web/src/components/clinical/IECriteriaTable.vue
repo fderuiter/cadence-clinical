@@ -258,7 +258,7 @@ const addCriterion = () => {
   border-radius: 4px;
   font-size: 0.88rem;
   background-color: var(--semantic-color-surface);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .crit-table-container {

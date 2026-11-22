@@ -116,7 +116,7 @@ export async function getControlBorderContrast(page, selector) {
       function luminance([r, g, b]) {
         const [rl, gl, bl] = [r, g, b].map((v) => {
           const s = v / 255;
-          return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+          return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; // deid-ignore
         });
         return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
       }
@@ -202,7 +202,7 @@ export async function auditInteractiveControlBorders(page, options = {}) {
       function luminance([r, g, b]) {
         const [rl, gl, bl] = [r, g, b].map((v) => {
           const s = v / 255;
-          return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+          return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; // deid-ignore
         });
         return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
       }

@@ -1418,7 +1418,7 @@ export default {
   padding: 2px 6px;
   background-color: var(--semantic-color-surface);
   transition: transform 0.1s;
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn-mini:hover {

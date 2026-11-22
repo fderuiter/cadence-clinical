@@ -1003,7 +1003,7 @@ function synthesizeProtocol() {
   border-radius: 6px;
   padding: 16px;
   margin-bottom: 20px;
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .pane-header {

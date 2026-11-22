@@ -4855,7 +4855,7 @@ textarea {
 .btn-secondary {
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface-muted);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn-primary {
@@ -4866,7 +4866,7 @@ textarea {
 
 .tab-btn:hover {
   background: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .doa-load-error {

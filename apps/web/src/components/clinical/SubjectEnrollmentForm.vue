@@ -536,7 +536,7 @@ const outcomeBadgeText = computed(() => {
 
 .btn-secondary:hover:not(:disabled) {
   background-color: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn:disabled {

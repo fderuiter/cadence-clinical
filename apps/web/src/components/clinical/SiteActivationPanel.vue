@@ -498,7 +498,7 @@ defineExpose({ checkStatus, loadStudySites });
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--semantic-color-surface);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .assigned-scope {

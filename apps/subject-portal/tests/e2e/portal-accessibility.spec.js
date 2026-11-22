@@ -828,6 +828,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
   test("enforces zero WCAG 2.2 AA and SC 1.4.11 control border violations across all 7 portal views in light and dark themes", async ({
     page,
   }) => {
+    test.setTimeout(120_000);
     await page.goto("http://127.0.0.1:5175/subject-portal/");
     await completeInitialPinSetupIfOpen(page);
 

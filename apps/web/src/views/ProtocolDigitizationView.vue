@@ -1890,7 +1890,7 @@ const commitAndActivateEDC = async () => {
 .btn-mode:hover {
   background-color: var(--semantic-color-surface-header);
   border-color: var(--semantic-color-border-control);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn-mode.active {

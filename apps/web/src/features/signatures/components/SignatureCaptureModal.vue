@@ -511,7 +511,7 @@ select {
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: var(--radius-sm, 4px);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .modal-footer {
@@ -534,7 +534,7 @@ select {
 .btn-cancel {
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn-primary {

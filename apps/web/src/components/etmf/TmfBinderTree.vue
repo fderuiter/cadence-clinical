@@ -573,7 +573,7 @@ function getUnreadBadgeCount(node) {
   padding: 2px 4px;
   border-radius: 4px;
   margin-left: 4px;
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .sr-only {
@@ -622,7 +622,7 @@ function getUnreadBadgeCount(node) {
   font-size: 0.85rem;
   background-color: var(--semantic-color-surface-muted);
   outline: 2px solid transparent;
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .tree-root-nodes {

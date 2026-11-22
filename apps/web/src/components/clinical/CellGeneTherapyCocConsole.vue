@@ -2248,7 +2248,7 @@ onMounted(() => {
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .form-grid {

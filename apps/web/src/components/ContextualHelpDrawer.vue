@@ -638,14 +638,14 @@ onUnmounted(() => {
   cursor: pointer;
   font-size: 1rem;
   transition: all 0.15s;
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn-icon-toggle:hover,
 .btn-icon-toggle.active {
   background-color: var(--semantic-color-surface-header);
   border-color: var(--semantic-color-border-control);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn-close {
@@ -1072,7 +1072,7 @@ onUnmounted(() => {
 .search-result-card:hover {
   border-color: var(--accent);
   background-color: var(--semantic-color-surface-muted);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .search-result-card.active {
@@ -1177,7 +1177,7 @@ onUnmounted(() => {
 
 .btn-secondary:hover {
   background-color: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn-escalate {

@@ -1998,7 +1998,7 @@ function formatResolutionAction(act?: string): string {
   padding: 10px 14px;
   font-size: 0.8rem;
   line-height: 1.5;
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .form-group {
@@ -2240,7 +2240,7 @@ function formatResolutionAction(act?: string): string {
 
 .btn-outline-secondary:hover {
   background-color: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .floating-batch-bar {

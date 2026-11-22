@@ -459,7 +459,7 @@ body {
 .portal-nav-item .portal-link-btn {
   background-color: var(--semantic-color-surface-muted);
   border: 1px dashed var(--semantic-color-border-control);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .portal-nav-item .portal-link-btn:hover {
@@ -1660,7 +1660,7 @@ a:focus-visible,
   transition: all 0.15s ease;
   margin-bottom: 8px;
   cursor: pointer;
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .canvas-field-widget:hover {

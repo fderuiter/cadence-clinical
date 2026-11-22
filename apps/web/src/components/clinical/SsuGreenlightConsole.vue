@@ -1857,7 +1857,7 @@ onMounted(() => {
 
 .btn-secondary:hover:not(:disabled) {
   background: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-primary);
+  color: var(--semantic-color-text);
 }
 
 .btn-override {
