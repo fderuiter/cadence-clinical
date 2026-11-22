@@ -3950,37 +3950,159 @@ export function createWebDemoStore() {
             .toLowerCase()
       );
       if (!normalized) {
-        return null;
+        return { error: "invalid_tier" };
       }
+      if (
+        state.entitlements?.is_read_only ||
+        state.entitlements?.status === "Expired"
+      ) {
+        return { error: "expired" };
+      }
+      const preserveTrial = state.entitlements?.status === "Trialing";
       state.entitlements = {
         ...state.entitlements,
         tier: normalized,
-        status: "Active",
+        status: preserveTrial ? "Trialing" : "Active",
         is_read_only: false,
         product_families: [...findCommercialTier(normalized).families],
       };
       recordActivity(
-        "subscription.tier_upgraded",
-        "Trust",
+        preserveTrial
+          ? "subscription.trial_tier_switched"
+          : "subscription.tier_upgraded",
+        "Execution",
         "subscription",
         state.entitlements.subscription_ref,
         getDemoPersonaForWorkspace("super_admin")?.username || "designer.lead"
       );
-      return cloneJson(state.entitlements);
+      return { data: cloneJson(state.entitlements) };
+    },
+
+    activateSubscription(payload = {}) {
+      const normalizedTier = ["Individual", "Select", "Complete"].find(
+        (candidate) =>
+          candidate.toLowerCase() ===
+          String(payload?.tier || "")
+            .trim()
+            .toLowerCase()
+      );
+      if (!normalizedTier) {
+        return { error: "invalid_tier" };
+      }
+      const errors = {};
+      const validPhases = new Set([
+        "Phase I",
+        "Phase I/II",
+        "Phase II",
+        "Phase II/III",
+        "Phase III",
+        "Phase IV",
+        "Observational",
+      ]);
+      const studyPhase = String(payload?.study_phase || "").trim();
+      if (!studyPhase) {
+        errors.study_phase = ["Study phase is required."];
+      } else if (!validPhases.has(studyPhase)) {
+        errors.study_phase = [
+          "Study phase must be one of: Phase I, Phase I/II, Phase II, Phase II/III, Phase III, Phase IV, Observational.",
+        ];
+      }
+      const duration = Number(payload?.study_duration_months);
+      if (!Number.isInteger(duration) || duration < 1 || duration > 240) {
+        errors.study_duration_months = [
+          "Study duration in months is required and must be between 1 and 240.",
+        ];
+      }
+      const countries = Array.isArray(payload?.countries)
+        ? payload.countries.map((c) => String(c || "").trim()).filter(Boolean)
+        : [];
+      if (countries.length === 0) {
+        errors.countries = ["At least one participating country is required."];
+      }
+      const siteCount = Number(payload?.site_count);
+      if (!Number.isInteger(siteCount) || siteCount < 1 || siteCount > 10000) {
+        errors.site_count = [
+          "Planned site count is required and must be between 1 and 10,000.",
+        ];
+      }
+      const participantCount = Number(payload?.participant_count);
+      if (
+        !Number.isInteger(participantCount) ||
+        participantCount < 1 ||
+        participantCount > 1e6
+      ) {
+        errors.participant_count = [
+          "Planned participant count is required and must be between 1 and 1,000,000.",
+        ];
+      }
+      const activeStudyCount = Number(payload?.active_study_count);
+      if (
+        !Number.isInteger(activeStudyCount) ||
+        activeStudyCount < 1 ||
+        activeStudyCount > 1000
+      ) {
+        errors.active_study_count = [
+          "Active study count is required and must be between 1 and 1,000.",
+        ];
+      }
+      const billingConfirmation = String(
+        payload?.billing_confirmation || ""
+      ).trim();
+      if (billingConfirmation.length < 3 || billingConfirmation.length > 160) {
+        errors.billing_confirmation = [
+          "A purchase order or signed quote reference (3 to 160 characters) is required to confirm billing.",
+        ];
+      }
+      if (Object.keys(errors).length > 0) {
+        return { error: "scoping_invalid", errors };
+      }
+
+      state.entitlements = {
+        ...state.entitlements,
+        tier: normalizedTier,
+        status: "Active",
+        is_read_only: false,
+        product_families: [...findCommercialTier(normalizedTier).families],
+        scoping: {
+          study_phase: studyPhase,
+          study_duration_months: duration,
+          countries,
+          site_count: siteCount,
+          participant_count: participantCount,
+          active_study_count: activeStudyCount,
+          billing_confirmation: billingConfirmation,
+        },
+      };
+      recordActivity(
+        "subscription.activated",
+        "Execution",
+        "subscription",
+        state.entitlements.subscription_ref,
+        getDemoPersonaForWorkspace("super_admin")?.username || "designer.lead"
+      );
+      return { data: cloneJson(state.entitlements) };
     },
 
     bootstrapTrial(payload = {}) {
-      const requestedTier = payload?.tier || "Individual";
-      const updated =
-        this.upgradeSubscriptionTier(requestedTier) ||
-        this.upgradeSubscriptionTier("Individual");
+      const requestedTier =
+        ["Individual", "Select", "Complete"].find(
+          (candidate) =>
+            candidate.toLowerCase() ===
+            String(payload?.tier || "Individual")
+              .trim()
+              .toLowerCase()
+        ) || "Individual";
       const now = new Date(demoNowMs());
       const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
       state.entitlements = {
-        ...updated,
+        ...state.entitlements,
+        tier: requestedTier,
         status: "Trialing",
+        is_read_only: false,
+        product_families: [...findCommercialTier(requestedTier).families],
         started_at: now.toISOString(),
         trial_ends_at: trialEnd.toISOString(),
+        scoping: null,
       };
       const defaultSite = DEMO_SITES[0];
       return {

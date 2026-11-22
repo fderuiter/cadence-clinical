@@ -115,8 +115,8 @@ export function createWebDemoHandlers(store = webDemoStore) {
     ),
     http.post("*/api/v1/kernel/entitlements/tier", async ({ request }) => {
       const body = await readJsonBody(request);
-      const updated = store.upgradeSubscriptionTier(body?.tier);
-      if (!updated) {
+      const outcome = store.upgradeSubscriptionTier(body?.tier);
+      if (!outcome || outcome.error === "invalid_tier") {
         return HttpResponse.json(
           {
             type: "https://cadence.clinical/errors/K.Commercial.TierInvalid",
@@ -127,7 +127,50 @@ export function createWebDemoHandlers(store = webDemoStore) {
           { status: 400 }
         );
       }
-      return HttpResponse.json(updated);
+      if (outcome.error === "expired") {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.Subscription.Expired",
+            title: "Trial subscription expired",
+            status: 403,
+            code: "K.Subscription.Expired",
+            detail:
+              "This tenant's trial subscription has expired. Read and export access remains active; activate a subscription to resume workspace writes.",
+          },
+          { status: 403 }
+        );
+      }
+      return HttpResponse.json(outcome.data);
+    }),
+    http.post("*/api/v1/kernel/entitlements/activate", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const outcome = store.activateSubscription(body);
+      if (outcome.error === "invalid_tier") {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.Commercial.TierInvalid",
+            title: "Invalid commercial tier",
+            status: 400,
+            code: "K.Commercial.TierInvalid",
+          },
+          { status: 400 }
+        );
+      }
+      if (outcome.error === "scoping_invalid") {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.Commercial.ScopingInvalid",
+            title: "Study scoping details required for subscription activation",
+            status: 422,
+            code: "K.Commercial.ScopingInvalid",
+            detail:
+              "Activating a commercial subscription requires valid study phase, duration, participating countries, site count, participant count, active study count, and a purchase order or quote confirmation.",
+            errors: outcome.errors,
+          },
+          { status: 422 }
+        );
+      }
+      return HttpResponse.json(outcome.data);
     }),
     http.post("*/api/v1/kernel/onboarding/trial", async ({ request }) => {
       const body = await readJsonBody(request);

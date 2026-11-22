@@ -55,8 +55,8 @@
     </template>
 
     <p class="pulse-footnote">
-      Data, safety, sites, quality, supply and submission measures arrive as
-      kernel indicators (#4845).
+      Additional quality, safety, site, and supply summaries appear here as
+      study data is recorded.
     </p>
   </section>
 </template>

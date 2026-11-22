@@ -33,6 +33,7 @@ public static class KernelEventFamilies
         ["TenantMembershipRegistered"] = EventFamily.Execution,
         ["SubscriptionProvisioned"] = EventFamily.Execution,
         ["SubscriptionExpired"] = EventFamily.Execution,
+        ["SubscriptionTrialTierSwitched"] = EventFamily.Execution,
         ["SubscriptionActivated"] = EventFamily.Execution,
         ["ProductEntitlementGranted"] = EventFamily.Execution,
         ["ProductEntitlementRevoked"] = EventFamily.Execution,

@@ -157,26 +157,29 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     ]);
   });
 
-  it("says so when the kernel has no study with that code the reader may see", async () => {
+  it("says in plain terms when the study wasn't found or isn't visible", async () => {
     vi.mocked(kernelApi.search).mockResolvedValue([]);
 
     await open("/studies/CAD-101?section=protocol-versions");
 
     expect(wrapper.find("#protocol-versions-status").text()).toBe(
-      "The kernel has no study CAD-101 that you may see."
+      "Study CAD-101 wasn't found or isn't visible to your account."
     );
     expect(kernelApi.listProtocolVersions).not.toHaveBeenCalled();
   });
 
-  it("reports the kernel's refusal as it is", async () => {
+  it("presents a plain status message and collapsible support details when versions cannot be read", async () => {
     vi.mocked(kernelApi.listProtocolVersions).mockRejectedValue(
       new ApiError("Not visible", 403)
     );
 
     await open("/studies/CAD-101?section=protocol-versions");
 
-    expect(wrapper.find("#protocol-versions-status").text()).toBe(
-      "The kernel couldn't answer: Not visible"
+    expect(wrapper.find("#protocol-versions-status").text()).toContain(
+      "Protocol versions couldn't be loaded right now."
+    );
+    expect(wrapper.find("#protocol-versions-section details").text()).toContain(
+      "Not visible"
     );
   });
 
@@ -243,7 +246,7 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     const changes = wrapper.findAll("#kernel-amendment-changes li");
     expect(changes.map((c) => c.text().replace(/\s+/g, " "))).toEqual([
       "Added activity act-pk",
-      "Changed encounter enc-v3 (/window/upper)",
+      "Changed encounter enc-v3 (Window · Upper)",
     ]);
     expect(wrapper.find("#kernel-impact-total").text()).toBe(
       "2 dependent objects"
@@ -287,15 +290,18 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     expect(kernelApi.trace).toHaveBeenCalledWith(V2);
   });
 
-  it("says why a version named in the URL couldn't be read", async () => {
+  it("presents a plain status message and support details when a version named in the URL couldn't be read", async () => {
     vi.mocked(kernelApi.getProtocolVersion).mockRejectedValue(
       new ApiError(`${V2} does not exist in your tenant.`, 404)
     );
 
     await open(`/studies/CAD-101?section=protocol-versions&node=${V2}`);
 
-    expect(wrapper.find("#inspector-version-error").text()).toBe(
-      `The kernel couldn't answer: ${V2} does not exist in your tenant.`
+    expect(wrapper.find("#inspector-version-error").text()).toContain(
+      "This protocol version couldn't be loaded."
+    );
+    expect(wrapper.find("#canvas-inspector details").text()).toContain(
+      "does not exist in your tenant"
     );
   });
 

@@ -11603,8 +11603,8 @@
         "tags": [
           "Kernel"
         ],
-        "summary": "Activates or upgrades the tenant\u0027s commercial tier in place while preserving all clinical and audit records.",
-        "description": "Transitions a trial or active subscription to Individual, Select, or Complete and grants the tier\u0027s product families through the kernel command pipeline without altering clinical Grants or existing study data.",
+        "summary": "Switches the tenant\u0027s commercial evaluation tier in place while preserving trial countdown and clinical records.",
+        "description": "Updates enabled product families on an active Trialing or Active subscription without activating billing or extending the original 30-day trial window. Refused with K.Subscription.Expired when the trial has expired.",
         "operationId": "KernelUpgradeSubscriptionTier",
         "requestBody": {
           "content": {
@@ -11731,6 +11731,156 @@
           },
           {
             "code": "K.Commercial.EntitlementRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Commercial.SubscriptionRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Commercial.TierInvalid",
+            "status": 422
+          }
+        ]
+      }
+    },
+    "/api/v1/kernel/entitlements/activate": {
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Activates a Trialing or Expired commercial subscription after validating study scoping and billing confirmation.",
+        "description": "Requires study phase, study duration, participating countries, site count, participant count, active study count, and a purchase order or quote reference before transitioning a Trialing or Expired workspace to Active and clearing read-only restrictions.",
+        "operationId": "KernelActivateSubscription",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_KernelActivateSubscriptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelEntitlementsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Commercial.SubscriptionUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Commercial.EntitlementRequired\u0060, \u0060K.Commercial.ScopingInvalid\u0060, \u0060K.Commercial.SubscriptionRequired\u0060, \u0060K.Commercial.TierInvalid\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Commercial.SubscriptionUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Commercial.EntitlementRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Commercial.ScopingInvalid",
             "status": 422
           },
           {
@@ -27716,6 +27866,74 @@
         }
       },
       "Kernel_JsonElement": {},
+      "Kernel_KernelActivateSubscriptionRequest": {
+        "required": [
+          "tier"
+        ],
+        "type": "object",
+        "properties": {
+          "tier": {
+            "type": "string"
+          },
+          "study_phase": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study_duration_months": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "countries": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "site_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "participant_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "active_study_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "billing_confirmation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Kernel_KernelActivityEntryResponse": {
         "required": [
           "event_id",
@@ -28437,6 +28655,16 @@
           },
           "environment_notice": {
             "type": "string"
+          },
+          "scoping": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelSubscriptionScopingResponse"
+              }
+            ]
           }
         }
       },
@@ -30679,6 +30907,64 @@
                 "$ref": "#/components/schemas/Kernel_KernelStudySiteSummaryResponse"
               }
             ]
+          }
+        }
+      },
+      "Kernel_KernelSubscriptionScopingResponse": {
+        "required": [
+          "study_phase",
+          "study_duration_months",
+          "countries",
+          "site_count",
+          "participant_count",
+          "active_study_count",
+          "billing_confirmation"
+        ],
+        "type": "object",
+        "properties": {
+          "study_phase": {
+            "type": "string"
+          },
+          "study_duration_months": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "countries": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "site_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "participant_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "active_study_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "billing_confirmation": {
+            "type": "string"
           }
         }
       },

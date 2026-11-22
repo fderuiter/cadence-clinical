@@ -89,12 +89,19 @@ public static partial class RulesetService
         output ??= Console.Out;
 
         var errors = new List<string>();
-        var definitions = LoadAndValidateRulesetFiles(repoRoot, errors);
+        bool hasRulesetsDirectory = Directory.Exists(Path.Combine(repoRoot, ".github", "rulesets"));
+        var definitions = hasRulesetsDirectory
+            ? LoadAndValidateRulesetFiles(repoRoot, errors)
+            : [];
         var workflowJobs = LoadAndValidateWorkflows(repoRoot, errors);
 
-        if (definitions.Count > 0 && workflowJobs.Count > 0)
+        if (workflowJobs.Count > 0)
         {
-            ValidateWorkflowParity(definitions, workflowJobs, errors);
+            if (definitions.Count > 0)
+            {
+                ValidateWorkflowParity(definitions, workflowJobs, errors);
+            }
+
             ValidateCiGateCoverage(workflowJobs, errors);
         }
 
@@ -108,7 +115,15 @@ public static partial class RulesetService
             return 1;
         }
 
-        output.WriteLine($"{Tag} ✔ Validated {definitions.Count} declarative rulesets and CI Gate workflow parity.");
+        if (hasRulesetsDirectory)
+        {
+            output.WriteLine($"{Tag} ✔ Validated {definitions.Count} declarative rulesets and CI Gate workflow parity.");
+        }
+        else
+        {
+            output.WriteLine($"{Tag} ✔ Validated CI Gate workflow parity (no declarative .github/rulesets directory present).");
+        }
+
         return 0;
     }
 

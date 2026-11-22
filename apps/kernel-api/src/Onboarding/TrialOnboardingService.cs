@@ -98,6 +98,7 @@ public sealed partial class TrialOnboardingService(
         "concept.revise",
         "effectivity.declare",
         "effectivity.change_status",
+        "subscription.switch_tier",
         "subscription.activate",
         "subscription.expire",
         "entitlement.grant",

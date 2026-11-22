@@ -828,10 +828,30 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Activates or upgrades the tenant's commercial tier in place while preserving all clinical and audit records.
-     * @description Transitions a trial or active subscription to Individual, Select, or Complete and grants the tier's product families through the kernel command pipeline without altering clinical Grants or existing study data.
+     * Switches the tenant's commercial evaluation tier in place while preserving trial countdown and clinical records.
+     * @description Updates enabled product families on an active Trialing or Active subscription without activating billing or extending the original 30-day trial window. Refused with K.Subscription.Expired when the trial has expired.
      */
     post: operations["KernelUpgradeSubscriptionTier"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/entitlements/activate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Activates a Trialing or Expired commercial subscription after validating study scoping and billing confirmation.
+     * @description Requires study phase, study duration, participating countries, site count, participant count, active study count, and a purchase order or quote reference before transitioning a Trialing or Expired workspace to Active and clearing read-only restrictions.
+     */
+    post: operations["KernelActivateSubscription"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1746,6 +1766,20 @@ export interface components {
       recommendations: components["schemas"]["Kernel_IntentRecommendation"][];
     };
     Kernel_JsonElement: unknown;
+    Kernel_KernelActivateSubscriptionRequest: {
+      tier: string;
+      study_phase?: null | string;
+      /** Format: int32 */
+      study_duration_months?: null | number | string;
+      countries?: null | string[];
+      /** Format: int32 */
+      site_count?: null | number | string;
+      /** Format: int32 */
+      participant_count?: null | number | string;
+      /** Format: int32 */
+      active_study_count?: null | number | string;
+      billing_confirmation?: null | string;
+    };
     Kernel_KernelActivityEntryResponse: {
       /** Format: uuid */
       event_id: string;
@@ -1917,6 +1951,9 @@ export interface components {
       product_families: string[];
       baseline_capabilities: string[];
       environment_notice: string;
+      scoping?:
+        | null
+        | components["schemas"]["Kernel_KernelSubscriptionScopingResponse"];
     };
     Kernel_KernelExplanationResponse: {
       subject: null | string;
@@ -2390,6 +2427,19 @@ export interface components {
       site_count: number | string;
       linked_site?:
         null | components["schemas"]["Kernel_KernelStudySiteSummaryResponse"];
+    };
+    Kernel_KernelSubscriptionScopingResponse: {
+      study_phase: string;
+      /** Format: int32 */
+      study_duration_months: number | string;
+      countries: string[];
+      /** Format: int32 */
+      site_count: number | string;
+      /** Format: int32 */
+      participant_count: number | string;
+      /** Format: int32 */
+      active_study_count: number | string;
+      billing_confirmation: string;
     };
     Kernel_KernelTrialOnboardingRequest: {
       organization_name: string;
@@ -5718,6 +5768,84 @@ export interface operations {
         };
       };
       /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Commercial.EntitlementRequired`, `K.Commercial.SubscriptionRequired`, `K.Commercial.TierInvalid`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelActivateSubscription: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_KernelActivateSubscriptionRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelEntitlementsResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Commercial.SubscriptionUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Commercial.EntitlementRequired`, `K.Commercial.ScopingInvalid`, `K.Commercial.SubscriptionRequired`, `K.Commercial.TierInvalid`. */
       422: {
         headers: {
           [name: string]: unknown;

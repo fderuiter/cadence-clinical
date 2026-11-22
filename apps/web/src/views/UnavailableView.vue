@@ -28,7 +28,7 @@
           </p>
           <p class="info-card-note">
             Commercial subscriptions govern product-family packaging; clinical
-            study visibility remains governed separately by kernel Grants.
+            study visibility remains governed separately by study access grants.
           </p>
         </section>
 

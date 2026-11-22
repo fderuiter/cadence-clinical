@@ -134,6 +134,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2601: One Composition Host for the Kernel and Its Modules](2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md) (2026-10-19)
 - [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) (2026-10-28) _(Partially superseded by ADR-2603)_
 - [ADR-2603: Keep Cadence in One Repository](2026-11-19-keep-cadence-in-one-repository.md) (2026-11-19)
+- [ADR-2604: Signed Gateway Expiry Guard and Scoped Trial Upgrades](2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md) (2026-11-21)
 - [ADR-2610: Scaffold Services Become Kernel Modules or Merge](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md) (2026-10-15)
 - [ADR-2620: The eCRF Correction Transaction Boundary](2026-10-15-ecrf-correction-transaction-boundary.md) (2026-10-15)
 - [ADR-2621: Observation Corrections Are Revisions; Locks Are Scoped Assertions](2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md) (2026-10-19)

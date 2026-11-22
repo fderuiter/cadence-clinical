@@ -7,7 +7,10 @@
       <li v-for="(step, index) in explanation.steps" :key="`step-${index}`">
         {{ step.claim }}
         <span v-if="step.evidence.length" class="explanation-evidence">
-          <code v-for="ref in step.evidence" :key="ref">{{ ref }}</code>
+          <template v-for="ref in step.evidence" :key="ref">
+            <NodeRefChip v-if="isNodeRef(ref)" :node-ref="ref" />
+            <code v-else>{{ ref }}</code>
+          </template>
         </span>
       </li>
     </ol>
@@ -24,7 +27,10 @@
           }}</span>
           {{ condition.description }}
           <span v-if="condition.evidence.length" class="explanation-evidence">
-            <code v-for="ref in condition.evidence" :key="ref">{{ ref }}</code>
+            <template v-for="ref in condition.evidence" :key="ref">
+              <NodeRefChip v-if="isNodeRef(ref)" :node-ref="ref" />
+              <code v-else>{{ ref }}</code>
+            </template>
           </span>
         </li>
       </ul>
@@ -37,6 +43,12 @@
           :key="`next-${index}`"
         >
           {{ action.description }}
+          <span
+            v-if="action.target && isNodeRef(action.target)"
+            class="explanation-evidence"
+          >
+            <NodeRefChip :node-ref="action.target" />
+          </span>
         </li>
       </ul>
     </template>
@@ -44,14 +56,35 @@
 </template>
 
 <script setup lang="ts">
+import { watch } from "vue";
 import type { KernelExplanation } from "../../api/kernelApi";
+import { parseNodeRef } from "../../canvas/nodeRef";
+import { ensureNodesResolved } from "../../canvas/nodeResolver";
+import NodeRefChip from "./NodeRefChip.vue";
 
 /**
- * Renders one of the kernel's explanations (ADR-2482) as the kernel produced it: the claim, the chain of steps,
- * every condition checked with whether it held, and what would change the outcome. The Canvas never composes or
- * rewords an explanation (K-EXP-1); it only lays it out.
+ * Renders one of the kernel's explanations (ADR-2482) verbatim as produced: the claim, the chain of steps,
+ * every condition checked with whether it held, and what would change the outcome (K-EXP-1), resolving
+ * referenced evidence objects and targets into clickable human-readable links.
  */
-defineProps<{ explanation: KernelExplanation }>();
+const props = defineProps<{ explanation: KernelExplanation }>();
+
+function isNodeRef(value: string): boolean {
+  return parseNodeRef(value) !== null;
+}
+
+watch(
+  () => props.explanation,
+  (exp) => {
+    const refs = [
+      ...exp.steps.flatMap((s) => s.evidence),
+      ...exp.conditions.flatMap((c) => c.evidence),
+      ...exp.next_actions.map((a) => a.target),
+    ];
+    ensureNodesResolved(refs);
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
