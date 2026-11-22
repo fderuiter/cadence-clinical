@@ -343,6 +343,11 @@ public sealed record KernelObservationStateResponse(string Ref, string Enrollmen
 /// <param name="Revisions">Every revision, oldest first.</param>
 /// <param name="Assertions">Verifications, queries and answers about it, retracted ones included, oldest first.</param>
 /// <param name="Audit">The kernel audit-chain entries about the observation, oldest first.</param>
+/// <param name="FormRef">Owning collection instance NodeRef when the observation belongs to an eCRF form.</param>
+/// <param name="ItemId">Owning collection item identifier when the observation belongs to an eCRF form.</param>
+/// <param name="ExpectedValueKind">Expected value kind declared by the owning collection item.</param>
+/// <param name="ExpectedUnit">Expected UCUM unit declared by the owning collection item.</param>
+/// <param name="ExpectedCodeSystemVersionId">Expected code-system version declared by the owning collection item.</param>
 public sealed record KernelObservationResponse(
     string Ref,
     string EnrollmentRef,
@@ -353,7 +358,12 @@ public sealed record KernelObservationResponse(
     IReadOnlyList<LockView> Locks,
     IReadOnlyList<ObservationRevisionView> Revisions,
     IReadOnlyList<AssertionView> Assertions,
-    IReadOnlyList<ObservationAuditView> Audit)
+    IReadOnlyList<ObservationAuditView> Audit,
+    string? FormRef = null,
+    string? ItemId = null,
+    string? ExpectedValueKind = null,
+    string? ExpectedUnit = null,
+    Guid? ExpectedCodeSystemVersionId = null)
 {
     internal static KernelObservationResponse From(ObservationRecord record) =>
         new(
@@ -366,5 +376,10 @@ public sealed record KernelObservationResponse(
             record.Locks.ToList(),
             record.Revisions.ToList(),
             record.Assertions.ToList(),
-            record.Audit.ToList());
+            record.Audit.ToList(),
+            record.CollectionInstanceId is { } formId ? NodeRef.For(formId).ToString() : null,
+            record.ItemId,
+            record.ExpectedValueKind?.ToString(),
+            record.ExpectedUnit,
+            record.ExpectedCodeSystemVersionId?.Value);
 }

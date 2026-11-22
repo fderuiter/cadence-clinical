@@ -176,6 +176,23 @@ public sealed class BuildDocsScriptTests : IDisposable
     }
 
     [Fact]
+    public void BuildDocs_IsolatesSigningSecretsFromVitePressSubprocess_WithoutMutatingProcessEnv()
+    {
+        var result = RunBuildDocs(new Dictionary<string, string?>
+        {
+            ["CADENCE_DOCS_SKIP_CHECKS"] = "1",
+            ["AUDIT_LOG_SECRET_KEY"] = "super-secret-audit-key",
+            ["INBOUND_EMAIL_HMAC_SECRET"] = "super-secret-hmac-key",
+            ["GATEWAY_SECRET_KEY"] = "super-secret-gateway-key",
+            ["GITHUB_TOKEN"] = "ghp_shouldNotLeakIntoVitePressBuild",
+        });
+
+        result.ExitCode.Should().Be(0, result.Output);
+        string snapshotDuringBuild = File.ReadAllText(Path.Combine(_fixtureRoot, "vitepress-snapshot.txt"));
+        snapshotDuringBuild.Should().Contain("VITEPRESS_SECRETS=|||");
+    }
+
+    [Fact]
     public void PaymentsSchemaDoc_MatchesEfCoreModel_IncludingAllFourStatusCheckConstraints()
     {
         string repoRoot = FindRepoRoot();
@@ -214,6 +231,7 @@ public sealed class BuildDocsScriptTests : IDisposable
         int exitCode = RtmGeneratorService.GenerateRtm(
             draft: true,
             validateOnly: true,
+            reportPath: Path.Combine(_fixtureRoot, "no-trx"),
             repoRoot: repoRoot,
             honorDraftEnvironment: false,
             requireCurrentSnapshot: false,
@@ -335,9 +353,15 @@ public sealed class BuildDocsScriptTests : IDisposable
               const schema = fs.readFileSync(path.join(root, "docs", "schema", "payments.md"), "utf8");
               const staged = ["README.md", "ARCHITECTURE.md", "AGENTS.md", "LICENSE.md"]
                 .every((f) => fs.existsSync(path.join(root, "docs", f)));
+              const secrets = [
+                process.env.AUDIT_LOG_SECRET_KEY ?? "",
+                process.env.INBOUND_EMAIL_HMAC_SECRET ?? "",
+                process.env.GATEWAY_SECRET_KEY ?? "",
+                process.env.GITHUB_TOKEN ?? "",
+              ].join("|");
               fs.writeFileSync(
                 path.join(root, "vitepress-snapshot.txt"),
-                `${rtm}\n${iq}\n${schema}\nSTAGED_ROOT_DOCS=${staged}\n`,
+                `${rtm}\n${iq}\n${schema}\nSTAGED_ROOT_DOCS=${staged}\nVITEPRESS_SECRETS=${secrets}\n`,
                 "utf8"
               );
             }

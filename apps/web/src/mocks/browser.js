@@ -42,7 +42,10 @@ export function installInProcessMswFallback(target = window) {
   }
   const previousFetch = target.fetch.bind(target);
   const wrappedFetch = async (input, init) => {
-    const baseHref = target.location?.href || "http://127.0.0.1:3001/";
+    const baseHref =
+      target.location?.href ||
+      (typeof window !== "undefined" && window.location?.href) ||
+      "https://cadence.example/";
     const rawUrl = input instanceof Request ? input.url : String(input);
     const resolvedUrl = new URL(rawUrl, baseHref).href;
     const baseReq =

@@ -1,7 +1,6 @@
 /**
- * Which canvas actions to offer the signed-in user. This is presentation only: Execution decides, and the
- * canvas reports its refusal (UX-6). Execution checks query management and source data verification
- * (#4920) and participant changes (#4943); all move to kernel Grants with the command catalogue (#4847, #4781).
+ * Which canvas actions to offer the signed-in user. This is presentation only: Execution and the Kernel decide, and
+ * the canvas reports any refusal (UX-6).
  */
 interface RoleHolder {
   hasRole: (role: string) => boolean;
@@ -15,11 +14,6 @@ interface RawRoleHolder {
   siteIds?: readonly string[] | null;
 }
 
-/**
- * Execution's SubjectAuthority.CanManageParticipants: investigators and coordinators. Compared with Execution's
- * own normalisation (trimmed, lower case) and without the web app's role aliases, because Execution does not
- * apply them: a data manager (#4981), a sponsor admin, a monitor or an auditor gets a 403.
- */
 const PARTICIPANT_ROLES = new Set([
   "investigator",
   "site_investigator",
@@ -37,6 +31,21 @@ const PARTICIPANT_ROLES = new Set([
   "site coordinator",
   "site_coordinator",
   "clinical research coordinator",
+]);
+
+const SIGNING_RAW_ROLES = new Set([
+  "investigator",
+  "site_investigator",
+  "site investigator",
+  "site-investigator",
+  "principal_investigator",
+  "principal investigator",
+  "pi",
+  "sub_investigator",
+  "sub investigator",
+  "sub-investigator",
+  "lead_investigator",
+  "lead investigator",
 ]);
 
 /** Whether the caller's token carries a raw coordinator/investigator role accepted by Execution. */
@@ -99,6 +108,62 @@ export function canManageQueries(auth: RoleHolder): boolean {
   return MONITORING_ROLES.some((role) => auth.hasRole(role));
 }
 
+/** Answer open queries (`execution.query.answer`: site coordinators and investigators, not monitors or data managers). */
+export function canAnswerQueries(
+  auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
+): boolean {
+  if (!auth.isAuthenticated) return true;
+  if (canManageParticipants(auth)) return true;
+  if (canManageQueries(auth)) return false;
+  return [
+    "site_investigator",
+    "investigator",
+    "principal_investigator",
+    "crc",
+  ].some((role) => auth.hasRole(role));
+}
+
+/** Sign eCRF forms (`collection.sign`: investigators only). */
+export function canSignForms(
+  auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
+): boolean {
+  if (!auth.isAuthenticated) return true;
+  if (
+    (auth.rawRoles ?? []).some((role) =>
+      SIGNING_RAW_ROLES.has(role.trim().toLowerCase())
+    )
+  ) {
+    return true;
+  }
+  return ["site_investigator", "investigator", "principal_investigator"].some(
+    (role) => auth.hasRole(role)
+  );
+}
+
+/** Draft, approve, and pin study edit-check rule packs. */
+export function canManageRulePacks(
+  auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
+): boolean {
+  if (!auth.isAuthenticated) return true;
+  if (
+    (auth.rawRoles ?? []).some((role) => {
+      const normalized = role.trim().toLowerCase();
+      return (
+        normalized.includes("designer") ||
+        normalized.includes("data_manager") ||
+        normalized.includes("data manager") ||
+        normalized === "admin" ||
+        normalized === "system_admin"
+      );
+    })
+  ) {
+    return true;
+  }
+  return ["study_designer", "designer", "data_manager", "admin"].some((role) =>
+    auth.hasRole(role)
+  );
+}
+
 /** Verify observations against source, or flag them for re-verification. */
 export function canVerifySource(auth: RoleHolder): boolean {
   return MONITORING_ROLES.some((role) => auth.hasRole(role));
@@ -108,6 +173,8 @@ export function canVerifySource(auth: RoleHolder): boolean {
 // monitors and auditors inspect observations read-only per KernelObservationEndpoints.cs).
 const OBSERVATION_CORRECTION_ROLES = [
   "site_investigator",
+  "investigator",
+  "principal_investigator",
   "crc",
   "data_manager",
 ];

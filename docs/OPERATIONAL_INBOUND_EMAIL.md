@@ -115,7 +115,7 @@ To maintain GxP record integrity and prevent duplicate document rows, the webhoo
 
 Webhook duplicate delivery is extremely common in SMTP infrastructures.
 
-- The webhook extracts the standard email natural key: the `Message-Id` header (e.g., `<unique-msg-id@example.com>`).
+- The webhook extracts the standard email natural key: the `Message-Id` header (e.g., `<unique-msg-id@cadence.clinical>`).
 - Before starting ingestion, the service queries the `tmf_documents` table to see if a record already exists with that `Message-Id` in its `metadata_json`.
 - If a match is found, the webhook performs a **no-op** and immediately returns a successful `HTTP 201 Created` with `{"status": "accepted"}`. No new files or audit log records are created.
 

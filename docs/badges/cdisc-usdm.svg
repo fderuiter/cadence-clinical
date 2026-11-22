@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="156" height="20" role="img" aria-label="CDISC: USDM v3 | v4">
+  <title>CDISC: USDM v3 | v4</title>
+  <rect width="52" height="20" rx="3" fill="#334155"/>
+  <rect x="49" width="107" height="20" rx="3" fill="#1e3a8a"/>
+  <rect x="49" width="4" height="20" fill="#1e3a8a"/>
+  <g fill="#ffffff" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif" font-size="11" font-weight="600">
+    <text x="26" y="14">CDISC</text>
+    <text x="103" y="14">USDM v3 | v4</text>
+  </g>
+</svg>
