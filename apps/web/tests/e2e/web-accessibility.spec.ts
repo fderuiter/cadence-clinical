@@ -178,4 +178,167 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expect(page.locator(".plans-view")).toBeVisible();
     await expectNoWcagViolations(page, "PlansView");
   });
+
+  test("Migrated ClinicalDrawer and ClinicalModal overlays on /etmf, /training, and /data-lock pass WCAG 2.2 AA, LIFO Escape, and reduced-motion", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // 1. /etmf: DocumentManagerView ClinicalDrawer + stacked PdfPreviewModal LIFO Escape
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await gotoHashRoute(page, "/etmf");
+    await expect(page.locator(".document-manager-layout")).toBeVisible();
+
+    const zoneWithDocs = page
+      .locator(".zone-header")
+      .filter({ has: page.locator(".zone-badge") })
+      .first();
+    await expect(zoneWithDocs).toBeVisible();
+    await zoneWithDocs.click();
+
+    const sectionWithDocs = page
+      .locator(".section-header")
+      .filter({ has: page.locator(".section-badge") })
+      .first();
+    await expect(sectionWithDocs).toBeVisible();
+    await sectionWithDocs.click();
+
+    const artifactWithDocs = page
+      .locator(".artifact-node")
+      .filter({ has: page.locator(".artifact-badge") })
+      .first();
+    await expect(artifactWithDocs).toBeVisible();
+    await artifactWithDocs.click();
+
+    const inspectBtn = page.locator(".btn-inspect-doc").first();
+    await expect(inspectBtn).toBeVisible();
+    await inspectBtn.click();
+
+    const drawerDialog = page.locator('.metadata-drawer[role="dialog"]');
+    await expect(drawerDialog).toBeVisible();
+    await expect(drawerDialog).toHaveAttribute("aria-modal", "true");
+
+    const animationDurationSec = await drawerDialog.evaluate((el) =>
+      parseFloat(window.getComputedStyle(el).animationDuration)
+    );
+    expect(animationDurationSec).toBeLessThanOrEqual(0.001);
+
+    await expectNoWcagViolations(
+      page,
+      "DocumentManagerView ClinicalDrawer (/etmf)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/etmf-clinical-drawer.png" });
+    }
+
+    // Launch stacked PdfPreviewModal from inside open ClinicalDrawer
+    await drawerDialog.locator(".btn-preview-from-drawer").click();
+    const pdfDialog = page.locator('.pdf-preview-modal[role="dialog"]');
+    await expect(pdfDialog).toBeVisible();
+
+    // First Escape closes ONLY top PdfPreviewModal while ClinicalDrawer stays open
+    await page.keyboard.press("Escape");
+    await expect(pdfDialog).toBeHidden();
+    await expect(drawerDialog).toBeVisible();
+
+    // Second Escape closes ClinicalDrawer
+    await page.keyboard.press("Escape");
+    await expect(drawerDialog).toBeHidden();
+
+    // 2. /training: StudyTrainingView -> ProtocolTrainingConsole ClinicalModal
+    await page.evaluate(() => {
+      const origFetch = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url =
+          typeof input === "string"
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url;
+        if (
+          url.includes("/api/v1/training/delegations") &&
+          !url.includes("bulk-signoff") &&
+          (!init?.method || init.method.toUpperCase() === "GET")
+        ) {
+          return new Response(
+            JSON.stringify([
+              {
+                id: "del-01",
+                study_id: "CADENCE-101",
+                site_id: "SITE-101",
+                staff_user_id: "usr-01",
+                staff_name: "Dr. Elena Rostova",
+                role: "Sub-Investigator",
+                task_code: "INFORMED_CONSENT",
+                duties: "Informed Consent Administration",
+                status: "PENDING",
+                signed_off: false,
+              },
+            ]),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+        return origFetch(input, init);
+      };
+    });
+    await gotoHashRoute(page, "/training");
+    await expect(page.locator("#section-study-training")).toBeVisible();
+    const batchTab = page
+      .locator(".tab-btn")
+      .filter({ hasText: "Batch Assignments" });
+    await expect(batchTab).toBeVisible();
+    await batchTab.click();
+
+    const firstSiteCheckbox = page
+      .locator(".batch-filter-grid input[type='checkbox']")
+      .first();
+    await expect(firstSiteCheckbox).toBeVisible();
+    await firstSiteCheckbox.check();
+
+    const openBatchBtn = page.locator(".batch-preview-bar button");
+    await expect(openBatchBtn).toBeEnabled();
+    await openBatchBtn.click();
+
+    const trainingModal = page.locator(
+      '#section-study-training [role="dialog"]'
+    );
+    await expect(trainingModal).toBeVisible();
+    await expect(trainingModal).toHaveAttribute("aria-modal", "true");
+    await expectNoWcagViolations(
+      page,
+      "ProtocolTrainingConsole Batch Assignment ClinicalModal (/training)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/training-clinical-modal.png" });
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(trainingModal).toBeHidden();
+
+    // 3. /data-lock: DataLockView ClinicalModal (formerly suppressed backdrop)
+    await gotoHashRoute(page, "/data-lock");
+    const lockTrigger = page
+      .locator(".btn-mini-lock, .btn-mini-freeze, .btn-mini-unlock")
+      .first();
+    await expect(lockTrigger).toBeVisible();
+    await lockTrigger.click();
+
+    const dataLockModal = page.locator('[role="dialog"]').first();
+    await expect(dataLockModal).toBeVisible();
+    await expect(dataLockModal).toHaveAttribute("aria-modal", "true");
+    await expectNoWcagViolations(
+      page,
+      "DataLockView ClinicalModal (/data-lock)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/datalock-clinical-modal.png" });
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(dataLockModal).toBeHidden();
+  });
 });

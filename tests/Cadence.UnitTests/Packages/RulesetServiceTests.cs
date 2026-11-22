@@ -303,7 +303,7 @@ public sealed class RulesetServiceTests : IDisposable
     }
 
     [Fact]
-    public void Validate_WhenRulesetsDirectoryIsAbsent_StillValidatesCiGateCoverage()
+    public void Validate_WhenRulesetsDirectoryIsAbsent_StillEnforcesCiGateCoverage_WhileSyncFailsClosed()
     {
         Directory.Delete(Path.Combine(_root, ".github", "rulesets"), recursive: true);
 
@@ -311,29 +311,22 @@ public sealed class RulesetServiceTests : IDisposable
         RulesetService.Validate(_root, validWriter).Should().Be(0, validWriter.ToString());
         validWriter.ToString().Should().Contain("Validated CI Gate workflow coverage");
 
+        using var syncWriter = new StringWriter();
+        RulesetService.Sync(
+                repoRoot: _root,
+                dryRun: true,
+                repoOverride: "owner/repo",
+                environment: _ => null,
+                output: syncWriter)
+            .Should().Be(1, "cadence rulesets sync requires declarative ruleset files");
+        syncWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
+
         WriteCiWorkflow(ciGateNeeds: "[unit-tests]", ciGateIf: "success()", checkComplianceResult: false);
-        using var brokenWriter = new StringWriter();
-        RulesetService.Validate(_root, brokenWriter).Should().Be(1);
-        string brokenOutput = brokenWriter.ToString();
-        brokenOutput.Should().Contain("if: always()");
-        brokenOutput.Should().Contain("compliance");
-    }
-
-    [Fact]
-    public void Sync_WhenRulesetsDirectoryIsAbsent_FailsClosed()
-    {
-        Directory.Delete(Path.Combine(_root, ".github", "rulesets"), recursive: true);
-        using var writer = new StringWriter();
-
-        int exitCode = RulesetService.Sync(
-            repoRoot: _root,
-            dryRun: true,
-            repoOverride: "owner/repo",
-            environment: _ => null,
-            output: writer);
-
-        exitCode.Should().Be(1);
-        writer.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
+        using var brokenCiWriter = new StringWriter();
+        RulesetService.Validate(_root, brokenCiWriter).Should().Be(1);
+        string brokenCiOutput = brokenCiWriter.ToString();
+        brokenCiOutput.Should().Contain("if: always()");
+        brokenCiOutput.Should().Contain("compliance");
     }
 
     private void SeedValidFixture()

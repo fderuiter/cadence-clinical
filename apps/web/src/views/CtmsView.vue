@@ -2025,1121 +2025,1129 @@
       </div>
 
       <!-- Modal: Create Budget Template -->
-      <div v-if="showCreateTemplateModal" class="modal-overlay">
-        <div class="modal">
-          <div class="modal-header">Create Multi-Tier Budget Template</div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="tmpl-name">Template Name</label>
-              <input
-                id="tmpl-name"
-                v-model="newTmplName"
-                type="text"
-                placeholder="e.g. Oncology Phase III - Academic Center"
-              />
-            </div>
-            <div class="form-group">
-              <label for="tmpl-tier">Tier Level</label>
-              <select id="tmpl-tier" v-model="newTmplTier">
-                <option value="TIER_1_ACADEMIC">
-                  Tier 1 - Academic Medical Center
-                </option>
-                <option value="TIER_2_COMMUNITY">
-                  Tier 2 - Community Health Clinic
-                </option>
-                <option value="TIER_3_REGIONAL">
-                  Tier 3 - Regional Research Site
-                </option>
-              </select>
-            </div>
-            <div
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
-            >
-              <div class="form-group">
-                <label for="tmpl-overhead">Overhead %</label>
-                <input
-                  id="tmpl-overhead"
-                  v-model.number="newTmplOverhead"
-                  type="number"
-                  step="0.5"
-                />
-              </div>
-              <div class="form-group">
-                <label for="tmpl-withholding">Withholding %</label>
-                <input
-                  id="tmpl-withholding"
-                  v-model.number="newTmplWithholding"
-                  type="number"
-                  step="0.5"
-                />
-              </div>
-            </div>
-            <div
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
-            >
-              <div class="form-group">
-                <label for="tmpl-startup">Fixed Startup Fee ($)</label>
-                <input
-                  id="tmpl-startup"
-                  v-model.number="newTmplStartup"
-                  type="number"
-                />
-              </div>
-              <div class="form-group">
-                <label for="tmpl-closeout">Fixed Closeout Fee ($)</label>
-                <input
-                  id="tmpl-closeout"
-                  v-model.number="newTmplCloseout"
-                  type="number"
-                />
-              </div>
-            </div>
-            <div
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
-            >
-              <div class="form-group">
-                <label for="tmpl-stipend">Per-Visit Patient Stipend ($)</label>
-                <input
-                  id="tmpl-stipend"
-                  v-model.number="newTmplStipend"
-                  type="number"
-                />
-              </div>
-              <div class="form-group">
-                <label for="tmpl-travel">Per-Visit Travel Reimb. ($)</label>
-                <input
-                  id="tmpl-travel"
-                  v-model.number="newTmplTravel"
-                  type="number"
-                />
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="tmpl-reason">Reason for Change Justification</label>
-              <textarea
-                id="tmpl-reason"
-                v-model="newTmplReason"
-                placeholder="State the justification reason for creating this budget template..."
-              />
-            </div>
+      <ClinicalModal
+        v-model="showCreateTemplateModal"
+        :teleport="false"
+        dialog-class="modal"
+        title="Create Multi-Tier Budget Template"
+      >
+        <div class="form-group">
+          <label for="tmpl-name">Template Name</label>
+          <input
+            id="tmpl-name"
+            v-model="newTmplName"
+            type="text"
+            placeholder="e.g. Oncology Phase III - Academic Center"
+          />
+        </div>
+        <div class="form-group">
+          <label for="tmpl-tier">Tier Level</label>
+          <select id="tmpl-tier" v-model="newTmplTier">
+            <option value="TIER_1_ACADEMIC">
+              Tier 1 - Academic Medical Center
+            </option>
+            <option value="TIER_2_COMMUNITY">
+              Tier 2 - Community Health Clinic
+            </option>
+            <option value="TIER_3_REGIONAL">
+              Tier 3 - Regional Research Site
+            </option>
+          </select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+          <div class="form-group">
+            <label for="tmpl-overhead">Overhead %</label>
+            <input
+              id="tmpl-overhead"
+              v-model.number="newTmplOverhead"
+              type="number"
+              step="0.5"
+            />
           </div>
-          <div class="modal-footer">
-            <button
-              class="btn btn-cancel"
-              @click="showCreateTemplateModal = false"
-            >
-              Cancel
-            </button>
-            <button class="btn btn-primary" @click="confirmCreateTemplate">
-              Create Template
-            </button>
+          <div class="form-group">
+            <label for="tmpl-withholding">Withholding %</label>
+            <input
+              id="tmpl-withholding"
+              v-model.number="newTmplWithholding"
+              type="number"
+              step="0.5"
+            />
           </div>
         </div>
-      </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+          <div class="form-group">
+            <label for="tmpl-startup">Fixed Startup Fee ($)</label>
+            <input
+              id="tmpl-startup"
+              v-model.number="newTmplStartup"
+              type="number"
+            />
+          </div>
+          <div class="form-group">
+            <label for="tmpl-closeout">Fixed Closeout Fee ($)</label>
+            <input
+              id="tmpl-closeout"
+              v-model.number="newTmplCloseout"
+              type="number"
+            />
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+          <div class="form-group">
+            <label for="tmpl-stipend">Per-Visit Patient Stipend ($)</label>
+            <input
+              id="tmpl-stipend"
+              v-model.number="newTmplStipend"
+              type="number"
+            />
+          </div>
+          <div class="form-group">
+            <label for="tmpl-travel">Per-Visit Travel Reimb. ($)</label>
+            <input
+              id="tmpl-travel"
+              v-model.number="newTmplTravel"
+              type="number"
+            />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="tmpl-reason">Reason for Change Justification</label>
+          <textarea
+            id="tmpl-reason"
+            v-model="newTmplReason"
+            placeholder="State the justification reason for creating this budget template..."
+          />
+        </div>
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showCreateTemplateModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="confirmCreateTemplate"
+          >
+            Create Template
+          </button>
+        </template>
+      </ClinicalModal>
 
       <!-- Modal: Add Procedure to Fee Grid -->
-      <div v-if="showAddProcedureModal" class="modal-overlay">
-        <div class="modal">
-          <div class="modal-header">Add Procedure to Fee Matrix Grid</div>
-          <div class="modal-body">
-            <div
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
+      <ClinicalModal
+        v-model="showAddProcedureModal"
+        :teleport="false"
+        dialog-class="modal"
+        title="Add Procedure to Fee Matrix Grid"
+      >
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+          <div class="form-group">
+            <label for="proc-visit">Visit Name</label>
+            <select id="proc-visit" v-model="newProcVisit">
+              <option value="SCREENING">SCREENING</option>
+              <option value="WEEK_4">WEEK_4</option>
+              <option value="WEEK_12">WEEK_12</option>
+              <option value="END_OF_TREATMENT">END_OF_TREATMENT</option>
+              <option value="UNSCHEDULED">UNSCHEDULED</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="proc-code">CPT / Procedure Code</label>
+            <input
+              id="proc-code"
+              v-model="newProcCode"
+              type="text"
+              placeholder="e.g. CPT-93000"
+            />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="proc-name">Procedure Description</label>
+          <input
+            id="proc-name"
+            v-model="newProcName"
+            type="text"
+            placeholder="e.g. 12-Lead Electrocardiogram"
+          />
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+          <div class="form-group">
+            <label for="proc-activity">USDM Activity ID (Optional)</label>
+            <input
+              id="proc-activity"
+              v-model="newProcActivityId"
+              type="text"
+              placeholder="e.g. ACT-ECG-01"
+            />
+          </div>
+          <div class="form-group">
+            <label for="proc-form">eCRF Form ID (Optional)</label>
+            <input
+              id="proc-form"
+              v-model="newProcFormId"
+              type="text"
+              placeholder="e.g. FORM-ECG-V1"
+            />
+          </div>
+        </div>
+        <div
+          style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px"
+        >
+          <div class="form-group">
+            <label for="proc-base">Base Amount ($)</label>
+            <input id="proc-base" v-model.number="newProcBase" type="number" />
+          </div>
+          <div class="form-group">
+            <label for="proc-overhead">Overhead %</label>
+            <input
+              id="proc-overhead"
+              v-model.number="newProcOverhead"
+              type="number"
+            />
+          </div>
+          <div class="form-group">
+            <label for="proc-withholding">Withholding %</label>
+            <input
+              id="proc-withholding"
+              v-model.number="newProcWithholding"
+              type="number"
+            />
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+          <div class="form-group">
+            <label for="proc-stipend">Patient Stipend ($)</label>
+            <input
+              id="proc-stipend"
+              v-model.number="newProcStipend"
+              type="number"
+            />
+          </div>
+          <div class="form-group">
+            <label for="proc-travel">Travel Reimb. ($)</label>
+            <input
+              id="proc-travel"
+              v-model.number="newProcTravel"
+              type="number"
+            />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="proc-reason">Reason for Change Justification</label>
+          <textarea
+            id="proc-reason"
+            v-model="newProcReason"
+            placeholder="State the justification reason..."
+          />
+        </div>
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showAddProcedureModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="confirmAddProcedure"
+          >
+            Add to Grid
+          </button>
+        </template>
+      </ClinicalModal>
+
+      <!-- Modal: Execute Contract Amendment -->
+      <ClinicalModal
+        v-model="showAmendmentModal"
+        :teleport="false"
+        dialog-class="modal"
+        title="Execute Contract Amendment (Version Increment)"
+      >
+        <div class="form-group">
+          <label for="amend-budget">Revised Total Budget ($)</label>
+          <input
+            id="amend-budget"
+            v-model.number="amendRevisedBudget"
+            type="number"
+          />
+        </div>
+        <div class="form-group">
+          <label for="amend-summary"
+            >Summary of Protocol &amp; Rate Changes</label
+          >
+          <textarea
+            id="amend-summary"
+            v-model="amendSummary"
+            placeholder="Detail the reasons and scope of this budget contract amendment..."
+          />
+        </div>
+        <div class="form-group">
+          <label for="amend-reason">GxP Reason for Change</label>
+          <input
+            id="amend-reason"
+            v-model="amendReason"
+            type="text"
+            placeholder="Protocol amendment execution"
+          />
+        </div>
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showAmendmentModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="confirmExecuteAmendment"
+          >
+            Sign &amp; Execute Amendment
+          </button>
+        </template>
+      </ClinicalModal>
+
+      <!-- Modal: Create Budget Adjustment -->
+      <ClinicalModal
+        v-model="showAdjustmentModal"
+        :teleport="false"
+        dialog-class="modal"
+        title="Create Budget Adjustment / Penalty"
+      >
+        <div class="form-group">
+          <label for="adj-type">Adjustment Classification</label>
+          <select id="adj-type" v-model="adjType">
+            <option value="PASSTHROUGH_REIMBURSEMENT">
+              Passthrough Expense Reimbursement (+)
+            </option>
+            <option value="PROTOCOL_DEVIATION_PENALTY">
+              Protocol Deviation Penalty Deduction (-)
+            </option>
+            <option value="OUT_OF_WINDOW_PENALTY">
+              Out-of-Window Visit Penalty (-)
+            </option>
+            <option value="SITE_BONUS">
+              Site Enrollment Performance Bonus (+)
+            </option>
+            <option value="DISCRETIONARY_CREDIT">
+              Discretionary Sponsor Credit (+)
+            </option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="adj-desc">Description &amp; Clinical Justification</label>
+          <input
+            id="adj-desc"
+            v-model="adjDescription"
+            type="text"
+            placeholder="e.g. Dry ice shipping courier reimbursement"
+          />
+        </div>
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px">
+          <div class="form-group">
+            <label for="adj-amt">Amount ($)</label>
+            <input
+              id="adj-amt"
+              v-model.number="adjAmount"
+              type="number"
+              step="0.01"
+            />
+          </div>
+          <div class="form-group">
+            <label for="adj-curr">Currency</label>
+            <input id="adj-curr" v-model="adjCurrency" type="text" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="adj-reason">GxP Reason for Change</label>
+          <textarea
+            id="adj-reason"
+            v-model="adjReason"
+            placeholder="State reason for change..."
+          />
+        </div>
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showAdjustmentModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="confirmCreateAdjustment"
+          >
+            Save Adjustment
+          </button>
+        </template>
+      </ClinicalModal>
+
+      <!-- Modal 1: General Change Justification -->
+      <ClinicalModal
+        v-model="showJustificationModal"
+        :teleport="false"
+        dialog-class="modal"
+        :title="justificationTitle"
+      >
+        <p
+          style="
+            font-size: 13px;
+            color: var(--semantic-color-text-secondary);
+            margin-bottom: 12px;
+            line-height: 1.4;
+          "
+        >
+          To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>, you
+          must document a valid GxP justification reason for this action.
+        </p>
+        <div class="form-group">
+          <label for="modal-justification-reason"
+            >Change Justification Reason</label
+          >
+          <textarea
+            id="modal-justification-reason"
+            v-model="justificationReason"
+            :placeholder="justificationPlaceholder"
+          />
+          <div v-if="justificationError" class="error-msg">
+            ⚠️ {{ justificationError }}
+          </div>
+        </div>
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showJustificationModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="confirmJustification"
+          >
+            Confirm Change
+          </button>
+        </template>
+      </ClinicalModal>
+
+      <!-- Modal 2: FDA Part 11 Electronic Signature & Re-Authentication -->
+      <ClinicalModal
+        :open="showSignatureModal"
+        :teleport="false"
+        :dismissible="!sigBusy"
+        dialog-class="modal"
+        aria-label="Electronic Signature and Identity Verification"
+        title="Electronic Signature & Identity Verification (Part 11)"
+        @close="cancelSignatureModal"
+      >
+        <p
+          style="
+            font-size: 13px;
+            color: var(--semantic-color-text-secondary);
+            margin-bottom: 16px;
+            line-height: 1.4;
+          "
+        >
+          Please re-authenticate your identity and verify your endorsement of
+          this delegation. All signings are permanently logged to the audit
+          ledger.
+        </p>
+
+        <div class="form-group">
+          <label for="sig-username">Username</label>
+          <input
+            id="sig-username"
+            v-model="sigUsername"
+            type="text"
+            placeholder="Username"
+            :disabled="sigBusy"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="sig-password">Password</label>
+          <input
+            id="sig-password"
+            v-model="sigPassword"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+            placeholder="Password"
+            :disabled="sigBusy"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="sig-totp">MFA/TOTP Token (Optional)</label>
+          <input
+            id="sig-totp"
+            v-model="sigTotp"
+            type="text"
+            placeholder="MFA Token"
+            :disabled="sigBusy"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="sig-signing-reason">Signing Reason</label>
+          <select
+            id="sig-signing-reason"
+            v-model="sigSigningReason"
+            :disabled="sigBusy"
+          >
+            <option value="INVESTIGATOR_SIGNATURE">
+              INVESTIGATOR_SIGNATURE (PI Endorsement)
+            </option>
+            <option value="APPROVAL">APPROVAL (Supervisory Approval)</option>
+            <option value="TECHNICAL_QC">TECHNICAL_QC</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="sig-reason-for-change"
+            >Reason for Change / Justification</label
+          >
+          <textarea
+            id="sig-reason-for-change"
+            v-model="sigReasonForChange"
+            placeholder="State your justification reason..."
+            :disabled="sigBusy"
+          />
+        </div>
+
+        <div v-if="sigError" class="error-msg">⚠️ {{ sigError }}</div>
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-cancel"
+            :disabled="sigBusy"
+            @click="cancelSignatureModal"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="sigBusy"
+            @click="confirmSignature"
+          >
+            {{ sigBusy ? "Verifying..." : "Verify & Digital Sign" }}
+          </button>
+        </template>
+      </ClinicalModal>
+
+      <!-- Modal 3: Schedule Monitoring Visit -->
+      <ClinicalModal
+        v-model="showScheduleVisitModal"
+        :teleport="false"
+        dialog-class="modal"
+        title="Schedule Clinical Monitoring Visit"
+      >
+        <div class="form-group">
+          <label for="sched-visit-type">Visit Type</label>
+          <select id="sched-visit-type" v-model="newVisitType">
+            <option value="SIV">Site Initiation Visit (SIV)</option>
+            <option value="IMV">Interim Monitoring Visit (IMV)</option>
+            <option value="COV">Close Out Visit (COV)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="sched-visit-date">Scheduled Date</label>
+          <input
+            id="sched-visit-date"
+            v-model="newVisitScheduledDate"
+            type="date"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="sched-visit-cra">Assigned CRA</label>
+          <input
+            id="sched-visit-cra"
+            v-model="newVisitCra"
+            type="text"
+            placeholder="e.g. cra.monitor"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="sched-visit-reason"
+            >Reason for Change / Setup Justification</label
+          >
+          <textarea
+            id="sched-visit-reason"
+            v-model="newVisitReason"
+            placeholder="State the regulatory justification for scheduling this visit..."
+          />
+        </div>
+
+        <div v-if="scheduleError" class="error-msg">⚠️ {{ scheduleError }}</div>
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showScheduleVisitModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="confirmScheduleVisit"
+          >
+            Schedule & Issue confirmation
+          </button>
+        </template>
+      </ClinicalModal>
+
+      <!-- Modal 4: Reallocate CRA Workload -->
+      <ClinicalModal
+        v-model="showReallocateModal"
+        :teleport="false"
+        dialog-class="modal"
+        title="Allocate CRA to Site"
+      >
+        <div class="form-group">
+          <label for="alloc-cra-id">CRA ID</label>
+          <input
+            id="alloc-cra-id"
+            v-model="allocCraId"
+            type="text"
+            placeholder="e.g. cra_alice"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="alloc-status">Allocation Status</label>
+          <select id="alloc-status" v-model="allocStatus">
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="INACTIVE">INACTIVE</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="alloc-reason"
+            >Reason for Change / Allocation Justification</label
+          >
+          <textarea
+            id="alloc-reason"
+            v-model="allocReason"
+            placeholder="Explain the allocation change context..."
+          />
+        </div>
+
+        <div v-if="allocError" class="error-msg">⚠️ {{ allocError }}</div>
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showReallocateModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="confirmReallocate"
+          >
+            Save Allocation
+          </button>
+        </template>
+      </ClinicalModal>
+
+      <!-- Modal 5: Recruitment Metrics Update -->
+      <ClinicalModal
+        v-model="showRecruitmentModal"
+        :teleport="false"
+        dialog-class="modal"
+        title="Log Site Recruitment Metrics Update"
+      >
+        <div class="form-group">
+          <label for="rec-screened">Screened Subject Count</label>
+          <input id="rec-screened" v-model="recScreened" type="number" />
+        </div>
+
+        <div class="form-group">
+          <label for="rec-enrolled">Enrolled Subject Count</label>
+          <input id="rec-enrolled" v-model="recEnrolled" type="number" />
+        </div>
+
+        <div class="form-group">
+          <label for="rec-target">Target Enrollment Count</label>
+          <input id="rec-target" v-model="recTarget" type="number" />
+        </div>
+
+        <div class="form-group">
+          <label for="rec-reason"
+            >Reason for Change / Update Justification</label
+          >
+          <textarea
+            id="rec-reason"
+            v-model="recReason"
+            placeholder="State the compliance justification for updating recruitment statistics..."
+          />
+        </div>
+
+        <div v-if="recError" class="error-msg">⚠️ {{ recError }}</div>
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showRecruitmentModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="confirmRecruitment"
+          >
+            Submit Metrics
+          </button>
+        </template>
+      </ClinicalModal>
+
+      <!-- Modal 6: Delegate New Authority Task -->
+      <ClinicalModal
+        v-model="showDelegateModal"
+        :teleport="false"
+        dialog-class="modal"
+        title="Delegate Site Trial Task"
+      >
+        <div class="form-group">
+          <label for="del-staff-id">Staff User ID</label>
+          <input
+            id="del-staff-id"
+            v-model="delStaffId"
+            type="text"
+            placeholder="e.g. kc-crc-001"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="del-start-date">Start Date</label>
+          <input id="del-start-date" v-model="delStartDate" type="date" />
+        </div>
+
+        <div class="form-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label>Delegated Duty Task Codes</label>
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 6px;
+              margin-top: 4px;
+            "
+          >
+            <label
+              v-for="task in availableTasks"
+              :key="task.value"
+              style="
+                display: flex;
+                gap: 8px;
+                font-weight: normal;
+                align-items: center;
+                cursor: pointer;
+              "
             >
-              <div class="form-group">
-                <label for="proc-visit">Visit Name</label>
-                <select id="proc-visit" v-model="newProcVisit">
-                  <option value="SCREENING">SCREENING</option>
-                  <option value="WEEK_4">WEEK_4</option>
-                  <option value="WEEK_12">WEEK_12</option>
-                  <option value="END_OF_TREATMENT">END_OF_TREATMENT</option>
-                  <option value="UNSCHEDULED">UNSCHEDULED</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="proc-code">CPT / Procedure Code</label>
-                <input
-                  id="proc-code"
-                  v-model="newProcCode"
-                  type="text"
-                  placeholder="e.g. CPT-93000"
-                />
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="proc-name">Procedure Description</label>
               <input
-                id="proc-name"
-                v-model="newProcName"
-                type="text"
-                placeholder="e.g. 12-Lead Electrocardiogram"
+                v-model="delTaskCodes"
+                type="checkbox"
+                :value="task.value"
+                style="width: auto; margin: 0"
               />
-            </div>
-            <div
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
+              {{ task.text }} (<code>{{ task.value }}</code
+              >)
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="del-reason"
+            >Reason for Change / Delegation Justification</label
+          >
+          <textarea
+            id="del-reason"
+            v-model="delReason"
+            placeholder="Justification for creating this task delegation assignment..."
+          />
+        </div>
+
+        <div v-if="delError" class="error-msg">⚠️ {{ delError }}</div>
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showDelegateModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="confirmDelegate"
+          >
+            Submit Delegation
+          </button>
+        </template>
+      </ClinicalModal>
+
+      <!-- Modal 7: Create Site Milestone -->
+      <ClinicalModal
+        v-model="showCreateMilestoneModal"
+        :teleport="false"
+        dialog-class="modal"
+        title="Add Site Milestone"
+      >
+        <div class="form-group">
+          <label for="ms-type">Milestone Type</label>
+          <select id="ms-type" v-model="newMsType">
+            <option value="SITE_SELECTION">SITE_SELECTION</option>
+            <option value="INITIATION_VISIT">INITIATION_VISIT</option>
+            <option value="SITE_ACTIVATION">SITE_ACTIVATION</option>
+            <option value="FIRST_SUBJECT_ENROLLED">
+              FIRST_SUBJECT_ENROLLED
+            </option>
+            <option value="DB_LOCK">DB_LOCK</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="ms-planned-date">Planned Date</label>
+          <input id="ms-planned-date" v-model="newMsPlannedDate" type="date" />
+        </div>
+
+        <div class="form-group">
+          <label for="ms-status">Status</label>
+          <select id="ms-status" v-model="newMsStatus">
+            <option value="PLANNED">PLANNED</option>
+            <option value="ACHIEVED">ACHIEVED</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="ms-reason">Reason for Change / Justification</label>
+          <textarea
+            id="ms-reason"
+            v-model="newMsReason"
+            placeholder="State the justification reason for creating this milestone..."
+          />
+        </div>
+
+        <div v-if="msError" class="error-msg">⚠️ {{ msError }}</div>
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showCreateMilestoneModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="confirmCreateMilestone"
+          >
+            Add Milestone
+          </button>
+        </template>
+      </ClinicalModal>
+
+      <!-- Modal 8: Complete Scheduled Monitoring Visit with Structured Findings -->
+      <ClinicalModal
+        v-model="showCompleteVisitModal"
+        :teleport="false"
+        overlay-id="modal-complete-visit"
+        size="lg"
+        dialog-class="modal"
+        title="Complete Monitoring Visit"
+      >
+        <div class="form-group">
+          <label for="complete-visit-select">Scheduled Visit</label>
+          <select id="complete-visit-select" v-model="completeVisitId">
+            <option v-for="sv in scheduledVisits" :key="sv.id" :value="sv.id">
+              {{ sv.visit_type }} —
+              {{ sv.scheduled_date ? sv.scheduled_date.slice(0, 10) : "N/A" }}
+              ({{ sv.cra_id || "Unassigned" }})
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="complete-visit-actual-date">Actual Visit Date</label>
+          <input
+            id="complete-visit-actual-date"
+            v-model="completeVisitActualDate"
+            type="date"
+          />
+        </div>
+
+        <div class="form-group">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 8px;
+            "
+          >
+            <span
+              style="
+                font-weight: 600;
+                font-size: 13px;
+                color: var(--semantic-color-text-body);
+              "
+              >Monitoring Findings</span
             >
-              <div class="form-group">
-                <label for="proc-activity">USDM Activity ID (Optional)</label>
-                <input
-                  id="proc-activity"
-                  v-model="newProcActivityId"
-                  type="text"
-                  placeholder="e.g. ACT-ECG-01"
-                />
-              </div>
-              <div class="form-group">
-                <label for="proc-form">eCRF Form ID (Optional)</label>
-                <input
-                  id="proc-form"
-                  v-model="newProcFormId"
-                  type="text"
-                  placeholder="e.g. FORM-ECG-V1"
-                />
-              </div>
+            <button
+              id="btn-add-visit-finding"
+              type="button"
+              class="btn btn-secondary btn-sm"
+              @click="addVisitFinding"
+            >
+              + Add Finding
+            </button>
+          </div>
+          <div
+            v-if="completeVisitFindings.length === 0"
+            style="
+              font-size: 12px;
+              color: var(--semantic-color-text-secondary);
+              margin-bottom: 6px;
+            "
+          >
+            No findings logged for this visit. Use "+ Add Finding" to record
+            deviations or action items.
+          </div>
+          <div
+            v-for="(finding, idx) in completeVisitFindings"
+            :key="idx"
+            style="
+              border: 1px solid var(--semantic-color-border);
+              border-radius: 6px;
+              padding: 10px;
+              margin-bottom: 8px;
+              background: var(--semantic-color-surface-muted);
+            "
+          >
+            <div class="form-group" style="margin-bottom: 8px">
+              <label :for="`finding-text-${idx}`">Finding Description</label>
+              <input
+                :id="`finding-text-${idx}`"
+                v-model="finding.text"
+                type="text"
+                placeholder="Describe monitoring observation or protocol finding..."
+              />
             </div>
             <div
               style="
                 display: grid;
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 12px;
+                grid-template-columns: 1fr 1fr auto;
+                gap: 8px;
+                align-items: end;
               "
             >
-              <div class="form-group">
-                <label for="proc-base">Base Amount ($)</label>
-                <input
-                  id="proc-base"
-                  v-model.number="newProcBase"
-                  type="number"
-                />
-              </div>
-              <div class="form-group">
-                <label for="proc-overhead">Overhead %</label>
-                <input
-                  id="proc-overhead"
-                  v-model.number="newProcOverhead"
-                  type="number"
-                />
-              </div>
-              <div class="form-group">
-                <label for="proc-withholding">Withholding %</label>
-                <input
-                  id="proc-withholding"
-                  v-model.number="newProcWithholding"
-                  type="number"
-                />
-              </div>
-            </div>
-            <div
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
-            >
-              <div class="form-group">
-                <label for="proc-stipend">Patient Stipend ($)</label>
-                <input
-                  id="proc-stipend"
-                  v-model.number="newProcStipend"
-                  type="number"
-                />
-              </div>
-              <div class="form-group">
-                <label for="proc-travel">Travel Reimb. ($)</label>
-                <input
-                  id="proc-travel"
-                  v-model.number="newProcTravel"
-                  type="number"
-                />
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="proc-reason">Reason for Change Justification</label>
-              <textarea
-                id="proc-reason"
-                v-model="newProcReason"
-                placeholder="State the justification reason..."
-              />
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              class="btn btn-cancel"
-              @click="showAddProcedureModal = false"
-            >
-              Cancel
-            </button>
-            <button class="btn btn-primary" @click="confirmAddProcedure">
-              Add to Grid
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal: Execute Contract Amendment -->
-      <div v-if="showAmendmentModal" class="modal-overlay">
-        <div class="modal">
-          <div class="modal-header">
-            Execute Contract Amendment (Version Increment)
-          </div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="amend-budget">Revised Total Budget ($)</label>
-              <input
-                id="amend-budget"
-                v-model.number="amendRevisedBudget"
-                type="number"
-              />
-            </div>
-            <div class="form-group">
-              <label for="amend-summary"
-                >Summary of Protocol &amp; Rate Changes</label
-              >
-              <textarea
-                id="amend-summary"
-                v-model="amendSummary"
-                placeholder="Detail the reasons and scope of this budget contract amendment..."
-              />
-            </div>
-            <div class="form-group">
-              <label for="amend-reason">GxP Reason for Change</label>
-              <input
-                id="amend-reason"
-                v-model="amendReason"
-                type="text"
-                placeholder="Protocol amendment execution"
-              />
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-cancel" @click="showAmendmentModal = false">
-              Cancel
-            </button>
-            <button class="btn btn-primary" @click="confirmExecuteAmendment">
-              Sign &amp; Execute Amendment
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal: Create Budget Adjustment -->
-      <div v-if="showAdjustmentModal" class="modal-overlay">
-        <div class="modal">
-          <div class="modal-header">Create Budget Adjustment / Penalty</div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="adj-type">Adjustment Classification</label>
-              <select id="adj-type" v-model="adjType">
-                <option value="PASSTHROUGH_REIMBURSEMENT">
-                  Passthrough Expense Reimbursement (+)
-                </option>
-                <option value="PROTOCOL_DEVIATION_PENALTY">
-                  Protocol Deviation Penalty Deduction (-)
-                </option>
-                <option value="OUT_OF_WINDOW_PENALTY">
-                  Out-of-Window Visit Penalty (-)
-                </option>
-                <option value="SITE_BONUS">
-                  Site Enrollment Performance Bonus (+)
-                </option>
-                <option value="DISCRETIONARY_CREDIT">
-                  Discretionary Sponsor Credit (+)
-                </option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="adj-desc"
-                >Description &amp; Clinical Justification</label
-              >
-              <input
-                id="adj-desc"
-                v-model="adjDescription"
-                type="text"
-                placeholder="e.g. Dry ice shipping courier reimbursement"
-              />
-            </div>
-            <div
-              style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px"
-            >
-              <div class="form-group">
-                <label for="adj-amt">Amount ($)</label>
-                <input
-                  id="adj-amt"
-                  v-model.number="adjAmount"
-                  type="number"
-                  step="0.01"
-                />
-              </div>
-              <div class="form-group">
-                <label for="adj-curr">Currency</label>
-                <input id="adj-curr" v-model="adjCurrency" type="text" />
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="adj-reason">GxP Reason for Change</label>
-              <textarea
-                id="adj-reason"
-                v-model="adjReason"
-                placeholder="State reason for change..."
-              />
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-cancel" @click="showAdjustmentModal = false">
-              Cancel
-            </button>
-            <button class="btn btn-primary" @click="confirmCreateAdjustment">
-              Save Adjustment
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal 1: General Change Justification -->
-      <div v-if="showJustificationModal" class="modal-overlay">
-        <div class="modal">
-          <div class="modal-header">
-            {{ justificationTitle }}
-          </div>
-          <div class="modal-body">
-            <p
-              style="
-                font-size: 13px;
-                color: var(--semantic-color-text-secondary);
-                margin-bottom: 12px;
-                line-height: 1.4;
-              "
-            >
-              To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
-              you must document a valid GxP justification reason for this
-              action.
-            </p>
-            <div class="form-group">
-              <label for="modal-justification-reason"
-                >Change Justification Reason</label
-              >
-              <textarea
-                id="modal-justification-reason"
-                v-model="justificationReason"
-                :placeholder="justificationPlaceholder"
-              />
-              <div v-if="justificationError" class="error-msg">
-                ⚠️ {{ justificationError }}
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              class="btn btn-cancel"
-              @click="showJustificationModal = false"
-            >
-              Cancel
-            </button>
-            <button class="btn btn-primary" @click="confirmJustification">
-              Confirm Change
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal 2: FDA Part 11 Electronic Signature & Re-Authentication -->
-      <div
-        v-if="showSignatureModal"
-        ref="sigModalRef"
-        class="modal-overlay"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Electronic Signature and Identity Verification"
-      >
-        <div class="modal">
-          <div class="modal-header">
-            Electronic Signature & Identity Verification (Part 11)
-          </div>
-          <div class="modal-body">
-            <p
-              style="
-                font-size: 13px;
-                color: var(--semantic-color-text-secondary);
-                margin-bottom: 16px;
-                line-height: 1.4;
-              "
-            >
-              Please re-authenticate your identity and verify your endorsement
-              of this delegation. All signings are permanently logged to the
-              audit ledger.
-            </p>
-
-            <div class="form-group">
-              <label for="sig-username">Username</label>
-              <input
-                id="sig-username"
-                v-model="sigUsername"
-                type="text"
-                placeholder="Username"
-                :disabled="sigBusy"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="sig-password">Password</label>
-              <input
-                id="sig-password"
-                v-model="sigPassword"
-                v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
-                placeholder="Password"
-                :disabled="sigBusy"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="sig-totp">MFA/TOTP Token (Optional)</label>
-              <input
-                id="sig-totp"
-                v-model="sigTotp"
-                type="text"
-                placeholder="MFA Token"
-                :disabled="sigBusy"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="sig-signing-reason">Signing Reason</label>
-              <select
-                id="sig-signing-reason"
-                v-model="sigSigningReason"
-                :disabled="sigBusy"
-              >
-                <option value="INVESTIGATOR_SIGNATURE">
-                  INVESTIGATOR_SIGNATURE (PI Endorsement)
-                </option>
-                <option value="APPROVAL">
-                  APPROVAL (Supervisory Approval)
-                </option>
-                <option value="TECHNICAL_QC">TECHNICAL_QC</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="sig-reason-for-change"
-                >Reason for Change / Justification</label
-              >
-              <textarea
-                id="sig-reason-for-change"
-                v-model="sigReasonForChange"
-                placeholder="State your justification reason..."
-                :disabled="sigBusy"
-              />
-            </div>
-
-            <div v-if="sigError" class="error-msg">⚠️ {{ sigError }}</div>
-          </div>
-          <div class="modal-footer">
-            <button
-              class="btn btn-cancel"
-              :disabled="sigBusy"
-              @click="cancelSignatureModal"
-            >
-              Cancel
-            </button>
-            <button
-              class="btn btn-primary"
-              :disabled="sigBusy"
-              @click="confirmSignature"
-            >
-              {{ sigBusy ? "Verifying..." : "Verify & Digital Sign" }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal 3: Schedule Monitoring Visit -->
-      <div v-if="showScheduleVisitModal" class="modal-overlay">
-        <div class="modal">
-          <div class="modal-header">Schedule Clinical Monitoring Visit</div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="sched-visit-type">Visit Type</label>
-              <select id="sched-visit-type" v-model="newVisitType">
-                <option value="SIV">Site Initiation Visit (SIV)</option>
-                <option value="IMV">Interim Monitoring Visit (IMV)</option>
-                <option value="COV">Close Out Visit (COV)</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="sched-visit-date">Scheduled Date</label>
-              <input
-                id="sched-visit-date"
-                v-model="newVisitScheduledDate"
-                type="date"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="sched-visit-cra">Assigned CRA</label>
-              <input
-                id="sched-visit-cra"
-                v-model="newVisitCra"
-                type="text"
-                placeholder="e.g. cra.monitor"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="sched-visit-reason"
-                >Reason for Change / Setup Justification</label
-              >
-              <textarea
-                id="sched-visit-reason"
-                v-model="newVisitReason"
-                placeholder="State the regulatory justification for scheduling this visit..."
-              />
-            </div>
-
-            <div v-if="scheduleError" class="error-msg">
-              ⚠️ {{ scheduleError }}
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              class="btn btn-cancel"
-              @click="showScheduleVisitModal = false"
-            >
-              Cancel
-            </button>
-            <button class="btn btn-primary" @click="confirmScheduleVisit">
-              Schedule & Issue confirmation
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal 4: Reallocate CRA Workload -->
-      <div v-if="showReallocateModal" class="modal-overlay">
-        <div class="modal">
-          <div class="modal-header">Allocate CRA to Site</div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="alloc-cra-id">CRA ID</label>
-              <input
-                id="alloc-cra-id"
-                v-model="allocCraId"
-                type="text"
-                placeholder="e.g. cra_alice"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="alloc-status">Allocation Status</label>
-              <select id="alloc-status" v-model="allocStatus">
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="INACTIVE">INACTIVE</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="alloc-reason"
-                >Reason for Change / Allocation Justification</label
-              >
-              <textarea
-                id="alloc-reason"
-                v-model="allocReason"
-                placeholder="Explain the allocation change context..."
-              />
-            </div>
-
-            <div v-if="allocError" class="error-msg">⚠️ {{ allocError }}</div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-cancel" @click="showReallocateModal = false">
-              Cancel
-            </button>
-            <button class="btn btn-primary" @click="confirmReallocate">
-              Save Allocation
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal 5: Recruitment Metrics Update -->
-      <div v-if="showRecruitmentModal" class="modal-overlay">
-        <div class="modal">
-          <div class="modal-header">Log Site Recruitment Metrics Update</div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="rec-screened">Screened Subject Count</label>
-              <input id="rec-screened" v-model="recScreened" type="number" />
-            </div>
-
-            <div class="form-group">
-              <label for="rec-enrolled">Enrolled Subject Count</label>
-              <input id="rec-enrolled" v-model="recEnrolled" type="number" />
-            </div>
-
-            <div class="form-group">
-              <label for="rec-target">Target Enrollment Count</label>
-              <input id="rec-target" v-model="recTarget" type="number" />
-            </div>
-
-            <div class="form-group">
-              <label for="rec-reason"
-                >Reason for Change / Update Justification</label
-              >
-              <textarea
-                id="rec-reason"
-                v-model="recReason"
-                placeholder="State the compliance justification for updating recruitment statistics..."
-              />
-            </div>
-
-            <div v-if="recError" class="error-msg">⚠️ {{ recError }}</div>
-          </div>
-          <div class="modal-footer">
-            <button
-              class="btn btn-cancel"
-              @click="showRecruitmentModal = false"
-            >
-              Cancel
-            </button>
-            <button class="btn btn-primary" @click="confirmRecruitment">
-              Submit Metrics
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal 6: Delegate New Authority Task -->
-      <div v-if="showDelegateModal" class="modal-overlay">
-        <div class="modal">
-          <div class="modal-header">Delegate Site Trial Task</div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="del-staff-id">Staff User ID</label>
-              <input
-                id="del-staff-id"
-                v-model="delStaffId"
-                type="text"
-                placeholder="e.g. kc-crc-001"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="del-start-date">Start Date</label>
-              <input id="del-start-date" v-model="delStartDate" type="date" />
-            </div>
-
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Delegated Duty Task Codes</label>
-              <div
-                style="
-                  display: flex;
-                  flex-direction: column;
-                  gap: 6px;
-                  margin-top: 4px;
-                "
-              >
-                <label
-                  v-for="task in availableTasks"
-                  :key="task.value"
-                  style="
-                    display: flex;
-                    gap: 8px;
-                    font-weight: normal;
-                    align-items: center;
-                    cursor: pointer;
-                  "
+              <div>
+                <label :for="`finding-severity-${idx}`">Severity</label>
+                <select
+                  :id="`finding-severity-${idx}`"
+                  v-model="finding.severity"
                 >
-                  <input
-                    v-model="delTaskCodes"
-                    type="checkbox"
-                    :value="task.value"
-                    style="width: auto; margin: 0"
-                  />
-                  {{ task.text }} (<code>{{ task.value }}</code
-                  >)
-                </label>
+                  <option value="MINOR">MINOR</option>
+                  <option value="MAJOR">MAJOR</option>
+                  <option value="CRITICAL">CRITICAL</option>
+                </select>
               </div>
-            </div>
-
-            <div class="form-group">
-              <label for="del-reason"
-                >Reason for Change / Delegation Justification</label
+              <div>
+                <label :for="`finding-resolution-${idx}`"
+                  >Resolution Status</label
+                >
+                <select
+                  :id="`finding-resolution-${idx}`"
+                  v-model="finding.resolution_status"
+                >
+                  <option value="OPEN">OPEN</option>
+                  <option value="IN_PROGRESS">IN_PROGRESS</option>
+                  <option value="CLOSED">CLOSED</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                class="btn btn-cancel btn-sm"
+                @click="removeVisitFinding(idx)"
               >
-              <textarea
-                id="del-reason"
-                v-model="delReason"
-                placeholder="Justification for creating this task delegation assignment..."
-              />
+                Remove
+              </button>
             </div>
-
-            <div v-if="delError" class="error-msg">⚠️ {{ delError }}</div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-cancel" @click="showDelegateModal = false">
-              Cancel
-            </button>
-            <button class="btn btn-primary" @click="confirmDelegate">
-              Submit Delegation
-            </button>
           </div>
         </div>
-      </div>
 
-      <!-- Modal 7: Create Site Milestone -->
-      <div v-if="showCreateMilestoneModal" class="modal-overlay">
-        <div class="modal">
-          <div class="modal-header">Add Site Milestone</div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="ms-type">Milestone Type</label>
-              <select id="ms-type" v-model="newMsType">
-                <option value="SITE_SELECTION">SITE_SELECTION</option>
-                <option value="INITIATION_VISIT">INITIATION_VISIT</option>
-                <option value="SITE_ACTIVATION">SITE_ACTIVATION</option>
-                <option value="FIRST_SUBJECT_ENROLLED">
-                  FIRST_SUBJECT_ENROLLED
-                </option>
-                <option value="DB_LOCK">DB_LOCK</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="ms-planned-date">Planned Date</label>
-              <input
-                id="ms-planned-date"
-                v-model="newMsPlannedDate"
-                type="date"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="ms-status">Status</label>
-              <select id="ms-status" v-model="newMsStatus">
-                <option value="PLANNED">PLANNED</option>
-                <option value="ACHIEVED">ACHIEVED</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="ms-reason">Reason for Change / Justification</label>
-              <textarea
-                id="ms-reason"
-                v-model="newMsReason"
-                placeholder="State the justification reason for creating this milestone..."
-              />
-            </div>
-
-            <div v-if="msError" class="error-msg">⚠️ {{ msError }}</div>
-          </div>
-          <div class="modal-footer">
-            <button
-              class="btn btn-cancel"
-              @click="showCreateMilestoneModal = false"
-            >
-              Cancel
-            </button>
-            <button class="btn btn-primary" @click="confirmCreateMilestone">
-              Add Milestone
-            </button>
-          </div>
+        <div class="form-group">
+          <label for="complete-visit-reason"
+            >Reason for Change / Visit Closure Summary</label
+          >
+          <textarea
+            id="complete-visit-reason"
+            v-model="completeVisitReason"
+            placeholder="State the GxP justification for completing this monitoring visit..."
+          />
         </div>
-      </div>
 
-      <!-- Modal 8: Complete Scheduled Monitoring Visit with Structured Findings -->
-      <div
-        v-if="showCompleteVisitModal"
-        id="modal-complete-visit"
-        class="modal-overlay"
-      >
-        <div class="modal" style="max-width: 620px">
-          <div class="modal-header">Complete Monitoring Visit</div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="complete-visit-select">Scheduled Visit</label>
-              <select id="complete-visit-select" v-model="completeVisitId">
-                <option
-                  v-for="sv in scheduledVisits"
-                  :key="sv.id"
-                  :value="sv.id"
-                >
-                  {{ sv.visit_type }} —
-                  {{
-                    sv.scheduled_date ? sv.scheduled_date.slice(0, 10) : "N/A"
-                  }}
-                  ({{ sv.cra_id || "Unassigned" }})
-                </option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="complete-visit-actual-date">Actual Visit Date</label>
-              <input
-                id="complete-visit-actual-date"
-                v-model="completeVisitActualDate"
-                type="date"
-              />
-            </div>
-
-            <div class="form-group">
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  margin-bottom: 8px;
-                "
-              >
-                <span
-                  style="
-                    font-weight: 600;
-                    font-size: 13px;
-                    color: var(--semantic-color-text-body);
-                  "
-                  >Monitoring Findings</span
-                >
-                <button
-                  id="btn-add-visit-finding"
-                  type="button"
-                  class="btn btn-secondary btn-sm"
-                  @click="addVisitFinding"
-                >
-                  + Add Finding
-                </button>
-              </div>
-              <div
-                v-if="completeVisitFindings.length === 0"
-                style="
-                  font-size: 12px;
-                  color: var(--semantic-color-text-secondary);
-                  margin-bottom: 6px;
-                "
-              >
-                No findings logged for this visit. Use "+ Add Finding" to record
-                deviations or action items.
-              </div>
-              <div
-                v-for="(finding, idx) in completeVisitFindings"
-                :key="idx"
-                style="
-                  border: 1px solid var(--semantic-color-border);
-                  border-radius: 6px;
-                  padding: 10px;
-                  margin-bottom: 8px;
-                  background: var(--semantic-color-surface-muted);
-                "
-              >
-                <div class="form-group" style="margin-bottom: 8px">
-                  <label :for="`finding-text-${idx}`"
-                    >Finding Description</label
-                  >
-                  <input
-                    :id="`finding-text-${idx}`"
-                    v-model="finding.text"
-                    type="text"
-                    placeholder="Describe monitoring observation or protocol finding..."
-                  />
-                </div>
-                <div
-                  style="
-                    display: grid;
-                    grid-template-columns: 1fr 1fr auto;
-                    gap: 8px;
-                    align-items: end;
-                  "
-                >
-                  <div>
-                    <label :for="`finding-severity-${idx}`">Severity</label>
-                    <select
-                      :id="`finding-severity-${idx}`"
-                      v-model="finding.severity"
-                    >
-                      <option value="MINOR">MINOR</option>
-                      <option value="MAJOR">MAJOR</option>
-                      <option value="CRITICAL">CRITICAL</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label :for="`finding-resolution-${idx}`"
-                      >Resolution Status</label
-                    >
-                    <select
-                      :id="`finding-resolution-${idx}`"
-                      v-model="finding.resolution_status"
-                    >
-                      <option value="OPEN">OPEN</option>
-                      <option value="IN_PROGRESS">IN_PROGRESS</option>
-                      <option value="CLOSED">CLOSED</option>
-                    </select>
-                  </div>
-                  <button
-                    type="button"
-                    class="btn btn-cancel btn-sm"
-                    @click="removeVisitFinding(idx)"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="complete-visit-reason"
-                >Reason for Change / Visit Closure Summary</label
-              >
-              <textarea
-                id="complete-visit-reason"
-                v-model="completeVisitReason"
-                placeholder="State the GxP justification for completing this monitoring visit..."
-              />
-            </div>
-
-            <div v-if="completeVisitError" class="error-msg">
-              ⚠️ {{ completeVisitError }}
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              class="btn btn-cancel"
-              @click="showCompleteVisitModal = false"
-            >
-              Cancel
-            </button>
-            <button
-              id="btn-confirm-complete-visit"
-              class="btn btn-primary"
-              @click="confirmCompleteVisit"
-            >
-              Complete Visit
-            </button>
-          </div>
+        <div v-if="completeVisitError" class="error-msg">
+          ⚠️ {{ completeVisitError }}
         </div>
-      </div>
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showCompleteVisitModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            id="btn-confirm-complete-visit"
+            type="button"
+            class="btn btn-primary"
+            @click="confirmCompleteVisit"
+          >
+            Complete Visit
+          </button>
+        </template>
+      </ClinicalModal>
 
       <!-- Modal 9: Compile Visit Letter PDF -->
-      <div
-        v-if="showCompileLetterModal"
-        id="modal-compile-letter"
-        class="modal-overlay"
+      <ClinicalModal
+        v-model="showCompileLetterModal"
+        :teleport="false"
+        :dismissible="!compileLetterBusy"
+        overlay-id="modal-compile-letter"
+        dialog-class="modal"
+        title="Compile Site Visit Letter"
       >
-        <div class="modal" style="max-width: 560px">
-          <div class="modal-header">Compile Site Visit Letter</div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="compile-letter-visit">Monitoring Visit</label>
-              <select id="compile-letter-visit" v-model="compileLetterVisitId">
-                <option value="">Ad-hoc / Current Site Scope</option>
-                <option v-for="mv in visits" :key="mv.id" :value="mv.id">
-                  {{ mv.visit_type }} ({{ mv.status }}) —
-                  {{
-                    mv.scheduled_date ? mv.scheduled_date.slice(0, 10) : "N/A"
-                  }}
-                </option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="compile-letter-template">Letter Template</label>
-              <select
-                id="compile-letter-template"
-                v-model="compileTemplateName"
-              >
-                <option value="confirmation_letter">
-                  Visit Confirmation Letter (confirmation_letter)
-                </option>
-                <option value="follow_up_letter">
-                  Monitoring Follow-Up Letter (follow_up_letter)
-                </option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label
-                for="compile-letter-finalize"
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  cursor: pointer;
-                "
-              >
-                <input
-                  id="compile-letter-finalize"
-                  v-model="compileFinalize"
-                  type="checkbox"
-                  style="width: auto; margin: 0"
-                />
-                Finalize with Part 11 eSignature &amp; file to document vault
-              </label>
-            </div>
-
-            <div v-if="compileFinalize" class="form-group">
-              <label for="compile-signer-name">Signer Full Name</label>
-              <input
-                id="compile-signer-name"
-                v-model="compileSignerName"
-                type="text"
-                placeholder="e.g. Jane Doe, Lead CRA"
-              />
-            </div>
-
-            <div v-if="compileFinalize" class="form-group">
-              <label for="compile-signing-purpose">Signing Purpose</label>
-              <input
-                id="compile-signing-purpose"
-                v-model="compileSigningPurpose"
-                type="text"
-                placeholder="Monitoring Visit Report Issuance"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="compile-investigator-email"
-                >Investigator Dispatch Email (Optional)</label
-              >
-              <input
-                id="compile-investigator-email"
-                v-model="compileInvestigatorEmail"
-                type="email"
-                placeholder="pi.site101@example.com"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="compile-letter-reason"
-                >Reason for Change / Issuance Justification</label
-              >
-              <textarea
-                id="compile-letter-reason"
-                v-model="compileLetterReason"
-                placeholder="Document the regulatory justification for compiling this letter..."
-              />
-            </div>
-
-            <div v-if="compileLetterError" class="error-msg">
-              ⚠️ {{ compileLetterError }}
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              class="btn btn-cancel"
-              :disabled="compileLetterBusy"
-              @click="showCompileLetterModal = false"
-            >
-              Cancel
-            </button>
-            <button
-              id="btn-confirm-compile-letter"
-              class="btn btn-primary"
-              :disabled="compileLetterBusy"
-              @click="confirmCompileLetter"
-            >
-              {{
-                compileLetterBusy
-                  ? "Compiling..."
-                  : compileFinalize
-                    ? "Verify Signature & Compile PDF"
-                    : "Compile Draft PDF"
-              }}
-            </button>
-          </div>
+        <div class="form-group">
+          <label for="compile-letter-visit">Monitoring Visit</label>
+          <select id="compile-letter-visit" v-model="compileLetterVisitId">
+            <option value="">Ad-hoc / Current Site Scope</option>
+            <option v-for="mv in visits" :key="mv.id" :value="mv.id">
+              {{ mv.visit_type }} ({{ mv.status }}) —
+              {{ mv.scheduled_date ? mv.scheduled_date.slice(0, 10) : "N/A" }}
+            </option>
+          </select>
         </div>
-      </div>
+
+        <div class="form-group">
+          <label for="compile-letter-template">Letter Template</label>
+          <select id="compile-letter-template" v-model="compileTemplateName">
+            <option value="confirmation_letter">
+              Visit Confirmation Letter (confirmation_letter)
+            </option>
+            <option value="follow_up_letter">
+              Monitoring Follow-Up Letter (follow_up_letter)
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label
+            for="compile-letter-finalize"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              cursor: pointer;
+            "
+          >
+            <input
+              id="compile-letter-finalize"
+              v-model="compileFinalize"
+              type="checkbox"
+              style="width: auto; margin: 0"
+            />
+            Finalize with Part 11 eSignature &amp; file to document vault
+          </label>
+        </div>
+
+        <div v-if="compileFinalize" class="form-group">
+          <label for="compile-signer-name">Signer Full Name</label>
+          <input
+            id="compile-signer-name"
+            v-model="compileSignerName"
+            type="text"
+            placeholder="e.g. Jane Doe, Lead CRA"
+          />
+        </div>
+
+        <div v-if="compileFinalize" class="form-group">
+          <label for="compile-signing-purpose">Signing Purpose</label>
+          <input
+            id="compile-signing-purpose"
+            v-model="compileSigningPurpose"
+            type="text"
+            placeholder="Monitoring Visit Report Issuance"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="compile-investigator-email"
+            >Investigator Dispatch Email (Optional)</label
+          >
+          <input
+            id="compile-investigator-email"
+            v-model="compileInvestigatorEmail"
+            type="email"
+            placeholder="pi.site101@example.com"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="compile-letter-reason"
+            >Reason for Change / Issuance Justification</label
+          >
+          <textarea
+            id="compile-letter-reason"
+            v-model="compileLetterReason"
+            placeholder="Document the regulatory justification for compiling this letter..."
+          />
+        </div>
+
+        <div v-if="compileLetterError" class="error-msg">
+          ⚠️ {{ compileLetterError }}
+        </div>
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-cancel"
+            :disabled="compileLetterBusy"
+            @click="showCompileLetterModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            id="btn-confirm-compile-letter"
+            type="button"
+            class="btn btn-primary"
+            :disabled="compileLetterBusy"
+            @click="confirmCompileLetter"
+          >
+            {{
+              compileLetterBusy
+                ? "Compiling..."
+                : compileFinalize
+                  ? "Verify Signature & Compile PDF"
+                  : "Compile Draft PDF"
+            }}
+          </button>
+        </template>
+      </ClinicalModal>
 
       <!-- Startup & Greenlight Tab Content -->
       <div
@@ -3217,9 +3225,9 @@ import { ref, computed, watch } from "vue";
 import { useRoute } from "vue-router";
 import {
   buildStepUpVerificationPayload,
+  ClinicalModal,
   SEMANTIC_ACTIONS,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
-  useFocusTrap,
 } from "ui";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
@@ -3846,12 +3854,6 @@ function confirmJustification() {
 }
 
 // Prompt for eSignature (FDA Part 11)
-const sigModalRef = ref(null);
-useFocusTrap(sigModalRef, {
-  isOpen: () => showSignatureModal.value,
-  onEscape: cancelSignatureModal,
-});
-
 function cancelSignatureModal() {
   sigPassword.value = "";
   sigTotp.value = "";

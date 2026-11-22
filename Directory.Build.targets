@@ -9,15 +9,92 @@
 
   <!-- Older .NET 10 SDK builds (e.g. 10.0.113) bundle Native AOT pack metadata at 10.0.13, which triggers NU1903
        (GHSA-p3jp-9v83-76w9) against the NuGet v3 vulnerability feed. Floor the Native AOT compiler and runtime packs
-       at 10.0.15 before ProcessFrameworkReferences without downgrading newer SDKs. -->
+       at $(DotNetServicingVersion) before ProcessFrameworkReferences without downgrading newer SDKs. -->
   <Target Name="FloorNativeAotPacks" BeforeTargets="ProcessFrameworkReferences">
+    <PropertyGroup>
+      <_NativeAotFloorVersion Condition="'$(DotNetServicingVersion)' != ''">$(DotNetServicingVersion)</_NativeAotFloorVersion>
+      <_NativeAotFloorVersion Condition="'$(_NativeAotFloorVersion)' == ''">10.0.15</_NativeAotFloorVersion>
+    </PropertyGroup>
     <ItemGroup>
       <KnownILCompilerPack Update="@(KnownILCompilerPack)"
                            Condition="'%(KnownILCompilerPack.TargetFramework)' == 'net10.0' and ('%(KnownILCompilerPack.ILCompilerPackVersion)' == '10.0.13' or '%(KnownILCompilerPack.ILCompilerPackVersion)' == '10.0.14')"
-                           ILCompilerPackVersion="10.0.15" />
+                           ILCompilerPackVersion="$(_NativeAotFloorVersion)" />
       <KnownRuntimePack Update="@(KnownRuntimePack)"
                         Condition="'%(KnownRuntimePack.TargetFramework)' == 'net10.0' and '%(KnownRuntimePack.RuntimePackLabels)' == 'NativeAOT' and ('%(KnownRuntimePack.LatestRuntimeFrameworkVersion)' == '10.0.13' or '%(KnownRuntimePack.LatestRuntimeFrameworkVersion)' == '10.0.14')"
-                        LatestRuntimeFrameworkVersion="10.0.15" />
+                        LatestRuntimeFrameworkVersion="$(_NativeAotFloorVersion)" />
     </ItemGroup>
+  </Target>
+
+  <!-- Fail compilation whenever a net10.0 project resolves a .NET 11+ framework package/assembly, splits IdentityModel
+       versions, or drifts from $(IdentityModelVersion) or $(AspireHostingVersion) (ADR-2527). -->
+  <Target Name="ValidateDependencyAlignment"
+          AfterTargets="ResolvePackageAssets;ResolveAssemblyReferences"
+          BeforeTargets="CoreCompile"
+          Condition="'$(TargetFramework)' == 'net10.0'">
+    <ItemGroup>
+      <_CandidateFrameworkReferences Include="@(ReferencePath)"
+                                     Condition="'%(ReferencePath.NuGetPackageId)' != '' and Exists('%(ReferencePath.FullPath)') and $([System.Text.RegularExpressions.Regex]::IsMatch('%(ReferencePath.Filename)', '^(?:System|Microsoft\.(?:Extensions|AspNetCore|EntityFrameworkCore|Data|Bcl|Win32|NETCore))(?:$|\.)'))" />
+    </ItemGroup>
+
+    <GetAssemblyIdentity AssemblyFiles="@(_CandidateFrameworkReferences)"
+                         Condition="'@(_CandidateFrameworkReferences)' != ''">
+      <Output TaskParameter="Assemblies" ItemName="_ResolvedFrameworkAssemblyIdentities" />
+    </GetAssemblyIdentity>
+
+    <ItemGroup>
+      <_ResolvedNuGetPackages Include="@(ResolvedCompileFileDefinitions->'%(NuGetPackageId)/%(NuGetPackageVersion)')"
+                              Condition="'%(ResolvedCompileFileDefinitions.NuGetPackageId)' != '' and '%(ResolvedCompileFileDefinitions.NuGetPackageVersion)' != ''"
+                              PackageName="%(ResolvedCompileFileDefinitions.NuGetPackageId)"
+                              PackageVersion="%(ResolvedCompileFileDefinitions.NuGetPackageVersion)" />
+      <_ResolvedNuGetPackages Include="@(RuntimeCopyLocalItems->'%(NuGetPackageId)/%(NuGetPackageVersion)')"
+                              Condition="'%(RuntimeCopyLocalItems.NuGetPackageId)' != '' and '%(RuntimeCopyLocalItems.NuGetPackageVersion)' != ''"
+                              PackageName="%(RuntimeCopyLocalItems.NuGetPackageId)"
+                              PackageVersion="%(RuntimeCopyLocalItems.NuGetPackageVersion)" />
+      <_ResolvedNuGetPackages Include="@(ReferencePath->'%(NuGetPackageId)/%(NuGetPackageVersion)')"
+                              Condition="'%(ReferencePath.NuGetPackageId)' != '' and '%(ReferencePath.NuGetPackageVersion)' != ''"
+                              PackageName="%(ReferencePath.NuGetPackageId)"
+                              PackageVersion="%(ReferencePath.NuGetPackageVersion)" />
+      <_ResolvedNuGetPackages Include="@(_PackageDependenciesDesignTime)"
+                              Condition="'%(_PackageDependenciesDesignTime.Name)' != '' and $([System.String]::Copy('%(_PackageDependenciesDesignTime.Identity)').Contains('/'))"
+                              PackageName="%(_PackageDependenciesDesignTime.Name)"
+                              PackageVersion="$([System.String]::Copy('%(_PackageDependenciesDesignTime.Identity)').Substring($([MSBuild]::Add($([System.String]::Copy('%(_PackageDependenciesDesignTime.Identity)').IndexOf('/')), 1))))" />
+      <_ResolvedNuGetPackages Include="@(PackageDefinitions->'%(Name)/%(Version)')"
+                              Condition="'%(PackageDefinitions.Name)' != '' and '%(PackageDefinitions.Version)' != ''"
+                              PackageName="%(PackageDefinitions.Name)"
+                              PackageVersion="%(PackageDefinitions.Version)" />
+
+      <_SkewedDotNetPackages Include="@(_ResolvedNuGetPackages->Distinct())"
+                             Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(_ResolvedNuGetPackages.PackageName)', '^(?:System|Microsoft\.(?:Extensions|AspNetCore|EntityFrameworkCore|Data|Bcl|Win32|NETCore))(?:$|\.)')) and $([System.Text.RegularExpressions.Regex]::IsMatch('%(_ResolvedNuGetPackages.PackageVersion)', '^(?:1[1-9]|[2-9][0-9]|[1-9][0-9]{2,})\.'))" />
+      <_SkewedDotNetAssemblies Include="@(_ResolvedFrameworkAssemblyIdentities)"
+                               Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(_ResolvedFrameworkAssemblyIdentities.Version)', '^(?:1[1-9]|[2-9][0-9]|[1-9][0-9]{2,})\.'))" />
+      <_SkewedDotNetAssemblies Include="@(ReferencePath)"
+                               Condition="'%(ReferencePath.Version)' != '' and $([System.Text.RegularExpressions.Regex]::IsMatch('%(ReferencePath.Filename)', '^(?:System|Microsoft\.(?:Extensions|AspNetCore|EntityFrameworkCore|Data|Bcl|Win32|NETCore))(?:$|\.)')) and $([System.Text.RegularExpressions.Regex]::IsMatch('%(ReferencePath.Version)', '^(?:1[1-9]|[2-9][0-9]|[1-9][0-9]{2,})\.'))" />
+
+      <_ResolvedIdentityModelPackages Include="@(_ResolvedNuGetPackages->Distinct())"
+                                      Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(_ResolvedNuGetPackages.PackageName)', '^(?:Microsoft|System)\.IdentityModel\.'))" />
+      <_IdentityModelVersions Include="@(_ResolvedIdentityModelPackages->'%(PackageVersion)')" />
+      <_DistinctIdentityModelVersions Include="@(_IdentityModelVersions->Distinct())" />
+      <_MismatchedIdentityModelPackages Include="@(_ResolvedIdentityModelPackages)"
+                                        Condition="'$(IdentityModelVersion)' != '' and '%(_ResolvedIdentityModelPackages.PackageVersion)' != '$(IdentityModelVersion)'" />
+
+      <_ResolvedAspirePackages Include="@(_ResolvedNuGetPackages->Distinct())"
+                               Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(_ResolvedNuGetPackages.PackageName)', '^Aspire\.'))" />
+      <_AspireVersions Include="@(_ResolvedAspirePackages->'%(PackageVersion)')" />
+      <_DistinctAspireVersions Include="@(_AspireVersions->Distinct())" />
+      <_MismatchedAspirePackages Include="@(_ResolvedAspirePackages)"
+                                 Condition="'$(AspireHostingVersion)' != '' and '%(_ResolvedAspirePackages.PackageVersion)' != '$(AspireHostingVersion)'" />
+    </ItemGroup>
+
+    <Error Code="CADDEP001"
+           Condition="'@(_SkewedDotNetPackages)' != '' or '@(_SkewedDotNetAssemblies)' != ''"
+           Text="Project '$(MSBuildProjectName)' targets '$(TargetFramework)' (ADR-2233) but resolved .NET 11+ framework packages or assemblies: packages=[@(_SkewedDotNetPackages, ', ')], assemblies=[@(_SkewedDotNetAssemblies->'%(Identity) %(Version)', ', ')]. Align pins to %24(DotNetServicingVersion) ($(DotNetServicingVersion)) in Directory.Packages.props." />
+
+    <Error Code="CADDEP002"
+           Condition="@(_DistinctIdentityModelVersions->Count()) &gt; 1 or '@(_MismatchedIdentityModelPackages)' != ''"
+           Text="Project '$(MSBuildProjectName)' resolved split or misaligned IdentityModel versions [@(_ResolvedIdentityModelPackages, ', ')]; expected lockstep %24(IdentityModelVersion)=$(IdentityModelVersion)." />
+
+    <Error Code="CADDEP003"
+           Condition="@(_DistinctAspireVersions->Count()) &gt; 1 or '@(_MismatchedAspirePackages)' != '' or ('$(AspireHostingSDKVersion)' != '' and '$(AspireHostingVersion)' != '' and '$(AspireHostingSDKVersion)' != '$(AspireHostingVersion)')"
+           Text="Project '$(MSBuildProjectName)' resolved split or misaligned Aspire versions (SDK='$(AspireHostingSDKVersion)', packages=[@(_ResolvedAspirePackages, ', ')]); expected lockstep %24(AspireHostingVersion)=$(AspireHostingVersion)." />
   </Target>
 </Project>

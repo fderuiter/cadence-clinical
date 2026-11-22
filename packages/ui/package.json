@@ -22,18 +22,18 @@
   "license": "UNLICENSED",
   "type": "module",
   "dependencies": {
-    "axe-core": "^4.14.1"
+    "axe-core": "catalog:"
   },
   "peerDependencies": {
-    "vue": "^3.5.45"
+    "vue": "catalog:"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.11",
-    "@vitest/coverage-v8": "^5.1.0",
-    "pinia": "^4.1.0",
-    "typescript": "^6.0.3",
-    "vite": "^8.3.8",
-    "vitest": "^5.1.0",
-    "vue": "^3.5.45"
+    "@vitejs/plugin-vue": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "pinia": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "vue": "catalog:"
   }
 }
