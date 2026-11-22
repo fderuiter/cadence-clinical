@@ -37,6 +37,20 @@
           />
         </datalist>
       </template>
+      <label for="site-activation-site-picker">Pick site</label>
+      <select
+        id="site-activation-site-picker"
+        :value="pickerValue"
+        class="site-picker"
+        aria-label="Pick a study site"
+        @focus="loadStudySites"
+        @change="onPickSite"
+      >
+        <option value="">Custom / enter site code</option>
+        <option v-for="code in siteOptions" :key="code" :value="code">
+          {{ code }}
+        </option>
+      </select>
       <label for="site-activation-site">Site</label>
       <input
         id="site-activation-site"
@@ -201,7 +215,7 @@
       class="readonly-note"
     >
       Read-only view: site activation requires Sponsor Data Management or System
-      Administrator authorization.
+      Administrator authorization (site_compliance:activate).
     </p>
 
     <p v-if="!props.studyCode" class="unavailable-note">
@@ -214,6 +228,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
 import { canActivateSite } from "../../canvas/authority";
 import { useAuthStore } from "../../stores/auth";
@@ -228,8 +243,11 @@ import PlansRoadmapLink from "./PlansRoadmapLink.vue";
 /**
  * Site activation against Execution: the site's eTMF completeness for SITE_ACTIVATION, and activation once
  * it is complete. Execution refuses activation for an incomplete site and audits every attempt, with the
- * reason given here as the change reason.
+ * reason given here as the change reason. Only callers holding site_compliance:activate (sysadmin or
+ * sponsor_dm) can submit activation.
  */
+const DEFAULT_KNOWN_SITES = ["SITE-101", "SITE-102"];
+
 const props = defineProps({
   /** Fixes the study (the Clinical Canvas passes the study it shows); without it the user types the study. */
   studyCode: { type: String, default: "" },
@@ -255,6 +273,7 @@ const siteCode = ref(
     store.activeSiteId ||
     (assignedSites.value.length ? assignedSites.value[0] : "")
 );
+const discoveredSites = ref([]);
 const compliance = ref(null);
 const checked = ref(false);
 const loading = ref(false);
@@ -263,12 +282,54 @@ const scopeGuidance = ref("");
 const reason = ref("");
 const activating = ref(false);
 
+const siteOptions = computed(() => {
+  const merged = new Set(DEFAULT_KNOWN_SITES);
+  for (const s of assignedSites.value) {
+    if (s) merged.add(s);
+  }
+  for (const s of discoveredSites.value) {
+    if (s) merged.add(s);
+  }
+  if (siteCode.value?.trim()) {
+    merged.add(siteCode.value.trim());
+  }
+  return [...merged].sort((a, b) => a.localeCompare(b));
+});
+
+const pickerValue = computed(() => {
+  const trimmed = siteCode.value?.trim() || "";
+  return siteOptions.value.includes(trimmed) ? trimmed : "";
+});
+
+function onPickSite(event) {
+  const chosen = event.target?.value || "";
+  if (chosen) {
+    siteCode.value = chosen;
+  }
+}
+
+async function loadStudySites() {
+  const study = studyCode.value?.trim();
+  if (!study) return;
+  try {
+    const milestones = await ctmsApi.listSiteMilestones({ study_id: study });
+    if (Array.isArray(milestones)) {
+      discoveredSites.value = milestones
+        .map((m) => m.site_id)
+        .filter((s) => Boolean(s));
+    }
+  } catch {
+    // Optional site discovery should never block manual site entry.
+  }
+}
+
 // The canvas switched study: the status shown was for the previous one.
 watch(
   () => props.studyCode,
   (value) => {
     if (!value) return;
     studyCode.value = value;
+    discoveredSites.value = [];
     compliance.value = null;
     checked.value = false;
     loadError.value = false;
@@ -336,6 +397,7 @@ async function checkStatus() {
 }
 
 async function activate() {
+  if (!canActivate.value) return;
   const current = compliance.value;
   const why = reason.value.trim();
   if (
@@ -404,7 +466,7 @@ onMounted(() => {
   if (canCheck.value) checkStatus();
 });
 
-defineExpose({ checkStatus });
+defineExpose({ checkStatus, loadStudySites });
 </script>
 
 <style scoped>
@@ -428,12 +490,14 @@ defineExpose({ checkStatus });
   font-weight: bold;
 }
 
-.scope input {
+.scope input,
+.site-picker {
   flex: 0 1 12rem;
   min-width: 0;
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
+  background: var(--semantic-color-surface);
 }
 
 .assigned-scope {
@@ -493,11 +557,17 @@ defineExpose({ checkStatus });
 
 .status-complete {
   color: var(--semantic-color-success-dark);
+  font-weight: 600;
 }
 
-.status-incomplete,
+.status-incomplete {
+  color: var(--semantic-color-warning-dark);
+  font-weight: 600;
+}
+
 .status-error {
   color: var(--semantic-color-error);
+  font-weight: 600;
 }
 
 .status-scope-guidance {
@@ -549,7 +619,11 @@ defineExpose({ checkStatus });
 
 .unavailable-note {
   margin: 0;
-  color: var(--semantic-color-text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  color: var(--semantic-color-warning-dark);
+  background: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
+  border-radius: 4px;
+  padding: 8px 12px;
 }
 </style>
