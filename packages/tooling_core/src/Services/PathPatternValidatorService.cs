@@ -14,8 +14,14 @@ public static class PathPatternValidatorService
         int violations = 0;
         string[] forbiddenSubdirs = ["tmp", "temp", "scratch", "old_src"];
 
+        if (files is { Length: 0 })
+        {
+            Console.WriteLine("✔ Path patterns validated cleanly.");
+            return 0;
+        }
+
         // Rule 1: Check forbidden subdirectories across all files
-        var allFiles = files != null && files.Length > 0
+        var allFiles = files is not null
             ? files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists).ToList()
             : Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.AllDirectories)
                 .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}") &&
@@ -37,7 +43,7 @@ public static class PathPatternValidatorService
         }
 
         // Rule 2: Check Vue and Shell script boundaries
-        string[] boundaryCheckFiles = files != null && files.Length > 0
+        string[] boundaryCheckFiles = files is not null
             ? files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists).ToArray()
             : Directory.GetFiles(repoRoot, "*.*", SearchOption.TopDirectoryOnly);
 

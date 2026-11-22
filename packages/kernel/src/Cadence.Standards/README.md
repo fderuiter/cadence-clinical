@@ -34,10 +34,10 @@ through the kernel command `RegisterStandardVersion`.
 
 ## Seeds
 
-| File | Standard | Content | CT binding |
-| --- | --- | --- | --- |
+| File                   | Standard    | Content                        | CT binding          |
+| ---------------------- | ----------- | ------------------------------ | ------------------- |
 | `Seed/sdtmig-3-4.json` | SDTMIG v3.4 | DM, AE, VS, LB (192 variables) | `sdtmct 2024-09-27` |
-| `Seed/adamig-1-3.json` | ADaMIG v1.3 | ADSL (141 variables) | `adamct 2024-09-27` |
+| `Seed/adamig-1-3.json` | ADaMIG v1.3 | ADSL (141 variables)           | `adamct 2024-09-27` |
 
 Provenance: the variable metadata comes from the CDISC workbook exports in
 [`docs/CDISC/Library/Data_Tabulation/SDTMIG_v3.4.json`](../../../../docs/CDISC/Library/Data_Tabulation/SDTMIG_v3.4.json)
@@ -48,8 +48,8 @@ binds "the latest" terminology (spec §6.1). The seeds contain only public CDISC
 
 ## Form blocks
 
-| File | Library item key | Items |
-| --- | --- | --- |
+| File                      | Library item key      | Items                                                                                                                                                                                        |
+| ------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Blocks/vital-signs.json` | `cadence.vital-signs` | Systolic (C25298) and diastolic (C25299) blood pressure in `mm[Hg]`, pulse rate (C49676) in `{beats}/min`, respiratory rate (C49678) in `{breaths}/min`, body temperature (C174446) in `Cel` |
 
 The concept codes are the VSTESTCD terms (codelist C66741) of SDTM CT 2024-09-27 in

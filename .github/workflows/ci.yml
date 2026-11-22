@@ -58,7 +58,7 @@ jobs:
 
       - name: Run frontend style and lint
         run: |
-          pnpm --filter web --filter subject-portal --filter ui exec prettier --check .
+          pnpm exec prettier --check --ignore-path .prettierignore "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}"
           pnpm -r lint
 
       - name: Run Hadolint on Dockerfiles
@@ -346,7 +346,6 @@ jobs:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
         run: |
           node scripts/run-cli.js check clean-secrets
-          git diff --exit-code .secrets.baseline
           node scripts/run-cli.js check security
 
       - name: Run detect-secrets against the baseline

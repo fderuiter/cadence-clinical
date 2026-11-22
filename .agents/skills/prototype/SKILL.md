@@ -13,34 +13,38 @@ Build throwaway or exploratory prototypes to quickly answer clinical design ques
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Visual Wireframing** | `generate_image` | `Prompt="Vue 3 clinical interface mockup for ... with semantic CSS tokens"`, `AspectRatio="16:9"` | Generate high-fidelity visual UI wireframe |
-| **Sandbox Subagent** | `invoke_subagent` | `Subagents=[{"Role": "Prototype Sandboxer", "Workspace": "branch"}]` | Launch isolated prototype exploration in branched workspace |
-| **Scratch Implementation**| `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/scratch/<proto_file>` | Write isolated, throwaway prototype code |
-| **Prototype Execution**| `run_command` | `CommandLine="dotnet run --project <scratch_project>"`, `WaitMsBeforeAsync=5000` | Execute prototype in ephemeral scratch space |
-| **User Feedback** | `ask_question` | `questions=[{"question": "Evaluate Prototype Approach", ...}]` | Solicit interactive feedback on layout/logic |
-| **Transition Plan** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/prototype_findings.md` | Emit structured findings artifact |
+| Phase                      | Antigravity Tool  | Invocation Pattern                                                                                | Objective                                                   |
+| :------------------------- | :---------------- | :------------------------------------------------------------------------------------------------ | :---------------------------------------------------------- |
+| **Visual Wireframing**     | `generate_image`  | `Prompt="Vue 3 clinical interface mockup for ... with semantic CSS tokens"`, `AspectRatio="16:9"` | Generate high-fidelity visual UI wireframe                  |
+| **Sandbox Subagent**       | `invoke_subagent` | `Subagents=[{"Role": "Prototype Sandboxer", "Workspace": "branch"}]`                              | Launch isolated prototype exploration in branched workspace |
+| **Scratch Implementation** | `write_to_file`   | Target: `<appDataDir>/brain/<conversation-id>/scratch/<proto_file>`                               | Write isolated, throwaway prototype code                    |
+| **Prototype Execution**    | `run_command`     | `CommandLine="dotnet run --project <scratch_project>"`, `WaitMsBeforeAsync=5000`                  | Execute prototype in ephemeral scratch space                |
+| **User Feedback**          | `ask_question`    | `questions=[{"question": "Evaluate Prototype Approach", ...}]`                                    | Solicit interactive feedback on layout/logic                |
+| **Transition Plan**        | `write_to_file`   | Target: `<appDataDir>/brain/<conversation-id>/prototype_findings.md`                              | Emit structured findings artifact                           |
 
 ---
 
 ## Prototyping Guidelines
 
 ### 1. Frontend Prototypes (`apps/web`)
+
 - Use existing Vue 3 components and design tokens from `apps/web/src/style.css` (`var(--primary)`, `var(--surface)`, `var(--border)`).
 - Never use Tailwind utility classes.
 - Ensure persona context switcher compatibility (`apps/web/src/stores/auth.ts`).
 - Generate visual mockups with `generate_image` before writing complex UI templates.
 
 ### 2. Backend Prototypes & Sandboxing (`apps/`)
+
 - When exploring risky or complex state mutations, dispatch a subagent with `Workspace: "branch"` to prevent polluting the main working branch.
 - Prototype domain logic using pure in-memory models (`Cadence.Testing.Fakes`) before adding database tables or migrations.
 - Save temporary exploratory scripts in `<appDataDir>/brain/<conversation-id>/scratch/`.
 - Test state transitions using ephemeral test cases (`dotnet cadence test --fast`).
 
 ### 3. Evaluate & Transition via `ask_question`
+
 - Record prototype findings in an Antigravity walkthrough artifact via `write_to_file`.
 - Solicit interactive feedback using `ask_question`:
+
 ```json
 {
   "questions": [
@@ -56,5 +60,3 @@ Build throwaway or exploratory prototypes to quickly answer clinical design ques
   ]
 }
 ```
-
-

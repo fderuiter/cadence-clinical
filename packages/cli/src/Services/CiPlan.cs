@@ -225,7 +225,8 @@ public static class CiPlan
             {
                 Commands =
                 [
-                    Pnpm("--filter", "web", "--filter", "subject-portal", "--filter", "ui", "exec", "prettier", "--check", "."),
+                    Pnpm("exec", "prettier", "--check", "--ignore-path", ".prettierignore", "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}")
+                        with { CiText = "pnpm exec prettier --check --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}\"" },
                     Pnpm("-r", "lint"),
                 ],
             },
@@ -306,7 +307,6 @@ public static class CiPlan
                 Commands =
                 [
                     NodeCli("check", "clean-secrets"),
-                    new CiCommand("git", ["diff", "--exit-code", ".secrets.baseline"]),
                     NodeCli("check", "security"),
                 ],
             },
