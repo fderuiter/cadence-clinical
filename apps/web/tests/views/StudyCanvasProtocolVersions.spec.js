@@ -412,5 +412,60 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     expect(wrapper.find("#kernel-simulate-error").text()).toBe(
       "Base protocol version is not frozen."
     );
+
+    // Simulation error Explain opens #kernel-explain; Retry re-runs simulation
+    await wrapper
+      .find('#kernel-simulate [data-testid="canvas-error-explain"]')
+      .trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#kernel-explain").exists()).toBe(true);
+
+    vi.mocked(kernelApi.simulate)
+      .mockRejectedValueOnce(
+        new ApiError("Base protocol version is not frozen.", 409)
+      )
+      .mockResolvedValueOnce({
+        input_hash: "sha256:v1-retry",
+        result_hash: "sha256:v1-out",
+        structural_diff: [],
+        schedule_changes: [],
+        masked: [],
+        matrix_gaps: [],
+      });
+    await wrapper.find("#verb-simulate").trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#kernel-simulate-error").exists()).toBe(true);
+    await wrapper
+      .find('#kernel-simulate [data-testid="canvas-error-retry"]')
+      .trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#kernel-simulate-error").exists()).toBe(false);
+
+    // Protocol version load error Retry & Explain
+    const missingRef = "protocol_version:0192f3c4-5e6a-7b8c-9d0e-000000000999";
+    vi.mocked(kernelApi.getProtocolVersion)
+      .mockRejectedValueOnce(new ApiError("Transient read timeout", 503))
+      .mockResolvedValueOnce(
+        version({ ref: `${missingRef}@1`, number: 1, status: "Approved" })
+      );
+    await router.push(
+      `/studies/CAD-101?stage=design&section=protocol-versions&node=${missingRef}`
+    );
+    await flushPromises();
+
+    const versionErr = wrapper.find("#inspector-version-error");
+    expect(versionErr.exists()).toBe(true);
+    await versionErr
+      .find('[data-testid="canvas-error-explain"]')
+      .trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#kernel-explain").exists()).toBe(true);
+
+    await versionErr
+      .find('[data-testid="canvas-error-retry"]')
+      .trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#inspector-version-error").exists()).toBe(false);
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe("Version 1");
   });
 });

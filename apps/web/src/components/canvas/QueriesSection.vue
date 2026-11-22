@@ -81,15 +81,14 @@
     <p v-if="studyLoading" class="status-line" role="status">
       Looking up {{ studyCode }}…
     </p>
-    <div
+    <CanvasErrorAlert
       v-else-if="studyError"
       id="study-queries-error"
-      class="status-line"
-      role="alert"
-    >
-      <p class="status-line">{{ studyCode }}'s queries couldn't be loaded.</p>
-      <SupportDetails :detail="studyError" />
-    </div>
+      :message="`${studyCode}'s queries couldn't be loaded.`"
+      :detail="studyError"
+      @retry="loadStudy(studyCode)"
+      @explain="explainLoadError"
+    />
     <p v-else-if="!studyId" id="study-queries-no-study" class="status-line">
       Study {{ studyCode }} wasn't found or isn't visible to your account, so
       its queries cannot be listed here.
@@ -107,15 +106,14 @@
       >
         Refreshing queries for {{ studyCode }}…
       </p>
-      <div
+      <CanvasErrorAlert
         v-if="queries.loadError"
         id="study-queries-error"
-        class="status-line"
-        role="alert"
-      >
-        <p class="status-line">{{ studyCode }}'s queries couldn't be loaded.</p>
-        <SupportDetails :detail="queries.loadError" />
-      </div>
+        :message="`${studyCode}'s queries couldn't be loaded.`"
+        :detail="queries.loadError"
+        @retry="queries.reload()"
+        @explain="explainLoadError"
+      />
       <p
         v-if="queries.queries.length === 0 && !queries.loadError"
         id="study-queries-empty"
@@ -171,8 +169,9 @@ import {
   parseNodeRef,
 } from "../../canvas/nodeRef";
 import { useFormQueries } from "../../composables/useFormQueries";
+import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import FormQueryList from "../ecrf/FormQueryList.vue";
-import SupportDetails from "./SupportDetails.vue";
+import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 
 export interface StudyQueriesFilterState {
   status: string;
@@ -207,7 +206,10 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   filter: [next: StudyQueriesFilterState];
+  explain: [];
 }>();
+
+const canvasStore = useStudyCanvasStore();
 
 const siteInputRef = ref<HTMLInputElement | null>(null);
 const participantInputRef = ref<HTMLInputElement | null>(null);
@@ -434,33 +436,44 @@ async function refreshQueries() {
   }
 }
 
+async function loadStudy(code: string) {
+  const request = ++studyLookup;
+  clearTimeout(filterTimer);
+  filterTimer = undefined;
+  studyId.value = null;
+  studyError.value = null;
+  seenSites.value = [];
+  seenParticipants.value = [];
+  queries.clear();
+  if (!code) return;
+  studyLoading.value = true;
+  try {
+    const refText = await findKernelStudyRef(code);
+    if (request !== studyLookup) return;
+    const parsed = refText ? parseNodeRef(refText) : null;
+    studyId.value = parsed?.kind === "study" ? parsed.id : null;
+    if (studyId.value) {
+      await refreshQueries();
+    }
+  } catch (error) {
+    if (request !== studyLookup) return;
+    studyError.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    if (request === studyLookup) studyLoading.value = false;
+  }
+}
+
+function explainLoadError() {
+  emit("explain");
+  canvasStore.requestExplain({
+    targetNodeRef: studyId.value ? `study:${studyId.value}` : null,
+  });
+}
+
 watch(
   () => props.studyCode,
-  async (code) => {
-    const request = ++studyLookup;
-    clearTimeout(filterTimer);
-    filterTimer = undefined;
-    studyId.value = null;
-    studyError.value = null;
-    seenSites.value = [];
-    seenParticipants.value = [];
-    queries.clear();
-    if (!code) return;
-    studyLoading.value = true;
-    try {
-      const refText = await findKernelStudyRef(code);
-      if (request !== studyLookup) return;
-      const parsed = refText ? parseNodeRef(refText) : null;
-      studyId.value = parsed?.kind === "study" ? parsed.id : null;
-      if (studyId.value) {
-        await refreshQueries();
-      }
-    } catch (error) {
-      if (request !== studyLookup) return;
-      studyError.value = error instanceof Error ? error.message : String(error);
-    } finally {
-      if (request === studyLookup) studyLoading.value = false;
-    }
+  (code) => {
+    void loadStudy(code);
   },
   { immediate: true }
 );

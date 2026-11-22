@@ -458,4 +458,61 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       "Source chart verified across visits"
     );
   });
+
+  it("renders CanvasErrorAlert with working Retry and Explain controls on study and participant query load failures", async () => {
+    vi.mocked(findKernelStudyRef).mockRejectedValueOnce(
+      new ApiError("Kernel search gateway timeout", 504)
+    );
+
+    await router.push("/studies/CAD-101?stage=data&section=queries");
+    await router.isReady();
+    wrapper = mount(StudyCanvasView, {
+      attachTo: document.body,
+      global: { plugins: [pinia, router] },
+    });
+    await flushPromises();
+
+    const studyAlert = wrapper.find("#study-queries-error");
+    expect(studyAlert.exists()).toBe(true);
+    expect(studyAlert.find("details").text()).toContain(
+      "Kernel search gateway timeout"
+    );
+
+    // Retry study lookup succeeds, then listForStudy fails once to test queries.reload() + Explain
+    vi.mocked(findKernelStudyRef).mockResolvedValueOnce(
+      `study:${STUDY_UUID}@1`
+    );
+    vi.mocked(ecrfQueriesApi.listForStudy).mockRejectedValueOnce(
+      new ApiError("Query projection temporarily unavailable", 503)
+    );
+    await studyAlert
+      .find('[data-testid="canvas-error-retry"]')
+      .trigger("click");
+    await flushPromises();
+
+    const listAlert = wrapper.find("#study-queries-error");
+    expect(listAlert.exists()).toBe(true);
+    expect(listAlert.find("details").text()).toContain(
+      "Query projection temporarily unavailable"
+    );
+
+    // Clicking Explain expands #canvas-inspector on study NodeRef and opens #kernel-explain
+    await listAlert
+      .find('[data-testid="canvas-error-explain"]')
+      .trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#canvas-inspector").attributes("data-collapsed")).toBe(
+      "false"
+    );
+    expect(wrapper.find("#kernel-explain").exists()).toBe(true);
+
+    // Clicking Retry invokes queries.reload() and renders loaded queries
+    vi.mocked(ecrfQueriesApi.listForStudy).mockResolvedValueOnce([
+      studyQuery(),
+    ]);
+    await listAlert.find('[data-testid="canvas-error-retry"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#study-queries-error").exists()).toBe(false);
+    expect(wrapper.find("#query-query-1").exists()).toBe(true);
+  });
 });

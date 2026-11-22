@@ -3,7 +3,20 @@
     class="app-shell"
     :style="{ '--shell-header-height': `${headerHeight}px` }"
   >
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a
+      v-if="hasStudyWorkspace"
+      id="skip-to-workspace"
+      href="#canvas-workspace"
+      class="skip-link"
+      @click.prevent="focusSkipTarget('canvas-workspace')"
+      >Skip to workspace</a
+    >
+    <a
+      href="#main-content"
+      class="skip-link"
+      @click.prevent="focusSkipTarget('main-content')"
+      >Skip to main content</a
+    >
 
     <header ref="headerRef" class="app-header">
       <div class="header-left">
@@ -329,6 +342,13 @@ const headerRef = ref(null);
 const headerHeight = ref(57);
 let headerResizeObserver = null;
 
+function focusSkipTarget(targetId) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.focus();
+  target.scrollIntoView?.({ block: "nearest" });
+}
+
 function syncHeaderHeight() {
   const el = headerRef.value;
   if (!el || typeof el.getBoundingClientRect !== "function") return;
@@ -380,6 +400,12 @@ const isStudiesRoute = computed(
   () =>
     route?.name === "study" ||
     Boolean(route?.path && route.path.startsWith("/studies"))
+);
+const hasStudyWorkspace = computed(
+  () =>
+    route?.name === "study" &&
+    typeof route?.params?.studyCode === "string" &&
+    Boolean(route.params.studyCode.trim())
 );
 const isDataCollectionRoute = computed(
   () =>
@@ -453,6 +479,10 @@ const {
 });
 
 function handleGlobalKeydown(event) {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
+    canvasStore.handleExplainShortcut(event);
+    return;
+  }
   if (!authStore.isAuthenticated) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();

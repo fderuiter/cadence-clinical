@@ -93,6 +93,39 @@ export async function findStudySites(
   );
 }
 
+/**
+ * Resolves the canonical `study_site:<uuid>` `NodeRef` for `(studyCode, siteCode)` from the kernel's
+ * visible `study_site` zoom children, or `null` when the study or site is not visible to the caller.
+ */
+export async function findKernelStudySiteRef(
+  studyCode: string,
+  siteCode: string
+): Promise<string | null> {
+  const normalizedStudy = studyCode.trim();
+  const normalizedSite = siteCode.trim().toLowerCase();
+  if (
+    !normalizedStudy ||
+    !normalizedSite ||
+    typeof kernelApi.search !== "function" ||
+    typeof kernelApi.getChildren !== "function"
+  ) {
+    return null;
+  }
+  const studyRef = await findKernelStudyRef(normalizedStudy);
+  if (!studyRef) return null;
+  const children = await kernelApi.getChildren(studyRef);
+  const matches = children.filter(
+    (child) =>
+      child.node.kind === "study_site" &&
+      !child.node.mask &&
+      Boolean(child.node.ref) &&
+      child.node.code?.trim().toLowerCase() === normalizedSite
+  );
+  if (matches.length !== 1) return null;
+  const parsed = parseNodeRef(matches[0].node.ref);
+  return parsed?.kind === "study_site" ? `${parsed.kind}:${parsed.id}` : null;
+}
+
 export interface StudyCollectionSpecOption {
   id: string;
   name: string;

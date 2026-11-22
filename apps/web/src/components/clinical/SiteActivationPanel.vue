@@ -184,39 +184,72 @@
       </p>
     </div>
 
-    <div
-      v-if="compliance?.is_complete && !compliance?.is_activated && canActivate"
-      class="activate"
-    >
-      <label for="site-activation-reason">Reason for activation</label>
-      <textarea
-        id="site-activation-reason"
-        v-model="reason"
-        rows="2"
-        placeholder="Why the site is being activated (recorded in the audit trail)"
-      />
-      <button
-        id="btn-activate-site"
-        type="button"
-        class="btn btn-primary"
-        :disabled="!reason.trim() || activating"
-        @click="activate"
+    <div v-if="compliance && !compliance.is_activated" class="activate">
+      <template v-if="isActivationAllowed">
+        <label for="site-activation-reason">Reason for activation</label>
+        <textarea
+          id="site-activation-reason"
+          v-model="reason"
+          rows="2"
+          placeholder="Why the site is being activated (recorded in the audit trail)"
+        />
+      </template>
+      <p
+        v-if="!canActivate"
+        id="site-activation-readonly-note"
+        class="readonly-note"
       >
-        {{
-          activating ? "Activating..." : `Activate site ${compliance.site_id}`
-        }}
-      </button>
+        Read-only view: site activation requires Sponsor Data Management or
+        System Administrator authorization (site_compliance:activate).
+      </p>
+      <div class="activate-actions">
+        <button
+          id="btn-activate-site"
+          type="button"
+          class="btn btn-primary"
+          :disabled="!isActivationAllowed || !reason.trim() || activating"
+          @click="activate"
+        >
+          {{
+            activating ? "Activating..." : `Activate site ${compliance.site_id}`
+          }}
+        </button>
+        <button
+          v-if="
+            !isActivationAllowed || Boolean(canI.decision.value?.explanation)
+          "
+          id="btn-explain-site-activation"
+          type="button"
+          class="btn btn-secondary"
+          :aria-expanded="showExplanation ? 'true' : 'false'"
+          aria-controls="site-activation-explanation"
+          @click="showExplanation = !showExplanation"
+        >
+          {{ showExplanation ? "Hide explanation" : "Explain" }}
+        </button>
+      </div>
+      <div
+        v-if="showExplanation"
+        id="site-activation-explanation"
+        class="activation-explanation"
+        role="region"
+        aria-label="Site activation eligibility explanation"
+      >
+        <ul
+          v-if="unmetConditions.length"
+          id="site-activation-unmet-conditions"
+          class="activation-conditions"
+        >
+          <li v-for="condition in unmetConditions" :key="condition">
+            {{ condition }}
+          </li>
+        </ul>
+        <KernelExplanation
+          v-if="canI.decision.value?.explanation"
+          :explanation="canI.decision.value.explanation"
+        />
+      </div>
     </div>
-    <p
-      v-else-if="
-        compliance?.is_complete && !compliance?.is_activated && !canActivate
-      "
-      id="site-activation-readonly-note"
-      class="readonly-note"
-    >
-      Read-only view: site activation requires Sponsor Data Management or System
-      Administrator authorization (site_compliance:activate).
-    </p>
 
     <p v-if="!props.studyCode" class="unavailable-note">
       Grant financials, CRA workload allocation, recruitment target updates, and
@@ -230,7 +263,11 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
-import { canActivateSite } from "../../canvas/authority";
+import {
+  SITE_ACTIVATION_ROLE_REASON,
+  canActivateSite,
+} from "../../canvas/authority";
+import { useKernelCanI } from "../../composables/useKernelCanI";
 import { useAuthStore } from "../../stores/auth";
 import { useClinicalStore } from "../../stores/clinical";
 import { useToastStore } from "../../stores/toasts.js";
@@ -238,6 +275,7 @@ import {
   formatScopeForbiddenGuidance,
   isForbiddenScopeError,
 } from "../../utils/callerScope";
+import KernelExplanation from "../canvas/KernelExplanation.vue";
 import PlansRoadmapLink from "./PlansRoadmapLink.vue";
 
 /**
@@ -281,6 +319,47 @@ const loadError = ref(false);
 const scopeGuidance = ref("");
 const reason = ref("");
 const activating = ref(false);
+const showExplanation = ref(false);
+const canI = useKernelCanI();
+
+const isKernelPermitted = computed(() =>
+  canI.decision.value ? Boolean(canI.decision.value.permitted) : true
+);
+
+const isActivationAllowed = computed(() =>
+  Boolean(
+    compliance.value?.is_complete &&
+    !compliance.value?.is_activated &&
+    canActivate.value &&
+    isKernelPermitted.value
+  )
+);
+
+const unmetConditions = computed(() => {
+  const items = [];
+  if (!compliance.value || compliance.value.is_activated) return items;
+  if (!canActivate.value) {
+    items.push(SITE_ACTIVATION_ROLE_REASON);
+  }
+  if (!compliance.value.is_complete) {
+    if (compliance.value.missing_documents?.length) {
+      items.push(
+        `Missing required activation documents: ${compliance.value.missing_documents.join(", ")}.`
+      );
+    } else {
+      items.push(
+        "eTMF has not confirmed activation document completeness for this site."
+      );
+    }
+  }
+  if (canI.decision.value && !canI.decision.value.permitted) {
+    const kernelReason = canI.decision.value.reason?.trim();
+    if (kernelReason) {
+      items.push(kernelReason);
+    }
+  }
+  return items;
+});
 
 const siteOptions = computed(() => {
   const merged = new Set(DEFAULT_KNOWN_SITES);
@@ -334,6 +413,8 @@ watch(
     checked.value = false;
     loadError.value = false;
     scopeGuidance.value = "";
+    showExplanation.value = false;
+    canI.reset();
   }
 );
 
@@ -376,6 +457,8 @@ async function checkStatus() {
   loadError.value = false;
   scopeGuidance.value = "";
   compliance.value = null;
+  showExplanation.value = false;
+  void canI.probeStudySiteActivate(study, site);
   try {
     compliance.value = await executionApi.getSiteComplianceStatus(site, study);
   } catch (err) {
@@ -397,11 +480,11 @@ async function checkStatus() {
 }
 
 async function activate() {
-  if (!canActivate.value) return;
+  if (!isActivationAllowed.value) return;
   const current = compliance.value;
   const why = reason.value.trim();
   if (
-    !canActivate.value ||
+    !isActivationAllowed.value ||
     !current?.is_complete ||
     current?.is_activated ||
     !why ||
@@ -549,6 +632,33 @@ defineExpose({ checkStatus, loadStudySites });
 
 .activate button {
   align-self: flex-start;
+}
+
+.activate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.activation-explanation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text);
+  font-size: var(--font-size-sm);
+}
+
+.activation-conditions {
+  margin: 0;
+  padding-left: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2xs);
 }
 
 .status {

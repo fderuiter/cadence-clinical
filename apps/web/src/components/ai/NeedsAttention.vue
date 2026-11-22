@@ -69,7 +69,7 @@ import type { RouteLocationRaw } from "vue-router";
 import { kernelApi, type KernelProposal } from "../../api/kernelApi";
 import { isAgentProposal } from "../../ai/proposals";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
-import { maskReasonWords } from "../../canvas/nodeResolver";
+import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
@@ -138,7 +138,18 @@ async function load() {
       status: "Open",
       limit: LIMIT,
     });
-    if (request === latest) proposals.value = open;
+    if (request === latest) {
+      proposals.value = open;
+      for (const item of open) {
+        if (item.ref && !item.mask) {
+          seedNodeSummary(item.ref, {
+            kind: "proposal",
+            title: item.intent ?? null,
+            status: item.status ?? null,
+          });
+        }
+      }
+    }
   } catch (e) {
     if (request === latest) {
       error.value = e instanceof Error ? e.message : String(e);
