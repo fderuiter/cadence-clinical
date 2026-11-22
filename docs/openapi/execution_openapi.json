@@ -137,6 +137,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -398,6 +408,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -6301,6 +6321,12 @@
         "properties": {
           "study_id": {
             "type": "string"
+          },
+          "greenlight_token": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

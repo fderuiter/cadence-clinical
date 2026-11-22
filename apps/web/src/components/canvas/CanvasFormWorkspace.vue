@@ -61,6 +61,7 @@
       />
 
       <EcrfFormPanel
+        v-if="Boolean(formId) || !captureLocked"
         :form-id="formId"
         :collection-spec-id="collectionSpecId"
         :planned-activity-id="plannedActivityId"
@@ -140,6 +141,16 @@ watch(
   { immediate: true }
 );
 
+watch(
+  () => [props.enrollmentId, props.formId] as const,
+  ([enrollmentId, formId]) => {
+    if (enrollmentId && !formId) {
+      void canvas.loadEnrollmentScheduleOptions(enrollmentId);
+    }
+  },
+  { immediate: true }
+);
+
 const workspaceTitle = computed(() => {
   if (props.formLabel) return props.formLabel;
   return props.formId ? "Case report form" : "Forms";
@@ -154,13 +165,36 @@ const scheduleForStudy = computed(() =>
     : canvas.scheduleOptions
 );
 
+const enrollmentSchedule = computed(() =>
+  props.enrollmentId
+    ? (canvas.enrollmentSchedulesById[props.enrollmentId] ?? null)
+    : null
+);
+
+const captureLocked = computed(() =>
+  Boolean(
+    enrollmentSchedule.value?.requiresReconsent ||
+    enrollmentSchedule.value?.isInconsistent
+  )
+);
+
+const effectiveSchedule = computed(() => {
+  if (enrollmentSchedule.value?.schedule) {
+    return enrollmentSchedule.value.schedule;
+  }
+  if (enrollmentSchedule.value?.isInconsistent) {
+    return null;
+  }
+  return scheduleForStudy.value;
+});
+
 const enrollmentContext = computed<CanvasFormEnrollmentContext | null>(() => {
   if (!props.enrollmentId) return null;
   return {
     enrollmentId: props.enrollmentId,
     subjectCode: props.participant?.subject_id,
-    collectionSpecs: scheduleForStudy.value?.collectionSpecs ?? [],
-    plannedActivities: scheduleForStudy.value?.plannedActivities ?? [],
+    collectionSpecs: effectiveSchedule.value?.collectionSpecs ?? [],
+    plannedActivities: effectiveSchedule.value?.plannedActivities ?? [],
     scheduleLoading: !props.formId && canvas.scheduleLoading,
     scheduleError: !props.formId ? canvas.scheduleError : null,
   };

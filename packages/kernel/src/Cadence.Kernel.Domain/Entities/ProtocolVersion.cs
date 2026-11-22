@@ -261,7 +261,15 @@ public class ProtocolVersion : AggregateRoot<ProtocolVersionId>
             && amendment.ImpactedElements is { Count: > 0 } elements
             && elements.All(e => !string.IsNullOrWhiteSpace(e))
             && Enum.IsDefined(amendment.Classification)
-            && Enum.IsDefined(amendment.TransitionPolicy);
+            && Enum.IsDefined(amendment.TransitionPolicy)
+            && Enum.IsDefined(amendment.DefaultCohortPolicy)
+            && amendment.DefaultCohortPolicy != TransitionPolicy.ByCohort
+            && (amendment.CohortRules is null
+                || amendment.CohortRules.All(r =>
+                    r is not null
+                    && !string.IsNullOrWhiteSpace(r.Predicate)
+                    && Enum.IsDefined(r.Policy)
+                    && r.Policy != TransitionPolicy.ByCohort));
         return valid ? null : ProtocolErrors.AmendmentInvalid;
     }
 }

@@ -7,12 +7,22 @@ using Cadence.Kernel.Execution;
 namespace Cadence.Kernel.Commands;
 
 /// <summary>
-/// Declares that a protocol version is being made effective in a scope of its study (spec §7.1). The effectivity starts
-/// <see cref="EffectivityStatus.Pending"/> at <c>DeclaredAt</c>, in valid time. A version has at most one effectivity
+/// Declares that an approved protocol version is being made effective in a scope of its study (spec §7.1). The effectivity
+/// starts <see cref="EffectivityStatus.Pending"/> at <c>DeclaredAt</c>, in valid time. A version has at most one effectivity
 /// per scope.
 /// </summary>
 [KernelCapability("effectivity.declare", VerbClass.Execute, Resource = nameof(ProtocolVersionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(EffectivityErrors),
+    nameof(EffectivityErrors.ScopeInvalid),
+    nameof(EffectivityErrors.TransitionTimeInvalid),
+    nameof(EffectivityErrors.ProtocolVersionUnknown),
+    nameof(EffectivityErrors.ProtocolVersionNotApproved),
+    nameof(EffectivityErrors.StudySiteUnknown),
+    nameof(EffectivityErrors.StudySiteNotInStudy),
+    nameof(EffectivityErrors.AlreadyDeclared))]
 public sealed record DeclareEffectivity(
     TenantId TenantId,
     EffectivityId EffectivityId,
@@ -30,6 +40,15 @@ public sealed record DeclareEffectivity(
 /// </summary>
 [KernelCapability("effectivity.change_status", VerbClass.Approve, Resource = nameof(EffectivityId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(EffectivityErrors),
+    nameof(EffectivityErrors.InvalidTransition),
+    nameof(EffectivityErrors.TransitionTimeInvalid),
+    nameof(EffectivityErrors.ProtocolVersionUnknown),
+    nameof(EffectivityErrors.ProtocolVersionNotApproved),
+    nameof(EffectivityErrors.EvidenceRequired),
+    nameof(EffectivityErrors.EvidenceInvalid))]
 public sealed record ChangeEffectivityStatus(
     TenantId TenantId,
     EffectivityId EffectivityId,
@@ -44,11 +63,59 @@ public sealed record ChangeEffectivityStatus(
 /// </summary>
 [KernelCapability("study_site.activate", VerbClass.Approve, Resource = nameof(StudySiteId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(
+    typeof(EffectivityErrors),
+    nameof(EffectivityErrors.StudySiteUnknown),
+    nameof(EffectivityErrors.StudySiteAlreadyActive),
+    nameof(EffectivityErrors.NoEffectiveVersion))]
 public sealed record ActivateStudySite(
     TenantId TenantId,
     StudySiteId StudySiteId,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<StudySiteState>;
+
+/// <summary>
+/// Records bitemporal participant consent for a protocol version and scope set on an enrollment (spec §9.4, PRD-SUB-007).
+/// When <c>Signed</c> is true, resolves every pending re-consent transition covered by <c>ProtocolVersionId</c> (or its
+/// amendment ancestor chain) and advances or establishes bitemporal <c>Applicability</c> at <c>SignedAt</c> (spec §7.5).
+/// </summary>
+[KernelCapability("consent.record", VerbClass.Execute, Resource = nameof(RecordConsentStatus.EnrollmentId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(ConsentErrors),
+    nameof(ConsentErrors.EnrollmentUnknown),
+    nameof(ConsentErrors.ProtocolVersionUnknown),
+    nameof(ConsentErrors.SignedAtInvalid),
+    nameof(ConsentErrors.ScopesInvalid))]
+public sealed record RecordConsentStatus(
+    TenantId TenantId,
+    ConsentStatusId ConsentStatusId,
+    EnrollmentId EnrollmentId,
+    ProtocolVersionId ProtocolVersionId,
+    bool Signed,
+    DateTimeOffset SignedAt,
+    ConsentBasisKind BasisKind,
+    AttestationId? AttestationId,
+    ArtifactVersionId? ArtifactVersionId,
+    IReadOnlyList<ConsentScopeEntry> Scopes,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<ConsentStatusState>;
+
+/// <summary>
+/// Flags or clears an applicability inconsistency on an enrollment (spec §7.5, K-TIME-6); while flagged, new clinical
+/// data capture is refused until the inconsistency is resolved.
+/// </summary>
+[KernelCapability("applicability.flag_inconsistency", VerbClass.Execute, Resource = nameof(FlagApplicabilityInconsistency.EnrollmentId))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(ConsentErrors), nameof(ConsentErrors.EnrollmentUnknown))]
+public sealed record FlagApplicabilityInconsistency(
+    TenantId TenantId,
+    EnrollmentId EnrollmentId,
+    bool IsInconsistent,
+    string? InconsistencyReason,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<ApplicabilityState>;
 
 /// <summary>An effectivity after a command.</summary>
 public sealed record EffectivityState(

@@ -84,7 +84,7 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
         {
             var sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == study).Select(s => s.SponsorId).SingleAsync(ct);
             var site = new Site(SiteId.New(), tenant, sponsor, $"NAVE-{Guid.NewGuid():N}"[..20], "Enrolling Clinic", "FR", KernelPostgresFixture.ActorId, Reason);
-            await fixture.SeedAsync(site, new StudySite(StudySiteId.New(), tenant, study, site.Id, "Selected", KernelPostgresFixture.ActorId, Reason));
+            await fixture.SeedAsync(site, new StudySite(StudySiteId.New(), tenant, study, site.Id, "Active", KernelPostgresFixture.ActorId, Reason));
         }
 
         StudySiteId studySite;

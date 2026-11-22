@@ -32,8 +32,13 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `GET` | `/api/v1/kernel/activity` | KernelActivity | What happened in a scope, newest first. |
 | `POST` | `/api/v1/kernel/assertions/{assertionRef}/retraction` | KernelRetractAssertion | Retracts a verification, answer or query assertion with the signed reason for change (assertion.retract). |
 | `GET` | `/api/v1/kernel/authorization/can-i` | KernelCanI | Whether the caller may exercise a capability on an object now, and why. |
+| `POST` | `/api/v1/kernel/consents/sync` | KernelSyncConsentStatus | Synchronizes signed coordinator or electronic consent from Execution into Kernel bitemporal ConsentStatus and Applicability (consent.record). |
+| `POST` | `/api/v1/kernel/effectivities` | KernelDeclareEffectivity | Declares an approved protocol version's effectivity at study, country, or study-site scope (effectivity.declare). |
+| `POST` | `/api/v1/kernel/effectivities/{effectivityRef}/status` | KernelChangeEffectivityStatus | Transitions an effectivity record's status and evaluates TransitionPolicy for open enrollments (effectivity.change_status). |
 | `POST` | `/api/v1/kernel/enrollments/screen` | KernelScreenEnrollment | Registers a pseudonymous participant when needed and starts a screening enrollment at a study site (participant.screen). |
 | `GET` | `/api/v1/kernel/enrollments/{enrollmentRef}/casebook` | KernelExportEnrollmentCasebook | Streams a participant casebook with revisions, queries, verifications, attestations and SHA-256 digests. |
+| `POST` | `/api/v1/kernel/enrollments/{enrollmentRef}/consents` | KernelRecordConsentStatus | Records bitemporal participant consent at SignedAt and resolves covered pending re-consent transitions (consent.record). |
+| `GET` | `/api/v1/kernel/enrollments/{enrollmentRef}/schedule-of-activities` | KernelGetEnrollmentScheduleOfActivities | An enrollment's governing Schedule of Activities and re-consent lock state. |
 | `GET` | `/api/v1/kernel/entitlements` | KernelGetEntitlements | The caller's tenant commercial subscription tier, trial state, and enabled product families. |
 | `POST` | `/api/v1/kernel/entitlements/activate` | KernelActivateSubscription | Activates a Trialing or Expired commercial subscription after validating study scoping and billing confirmation. |
 | `POST` | `/api/v1/kernel/entitlements/tier` | KernelUpgradeSubscriptionTier | Switches the tenant's commercial evaluation tier in place while preserving trial countdown and clinical records. |
@@ -74,5 +79,7 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `POST` | `/api/v1/kernel/studies/{studyRef}/rule-packs/{itemRef}/preview` | KernelPreviewStudyRulePack | Evaluates a draft or approved rule pack in memory over the study's current collection records without mutating state. |
 | `PUT` | `/api/v1/kernel/studies/{studyRef}/standards` | KernelDeclareStudyRulePacks | Declares or updates the approved rule-pack library items pinned on a study (study.declare_standards). |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/validation/findings` | KernelListStudyValidationFindings | Lists derived validation findings for a study, optionally filtered by stage, status, severity, rule pack or dataset. |
+| `POST` | `/api/v1/kernel/study-sites/activate` | KernelActivateStudySiteByCode | Idempotently activates a linked study site resolved by study code and site code (study_site.activate). |
+| `POST` | `/api/v1/kernel/study-sites/{studySiteRef}/activate` | KernelActivateStudySite | Activates a study site for screening and enrollment once regulatory and greenlight prerequisites hold (study_site.activate). |
 | `GET` | `/api/v1/kernel/validation/findings/{findingRef}` | KernelGetValidationFinding | Returns one derived validation finding and its structured provenance explanation. |
 | `GET` | `/healthz` | KernelHealthCheck | Clinical Kernel API health probe. |

@@ -74,6 +74,7 @@ internal sealed record JourneyStudy(
         var aeTerm = await DefineAsync(fixture, tenant, "Adverse event term", ConceptKind.BiomedicalConcept, ct);
         var aeSerious = await DefineAsync(fixture, tenant, "Adverse event seriousness", ConceptKind.BiomedicalConcept, ct);
         var version = await EffectiveVersionAsync(fixture, tenant, study, sbp, aeTerm, aeSerious, ct);
+        await fixture.ArrangeAsync(new ActivateStudySite(tenant, studySite, Key(), Reason), ct);
 
         var from = SystemClock.Instance.UtcNow.AddHours(-2);
         await GrantAsync(fixture, tenant, Coordinator, AuthorityScope.Tenant(), from, ct, "participant.register");

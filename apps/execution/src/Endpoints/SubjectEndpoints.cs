@@ -110,6 +110,7 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
             .AddEndpointFilter<ValidationFilter<SubjectConsentRequest>>();
 

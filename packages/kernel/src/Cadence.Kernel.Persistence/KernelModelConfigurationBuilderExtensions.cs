@@ -28,6 +28,8 @@ public static class KernelModelConfigurationBuilderExtensions
         configurationBuilder.Properties<RoleId>().HaveConversion<RoleIdValueConverter, EntityIdValueComparer<RoleId>>();
         configurationBuilder.Properties<GrantId>().HaveConversion<GrantIdValueConverter, EntityIdValueComparer<GrantId>>();
         configurationBuilder.Properties<EffectivityId>().HaveConversion<EffectivityIdValueConverter, EntityIdValueComparer<EffectivityId>>();
+        configurationBuilder.Properties<ApplicabilityId>().HaveConversion<ApplicabilityIdValueConverter, EntityIdValueComparer<ApplicabilityId>>();
+        configurationBuilder.Properties<ConsentStatusId>().HaveConversion<ConsentStatusIdValueConverter, EntityIdValueComparer<ConsentStatusId>>();
         configurationBuilder.Properties<ObservationId>().HaveConversion<ObservationIdValueConverter, EntityIdValueComparer<ObservationId>>();
         configurationBuilder.Properties<AssertionId>().HaveConversion<AssertionIdValueConverter, EntityIdValueComparer<AssertionId>>();
         configurationBuilder.Properties<CollectionInstanceId>().HaveConversion<CollectionInstanceIdValueConverter, EntityIdValueComparer<CollectionInstanceId>>();

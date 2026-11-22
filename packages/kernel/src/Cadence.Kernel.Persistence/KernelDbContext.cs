@@ -93,6 +93,16 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<EffectivityStatusPeriod> EffectivityStatusPeriods => Set<EffectivityStatusPeriod>();
 
+    public DbSet<Applicability> Applicabilities => Set<Applicability>();
+
+    public DbSet<ApplicabilityPeriod> ApplicabilityPeriods => Set<ApplicabilityPeriod>();
+
+    public DbSet<PendingApplicabilityTransition> PendingApplicabilityTransitions => Set<PendingApplicabilityTransition>();
+
+    public DbSet<ConsentStatus> ConsentStatuses => Set<ConsentStatus>();
+
+    public DbSet<ConsentStatusPeriod> ConsentStatusPeriods => Set<ConsentStatusPeriod>();
+
     public DbSet<Proposal> Proposals => Set<Proposal>();
 
     public DbSet<Subscription> Subscriptions => Set<Subscription>();

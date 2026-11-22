@@ -60,6 +60,23 @@ vi.mock("../src/api/ctmsApi", () => ({
   },
 }));
 
+const CERTIFIED_GREENLIGHT_TOKEN = "v1.eyJzdHVkeV9pZCI6IkNBRC0xMDEifQ.sig";
+
+function greenlightGate(overrides = {}) {
+  return {
+    study_id: "CAD-101",
+    site_id: "SITE-7",
+    country_code: "US",
+    overall_status: "CERTIFIED",
+    is_compliant: true,
+    greenlight_token: CERTIFIED_GREENLIGHT_TOKEN,
+    greenlight_certified_by: "ssu_lead_01",
+    greenlight_certified_at: "2026-06-15T10:00:00Z",
+    unfulfilled_reasons: [],
+    ...overrides,
+  };
+}
+
 function status(overrides = {}) {
   return {
     study_id: "CAD-101",
@@ -94,6 +111,10 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     useAuthStore().rawRoles = ["Data Manager"];
     vi.mocked(executionApi.getSiteComplianceStatus).mockReset();
     vi.mocked(executionApi.activateSite).mockReset();
+    vi.mocked(ctmsApi.evaluateSiteGreenlight).mockReset();
+    vi.mocked(ctmsApi.evaluateSiteGreenlight).mockResolvedValue(
+      greenlightGate()
+    );
     vi.mocked(ctmsApi.listSiteMilestones).mockReset();
     vi.mocked(ctmsApi.listSiteMilestones).mockResolvedValue([]);
     vi.mocked(ctmsApi.listMonitoringVisits).mockReset();
@@ -271,7 +292,7 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     vi.mocked(executionApi.getSiteComplianceStatus).mockResolvedValueOnce(
       status()
     );
-    vi.mocked(ctmsApi.evaluateSiteGreenlight).mockResolvedValueOnce({
+    vi.mocked(ctmsApi.evaluateSiteGreenlight).mockResolvedValue({
       study_id: "CAD-101",
       site_id: "SITE-7",
       country_code: "US",
@@ -419,7 +440,8 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     expect(executionApi.activateSite).toHaveBeenCalledWith(
       "SITE-7",
       "CAD-101",
-      "IRB approval and 1572 on file."
+      "IRB approval and 1572 on file.",
+      CERTIFIED_GREENLIGHT_TOKEN
     );
     expect(useToastStore().toasts[0]).toMatchObject({
       tone: "success",
@@ -428,6 +450,34 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     });
     expect(wrapper.find("#site-activated-summary").exists()).toBe(true);
     expect(wrapper.find("#btn-activate-site").exists()).toBe(false);
+  });
+
+  it("blocks site activation when SSU greenlight has not issued a cryptographic token even if eTMF documents are complete (PRD-SSU-003)", async () => {
+    routeQuery.value = { studyId: "CAD-101", siteId: "SITE-7" };
+    vi.mocked(executionApi.getSiteComplianceStatus).mockResolvedValueOnce(
+      status()
+    );
+    vi.mocked(ctmsApi.evaluateSiteGreenlight).mockResolvedValueOnce(
+      greenlightGate({
+        overall_status: "READY",
+        greenlight_token: null,
+        greenlight_certified_by: null,
+      })
+    );
+
+    const wrapper = await mountView();
+
+    expect(wrapper.find("#site-greenlight-status").text()).toContain(
+      "SSU Greenlight required"
+    );
+    await wrapper
+      .find("#site-activation-reason")
+      .setValue("Ready for enrollment.");
+    expect(wrapper.find("#btn-activate-site").attributes()).toHaveProperty(
+      "disabled"
+    );
+    await wrapper.find("#btn-activate-site").trigger("click");
+    expect(executionApi.activateSite).not.toHaveBeenCalled();
   });
 
   it("reports a refused activation and keeps the reason", async () => {

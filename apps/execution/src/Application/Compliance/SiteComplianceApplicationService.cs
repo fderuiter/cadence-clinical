@@ -9,6 +9,7 @@ using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 
 namespace Cadence.Apps.Execution.Application.Compliance;
 
@@ -34,12 +35,15 @@ namespace Cadence.Apps.Execution.Application.Compliance;
 /// Legacy Python source being replaced: <c>apps/execution/presentation/routers/subjects.py</c>
 /// (<c>etmf_completeness_webhook</c>, <c>activate_site_endpoint</c>, <c>get_site_compliance_status</c>).
 /// @req:PRD-SUB-001
+/// @req:PRD-SSU-003
 /// </summary>
 public sealed class SiteComplianceApplicationService(
     ISiteComplianceRepository compliance,
     IAuditLogWriter auditLog,
     ICurrentAuditContextAccessor auditContext,
-    IClock clock) : ISiteComplianceApplicationService
+    IClock clock,
+    IGreenlightTokenValidator? greenlightValidator = null,
+    IKernelSiteActivationSynchronizer? kernelSiteActivationSynchronizer = null) : ISiteComplianceApplicationService
 {
     // The audit chain key for every entry this service writes: the aggregate's CLR type name (#4768).
     private const string SiteComplianceEntityName = nameof(SiteComplianceCache);
@@ -113,24 +117,52 @@ public sealed class SiteComplianceApplicationService(
             return SubjectErrors.BlockedActivation(siteId);
         }
 
-        // Activation is stateful and idempotent: if already activated, return success without writing a
-        // duplicate SITE_ACTIVATION audit row. ActivateSiteAsync never flips IsComplete or increments Version.
-        if (!gate.MarkActivated(clock.UtcNow, auditContext.UserId))
+        if (greenlightValidator is not null)
         {
-            return true;
+            var tokenValidation = greenlightValidator.Validate(request.GreenlightToken, siteId, request.StudyId);
+            if (!tokenValidation.IsValid)
+            {
+                await auditLog.WriteAsync(SiteComplianceEntityName, siteId, "BLOCKED_ACTIVATION",
+                    auditContext.UserId, auditContext.ChangeReason, oldValues: null,
+                    newValues: new Dictionary<string, object?>
+                    {
+                        ["site_id"] = siteId,
+                        ["study_id"] = request.StudyId,
+                        ["reason"] = tokenValidation.FailureReason,
+                    }, ct);
+                await compliance.SaveChangesAsync(ct);
+
+                return SubjectErrors.InvalidGreenlightToken(
+                    siteId, tokenValidation.FailureReason ?? "Invalid startup greenlight token.");
+            }
         }
 
-        gate.ReasonForChange = auditContext.ChangeReason;
-        await auditLog.WriteAsync(SiteComplianceEntityName, gate.Id.ToString(), "SITE_ACTIVATION",
-            auditContext.UserId, auditContext.ChangeReason, oldValues: null,
-            newValues: new Dictionary<string, object?>
+        // Activation is stateful and idempotent: if already activated, skip duplicate SITE_ACTIVATION audit row
+        // while still ensuring Kernel StudySite synchronization is idempotently applied when configured.
+        if (gate.MarkActivated(clock.UtcNow, auditContext.UserId))
+        {
+            gate.ReasonForChange = auditContext.ChangeReason;
+            await auditLog.WriteAsync(SiteComplianceEntityName, gate.Id.ToString(), "SITE_ACTIVATION",
+                auditContext.UserId, auditContext.ChangeReason, oldValues: null,
+                newValues: new Dictionary<string, object?>
+                {
+                    ["site_id"] = siteId,
+                    ["is_activated"] = true,
+                    ["activated_at"] = gate.ActivatedAt,
+                    ["activated_by"] = gate.ActivatedBy,
+                }, ct);
+            await compliance.SaveChangesAsync(ct);
+        }
+
+        if (kernelSiteActivationSynchronizer is not null)
+        {
+            var syncResult = await kernelSiteActivationSynchronizer.SynchronizeSiteActivationAsync(
+                studyCode.Value, siteCode.Value, auditContext.ChangeReason, ct);
+            if (syncResult.IsFailure)
             {
-                ["site_id"] = siteId,
-                ["is_activated"] = true,
-                ["activated_at"] = gate.ActivatedAt,
-                ["activated_by"] = gate.ActivatedBy,
-            }, ct);
-        await compliance.SaveChangesAsync(ct);
+                return syncResult.Error!;
+            }
+        }
 
         return true;
     }

@@ -255,8 +255,10 @@ public class SubjectApplicationServiceStateTests
         // D8 (#4771): the response reports the real post-transition status.
         var harness = new Harness();
         var siteCode = new SiteCode("SITE-COMPLIANT");
-        harness.Compliance.Seed(SiteComplianceCache.Create(Study, siteCode, "SITE_ACTIVATION",
-            isComplete: true, missingDocuments: []));
+        var cache = SiteComplianceCache.Create(Study, siteCode, "SITE_ACTIVATION",
+            isComplete: true, missingDocuments: []);
+        cache.MarkActivated(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), "sponsor-dm");
+        harness.Compliance.Seed(cache);
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", siteCode);
 
         var result = await harness.Service.AdvanceStateAsync(subject.SubjectCode.Value,
@@ -309,12 +311,36 @@ public class SubjectApplicationServiceStateTests
 
     [Fact]
     [GxPRequirement("PRD-SUB-001")]
+    [GxPRequirement("PRD-SSU-003")]
+    public async Task AdvanceStateAsync_GivenCompliantButUnactivatedSite_TargetingEnrolled_FailsWithBlockedEnrollmentAndWritesAudit()
+    {
+        var harness = new Harness();
+        var siteCode = new SiteCode("SITE-UNACTIVATED");
+        harness.Compliance.Seed(SiteComplianceCache.Create(Study, siteCode, "SITE_ACTIVATION",
+            isComplete: true, missingDocuments: []));
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", siteCode);
+
+        var result = await harness.Service.AdvanceStateAsync(subject.SubjectCode.Value,
+            new SubjectStateUpdateRequest(Status: "ENROLLED", State: null), "Attempted enrollment before site activation",
+            TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("BLOCKED_ENROLLMENT");
+        harness.AuditLog.Calls.Should().ContainSingle(c => c.Action == "BLOCKED_ENROLLMENT");
+        var persisted = await harness.Subjects.GetByCodeAsync("SUBJ-001", TestContext.Current.CancellationToken);
+        persisted!.Status.Should().Be(SubjectState.Screening);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SUB-001")]
     public async Task AdvanceStateAsync_GivenCompliantSite_TargetingEnrolled_Succeeds()
     {
         var harness = new Harness();
         var siteCode = new SiteCode("SITE-COMPLIANT");
-        harness.Compliance.Seed(SiteComplianceCache.Create(Study, siteCode, "SITE_ACTIVATION",
-            isComplete: true, missingDocuments: []));
+        var cache = SiteComplianceCache.Create(Study, siteCode, "SITE_ACTIVATION",
+            isComplete: true, missingDocuments: []);
+        cache.MarkActivated(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), "sponsor-dm");
+        harness.Compliance.Seed(cache);
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", siteCode);
 
         var result = await harness.Service.AdvanceStateAsync(subject.SubjectCode.Value,
@@ -388,8 +414,10 @@ public class SubjectApplicationServiceStateTests
         // code (e.g. "SUBJ-009"), so a surrogate GUID must NOT resolve here.
         var harness = new Harness { ScreeningEligibility = (_, _) => Task.FromResult(true) };
         var siteCode = new SiteCode("SITE-COMPLIANT");
-        harness.Compliance.Seed(SiteComplianceCache.Create(Study, siteCode, "SITE_ACTIVATION",
-            isComplete: true, missingDocuments: []));
+        var cache = SiteComplianceCache.Create(Study, siteCode, "SITE_ACTIVATION",
+            isComplete: true, missingDocuments: []);
+        cache.MarkActivated(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), "sponsor-dm");
+        harness.Compliance.Seed(cache);
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", siteCode);
 
         var byId = await harness.Service.EvaluateAndTransitionScreeningAsync(
@@ -408,8 +436,10 @@ public class SubjectApplicationServiceStateTests
     {
         var harness = new Harness { ScreeningEligibility = (_, _) => Task.FromResult(true) };
         var siteCode = new SiteCode("SITE-COMPLIANT");
-        harness.Compliance.Seed(SiteComplianceCache.Create(Study, siteCode, "SITE_ACTIVATION",
-            isComplete: true, missingDocuments: []));
+        var cache = SiteComplianceCache.Create(Study, siteCode, "SITE_ACTIVATION",
+            isComplete: true, missingDocuments: []);
+        cache.MarkActivated(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), "sponsor-dm");
+        harness.Compliance.Seed(cache);
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", siteCode);
 
         var result = await harness.Service.EvaluateAndTransitionScreeningAsync(

@@ -33,6 +33,7 @@ public sealed record RegisterParticipant(
     typeof(ExecutionErrors),
     nameof(ExecutionErrors.ParticipantUnknown),
     nameof(ExecutionErrors.StudySiteUnknown),
+    nameof(ExecutionErrors.StudySiteNotActive),
     nameof(ExecutionErrors.SubjectCodeInvalid),
     nameof(ExecutionErrors.SubjectCodeTaken),
     nameof(ExecutionErrors.AlreadyActiveAtSite),
@@ -57,6 +58,14 @@ public sealed record ScreenParticipant(
 /// </remarks>
 [KernelCapability("enrollment.change_status", VerbClass.Execute, Resource = nameof(ChangeEnrollmentStatus.EnrollmentId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(ExecutionErrors),
+    nameof(ExecutionErrors.StudySiteUnknown),
+    nameof(ExecutionErrors.StudySiteNotActive),
+    nameof(ExecutionErrors.InvalidTransition),
+    nameof(ExecutionErrors.TransitionTimeInvalid),
+    nameof(ExecutionErrors.WithdrawalRequiresCommand))]
 public sealed record ChangeEnrollmentStatus(
     TenantId TenantId,
     EnrollmentId EnrollmentId,
@@ -106,6 +115,9 @@ public static class ExecutionErrors
 
     public static readonly KernelError StudySiteUnknown =
         new("K.Execution.StudySiteUnknown", 404, "The study site does not exist.");
+
+    public static readonly KernelError StudySiteNotActive =
+        new("K.Execution.StudySiteNotActive", 409, "The study site is not active; activate the site before screening or enrolling participants.");
 
     public static readonly KernelError SubjectCodeInvalid =
         new("K.Execution.SubjectCodeInvalid", 422, "A subject code is 1 to 64 printable characters with no leading or trailing whitespace.");

@@ -29,6 +29,9 @@ public static class SubjectErrors
     public static DomainError BlockedEnrollment(SiteCode? siteId) =>
         DomainError.Validation("BLOCKED_ENROLLMENT", $"Subject enrollment blocked: Site {siteId} is not compliant.");
 
+    public static DomainError InvalidGreenlightToken(string siteId, string detail) =>
+        DomainError.Forbidden("INVALID_GREENLIGHT_TOKEN", $"Site activation blocked for site {siteId}: {detail}");
+
     public static DomainError BlockedActivation(string siteId) =>
         DomainError.Validation("BLOCKED_ACTIVATION", $"Site activation blocked: Site {siteId} is not compliant in eTMF. Missing expected documents.");
 

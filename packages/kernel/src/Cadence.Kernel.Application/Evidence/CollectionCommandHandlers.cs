@@ -286,34 +286,26 @@ internal sealed class RecordCollectedValuesValidator : AbstractValidator<RecordC
     }
 }
 
-/// <summary>Resolves the protocol version that governs an enrollment at a valid time (K-TIME-8).</summary>
+/// <summary>Resolves the protocol version that governs an enrollment at a valid time (spec §7.5, K-TIME-8).</summary>
 internal static class GoverningVersion
 {
     /// <summary>
-    /// The highest-numbered protocol version in force (<see cref="EffectivityResolution.EffectiveAt"/>) at the enrollment's
-    /// study site at <paramref name="validAt"/>, as known at <paramref name="knownAt"/>, or null when none is.
+    /// Resolves the single governing <see cref="ProtocolVersion"/> from the enrollment's bitemporal
+    /// <see cref="Applicability"/> at <paramref name="validAt"/>, as known at <paramref name="knownAt"/>, or null when
+    /// none governs at that instant or applicability is flagged inconsistent (K-TIME-6, K-TIME-8).
     /// </summary>
     public static async Task<ProtocolVersion?> ResolveAsync(
         IKernelUnitOfWork work, Enrollment enrollment, DateTimeOffset validAt, DateTimeOffset knownAt, CancellationToken cancellationToken)
     {
-        if (await work.ReadAsync<StudySite>(enrollment.StudySiteId, cancellationToken).ConfigureAwait(false) is not { } studySite
-            || await work.ReadAsync<Site>(studySite.SiteId, cancellationToken).ConfigureAwait(false) is not { } site)
+        var enrollmentId = enrollment.Id;
+        var applicabilities = await work.ReadAllAsync<Applicability>(a => a.EnrollmentId == enrollmentId, cancellationToken).ConfigureAwait(false);
+        if (applicabilities.SingleOrDefault() is not { IsInconsistent: false } applicability
+            || applicability.PeriodAsOf(validAt, knownAt) is not { } period)
         {
             return null;
         }
 
-        var study = enrollment.StudyId;
-        var effectivities = await work.ReadAllAsync<Effectivity>(e => e.StudyId == study, cancellationToken).ConfigureAwait(false);
-        var effective = EffectivityResolution.EffectiveAt(effectivities, studySite.Id, site.Country, validAt, knownAt)
-            .Select(e => e.ProtocolVersionId)
-            .ToList();
-        if (effective.Count == 0)
-        {
-            return null;
-        }
-
-        var versions = await work.ReadAllAsync<ProtocolVersion>(v => effective.Contains(v.Id), cancellationToken).ConfigureAwait(false);
-        return versions.MaxBy(v => v.Number);
+        return await work.ReadAsync<ProtocolVersion>(period.ProtocolVersionId, cancellationToken).ConfigureAwait(false);
     }
 }
 

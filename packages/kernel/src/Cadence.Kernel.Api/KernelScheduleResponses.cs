@@ -177,6 +177,39 @@ public sealed record KernelSoaVisitResponse(string EpochId, int? StudyDay, int W
             : new(state.EpochId, state.StudyDay, state.WindowBefore, state.WindowAfter, [.. state.Locations.Select(l => l.ToString())]);
 }
 
+/// <summary>A pending re-consent transition blocking new clinical capture on an enrollment (PRD-SUB-007).</summary>
+/// <param name="TargetVersionRef">The amended <c>protocol_version</c> NodeRef awaiting re-consent.</param>
+/// <param name="TargetVersionNumber">The amended version's 1-indexed version number, when visible.</param>
+/// <param name="AmendmentIntent">The amended version's amendment intent summary, when visible.</param>
+/// <param name="SourceEffectivityRef">The <c>effectivity</c> NodeRef that initiated the transition.</param>
+/// <param name="RequiredSince">When the re-consent requirement took effect in valid time.</param>
+public sealed record KernelPendingReconsentResponse(
+    string TargetVersionRef,
+    int? TargetVersionNumber,
+    string? AmendmentIntent,
+    string SourceEffectivityRef,
+    DateTimeOffset RequiredSince);
+
+/// <summary>
+/// An enrollment's bitemporally resolved governing protocol version, compiled Schedule of Activities, and
+/// re-consent lock state at a valid-time point (spec §7.5, K-TIME-6, PRD-SUB-007).
+/// </summary>
+/// <param name="EnrollmentRef">The enrollment's canonical NodeRef.</param>
+/// <param name="GoverningVersion">Summary of the enrollment's governing protocol version, or null when none applies.</param>
+/// <param name="ScheduleOfActivities">Compiled Schedule of Activities of the governing protocol version, when available.</param>
+/// <param name="RequiresReconsent">True when one or more pending <c>RequiresReconsent</c> transitions block new capture.</param>
+/// <param name="IsInconsistent">True when K-TIME-6 detected overlapping governing protocol versions requiring resolution.</param>
+/// <param name="InconsistencyReason">Explanation of any K-TIME-6 inconsistency, or null when consistent.</param>
+/// <param name="PendingTransitions">Unresolved <c>RequiresReconsent</c> transitions for this enrollment.</param>
+public sealed record KernelEnrollmentScheduleResponse(
+    string EnrollmentRef,
+    KernelProtocolVersionResponse? GoverningVersion,
+    KernelScheduleOfActivitiesResponse? ScheduleOfActivities,
+    bool RequiresReconsent,
+    bool IsInconsistent,
+    string? InconsistencyReason,
+    IReadOnlyList<KernelPendingReconsentResponse> PendingTransitions);
+
 /// <summary>Concept versions as the pinned NodeRefs the Canvas navigates to.</summary>
 internal static class KernelSoaConcepts
 {

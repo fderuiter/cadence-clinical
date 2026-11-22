@@ -20,6 +20,7 @@ using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain;
 using Cadence.Database;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 using Cadence.Testing;
@@ -526,7 +527,16 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         (await etmf.PostAsJsonAsync("/api/v1/execution/webhooks/etmf", webhook,
             ExecutionProgramTestFactory.JsonOptions, TestContext.Current.CancellationToken)).StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var activateReq = new SiteActivationRequest("STUDY-ACT-1");
+        var nowUnix = SystemClock.Instance.UtcNow.ToUnixTimeSeconds();
+        var greenlightToken = GreenlightTokenValidator.GenerateToken(
+            "SITE-ACT-1",
+            "STUDY-ACT-1",
+            "US",
+            "ctms-director-1",
+            TestSecurityContext.GatewaySecret,
+            nowUnix,
+            nowUnix + 86400);
+        var activateReq = new SiteActivationRequest("STUDY-ACT-1", greenlightToken);
         var firstAct = await dm.PostAsJsonAsync("/api/v1/execution/sites/SITE-ACT-1/activate", activateReq,
             ExecutionProgramTestFactory.JsonOptions, TestContext.Current.CancellationToken);
         firstAct.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -544,6 +554,58 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         statusDoc.RootElement.GetProperty("is_activated").GetBoolean().Should().BeTrue();
         statusDoc.RootElement.GetProperty("activated_by").GetString().Should().Be("sponsor-dm-9");
         statusDoc.RootElement.GetProperty("activated_at").GetString().Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SSU-003")]
+    public async Task ActivateSite_EndToEnd_CompliantSiteWithMissingOrTamperedGreenlightToken_Returns403AndCommitsBlockedActivationAudit()
+    {
+        using var etmf = _factory.CreateSignedClient(TestSecurityContext.Identity("svc:etmf", PermissionMatrix.EtmfServiceRole));
+        using var dm = _factory.CreateSignedClient(TestSecurityContext.Identity("sponsor-dm-11", "Data Manager") with
+        {
+            ChangeReason = "Attempted activation without valid CTMS greenlight token"
+        });
+
+        var webhook = new EtmfCompletenessWebhookPayload("STUDY-ACT-GL", "SITE-ACT-GL", "SITE_ACTIVATION", true, Array.Empty<string>());
+        (await etmf.PostAsJsonAsync("/api/v1/execution/webhooks/etmf", webhook,
+            ExecutionProgramTestFactory.JsonOptions, TestContext.Current.CancellationToken)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var missingTokenRes = await dm.PostAsJsonAsync(
+            "/api/v1/execution/sites/SITE-ACT-GL/activate",
+            new SiteActivationRequest("STUDY-ACT-GL", GreenlightToken: null),
+            ExecutionProgramTestFactory.JsonOptions,
+            TestContext.Current.CancellationToken);
+        missingTokenRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var missingDoc = JsonDocument.Parse(await missingTokenRes.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        missingDoc.RootElement.GetProperty("code").GetString().Should().Be("INVALID_GREENLIGHT_TOKEN");
+
+        var nowUnix = SystemClock.Instance.UtcNow.ToUnixTimeSeconds();
+        var wrongSiteToken = GreenlightTokenValidator.GenerateToken(
+            "OTHER-SITE",
+            "STUDY-ACT-GL",
+            "US",
+            "ctms-director-1",
+            TestSecurityContext.GatewaySecret,
+            nowUnix,
+            nowUnix + 86400);
+        var wrongSiteRes = await dm.PostAsJsonAsync(
+            "/api/v1/execution/sites/SITE-ACT-GL/activate",
+            new SiteActivationRequest("STUDY-ACT-GL", wrongSiteToken),
+            ExecutionProgramTestFactory.JsonOptions,
+            TestContext.Current.CancellationToken);
+        wrongSiteRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var statusRes = await dm.GetAsync(
+            "/api/v1/execution/sites/SITE-ACT-GL/compliance-status?study_id=STUDY-ACT-GL",
+            TestContext.Current.CancellationToken);
+        using var statusDoc = JsonDocument.Parse(await statusRes.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        statusDoc.RootElement.GetProperty("is_activated").GetBoolean().Should().BeFalse();
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
+        var blockedCount = await db.AuditLogEntries.AsNoTracking()
+            .CountAsync(e => e.Action == "BLOCKED_ACTIVATION" && e.EntityId == "SITE-ACT-GL", TestContext.Current.CancellationToken);
+        blockedCount.Should().Be(2);
     }
 
     /// <summary>

@@ -105,6 +105,34 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                         EnrollmentSummary(enrollmentId, enrollment.SubjectCode, enrollment.Status, enrollment.VersionIndex),
                         ZoomRules.EnrollmentParent(enrollment.StudyId, enrollment.StudySiteId));
 
+            case NodeKinds.Applicability:
+                var applicabilityId = ApplicabilityId.FromGuid(node.Id);
+                var applicability = await db.Applicabilities.AsNoTracking()
+                    .Where(a => a.TenantId == tenant && a.Id == applicabilityId)
+                    .Select(a => new { a.EnrollmentId, a.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return applicability is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(applicabilityId, applicability.VersionIndex), "Protocol applicability", Code: null),
+                        NodeRef.For(applicability.EnrollmentId));
+
+            case NodeKinds.ConsentStatus:
+                var consentStatusId = ConsentStatusId.FromGuid(node.Id);
+                var consentStatus = await db.ConsentStatuses.AsNoTracking()
+                    .Where(c => c.TenantId == tenant && c.Id == consentStatusId)
+                    .Select(c => new { c.EnrollmentId, c.Signed, c.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                if (consentStatus is null)
+                {
+                    return null;
+                }
+
+                string consentStateLabel = consentStatus.Signed ? "Signed" : "Unsigned";
+                return new ScopeNode(
+                    new NodeSummary(NodeRef.For(consentStatusId, consentStatus.VersionIndex), "Consent status", Code: null, consentStateLabel),
+                    NodeRef.For(consentStatus.EnrollmentId));
+
             case NodeKinds.ProtocolVersion:
                 var protocolVersionId = ProtocolVersionId.FromGuid(node.Id);
                 var protocolVersion = await db.ProtocolVersions.AsNoTracking()

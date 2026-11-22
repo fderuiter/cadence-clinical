@@ -200,6 +200,9 @@ public class KernelPostgresFixture : IAsyncLifetime
     /// <summary>The effectivity read port, as applications get it.</summary>
     public IEffectivityReader Effectivity => Scope().GetRequiredService<IEffectivityReader>();
 
+    /// <summary>The bitemporal applicability and consent read port.</summary>
+    public IApplicabilityReader Applicability => Scope().GetRequiredService<IApplicabilityReader>();
+
     /// <summary>The observation read port, as the kernel host gets it (ADR-2620).</summary>
     public IObservationRecords ObservationRecords => Scope().GetRequiredService<IObservationRecords>();
 

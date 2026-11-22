@@ -173,7 +173,7 @@ public sealed class KernelActivityPostgresTests(KernelPostgresFixture fixture) :
         {
             var sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == study).Select(s => s.SponsorId).SingleAsync(ct);
             var site = new Site(SiteId.New(), tenant, sponsor, $"ACT-{Guid.NewGuid():N}"[..20], "Activity Clinic", "NL", KernelPostgresFixture.ActorId, KernelProtocolScenario.Reason);
-            var link = new StudySite(StudySiteId.New(), tenant, study, site.Id, "Selected", KernelPostgresFixture.ActorId, KernelProtocolScenario.Reason);
+            var link = new StudySite(StudySiteId.New(), tenant, study, site.Id, "Active", KernelPostgresFixture.ActorId, KernelProtocolScenario.Reason);
             await fixture.SeedAsync(site, link);
             studySite = link.Id;
         }

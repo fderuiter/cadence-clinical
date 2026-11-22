@@ -182,12 +182,61 @@
         Not confirmed: eTMF has not reported this site's activation documents
         complete.
       </p>
+
+      <template v-if="!compliance.is_activated">
+        <p
+          v-if="greenlightGate?.greenlight_token"
+          id="site-greenlight-status"
+          class="status status-complete greenlight-note"
+        >
+          SSU Greenlight certified: cryptographic startup readiness token
+          verified for site {{ compliance.site_id }}
+          <template
+            v-if="
+              greenlightGate.greenlight_certified_by ||
+              greenlightGate.certified_by
+            "
+          >
+            (certified by
+            {{
+              greenlightGate.greenlight_certified_by ||
+              greenlightGate.certified_by
+            }})
+          </template>
+          .
+        </p>
+        <p
+          v-else-if="greenlightError"
+          id="site-greenlight-status"
+          class="status status-error greenlight-note"
+        >
+          SSU Greenlight status couldn't be loaded from CTMS, so startup
+          certification cannot be verified automatically.
+        </p>
+        <p
+          v-else-if="compliance.is_complete"
+          id="site-greenlight-status"
+          class="status status-incomplete greenlight-note"
+        >
+          SSU Greenlight required: certify startup readiness in the Startup
+          readiness tab to issue a cryptographic greenlight token before
+          activating site {{ compliance.site_id }}.
+        </p>
+      </template>
     </div>
 
     <div
       v-if="compliance?.is_complete && !compliance?.is_activated && canActivate"
       class="activate"
     >
+      <label for="site-greenlight-token">SSU greenlight token</label>
+      <input
+        id="site-greenlight-token"
+        v-model="greenlightToken"
+        type="text"
+        autocomplete="off"
+        placeholder="Cryptographic greenlight token issued by CTMS Startup readiness"
+      />
       <label for="site-activation-reason">Reason for activation</label>
       <textarea
         id="site-activation-reason"
@@ -199,7 +248,7 @@
         id="btn-activate-site"
         type="button"
         class="btn btn-primary"
-        :disabled="!reason.trim() || activating"
+        :disabled="!reason.trim() || !greenlightToken.trim() || activating"
         @click="activate"
       >
         {{
@@ -275,6 +324,9 @@ const siteCode = ref(
 );
 const discoveredSites = ref([]);
 const compliance = ref(null);
+const greenlightGate = ref(null);
+const greenlightError = ref(false);
+const greenlightToken = ref("");
 const checked = ref(false);
 const loading = ref(false);
 const loadError = ref(false);
@@ -331,6 +383,9 @@ watch(
     studyCode.value = value;
     discoveredSites.value = [];
     compliance.value = null;
+    greenlightGate.value = null;
+    greenlightError.value = false;
+    greenlightToken.value = "";
     checked.value = false;
     loadError.value = false;
     scopeGuidance.value = "";
@@ -376,8 +431,29 @@ async function checkStatus() {
   loadError.value = false;
   scopeGuidance.value = "";
   compliance.value = null;
+  greenlightGate.value = null;
+  greenlightError.value = false;
+  greenlightToken.value = "";
   try {
     compliance.value = await executionApi.getSiteComplianceStatus(site, study);
+    if (
+      compliance.value?.is_complete &&
+      !compliance.value.is_activated &&
+      typeof ctmsApi?.evaluateSiteGreenlight === "function"
+    ) {
+      try {
+        const gate = await ctmsApi.evaluateSiteGreenlight(site, study);
+        if (gate && typeof gate === "object") {
+          greenlightGate.value = gate;
+          greenlightToken.value =
+            typeof gate.greenlight_token === "string"
+              ? gate.greenlight_token
+              : "";
+        }
+      } catch {
+        greenlightError.value = true;
+      }
+    }
   } catch (err) {
     if (isForbiddenScopeError(err)) {
       scopeGuidance.value = formatScopeForbiddenGuidance(err, {
@@ -400,11 +476,13 @@ async function activate() {
   if (!canActivate.value) return;
   const current = compliance.value;
   const why = reason.value.trim();
+  const token = greenlightToken.value.trim();
   if (
     !canActivate.value ||
     !current?.is_complete ||
     current?.is_activated ||
     !why ||
+    !token ||
     !current.site_id
   ) {
     return;
@@ -414,7 +492,8 @@ async function activate() {
     const result = await executionApi.activateSite(
       current.site_id,
       current.study_id,
-      why
+      why,
+      token
     );
     toasts.push({
       tone: "success",
@@ -541,10 +620,15 @@ defineExpose({ checkStatus, loadStudySites });
   align-items: stretch;
 }
 
-.activate textarea {
+.activate textarea,
+.activate input {
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
+}
+
+.greenlight-note {
+  margin-top: 8px;
 }
 
 .activate button {

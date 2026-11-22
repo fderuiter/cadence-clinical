@@ -59,6 +59,13 @@ internal sealed class KernelEnrollmentDirectory(KernelTenantDbContextFactory con
     public async Task<(StudyId StudyId, StudySiteId StudySiteId)?> FindStudySiteAsync(
         TenantId tenant, string studyCode, string siteCode, CancellationToken cancellationToken)
     {
+        var info = await FindStudySiteInfoAsync(tenant, studyCode, siteCode, cancellationToken).ConfigureAwait(false);
+        return info is null ? null : (info.StudyId, info.StudySiteId);
+    }
+
+    public async Task<StudySiteLookup?> FindStudySiteInfoAsync(
+        TenantId tenant, string studyCode, string siteCode, CancellationToken cancellationToken)
+    {
         if (string.IsNullOrWhiteSpace(studyCode) || string.IsNullOrWhiteSpace(siteCode))
         {
             return null;
@@ -71,10 +78,38 @@ internal sealed class KernelEnrollmentDirectory(KernelTenantDbContextFactory con
                 join site in db.Sites.AsNoTracking() on studySite.SiteId equals site.Id
                 where studySite.IsActive && study.IsActive && site.IsActive
                     && study.StudyCode == studyCode && site.SiteCode == siteCode
-                select new { study.Id, StudySiteId = studySite.Id })
+                select new StudySiteLookup(study.Id, studySite.Id, site.Id, studySite.Status))
             .SingleOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
-        return match is null ? null : (match.Id, match.StudySiteId);
+        return match;
+    }
+
+    public async Task<StudySiteLookup?> FindStudySiteByIdAsync(
+        TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        return await db.StudySites.AsNoTracking()
+            .Where(s => s.Id == studySiteId && s.IsActive)
+            .Select(s => new StudySiteLookup(s.StudyId, s.Id, s.SiteId, s.Status))
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<StudyId?> FindStudyByCodeAsync(
+        TenantId tenant, string studyCode, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(studyCode))
+        {
+            return null;
+        }
+
+        await using var db = contexts.Create(tenant);
+        var found = await db.Studies.AsNoTracking()
+            .Where(s => s.IsActive && s.StudyCode == studyCode)
+            .Select(s => (StudyId?)s.Id)
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return found;
     }
 
     public async Task<int> NextEnrollmentNumberAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken)

@@ -2081,6 +2081,7 @@ export interface components {
     };
     Execution_SiteActivationRequest: {
       study_id: string;
+      greenlight_token?: null | string;
     };
     Execution_SiteCode: string;
     Execution_StagedAdverseEventActionRequest: {
@@ -2350,6 +2351,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   GetSiteComplianceStatus: {
@@ -2517,6 +2527,15 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

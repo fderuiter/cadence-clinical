@@ -499,7 +499,9 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
 
         if (activateSite && !await db.SiteComplianceCaches.AnyAsync(c => c.StudyCode == study && c.SiteCode == site, Ct))
         {
-            db.SiteComplianceCaches.Add(SiteComplianceCache.Create(study, site, "SITE_ACTIVATION", true, []));
+            var cache = SiteComplianceCache.Create(study, site, "SITE_ACTIVATION", true, []);
+            cache.MarkActivated(SystemClock.Instance.UtcNow.AddDays(-1), "sponsor-dm");
+            db.SiteComplianceCaches.Add(cache);
         }
 
         await db.SaveChangesAsync(Ct);

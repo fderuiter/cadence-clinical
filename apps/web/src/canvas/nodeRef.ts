@@ -31,6 +31,8 @@ export const NODE_KINDS = [
   "qualification",
   "qualification_requirement",
   "effectivity",
+  "applicability",
+  "consent_status",
   "tenant_membership",
   "code_system",
   "code_system_version",

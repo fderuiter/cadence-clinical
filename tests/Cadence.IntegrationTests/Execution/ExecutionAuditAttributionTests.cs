@@ -77,9 +77,12 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
             "/api/v1/execution/webhooks/etmf",
             new { study_id = Study, site_id = site, milestone = "SITE_ACTIVATION", is_complete = true, missing_artifacts = Array.Empty<string>() },
             Ct));
+        long nowUnix = Cadence.Kernel.Time.SystemClock.Instance.UtcNow.ToUnixTimeSeconds();
+        var greenlightToken = Cadence.Security.Authentication.GreenlightTokenValidator.GenerateToken(
+            site, Study, "US", "ctms-director", TestSecurityContext.GatewaySecret, nowUnix, nowUnix + 86400);
         await AuditedAsync(manager, c => c.PostAsJsonAsync(
             $"/api/v1/execution/sites/{site}/activate",
-            new { study_id = Study },
+            new { study_id = Study, greenlight_token = greenlightToken },
             Ct));
 
         await ShouldHaveNoAnonymousEntriesAsync();

@@ -64,6 +64,15 @@ public static class CadenceSecurityServiceCollectionExtensions
         services.TryAddSingleton<ISigTokenUseStore>(sp => new ReplayCache(sp.GetService<IClock>()));
         services.AddHostedService<SigTokenUseStoreStartupCheck>();
         services.AddSingleton(sp => new SigTokenVerifier(sp.GetRequiredService<ISigTokenUseStore>(), sp.GetService<IClock>()));
+        services.TryAddSingleton<IGreenlightTokenValidator>(sp =>
+        {
+            var gatewayAuth = sp.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<GatewayAuthenticationOptions>>()
+                .Get(GatewayAuthenticationHandler.SchemeName);
+            string secret = gatewayAuth.GatewaySecret
+                ?? options.GatewaySecret
+                ?? sp.GetService<IConfiguration>()?[GatewaySecretConfigurationKey]!;
+            return new GreenlightTokenValidator(secret, sp.GetService<IClock>() ?? SystemClock.Instance);
+        });
         services.AddSingleton<IAuditLogWriter, InMemoryAuditStore>();
         services.AddSingleton(sp => new AuditDigestEngine(
             sp.GetRequiredService<IAuditLogWriter>(),

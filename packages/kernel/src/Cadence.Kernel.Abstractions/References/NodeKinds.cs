@@ -34,6 +34,8 @@ public static class NodeKinds
     public const string Qualification = "qualification";
     public const string QualificationRequirement = "qualification_requirement";
     public const string Effectivity = "effectivity";
+    public const string Applicability = "applicability";
+    public const string ConsentStatus = "consent_status";
     public const string TenantMembership = "tenant_membership";
     public const string CodeSystem = "code_system";
     public const string CodeSystemVersion = "code_system_version";
@@ -73,6 +75,8 @@ public static class NodeKinds
         [typeof(QualificationId)] = Qualification,
         [typeof(QualificationRequirementId)] = QualificationRequirement,
         [typeof(EffectivityId)] = Effectivity,
+        [typeof(ApplicabilityId)] = Applicability,
+        [typeof(ConsentStatusId)] = ConsentStatus,
         [typeof(TenantMembershipId)] = TenantMembership,
         [typeof(CodeSystemId)] = CodeSystem,
         [typeof(CodeSystemVersionId)] = CodeSystemVersion,

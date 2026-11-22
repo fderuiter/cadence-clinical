@@ -735,7 +735,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         }
 
         var site = new Site(SiteId.New(), tenant, institutionId, $"SITE-{suffix}", "Hospital", country, KernelPostgresFixture.ActorId, "Seeded");
-        var studySite = new StudySite(StudySiteId.New(), tenant, study, site.Id, "Selected", KernelPostgresFixture.ActorId, "Seeded");
+        var studySite = new StudySite(StudySiteId.New(), tenant, study, site.Id, "Active", KernelPostgresFixture.ActorId, "Seeded");
         if (externalOrg is not null)
         {
             await fixture.SeedAsync(externalOrg, site, studySite);

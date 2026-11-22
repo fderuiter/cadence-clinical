@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 using Cadence.Core.Domain;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Identity;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
@@ -73,7 +74,7 @@ internal sealed class KernelCommandTransaction(
     KernelDbContext db,
     CommandExecution execution,
     Action<CommitStage>? faultInjector,
-    IReadOnlyList<IModuleCommandStore>? moduleStores = null) : IKernelCommandTransaction, IKernelUnitOfWork, IIdentityVaultStaging
+    IReadOnlyList<IModuleCommandStore>? moduleStores = null) : IKernelCommandTransaction, IKernelUnitOfWork, IIdentityVaultStaging, IStudyGovernanceLock
 {
     private const string DecisionDeniedEvent = "DecisionDenied";
 
@@ -85,6 +86,7 @@ internal sealed class KernelCommandTransaction(
     private readonly List<(IModuleCommandStore Store, ModuleDbContext Context)> _modules = [];
     private readonly HashSet<(Type Type, string Key)> _claimed = [];
     private CollectionInstanceId? _collection;
+    private StudyId? _governanceStudy;
     private long? _lockKey;
     private bool _scopeLocked;
     private readonly List<long> _sharedKeys = [];
@@ -157,6 +159,18 @@ internal sealed class KernelCommandTransaction(
 
         await LockExclusiveAsync(AdvisoryLockKey(Command.TenantId, typeof(CollectionInstance), KeyText(instance)), cancellationToken).ConfigureAwait(false);
         _collection = instance;
+    }
+
+    public async Task LockStudyGovernanceAsync(StudyId studyId, CancellationToken cancellationToken)
+    {
+        if (_claimed.Count > 0 || _sharedKeys.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"K-TX-1: {execution.CommandType} must lock study governance before it claims or shares locks.");
+        }
+
+        await LockExclusiveAsync(AdvisoryLockKey(Command.TenantId, typeof(Study), KeyText(studyId)), cancellationToken).ConfigureAwait(false);
+        _governanceStudy = studyId;
     }
 
     public async Task ShareScopesAsync(IReadOnlyList<NodeRef> scopes, CancellationToken cancellationToken)
@@ -632,6 +646,29 @@ internal sealed class KernelCommandTransaction(
             return;
         }
 
+        if (_governanceStudy is not null)
+        {
+            if (type != typeof(Applicability)
+                && type != typeof(Effectivity)
+                && type != typeof(ConsentStatus)
+                && type != typeof(Enrollment))
+            {
+                throw new InvalidOperationException(
+                    $"K-TX-1: {execution.CommandType} holds study governance lock {_governanceStudy}; it cannot change {type.Name} {key}.");
+            }
+
+            if (type != typeof(Applicability)
+                && _claimed.Any(c => c.Type != typeof(Applicability) && c != (type, key)))
+            {
+                var other = _claimed.First(c => c.Type != typeof(Applicability));
+                throw new InvalidOperationException(
+                    $"K-TX-1: {execution.CommandType} already changes {other.Type.Name} {other.Key}; it cannot also change {type.Name} {key}.");
+            }
+
+            _claimed.Add((type, key));
+            return;
+        }
+
         if (_claimed.Count > 0 && !_claimed.Contains((type, key)))
         {
             var claimed = _claimed.First();
@@ -655,10 +692,55 @@ internal sealed class KernelCommandTransaction(
             .ToList();
         if (changed.Count > 1)
         {
-            changed = OrderFormSave(changed);
+            changed = _governanceStudy is { } studyId
+                ? OrderGovernanceSave(studyId, changed)
+                : OrderFormSave(changed);
         }
 
         return [.. changed.Select(c => Stamp(c.Entry, c.Module))];
+    }
+
+    private List<(EntityEntry<AggregateRootBase> Entry, string? Module)> OrderGovernanceSave(
+        StudyId studyId,
+        List<(EntityEntry<AggregateRootBase> Entry, string? Module)> changed)
+    {
+        var nonApplicability = changed.Where(c => c.Entry.Entity is not Applicability).ToList();
+        if (nonApplicability.Count > 1
+            || changed.Any(c => c.Module is not null || c.Entry.State == EntityState.Deleted))
+        {
+            throw new InvalidOperationException(
+                $"K-TX-1: {execution.CommandType} may change at most one primary governance aggregate plus study {studyId} Applicability records.");
+        }
+
+        var applicabilities = changed
+            .Where(c => c.Entry.Entity is Applicability)
+            .OrderBy(c => ((Applicability)c.Entry.Entity).Id)
+            .ToList();
+        if (applicabilities.Any(a => ((Applicability)a.Entry.Entity).StudyId != studyId))
+        {
+            throw new InvalidOperationException(
+                $"K-TX-1: {execution.CommandType} modified an Applicability outside study {studyId}.");
+        }
+
+        if (nonApplicability is [var primary])
+        {
+            var primaryStudyId = primary.Entry.Entity switch
+            {
+                Effectivity e => e.StudyId,
+                ConsentStatus c => c.StudyId,
+                Enrollment en => en.StudyId,
+                _ => default,
+            };
+            if (primaryStudyId != studyId)
+            {
+                throw new InvalidOperationException(
+                    $"K-TX-1: {execution.CommandType} modified {primary.Entry.Entity.GetType().Name} outside study {studyId}.");
+            }
+
+            return [primary, .. applicabilities];
+        }
+
+        return applicabilities;
     }
 
     /// <summary>

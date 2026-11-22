@@ -251,6 +251,26 @@ function mockKernelProtocolAndStudy() {
   vi.spyOn(kernelApi, "getScheduleOfActivities").mockResolvedValue(
     makeSoaResponse()
   );
+  vi.spyOn(kernelApi, "getEnrollmentScheduleOfActivities").mockResolvedValue({
+    enrollment_ref: `enrollment:${ENROLLMENT_ID}`,
+    governing_version: {
+      ref: VERSION_REF,
+      study: STUDY_REF,
+      number: 1,
+      parent_version: null,
+      status: "Approved",
+      content_hash: "sha256:v1",
+      amendment_intent: null,
+      approval_attestation: null,
+      withdrawal_reason: null,
+      mask: null,
+    },
+    schedule_of_activities: makeSoaResponse(),
+    requires_reconsent: false,
+    is_inconsistent: false,
+    inconsistency_reason: null,
+    pending_transitions: [],
+  });
   vi.spyOn(kernelApi, "getChildren").mockImplementation(async (ref) => {
     if (ref === STUDY_REF) {
       return [
@@ -740,5 +760,226 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
 
     await expect(standaloneWrapper.element).toBeAccessible();
     standaloneWrapper.unmount();
+  });
+
+  it("renders the participant's governing v1 Schedule of Activities even when v2 is active for NewParticipantsOnly (PRD-SUB-007)", async () => {
+    const { wrapper } = await mountParticipantCasebook();
+    wrapper.unmount();
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const auth = useAuthStore();
+    auth.setAuth({
+      authenticated: true,
+      token: "token-crc-1",
+      tokenParsed: {
+        sub: "crc-1",
+        tenant_id: "tenant-1",
+        realm_access: { roles: ["crc"] },
+      },
+    });
+
+    mockKernelProtocolAndStudy();
+    const v2Ref = "protocol_version:0192f3c4-5e6a-7b8c-9d0e-00000000b202";
+    vi.spyOn(kernelApi, "listProtocolVersions").mockResolvedValue([
+      {
+        ref: v2Ref,
+        study: STUDY_REF,
+        number: 2,
+        parent_version: VERSION_REF,
+        status: "Approved",
+        content_hash: "sha256:v2",
+        amendment_intent: "NewParticipantsOnly Week 8 extension",
+        approval_attestation: null,
+        withdrawal_reason: null,
+        mask: null,
+      },
+    ]);
+    vi.spyOn(kernelApi, "getScheduleOfActivities").mockResolvedValue({
+      ...makeSoaResponse(),
+      version: v2Ref,
+      title: "CADENCE-101 Protocol v2.0",
+      columns: [
+        ...makeSoaResponse().columns,
+        {
+          activity_id: "pa.week8",
+          name: "Week 8 Extension",
+          epoch_id: "epoch.treatment",
+          study_day: 56,
+          window_before: 3,
+          window_after: 3,
+          locations: [],
+          footnotes: [],
+        },
+      ],
+    });
+    vi.spyOn(kernelApi, "listProposals").mockResolvedValue([]);
+    vi.spyOn(executionApi, "listSubjects").mockResolvedValue({
+      items: [PARTICIPANT],
+      total: 1,
+      limit: 50,
+      offset: 0,
+    } as never);
+    vi.spyOn(ecrfFormsApi, "listForEnrollment").mockResolvedValue([
+      makeFormSummary(),
+    ] as never);
+    vi.spyOn(ecrfQueriesApi, "listForEnrollment").mockResolvedValue([]);
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: StudyCanvasView,
+        },
+        {
+          path: "/ecrf",
+          name: "ecrf",
+          component: { template: "<div />" },
+        },
+      ],
+    });
+    await router.push("/studies/CADENCE-101?section=participants");
+    await router.isReady();
+    const v1Wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [pinia, router] }, attachTo: document.body }
+    );
+    await flushPromises();
+    await v1Wrapper.find("#participant-SUBJ-101").trigger("click");
+    await flushPromises();
+    await v1Wrapper.find("#inspector-open-record").trigger("click");
+    await flushPromises();
+
+    expect(v1Wrapper.find("#casebook-summary").text()).toContain(
+      "CADENCE-101 Protocol v1.0"
+    );
+    expect(v1Wrapper.find("#casebook-matrix").text()).not.toContain(
+      "Week 8 Extension"
+    );
+    v1Wrapper.unmount();
+  });
+
+  it("displays 'Re-Consent Required - Demographics & Visit Forms Locked' banner, locks new visit forms, and keeps existing forms openable for corrections (PRD-SUB-007)", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const auth = useAuthStore();
+    auth.setAuth({
+      authenticated: true,
+      token: "token-crc-1",
+      tokenParsed: {
+        sub: "crc-1",
+        tenant_id: "tenant-1",
+        realm_access: { roles: ["crc"] },
+      },
+    });
+
+    mockKernelProtocolAndStudy();
+    vi.spyOn(kernelApi, "getEnrollmentScheduleOfActivities").mockResolvedValue({
+      enrollment_ref: `enrollment:${ENROLLMENT_ID}`,
+      governing_version: {
+        ref: VERSION_REF,
+        study: STUDY_REF,
+        number: 1,
+        parent_version: null,
+        status: "Superseded",
+        content_hash: "sha256:v1",
+        amendment_intent: null,
+        approval_attestation: null,
+        withdrawal_reason: null,
+        mask: null,
+      },
+      schedule_of_activities: makeSoaResponse(),
+      requires_reconsent: true,
+      is_inconsistent: false,
+      inconsistency_reason: null,
+      pending_transitions: [
+        {
+          target_version_ref:
+            "protocol_version:0192f3c4-5e6a-7b8c-9d0e-00000000b202",
+          target_version_number: 2,
+          amendment_intent: "Safety amendment",
+          source_effectivity_ref:
+            "effectivity:0192f3c4-5e6a-7b8c-9d0e-00000000e901",
+          required_since: ISO_T1,
+        },
+      ],
+    });
+    vi.spyOn(kernelApi, "listProposals").mockResolvedValue([]);
+    vi.spyOn(executionApi, "listSubjects").mockResolvedValue({
+      items: [PARTICIPANT],
+      total: 1,
+      limit: 50,
+      offset: 0,
+    } as never);
+    vi.spyOn(ecrfFormsApi, "listForEnrollment").mockResolvedValue([
+      makeFormSummary({
+        form_id: FORM_REPEAT_1_ID,
+        planned_activity_id: "pa.baseline",
+        complete: false,
+        locked: false,
+        frozen: false,
+      }),
+    ] as never);
+    vi.spyOn(ecrfQueriesApi, "listForEnrollment").mockResolvedValue([]);
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: StudyCanvasView,
+        },
+        {
+          path: "/ecrf",
+          name: "ecrf",
+          component: { template: "<div />" },
+        },
+      ],
+    });
+    await router.push("/studies/CADENCE-101?section=participants");
+    await router.isReady();
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [pinia, router] }, attachTo: document.body }
+    );
+    await flushPromises();
+    await wrapper.find("#participant-SUBJ-101").trigger("click");
+    await flushPromises();
+    await wrapper.find("#inspector-open-record").trigger("click");
+    await flushPromises();
+
+    const banner = wrapper.find("#reconsent-lock-banner");
+    expect(banner.exists()).toBe(true);
+    expect(banner.text()).toContain(
+      "Re-Consent Required - Demographics & Visit Forms Locked"
+    );
+    expect(banner.text()).toContain("Protocol v2 (Safety amendment)");
+
+    // Unstarted scheduled cells are locked rather than offering Open form
+    const week4Cell = wrapper.find('[data-cell="cs.vitals:pa.week4"]');
+    expect(week4Cell.text()).toContain("Locked — Re-Consent Required");
+    expect(
+      week4Cell.find('[id="matrix-open-cs.vitals-pa.week4"]').exists()
+    ).toBe(false);
+
+    // Repeating new instance button and unscheduled triggers are hidden
+    const baselineCell = wrapper.find('[data-cell="cs.vitals:pa.baseline"]');
+    expect(
+      baselineCell.find('[id="matrix-repeat-cs.vitals-pa.baseline"]').exists()
+    ).toBe(false);
+    expect(
+      wrapper.find('[id="unscheduled-open-cs.adverse_event"]').exists()
+    ).toBe(false);
+
+    // Existing form instance remains openable for data corrections
+    expect(
+      baselineCell.find(`[id="record-form-link-${FORM_REPEAT_1_ID}"]`).exists()
+    ).toBe(true);
+
+    await expect(wrapper.element).toBeAccessible();
+    wrapper.unmount();
   });
 });

@@ -67,12 +67,13 @@ public static class KernelExecutionEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
-        if (await enrollments.FindStudySiteAsync(tenant, request.StudyCode.Trim(), request.SiteCode.Trim(), cancellationToken).ConfigureAwait(false)
-            is not var (studyId, studySiteId))
+        if (await enrollments.FindStudySiteInfoAsync(tenant, request.StudyCode.Trim(), request.SiteCode.Trim(), cancellationToken).ConfigureAwait(false)
+            is not { } siteInfo)
         {
             return KernelErrorEndpoints.Problem(ExecutionErrors.StudySiteUnknown);
         }
 
+        var (studyId, studySiteId) = (siteInfo.StudyId, siteInfo.StudySiteId);
         string key = IdempotencyKey(context);
         string reason = changeReason.Read(context) ?? string.Empty;
         var participantId = request.ParticipantId is { } givenParticipant && givenParticipant != Guid.Empty
@@ -92,6 +93,11 @@ public static class KernelExecutionEndpoints
                 new ScreenParticipant(tenant, enrollmentId, participantId, studySiteId, subjectCode, request.ScreenedAt, key, reason),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             return KernelErrorEndpoints.Problem(denied.Error!);
+        }
+
+        if (!string.Equals(siteInfo.Status, "Active", StringComparison.Ordinal))
+        {
+            return KernelErrorEndpoints.Problem(ExecutionErrors.StudySiteNotActive);
         }
 
         if (await enrollments.ResolveParticipantAsync(tenant, studyId, subjectCode, cancellationToken).ConfigureAwait(false) is { } existing

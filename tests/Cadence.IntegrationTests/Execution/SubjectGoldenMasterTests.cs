@@ -170,6 +170,9 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
             case "SCN-003-A":
                 await ReplayNoSiteEnrollmentBlockedContractAsync(scenario);
                 return;
+            case "SCN-005-B":
+                await ReplayActivateSiteWithGreenlightTokenAsync(scenario);
+                return;
             case "SCN-010-C":
                 await ReplayVisitsWriteGuardContractAsync(scenario);
                 return;
@@ -634,6 +637,44 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
     }
 
     /// <summary>
+    /// SCN-005-B activates <c>SITE-COMPLIANT-01</c> after SCN-005-A's eTMF completeness webhook. Under
+    /// <c>PRD-SSU-003</c>, <c>POST /api/v1/execution/sites/{siteId}/activate</c> additionally requires a
+    /// cryptographically verified CTMS startup <c>greenlight_token</c> signed with the shared gateway secret
+    /// (absent from the legacy Python fixture). This replay mints a valid greenlight token for the fixture's
+    /// <c>(SITE-COMPLIANT-01, STUDY-GATED)</c> pair and verifies the HTTP 200 envelope, DB activation state,
+    /// and <c>SITE_ACTIVATION</c> audit assertion so SCN-005-C and SCN-005-D proceed against the activated site.
+    /// </summary>
+    private async Task ReplayActivateSiteWithGreenlightTokenAsync(GoldenMasterScenario scenario)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await ApplyPreconditionsAsync(scenario.Input, ct);
+
+        string studyId = scenario.Input!.Value.GetProperty("body").GetProperty("study_id").GetString()!;
+        const string siteId = "SITE-COMPLIANT-01";
+        long nowUnix = SystemClock.Instance.UtcNow.ToUnixTimeSeconds();
+        string greenlightToken = GreenlightTokenValidator.GenerateToken(
+            siteId, studyId, "US", "ctms-director-gm", TestSecurityContext.GatewaySecret, nowUnix, nowUnix + 86400);
+
+        using HttpClient client = CreateClientFor(scenario);
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            scenario.Route!,
+            new { study_id = studyId, greenlight_token = greenlightToken },
+            ct);
+        string rawBody = await response.Content.ReadAsStringAsync(ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK,
+            $"scenario '{scenario.ScenarioId}' expected site activation to succeed with a valid greenlight token -- actual: {rawBody}");
+
+        JsonElement body = JsonSerializer.Deserialize<JsonElement>(rawBody);
+        GoldenMasterAssert.BodyMatches(body, scenario.ExpectedBody!.Value);
+
+        if (scenario.AuditAssertions is not null)
+        {
+            await GoldenMasterAssert.AuditLogContains<ExecutionDbContext>(_testApi.Services, scenario, ct);
+        }
+    }
+
+    /// <summary>
     /// EDGE-010 checks that a successful transition's response reports the subject's real post-transition
     /// fields (D8, #4771) -- its narrative focus is the response body, not Rule 2's site-compliance gate. Its own precondition
     /// declares <c>site_id: null</c>, but (per <see cref="ReplayNoSiteEnrollmentBlockedContractAsync"/>'s own
@@ -656,8 +697,10 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
             JsonElement subjectPrecondition = scenario.Input!.Value.GetProperty("preconditions").GetProperty("subject");
             ClinicalSubject subject = await EnsureSubjectPreconditionAsync(db, encryption, subjectPrecondition, ct);
             db.Entry(subject).Property(nameof(ClinicalSubject.SiteCode)).CurrentValue = new SiteCode("SITE-EDGE-010-COMPLIANT");
-            db.SiteComplianceCaches.Add(SiteComplianceCache.Create(new StudyCode("STUDY-001"), new SiteCode("SITE-EDGE-010-COMPLIANT"),
-                "SITE_ACTIVATION", isComplete: true, missingDocuments: []));
+            var edge010Cache = SiteComplianceCache.Create(new StudyCode("STUDY-001"), new SiteCode("SITE-EDGE-010-COMPLIANT"),
+                "SITE_ACTIVATION", isComplete: true, missingDocuments: []);
+            edge010Cache.MarkActivated(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), "sponsor-dm");
+            db.SiteComplianceCaches.Add(edge010Cache);
             await db.SaveChangesAsync(ct);
         }
 
@@ -828,8 +871,10 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
         JsonElement subjectPrecondition = scenario.Input!.Value.GetProperty("preconditions").GetProperty("subject");
         ClinicalSubject seeded = await EnsureSubjectPreconditionAsync(db, encryption, subjectPrecondition, ct);
         db.Entry(seeded).Property(nameof(ClinicalSubject.SiteCode)).CurrentValue = new SiteCode("SITE-EDGE-008-COMPLIANT");
-        db.SiteComplianceCaches.Add(SiteComplianceCache.Create(new StudyCode("STUDY-PRECONDITION-DEFAULT"),
-            new SiteCode("SITE-EDGE-008-COMPLIANT"), "SITE_ACTIVATION", isComplete: true, missingDocuments: []));
+        var edge008Cache = SiteComplianceCache.Create(new StudyCode("STUDY-PRECONDITION-DEFAULT"),
+            new SiteCode("SITE-EDGE-008-COMPLIANT"), "SITE_ACTIVATION", isComplete: true, missingDocuments: []);
+        edge008Cache.MarkActivated(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), "sponsor-dm");
+        db.SiteComplianceCaches.Add(edge008Cache);
         await db.SaveChangesAsync(ct);
         string internalId = seeded.Id.ToString();
 

@@ -28,7 +28,11 @@ namespace Cadence.Kernel.Commands;
     nameof(ObservationErrors.ValueInvalid),
     nameof(ObservationErrors.ObservedAtInvalid),
     nameof(ObservationErrors.Locked),
-    nameof(ObservationErrors.ParticipantWithdrawn))]
+    nameof(ObservationErrors.StudySiteNotActive),
+    nameof(ObservationErrors.ParticipantWithdrawn),
+    nameof(ObservationErrors.ReconsentRequired),
+    nameof(ObservationErrors.ApplicabilityInconsistent),
+    nameof(ObservationErrors.NoGoverningVersion))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RecordObservation(
     TenantId TenantId,
@@ -106,6 +110,13 @@ public static class ObservationErrors
         new("K.Observation.Locked", 423, "A lock covers this observation's scope; nothing is recorded or corrected there.");
 
     /// <summary>
+    /// New capture at an unactivated study site (PRD-SSU-003). Activate the study site before recording new observations
+    /// or opening visit forms.
+    /// </summary>
+    public static readonly KernelError StudySiteNotActive =
+        new("K.Observation.StudySiteNotActive", 409, "The study site is not active; activate the site before capturing clinical data.");
+
+    /// <summary>
     /// New capture for a withdrawn participant: recording an observation, opening a form or saving a new value in one.
     /// Values captured before the withdrawal stay readable and can still be corrected (spec §7.4, K-CONS-2). The refusal
     /// is audited with the evaluated condition and the enrollment it was decided on.
@@ -113,7 +124,38 @@ public static class ObservationErrors
     public static readonly KernelError ParticipantWithdrawn =
         new("K.Observation.ParticipantWithdrawn", 409, "The participant is withdrawn; no new data is captured for this enrollment.");
 
+    /// <summary>
+    /// New capture while a protocol amendment with <c>RequiresReconsent</c> is pending for the enrollment (spec §7.5,
+    /// PRD-SUB-007). Existing values remain readable and correctable; new capture is locked (423) until consent is recorded.
+    /// </summary>
+    public static readonly KernelError ReconsentRequired =
+        new("K.Observation.ReconsentRequired", 423, "Re-consent is required for a pending protocol amendment; new data capture is locked until consent is recorded.");
+
+    /// <summary>
+    /// New capture while the enrollment's bitemporal applicability has an unresolved inconsistency (spec §7.5, K-TIME-6).
+    /// </summary>
+    public static readonly KernelError ApplicabilityInconsistent =
+        new("K.Observation.ApplicabilityInconsistent", 423, "Protocol applicability is inconsistent for this enrollment (K-TIME-6); new data capture is blocked until resolved.");
+
+    /// <summary>
+    /// Recording an observation in a protocol-governed study at a valid time where no protocol version governs the enrollment (K-TIME-8).
+    /// </summary>
+    public static readonly KernelError NoGoverningVersion =
+        new("K.Observation.NoGoverningVersion", 409, "No protocol version governs this enrollment when the observation held.");
+
     /// <summary>Every observation error, for the API's documented problem set.</summary>
     public static IReadOnlyList<KernelError> All { get; } =
-        [ValueInvalid, ObservedAtInvalid, EnrollmentUnknown, ValueUnchanged, VersionStale, Locked, ParticipantWithdrawn];
+        [
+            ValueInvalid,
+            ObservedAtInvalid,
+            EnrollmentUnknown,
+            ValueUnchanged,
+            VersionStale,
+            Locked,
+            StudySiteNotActive,
+            ParticipantWithdrawn,
+            ReconsentRequired,
+            ApplicabilityInconsistent,
+            NoGoverningVersion,
+        ];
 }

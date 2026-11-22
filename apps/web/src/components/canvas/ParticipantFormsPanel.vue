@@ -9,7 +9,7 @@
       <h3 id="record-forms-title">{{ matrixActive ? "Casebook" : "Forms" }}</h3>
       <div class="forms-head-actions">
         <router-link
-          v-if="enrollmentId && newFormLocation"
+          v-if="enrollmentId && newFormLocation && !captureLocked"
           id="record-open-form"
           class="btn btn-secondary forms-open-btn"
           :to="newFormLocation"
@@ -26,6 +26,44 @@
           Open standalone form view
         </router-link>
       </div>
+    </div>
+
+    <div
+      v-if="enrollmentId && !loading && !loadError && requiresReconsent"
+      id="reconsent-lock-banner"
+      data-testid="reconsent-lock-banner"
+      class="reconsent-lock-banner"
+      role="alert"
+    >
+      <strong class="reconsent-lock-title">
+        Re-Consent Required - Demographics &amp; Visit Forms Locked
+      </strong>
+      <p class="reconsent-lock-detail">
+        New visit and form capture is paused for {{ subjectCode }} until signed
+        participant re-consent is recorded<template
+          v-if="pendingReconsentLabel"
+        >
+          for {{ pendingReconsentLabel }}</template
+        >. Previously opened forms remain accessible below for data corrections.
+      </p>
+    </div>
+
+    <div
+      v-if="enrollmentId && !loading && !loadError && isInconsistent"
+      id="applicability-inconsistent-banner"
+      data-testid="applicability-inconsistent-banner"
+      class="reconsent-lock-banner"
+      role="alert"
+    >
+      <strong class="reconsent-lock-title">
+        Protocol Applicability Conflict - New Capture Locked
+      </strong>
+      <p class="reconsent-lock-detail">
+        {{
+          resolvedEnrollmentSchedule?.inconsistencyReason ||
+          `Multiple or missing governing protocol versions apply to ${subjectCode}; resolve protocol applicability before opening new forms.`
+        }}
+      </p>
     </div>
 
     <p v-if="!enrollmentId" id="record-forms-no-enrollment" class="status-line">
@@ -200,8 +238,21 @@
                   >
                     Not started
                   </span>
+                  <span
+                    v-if="captureLocked"
+                    class="cb-badge cb-badge--locked"
+                    data-testid="badge-capture-locked"
+                  >
+                    {{
+                      requiresReconsent
+                        ? "Locked — Re-Consent Required"
+                        : "Locked"
+                    }}
+                  </span>
                   <router-link
-                    v-if="cellNewLocation(row.collectionSpecId, col.activityId)"
+                    v-else-if="
+                      cellNewLocation(row.collectionSpecId, col.activityId)
+                    "
                     :id="`matrix-open-${row.collectionSpecId}-${col.activityId}`"
                     :data-testid="`matrix-open-${row.collectionSpecId}-${col.activityId}`"
                     class="matrix-open-link"
@@ -277,6 +328,7 @@
                   </div>
                   <router-link
                     v-if="
+                      !captureLocked &&
                       cellNewLocation(row.collectionSpecId, col.activityId) &&
                       canAddRepeat(
                         cellForms(row.collectionSpecId, col.activityId)
@@ -310,7 +362,7 @@
         <div class="unscheduled-head">
           <h4 id="casebook-unscheduled-title">Unscheduled &amp; log forms</h4>
           <div
-            v-if="activeSchedule.unscheduledRows.length > 0"
+            v-if="activeSchedule.unscheduledRows.length > 0 && !captureLocked"
             class="unscheduled-triggers"
           >
             <router-link
@@ -501,6 +553,7 @@ import {
   type EcrfFormSummary,
 } from "../../api/ecrfFormsApi";
 import {
+  type EnrollmentScheduleOptions,
   type StudyScheduleOptions,
   type StudyScheduleRow,
 } from "../../canvas/kernelStudy";
@@ -534,6 +587,7 @@ const props = defineProps<{
   subjectCode: string;
   enrollmentId: string | null;
   schedule?: StudyScheduleOptions | null;
+  enrollmentSchedule?: EnrollmentScheduleOptions | null;
   formLocation: (formId: string) => RouteLocationRaw;
   newFormLocation?: RouteLocationRaw | null;
   newFormCellLocation?: (
@@ -560,8 +614,51 @@ function formDisplayTitle(summary: EcrfFormSummary): string {
     : base;
 }
 
+const resolvedEnrollmentSchedule = computed<EnrollmentScheduleOptions | null>(
+  () => {
+    if (props.enrollmentSchedule !== undefined) {
+      return props.enrollmentSchedule;
+    }
+    if (!props.enrollmentId) return null;
+    return canvas.enrollmentSchedulesById[props.enrollmentId] ?? null;
+  }
+);
+
+const requiresReconsent = computed(() =>
+  Boolean(resolvedEnrollmentSchedule.value?.requiresReconsent)
+);
+
+const isInconsistent = computed(() =>
+  Boolean(resolvedEnrollmentSchedule.value?.isInconsistent)
+);
+
+const captureLocked = computed(
+  () => requiresReconsent.value || isInconsistent.value
+);
+
+const pendingReconsentLabel = computed(() => {
+  const transitions =
+    resolvedEnrollmentSchedule.value?.pendingTransitions ?? [];
+  if (transitions.length === 0) return "";
+  return transitions
+    .map((t) => {
+      const ver =
+        t.targetVersionNumber !== null
+          ? `Protocol v${t.targetVersionNumber}`
+          : t.targetVersionRef;
+      return t.amendmentIntent ? `${ver} (${t.amendmentIntent})` : ver;
+    })
+    .join(", ");
+});
+
 const activeSchedule = computed<StudyScheduleOptions | null>(() => {
   if (props.schedule !== undefined) return props.schedule;
+  if (resolvedEnrollmentSchedule.value?.schedule) {
+    return resolvedEnrollmentSchedule.value.schedule;
+  }
+  if (resolvedEnrollmentSchedule.value?.isInconsistent) {
+    return null;
+  }
   const code = props.studyCode?.trim() ?? "";
   if (!code) return null;
   return canvas.scheduleOptionsByStudy[code] ?? null;
@@ -858,6 +955,9 @@ async function loadFormsAndSchedule() {
     emit("forms-loaded", []);
     return;
   }
+  if (props.enrollmentSchedule === undefined) {
+    void canvas.loadEnrollmentScheduleOptions(enrollmentId);
+  }
   if (
     props.schedule === undefined &&
     props.studyCode &&
@@ -936,6 +1036,26 @@ watch(
   font-size: 0.82rem;
   padding: 4px 10px;
   text-decoration: none;
+}
+
+.reconsent-lock-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--semantic-color-error-text-dark);
+  background: var(--semantic-color-error-bg-soft);
+  color: var(--semantic-color-error-text-dark);
+  font-size: 0.85rem;
+}
+
+.reconsent-lock-title {
+  font-weight: 700;
+}
+
+.reconsent-lock-detail {
+  margin: 0;
 }
 
 .status-line {

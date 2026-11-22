@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 
@@ -70,13 +71,15 @@ public sealed class ConsentEventRejectedException(string message) : InvalidOpera
 /// <c>02_technical_design.md</c> §5.2 and this ticket's Acceptance Criteria require.
 /// </para>
 /// @req:PRD-SUB-001
+/// @req:PRD-SUB-007
 /// </summary>
 public sealed class EConsentCompletedConsumer(
     ISubjectRepository subjects,
     IConsentRepository consents,
     IAuditLogWriter auditLog,
     IAuditActorScope actorScope,
-    ILogger<EConsentCompletedConsumer>? logger = null)
+    ILogger<EConsentCompletedConsumer>? logger = null,
+    IKernelConsentSynchronizer? kernelConsentSynchronizer = null)
     : IConsumer<EConsentCompletedEvent>
 {
     public async Task Consume(ConsumeContext<EConsentCompletedEvent> context)
@@ -178,5 +181,25 @@ public sealed class EConsentCompletedConsumer(
             await subjects.SaveChangesAsync(token).ConfigureAwait(false);
             return true;
         }, context.CancellationToken).ConfigureAwait(false);
+
+        if (kernelConsentSynchronizer is not null)
+        {
+            var syncResult = await kernelConsentSynchronizer.SynchronizeConsentAsync(
+                studyCode.Value,
+                msg.SiteId,
+                subjectCode.Value,
+                msg.VersionIndex,
+                msg.VersionTag,
+                signedAt,
+                isPaperOverride: false,
+                account.ChangeReason,
+                context.CancellationToken,
+                msg.TenantCode).ConfigureAwait(false);
+            if (syncResult.IsFailure)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to synchronize eConsent for subject '{msg.SubjectId}' in study '{msg.StudyId}' to Kernel: {syncResult.Error?.Description}");
+            }
+        }
     }
 }

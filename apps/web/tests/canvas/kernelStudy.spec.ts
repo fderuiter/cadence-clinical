@@ -1,12 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { kernelApi } from "../../src/api/kernelApi";
 import {
+  findEnrollmentScheduleOptions,
   findKernelEnrollmentRef,
   findStudySites,
 } from "../../src/canvas/kernelStudy";
 
 vi.mock("../../src/api/kernelApi", () => ({
-  kernelApi: { search: vi.fn(), getChildren: vi.fn() },
+  kernelApi: {
+    search: vi.fn(),
+    getChildren: vi.fn(),
+    getEnrollmentScheduleOfActivities: vi.fn(),
+  },
 }));
 
 const STUDY_REF = "study:0192f3c4-5e6a-7b8c-9d0e-00000000c001";
@@ -152,5 +157,95 @@ describe("findStudySites", () => {
   it("returns an empty list when the study is unknown", async () => {
     vi.mocked(kernelApi.search).mockResolvedValue([]);
     await expect(findStudySites("CAD-404")).resolves.toEqual([]);
+  });
+});
+
+describe("findEnrollmentScheduleOptions (PRD-SUB-007)", () => {
+  beforeEach(() => {
+    vi.mocked(kernelApi.getEnrollmentScheduleOfActivities).mockReset();
+  });
+
+  it("normalizes enrollment refs and maps governing version, schedule, and pending re-consent transitions", async () => {
+    vi.mocked(kernelApi.getEnrollmentScheduleOfActivities).mockResolvedValue({
+      enrollment_ref: `enrollment:${ENROLLMENT_ID}`,
+      governing_version: {
+        ref: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-00000000b001",
+        study: STUDY_REF,
+        number: 1,
+        parent_version: null,
+        status: "Superseded",
+        content_hash: "sha256:v1",
+        amendment_intent: null,
+        approval_attestation: null,
+        withdrawal_reason: null,
+        mask: null,
+      },
+      schedule_of_activities: {
+        version: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-00000000b001",
+        content_hash: "sha256:soa-v1",
+        hash: "sha256:soa-v1",
+        title: "CAD-101 Protocol v1.0",
+        epochs: [],
+        columns: [
+          {
+            activity_id: "pa.screening",
+            name: "Screening",
+            epoch_id: "screening",
+            study_day: -7,
+            window_before: 3,
+            window_after: 0,
+            locations: [],
+            footnotes: [],
+          },
+        ],
+        rows: [
+          {
+            collection_spec_id: "cs.vitals",
+            name: "Vital Signs",
+            item_ids: ["sysbp"],
+            concepts: ["concept:sysbp@1"],
+            columns: [0],
+            frequency: 1,
+            footnotes: [],
+          },
+        ],
+        footnotes: [],
+      },
+      requires_reconsent: true,
+      is_inconsistent: false,
+      inconsistency_reason: null,
+      pending_transitions: [
+        {
+          target_version_ref:
+            "protocol_version:0192f3c4-5e6a-7b8c-9d0e-00000000b002",
+          target_version_number: 2,
+          amendment_intent: "Safety ECG monitoring",
+          source_effectivity_ref:
+            "effectivity:0192f3c4-5e6a-7b8c-9d0e-00000000e901",
+          required_since: "2026-10-15T12:00:00Z",
+        },
+      ],
+    });
+
+    const result = await findEnrollmentScheduleOptions(`${ENROLLMENT_ID}@2`);
+    expect(kernelApi.getEnrollmentScheduleOfActivities).toHaveBeenCalledWith(
+      `enrollment:${ENROLLMENT_ID}`,
+      undefined
+    );
+    expect(result).not.toBeNull();
+    expect(result?.governingVersionNumber).toBe(1);
+    expect(result?.schedule?.title).toBe("CAD-101 Protocol v1.0");
+    expect(result?.requiresReconsent).toBe(true);
+    expect(result?.pendingTransitions).toEqual([
+      {
+        targetVersionRef:
+          "protocol_version:0192f3c4-5e6a-7b8c-9d0e-00000000b002",
+        targetVersionNumber: 2,
+        amendmentIntent: "Safety ECG monitoring",
+        sourceEffectivityRef:
+          "effectivity:0192f3c4-5e6a-7b8c-9d0e-00000000e901",
+        requiredSince: "2026-10-15T12:00:00Z",
+      },
+    ]);
   });
 });

@@ -6,8 +6,10 @@ import {
   type SubjectSummary,
 } from "../api/executionApi";
 import {
+  findEnrollmentScheduleOptions,
   findKernelEnrollmentRef,
   findStudyScheduleOptions,
+  type EnrollmentScheduleOptions,
   type StudyScheduleOptions,
 } from "../canvas/kernelStudy";
 import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
@@ -85,6 +87,10 @@ let lookupEpoch = 0;
 const inFlightPages = new Map<string, Promise<SubjectList>>();
 const inFlightById = new Map<string, Promise<SubjectSummary | null>>();
 const inFlightByCode = new Map<string, Promise<SubjectSummary | null>>();
+const inFlightEnrollmentSchedules = new Map<
+  string,
+  Promise<EnrollmentScheduleOptions | null>
+>();
 const inFlightSchedules = new WeakMap<
   object,
   {
@@ -147,6 +153,11 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     pulseError: false,
     /** Cached Schedule of Activities options per study code so form launchers avoid re-fetching. */
     scheduleOptionsByStudy: {} as Record<string, StudyScheduleOptions | null>,
+    /** Cached governing Schedule of Activities and re-consent lock state per enrollment id. */
+    enrollmentSchedulesById: {} as Record<
+      string,
+      EnrollmentScheduleOptions | null
+    >,
     scheduleOptions: null as StudyScheduleOptions | null,
     scheduleLoading: false,
     scheduleError: null as string | null,
@@ -179,6 +190,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       inFlightPages.clear();
       inFlightById.clear();
       inFlightByCode.clear();
+      inFlightEnrollmentSchedules.clear();
       palettePromise = null;
       palettePromiseKey = "";
       this.$reset();
@@ -270,6 +282,47 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       return this.loadScheduleOptions(studyCode ?? this.studyCode, {
         force: true,
       });
+    },
+
+    /** Loads and caches a participant enrollment's governing protocol schedule and re-consent lock state. */
+    async loadEnrollmentScheduleOptions(
+      enrollmentId: string,
+      { force = false } = {}
+    ): Promise<EnrollmentScheduleOptions | null> {
+      const target = enrollmentId.trim();
+      if (!target) return null;
+      if (
+        !force &&
+        Object.prototype.hasOwnProperty.call(
+          this.enrollmentSchedulesById,
+          target
+        )
+      ) {
+        return this.enrollmentSchedulesById[target];
+      }
+      const existing = inFlightEnrollmentSchedules.get(target);
+      if (!force && existing) {
+        return existing;
+      }
+      const epoch = lookupEpoch;
+      const promise = (async () => {
+        try {
+          const loaded = await findEnrollmentScheduleOptions(target);
+          if (epoch === lookupEpoch) {
+            this.enrollmentSchedulesById[target] = loaded;
+          }
+          return loaded;
+        } catch {
+          if (epoch === lookupEpoch) {
+            this.enrollmentSchedulesById[target] = null;
+          }
+          return null;
+        } finally {
+          inFlightEnrollmentSchedules.delete(target);
+        }
+      })();
+      inFlightEnrollmentSchedules.set(target, promise);
+      return promise;
     },
 
     /** Records participants for the active study and keeps `paletteParticipants` ordered. */

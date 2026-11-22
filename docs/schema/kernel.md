@@ -7,6 +7,9 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | Table | Entity | Columns |
 | --- | --- | --- |
 | [`kernel.activity_entries`](#kernelactivity_entries) | `ActivityEntryRecord` | 11 |
+| [`kernel.applicabilities`](#kernelapplicabilities) | `Applicability` | 14 |
+| [`kernel.applicability_pending_transitions`](#kernelapplicability_pending_transitions) | `PendingApplicabilityTransition` | 10 |
+| [`kernel.applicability_periods`](#kernelapplicability_periods) | `ApplicabilityPeriod` | 12 |
 | [`kernel.artifact_versions`](#kernelartifact_versions) | `ArtifactVersion` | 9 |
 | [`kernel.artifacts`](#kernelartifacts) | `Artifact` | 9 |
 | [`kernel.assertions`](#kernelassertions) | `Assertion` | 17 |
@@ -22,6 +25,8 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.concept_mappings`](#kernelconcept_mappings) | `ConceptMapping` | 13 |
 | [`kernel.concept_revisions`](#kernelconcept_revisions) | `ConceptRevision` | 6 |
 | [`kernel.concepts`](#kernelconcepts) | `Concept` | 13 |
+| [`kernel.consent_status_periods`](#kernelconsent_status_periods) | `ConsentStatusPeriod` | 12 |
+| [`kernel.consent_statuses`](#kernelconsent_statuses) | `ConsentStatus` | 16 |
 | [`kernel.domain_events`](#kerneldomain_events) | `DomainEventRecord` | 11 |
 | [`kernel.effectivities`](#kerneleffectivities) | `Effectivity` | 13 |
 | [`kernel.effectivity_status_periods`](#kerneleffectivity_status_periods) | `EffectivityStatusPeriod` | 7 |
@@ -95,6 +100,114 @@ Indexes:
 
 - `IX_activity_entries_scope`: (`scope`)
 - `IX_activity_entries_tenant_id_recorded_event_id`: (`tenant_id`, `recorded`, `event_id`)
+
+## kernel.applicabilities
+
+Entity: `Applicability`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `enrollment_id` | `uuid` | no |  |  |
+| `governing_version_id` | `uuid` | yes |  |  |
+| `inconsistency_reason` | `character varying(1000)` | yes |  |  |
+| `is_inconsistent` | `boolean` | no |  |  |
+| `participant_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `study_site_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `valid_from` | `timestamp with time zone` | yes |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_applicabilities_enrollments_tenant_id_enrollment_id`: (`tenant_id`, `enrollment_id`) references `kernel.enrollments` (`tenant_id`, `id`), on delete restrict
+- `FK_applicabilities_participants_tenant_id_participant_id`: (`tenant_id`, `participant_id`) references `kernel.participants` (`tenant_id`, `id`), on delete restrict
+- `FK_applicabilities_protocol_versions_tenant_id_governing_versi~`: (`tenant_id`, `governing_version_id`) references `kernel.protocol_versions` (`tenant_id`, `id`), on delete restrict
+- `FK_applicabilities_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
+- `FK_applicabilities_study_sites_tenant_id_study_site_id_study_id`: (`tenant_id`, `study_site_id`, `study_id`) references `kernel.study_sites` (`tenant_id`, `id`, `study_id`), on delete restrict
+- `FK_applicabilities_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_applicabilities_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `AK_applicabilities_tenant_id_id_enrollment_id`: unique constraint (`tenant_id`, `id`, `enrollment_id`)
+- `AK_applicabilities_tenant_id_id_enrollment_id_participant_id_s~`: unique constraint (`tenant_id`, `id`, `enrollment_id`, `participant_id`, `study_id`)
+- `IX_applicabilities_tenant_id_enrollment_id`: unique (`tenant_id`, `enrollment_id`)
+- `IX_applicabilities_tenant_id_governing_version_id`: (`tenant_id`, `governing_version_id`)
+- `IX_applicabilities_tenant_id_participant_id`: (`tenant_id`, `participant_id`)
+- `IX_applicabilities_tenant_id_study_id_participant_id`: (`tenant_id`, `study_id`, `participant_id`)
+- `IX_applicabilities_tenant_id_study_site_id_study_id`: (`tenant_id`, `study_site_id`, `study_id`)
+
+## kernel.applicability_pending_transitions
+
+Entity: `PendingApplicabilityTransition`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `applicability_id` | `uuid` | no |  |  |
+| `effectivity_id` | `uuid` | no |  |  |
+| `enrollment_id` | `uuid` | no |  |  |
+| `from_version_id` | `uuid` | yes |  |  |
+| `recorded_period` | `tstzrange` | no |  |  |
+| `required_since` | `timestamp with time zone` | no |  |  |
+| `target_version_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
+
+Foreign keys:
+
+- `FK_applicability_pending_transitions_applicabilities_tenant_id~`: (`tenant_id`, `applicability_id`, `enrollment_id`) references `kernel.applicabilities` (`tenant_id`, `id`, `enrollment_id`), on delete restrict
+- `FK_applicability_pending_transitions_effectivities_tenant_id_e~`: (`tenant_id`, `effectivity_id`) references `kernel.effectivities` (`tenant_id`, `id`), on delete restrict
+- `FK_applicability_pending_transitions_protocol_versions_tenant_~`: (`tenant_id`, `from_version_id`) references `kernel.protocol_versions` (`tenant_id`, `id`), on delete restrict
+- `FK_applicability_pending_transitions_protocol_versions_tenant~1`: (`tenant_id`, `target_version_id`) references `kernel.protocol_versions` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_applicability_pending_transitions_tenant_id_applicability_i~`: (`tenant_id`, `applicability_id`, `enrollment_id`)
+- `IX_applicability_pending_transitions_tenant_id_effectivity_id`: (`tenant_id`, `effectivity_id`)
+- `IX_applicability_pending_transitions_tenant_id_enrollment_id_t~`: (`tenant_id`, `enrollment_id`, `target_version_id`)
+- `IX_applicability_pending_transitions_tenant_id_from_version_id`: (`tenant_id`, `from_version_id`)
+- `IX_applicability_pending_transitions_tenant_id_target_version_~`: (`tenant_id`, `target_version_id`)
+
+## kernel.applicability_periods
+
+Entity: `ApplicabilityPeriod`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `applicability_id` | `uuid` | no |  |  |
+| `basis` | `character varying(64)` | no |  |  |
+| `consent_status_id` | `uuid` | yes |  |  |
+| `effectivity_id` | `uuid` | yes |  |  |
+| `enrollment_id` | `uuid` | no |  |  |
+| `participant_id` | `uuid` | no |  |  |
+| `protocol_version_id` | `uuid` | no |  |  |
+| `recorded_period` | `tstzrange` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
+
+Foreign keys:
+
+- `FK_applicability_periods_applicabilities_tenant_id_applicabili~`: (`tenant_id`, `applicability_id`, `enrollment_id`, `participant_id`, `study_id`) references `kernel.applicabilities` (`tenant_id`, `id`, `enrollment_id`, `participant_id`, `study_id`), on delete restrict
+- `FK_applicability_periods_consent_statuses_tenant_id_consent_st~`: (`tenant_id`, `consent_status_id`) references `kernel.consent_statuses` (`tenant_id`, `id`), on delete restrict
+- `FK_applicability_periods_effectivities_tenant_id_effectivity_id`: (`tenant_id`, `effectivity_id`) references `kernel.effectivities` (`tenant_id`, `id`), on delete restrict
+- `FK_applicability_periods_protocol_versions_tenant_id_protocol_~`: (`tenant_id`, `protocol_version_id`) references `kernel.protocol_versions` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_applicability_periods_tenant_id_applicability_id_enrollment~`: (`tenant_id`, `applicability_id`, `enrollment_id`, `participant_id`, `study_id`)
+- `IX_applicability_periods_tenant_id_consent_status_id`: (`tenant_id`, `consent_status_id`)
+- `IX_applicability_periods_tenant_id_effectivity_id`: (`tenant_id`, `effectivity_id`)
+- `IX_applicability_periods_tenant_id_enrollment_id`: (`tenant_id`, `enrollment_id`)
+- `IX_applicability_periods_tenant_id_protocol_version_id`: (`tenant_id`, `protocol_version_id`)
+- `IX_applicability_periods_tenant_id_study_id_participant_id`: (`tenant_id`, `study_id`, `participant_id`)
 
 ## kernel.artifact_versions
 
@@ -511,6 +624,80 @@ Indexes:
 
 - `AK_concepts_tenant_id_id`: unique constraint (`tenant_id`, `id`)
 - `IX_concepts_tenant_id_external_code`: unique (`tenant_id`, `external_code`) where `external_code IS NOT NULL`
+
+## kernel.consent_status_periods
+
+Entity: `ConsentStatusPeriod`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `artifact_version_id` | `uuid` | yes |  |  |
+| `attestation_id` | `uuid` | yes |  |  |
+| `basis_kind` | `character varying(32)` | no |  |  |
+| `consent_status_id` | `uuid` | no |  |  |
+| `enrollment_id` | `uuid` | no |  |  |
+| `protocol_version_id` | `uuid` | no |  |  |
+| `recorded_period` | `tstzrange` | no |  |  |
+| `scopes` | `jsonb` | no |  |  |
+| `signed` | `boolean` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
+
+Foreign keys:
+
+- `FK_consent_status_periods_consent_statuses_tenant_id_consent_s~`: (`tenant_id`, `consent_status_id`, `enrollment_id`, `protocol_version_id`) references `kernel.consent_statuses` (`tenant_id`, `id`, `enrollment_id`, `protocol_version_id`), on delete restrict
+
+Indexes:
+
+- `IX_consent_status_periods_tenant_id_consent_status_id_enrollme~`: (`tenant_id`, `consent_status_id`, `enrollment_id`, `protocol_version_id`)
+- `IX_consent_status_periods_tenant_id_enrollment_id_protocol_ver~`: (`tenant_id`, `enrollment_id`, `protocol_version_id`)
+
+## kernel.consent_statuses
+
+Entity: `ConsentStatus`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `artifact_version_id` | `uuid` | yes |  |  |
+| `attestation_id` | `uuid` | yes |  |  |
+| `basis_kind` | `character varying(32)` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `enrollment_id` | `uuid` | no |  |  |
+| `participant_id` | `uuid` | no |  |  |
+| `protocol_version_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `signed` | `boolean` | no |  |  |
+| `signed_at` | `timestamp with time zone` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `study_site_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_consent_statuses_artifact_versions_tenant_id_artifact_versi~`: (`tenant_id`, `artifact_version_id`) references `kernel.artifact_versions` (`tenant_id`, `id`), on delete restrict
+- `FK_consent_statuses_attestations_tenant_id_attestation_id`: (`tenant_id`, `attestation_id`) references `kernel.attestations` (`tenant_id`, `id`), on delete restrict
+- `FK_consent_statuses_enrollments_tenant_id_enrollment_id`: (`tenant_id`, `enrollment_id`) references `kernel.enrollments` (`tenant_id`, `id`), on delete restrict
+- `FK_consent_statuses_participants_tenant_id_participant_id`: (`tenant_id`, `participant_id`) references `kernel.participants` (`tenant_id`, `id`), on delete restrict
+- `FK_consent_statuses_protocol_versions_tenant_id_protocol_versi~`: (`tenant_id`, `protocol_version_id`) references `kernel.protocol_versions` (`tenant_id`, `id`), on delete restrict
+- `FK_consent_statuses_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
+- `FK_consent_statuses_study_sites_tenant_id_study_site_id_study_~`: (`tenant_id`, `study_site_id`, `study_id`) references `kernel.study_sites` (`tenant_id`, `id`, `study_id`), on delete restrict
+- `FK_consent_statuses_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_consent_statuses_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `AK_consent_statuses_tenant_id_id_enrollment_id_protocol_versio~`: unique constraint (`tenant_id`, `id`, `enrollment_id`, `protocol_version_id`)
+- `IX_consent_statuses_tenant_id_artifact_version_id`: (`tenant_id`, `artifact_version_id`)
+- `IX_consent_statuses_tenant_id_attestation_id`: (`tenant_id`, `attestation_id`)
+- `IX_consent_statuses_tenant_id_enrollment_id_protocol_version_id`: unique (`tenant_id`, `enrollment_id`, `protocol_version_id`)
+- `IX_consent_statuses_tenant_id_participant_id`: (`tenant_id`, `participant_id`)
+- `IX_consent_statuses_tenant_id_protocol_version_id`: (`tenant_id`, `protocol_version_id`)
+- `IX_consent_statuses_tenant_id_study_id_participant_id`: (`tenant_id`, `study_id`, `participant_id`)
+- `IX_consent_statuses_tenant_id_study_site_id_study_id`: (`tenant_id`, `study_site_id`, `study_id`)
 
 ## kernel.domain_events
 

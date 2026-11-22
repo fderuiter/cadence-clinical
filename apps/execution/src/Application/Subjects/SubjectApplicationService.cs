@@ -65,7 +65,8 @@ public sealed class SubjectApplicationService(
     ICurrentAuditContextAccessor auditContext,
     Func<ClinicalSubject, CancellationToken, Task<bool>>? screeningEligibility = null,
     IClock? clock = null,
-    IKernelEnrollmentSynchronizer? kernelEnrollmentSynchronizer = null) : ISubjectApplicationService
+    IKernelEnrollmentSynchronizer? kernelEnrollmentSynchronizer = null,
+    IKernelConsentSynchronizer? kernelConsentSynchronizer = null) : ISubjectApplicationService
 {
     private readonly IClock _clock = clock ?? SystemClock.Instance;
 
@@ -202,6 +203,27 @@ public sealed class SubjectApplicationService(
         await auditLog.WriteAsync(nameof(SubjectConsent), consent.Id.ToString(), "RECORD_CONSENT",
             auditContext.UserId, consent.ReasonForChange, oldValues: null, newValues: null, ct).ConfigureAwait(false);
         await consents.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        if (kernelConsentSynchronizer is not null
+            && !consent.RequiresReconsent
+            && (consent.IcfSigned || consent.IsPaperOverride)
+            && consent.IcfSignedDate is { } signedAt)
+        {
+            var syncResult = await kernelConsentSynchronizer.SynchronizeConsentAsync(
+                studyCode.Value,
+                subject.SiteCode?.Value,
+                subject.SubjectCode.Value,
+                consent.ProtocolVersion.VersionIndex,
+                consent.ProtocolVersion.VersionTag,
+                signedAt,
+                consent.IsPaperOverride,
+                consent.ReasonForChange,
+                ct).ConfigureAwait(false);
+            if (syncResult.IsFailure)
+            {
+                return Result<SubjectConsentResponse>.Failure(syncResult.Error!);
+            }
+        }
 
         return new SubjectConsentResponse(consent.Id, consent.SubjectCode, consent.ProtocolVersion.StudyCode,
             consent.ProtocolVersion.VersionTag, consent.ProtocolVersion.VersionIndex, consent.IcfSigned,
@@ -515,7 +537,7 @@ public sealed class SubjectApplicationService(
         if (target == SubjectState.Enrolled)
         {
             var gate = await compliance.GetAsync(subject.StudyCode, subject.SiteCode, "SITE_ACTIVATION", ct).ConfigureAwait(false);
-            if (gate is not { IsComplete: true })
+            if (gate is not { IsComplete: true, IsActivated: true })
             {
                 // MIG-SUBJ-026 fix: this audit write was never committed. IAuditLogWriter.WriteAsync only
                 // stages the entry on the shared DbContext's ChangeTracker (see its own doc comment: "commits

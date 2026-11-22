@@ -23,15 +23,18 @@ public static class ExecutionDbSeeder
         // 1. Seed Site Compliance Caches
         if (!await dbContext.SiteComplianceCaches.AnyAsync(ct).ConfigureAwait(false))
         {
+            var site101Activation = SiteComplianceCache.Create(
+                new StudyCode("CADENCE-101"),
+                new SiteCode("SITE-101"),
+                "SITE_ACTIVATION",
+                isComplete: true,
+                missingDocuments: Array.Empty<string>()
+            );
+            site101Activation.MarkActivated(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), "system_seed");
+
             var initialCaches = new[]
             {
-                SiteComplianceCache.Create(
-                    new StudyCode("CADENCE-101"),
-                    new SiteCode("SITE-101"),
-                    "SITE_ACTIVATION",
-                    isComplete: true,
-                    missingDocuments: Array.Empty<string>()
-                ),
+                site101Activation,
                 SiteComplianceCache.Create(
                     new StudyCode("CADENCE-101"),
                     new SiteCode("SITE-102"),

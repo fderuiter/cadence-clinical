@@ -137,9 +137,9 @@ public sealed class KernelEffectivityPostgresTests(KernelPostgresFixture fixture
     }
 
     /// <summary>
-    /// Validates the declaration rules: an unknown or withdrawn version, a study site of another study, a malformed
-    /// scope and a second effectivity for the same version and scope are refused. A version not yet approved may be
-    /// declared but cannot become effective.
+    /// Validates the declaration rules: an unknown, draft, in-review, or withdrawn version, a study site of another study,
+    /// a malformed scope, and a second effectivity for the same version and scope are refused. Only an approved (or
+    /// superseded) version may be declared and made effective.
     /// </summary>
     [Fact(DisplayName = "Effectivity_Declare_RefusesUnknownForeignDuplicateAndUnapproved")]
     public async Task EffectivityDeclareRefusesUnknownForeignDuplicateAndUnapproved()
@@ -150,8 +150,28 @@ public sealed class KernelEffectivityPostgresTests(KernelPostgresFixture fixture
         var otherStudy = await NewStudyInTenantAsync(tenant, ct);
         var foreignSite = await AddStudySiteAsync(tenant, otherStudy, "US", ct);
         var ownSite = await AddStudySiteAsync(tenant, study, "US", ct);
-        var draft = await _scenario.InReviewAsync(tenant, study, ct);
-        var versionId = draft.ProtocolVersionId;
+
+        var draftId = ProtocolVersionId.New();
+        var draftCreated = await _scenario.CreateDraftAsync(tenant, study, draftId, ct);
+        draftCreated.IsSuccess.Should().BeTrue(draftCreated.Error?.Message);
+        (await SendAsync(Declare(tenant, EffectivityId.New(), draftId, EffectivityScope.Study(), Tick()), ct)).Error
+            .Should().Be(EffectivityErrors.ProtocolVersionNotApproved);
+
+        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, draftId, KernelProtocolScenario.Key(), Reason), ct);
+        (await SendAsync(Declare(tenant, EffectivityId.New(), draftId, EffectivityScope.Study(), Tick()), ct)).Error
+            .Should().Be(EffectivityErrors.ProtocolVersionNotApproved);
+
+        var withdrawnStudy = await NewStudyInTenantAsync(tenant, ct);
+        var toWithdraw = await _scenario.InReviewAsync(tenant, withdrawnStudy, ct);
+        Tick();
+        var withdrawal = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Withdrawn, KernelProtocolScenario.Target(toWithdraw)), ct);
+        await _scenario.OkAsync(new WithdrawProtocolVersion(tenant, toWithdraw.ProtocolVersionId, withdrawal, KernelProtocolScenario.Key(), "Study cancelled"), ct);
+        (await SendAsync(Declare(tenant, EffectivityId.New(), toWithdraw.ProtocolVersionId, EffectivityScope.Study(), Tick()), ct)).Error
+            .Should().Be(EffectivityErrors.ProtocolVersionNotApproved);
+
+        var approvalSig = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
+        var approved = await _scenario.OkAsync(new ApproveProtocolVersion(tenant, draftId, approvalSig, KernelProtocolScenario.Key(), Reason), ct);
+        var versionId = approved.ProtocolVersionId;
 
         (await SendAsync(Declare(tenant, EffectivityId.New(), ProtocolVersionId.New(), EffectivityScope.Study(), Tick()), ct)).Error
             .Should().Be(EffectivityErrors.ProtocolVersionUnknown);
@@ -168,16 +188,13 @@ public sealed class KernelEffectivityPostgresTests(KernelPostgresFixture fixture
         (await SendAsync(Declare(tenant, EffectivityId.New(), versionId, EffectivityScope.At(ownSite), Tick()), ct)).Error
             .Should().Be(EffectivityErrors.AlreadyDeclared);
 
+        Tick();
+        var approvedWithdrawal = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Withdrawn, KernelProtocolScenario.Target(approved)), ct);
+        await _scenario.OkAsync(new WithdrawProtocolVersion(tenant, versionId, approvedWithdrawal, KernelProtocolScenario.Key(), "Withdrawn after declaration"), ct);
+
         var approval = await RegisterAsync(tenant, ArtifactKind.EthicsApproval, study, ct);
         (await SendAsync(ChangeStatus(tenant, atSite, EffectivityStatus.Effective, Tick(), approval), ct)).Error
             .Should().Be(EffectivityErrors.ProtocolVersionNotApproved);
-
-        Tick();
-        var withdrawal = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Withdrawn, KernelProtocolScenario.Target(draft)), ct);
-        await _scenario.OkAsync(new WithdrawProtocolVersion(tenant, versionId, withdrawal, KernelProtocolScenario.Key(), "Study cancelled"), ct);
-
-        (await SendAsync(Declare(tenant, EffectivityId.New(), versionId, EffectivityScope.Study(), Tick()), ct)).Error
-            .Should().Be(EffectivityErrors.ProtocolVersionWithdrawn);
     }
 
     /// <summary>

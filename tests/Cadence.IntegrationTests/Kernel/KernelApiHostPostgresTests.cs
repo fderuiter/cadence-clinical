@@ -244,7 +244,7 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
         var sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == study).Select(s => s.SponsorId).SingleAsync(ct);
         var suffix = Guid.NewGuid().ToString("N")[..10];
         var site = new Site(SiteId.New(), tenant, sponsor, $"SITE-{suffix}", "Memorial Hospital", "US", KernelPostgresFixture.ActorId, "Seeded for test");
-        var studySite = new StudySite(StudySiteId.New(), tenant, study, site.Id, "Selected", KernelPostgresFixture.ActorId, "Seeded for test");
+        var studySite = new StudySite(StudySiteId.New(), tenant, study, site.Id, "Active", KernelPostgresFixture.ActorId, "Seeded for test");
         await fixture.SeedAsync(site, studySite);
         return studySite.Id;
     }

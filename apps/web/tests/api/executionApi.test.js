@@ -203,6 +203,25 @@ describe("executionApi site activation", () => {
     expect(await request.json()).toEqual({ study_id: "CAD-101" });
   });
 
+  it("sends greenlight_token in the body when activating a certified site (PRD-SSU-003)", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(200, { status: "success", message: "ok" })
+    );
+
+    await executionApi.activateSite(
+      "SITE-7",
+      "CAD-101",
+      "SSU greenlight certified.",
+      "v1.eyJzdHVkeV9pZCI6IkNBRC0xMDEifQ.sig"
+    );
+
+    const request = fetchSpy.mock.calls[0][0];
+    expect(await request.json()).toEqual({
+      study_id: "CAD-101",
+      greenlight_token: "v1.eyJzdHVkeV9pZCI6IkNBRC0xMDEifQ.sig",
+    });
+  });
+
   it("sends a reason with an em dash and CJK encoded instead of failing in fetch (#4895)", async () => {
     fetchSpy.mockResolvedValueOnce(
       jsonResponse(200, { status: "success", message: "ok" })

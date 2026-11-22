@@ -50,6 +50,7 @@ public static class DomainErrorHttpMapping
         ["LOCKED_FACTOR_MUTATION"] = StatusCodes.Status422UnprocessableEntity,
         ["INVALID_STATE_TRANSITION"] = StatusCodes.Status422UnprocessableEntity,
         ["RECONSENT_REQUIRED"] = StatusCodes.Status423Locked,
+        ["INVALID_GREENLIGHT_TOKEN"] = StatusCodes.Status403Forbidden,
         ["CONCURRENCY_CONFLICT"] = StatusCodes.Status409Conflict,
     };
 

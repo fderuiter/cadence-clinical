@@ -105,6 +105,7 @@ public sealed class IndicatorSetPostgresTests(KernelPostgresFixture fixture) : I
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var graph = KernelSchemaPostgresTests.NewGraph();
+        graph.StudySite.Activate("Active for study pulse test");
         await fixture.SeedAsync(graph.Tenant, graph.Sponsor, graph.Institution, graph.Site, graph.Study, graph.StudySite);
         var tenant = graph.Tenant.Id;
         var (set, _, sdtmig) = await PinSampleSetAndPackAsync(tenant, graph.Study.Id, ct);

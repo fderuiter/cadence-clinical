@@ -6,12 +6,15 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
+using Cadence.Kernel.Time;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -109,6 +112,15 @@ public static class KernelReadEndpoints
             .WithName("KernelGetScheduleOfActivities")
             .WithSummary("A protocol version's Schedule of Activities, compiled from its design.")
             .WithDescription("Planned activities as columns grouped by epoch, collection specifications as rows (ADR-2475). A version the caller may not see is refused.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        reads.MapGet("/enrollments/{enrollmentRef}/schedule-of-activities", GetEnrollmentScheduleOfActivitiesAsync)
+            .WithName("KernelGetEnrollmentScheduleOfActivities")
+            .WithSummary("An enrollment's governing Schedule of Activities and re-consent lock state.")
+            .WithDescription("Resolves the participant's bitemporal Applicability at validAt (defaulting to now) and returns the governing Schedule of Activities plus any pending RequiresReconsent transitions (spec §7.5, PRD-SUB-007).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -359,6 +371,94 @@ public static class KernelReadEndpoints
         return await reader.GetScheduleOfActivitiesAsync(tenant, id, cancellationToken).ConfigureAwait(false) is { } matrix
             ? TypedResults.Ok(KernelScheduleOfActivitiesResponse.From(version, matrix))
             : KernelProblems.BadRequest("Not a typed design", $"{node} holds content that is not a typed protocol design, so it has no Schedule of Activities.");
+    }
+
+    internal static async Task<Results<Ok<KernelEnrollmentScheduleResponse>, ProblemHttpResult>> GetEnrollmentScheduleOfActivitiesAsync(
+        string enrollmentRef,
+        [Microsoft.AspNetCore.Mvc.FromQuery(Name = "valid_at")] DateTimeOffset? validAt,
+        HttpContext context,
+        IEnrollmentDirectory enrollments,
+        IApplicabilityReader applicability,
+        IProtocolVersionReader protocolVersions,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        IClock clock,
+        CancellationToken cancellationToken)
+    {
+        if (!NodeRef.TryParse(enrollmentRef, out var node))
+        {
+            return KernelProblems.InvalidNodeRef(enrollmentRef);
+        }
+
+        if (node.Kind != NodeKinds.Enrollment)
+        {
+            return KernelProblems.WrongKind(node, NodeKinds.Enrollment);
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var enrollmentId = EnrollmentId.FromGuid(node.Id);
+        if (await enrollments.FindAsync(tenant, enrollmentId, cancellationToken).ConfigureAwait(false) is null)
+        {
+            return KernelProblems.NotFound(node);
+        }
+
+        var enrollmentNode = NodeRef.For(enrollmentId);
+        var enrollmentMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [enrollmentNode], cancellationToken).ConfigureAwait(false);
+        if (enrollmentMasks.For(enrollmentNode) is { } enrollmentMask)
+        {
+            return KernelProblems.NotVisible($"You can't see this enrollment ({enrollmentMask}), so its governing schedule is not shown.");
+        }
+
+        var now = clock.UtcNow;
+        var resolution = await applicability.ResolveAsync(
+            tenant,
+            enrollmentId,
+            validAt ?? now,
+            now,
+            cancellationToken).ConfigureAwait(false);
+
+        KernelProtocolVersionResponse? governingVersionResponse = null;
+        KernelScheduleOfActivitiesResponse? soaResponse = null;
+        if (resolution.ProtocolVersionId is { } governingId
+            && await protocolVersions.GetAsync(tenant, governingId, cancellationToken).ConfigureAwait(false) is { } governingVersion)
+        {
+            var versionNode = NodeRef.For(governingVersion.Id);
+            var versionMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [versionNode], cancellationToken).ConfigureAwait(false);
+            var versionMask = versionMasks.For(versionNode);
+            governingVersionResponse = KernelProtocolVersionResponse.From(governingVersion, versionMask);
+            if (versionMask is null
+                && await protocolVersions.GetScheduleOfActivitiesAsync(tenant, governingId, cancellationToken).ConfigureAwait(false) is { } matrix)
+            {
+                soaResponse = KernelScheduleOfActivitiesResponse.From(governingVersion, matrix);
+            }
+        }
+
+        var pendingResponses = new List<KernelPendingReconsentResponse>();
+        if (resolution.PendingTransitions is { Count: > 0 } pendingList)
+        {
+            foreach (var pending in pendingList)
+            {
+                var targetVersion = await protocolVersions.GetAsync(tenant, pending.TargetVersionId, cancellationToken).ConfigureAwait(false);
+                var targetNode = NodeRef.For(pending.TargetVersionId);
+                var targetMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [targetNode], cancellationToken).ConfigureAwait(false);
+                bool targetVisible = targetMasks.For(targetNode) is null;
+                pendingResponses.Add(new KernelPendingReconsentResponse(
+                    targetNode.ToString(),
+                    targetVisible ? (targetVersion?.Number ?? pending.TargetVersionNumber) : null,
+                    targetVisible ? targetVersion?.AmendmentIntent : null,
+                    NodeRef.For(pending.EffectivityId).ToString(),
+                    pending.RequiredSince));
+            }
+        }
+
+        return TypedResults.Ok(new KernelEnrollmentScheduleResponse(
+            enrollmentNode.ToString(),
+            governingVersionResponse,
+            soaResponse,
+            RequiresReconsent: resolution.RequiresReconsent,
+            IsInconsistent: resolution.IsInconsistent,
+            InconsistencyReason: resolution.InconsistencyReason,
+            PendingTransitions: pendingResponses));
     }
 
     /// <summary>

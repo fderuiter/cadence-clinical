@@ -209,17 +209,31 @@ public sealed class EtmfCompletenessWebhookTests : IDisposable
         completeStatus!.IsComplete.Should().BeTrue();
         completeStatus.MissingDocuments.Should().BeEmpty();
 
-        // 5. Sponsor activates SITE-102 -> 200 OK.
+        // 5. Sponsor activates SITE-102 with signed CTMS greenlight token -> 200 OK.
+        long nowUnix = SystemClock.Instance.UtcNow.ToUnixTimeSeconds();
+        var greenlightToken = GreenlightTokenValidator.GenerateToken(
+            SiteId,
+            StudyId,
+            "US",
+            "ctms-director-1",
+            TestSecurityContext.GatewaySecret,
+            nowUnix,
+            nowUnix + 86400);
         var activateResp = await executionSponsorClient.PostAsJsonAsync(
             $"/api/v1/execution/sites/{SiteId}/activate",
-            new SiteActivationRequest(StudyId),
+            new SiteActivationRequest(StudyId, greenlightToken),
             ExecutionApiFactory.JsonOptions,
             ct);
         activateResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // 6. Verify that updating SITE_ACTIVATION completeness unblocks SubjectApplicationService enrollment
+        var activatedStatus = await (await executionSponsorClient.GetAsync(
+                $"/api/v1/execution/sites/{SiteId}/compliance-status?study_id={StudyId}", ct))
+            .Content.ReadFromJsonAsync<ComplianceStatusResponse>(ExecutionApiFactory.JsonOptions, ct);
+        activatedStatus!.IsActivated.Should().BeTrue();
+
+        // 6. Verify that updating SITE_ACTIVATION completeness + activation unblocks SubjectApplicationService enrollment
         // and RandomizationApplicationService randomization for SITE-102.
-        await AssertEnrollmentAndRandomizationUnblockedForSite102Async(completeStatus, ct);
+        await AssertEnrollmentAndRandomizationUnblockedForSite102Async(activatedStatus, ct);
     }
 
     [Fact]
@@ -345,15 +359,18 @@ public sealed class EtmfCompletenessWebhookTests : IDisposable
         blockedEnroll.IsFailure.Should().BeTrue();
         blockedEnroll.Error!.Code.Should().Be("BLOCKED_ENROLLMENT");
 
-        // Apply the synced SITE_ACTIVATION state delivered by the eTMF webhook.
-        await compliance.AddAsync(
-            SiteComplianceCache.Create(
-                syncedStatus.StudyId,
-                syncedStatus.SiteId!.Value,
-                syncedStatus.Milestone,
-                syncedStatus.IsComplete,
-                syncedStatus.MissingDocuments),
-            ct);
+        // Apply the synced SITE_ACTIVATION state delivered by the eTMF webhook + site activation.
+        var syncedCache = SiteComplianceCache.Create(
+            syncedStatus.StudyId,
+            syncedStatus.SiteId!.Value,
+            syncedStatus.Milestone,
+            syncedStatus.IsComplete,
+            syncedStatus.MissingDocuments);
+        if (syncedStatus.IsActivated)
+        {
+            syncedCache.MarkActivated(syncedStatus.ActivatedAt ?? clock.UtcNow, syncedStatus.ActivatedBy ?? "sponsor-dm-1");
+        }
+        await compliance.AddAsync(syncedCache, ct);
 
         // Enrollment in SubjectApplicationService now succeeds for SITE-102.
         var enrolled = await subjectService.AdvanceStateAsync(

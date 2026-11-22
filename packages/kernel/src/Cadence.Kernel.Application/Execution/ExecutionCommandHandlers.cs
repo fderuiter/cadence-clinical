@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,8 +34,9 @@ internal sealed class RegisterParticipantHandler : ICommandHandler<RegisterParti
 }
 
 /// <summary>
-/// Handles <see cref="ScreenParticipant"/>. Under the study's lock it checks that the subject code is unused in the
-/// study and that the participant has no active enrollment at the study site overlapping the new one in valid time.
+/// Handles <see cref="ScreenParticipant"/>. Locks study governance to enforce unique subject codes and non-overlapping
+/// active enrollments, and establishes initial bitemporal <see cref="Applicability"/> when a protocol version is effective
+/// at the site (spec §7.5, K-TIME-6).
 /// </summary>
 internal sealed class ScreenParticipantHandler : ICommandHandler<ScreenParticipant, EnrollmentState>
 {
@@ -50,18 +52,23 @@ internal sealed class ScreenParticipantHandler : ICommandHandler<ScreenParticipa
             return KernelErrors.AlreadyExists;
         }
 
-        if (await context.Work.ReadAsync<Participant>(command.ParticipantId, cancellationToken).ConfigureAwait(false) is null)
-        {
-            return ExecutionErrors.ParticipantUnknown;
-        }
-
         if (await context.Work.ReadAsync<StudySite>(command.StudySiteId, cancellationToken).ConfigureAwait(false) is not { } studySite)
         {
             return ExecutionErrors.StudySiteUnknown;
         }
 
+        if (!string.Equals(studySite.Status, ActivateStudySiteHandler.ActiveStatus, StringComparison.Ordinal))
+        {
+            return ExecutionErrors.StudySiteNotActive;
+        }
+
+        if (await context.Work.ReadAsync<Participant>(command.ParticipantId, cancellationToken).ConfigureAwait(false) is null)
+        {
+            return ExecutionErrors.ParticipantUnknown;
+        }
+
         var studyId = studySite.StudyId;
-        await context.Work.LockAsync<Study>(studyId, cancellationToken).ConfigureAwait(false);
+        await context.Work.LockStudyGovernanceAsync(studyId, cancellationToken).ConfigureAwait(false);
 
         var code = command.SubjectCode;
         if ((await context.Work.ReadAllAsync<Enrollment>(e => e.StudyId == studyId && e.SubjectCode == code, cancellationToken).ConfigureAwait(false)).Count > 0)
@@ -87,18 +94,23 @@ internal sealed class ScreenParticipantHandler : ICommandHandler<ScreenParticipa
             return ExecutionErrors.AlreadyActiveAtSite;
         }
 
+        await ApplicabilityGovernance.ClosePriorTerminalParticipantPeriodsAsync(
+            studyId, participantId, enrollment.Id, enrollment.StatusSince, context, cancellationToken).ConfigureAwait(false);
+
         context.Work.Add(enrollment);
         context.Work.Raise(
             new ParticipantScreened(
                 enrollment.TenantId, enrollment.Id, enrollment.ParticipantId, studyId, enrollment.StudySiteId, code, enrollment.StatusSince),
             enrollment.StatusSince);
+
+        await ApplicabilityGovernance.EstablishInitialIfNeededAsync(enrollment, studySite, context, cancellationToken).ConfigureAwait(false);
         return EnrollmentStates.Of(enrollment);
     }
 }
 
 /// <summary>
-/// Handles <see cref="ChangeEnrollmentStatus"/>. Entering Enrolled takes the study's lock and assigns the next number
-/// in the study, so numbers are gap-free (spec §7.4, K-TX-4).
+/// Handles <see cref="ChangeEnrollmentStatus"/>. Assigns gap-free enrollment numbers under the study governance lock
+/// and maintains bitemporal <see cref="Applicability"/> (spec §7.4, §7.5).
 /// </summary>
 internal sealed class ChangeEnrollmentStatusHandler(IEnrollmentDirectory directory) : ICommandHandler<ChangeEnrollmentStatus, EnrollmentState>
 {
@@ -109,15 +121,26 @@ internal sealed class ChangeEnrollmentStatusHandler(IEnrollmentDirectory directo
             return ExecutionErrors.WithdrawalRequiresCommand;
         }
 
+        if (await context.Work.ReadAsync<Enrollment>(command.EnrollmentId, cancellationToken).ConfigureAwait(false) is not { } unlocked)
+        {
+            return KernelErrors.NotFound;
+        }
+
+        var studySite = await context.Work.ReadAsync<StudySite>(unlocked.StudySiteId, cancellationToken).ConfigureAwait(false);
         if (command.To == EnrollmentStatus.Enrolled)
         {
-            if (await context.Work.ReadAsync<Enrollment>(command.EnrollmentId, cancellationToken).ConfigureAwait(false) is not { } unlocked)
+            if (studySite is null)
             {
-                return KernelErrors.NotFound;
+                return ExecutionErrors.StudySiteUnknown;
             }
 
-            await context.Work.LockAsync<Study>(unlocked.StudyId, cancellationToken).ConfigureAwait(false);
+            if (!string.Equals(studySite.Status, ActivateStudySiteHandler.ActiveStatus, StringComparison.Ordinal))
+            {
+                return ExecutionErrors.StudySiteNotActive;
+            }
         }
+
+        await context.Work.LockStudyGovernanceAsync(unlocked.StudyId, cancellationToken).ConfigureAwait(false);
 
         if (await context.Work.FindAsync<Enrollment>(command.EnrollmentId, cancellationToken).ConfigureAwait(false) is not { } enrollment)
         {
@@ -144,6 +167,23 @@ internal sealed class ChangeEnrollmentStatusHandler(IEnrollmentDirectory directo
                     enrollment.TenantId, enrollment.Id, enrollment.ParticipantId, enrollment.StudyId, enrollment.StudySiteId, assigned, enrollment.StatusSince)
                 : new EnrollmentStatusChanged(enrollment.TenantId, enrollment.Id, enrollment.ParticipantId, from, enrollment.Status, enrollment.StatusSince),
             enrollment.StatusSince);
+
+        if (command.To == EnrollmentStatus.ScreenFailed)
+        {
+            var existing = (await context.Work.ReadAllAsync<Applicability>(
+                a => a.EnrollmentId == enrollment.Id,
+                cancellationToken).ConfigureAwait(false)).SingleOrDefault();
+            if (existing is not null
+                && await context.Work.FindAsync<Applicability>(existing.Id, cancellationToken).ConfigureAwait(false) is { } tracked)
+            {
+                tracked.CloseOpenPeriod(enrollment.StatusSince, context.RecordedAt);
+            }
+        }
+        else if (command.To == EnrollmentStatus.Enrolled && studySite is not null)
+        {
+            await ApplicabilityGovernance.EstablishInitialIfNeededAsync(enrollment, studySite, context, cancellationToken).ConfigureAwait(false);
+        }
+
         return EnrollmentStates.Of(enrollment);
     }
 }
@@ -165,7 +205,7 @@ internal sealed class WithdrawParticipantHandler(IAttestationVerifier verifier) 
             return KernelErrors.NotFound;
         }
 
-        if (!System.Enum.IsDefined(command.Kind))
+        if (!Enum.IsDefined(command.Kind))
         {
             return ExecutionErrors.WithdrawalKindInvalid;
         }

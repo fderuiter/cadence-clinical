@@ -1,4 +1,4 @@
-DO $EF$
+﻿DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -4221,49 +4221,49 @@ START TRANSACTION;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
     ALTER TABLE kernel.provenance_activities ADD proposal_id uuid;
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
     ALTER TABLE kernel.provenance_activities ADD requested_by character varying(256);
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
     ALTER TABLE kernel.proposals ADD requested_by_id character varying(256);
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
     CREATE INDEX "IX_provenance_activities_tenant_id_proposal_id" ON kernel.provenance_activities (tenant_id, proposal_id) WHERE proposal_id IS NOT NULL;
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
     ALTER TABLE kernel.proposals ADD CONSTRAINT ck_proposals_requested_by CHECK ((proposed_by_kind = 'AutomationAgent' AND requested_by_id IS NOT NULL AND char_length(requested_by_id) > 0) OR (proposed_by_kind <> 'AutomationAgent' AND requested_by_id IS NULL));
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
     DROP TRIGGER IF EXISTS "trg_proposals_immutable" ON "kernel"."proposals";
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
     CREATE TRIGGER "trg_proposals_immutable" BEFORE UPDATE ON "kernel"."proposals"
         FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_immutable_columns('id', 'tenant_id', 'study_id', 'intent', 'plan_artifact_version_id', 'affected', 'simulated_impact', 'requested_capabilities', 'expires_at', 'proposed_at', 'proposed_by_id', 'proposed_by_kind', 'model_id', 'content_hash', 'created_at', 'created_by', 'requested_by_id', 'confidence_score');
     END IF;
@@ -4271,9 +4271,9 @@ END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261020031614_AgentRequesterAndProposalExecution') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20261020031614_AgentRequesterAndProposalExecution', '10.0.15'); -- pragma: allowlist secret
+    VALUES ('20261020031614_AgentRequesterAndProposalExecution', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -4282,7 +4282,7 @@ START TRANSACTION;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
     CREATE TABLE kernel.subscriptions (
         id uuid NOT NULL,
         tenant_id uuid NOT NULL,
@@ -4304,7 +4304,7 @@ END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
     CREATE TABLE kernel.product_entitlements (
         id uuid NOT NULL,
         tenant_id uuid NOT NULL,
@@ -4326,28 +4326,28 @@ END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
     CREATE UNIQUE INDEX "IX_product_entitlements_tenant_id_family" ON kernel.product_entitlements (tenant_id, family);
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
     CREATE INDEX "IX_product_entitlements_tenant_id_subscription_id" ON kernel.product_entitlements (tenant_id, subscription_id);
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
     CREATE UNIQUE INDEX "IX_subscriptions_tenant_id" ON kernel.subscriptions (tenant_id);
     END IF;
 END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
     ALTER TABLE "kernel"."subscriptions" ENABLE ROW LEVEL SECURITY;
     ALTER TABLE "kernel"."subscriptions" FORCE ROW LEVEL SECURITY;
     CREATE POLICY "tenant_isolation" ON "kernel"."subscriptions"
@@ -4358,7 +4358,7 @@ END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
     ALTER TABLE "kernel"."product_entitlements" ENABLE ROW LEVEL SECURITY;
     ALTER TABLE "kernel"."product_entitlements" FORCE ROW LEVEL SECURITY;
     CREATE POLICY "tenant_isolation" ON "kernel"."product_entitlements"
@@ -4369,9 +4369,9 @@ END $EF$;
 
 DO $EF$
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN -- pragma: allowlist secret
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261120152149_CommercialSubscriptionsAndEntitlements') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
-    VALUES ('20261120152149_CommercialSubscriptionsAndEntitlements', '10.0.15'); -- pragma: allowlist secret
+    VALUES ('20261120152149_CommercialSubscriptionsAndEntitlements', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;
@@ -4439,6 +4439,423 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261121163115_AddSubscriptionScopingFields') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20261121163115_AddSubscriptionScopingFields', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE TABLE kernel.applicabilities (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        enrollment_id uuid NOT NULL,
+        participant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        study_site_id uuid NOT NULL,
+        governing_version_id uuid,
+        valid_from timestamp with time zone,
+        is_inconsistent boolean NOT NULL,
+        inconsistency_reason character varying(1000),
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_applicabilities" PRIMARY KEY (id),
+        CONSTRAINT "AK_applicabilities_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "AK_applicabilities_tenant_id_id_enrollment_id" UNIQUE (tenant_id, id, enrollment_id),
+        CONSTRAINT "AK_applicabilities_tenant_id_id_enrollment_id_participant_id_s~" UNIQUE (tenant_id, id, enrollment_id, participant_id, study_id),
+        CONSTRAINT "FK_applicabilities_enrollments_tenant_id_enrollment_id" FOREIGN KEY (tenant_id, enrollment_id) REFERENCES kernel.enrollments (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_applicabilities_participants_tenant_id_participant_id" FOREIGN KEY (tenant_id, participant_id) REFERENCES kernel.participants (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_applicabilities_protocol_versions_tenant_id_governing_versi~" FOREIGN KEY (tenant_id, governing_version_id) REFERENCES kernel.protocol_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_applicabilities_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_applicabilities_study_sites_tenant_id_study_site_id_study_id" FOREIGN KEY (tenant_id, study_site_id, study_id) REFERENCES kernel.study_sites (tenant_id, id, study_id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_applicabilities_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE TABLE kernel.consent_statuses (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        enrollment_id uuid NOT NULL,
+        participant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        study_site_id uuid NOT NULL,
+        protocol_version_id uuid NOT NULL,
+        signed boolean NOT NULL,
+        signed_at timestamp with time zone NOT NULL,
+        basis_kind character varying(32) NOT NULL,
+        attestation_id uuid,
+        artifact_version_id uuid,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_consent_statuses" PRIMARY KEY (id),
+        CONSTRAINT "AK_consent_statuses_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "AK_consent_statuses_tenant_id_id_enrollment_id_protocol_versio~" UNIQUE (tenant_id, id, enrollment_id, protocol_version_id),
+        CONSTRAINT "FK_consent_statuses_artifact_versions_tenant_id_artifact_versi~" FOREIGN KEY (tenant_id, artifact_version_id) REFERENCES kernel.artifact_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_consent_statuses_attestations_tenant_id_attestation_id" FOREIGN KEY (tenant_id, attestation_id) REFERENCES kernel.attestations (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_consent_statuses_enrollments_tenant_id_enrollment_id" FOREIGN KEY (tenant_id, enrollment_id) REFERENCES kernel.enrollments (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_consent_statuses_participants_tenant_id_participant_id" FOREIGN KEY (tenant_id, participant_id) REFERENCES kernel.participants (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_consent_statuses_protocol_versions_tenant_id_protocol_versi~" FOREIGN KEY (tenant_id, protocol_version_id) REFERENCES kernel.protocol_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_consent_statuses_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_consent_statuses_study_sites_tenant_id_study_site_id_study_~" FOREIGN KEY (tenant_id, study_site_id, study_id) REFERENCES kernel.study_sites (tenant_id, id, study_id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_consent_statuses_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE TABLE kernel.applicability_pending_transitions (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        applicability_id uuid NOT NULL,
+        enrollment_id uuid NOT NULL,
+        from_version_id uuid,
+        target_version_id uuid NOT NULL,
+        effectivity_id uuid NOT NULL,
+        required_since timestamp with time zone NOT NULL,
+        recorded_period tstzrange NOT NULL,
+        valid_period tstzrange NOT NULL,
+        CONSTRAINT "PK_applicability_pending_transitions" PRIMARY KEY (id),
+        CONSTRAINT "FK_applicability_pending_transitions_applicabilities_tenant_id~" FOREIGN KEY (tenant_id, applicability_id, enrollment_id) REFERENCES kernel.applicabilities (tenant_id, id, enrollment_id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_applicability_pending_transitions_effectivities_tenant_id_e~" FOREIGN KEY (tenant_id, effectivity_id) REFERENCES kernel.effectivities (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_applicability_pending_transitions_protocol_versions_tenant_~" FOREIGN KEY (tenant_id, from_version_id) REFERENCES kernel.protocol_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_applicability_pending_transitions_protocol_versions_tenant~1" FOREIGN KEY (tenant_id, target_version_id) REFERENCES kernel.protocol_versions (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE TABLE kernel.applicability_periods (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        applicability_id uuid NOT NULL,
+        enrollment_id uuid NOT NULL,
+        participant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        protocol_version_id uuid NOT NULL,
+        basis character varying(64) NOT NULL,
+        effectivity_id uuid,
+        consent_status_id uuid,
+        recorded_period tstzrange NOT NULL,
+        valid_period tstzrange NOT NULL,
+        CONSTRAINT "PK_applicability_periods" PRIMARY KEY (id),
+        CONSTRAINT "FK_applicability_periods_applicabilities_tenant_id_applicabili~" FOREIGN KEY (tenant_id, applicability_id, enrollment_id, participant_id, study_id) REFERENCES kernel.applicabilities (tenant_id, id, enrollment_id, participant_id, study_id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_applicability_periods_consent_statuses_tenant_id_consent_st~" FOREIGN KEY (tenant_id, consent_status_id) REFERENCES kernel.consent_statuses (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_applicability_periods_effectivities_tenant_id_effectivity_id" FOREIGN KEY (tenant_id, effectivity_id) REFERENCES kernel.effectivities (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_applicability_periods_protocol_versions_tenant_id_protocol_~" FOREIGN KEY (tenant_id, protocol_version_id) REFERENCES kernel.protocol_versions (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE TABLE kernel.consent_status_periods (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        consent_status_id uuid NOT NULL,
+        enrollment_id uuid NOT NULL,
+        protocol_version_id uuid NOT NULL,
+        signed boolean NOT NULL,
+        basis_kind character varying(32) NOT NULL,
+        attestation_id uuid,
+        artifact_version_id uuid,
+        scopes jsonb NOT NULL,
+        recorded_period tstzrange NOT NULL,
+        valid_period tstzrange NOT NULL,
+        CONSTRAINT "PK_consent_status_periods" PRIMARY KEY (id),
+        CONSTRAINT "FK_consent_status_periods_consent_statuses_tenant_id_consent_s~" FOREIGN KEY (tenant_id, consent_status_id, enrollment_id, protocol_version_id) REFERENCES kernel.consent_statuses (tenant_id, id, enrollment_id, protocol_version_id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE UNIQUE INDEX "IX_applicabilities_tenant_id_enrollment_id" ON kernel.applicabilities (tenant_id, enrollment_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicabilities_tenant_id_governing_version_id" ON kernel.applicabilities (tenant_id, governing_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicabilities_tenant_id_participant_id" ON kernel.applicabilities (tenant_id, participant_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicabilities_tenant_id_study_id_participant_id" ON kernel.applicabilities (tenant_id, study_id, participant_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicabilities_tenant_id_study_site_id_study_id" ON kernel.applicabilities (tenant_id, study_site_id, study_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicability_pending_transitions_tenant_id_applicability_i~" ON kernel.applicability_pending_transitions (tenant_id, applicability_id, enrollment_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicability_pending_transitions_tenant_id_effectivity_id" ON kernel.applicability_pending_transitions (tenant_id, effectivity_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicability_pending_transitions_tenant_id_enrollment_id_t~" ON kernel.applicability_pending_transitions (tenant_id, enrollment_id, target_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicability_pending_transitions_tenant_id_from_version_id" ON kernel.applicability_pending_transitions (tenant_id, from_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicability_pending_transitions_tenant_id_target_version_~" ON kernel.applicability_pending_transitions (tenant_id, target_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicability_periods_tenant_id_applicability_id_enrollment~" ON kernel.applicability_periods (tenant_id, applicability_id, enrollment_id, participant_id, study_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicability_periods_tenant_id_consent_status_id" ON kernel.applicability_periods (tenant_id, consent_status_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicability_periods_tenant_id_effectivity_id" ON kernel.applicability_periods (tenant_id, effectivity_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicability_periods_tenant_id_enrollment_id" ON kernel.applicability_periods (tenant_id, enrollment_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicability_periods_tenant_id_protocol_version_id" ON kernel.applicability_periods (tenant_id, protocol_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_applicability_periods_tenant_id_study_id_participant_id" ON kernel.applicability_periods (tenant_id, study_id, participant_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_consent_status_periods_tenant_id_consent_status_id_enrollme~" ON kernel.consent_status_periods (tenant_id, consent_status_id, enrollment_id, protocol_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_consent_status_periods_tenant_id_enrollment_id_protocol_ver~" ON kernel.consent_status_periods (tenant_id, enrollment_id, protocol_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_consent_statuses_tenant_id_artifact_version_id" ON kernel.consent_statuses (tenant_id, artifact_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_consent_statuses_tenant_id_attestation_id" ON kernel.consent_statuses (tenant_id, attestation_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE UNIQUE INDEX "IX_consent_statuses_tenant_id_enrollment_id_protocol_version_id" ON kernel.consent_statuses (tenant_id, enrollment_id, protocol_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_consent_statuses_tenant_id_participant_id" ON kernel.consent_statuses (tenant_id, participant_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_consent_statuses_tenant_id_protocol_version_id" ON kernel.consent_statuses (tenant_id, protocol_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_consent_statuses_tenant_id_study_id_participant_id" ON kernel.consent_statuses (tenant_id, study_id, participant_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    CREATE INDEX "IX_consent_statuses_tenant_id_study_site_id_study_id" ON kernel.consent_statuses (tenant_id, study_site_id, study_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    ALTER TABLE "kernel"."applicability_periods" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."applicability_periods" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."applicability_periods"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    ALTER TABLE "kernel"."applicability_pending_transitions" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."applicability_pending_transitions" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."applicability_pending_transitions"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    ALTER TABLE "kernel"."applicabilities" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."applicabilities" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."applicabilities"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    ALTER TABLE "kernel"."consent_status_periods" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."consent_status_periods" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."consent_status_periods"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    ALTER TABLE "kernel"."consent_statuses" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."consent_statuses" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."consent_statuses"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    ALTER TABLE "kernel"."applicability_periods" ADD CONSTRAINT "ex_applicability_periods_single_truth"
+        EXCLUDE USING gist ("tenant_id" WITH =, "study_id" WITH =, "participant_id" WITH =, "valid_period" WITH &&, "recorded_period" WITH &&)
+        DEFERRABLE INITIALLY DEFERRED;
+    CREATE TRIGGER "trg_applicability_periods_append_only" BEFORE UPDATE OR DELETE ON "kernel"."applicability_periods"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    CREATE TRIGGER "trg_applicability_periods_no_truncate" BEFORE TRUNCATE ON "kernel"."applicability_periods"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    ALTER TABLE "kernel"."applicability_pending_transitions" ADD CONSTRAINT "ex_applicability_pending_transitions_single_truth"
+        EXCLUDE USING gist ("tenant_id" WITH =, "enrollment_id" WITH =, "target_version_id" WITH =, "valid_period" WITH &&, "recorded_period" WITH &&)
+        DEFERRABLE INITIALLY DEFERRED;
+    CREATE TRIGGER "trg_applicability_pending_transitions_append_only" BEFORE UPDATE OR DELETE ON "kernel"."applicability_pending_transitions"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    CREATE TRIGGER "trg_applicability_pending_transitions_no_truncate" BEFORE TRUNCATE ON "kernel"."applicability_pending_transitions"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    ALTER TABLE "kernel"."consent_status_periods" ADD CONSTRAINT "ex_consent_status_periods_single_truth"
+        EXCLUDE USING gist ("tenant_id" WITH =, "enrollment_id" WITH =, "protocol_version_id" WITH =, "valid_period" WITH &&, "recorded_period" WITH &&)
+        DEFERRABLE INITIALLY DEFERRED;
+    CREATE TRIGGER "trg_consent_status_periods_append_only" BEFORE UPDATE OR DELETE ON "kernel"."consent_status_periods"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    CREATE TRIGGER "trg_consent_status_periods_no_truncate" BEFORE TRUNCATE ON "kernel"."consent_status_periods"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122190720_BitemporalApplicabilityAndConsentStatus') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20261122190720_BitemporalApplicabilityAndConsentStatus', '10.0.15');
     END IF;
 END $EF$;
 COMMIT;

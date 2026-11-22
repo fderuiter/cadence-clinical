@@ -506,13 +506,13 @@ public sealed class KernelEnrollmentPostgresTests(KernelPostgresFixture fixture)
         return (studySite, (await ScreenAsync(tenant, studySite, "SUBJ-000", Tick(), ct)).Enrollment);
     }
 
-    private async Task<StudySiteId> AddStudySiteAsync(TenantId tenant, StudyId study, CancellationToken ct)
+    private async Task<StudySiteId> AddStudySiteAsync(TenantId tenant, StudyId study, CancellationToken ct, string status = "Active")
     {
         await using var db = fixture.CreateContext(tenant);
         var sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == study).Select(s => s.SponsorId).SingleAsync(ct);
         var suffix = Guid.NewGuid().ToString("N")[..10];
         var site = new Site(SiteId.New(), tenant, sponsor, $"SITE-{suffix}", "Memorial Hospital", "US", KernelPostgresFixture.ActorId, "Seeded for test");
-        var studySite = new StudySite(StudySiteId.New(), tenant, study, site.Id, "Selected", KernelPostgresFixture.ActorId, "Seeded for test");
+        var studySite = new StudySite(StudySiteId.New(), tenant, study, site.Id, status, KernelPostgresFixture.ActorId, "Seeded for test");
         await fixture.SeedAsync(site, studySite);
         return studySite.Id;
     }

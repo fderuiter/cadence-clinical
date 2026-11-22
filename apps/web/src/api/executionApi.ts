@@ -211,18 +211,24 @@ export const executionApi = {
 
   /**
    * Activates a site for the study. Execution refuses (400) unless eTMF reports the site's activation
-   * documents complete, and audits the attempt either way with the reason sent as X-Change-Reason
-   * (encoded per ADR-2495, so any script reaches the audit trail as typed).
+   * documents complete and CTMS startup readiness issued a valid HMAC `greenlightToken`, auditing the
+   * attempt either way with the reason sent as X-Change-Reason (encoded per ADR-2495).
    */
   activateSite(
     siteId: string,
     studyId: string,
-    changeReason: string
+    changeReason: string,
+    greenlightToken?: string | null
   ): Promise<OperationEnvelope> {
     return unwrapResponse(
       client.POST("/api/v1/execution/sites/{siteId}/activate", {
         params: { path: { siteId } },
-        body: { study_id: studyId },
+        body: {
+          study_id: studyId,
+          ...(greenlightToken !== undefined
+            ? { greenlight_token: greenlightToken }
+            : {}),
+        },
         headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
       })
     );

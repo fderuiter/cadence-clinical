@@ -164,7 +164,7 @@ public sealed class RandomizationApplicationService(
         // PRD-SSU-003: randomisation at a site that is not activated is refused with an audit entry that names the
         // caller; ICH E6(R3) 2.8: no trial procedure without a current informed consent.
         var gate = await compliance.GetAsync(probe.StudyCode, probe.SiteCode, SiteActivationMilestone, ct).ConfigureAwait(false);
-        if (gate is not { IsComplete: true })
+        if (gate is not { IsComplete: true, IsActivated: true })
         {
             return await RefuseAsync(probe, "BLOCKED_RANDOMIZATION_SITE", changeReason,
                 RandomizationErrors.SiteNotActivated(probe.SiteCode?.Value), ct).ConfigureAwait(false);

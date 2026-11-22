@@ -289,8 +289,8 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             var sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == study).Select(s => s.SponsorId).SingleAsync(ct);
             var sA = new Site(SiteId.New(), tenant, sponsor, "SITE-A", "Alpha Clinic", "US", KernelPostgresFixture.ActorId, "Seeded");
             var sB = new Site(SiteId.New(), tenant, sponsor, "SITE-B", "Beta Clinic", "US", KernelPostgresFixture.ActorId, "Seeded");
-            var linkA = new StudySite(StudySiteId.New(), tenant, study, sA.Id, "Selected", KernelPostgresFixture.ActorId, "Seeded");
-            var linkB = new StudySite(StudySiteId.New(), tenant, study, sB.Id, "Selected", KernelPostgresFixture.ActorId, "Seeded");
+            var linkA = new StudySite(StudySiteId.New(), tenant, study, sA.Id, "Active", KernelPostgresFixture.ActorId, "Seeded");
+            var linkB = new StudySite(StudySiteId.New(), tenant, study, sB.Id, "Active", KernelPostgresFixture.ActorId, "Seeded");
             await fixture.SeedAsync(sA, sB, linkA, linkB);
             siteA = linkA.Id;
             siteB = linkB.Id;

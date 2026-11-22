@@ -15,6 +15,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Consumers;
 /// An event without it is rejected to the error queue rather than recorded with the time it was processed
 /// (#4769).
 /// @req:PRD-SUB-001
+/// @req:PRD-SUB-007
 /// </summary>
 public sealed record EConsentCompletedEvent(
     string SubjectId,
@@ -22,4 +23,5 @@ public sealed record EConsentCompletedEvent(
     string? SiteId,
     string VersionTag,
     int VersionIndex,
-    DateTimeOffset? SignedAt = null);
+    DateTimeOffset? SignedAt = null,
+    string? TenantCode = null);

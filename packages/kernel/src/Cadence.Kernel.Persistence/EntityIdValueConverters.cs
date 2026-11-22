@@ -150,6 +150,16 @@ public class EffectivityIdValueConverter() : ValueConverter<EffectivityId, Guid>
     guid => new EffectivityId(guid)
 );
 
+public class ApplicabilityIdValueConverter() : ValueConverter<ApplicabilityId, Guid>(
+    id => id.Value,
+    guid => new ApplicabilityId(guid)
+);
+
+public class ConsentStatusIdValueConverter() : ValueConverter<ConsentStatusId, Guid>(
+    id => id.Value,
+    guid => new ConsentStatusId(guid)
+);
+
 public class ProposalIdValueConverter() : ValueConverter<ProposalId, Guid>(
     id => id.Value,
     guid => new ProposalId(guid)

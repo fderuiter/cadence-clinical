@@ -36,6 +36,16 @@ export type KernelProtocolVersion =
   Schemas["Kernel_KernelProtocolVersionResponse"];
 export type KernelScheduleOfActivities =
   Schemas["Kernel_KernelScheduleOfActivitiesResponse"];
+export type KernelEnrollmentSchedule =
+  Schemas["Kernel_KernelEnrollmentScheduleResponse"];
+export type KernelPendingReconsent =
+  Schemas["Kernel_KernelPendingReconsentResponse"];
+export type KernelEffectivityState =
+  Schemas["Kernel_KernelEffectivityStateResponse"];
+export type KernelStudySiteState =
+  Schemas["Kernel_KernelStudySiteStateResponse"];
+export type KernelConsentStatusState =
+  Schemas["Kernel_KernelConsentStatusStateResponse"];
 export type KernelSoaEpoch = Schemas["Kernel_KernelSoaEpochResponse"];
 export type KernelSoaColumn = Schemas["Kernel_KernelSoaColumnResponse"];
 export type KernelSoaRow = Schemas["Kernel_KernelSoaRowResponse"];
@@ -879,6 +889,27 @@ export const kernelApi = {
         "/api/v1/kernel/protocol-versions/{versionRef}/schedule-of-activities",
         {
           params: { path: { versionRef } },
+        }
+      )
+    );
+  },
+
+  /**
+   * An enrollment's governing protocol version, Schedule of Activities, and pending re-consent lock state at `validAt`
+   * (GET /api/v1/kernel/enrollments/{enrollmentRef}/schedule-of-activities).
+   */
+  getEnrollmentScheduleOfActivities(
+    enrollmentRef: string,
+    validAt?: string
+  ): Promise<KernelEnrollmentSchedule> {
+    return unwrapResponse(
+      client.GET(
+        "/api/v1/kernel/enrollments/{enrollmentRef}/schedule-of-activities",
+        {
+          params: {
+            path: { enrollmentRef: unversioned(enrollmentRef) },
+            query: validAt ? { valid_at: validAt } : undefined,
+          },
         }
       )
     );

@@ -9,7 +9,9 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.References;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -61,6 +63,24 @@ internal sealed class RecordObservationHandler : ICommandHandler<RecordObservati
         if (recorded.Value is not { } observation)
         {
             return recorded.Error!;
+        }
+
+        if (await GoverningVersion.ResolveAsync(
+                context.Work, enrollment, observation.ObservedAt, context.RecordedAt, cancellationToken).ConfigureAwait(false) is { } governingVersion)
+        {
+            context.Work.LinkInput(
+                NodeRef.For(governingVersion.Id, governingVersion.VersionIndex),
+                LineageEdgeKind.GovernedBy,
+                observation.ObservedAt);
+        }
+        else
+        {
+            var enrollmentId = enrollment.Id;
+            var applicabilities = await context.Work.ReadAllAsync<Applicability>(a => a.EnrollmentId == enrollmentId, cancellationToken).ConfigureAwait(false);
+            if (applicabilities.Count > 0)
+            {
+                return ObservationErrors.NoGoverningVersion;
+            }
         }
 
         context.Work.Add(observation);

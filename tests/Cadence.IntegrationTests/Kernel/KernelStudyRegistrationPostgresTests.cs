@@ -1,11 +1,14 @@
 using System;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Trust;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -44,8 +47,9 @@ public sealed class KernelStudyRegistrationPostgresTests(KernelPostgresFixture f
         var studySite = await _scenario.OkAsync(new LinkSiteToStudy(tenant, StudySiteId.New(), study, site, KernelProtocolScenario.Key(), "Site selection"), ct);
         var participant = await _scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
         SubjectCode.TryFrom("101-001", out var code);
-        await _scenario.OkAsync(
-            new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, code, fixture.Clock.UtcNow, KernelProtocolScenario.Key(), "Screening visit"), ct);
+        (await fixture.Sender.SendAsync(
+            new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, code, fixture.Clock.UtcNow, KernelProtocolScenario.Key(), "Premature screening"),
+            cancellationToken: ct)).Error.Should().Be(ExecutionErrors.StudySiteNotActive);
 
         await using var db = fixture.CreateContext(tenant);
         var studyRow = await db.Studies.AsNoTracking().SingleAsync(s => s.Id == study, ct);
@@ -56,8 +60,34 @@ public sealed class KernelStudyRegistrationPostgresTests(KernelPostgresFixture f
         var link = await db.StudySites.AsNoTracking().SingleAsync(s => s.Id == studySite, ct);
         (link.StudyId, link.SiteId, link.Status).Should().Be((study, site, "Selected"));
 
+        var (approved, _) = await _scenario.ApprovedAsync(tenant, study, ct);
+        var effectivity = EffectivityId.New();
+        await _scenario.OkAsync(
+            new DeclareEffectivity(tenant, effectivity, approved.ProtocolVersionId, EffectivityScope.Study(), fixture.Clock.Advance(TimeSpan.FromSeconds(1)), KernelProtocolScenario.Key(), "Study-wide"),
+            ct);
+        var ethicsBytes = Encoding.UTF8.GetBytes("ethics-cardio-301");
+        var ethics = ArtifactVersionId.New();
+        await _scenario.OkAsync(
+            new RegisterArtifact(
+                tenant,
+                ArtifactId.New(),
+                ethics,
+                ArtifactKind.EthicsApproval,
+                study,
+                "IRB Approval",
+                new ArtifactContent(ContentHash.OfBytes(ethicsBytes), ethicsBytes.Length, "application/pdf", "blob://evidence/cardio-301.pdf"),
+                KernelProtocolScenario.Key(),
+                "Filed IRB approval"),
+            ct);
+        await _scenario.OkAsync(
+            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, fixture.Clock.Advance(TimeSpan.FromSeconds(1)), [ethics], KernelProtocolScenario.Key(), "Effective"),
+            ct);
+        await _scenario.OkAsync(new ActivateStudySite(tenant, studySite, KernelProtocolScenario.Key(), "Greenlight received"), ct);
+        await _scenario.OkAsync(
+            new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, code, fixture.Clock.Advance(TimeSpan.FromSeconds(1)), KernelProtocolScenario.Key(), "Screening visit"), ct);
+
         var events = await db.DomainEvents.AsNoTracking().Where(e => e.TenantId == tenant).OrderBy(e => e.Recorded).ThenBy(e => e.EventId).Select(e => e.Type).ToListAsync(ct);
-        events.Should().ContainInOrder("StudyRegistered", "SiteRegistered", "SiteLinkedToStudy", "ParticipantScreened");
+        events.Should().ContainInOrder("StudyRegistered", "SiteRegistered", "SiteLinkedToStudy", "StudySiteActivated", "ParticipantScreened");
         var audited = await db.AuditEntries.AsNoTracking()
             .Where(a => a.TenantId == tenant && a.ActorId == KernelPostgresFixture.ActorId)
             .Select(a => a.AggregateId)

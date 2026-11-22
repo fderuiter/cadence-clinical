@@ -46,6 +46,7 @@ public class KernelDbContextModelTests
             "lineage_nodes", "lineage_edges", "activity_entries", "artifacts", "artifact_versions", "roles", "grants",
             "grant_periods", "work_queue_definitions", "validation_runs", "validation_run_packs", "validation_run_datasets",
             "validation_run_inputs", "validation_detections", "validation_findings", "effectivities", "effectivity_status_periods",
+            "applicabilities", "applicability_periods", "applicability_pending_transitions", "consent_statuses", "consent_status_periods",
             "qualifications", "qualification_periods", "qualification_requirements", "qualification_requirement_periods", "proposals", "form_version_snapshots",
             "observations", "observation_revisions", "assertions", "collection_instances", "collection_instance_members",
             "subscriptions", "product_entitlements");
