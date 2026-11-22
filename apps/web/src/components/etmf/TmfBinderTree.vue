@@ -73,6 +73,12 @@
           <span class="folder-icon">📂</span>
           <span class="zone-label">Zone {{ zone.code }}:</span>
           <span class="node-name">{{ zone.name }}</span>
+          <span
+            v-if="getDocumentCount(zone) > 0"
+            class="doc-count-badge zone-badge"
+          >
+            {{ getDocumentCount(zone) }}
+          </span>
           <button
             type="button"
             class="btn-node-export"
@@ -116,6 +122,12 @@
               <span class="folder-icon">📁</span>
               <span class="section-label">Section {{ section.code }}:</span>
               <span class="node-name">{{ section.name }}</span>
+              <span
+                v-if="getDocumentCount(section) > 0"
+                class="doc-count-badge section-badge"
+              >
+                {{ getDocumentCount(section) }}
+              </span>
               <button
                 type="button"
                 class="btn-node-export"
@@ -155,6 +167,12 @@
                   <span class="file-icon">📄</span>
                   <span class="artifact-code">[{{ artifact.code }}]</span>
                   <span class="node-name">{{ artifact.name }}</span>
+                  <span
+                    v-if="getDocumentCount(artifact) > 0"
+                    class="doc-count-badge artifact-badge"
+                  >
+                    {{ getDocumentCount(artifact) }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -508,6 +526,32 @@ function handleTreeKeyDown(e) {
       break;
   }
 }
+const artifactDocumentCounts = computed(() => {
+  const store = getEtmfStore();
+  const docs = Array.isArray(store?.documentsList) ? store.documentsList : [];
+  const counts = Object.create(null);
+  for (const doc of docs) {
+    const code = doc?.artifact_code || doc?.taxonomy_code;
+    if (typeof code === "string" && code.length > 0) {
+      counts[code] = (counts[code] || 0) + 1;
+    }
+  }
+  return counts;
+});
+
+function getDocumentCount(node) {
+  if (!node) return 0;
+  if (node.type === "artifact") {
+    return artifactDocumentCounts.value[node.code] || 0;
+  }
+  let total = 0;
+  if (Array.isArray(node.children)) {
+    for (const child of node.children) {
+      total += getDocumentCount(child);
+    }
+  }
+  return total;
+}
 </script>
 
 <style scoped>
@@ -665,6 +709,18 @@ function handleTreeKeyDown(e) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.doc-count-badge {
+  background-color: var(--semantic-color-primary-dark);
+  color: var(--semantic-color-text-on-solid);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 8px;
+  min-width: 14px;
+  text-align: center;
 }
 
 .btn-export-full-binder:disabled {

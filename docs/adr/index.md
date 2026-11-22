@@ -378,6 +378,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2641: Contextual SOP Specificity Resolution and Audited Support Ticket Escalation](2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md) (2026-11-20)
 - [ADR-2642: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation](2026-11-20-ctms-core-topology-scoped-isolation-and-stateful-site-activation.md) (2026-11-20)
 - [ADR-2643: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks](2026-11-20-wire-web-ctms-training-and-etmf-workspaces-and-signed-completeness-webhooks.md) (2026-11-20)
+- [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](2026-11-22-ctms-study-and-site-scope-isolation.md) (2026-11-22)
 
 ### 5. Compliance, Audit & Governance
 
@@ -622,3 +623,4 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2818: Clinical and Gateway Endpoints Take Time From IClock and Ban TimeProvider](2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.md) (2026-11-20)
 - [ADR-2819: Focus Active eCRF View on Backed Kernel Forms Outside Demo Mode](2026-11-20-focus-active-ecrf-view-on-backed-kernel-forms-outside-demo-mode.md) (2026-11-20)
 - [ADR-2820: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates](2026-11-19-recalibrate-shared-color-tokens-and-wcag-22-aa-contrast-gates.md) (2026-11-19)
+- [ADR-2821: Migrate Web Overlays to Clinical Primitives and Enforce AST Guardrails](2026-11-22-migrate-web-overlays-to-clinical-primitives-and-enforce-ast-guardrails.md) (2026-11-22)

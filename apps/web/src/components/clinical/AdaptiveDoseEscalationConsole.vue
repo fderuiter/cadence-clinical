@@ -256,136 +256,135 @@
     </div>
 
     <!-- 21 CFR Part 11 Cohort Transition Sign-off Modal -->
-    <div v-if="showTransitionModal" class="modal-backdrop">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h4 class="modal-title">21 CFR Part 11 Cohort Transition Sign-off</h4>
-          <button type="button" class="btn-close" @click="closeTransitionModal">
-            &times;
-          </button>
+    <ClinicalModal
+      v-model="showTransitionModal"
+      :teleport="false"
+      :dismissible="!isSubmitting"
+      dialog-class="modal-card"
+      title="21 CFR Part 11 Cohort Transition Sign-off"
+      @close="closeTransitionModal"
+    >
+      <div class="decision-summary-box">
+        <div class="decision-row">
+          <span class="lbl">Cohort Number:</span>
+          <span class="val">Cohort #{{ activeCohortNumber }}</span>
         </div>
-        <div class="modal-body">
-          <div class="decision-summary-box">
-            <div class="decision-row">
-              <span class="lbl">Cohort Number:</span>
-              <span class="val">Cohort #{{ activeCohortNumber }}</span>
-            </div>
-            <div class="decision-row">
-              <span class="lbl">Algorithmic Recommendation:</span>
-              <span class="val bold">{{ recommendationAction }}</span>
-            </div>
-            <div class="decision-row">
-              <span class="lbl">Target Dose Level:</span>
-              <span class="val"
-                >{{ selectedTargetDoseName }} (Level
-                {{ selectedTargetDoseIndex }})</span
-              >
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="decision-action-select"
-              >Confirmed Action:</label
-            >
-            <select
-              id="decision-action-select"
-              v-model="selectedAction"
-              class="form-select"
-            >
-              <option value="ESCALATE">
-                ESCALATE (Advance to Next Higher Dose)
-              </option>
-              <option value="DE_ESCALATE">
-                DE_ESCALATE (Reduce to Lower Dose)
-              </option>
-              <option value="STAY">STAY (Continue Current Dose Level)</option>
-              <option value="EXPAND_COHORT">
-                EXPAND_COHORT (Enroll 3 Additional Subjects)
-              </option>
-              <option value="STOP_SAFETY">
-                STOP_SAFETY (Halt Trial for Toxicity)
-              </option>
-              <option value="STOP_SUCCESS">
-                STOP_SUCCESS / MTD_FOUND (Declare MTD)
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="target-dose-select"
-              >Target Dose Level Index:</label
-            >
-            <select
-              id="target-dose-select"
-              v-model.number="selectedTargetDoseIndex"
-              class="form-select"
-            >
-              <option
-                v-for="dose in doseSummaries"
-                :key="dose.dose_level_index"
-                :value="dose.dose_level_index"
-                :disabled="dose.is_eliminated_for_safety"
-              >
-                Level {{ dose.dose_level_index }} - {{ dose.dose_name }}
-                <template v-if="dose.is_eliminated_for_safety">
-                  (ELIMINATED FOR SAFETY)
-                </template>
-              </option>
-            </select>
-          </div>
-
-          <div v-if="isOverride" class="form-group alert-group">
-            <label class="form-label required" for="override-reason-input">
-              Safety Committee Override Justification (21 CFR Part 11):
-            </label>
-            <textarea
-              id="override-reason-input"
-              v-model="overrideReason"
-              class="form-textarea"
-              rows="3"
-              placeholder="Enter detailed clinical rationale and Safety Committee sign-off ID..."
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label required" for="esignature-input">
-              Electronic Signature (PIN or Full Name):
-            </label>
-            <input
-              id="esignature-input"
-              v-model="electronicSignature"
-              type="text"
-              class="form-input"
-              placeholder="e.g. Dr. Jane Smith, MD"
-              required
-            />
-          </div>
+        <div class="decision-row">
+          <span class="lbl">Algorithmic Recommendation:</span>
+          <span class="val bold">{{ recommendationAction }}</span>
         </div>
-
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn-secondary"
-            @click="closeTransitionModal"
+        <div class="decision-row">
+          <span class="lbl">Target Dose Level:</span>
+          <span class="val"
+            >{{ selectedTargetDoseName }} (Level
+            {{ selectedTargetDoseIndex }})</span
           >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn-submit"
-            :disabled="!isFormValid || isSubmitting"
-            @click="submitCohortTransition"
-          >
-            {{ isSubmitting ? "Authorizing..." : "Authorize & Advance Cohort" }}
-          </button>
         </div>
       </div>
-    </div>
+
+      <div class="form-group">
+        <label class="form-label" for="decision-action-select"
+          >Confirmed Action:</label
+        >
+        <select
+          id="decision-action-select"
+          v-model="selectedAction"
+          class="form-select"
+        >
+          <option value="ESCALATE">
+            ESCALATE (Advance to Next Higher Dose)
+          </option>
+          <option value="DE_ESCALATE">
+            DE_ESCALATE (Reduce to Lower Dose)
+          </option>
+          <option value="STAY">STAY (Continue Current Dose Level)</option>
+          <option value="EXPAND_COHORT">
+            EXPAND_COHORT (Enroll 3 Additional Subjects)
+          </option>
+          <option value="STOP_SAFETY">
+            STOP_SAFETY (Halt Trial for Toxicity)
+          </option>
+          <option value="STOP_SUCCESS">
+            STOP_SUCCESS / MTD_FOUND (Declare MTD)
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="target-dose-select"
+          >Target Dose Level Index:</label
+        >
+        <select
+          id="target-dose-select"
+          v-model.number="selectedTargetDoseIndex"
+          class="form-select"
+        >
+          <option
+            v-for="dose in doseSummaries"
+            :key="dose.dose_level_index"
+            :value="dose.dose_level_index"
+            :disabled="dose.is_eliminated_for_safety"
+          >
+            Level {{ dose.dose_level_index }} - {{ dose.dose_name }}
+            <template v-if="dose.is_eliminated_for_safety">
+              (ELIMINATED FOR SAFETY)
+            </template>
+          </option>
+        </select>
+      </div>
+
+      <div v-if="isOverride" class="form-group alert-group">
+        <label class="form-label required" for="override-reason-input">
+          Safety Committee Override Justification (21 CFR Part 11):
+        </label>
+        <textarea
+          id="override-reason-input"
+          v-model="overrideReason"
+          class="form-textarea"
+          rows="3"
+          placeholder="Enter detailed clinical rationale and Safety Committee sign-off ID..."
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label required" for="esignature-input">
+          Electronic Signature (PIN or Full Name):
+        </label>
+        <input
+          id="esignature-input"
+          v-model="electronicSignature"
+          type="text"
+          class="form-input"
+          placeholder="e.g. Dr. Jane Smith, MD"
+          required
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn-secondary"
+          :disabled="isSubmitting"
+          @click="closeTransitionModal"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn-submit"
+          :disabled="!isFormValid || isSubmitting"
+          @click="submitCohortTransition"
+        >
+          {{ isSubmitting ? "Authorizing..." : "Authorize & Advance Cohort" }}
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ClinicalModal } from "ui";
 import { computed, ref } from "vue";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";

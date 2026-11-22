@@ -518,320 +518,279 @@
     </div>
 
     <!-- MODAL: Acknowledge Safety Alert -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="showAckModal && selectedAlert"
-      class="modal-backdrop"
-      @click.self="showAckModal = false"
+    <ClinicalModal
+      :model-value="Boolean(showAckModal && selectedAlert)"
+      :teleport="false"
+      :dismissible="!isSubmitting"
+      dialog-class="modal-dialog"
+      :title="
+        selectedAlert
+          ? `Acknowledge Safety Alert: ${selectedAlert.alert_id}`
+          : 'Acknowledge Safety Alert'
+      "
+      @update:model-value="showAckModal = $event"
     >
-      <div class="modal-dialog">
-        <div class="modal-header">
-          <h3 class="modal-title">
-            Acknowledge Safety Alert: {{ selectedAlert.alert_id }}
-          </h3>
-          <button
-            type="button"
-            class="modal-close"
-            @click="showAckModal = false"
-          >
-            ×
-          </button>
+      <template v-if="selectedAlert">
+        <div v-if="ackError" class="error-banner modal-error-banner">
+          {{ ackError }}
         </div>
-        <div class="modal-body">
-          <div v-if="ackError" class="error-banner modal-error-banner">
-            {{ ackError }}
-          </div>
-          <div class="alert-detail-box">
-            <p>
-              <strong>Subject:</strong>
-              <code>{{ selectedAlert.subject_id }}</code>
-            </p>
-            <p>
-              <strong>Parameter:</strong> {{ selectedAlert.parameter_name }} =
-              <span class="text-danger"
-                >{{ selectedAlert.observed_value }}
-                {{ selectedAlert.unit }}</span
-              >
-            </p>
-            <p>
-              <strong>Threshold Breached:</strong>
-              {{ selectedAlert.threshold_value }} {{ selectedAlert.unit }}
-            </p>
-            <p>
-              <strong>Triggered Time:</strong>
-              {{ formatDate(selectedAlert.triggered_at) }}
-            </p>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="ack-notes"
-              >Clinical Justification &amp; Action Notes *</label
+        <div class="alert-detail-box">
+          <p>
+            <strong>Subject:</strong>
+            <code>{{ selectedAlert.subject_id }}</code>
+          </p>
+          <p>
+            <strong>Parameter:</strong> {{ selectedAlert.parameter_name }} =
+            <span class="text-danger"
+              >{{ selectedAlert.observed_value }} {{ selectedAlert.unit }}</span
             >
-            <textarea
-              id="ack-notes"
-              v-model="ackNotes"
-              class="form-control textarea"
-              rows="3"
-              placeholder="Describe clinical intervention, subject contact, or protocol procedures undertaken..."
-            />
-          </div>
+          </p>
+          <p>
+            <strong>Threshold Breached:</strong>
+            {{ selectedAlert.threshold_value }} {{ selectedAlert.unit }}
+          </p>
+          <p>
+            <strong>Triggered Time:</strong>
+            {{ formatDate(selectedAlert.triggered_at) }}
+          </p>
         </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="showAckModal = false"
+
+        <div class="form-group">
+          <label class="form-label" for="ack-notes"
+            >Clinical Justification &amp; Action Notes *</label
           >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-danger"
-            :disabled="!ackNotes.trim() || isSubmitting"
-            @click="submitAcknowledgment"
-          >
-            {{
-              isSubmitting ? "Signing..." : "✍ Confirm 21 CFR Part 11 Sign-off"
-            }}
-          </button>
+          <textarea
+            id="ack-notes"
+            v-model="ackNotes"
+            class="form-control textarea"
+            rows="3"
+            placeholder="Describe clinical intervention, subject contact, or protocol procedures undertaken..."
+          />
         </div>
-      </div>
-    </div>
+      </template>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="showAckModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          :disabled="!ackNotes.trim() || isSubmitting"
+          @click="submitAcknowledgment"
+        >
+          {{
+            isSubmitting ? "Signing..." : "✍ Confirm 21 CFR Part 11 Sign-off"
+          }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- MODAL: Register Medical IoT Device -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="showRegisterModal"
-      class="modal-backdrop"
-      @click.self="showRegisterModal = false"
+    <ClinicalModal
+      v-model="showRegisterModal"
+      :teleport="false"
+      :dismissible="!isSubmitting"
+      dialog-class="modal-dialog"
+      title="Register Medical IoT Device"
     >
-      <div class="modal-dialog">
-        <div class="modal-header">
-          <h3 class="modal-title">Register Medical IoT Device</h3>
-          <button
-            type="button"
-            class="modal-close"
-            @click="showRegisterModal = false"
+      <div v-if="registerError" class="error-banner modal-error-banner">
+        {{ registerError }}
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="dev-category">Device Category *</label>
+          <select
+            id="dev-category"
+            v-model="registerForm.device_type"
+            class="form-control"
           >
-            ×
-          </button>
+            <option value="CGM">Continuous Glucose Monitor (CGM)</option>
+            <option value="ACTIGRAPHY">
+              Actigraphy / Sleep &amp; Steps Tracker
+            </option>
+            <option value="SPIROMETRY">Digital Spirometer (FEV1)</option>
+            <option value="BLOOD_PRESSURE">
+              Bluetooth Blood Pressure Cuff
+            </option>
+          </select>
         </div>
-        <div class="modal-body">
-          <div v-if="registerError" class="error-banner modal-error-banner">
-            {{ registerError }}
-          </div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label" for="dev-category"
-                >Device Category *</label
-              >
-              <select
-                id="dev-category"
-                v-model="registerForm.device_type"
-                class="form-control"
-              >
-                <option value="CGM">Continuous Glucose Monitor (CGM)</option>
-                <option value="ACTIGRAPHY">
-                  Actigraphy / Sleep &amp; Steps Tracker
-                </option>
-                <option value="SPIROMETRY">Digital Spirometer (FEV1)</option>
-                <option value="BLOOD_PRESSURE">
-                  Bluetooth Blood Pressure Cuff
-                </option>
-              </select>
-            </div>
 
-            <div class="form-group">
-              <label class="form-label" for="dev-vendor"
-                >Manufacturer / Vendor *</label
-              >
-              <input
-                id="dev-vendor"
-                v-model="registerForm.vendor"
-                type="text"
-                class="form-control"
-                placeholder="e.g. Dexcom, Abbott, ActiGraph"
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="dev-model">Model Name *</label>
-              <input
-                id="dev-model"
-                v-model="registerForm.model_name"
-                type="text"
-                class="form-control"
-                placeholder="e.g. G7, FreeStyle Libre 3, wGT3X-BT"
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="dev-subject"
-                >Assigned Subject ID *</label
-              >
-              <input
-                id="dev-subject"
-                v-model="registerForm.subject_id"
-                type="text"
-                class="form-control"
-                placeholder="e.g. SUBJ-101"
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="dev-mac"
-                >Bluetooth MAC Address</label
-              >
-              <input
-                id="dev-mac"
-                v-model="registerForm.mac_address"
-                type="text"
-                class="form-control"
-                placeholder="00:1A:7D:DA:71:13"
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="dev-udi"
-                >FDA UDI Barcode / DI</label
-              >
-              <input
-                id="dev-udi"
-                v-model="registerForm.device_udi"
-                type="text"
-                class="form-control"
-                placeholder="(01)00850012345678(21)SN123"
-              />
-            </div>
-          </div>
+        <div class="form-group">
+          <label class="form-label" for="dev-vendor"
+            >Manufacturer / Vendor *</label
+          >
+          <input
+            id="dev-vendor"
+            v-model="registerForm.vendor"
+            type="text"
+            class="form-control"
+            placeholder="e.g. Dexcom, Abbott, ActiGraph"
+          />
         </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="showRegisterModal = false"
+
+        <div class="form-group">
+          <label class="form-label" for="dev-model">Model Name *</label>
+          <input
+            id="dev-model"
+            v-model="registerForm.model_name"
+            type="text"
+            class="form-control"
+            placeholder="e.g. G7, FreeStyle Libre 3, wGT3X-BT"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="dev-subject"
+            >Assigned Subject ID *</label
           >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            :disabled="
-              !registerForm.vendor ||
-              !registerForm.model_name ||
-              !registerForm.subject_id ||
-              isSubmitting
-            "
-            @click="submitDeviceRegistration"
-          >
-            {{ isSubmitting ? "Registering..." : "Register & Map Device" }}
-          </button>
+          <input
+            id="dev-subject"
+            v-model="registerForm.subject_id"
+            type="text"
+            class="form-control"
+            placeholder="e.g. SUBJ-101"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="dev-mac">Bluetooth MAC Address</label>
+          <input
+            id="dev-mac"
+            v-model="registerForm.mac_address"
+            type="text"
+            class="form-control"
+            placeholder="00:1A:7D:DA:71:13"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="dev-udi">FDA UDI Barcode / DI</label>
+          <input
+            id="dev-udi"
+            v-model="registerForm.device_udi"
+            type="text"
+            class="form-control"
+            placeholder="(01)00850012345678(21)SN123"
+          />
         </div>
       </div>
-    </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="showRegisterModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="
+            !registerForm.vendor ||
+            !registerForm.model_name ||
+            !registerForm.subject_id ||
+            isSubmitting
+          "
+          @click="submitDeviceRegistration"
+        >
+          {{ isSubmitting ? "Registering..." : "Register & Map Device" }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- MODAL: Ingest Stream Batch Simulator -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="showSimulateModal"
-      class="modal-backdrop"
-      @click.self="showSimulateModal = false"
+    <ClinicalModal
+      v-model="showSimulateModal"
+      :teleport="false"
+      :dismissible="!isSubmitting"
+      dialog-class="modal-dialog"
+      title="Simulate Biometric Telemetry Ingestion"
     >
-      <div class="modal-dialog">
-        <div class="modal-header">
-          <h3 class="modal-title">Simulate Biometric Telemetry Ingestion</h3>
-          <button
-            type="button"
-            class="modal-close"
-            @click="showSimulateModal = false"
+      <div v-if="simulateError" class="error-banner modal-error-banner">
+        {{ simulateError }}
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="sim-dev-type">Stream Category *</label>
+          <select
+            id="sim-dev-type"
+            v-model="simulateForm.device_type"
+            class="form-control"
           >
-            ×
-          </button>
+            <option value="CGM">Continuous Glucose Monitor (CGM)</option>
+            <option value="ACTIGRAPHY">Actigraphy &amp; Heart Rate</option>
+            <option value="SPIROMETRY">Digital Spirometry</option>
+            <option value="BLOOD_PRESSURE">Blood Pressure Cuff</option>
+          </select>
         </div>
-        <div class="modal-body">
-          <div v-if="simulateError" class="error-banner modal-error-banner">
-            {{ simulateError }}
-          </div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label" for="sim-dev-type"
-                >Stream Category *</label
-              >
-              <select
-                id="sim-dev-type"
-                v-model="simulateForm.device_type"
-                class="form-control"
-              >
-                <option value="CGM">Continuous Glucose Monitor (CGM)</option>
-                <option value="ACTIGRAPHY">Actigraphy &amp; Heart Rate</option>
-                <option value="SPIROMETRY">Digital Spirometry</option>
-                <option value="BLOOD_PRESSURE">Blood Pressure Cuff</option>
-              </select>
-            </div>
 
-            <div class="form-group">
-              <label class="form-label" for="sim-subject">Subject ID *</label>
-              <input
-                id="sim-subject"
-                v-model="simulateForm.subject_id"
-                type="text"
-                class="form-control"
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="sim-drift"
-                >Simulated Clock Drift (ms)</label
-              >
-              <input
-                id="sim-drift"
-                v-model.number="simulateForm.drift_ms"
-                type="number"
-                class="form-control"
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="sim-samples"
-                >Number of Samples</label
-              >
-              <input
-                id="sim-samples"
-                v-model.number="simulateForm.sample_count"
-                type="number"
-                class="form-control"
-                min="1"
-                max="288"
-              />
-            </div>
-          </div>
+        <div class="form-group">
+          <label class="form-label" for="sim-subject">Subject ID *</label>
+          <input
+            id="sim-subject"
+            v-model="simulateForm.subject_id"
+            type="text"
+            class="form-control"
+          />
         </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="showSimulateModal = false"
+
+        <div class="form-group">
+          <label class="form-label" for="sim-drift"
+            >Simulated Clock Drift (ms)</label
           >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-accent"
-            :disabled="isSubmitting"
-            @click="submitSimulatedIngestion"
-          >
-            {{ isSubmitting ? "Ingesting..." : "⚡ Ingest Telemetry Stream" }}
-          </button>
+          <input
+            id="sim-drift"
+            v-model.number="simulateForm.drift_ms"
+            type="number"
+            class="form-control"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sim-samples">Number of Samples</label>
+          <input
+            id="sim-samples"
+            v-model.number="simulateForm.sample_count"
+            type="number"
+            class="form-control"
+            min="1"
+            max="288"
+          />
         </div>
       </div>
-    </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="showSimulateModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-accent"
+          :disabled="isSubmitting"
+          @click="submitSimulatedIngestion"
+        >
+          {{ isSubmitting ? "Ingesting..." : "⚡ Ingest Telemetry Stream" }}
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ClinicalModal } from "ui";
 import { computed, onMounted, ref } from "vue";
 import { interopService } from "../../api/interop";
 import { useToastStore } from "../../stores/toasts";
