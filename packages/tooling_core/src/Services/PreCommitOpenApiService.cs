@@ -22,35 +22,22 @@ public static class PreCommitOpenApiService
         }
 
         var files = targetFiles?.ToList() ?? GetStagedFiles(repoRoot);
+        var (shouldExport, targetServices, hasCsharpFiles) = AnalyzeBackendContractChanges(files);
 
-        var csharpFiles = files
-            .Where(IsCsharpFile)
-            .ToList();
-
-        if (csharpFiles.Count == 0)
+        if (!hasCsharpFiles)
         {
             Console.WriteLine("No staged C# backend changes detected. Skipping service startup (lightweight docs check)...");
             return ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot);
         }
 
-        bool affectsSharedLibraries = csharpFiles.Any(IsSharedOrSolutionFile);
-        List<string>? targetServices = null;
-
-        if (!affectsSharedLibraries)
+        if (!shouldExport)
         {
-            var detectedServices = csharpFiles
-                .Select(ResolveServiceFromPath)
-                .Where(s => !string.IsNullOrEmpty(s))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList()!;
+            Console.WriteLine("Staged C# changes do not affect microservice API contracts. Skipping service startup...");
+            return ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot);
+        }
 
-            if (detectedServices.Count == 0)
-            {
-                Console.WriteLine("Staged C# changes do not affect microservice API contracts. Skipping service startup...");
-                return ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot);
-            }
-
-            targetServices = detectedServices!;
+        if (targetServices is not null)
+        {
             Console.WriteLine($"Staged C# changes detected for microservice(s): {string.Join(", ", targetServices)}");
         }
         else
@@ -61,6 +48,93 @@ public static class PreCommitOpenApiService
         int syncResult = OpenApiSyncService.SyncOpenApiSpec(validate: true, repoRoot, targetServices);
         int docsResult = ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot);
         return syncResult != 0 || docsResult != 0 ? 1 : 0;
+    }
+
+    public static (bool ShouldExport, List<string>? TargetServices, bool HasCsharpFiles) AnalyzeBackendContractChanges(IEnumerable<string> files)
+    {
+        var csharpFiles = files.Where(IsCsharpFile).ToList();
+        if (csharpFiles.Count == 0)
+        {
+            return (false, null, false);
+        }
+
+        if (csharpFiles.Any(IsSharedOrSolutionFile))
+        {
+            return (true, null, true);
+        }
+
+        var detectedServices = csharpFiles
+            .Select(ResolveServiceFromPath)
+            .Where(s => !string.IsNullOrEmpty(s))
+            .Select(s => s!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return detectedServices.Count > 0
+            ? (true, detectedServices, true)
+            : (false, null, true);
+    }
+
+    public static bool AffectsEfCoreSchema(string file)
+    {
+        string normalized = file.Replace('\\', '/');
+        if (!normalized.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains("/tests/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("docs/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("scripts/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string fileName = Path.GetFileNameWithoutExtension(normalized);
+
+        return normalized.Contains("/migrations/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("migrations/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/configurations/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("configurations/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/entities/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("entities/", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("migration", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("configuration", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("entities", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("entity", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("dbcontext", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static List<string> GetChangedFilesForSelfHeal(string repoRoot)
+    {
+        if (!Directory.Exists(Path.Combine(repoRoot, ".git")) && !File.Exists(Path.Combine(repoRoot, ".git")))
+        {
+            return [];
+        }
+
+        var changed = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (string file in RunGitLines(repoRoot, "diff", "--name-only", "--diff-filter=ACMR") ?? [])
+        {
+            changed.Add(file.Replace('\\', '/'));
+        }
+
+        foreach (string file in GetStagedFiles(repoRoot))
+        {
+            changed.Add(file.Replace('\\', '/'));
+        }
+
+        foreach (string file in RunGitLines(repoRoot, "ls-files", "--others", "--exclude-standard") ?? [])
+        {
+            changed.Add(file.Replace('\\', '/'));
+        }
+
+        foreach (string file in TryGetChangedFilesSinceBase(repoRoot) ?? [])
+        {
+            changed.Add(file.Replace('\\', '/'));
+        }
+
+        return [.. changed];
     }
 
     public static List<string> GetStagedFiles(string repoRoot)
@@ -245,16 +319,43 @@ public static class PreCommitOpenApiService
         }
     }
 
-    internal static string FindRepoRoot()
+    public static string? FindNearestCsproj(string repoRoot, string relativeFile)
     {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
+        string fullRepoRoot = Path.GetFullPath(repoRoot);
+        string? dir = Path.GetDirectoryName(Path.GetFullPath(Path.Combine(fullRepoRoot, relativeFile)));
+        while (!string.IsNullOrEmpty(dir) && dir.StartsWith(fullRepoRoot, StringComparison.Ordinal))
         {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
+            string[] projects = Directory.GetFiles(dir, "*.csproj");
+            if (projects.Length == 1)
+            {
+                return Path.GetRelativePath(fullRepoRoot, projects[0]);
+            }
+
+            if (string.Equals(dir, fullRepoRoot, StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            dir = Directory.GetParent(dir)?.FullName;
         }
+
+        return null;
+    }
+
+    public static string FindRepoRoot()
+    {
+        foreach (string start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+        {
+            string current = start;
+            while (!string.IsNullOrEmpty(current))
+            {
+                if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
+                string? parent = Directory.GetParent(current)?.FullName;
+                if (parent == current) break;
+                current = parent ?? "";
+            }
+        }
+
         return Directory.GetCurrentDirectory();
     }
 }

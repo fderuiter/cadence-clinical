@@ -47,13 +47,18 @@ public static class ComplianceUtilityService
     /// <summary>Rewrites lower-case <c>@req:prd-…</c> tags and returns how many files changed.</summary>
     public static int SanitizeRequirementTags(string repoRoot, string[]? targetFiles, string? docsDir)
     {
+        if (targetFiles is { Length: 0 })
+        {
+            return 0;
+        }
+
         string targetDocsDir = docsDir ?? Path.Combine(repoRoot, "docs");
         if (!Directory.Exists(targetDocsDir) && targetFiles is not { Length: > 0 })
         {
             return 0;
         }
 
-        var files = targetFiles != null && targetFiles.Length > 0
+        var files = targetFiles is not null
             ? targetFiles.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f))
             : Directory.GetFiles(targetDocsDir, "*.md", SearchOption.AllDirectories);
 

@@ -13,12 +13,12 @@ Delegates exploratory investigation against primary sources (codebase, CDISC USD
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Web Research** | `search_web` / `read_url_content` | `query="..."`, `Url="..."` | Retrieve authoritative regulatory or clinical standard docs |
-| **Codebase Search** | `grep_search` / `find_by_name` | `Query="..."`, `Pattern="..."` | Locate existing implementations and domain patterns |
-| **Delegated Research** | `invoke_subagent` | `Subagents=[{"TypeName": "research", "Model": "flash"}]` | Offload heavy search/read context to subagent |
-| **Artifact Report** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/research_notes.md` | Emit structured research artifact with citations |
+| Phase                  | Antigravity Tool                  | Invocation Pattern                                               | Objective                                                   |
+| :--------------------- | :-------------------------------- | :--------------------------------------------------------------- | :---------------------------------------------------------- |
+| **Web Research**       | `search_web` / `read_url_content` | `query="..."`, `Url="..."`                                       | Retrieve authoritative regulatory or clinical standard docs |
+| **Codebase Search**    | `grep_search` / `find_by_name`    | `Query="..."`, `Pattern="..."`                                   | Locate existing implementations and domain patterns         |
+| **Delegated Research** | `invoke_subagent`                 | `Subagents=[{"TypeName": "research", "Model": "flash"}]`         | Offload heavy search/read context to subagent               |
+| **Artifact Report**    | `write_to_file`                   | Target: `<appDataDir>/brain/<conversation-id>/research_notes.md` | Emit structured research artifact with citations            |
 
 ---
 
@@ -54,5 +54,5 @@ Synthesize the subagent's findings into `<appDataDir>/brain/<conversation-id>/re
 ---
 
 ## 3. Present Concise Findings
-Provide a concise overview in chat pointing to the generated artifact.
 
+Provide a concise overview in chat pointing to the generated artifact.

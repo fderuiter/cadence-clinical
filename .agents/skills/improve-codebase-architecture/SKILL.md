@@ -13,14 +13,14 @@ Scans modules across `apps/` and `packages/` to identify shallow abstractions, l
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Boundary Scan** | `find_by_name` / `grep_search` | Search module directories under `apps/` and `packages/` | Identify multi-file clusters and shallow wrappers |
-| **Deep Inspection** | `invoke_subagent` | `Subagents=[{"TypeName": "research", "Role": "Deep Module Inspector", "Model": "flash"}]` | Launch fast research subagent for structural audit |
-| **Structural Analysis**| `invoke_subagent` | `Subagents=[{"Role": "Architecture Sentinel", "Model": "pro"}]` | Deep reasoning on complex decoupling refactors |
-| **Architecture Diagram**| `generate_image` | `Prompt="Hexagonal architecture boundary diagram showing deep domain core for ..."`, `AspectRatio="16:9"` | Generate visual architecture diagram |
-| **Opportunity Select**| `ask_question` | `questions=[{"question": "Select Deepening Opportunity to Refactor", ...}]` | Prompt user with interactive selection modal |
-| **Audit Artifact** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/architecture_audit.md` | Emit structured architecture report with Mermaid diagrams |
+| Phase                    | Antigravity Tool               | Invocation Pattern                                                                                        | Objective                                                 |
+| :----------------------- | :----------------------------- | :-------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------- |
+| **Boundary Scan**        | `find_by_name` / `grep_search` | Search module directories under `apps/` and `packages/`                                                   | Identify multi-file clusters and shallow wrappers         |
+| **Deep Inspection**      | `invoke_subagent`              | `Subagents=[{"TypeName": "research", "Role": "Deep Module Inspector", "Model": "flash"}]`                 | Launch fast research subagent for structural audit        |
+| **Structural Analysis**  | `invoke_subagent`              | `Subagents=[{"Role": "Architecture Sentinel", "Model": "pro"}]`                                           | Deep reasoning on complex decoupling refactors            |
+| **Architecture Diagram** | `generate_image`               | `Prompt="Hexagonal architecture boundary diagram showing deep domain core for ..."`, `AspectRatio="16:9"` | Generate visual architecture diagram                      |
+| **Opportunity Select**   | `ask_question`                 | `questions=[{"question": "Select Deepening Opportunity to Refactor", ...}]`                               | Prompt user with interactive selection modal              |
+| **Audit Artifact**       | `write_to_file`                | Target: `<appDataDir>/brain/<conversation-id>/architecture_audit.md`                                      | Emit structured architecture report with Mermaid diagrams |
 
 ---
 
@@ -56,7 +56,9 @@ Write findings to `<appDataDir>/brain/<conversation-id>/architecture_audit.md` v
 ---
 
 ## 3. Interactive Drill-Down
+
 Present the opportunities to the user using `ask_question`:
+
 ```json
 {
   "questions": [
@@ -72,6 +74,5 @@ Present the opportunities to the user using `ask_question`:
   ]
 }
 ```
+
 Follow up on the selected choice using [`grill-with-docs`](../grill-with-docs/SKILL.md) or [`tdd`](../tdd/SKILL.md).
-
-

@@ -13,7 +13,7 @@
 
 | Setting                     | Values                                                     | Effect                                                                                                                                                                 |
 | --------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AppHost:Profile`           | `full` (default), `core`                                   | `core` runs the gateway, the kernel API host, execution, etmf, ctms, knowledge and the web app. `full` adds the other 12 services, MinIO and the subject portal.     |
+| `AppHost:Profile`           | `full` (default), `core`                                   | `core` runs the gateway, the kernel API host, execution, etmf, ctms, knowledge and the web app. `full` adds the other 12 services, MinIO and the subject portal.       |
 | `ConnectionStrings:cadence` | an Npgsql connection string                                | Use this existing database instead of starting the PostgreSQL container. The services apply their migrations to it.                                                    |
 | `AppHost:OidcAuthority`     | a Keycloak realm URL, `http(s)://host:port/realms/<realm>` | Use this issuer for the gateway and the web app instead of starting the Keycloak container. The realm needs the `cadence-web` client from `docker/cadence-realm.json`. |
 

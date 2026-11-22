@@ -26,28 +26,28 @@ This returned **1,675 files** on 2026-09-03, saved to a scratch census file and 
 awk -F/ '{ if ($1=="apps" || $1=="packages") print $1"/"$2; else print $1 }' <census> | sort | uniq -c
 ```
 
-| Bucket | Files | Bucket | Files |
-|---|---:|---|---:|
-| `apps/execution` | 330 | `packages/engine_core` | 59 |
-| `apps/designer` | 169 | `packages/security` | 36 |
-| `apps/etmf` | 115 | `packages/cli` | 24 |
-| `apps/interop` | 110 | `packages/ddf` | 21 |
-| `scripts` (root) | 104 | `packages/deid` | 16 |
-| `apps/safety` | 73 | `packages/storage` | 15 |
-| `apps/econsent` | 67 | `packages/database` | 15 |
-| `apps/ctms` | 65 | `packages/compliance` | 14 |
-| `apps/quality` | 54 | `tests` (root) | 15 |
-| `apps/fileshare` | 49 | `packages/testing` | 7 |
-| `apps/tickets` | 47 | `packages/hexagonal` | 5 |
-| `apps/eisf` | 43 | `apps/web` | 5 |
-| `apps/knowledge` | 39 | `packages/tooling_core` | 4 |
-| `apps/ai_gateway` | 31 | `packages/sentinels` | 4 |
-| `apps/payments` | 30 | `packages/core-models` | 1 |
-| `apps/notifications` | 29 | `apps/__init__.py` | 1 |
-| `apps/gateway` | 29 | `apps/conftest.py` | 1 |
-| `apps/imaging` | 23 | `packages/__init__.py` | 1 |
-| `apps/org` | 22 | `packages/conftest.py` | 1 |
-| | | `verification` (root) | 1 |
+| Bucket               | Files | Bucket                  | Files |
+| -------------------- | ----: | ----------------------- | ----: |
+| `apps/execution`     |   330 | `packages/engine_core`  |    59 |
+| `apps/designer`      |   169 | `packages/security`     |    36 |
+| `apps/etmf`          |   115 | `packages/cli`          |    24 |
+| `apps/interop`       |   110 | `packages/ddf`          |    21 |
+| `scripts` (root)     |   104 | `packages/deid`         |    16 |
+| `apps/safety`        |    73 | `packages/storage`      |    15 |
+| `apps/econsent`      |    67 | `packages/database`     |    15 |
+| `apps/ctms`          |    65 | `packages/compliance`   |    14 |
+| `apps/quality`       |    54 | `tests` (root)          |    15 |
+| `apps/fileshare`     |    49 | `packages/testing`      |     7 |
+| `apps/tickets`       |    47 | `packages/hexagonal`    |     5 |
+| `apps/eisf`          |    43 | `apps/web`              |     5 |
+| `apps/knowledge`     |    39 | `packages/tooling_core` |     4 |
+| `apps/ai_gateway`    |    31 | `packages/sentinels`    |     4 |
+| `apps/payments`      |    30 | `packages/core-models`  |     1 |
+| `apps/notifications` |    29 | `apps/__init__.py`      |     1 |
+| `apps/gateway`       |    29 | `apps/conftest.py`      |     1 |
+| `apps/imaging`       |    23 | `packages/__init__.py`  |     1 |
+| `apps/org`           |    22 | `packages/conftest.py`  |     1 |
+|                      |       | `verification` (root)   |     1 |
 
 **Sum of all buckets: 1,675 — matches the raw `find | wc -l` count exactly.** `apps/subject-portal` contributes 0 `.py` files (confirmed Vue/Vite-only, no Python backend) and does not appear as a bucket for that reason, not because it was skipped.
 
@@ -57,50 +57,50 @@ awk -F/ '{ if ($1=="apps" || $1=="packages") print $1"/"$2; else print $1 }' <ce
 
 Every bucket above resolves to exactly one row in `02_bounded_contexts.md` §1 (bounded context) or §3 (shared kernel / cross-cutting), with no bucket left unassigned:
 
-| Bucket(s) | Assigned to | Category |
-|---|---|---|
-| `apps/execution` | Execution (EDC/RTSM) | Bounded context |
-| `apps/designer` | Designer (USDM/MDR) | Bounded context |
-| `apps/etmf` | eTMF | Bounded context |
-| `apps/interop` | Interop | Bounded context |
-| `apps/safety` | Safety (PV) | Bounded context |
-| `apps/econsent` | Econsent | Bounded context |
-| `apps/ctms` | CTMS | Bounded context |
-| `apps/quality` | Quality (CAPA/CSM) | Bounded context |
-| `apps/fileshare` | Fileshare | Bounded context |
-| `apps/tickets` | Tickets | Bounded context |
-| `apps/eisf` | eISF | Bounded context |
-| `apps/knowledge` | Knowledge | Bounded context |
-| `apps/ai_gateway` | AiGateway | Bounded context |
-| `apps/payments` | Payments | Bounded context |
-| `apps/notifications` | Notifications | Bounded context |
-| `apps/gateway` | Gateway | Bounded context |
-| `apps/imaging` | Imaging | Bounded context |
-| `apps/org` | Org | Bounded context |
-| `apps/web` | Web SPA edge | Bounded context (non-Python edge, catalogued not migrated) |
-| `apps/__init__.py`, `apps/conftest.py` | Cross-cutting test fixture root | Shared Kernel / Cross-Cutting — pytest root config, not a business domain |
-| `packages/engine_core` | Cadence.Core.Domain | Shared Kernel |
-| `packages/security` | Cadence.Security | Shared Kernel (flagged non-leaf, MIG-02) |
-| `packages/database` | Cadence.Database | Shared Kernel |
-| `packages/contracts` — *(0 `.py` files; TypeScript/schema-only per repo layout — no bucket row, consistent with 0-file buckets being omitted, same as `subject-portal`)* | Cadence.Contracts | Shared Kernel |
-| `packages/testing` | Cadence.Testing | Shared Kernel |
-| `packages/cli` | Cadence.Cli | Shared Kernel |
-| `packages/deid` | Cadence.Deid | Shared Kernel |
-| `packages/storage` | Cadence.Storage | Shared Kernel |
-| `packages/ddf` | Cadence.Ddf | Shared Kernel |
-| `packages/compliance` | Cadence.Compliance | Shared Kernel |
-| `packages/hexagonal` | Scaffolding templates (`scripts/scaffold_service.py` support) | Shared Kernel / tooling |
-| `packages/tooling_core` | Shared CLI tooling handlers | Shared Kernel / tooling |
-| `packages/sentinels` | Architecture-drift sentinel definitions | Shared Kernel / tooling |
-| `packages/core-models` | Placeholder | Shared Kernel |
-| `packages/__init__.py`, `packages/conftest.py` | Cross-cutting test fixture root | Shared Kernel / Cross-Cutting |
-| `scripts` (104 files) | Operational/CI tooling | Cross-Cutting, explicitly **not migrated** (see `01_system_topology.md` §2.5) — retired alongside the Python codebase except where a named .NET-side CI equivalent is created |
-| `tests` (root, 15 files) | Cross-service integration test fixtures | Cross-Cutting — not a bounded context, confirmed by the coupling-DAG research pass as the *only* location where genuine cross-app Python imports occur (production code has zero cross-app imports) |
-| `verification` (1 file, `verify_lookup.py`) | Standalone verification utility with an accompanying static HTML/PNG pair, unrelated to any service's runtime | Cross-Cutting, out of migration scope — a one-off tool, not part of any bounded context's deployable surface |
+| Bucket(s)                                                                                                                                                                | Assigned to                                                                                                   | Category                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/execution`                                                                                                                                                         | Execution (EDC/RTSM)                                                                                          | Bounded context                                                                                                                                                                                     |
+| `apps/designer`                                                                                                                                                          | Designer (USDM/MDR)                                                                                           | Bounded context                                                                                                                                                                                     |
+| `apps/etmf`                                                                                                                                                              | eTMF                                                                                                          | Bounded context                                                                                                                                                                                     |
+| `apps/interop`                                                                                                                                                           | Interop                                                                                                       | Bounded context                                                                                                                                                                                     |
+| `apps/safety`                                                                                                                                                            | Safety (PV)                                                                                                   | Bounded context                                                                                                                                                                                     |
+| `apps/econsent`                                                                                                                                                          | Econsent                                                                                                      | Bounded context                                                                                                                                                                                     |
+| `apps/ctms`                                                                                                                                                              | CTMS                                                                                                          | Bounded context                                                                                                                                                                                     |
+| `apps/quality`                                                                                                                                                           | Quality (CAPA/CSM)                                                                                            | Bounded context                                                                                                                                                                                     |
+| `apps/fileshare`                                                                                                                                                         | Fileshare                                                                                                     | Bounded context                                                                                                                                                                                     |
+| `apps/tickets`                                                                                                                                                           | Tickets                                                                                                       | Bounded context                                                                                                                                                                                     |
+| `apps/eisf`                                                                                                                                                              | eISF                                                                                                          | Bounded context                                                                                                                                                                                     |
+| `apps/knowledge`                                                                                                                                                         | Knowledge                                                                                                     | Bounded context                                                                                                                                                                                     |
+| `apps/ai_gateway`                                                                                                                                                        | AiGateway                                                                                                     | Bounded context                                                                                                                                                                                     |
+| `apps/payments`                                                                                                                                                          | Payments                                                                                                      | Bounded context                                                                                                                                                                                     |
+| `apps/notifications`                                                                                                                                                     | Notifications                                                                                                 | Bounded context                                                                                                                                                                                     |
+| `apps/gateway`                                                                                                                                                           | Gateway                                                                                                       | Bounded context                                                                                                                                                                                     |
+| `apps/imaging`                                                                                                                                                           | Imaging                                                                                                       | Bounded context                                                                                                                                                                                     |
+| `apps/org`                                                                                                                                                               | Org                                                                                                           | Bounded context                                                                                                                                                                                     |
+| `apps/web`                                                                                                                                                               | Web SPA edge                                                                                                  | Bounded context (non-Python edge, catalogued not migrated)                                                                                                                                          |
+| `apps/__init__.py`, `apps/conftest.py`                                                                                                                                   | Cross-cutting test fixture root                                                                               | Shared Kernel / Cross-Cutting — pytest root config, not a business domain                                                                                                                           |
+| `packages/engine_core`                                                                                                                                                   | Cadence.Core.Domain                                                                                           | Shared Kernel                                                                                                                                                                                       |
+| `packages/security`                                                                                                                                                      | Cadence.Security                                                                                              | Shared Kernel (flagged non-leaf, MIG-02)                                                                                                                                                            |
+| `packages/database`                                                                                                                                                      | Cadence.Database                                                                                              | Shared Kernel                                                                                                                                                                                       |
+| `packages/contracts` — _(0 `.py` files; TypeScript/schema-only per repo layout — no bucket row, consistent with 0-file buckets being omitted, same as `subject-portal`)_ | Cadence.Contracts                                                                                             | Shared Kernel                                                                                                                                                                                       |
+| `packages/testing`                                                                                                                                                       | Cadence.Testing                                                                                               | Shared Kernel                                                                                                                                                                                       |
+| `packages/cli`                                                                                                                                                           | Cadence.Cli                                                                                                   | Shared Kernel                                                                                                                                                                                       |
+| `packages/deid`                                                                                                                                                          | Cadence.Deid                                                                                                  | Shared Kernel                                                                                                                                                                                       |
+| `packages/storage`                                                                                                                                                       | Cadence.Storage                                                                                               | Shared Kernel                                                                                                                                                                                       |
+| `packages/ddf`                                                                                                                                                           | Cadence.Ddf                                                                                                   | Shared Kernel                                                                                                                                                                                       |
+| `packages/compliance`                                                                                                                                                    | Cadence.Compliance                                                                                            | Shared Kernel                                                                                                                                                                                       |
+| `packages/hexagonal`                                                                                                                                                     | Scaffolding templates (`scripts/scaffold_service.py` support)                                                 | Shared Kernel / tooling                                                                                                                                                                             |
+| `packages/tooling_core`                                                                                                                                                  | Shared CLI tooling handlers                                                                                   | Shared Kernel / tooling                                                                                                                                                                             |
+| `packages/sentinels`                                                                                                                                                     | Architecture-drift sentinel definitions                                                                       | Shared Kernel / tooling                                                                                                                                                                             |
+| `packages/core-models`                                                                                                                                                   | Placeholder                                                                                                   | Shared Kernel                                                                                                                                                                                       |
+| `packages/__init__.py`, `packages/conftest.py`                                                                                                                           | Cross-cutting test fixture root                                                                               | Shared Kernel / Cross-Cutting                                                                                                                                                                       |
+| `scripts` (104 files)                                                                                                                                                    | Operational/CI tooling                                                                                        | Cross-Cutting, explicitly **not migrated** (see `01_system_topology.md` §2.5) — retired alongside the Python codebase except where a named .NET-side CI equivalent is created                       |
+| `tests` (root, 15 files)                                                                                                                                                 | Cross-service integration test fixtures                                                                       | Cross-Cutting — not a bounded context, confirmed by the coupling-DAG research pass as the _only_ location where genuine cross-app Python imports occur (production code has zero cross-app imports) |
+| `verification` (1 file, `verify_lookup.py`)                                                                                                                              | Standalone verification utility with an accompanying static HTML/PNG pair, unrelated to any service's runtime | Cross-Cutting, out of migration scope — a one-off tool, not part of any bounded context's deployable surface                                                                                        |
 
 **Verification check performed:** `packages/contracts` was confirmed to have zero `.py` files (it is schema/DTO source used by the `.NET` `Cadence.Contracts` project directly, plus TypeScript client-generation artifacts) via `find packages/contracts -name "*.py"` returning empty — its absence from the bucket table in §2 is therefore correct, not an omission.
 
-**Result: 100% of the 1,675 `.py` files in the repository are accounted for.** Zero orphans found. This is a structural (directory-level) guarantee, not a claim that every individual file's *content* was read — see the limits section in `01_system_topology.md` §6 for what was and was not verified at the content level.
+**Result: 100% of the 1,675 `.py` files in the repository are accounted for.** Zero orphans found. This is a structural (directory-level) guarantee, not a claim that every individual file's _content_ was read — see the limits section in `01_system_topology.md` §6 for what was and was not verified at the content level.
 
 ---
 
@@ -119,10 +119,11 @@ $ echo $?
 ```
 
 **The .NET 10 SDK could not be installed in this sandboxed environment to run the remainder of the script:**
+
 - `apt-get install -y dotnet-sdk-10.0` resolved a candidate (`10.0.104-0ubuntu1~24.04.1`) but every constituent package (`dotnet-host-10.0`, `dotnet-hostfxr-10.0`, `dotnet-runtime-10.0`, `aspnetcore-runtime-10.0`, `dotnet-sdk-10.0`, etc.) returned `404 Not Found` from both `archive.ubuntu.com` and `security.ubuntu.com` — the package index is stale relative to what's actually hosted.
 - `curl https://dot.net/v1/dotnet-install.sh` (the official Microsoft install script) failed with `CONNECT tunnel failed, response 403` — `dot.net` is not on this environment's outbound-proxy allowlist.
 
-**Consequence for this baseline's claims:** `04_scaffold_solution.sh` was authored, code-reviewed by hand against the two already-working scaffold scripts in this repository (`scripts/scaffold_dotnet_solution.sh`, and the script embedded in `docs/migration/PHASE0_DOMAIN_DECOMPOSITION_AND_SCAFFOLD.md`, both of which follow the identical `dotnet new`/`dotnet sln add`/`dotnet add reference|package` idiom), and confirmed to fail *cleanly and immediately* at its own SDK guard rather than partway through with an inconsistent solution state. It was **not** run to completion, and `dotnet build Cadence.sln` was **not** executed in this session. No claim of "zero warnings, zero errors" is made anywhere in this Phase 0 baseline, because it was not observed.
+**Consequence for this baseline's claims:** `04_scaffold_solution.sh` was authored, code-reviewed by hand against the two already-working scaffold scripts in this repository (`scripts/scaffold_dotnet_solution.sh`, and the script embedded in `docs/migration/PHASE0_DOMAIN_DECOMPOSITION_AND_SCAFFOLD.md`, both of which follow the identical `dotnet new`/`dotnet sln add`/`dotnet add reference|package` idiom), and confirmed to fail _cleanly and immediately_ at its own SDK guard rather than partway through with an inconsistent solution state. It was **not** run to completion, and `dotnet build Cadence.sln` was **not** executed in this session. No claim of "zero warnings, zero errors" is made anywhere in this Phase 0 baseline, because it was not observed.
 
 This is stated explicitly, rather than silently omitted or asserted optimistically, because the most recent commit in this repository's own history (`docs/migration/Migration_Phase0_Readiness_Audit.md`, AUD-NET10-002) is a forensic finding that a prior Phase 0 pass certified remediations as complete on the basis of a markdown linter, not a functional check — repeating that pattern here (asserting a build result that was never produced) would be the same defect this baseline exists to not repeat.
 
@@ -134,12 +135,12 @@ This is stated explicitly, rather than silently omitted or asserted optimistical
 
 Independent of the build-verification gap above, the repository already contains a partial scaffold from prior Phase 0 work, confirmed present on disk:
 
-| Already present | Added/completed by `04_scaffold_solution.sh` |
-|---|---|
-| `Cadence.sln`, `Directory.Build.props`, `Directory.Packages.props`, `global.json`, `.editorconfig` | *(verified, not overwritten)* |
-| `Cadence.Core.Domain`, `Cadence.Security`, `Cadence.Database`, `Cadence.Contracts`, `Cadence.Testing`, `Cadence.Cli` (6 of 9 Tier 0 packages) | `Cadence.Deid`, `Cadence.Storage`, `Cadence.Ddf` (3 remaining Tier 0 packages) |
-| `Cadence.Apps.Execution`, `Cadence.Apps.Designer`, `Cadence.Apps.Gateway` (3 of 18 app services), each with a minimal `Program.cs` | Remaining 15 app-service skeletons: Org, Quality, Payments, Ctms, Etmf, Safety, Econsent, Eisf, Tickets, Notifications, AiGateway, Fileshare, Imaging, Knowledge, Interop |
-| `tests/Cadence.UnitTests.csproj`, `tests/Cadence.ArchitectureTests.csproj` with hand-written `ArchitectureSentinelTests.cs`/`SecurityAndDomainTests.cs` | *(verified present, not overwritten)* |
+| Already present                                                                                                                                         | Added/completed by `04_scaffold_solution.sh`                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Cadence.sln`, `Directory.Build.props`, `Directory.Packages.props`, `global.json`, `.editorconfig`                                                      | _(verified, not overwritten)_                                                                                                                                             |
+| `Cadence.Core.Domain`, `Cadence.Security`, `Cadence.Database`, `Cadence.Contracts`, `Cadence.Testing`, `Cadence.Cli` (6 of 9 Tier 0 packages)           | `Cadence.Deid`, `Cadence.Storage`, `Cadence.Ddf` (3 remaining Tier 0 packages)                                                                                            |
+| `Cadence.Apps.Execution`, `Cadence.Apps.Designer`, `Cadence.Apps.Gateway` (3 of 18 app services), each with a minimal `Program.cs`                      | Remaining 15 app-service skeletons: Org, Quality, Payments, Ctms, Etmf, Safety, Econsent, Eisf, Tickets, Notifications, AiGateway, Fileshare, Imaging, Knowledge, Interop |
+| `tests/Cadence.UnitTests.csproj`, `tests/Cadence.ArchitectureTests.csproj` with hand-written `ArchitectureSentinelTests.cs`/`SecurityAndDomainTests.cs` | _(verified present, not overwritten)_                                                                                                                                     |
 
 15 `.cs` files exist in the repository today (`Program.cs` x3 for the scaffolded apps, plus one file each for `Cadence.Cli`, `IExecutionApiClient`, `GxPAuditInterceptor`, `AggregateRoot`, `AuditLogEntry`, `IGxPAuditable`, `Result`, `HmacSigner`, `GxPRequirementAttribute`, `InMemoryRepository`, and the two test files) — these are tracer-bullet skeletons, not feature-complete transcriptions, consistent with this task's Step 0 instruction to not write application domain code during Phase 0.
 
@@ -149,4 +150,4 @@ Independent of the build-verification gap above, the repository already contains
 
 - **Total Python files cataloged:** 1,675, all 100% accounted for against exactly one bounded context or cross-cutting bucket (§2-3 above).
 - **Total bounded contexts identified:** 18 Python-backed FastAPI services + 2 non-Python SPA edges (Web, Subject-Portal) = 20 catalogued contexts, plus a 14-package Shared Kernel / Cross-Cutting layer (`02_bounded_contexts.md` §3).
-- **Recommended Slice 01 for immediate Phase 1 execution: `Cadence.Apps.Execution`** — already the tracer-bullet slice in progress (has the most complete existing `.cs` skeleton of any app service), the highest fan-in/fan-out of any context in the platform, and the load-bearing dependency every Tier 3 orchestrator (Quality, Ctms, Etmf, Safety, Eisf) is sequenced behind. It carries the heaviest blocker list of any slice (MIG-03, MIG-04, MIG-05 — see `03_migration_plan.md` §3) precisely because it is the highest-leverage slice to de-risk first; deferring it would leave every downstream Tier 3/4 slice's contract un-frozen. `Cadence.Apps.Gateway` and `Cadence.Apps.Designer` should be staffed in parallel with it (both already have skeletons and both sit in the same wave), with Gateway's MIG-07 (OpenAPI HTTP-discovery replacement) prioritized early since it is a correctness blocker for *every other slice's* documentation the moment any second service goes live in .NET.
+- **Recommended Slice 01 for immediate Phase 1 execution: `Cadence.Apps.Execution`** — already the tracer-bullet slice in progress (has the most complete existing `.cs` skeleton of any app service), the highest fan-in/fan-out of any context in the platform, and the load-bearing dependency every Tier 3 orchestrator (Quality, Ctms, Etmf, Safety, Eisf) is sequenced behind. It carries the heaviest blocker list of any slice (MIG-03, MIG-04, MIG-05 — see `03_migration_plan.md` §3) precisely because it is the highest-leverage slice to de-risk first; deferring it would leave every downstream Tier 3/4 slice's contract un-frozen. `Cadence.Apps.Gateway` and `Cadence.Apps.Designer` should be staffed in parallel with it (both already have skeletons and both sit in the same wave), with Gateway's MIG-07 (OpenAPI HTTP-discovery replacement) prioritized early since it is a correctness blocker for _every other slice's_ documentation the moment any second service goes live in .NET.
