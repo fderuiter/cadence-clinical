@@ -13,11 +13,11 @@ Synthesizes the active conversation, settled decisions, and architectural requir
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Context Review** | `view_file` | Read `CONTEXT.md` and `docs/SDLC/01_Product_Requirements_Document_PRD.md` | Ground spec in existing requirements and glossary |
-| **Ambiguity Settlement**| `ask_question` | `questions=[{"question": "Confirm Acceptance Criterion", ...}]` | Confirm critical regulatory bounds before writing spec |
-| **Spec Emission** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/spec.md` with `ArtifactMetadata` | Emit formal specification document |
+| Phase                    | Antigravity Tool | Invocation Pattern                                                             | Objective                                              |
+| :----------------------- | :--------------- | :----------------------------------------------------------------------------- | :----------------------------------------------------- |
+| **Context Review**       | `view_file`      | Read `CONTEXT.md` and `docs/SDLC/01_Product_Requirements_Document_PRD.md`      | Ground spec in existing requirements and glossary      |
+| **Ambiguity Settlement** | `ask_question`   | `questions=[{"question": "Confirm Acceptance Criterion", ...}]`                | Confirm critical regulatory bounds before writing spec |
+| **Spec Emission**        | `write_to_file`  | Target: `<appDataDir>/brain/<conversation-id>/spec.md` with `ArtifactMetadata` | Emit formal specification document                     |
 
 ---
 
@@ -40,6 +40,7 @@ Generate a comprehensive specification with the following sections:
 ### MANDATORY TOOL INVOCATION (`ask_question`)
 
 If any regulatory boundaries, SLA targets, or data contracts remain ambiguous, you **MUST** invoke `ask_question` before finalizing the spec:
+
 ```json
 {
   "questions": [
@@ -57,5 +58,3 @@ If any regulatory boundaries, SLA targets, or data contracts remain ambiguous, y
 
 Write the specification to `<appDataDir>/brain/<conversation-id>/spec.md` with `ArtifactMetadata` (`UserFacing: true`, `RequestFeedback: true`).
 If long-term documentation is needed, also write to `docs/specs/<feature-name>.md`.
-
-

@@ -11,16 +11,23 @@ public static class QueryLinterService
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Linting database and ORM query statements...");
 
-        var csFiles = files != null && files.Length > 0
+        if (files is { Length: 0 })
+        {
+            Console.WriteLine("✔ Query style linting passed cleanly.");
+            return 0;
+        }
+
+        var rawCandidates = files is not null
             // The pre-commit gate passes every staged file; only C# source is linted, so a Markdown table that
             // documents these rules is not reported as a violation of them.
             ? files.Where(f => f.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
-                .Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists).ToList()
-            : Directory.EnumerateFiles(repoRoot, "*.cs", SearchOption.AllDirectories)
-                .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") &&
-                            !f.Contains($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}"))
-                .ToList();
+                .Select(f => Path.IsPathRooted(f) ? Path.GetFullPath(f) : Path.GetFullPath(Path.Combine(repoRoot, f)))
+                .Where(File.Exists)
+            : Directory.EnumerateFiles(repoRoot, "*.cs", SearchOption.AllDirectories);
+
+        var csFiles = rawCandidates
+            .Where(f => !IsExcludedCSharpPath(Path.GetRelativePath(repoRoot, f)))
+            .ToList();
 
         int issues = 0;
         foreach (var file in csFiles)
@@ -64,16 +71,22 @@ public static class QueryLinterService
         return 0;
     }
 
-    private static string FindRepoRoot()
+    private static bool IsExcludedCSharpPath(string relativePath)
     {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
+        string normalized = relativePath.Replace('\\', '/');
+        return normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/tests/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("bin/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/bin/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("obj/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/obj/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith(".git/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/.git/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("node_modules/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/node_modules/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith(".cadence/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith(".venv/", StringComparison.OrdinalIgnoreCase);
     }
+
+    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }

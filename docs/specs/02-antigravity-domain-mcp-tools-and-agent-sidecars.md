@@ -15,6 +15,7 @@
 In the Cadence Clinical high-assurance eClinical platform, autonomous AI coding agents operating across microservices frequently need to inspect complex clinical metadata (CDISC USDM v3/v4 graphs in Neo4j), validate dynamic eCRF schema migrations in PostgreSQL, and verify reactive outbox event streams.
 
 Currently, agents face critical friction when interacting with deep clinical domain layers:
+
 1. **Lack of Domain-Level MCP Tooling:** While generic diagnostics exist (`doctor_diagnose`, `run_fast_tests`), agents lack dedicated Model Context Protocol (MCP) tools for domain introspection, forcing them to construct raw Cypher queries, execute ad-hoc SQL against internal databases, or scrape logs.
 2. **Context Bloat on Large Clinical Schemas:** Inspecting complete USDM study graphs or SDTM domain mappings emits tens of thousands of tokens, rapidly overflowing the agent's context window and degrading reasoning fidelity.
 3. **Absence of Parameterized Clinical Event Replay:** Agents cannot easily simulate or replay reactive clinical events (e.g. subject enrollment advances, adverse event triggers, lab value outbox emissions) through typed MCP interfaces during TDD loops.
@@ -63,21 +64,27 @@ Extend the native Cadence MCP Server (`cadence mcp`) with a dedicated suite of h
 ## Implementation Decisions
 
 ### 1. Domain MCP Tool Catalog Extension
+
 Extend `CadenceMcpServer.TOOLS` in `packages/cli/mcp/server.py` with 4 new tool definitions:
+
 - `usdm_graph_inspect(protocol_id: str | None = None, entity_type: str | None = None, depth: int = 2, summary: bool = True)`
 - `sdtm_pipeline_validate(domain: str | None = None, strict_cdisc: bool = True, summary: bool = True)`
 - `clinical_event_stream(event_type: str | None = None, limit: int = 20, replay: bool = False)`
 - `synthetic_patient_generate(protocol_id: str = "default", scenario: str = "standard", count: int = 1, dry_run: bool = False)`
 
 ### 2. Tooling Core Domain Handlers
+
 Implement dedicated handler functions in `packages/tooling_core/src/ToolingHandlers.cs` (the Python signatures below describe the shapes):
+
 - `handle_usdm_graph_inspect(req: UsdmGraphInspectRequest) -> CommandEnvelope[UsdmGraphInspectResponse]`
 - `handle_sdtm_pipeline_validate(req: SdtmPipelineValidateRequest) -> CommandEnvelope[SdtmPipelineValidateResponse]`
 - `handle_clinical_event_stream(req: ClinicalEventStreamRequest) -> CommandEnvelope[ClinicalEventStreamResponse]`
 - `handle_synthetic_patient_generate(req: SyntheticPatientGenerateRequest) -> CommandEnvelope[SyntheticPatientGenerateResponse]`
 
 ### 3. Progressive Zoom Envelope Standardization
+
 All responses adhere to the standard `CommandEnvelope[T]` format:
+
 - `success`: Boolean status indicator.
 - `exit_code`: Numeric status code.
 - `summary`: Compact dictionary/narrative metrics for immediate agent consumption.
@@ -90,10 +97,12 @@ All responses adhere to the standard `CommandEnvelope[T]` format:
 ## Testing Decisions
 
 ### What Makes a Good Test
+
 - Tests must assert external JSON-RPC protocol compliance (`tools/list` returns updated schemas, `tools/call` executes with valid parameter validation and zoom envelopes).
 - Tests must run in sub-second time using in-memory mock adapters without requiring live Neo4j or PostgreSQL daemon processes.
 
 ### Tested Surfaces
+
 1. **JSON-RPC Schema Tests (`packages/cli/mcp/server.py`):**
    - Verify all 10 tools (6 existing + 4 domain extensions) are published in `tools/list`.
    - Verify input parameter validation for each domain tool.
