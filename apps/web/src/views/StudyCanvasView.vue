@@ -254,7 +254,9 @@
                   : undefined
               "
               :can-manage-queries="canManage"
+              :can-answer-queries="canAnswer"
               :can-verify-source="canVerify"
+              :highlight-item-id="highlightItemQuery || null"
               :back-location="formBackLocation"
               :back-label="formBackLabel"
               :handoff-location="
@@ -392,6 +394,7 @@
             :key="`queries-${studyCode}`"
             :study-code="studyCode"
             :can-manage="canManage"
+            :can-answer="canAnswer"
             :status="queryStatusFilter"
             :site="siteFilter"
             :participant="queryParticipantFilter"
@@ -403,6 +406,13 @@
             v-else-if="section?.id === 'locks'"
             :key="`locks-${studyCode}`"
             :study-code="studyCode"
+          />
+
+          <ValidationSection
+            v-else-if="section?.id === 'validation'"
+            :key="`validation-${studyCode}`"
+            :study-code="studyCode"
+            :can-manage-rules="canManageRules"
           />
 
           <ExportsSection
@@ -563,7 +573,9 @@
                 <strong class="study-card-code">{{ item.code }}</strong>
                 <span class="study-phase-badge">{{ item.phase }}</span>
               </div>
-              <div class="study-card-title">{{ item.title }}</div>
+              <div class="study-card-title">
+                {{ item.title }}
+              </div>
               <div class="study-card-sponsor">
                 Sponsor: {{ item.sponsor_name }} ({{ item.sponsor_code }})
               </div>
@@ -874,8 +886,10 @@ import {
   type NodeRef,
 } from "../canvas/nodeRef";
 import {
+  canAnswerQueries,
   canManageParticipants,
   canManageQueries,
+  canManageRulePacks,
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
@@ -888,6 +902,7 @@ import CanvasInspector from "../components/canvas/CanvasInspector.vue";
 import CanvasPalette from "../components/canvas/CanvasPalette.vue";
 import ExportsSection from "../components/canvas/ExportsSection.vue";
 import LocksSection from "../components/canvas/LocksSection.vue";
+import ValidationSection from "../components/canvas/ValidationSection.vue";
 import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
 import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
 import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
@@ -933,6 +948,7 @@ interface StudyQuery {
   node?: string;
   participant?: string;
   form?: string;
+  item?: string;
   spec?: string;
   visit?: string;
   observation?: string;
@@ -1304,6 +1320,7 @@ const recordRef = computed(() => participantRef(route.query.participant));
 const formQuery = computed(() => single(route.query.form).trim());
 const isNewForm = computed(() => formQuery.value === "new");
 const openFormId = computed(() => collectionInstanceId(formQuery.value));
+const highlightItemQuery = computed(() => single(route.query.item).trim());
 const initialSpecId = computed(() => single(route.query.spec).trim());
 const initialVisitId = computed(() => single(route.query.visit).trim());
 const hasOpenForm = computed(
@@ -1391,6 +1408,8 @@ const inspectedNodeText = computed(() => {
   return node ? formatNodeRef(node) : "";
 });
 const canManage = computed(() => canManageQueries(authStore));
+const canAnswer = computed(() => canAnswerQueries(authStore));
+const canManageRules = computed(() => canManageRulePacks(authStore));
 const canVerify = computed(() => canVerifySource(authStore));
 const canChangeParticipants = computed(() => canManageParticipants(authStore));
 
@@ -1632,6 +1651,13 @@ const zoomFormLocation = computed(() => {
 });
 
 const formBackLocation = computed(() => {
+  if (section.value?.id === "queries" || section.value?.id === "validation") {
+    return studyLocation({
+      stage: "data",
+      section: section.value.id,
+      site: siteFilter.value || undefined,
+    });
+  }
   if (activeFormParticipant.value) {
     return recordLocationFor(activeFormParticipant.value);
   }

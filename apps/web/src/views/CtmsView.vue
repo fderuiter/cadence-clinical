@@ -3072,7 +3072,7 @@
                 id="compile-investigator-email"
                 v-model="compileInvestigatorEmail"
                 type="email"
-                placeholder="pi@clinicalsite.org"
+                placeholder="pi.site101@example.com"
               />
             </div>
 

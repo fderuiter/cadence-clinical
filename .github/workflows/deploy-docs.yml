@@ -68,6 +68,11 @@ jobs:
       - name: Build and Stage Co-Hosted Interactive Demos
         run: pnpm docs:stage-demos
 
+      - name: Verify Public Bundles
+        env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
+        run: node scripts/run-cli.js check public-bundle
+
       - name: Generate Documentation Artifact SHA256 Checksums
         run: |
           (cd docs/.vitepress/dist && LC_ALL=C find . -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/SHA256SUMS"
