@@ -867,5 +867,77 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
         );
       expect(studySearches).toHaveLength(1);
     });
+
+    it("opens a participant cold by URL with null siteCode in 1 enrollment lookup, 0 getChildren/search calls, and at most 6 kernel requests", async () => {
+      const deepId = "0192f3c4-5e6a-7b8c-9d0e-000000009099";
+      const studyNodeRef = "study:0192f3c4-5e6a-7b8c-9d0e-000000009011@1";
+      const siteNodeRef = "study_site:0192f3c4-5e6a-7b8c-9d0e-000000009012@1";
+      const enrollmentId = "0192f3c4-5e6a-7b8c-9d0e-000000009013";
+      const versionRef =
+        "protocol_version:0192f3c4-5e6a-7b8c-9d0e-000000009014@1";
+
+      for (const fn of Object.values(kernelApi)) {
+        if (typeof fn?.mockClear === "function") fn.mockClear();
+      }
+
+      vi.mocked(executionApi.getSubjectDetail).mockResolvedValueOnce({
+        id: deepId,
+        subject_id: "018-0001",
+        study_id: "CAD-101",
+        site_id: null,
+        status: "ACTIVE",
+        active_protocol_version: "1.0",
+        enrollment_index: 1,
+        treatment_group: null,
+        randomization_seed: null,
+        investigational_product_id: null,
+      });
+      vi.mocked(kernelApi.lookupEnrollment).mockResolvedValueOnce({
+        study_ref: studyNodeRef,
+        study_code: "CAD-101",
+        study_title: "CAD-101",
+        study_site_ref: siteNodeRef,
+        site_code: "018",
+        site_title: "Site 018",
+        enrollment_ref: `enrollment:${enrollmentId}@1`,
+        subject_code: "018-0001",
+        status: "Enrolled",
+      });
+      vi.mocked(kernelApi.listStudyLocks).mockResolvedValueOnce({ locks: [] });
+      vi.mocked(kernelApi.canI).mockResolvedValue({ permitted: false });
+      vi.mocked(kernelApi.listProtocolVersions).mockResolvedValueOnce([
+        { ref: versionRef, status: "Approved", mask: null },
+      ]);
+      vi.mocked(kernelApi.getScheduleOfActivities).mockResolvedValueOnce({
+        version: versionRef,
+        title: "Protocol 1.0",
+        epochs: [],
+        columns: [],
+        rows: [],
+      });
+
+      await open(
+        `/studies/CAD-101?stage=conduct&participant=participant:${deepId}`
+      );
+
+      expect(kernelApi.lookupEnrollment).toHaveBeenCalledTimes(1);
+      expect(kernelApi.lookupEnrollment).toHaveBeenCalledWith({
+        studyCode: "CAD-101",
+        subjectCode: "018-0001",
+        siteCode: null,
+      });
+      expect(kernelApi.getChildren).not.toHaveBeenCalled();
+      expect(kernelApi.search).not.toHaveBeenCalled();
+
+      const totalKernelCalls = Object.values(kernelApi).reduce(
+        (sum, fn) =>
+          sum +
+          (typeof fn?.mock?.calls?.length === "number"
+            ? fn.mock.calls.length
+            : 0),
+        0
+      );
+      expect(totalKernelCalls).toBeLessThanOrEqual(6);
+    });
   });
 });

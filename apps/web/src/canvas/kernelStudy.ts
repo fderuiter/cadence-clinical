@@ -18,6 +18,7 @@ interface SessionCacheBucket {
   activeSessionKey: string;
   studyRefs: Map<string, string>;
   studyInFlight: Map<string, Promise<string | null>>;
+  enrollmentStudyInFlight: Map<string, Promise<string | null>>;
   studySites: Map<string, StudySiteOption[]>;
   studySitesInFlight: Map<string, Promise<StudySiteOption[]>>;
   enrollments: Map<string, NodeRef>;
@@ -30,6 +31,7 @@ function createSessionCacheBucket(): SessionCacheBucket {
     activeSessionKey: "",
     studyRefs: new Map(),
     studyInFlight: new Map(),
+    enrollmentStudyInFlight: new Map(),
     studySites: new Map(),
     studySitesInFlight: new Map(),
     enrollments: new Map(),
@@ -56,6 +58,7 @@ function clearBucket(bucket: SessionCacheBucket): void {
   bucket.activeSessionKey = "";
   bucket.studyRefs.clear();
   bucket.studyInFlight.clear();
+  bucket.enrollmentStudyInFlight.clear();
   bucket.studySites.clear();
   bucket.studySitesInFlight.clear();
   bucket.enrollments.clear();
@@ -141,10 +144,22 @@ export function resetKernelStudySession(studyCode = ""): void {
   }
 }
 
+function ensureActiveStudySession(
+  bucket: SessionCacheBucket,
+  normalizedStudy: string
+): void {
+  const nextSessionKey = sessionKeyForStudy(normalizedStudy);
+  if (!nextSessionKey) return;
+  if (bucket.activeSessionKey && bucket.activeSessionKey !== nextSessionKey) {
+    clearBucket(bucket);
+  }
+  bucket.activeSessionKey = nextSessionKey;
+}
+
 /**
- * The kernel reference of the study with exactly this code, found with kernel search (ADR-2484) and cached for the
- * active `(tenant, actor, persona, studyCode)` session once positively resolved, or null when the kernel has no such
- * study the reader may see.
+ * The kernel reference of the study with exactly this code, found with kernel search (ADR-2484) — or piggybacked off
+ * an already in-flight enrollment lookup for the same study — and cached for the active `(tenant, actor, persona,
+ * studyCode)` session once positively resolved, or null when the kernel has no such study the reader may see.
  */
 export function findKernelStudyRef(code: string): Promise<string | null> {
   const trimmed = code.trim();
@@ -153,9 +168,7 @@ export function findKernelStudyRef(code: string): Promise<string | null> {
   const bucket = getBucket();
   const scope = getKernelStudyCallerScopeKey();
   const normalizedStudy = normalizeStudyCode(trimmed);
-  if (!bucket.activeSessionKey) {
-    bucket.activeSessionKey = sessionKeyForStudy(normalizedStudy);
-  }
+  ensureActiveStudySession(bucket, normalizedStudy);
   const key = studyKey(scope, normalizedStudy);
 
   const cached = bucket.studyRefs.get(key);
@@ -168,6 +181,24 @@ export function findKernelStudyRef(code: string): Promise<string | null> {
   let lookup: Promise<string | null> | undefined;
   lookup = (async () => {
     try {
+      const inFlightEnrollmentStudy = bucket.enrollmentStudyInFlight.get(key);
+      if (inFlightEnrollmentStudy) {
+        const hinted = await inFlightEnrollmentStudy;
+        if (hinted) {
+          if (
+            bucket.epoch === epochAtStart &&
+            getKernelStudyCallerScopeKey() === scope
+          ) {
+            bucket.studyRefs.set(key, hinted);
+          }
+          return hinted;
+        }
+        const cachedAfterHint = bucket.studyRefs.get(key);
+        if (cachedAfterHint) {
+          return cachedAfterHint;
+        }
+      }
+
       const hits = await kernelApi.search({
         text: trimmed,
         kinds: ["study"],
@@ -215,9 +246,7 @@ export function findKernelEnrollmentRef(
   const bucket = getBucket();
   const scope = getKernelStudyCallerScopeKey();
   const normalizedStudy = normalizeStudyCode(trimmedStudy);
-  if (!bucket.activeSessionKey) {
-    bucket.activeSessionKey = sessionKeyForStudy(normalizedStudy);
-  }
+  ensureActiveStudySession(bucket, normalizedStudy);
   const key = enrollmentKey(
     scope,
     normalizedStudy,
@@ -231,6 +260,19 @@ export function findKernelEnrollmentRef(
   const pending = bucket.enrollmentInFlight.get(key);
   if (pending) return pending;
 
+  const sKey = studyKey(scope, normalizedStudy);
+  let resolveStudyHint = (_studyRef: string | null): void => {};
+  let studyHintPromise: Promise<string | null> | null = null;
+  if (
+    !bucket.studyRefs.has(sKey) &&
+    !bucket.enrollmentStudyInFlight.has(sKey)
+  ) {
+    studyHintPromise = new Promise<string | null>((resolve) => {
+      resolveStudyHint = resolve;
+    });
+    bucket.enrollmentStudyInFlight.set(sKey, studyHintPromise);
+  }
+
   const epochAtStart = bucket.epoch;
   let lookup: Promise<NodeRef | null> | undefined;
   lookup = (async (): Promise<NodeRef | null> => {
@@ -242,6 +284,7 @@ export function findKernelEnrollmentRef(
       });
       const parsed = parseNodeRef(found.enrollment_ref);
       const resolved = parsed?.kind === "enrollment" ? parsed : null;
+      const resolvedStudyRef = found.study_ref?.trim() || null;
       if (
         resolved &&
         bucket.epoch === epochAtStart &&
@@ -263,26 +306,32 @@ export function findKernelEnrollmentRef(
             resolved
           );
         }
-        if (found.study_ref?.trim()) {
-          bucket.studyRefs.set(
-            studyKey(scope, normalizedStudy),
-            found.study_ref.trim()
-          );
+        if (resolvedStudyRef) {
+          bucket.studyRefs.set(sKey, resolvedStudyRef);
           if (found.study_code?.trim()) {
             bucket.studyRefs.set(
               studyKey(scope, normalizeStudyCode(found.study_code)),
-              found.study_ref.trim()
+              resolvedStudyRef
             );
           }
         }
       }
+      resolveStudyHint(resolved ? resolvedStudyRef : null);
       return resolved ? { ...resolved } : null;
     } catch (err) {
+      resolveStudyHint(null);
       if ((err as { status?: number | null } | null)?.status === 404) {
         return null;
       }
       throw err;
     } finally {
+      resolveStudyHint(null);
+      if (
+        studyHintPromise &&
+        bucket.enrollmentStudyInFlight.get(sKey) === studyHintPromise
+      ) {
+        bucket.enrollmentStudyInFlight.delete(sKey);
+      }
       if (bucket.enrollmentInFlight.get(key) === lookup) {
         bucket.enrollmentInFlight.delete(key);
       }
@@ -311,9 +360,7 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
   const bucket = getBucket();
   const scope = getKernelStudyCallerScopeKey();
   const normalizedStudy = normalizeStudyCode(trimmed);
-  if (!bucket.activeSessionKey) {
-    bucket.activeSessionKey = sessionKeyForStudy(normalizedStudy);
-  }
+  ensureActiveStudySession(bucket, normalizedStudy);
   const key = sitesKey(scope, normalizedStudy);
 
   const cached = bucket.studySites.get(key);

@@ -195,6 +195,63 @@ describe("findKernelEnrollmentRef", () => {
     });
     expect(kernelApi.lookupEnrollment).toHaveBeenCalledTimes(2);
   });
+
+  it("deduplicates concurrent findKernelStudyRef calls onto an in-flight lookupEnrollment and falls back to search on 404", async () => {
+    vi.mocked(kernelApi.lookupEnrollment).mockResolvedValueOnce({
+      study_ref: STUDY_REF,
+      study_code: "CAD-101",
+      study_title: "Study",
+      study_site_ref: SITE_A,
+      site_code: "017",
+      site_title: "Site 017",
+      enrollment_ref: `enrollment:${ENROLLMENT_ID}@1`,
+      subject_code: "017-0001",
+      status: "Enrolled",
+    });
+
+    const [enrollmentRef, studyRefA, studyRefB] = await Promise.all([
+      findKernelEnrollmentRef("CAD-101", null, "017-0001"),
+      findKernelStudyRef("CAD-101"),
+      findKernelStudyRef("CAD-101"),
+    ]);
+
+    expect(enrollmentRef).toEqual({
+      kind: "enrollment",
+      id: ENROLLMENT_ID,
+      version: 1,
+    });
+    expect(studyRefA).toBe(STUDY_REF);
+    expect(studyRefB).toBe(STUDY_REF);
+    expect(kernelApi.lookupEnrollment).toHaveBeenCalledTimes(1);
+    expect(kernelApi.search).not.toHaveBeenCalled();
+
+    // When a cold lookupEnrollment returns 404 (participant not yet enrolled), concurrent findKernelStudyRef falls back to search.
+    clearKernelStudyCache();
+    vi.mocked(kernelApi.lookupEnrollment).mockRejectedValueOnce(
+      notFoundError()
+    );
+    vi.mocked(kernelApi.search).mockResolvedValueOnce([
+      {
+        ref: STUDY_REF,
+        kind: "study",
+        title: "Study",
+        code: "CAD-101",
+        detail: null,
+        exact_code: true,
+        rank: 1,
+      },
+    ]);
+
+    const [missingEnrollment, fallbackStudyRef] = await Promise.all([
+      findKernelEnrollmentRef("CAD-101", null, "017-9999"),
+      findKernelStudyRef("CAD-101"),
+    ]);
+
+    expect(missingEnrollment).toBeNull();
+    expect(fallbackStudyRef).toBe(STUDY_REF);
+    expect(kernelApi.lookupEnrollment).toHaveBeenCalledTimes(2);
+    expect(kernelApi.search).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("findKernelStudyRef and findStudySites session caching", () => {
@@ -395,6 +452,10 @@ describe("findKernelStudyRef and findStudySites session caching", () => {
     canvas.openStudy("CAD-101");
     await warmCaches();
     canvas.openStudy("CAD-202");
+    await expectColdReload();
+
+    // 3b. Direct study switch via findKernelStudyRef / findKernelEnrollmentRef (e.g. EcrfView)
+    await findKernelStudyRef("CAD-202");
     await expectColdReload();
 
     // 4. Persona switch
