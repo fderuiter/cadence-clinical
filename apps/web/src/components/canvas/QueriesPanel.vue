@@ -7,15 +7,19 @@
   >
     <h3 id="record-queries-title">Queries</h3>
     <p
-      v-if="!enrollmentId"
+      v-if="queries.loading || enrollmentLoading"
+      class="status-line"
+      role="status"
+    >
+      Loading {{ subjectCode }}'s queries…
+    </p>
+    <p
+      v-else-if="!enrollmentId"
       id="record-queries-no-enrollment"
       class="status-line"
     >
       No enrollment record is visible for {{ subjectCode }}, so queries aren't
       available here.
-    </p>
-    <p v-else-if="queries.loading" class="status-line" role="status">
-      Loading {{ subjectCode }}'s queries…
     </p>
     <div
       v-else-if="queries.loadError"
@@ -76,6 +80,7 @@ const props = defineProps<{
   subjectCode: string;
   /** The participant's enrollment id, or null when none is visible. */
   enrollmentId: string | null;
+  enrollmentLoading?: boolean;
   canManage: boolean;
   formTitles?: Record<string, string>;
   formLocation?: (formId: string) => RouteLocationRaw | null;

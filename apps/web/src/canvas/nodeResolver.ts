@@ -1,5 +1,7 @@
 import { computed, shallowReactive, type ComputedRef } from "vue";
 import { kernelApi, type KernelNode } from "../api/kernelApi";
+import { registerSessionCacheClearHandler } from "../auth/sessionCoordinator.js";
+import * as kernelStudy from "./kernelStudy";
 import { formatNodeRef, parseNodeRef } from "./nodeRef";
 
 /**
@@ -83,6 +85,9 @@ export function clearNodeResolutionCache(): void {
   clearReactiveRecord(resolvedEntries);
   clearReactiveRecord(localHints);
   inFlight.clear();
+  if (typeof kernelStudy.clearKernelStudyCache === "function") {
+    kernelStudy.clearKernelStudyCache();
+  }
   while (lookupQueue.length > 0) {
     const waiter = lookupQueue.shift();
     if (waiter) {
@@ -92,15 +97,43 @@ export function clearNodeResolutionCache(): void {
   }
 }
 
+registerSessionCacheClearHandler(() => {
+  clearNodeResolutionCache();
+});
+
 /**
- * Resets cached node summaries when switching to a different study session.
- * Calling with the already-active study code preserves the warm session cache.
+ * Resets cached node summaries when switching to a different study or caller session.
+ * Calling with the already-active study code and caller scope preserves the warm session cache.
  */
 export function resetNodeResolutionSession(studyCode = ""): void {
   const normalized = studyCode.trim();
-  if (normalized && normalized === activeSessionKey) return;
+  const callerScope =
+    typeof kernelStudy.getKernelStudyCallerScopeKey === "function"
+      ? kernelStudy.getKernelStudyCallerScopeKey()
+      : "anonymous::";
+  const nextSessionKey = normalized
+    ? `${callerScope}::${encodeURIComponent(normalized.toUpperCase())}`
+    : "";
+  const activeStudySessionKey =
+    typeof kernelStudy.getActiveKernelStudySessionKey === "function"
+      ? kernelStudy.getActiveKernelStudySessionKey()
+      : "";
+  if (
+    nextSessionKey &&
+    (nextSessionKey === activeSessionKey ||
+      (!activeSessionKey && nextSessionKey === activeStudySessionKey))
+  ) {
+    activeSessionKey = nextSessionKey;
+    if (typeof kernelStudy.resetKernelStudySession === "function") {
+      kernelStudy.resetKernelStudySession(normalized);
+    }
+    return;
+  }
   clearNodeResolutionCache();
-  activeSessionKey = normalized;
+  activeSessionKey = nextSessionKey;
+  if (typeof kernelStudy.resetKernelStudySession === "function") {
+    kernelStudy.resetKernelStudySession(normalized);
+  }
 }
 
 /**

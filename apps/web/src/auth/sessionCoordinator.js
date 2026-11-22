@@ -13,6 +13,26 @@ export const WEB_AUTH_RETURN_URL_KEY = "cadence_web_return_url";
 
 let authSessionBridge = null;
 let sessionEndedHandler = null;
+const sessionCacheClearHandlers = new Set();
+
+export function registerSessionCacheClearHandler(handler) {
+  if (typeof handler === "function") {
+    sessionCacheClearHandlers.add(handler);
+  }
+  return () => {
+    sessionCacheClearHandlers.delete(handler);
+  };
+}
+
+export function notifySessionCacheCleared(context = {}) {
+  for (const handler of sessionCacheClearHandlers) {
+    try {
+      handler(context);
+    } catch {
+      // Cache clear listener failed or Pinia store not active yet
+    }
+  }
+}
 
 /**
  * Computes the current in-app relative path (`pathname` stripped of Vite `BASE_URL` + `search` + `hash`).

@@ -251,6 +251,28 @@ function mockKernelProtocolAndStudy() {
   vi.spyOn(kernelApi, "getScheduleOfActivities").mockResolvedValue(
     makeSoaResponse()
   );
+  vi.spyOn(kernelApi, "lookupEnrollment").mockImplementation(
+    async ({ studyCode, subjectCode, siteCode }) => {
+      if (
+        studyCode === "CADENCE-101" &&
+        subjectCode === "SUBJ-101" &&
+        (!siteCode || siteCode === "SITE-101")
+      ) {
+        return {
+          study_ref: STUDY_REF,
+          study_code: "CADENCE-101",
+          study_title: "CADENCE-101 Study",
+          study_site_ref: SITE_REF,
+          site_code: "SITE-101",
+          site_title: "SITE-101",
+          enrollment_ref: `enrollment:${ENROLLMENT_ID}@1`,
+          subject_code: "SUBJ-101",
+          status: "Screened",
+        };
+      }
+      throw Object.assign(new Error("Not found"), { status: 404 });
+    }
+  );
   vi.spyOn(kernelApi, "getChildren").mockImplementation(async (ref) => {
     if (ref === STUDY_REF) {
       return [

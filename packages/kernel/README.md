@@ -232,7 +232,10 @@ var enrolled = await sender.SendAsync(
   scopes (K-CONS-1), not yet.
 - **History.** Every change closes the current row of `enrollment_status_periods` and records the old status up to
   the change and the new status from it. `IEnrollmentDirectory.StatusAsOfAsync(tenant, enrollment, validAt, knownAt)`
-  reads it, and `ResolveParticipantAsync(tenant, study, code)` resolves a subject code (K-ID-5).
+  reads it, `ResolveParticipantAsync(tenant, study, code)` resolves a subject code within a known study (K-ID-5), and
+  `LookupByCodeAsync(tenant, studyCode, subjectCode, siteCode)` backs `GET /api/v1/kernel/enrollments/lookup` to resolve
+  pinned study, study site, and enrollment `NodeRef`s over the unique `(tenant_id, study_id, subject_code)` index with
+  non-confirming `404` caller visibility masking (ADR-2471).
 - **Uniqueness.** Subject codes are unique per study. A participant has at most one active enrollment at a study
   site at any valid time; rescreening after a screen failure is a new enrollment.
 - **Advisory locks (K-TX-4).** `IKernelUnitOfWork.LockAsync<TAggregate>(id)` takes a PostgreSQL advisory lock on the

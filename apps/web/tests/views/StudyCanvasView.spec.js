@@ -13,21 +13,29 @@ import { router as appRouter } from "../../src/router";
 import App from "../../src/App.vue";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
-vi.mock("../../src/api/kernelApi", () => ({
-  kernelApi: {
-    listProposals: vi.fn(async () => []),
-    search: vi.fn(async () => []),
-    getChildren: vi.fn(async () => []),
-    listProtocolVersions: vi.fn(async () => []),
-    getScheduleOfActivities: vi.fn(),
-    getCommands: vi.fn(),
-    getNode: vi.fn(async () => {
-      throw new Error("Not found");
-    }),
-    getObservation: vi.fn(),
-    getZoomPath: vi.fn(async () => []),
-  },
-}));
+vi.mock("../../src/api/kernelApi", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    kernelApi: {
+      listProposals: vi.fn(async () => []),
+      search: vi.fn(async () => []),
+      lookupEnrollment: vi.fn(),
+      getChildren: vi.fn(async () => []),
+      listProtocolVersions: vi.fn(async () => []),
+      getScheduleOfActivities: vi.fn(),
+      listStudyLocks: vi.fn(async () => ({ locks: [] })),
+      canI: vi.fn(async () => ({ permitted: false })),
+      activity: vi.fn(async () => ({ entries: [], next: null })),
+      getCommands: vi.fn(),
+      getNode: vi.fn(async () => {
+        throw new Error("Not found");
+      }),
+      getObservation: vi.fn(),
+      getZoomPath: vi.fn(async () => []),
+    },
+  };
+});
 
 vi.mock("../../src/api/ecrfFormsApi", async (importOriginal) => {
   const actual = await importOriginal();
@@ -135,6 +143,11 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
     vi.mocked(executionApi.listSubjects).mockReset();
     vi.mocked(executionApi.getSubjectDetail).mockReset();
     vi.mocked(executionApi.getSiteComplianceStatus).mockReset();
+    vi.mocked(kernelApi.search).mockReset();
+    vi.mocked(kernelApi.search).mockResolvedValue([]);
+    vi.mocked(kernelApi.lookupEnrollment).mockReset();
+    vi.mocked(kernelApi.getChildren).mockReset();
+    vi.mocked(kernelApi.getChildren).mockResolvedValue([]);
     serveParticipants();
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -338,24 +351,16 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
     vi.mocked(kernelApi.search).mockResolvedValue([
       { ref: studyNodeRef, exact_code: true, kind: "study", code: "CAD-101" },
     ]);
-    vi.mocked(kernelApi.getChildren).mockImplementation(async (ref) => {
-      if (ref === studyNodeRef) {
-        return [
-          { node: { kind: "study_site", ref: siteNodeRef, code: "017" } },
-        ];
-      }
-      if (ref === siteNodeRef) {
-        return [
-          {
-            node: {
-              kind: "enrollment",
-              ref: `enrollment:${enrollmentId}`,
-              code: "017-0001",
-            },
-          },
-        ];
-      }
-      return [];
+    vi.mocked(kernelApi.lookupEnrollment).mockResolvedValue({
+      study_ref: studyNodeRef,
+      study_code: "CAD-101",
+      study_title: "CAD-101",
+      study_site_ref: siteNodeRef,
+      site_code: "017",
+      site_title: "Site 017",
+      enrollment_ref: `enrollment:${enrollmentId}@1`,
+      subject_code: "017-0001",
+      status: "Enrolled",
     });
     vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([
       { ref: versionRef, status: "Approved", mask: null },
@@ -823,6 +828,44 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       expect(wrapper.find("#canvas-inspector-ref").text()).toContain(
         `study_site:${siteUuid}@1`
       );
+    });
+
+    it("reuses the cached study reference across 9 same-study section transitions without duplicate study lookups", async () => {
+      const studyNodeRef = "study:0192f3c4-5e6a-7b8c-9d0e-000000009011@1";
+      vi.mocked(kernelApi.search).mockResolvedValue([
+        {
+          ref: studyNodeRef,
+          exact_code: true,
+          kind: "study",
+          code: "CAD-101",
+          title: "CAD-101",
+        },
+      ]);
+
+      await open("/studies/CAD-101?stage=conduct&section=participants");
+
+      const transitions = [
+        "/studies/CAD-101?stage=design&section=protocol-versions",
+        "/studies/CAD-101?stage=data&section=queries",
+        "/studies/CAD-101?stage=data&section=proposals",
+        "/studies/CAD-101?stage=data&section=locks",
+        "/studies/CAD-101?stage=submit&section=exports",
+        "/studies/CAD-101?stage=conduct&section=participants",
+        "/studies/CAD-101?stage=data&section=locks",
+        "/studies/CAD-101?stage=design&section=protocol-versions",
+        "/studies/CAD-101?stage=submit&section=exports",
+      ];
+      for (const path of transitions) {
+        await router.push(path);
+        await flushPromises();
+      }
+
+      const studySearches = vi
+        .mocked(kernelApi.search)
+        .mock.calls.filter(
+          ([q]) => q?.text === "CAD-101" && q?.kinds?.includes("study")
+        );
+      expect(studySearches).toHaveLength(1);
     });
   });
 });

@@ -1,4 +1,5 @@
-import { defineStore } from "pinia";
+import { defineStore, getActivePinia } from "pinia";
+import { registerSessionCacheClearHandler } from "../auth/sessionCoordinator.js";
 import {
   executionApi,
   type SubjectDetail,
@@ -6,8 +7,10 @@ import {
   type SubjectSummary,
 } from "../api/executionApi";
 import {
+  clearKernelStudyCache,
   findKernelEnrollmentRef,
   findStudyScheduleOptions,
+  resetKernelStudySession,
   type StudyScheduleOptions,
 } from "../canvas/kernelStudy";
 import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
@@ -183,8 +186,14 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       palettePromiseKey = "";
       this.$reset();
       this.studyCode = studyCode;
+      if (typeof clearKernelStudyCache === "function") {
+        clearKernelStudyCache();
+      }
       clearNodeResolutionCache();
       resetNodeResolutionSession(studyCode);
+      if (typeof resetKernelStudySession === "function") {
+        resetKernelStudySession(studyCode);
+      }
       this.scheduleOptionsByStudy = cachedSchedules;
       if (
         studyCode &&
@@ -192,6 +201,20 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       ) {
         this.scheduleOptions = cachedSchedules[studyCode];
       }
+    },
+
+    /** Clears per-study cached schedules and kernel lookup caches across auth, tenant, account, or persona transitions. */
+    clearSessionCaches() {
+      scheduleRequest++;
+      inFlightSchedules.delete(this);
+      this.scheduleOptionsByStudy = {};
+      this.scheduleOptions = null;
+      this.scheduleLoading = false;
+      this.scheduleError = null;
+      if (typeof clearKernelStudyCache === "function") {
+        clearKernelStudyCache();
+      }
+      clearNodeResolutionCache();
     },
 
     /** Loads and caches structured Schedule of Activities options for `studyCode` (defaults to the active study). */
@@ -826,4 +849,14 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       }
     },
   },
+});
+
+registerSessionCacheClearHandler((context?: { reason?: string }) => {
+  const pinia = getActivePinia();
+  if (!pinia || !("studyCanvas" in pinia.state.value)) return;
+  const store = useStudyCanvasStore(pinia);
+  if (context?.reason === "logout") {
+    store.$reset();
+  }
+  store.clearSessionCaches();
 });

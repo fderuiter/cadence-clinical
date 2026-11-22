@@ -237,39 +237,28 @@ describe("eCRF screen: the participant's case report form", () => {
       offset: 0,
     });
 
-    vi.spyOn(kernelApi, "search").mockResolvedValue([
-      {
-        ref: "study:0192f3c4-0000-7000-8000-00000000c101",
-        kind: "study",
-        code: "CAD-101",
-        exact_code: true,
-      },
-    ]);
-    vi.spyOn(kernelApi, "getChildren").mockImplementation(async (ref) => {
-      if (ref === "study:0192f3c4-0000-7000-8000-00000000c101") {
-        return [
-          {
-            node: {
-              kind: "study_site",
-              ref: "study_site:0192f3c4-0000-7000-8000-00000000a001",
-              code: "SITE-01",
-            },
-          },
-        ];
+    vi.spyOn(kernelApi, "lookupEnrollment").mockImplementation(
+      async ({ studyCode, subjectCode, siteCode }) => {
+        if (
+          studyCode === "CAD-101" &&
+          subjectCode === "017-0001" &&
+          (!siteCode || siteCode === "SITE-01")
+        ) {
+          return {
+            study_ref: "study:0192f3c4-0000-7000-8000-00000000c101@1",
+            study_code: "CAD-101",
+            study_title: "CAD-101",
+            study_site_ref: "study_site:0192f3c4-0000-7000-8000-00000000a001@1",
+            site_code: "SITE-01",
+            site_title: "SITE-01",
+            enrollment_ref: "enrollment:0192f3c4-0000-7000-8000-00000000e001@1",
+            subject_code: "017-0001",
+            status: "Enrolled",
+          };
+        }
+        throw Object.assign(new Error("Not found"), { status: 404 });
       }
-      if (ref === "study_site:0192f3c4-0000-7000-8000-00000000a001") {
-        return [
-          {
-            node: {
-              kind: "enrollment",
-              ref: "enrollment:0192f3c4-0000-7000-8000-00000000e001",
-              code: "017-0001",
-            },
-          },
-        ];
-      }
-      return [];
-    });
+    );
 
     wrapper = mount(EcrfView, {
       global: {

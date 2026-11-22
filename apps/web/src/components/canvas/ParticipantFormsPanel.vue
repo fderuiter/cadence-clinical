@@ -28,12 +28,16 @@
       </div>
     </div>
 
-    <p v-if="!enrollmentId" id="record-forms-no-enrollment" class="status-line">
+    <p v-if="loading || enrollmentLoading" class="status-line" role="status">
+      Loading {{ subjectCode }}'s forms…
+    </p>
+    <p
+      v-else-if="!enrollmentId"
+      id="record-forms-no-enrollment"
+      class="status-line"
+    >
       There is no enrollment for {{ subjectCode }} visible to your account, so
       forms can't be listed or opened here.
-    </p>
-    <p v-else-if="loading" class="status-line" role="status">
-      Loading {{ subjectCode }}'s forms…
     </p>
     <div
       v-else-if="loadError"
@@ -533,6 +537,7 @@ const props = defineProps<{
   studyCode?: string;
   subjectCode: string;
   enrollmentId: string | null;
+  enrollmentLoading?: boolean;
   schedule?: StudyScheduleOptions | null;
   formLocation: (formId: string) => RouteLocationRaw;
   newFormLocation?: RouteLocationRaw | null;
@@ -850,6 +855,13 @@ const lockedFormsCount = computed(
 );
 
 async function loadFormsAndSchedule() {
+  if (
+    props.schedule === undefined &&
+    props.studyCode &&
+    props.newFormCellLocation
+  ) {
+    void canvas.loadScheduleOptions(props.studyCode);
+  }
   const enrollmentId = props.enrollmentId;
   if (!enrollmentId) {
     forms.value = [];
@@ -857,13 +869,6 @@ async function loadFormsAndSchedule() {
     loadError.value = "";
     emit("forms-loaded", []);
     return;
-  }
-  if (
-    props.schedule === undefined &&
-    props.studyCode &&
-    props.newFormCellLocation
-  ) {
-    void canvas.loadScheduleOptions(props.studyCode);
   }
   if (typeof ecrfFormsApi?.listForEnrollment !== "function") {
     forms.value = [];

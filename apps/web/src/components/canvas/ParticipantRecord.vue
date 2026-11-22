@@ -15,15 +15,7 @@
       </span>
     </header>
 
-    <p v-if="record.loading" class="status-line" role="status">
-      Loading {{ participant.subject_id }}'s data...
-    </p>
-    <p
-      v-else-if="record.error"
-      id="record-error"
-      class="status-line"
-      role="status"
-    >
+    <p v-if="record.error" id="record-error" class="status-line" role="status">
       {{ participant.subject_id }}'s data couldn't be loaded.
       <button
         id="btn-retry-record"
@@ -36,8 +28,12 @@
     </p>
 
     <template v-else>
+      <p v-if="record.loading" class="status-line" role="status">
+        Loading {{ participant.subject_id }}'s data...
+      </p>
+
       <div
-        v-if="record.enrollmentId"
+        v-if="!record.loading && record.enrollmentId"
         class="participant-governance"
         data-testid="participant-governance"
       >
@@ -104,6 +100,7 @@
         :study-code="canvas.studyCode"
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
+        :enrollment-loading="record.loading"
         :form-location="formLocation"
         :new-form-location="newFormLocation"
         :new-form-cell-location="newFormCellLocation"
@@ -115,6 +112,7 @@
         :study-code="canvas.studyCode"
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
+        :enrollment-loading="record.loading"
         :can-manage="canManage"
         :form-titles="formTitles"
         :form-location="formLocation"
@@ -148,7 +146,7 @@ import ScopeLockControls, {
  * One participant's data inside Clinical Canvas: opened case report forms, locks, casebooks, and queries on the
  * participant's enrollment (ADR-2622), linking directly to forms and observations in the zoom path.
  */
-defineProps<{
+const props = defineProps<{
   participant: SubjectSummary;
   canManage: boolean;
   formLocation: (formId: string) => RouteLocationRaw;
@@ -222,11 +220,18 @@ async function refreshEnrollmentLocks() {
 let lookupSeq = 0;
 
 watch(
-  [() => canvas.studyCode, () => record.value.enrollmentId],
-  async ([code, enrollmentId]) => {
+  () => record.value.enrollmentId,
+  () => {
+    casebookOutcome.value = null;
+  }
+);
+
+watch(
+  [() => canvas.studyCode, () => props.participant.id],
+  async ([code]) => {
     const seq = ++lookupSeq;
     casebookOutcome.value = null;
-    if (!code || !enrollmentId) {
+    if (!code) {
       studyRef.value = null;
       activeStudyLocks.value = [];
       return;
@@ -237,9 +242,14 @@ watch(
       studyRef.value = resolved;
       if (resolved) {
         await refreshEnrollmentLocks();
+      } else {
+        activeStudyLocks.value = [];
       }
     } catch {
-      if (seq === lookupSeq) studyRef.value = null;
+      if (seq === lookupSeq) {
+        studyRef.value = null;
+        activeStudyLocks.value = [];
+      }
     }
   },
   { immediate: true }

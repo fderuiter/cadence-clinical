@@ -1,66 +1,295 @@
+import { getActivePinia, type Pinia } from "pinia";
 import { kernelApi } from "../api/kernelApi";
+import { registerSessionCacheClearHandler } from "../auth/sessionCoordinator.js";
 import { parseNodeRef, type NodeRef } from "./nodeRef";
 
-// Lookups still in flight, so panes opening together on study home share one search; nothing is kept once it answers.
-const inFlight = new Map<string, Promise<string | null>>();
+interface AuthLikeState {
+  isAuthenticated?: boolean;
+  currentPersona?: string | null;
+  user?: {
+    id?: string | null;
+    username?: string | null;
+    tenantId?: string | null;
+  } | null;
+}
+
+interface SessionCacheBucket {
+  epoch: number;
+  activeSessionKey: string;
+  studyRefs: Map<string, string>;
+  studyInFlight: Map<string, Promise<string | null>>;
+  studySites: Map<string, StudySiteOption[]>;
+  studySitesInFlight: Map<string, Promise<StudySiteOption[]>>;
+  enrollments: Map<string, NodeRef>;
+  enrollmentInFlight: Map<string, Promise<NodeRef | null>>;
+}
+
+function createSessionCacheBucket(): SessionCacheBucket {
+  return {
+    epoch: 0,
+    activeSessionKey: "",
+    studyRefs: new Map(),
+    studyInFlight: new Map(),
+    studySites: new Map(),
+    studySitesInFlight: new Map(),
+    enrollments: new Map(),
+    enrollmentInFlight: new Map(),
+  };
+}
+
+const piniaBuckets = new WeakMap<Pinia, SessionCacheBucket>();
+const standaloneBucket = createSessionCacheBucket();
+
+function getBucket(): SessionCacheBucket {
+  const pinia = getActivePinia();
+  if (!pinia) return standaloneBucket;
+  let bucket = piniaBuckets.get(pinia);
+  if (!bucket) {
+    bucket = createSessionCacheBucket();
+    piniaBuckets.set(pinia, bucket);
+  }
+  return bucket;
+}
+
+function clearBucket(bucket: SessionCacheBucket): void {
+  bucket.epoch += 1;
+  bucket.activeSessionKey = "";
+  bucket.studyRefs.clear();
+  bucket.studyInFlight.clear();
+  bucket.studySites.clear();
+  bucket.studySitesInFlight.clear();
+  bucket.enrollments.clear();
+  bucket.enrollmentInFlight.clear();
+}
 
 /**
- * The kernel reference of the study with exactly this code, found with kernel search (ADR-2484), or null when the
- * kernel has no such study the reader may see. The Canvas addresses a study by its code in the URL; kernel reads take
- * its NodeRef.
+ * Active caller cache scope (`tenant:actor:persona`), taken from the active Pinia auth state when present so positive
+ * study, site, and enrollment lookups never cross tenant, account, or persona boundaries.
+ */
+export function getKernelStudyCallerScopeKey(): string {
+  const pinia = getActivePinia();
+  const auth = (pinia?.state.value as { auth?: AuthLikeState } | undefined)
+    ?.auth;
+  if (!auth || !auth.isAuthenticated) {
+    return "anonymous::";
+  }
+  const tenant = String(auth.user?.tenantId ?? "").trim();
+  const actor = String(auth.user?.id || auth.user?.username || "").trim();
+  const persona = String(auth.currentPersona ?? "").trim();
+  return `${encodeURIComponent(tenant)}:${encodeURIComponent(actor)}:${encodeURIComponent(persona)}`;
+}
+
+function normalizeStudyCode(code: string): string {
+  return code.trim().toUpperCase();
+}
+
+function sessionKeyForStudy(normalizedStudy: string): string {
+  if (!normalizedStudy) return "";
+  return `${getKernelStudyCallerScopeKey()}::${encodeURIComponent(normalizedStudy)}`;
+}
+
+function studyKey(scope: string, normalizedStudy: string): string {
+  return `${scope}::study::${encodeURIComponent(normalizedStudy)}`;
+}
+
+function sitesKey(scope: string, normalizedStudy: string): string {
+  return `${scope}::sites::${encodeURIComponent(normalizedStudy)}`;
+}
+
+function enrollmentKey(
+  scope: string,
+  normalizedStudy: string,
+  siteCode: string | null,
+  subjectCode: string
+): string {
+  return `${scope}::enrollment::${encodeURIComponent(normalizedStudy)}::${encodeURIComponent(siteCode ?? "*")}::${encodeURIComponent(subjectCode)}`;
+}
+
+/** Clears all cached positive study references, study site options, and enrollment references immediately. */
+export function clearKernelStudyCache(): void {
+  clearBucket(standaloneBucket);
+  const pinia = getActivePinia();
+  if (pinia) {
+    const bucket = piniaBuckets.get(pinia);
+    if (bucket) clearBucket(bucket);
+  }
+}
+
+registerSessionCacheClearHandler(() => {
+  clearKernelStudyCache();
+});
+
+/** Returns the active `(tenant, actor, persona, studyCode)` session key for the current Pinia bucket, if any. */
+export function getActiveKernelStudySessionKey(): string {
+  return getBucket().activeSessionKey;
+}
+
+/**
+ * Resets cached study, site, and enrollment lookups when switching studies or caller scopes, while preserving warm
+ * entries when called again for the already-active `(tenant, actor, persona, studyCode)` session.
+ */
+export function resetKernelStudySession(studyCode = ""): void {
+  const normalized = normalizeStudyCode(studyCode);
+  const nextSessionKey = sessionKeyForStudy(normalized);
+  const bucket = getBucket();
+  if (nextSessionKey && nextSessionKey === bucket.activeSessionKey) {
+    return;
+  }
+  clearKernelStudyCache();
+  if (nextSessionKey) {
+    getBucket().activeSessionKey = nextSessionKey;
+  }
+}
+
+/**
+ * The kernel reference of the study with exactly this code, found with kernel search (ADR-2484) and cached for the
+ * active `(tenant, actor, persona, studyCode)` session once positively resolved, or null when the kernel has no such
+ * study the reader may see.
  */
 export function findKernelStudyRef(code: string): Promise<string | null> {
-  const pending = inFlight.get(code);
+  const trimmed = code.trim();
+  if (!trimmed) return Promise.resolve(null);
+
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  const normalizedStudy = normalizeStudyCode(trimmed);
+  if (!bucket.activeSessionKey) {
+    bucket.activeSessionKey = sessionKeyForStudy(normalizedStudy);
+  }
+  const key = studyKey(scope, normalizedStudy);
+
+  const cached = bucket.studyRefs.get(key);
+  if (cached) return Promise.resolve(cached);
+
+  const pending = bucket.studyInFlight.get(key);
   if (pending) return pending;
-  const lookup = (async () => {
+
+  const epochAtStart = bucket.epoch;
+  let lookup: Promise<string | null> | undefined;
+  lookup = (async () => {
     try {
       const hits = await kernelApi.search({
-        text: code,
+        text: trimmed,
         kinds: ["study"],
         limit: 5,
       });
-      return hits.find((hit) => hit.exact_code)?.ref ?? null;
+      const resolved = hits.find((hit) => hit.exact_code)?.ref ?? null;
+      if (
+        resolved &&
+        bucket.epoch === epochAtStart &&
+        getKernelStudyCallerScopeKey() === scope
+      ) {
+        bucket.studyRefs.set(key, resolved);
+      }
+      return resolved;
     } finally {
-      inFlight.delete(code);
+      if (bucket.studyInFlight.get(key) === lookup) {
+        bucket.studyInFlight.delete(key);
+      }
     }
   })();
-  inFlight.set(code, lookup);
+  bucket.studyInFlight.set(key, lookup);
   return lookup;
 }
 
 /**
- * The kernel enrollment of a participant, found by walking the kernel's zoom children (study, then its study sites,
- * then their enrollments) and matching codes, or null when the kernel has no single such enrollment the reader may
- * see. The Canvas lists participants from Execution by subject and site code; kernel module reads, such as eCRF
- * queries, take the enrollment's id. A study site is matched by site code when the participant has one; an
- * enrollment by its subject code. Two matching enrollments return null rather than a guess.
+ * The kernel enrollment of a participant, resolved in one read-only lookup over the kernel's unique study and subject
+ * indexes (`GET /api/v1/kernel/enrollments/lookup`), or null when the study, site, or enrollment is absent,
+ * mismatched, or masked for the caller (ADR-2471). Positive hits warm both the enrollment and study reference caches
+ * for the active caller session; `404` responses and transient errors are not cached so newly screened participants
+ * resolve on demand.
  */
-export async function findKernelEnrollmentRef(
+export function findKernelEnrollmentRef(
   studyCode: string,
   siteCode: string | null,
   subjectCode: string
 ): Promise<NodeRef | null> {
-  const studyRef = await findKernelStudyRef(studyCode);
-  if (!studyRef) return null;
-  const studySites = (await kernelApi.getChildren(studyRef)).filter(
-    (child) =>
-      child.node.kind === "study_site" &&
-      child.node.ref &&
-      (!siteCode || child.node.code === siteCode)
+  const trimmedStudy = studyCode.trim();
+  const trimmedSubject = subjectCode.trim();
+  const trimmedSite = siteCode?.trim() ? siteCode.trim() : null;
+  if (!trimmedStudy || !trimmedSubject) return Promise.resolve(null);
+  if (typeof kernelApi.lookupEnrollment !== "function") {
+    return Promise.resolve(null);
+  }
+
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  const normalizedStudy = normalizeStudyCode(trimmedStudy);
+  if (!bucket.activeSessionKey) {
+    bucket.activeSessionKey = sessionKeyForStudy(normalizedStudy);
+  }
+  const key = enrollmentKey(
+    scope,
+    normalizedStudy,
+    trimmedSite,
+    trimmedSubject
   );
-  const enrollments = (
-    await Promise.all(
-      studySites.map((site) => kernelApi.getChildren(site.node.ref as string))
-    )
-  )
-    .flat()
-    .filter(
-      (child) =>
-        child.node.kind === "enrollment" && child.node.code === subjectCode
-    );
-  if (enrollments.length !== 1) return null;
-  const ref = parseNodeRef(enrollments[0].node.ref);
-  return ref?.kind === "enrollment" ? ref : null;
+
+  const cached = bucket.enrollments.get(key);
+  if (cached) return Promise.resolve({ ...cached });
+
+  const pending = bucket.enrollmentInFlight.get(key);
+  if (pending) return pending;
+
+  const epochAtStart = bucket.epoch;
+  let lookup: Promise<NodeRef | null> | undefined;
+  lookup = (async (): Promise<NodeRef | null> => {
+    try {
+      const found = await kernelApi.lookupEnrollment({
+        studyCode: trimmedStudy,
+        subjectCode: trimmedSubject,
+        siteCode: trimmedSite,
+      });
+      const parsed = parseNodeRef(found.enrollment_ref);
+      const resolved = parsed?.kind === "enrollment" ? parsed : null;
+      if (
+        resolved &&
+        bucket.epoch === epochAtStart &&
+        getKernelStudyCallerScopeKey() === scope
+      ) {
+        bucket.enrollments.set(key, resolved);
+        bucket.enrollments.set(
+          enrollmentKey(scope, normalizedStudy, null, trimmedSubject),
+          resolved
+        );
+        if (found.site_code?.trim()) {
+          bucket.enrollments.set(
+            enrollmentKey(
+              scope,
+              normalizedStudy,
+              found.site_code.trim(),
+              trimmedSubject
+            ),
+            resolved
+          );
+        }
+        if (found.study_ref?.trim()) {
+          bucket.studyRefs.set(
+            studyKey(scope, normalizedStudy),
+            found.study_ref.trim()
+          );
+          if (found.study_code?.trim()) {
+            bucket.studyRefs.set(
+              studyKey(scope, normalizeStudyCode(found.study_code)),
+              found.study_ref.trim()
+            );
+          }
+        }
+      }
+      return resolved ? { ...resolved } : null;
+    } catch (err) {
+      if ((err as { status?: number | null } | null)?.status === 404) {
+        return null;
+      }
+      throw err;
+    } finally {
+      if (bucket.enrollmentInFlight.get(key) === lookup) {
+        bucket.enrollmentInFlight.delete(key);
+      }
+    }
+  })();
+  bucket.enrollmentInFlight.set(key, lookup);
+  return lookup;
 }
 
 export interface StudySiteOption {
@@ -69,28 +298,67 @@ export interface StudySiteOption {
 }
 
 /**
- * Visible study sites for `studyCode` from the kernel's zoom children (`study_site`), ordered by site code.
- * Returns an empty list when the kernel has no visible study or study sites for the caller.
+ * Visible study sites for `studyCode` from the kernel's zoom children (`study_site`), ordered by site code and cached
+ * for the active `(tenant, actor, persona, studyCode)` session when positive. Returns an empty list when the kernel has
+ * no visible study or study sites for the caller.
  */
-export async function findStudySites(
-  studyCode: string
-): Promise<StudySiteOption[]> {
-  if (typeof kernelApi.getChildren !== "function") return [];
-  const studyRef = await findKernelStudyRef(studyCode);
-  if (!studyRef) return [];
-  const children = await kernelApi.getChildren(studyRef);
-  const byCode = new Map<string, StudySiteOption>();
-  for (const child of children) {
-    if (child.node.kind !== "study_site" || child.node.mask) continue;
-    const code = child.node.code?.trim();
-    if (!code || byCode.has(code)) continue;
-    const title = child.node.title?.trim();
-    const label = title && title !== code ? `${code} — ${title}` : code;
-    byCode.set(code, { code, label });
+export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
+  const trimmed = studyCode.trim();
+  if (!trimmed || typeof kernelApi.getChildren !== "function") {
+    return Promise.resolve([]);
   }
-  return Array.from(byCode.values()).sort((a, b) =>
-    a.code.localeCompare(b.code)
-  );
+
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  const normalizedStudy = normalizeStudyCode(trimmed);
+  if (!bucket.activeSessionKey) {
+    bucket.activeSessionKey = sessionKeyForStudy(normalizedStudy);
+  }
+  const key = sitesKey(scope, normalizedStudy);
+
+  const cached = bucket.studySites.get(key);
+  if (cached) {
+    return Promise.resolve(cached.map((item) => ({ ...item })));
+  }
+
+  const pending = bucket.studySitesInFlight.get(key);
+  if (pending) return pending;
+
+  const epochAtStart = bucket.epoch;
+  let lookup: Promise<StudySiteOption[]> | undefined;
+  lookup = (async (): Promise<StudySiteOption[]> => {
+    try {
+      const studyRef = await findKernelStudyRef(trimmed);
+      if (!studyRef) return [];
+      const children = await kernelApi.getChildren(studyRef);
+      const byCode = new Map<string, StudySiteOption>();
+      for (const child of children) {
+        if (child.node.kind !== "study_site" || child.node.mask) continue;
+        const code = child.node.code?.trim();
+        if (!code || byCode.has(code)) continue;
+        const title = child.node.title?.trim();
+        const label = title && title !== code ? `${code} — ${title}` : code;
+        byCode.set(code, { code, label });
+      }
+      const options = Array.from(byCode.values()).sort((a, b) =>
+        a.code.localeCompare(b.code)
+      );
+      if (
+        options.length > 0 &&
+        bucket.epoch === epochAtStart &&
+        getKernelStudyCallerScopeKey() === scope
+      ) {
+        bucket.studySites.set(key, options);
+      }
+      return options.map((item) => ({ ...item }));
+    } finally {
+      if (bucket.studySitesInFlight.get(key) === lookup) {
+        bucket.studySitesInFlight.delete(key);
+      }
+    }
+  })();
+  bucket.studySitesInFlight.set(key, lookup);
+  return lookup;
 }
 
 export interface StudyCollectionSpecOption {
