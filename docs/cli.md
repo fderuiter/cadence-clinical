@@ -199,17 +199,17 @@ Runs the jobs of `.github/workflows/ci.yml` on this machine, because GitHub Acti
 repository until 2027 (#5017). Each step runs the same command as in CI, in the same order, from the repository root.
 
 ```bash
-pnpm cadence ci                          # actionlint, lint-and-static, dotnet-quality, native-aot-build, docs-build, security, container-security, unit-tests, dotnet-tests, accessibility-e2e and compliance
+pnpm cadence ci                          # actionlint, native-aot-build, lint-and-static, dotnet-quality, docs-build, security, container-security, unit-tests, dotnet-tests, accessibility-e2e and compliance
 pnpm cadence ci --job container-security # build and Trivy-scan gateway, kernel-api, sce-python and sce-r
 pnpm cadence ci --job dotnet-tests       # one job (repeat --job for more)
-pnpm cadence ci --job compliance         # a job and the jobs it needs (unit-tests, dotnet-tests)
+pnpm cadence ci --job compliance         # a job and the jobs it needs (native-aot-build, unit-tests, dotnet-tests)
 pnpm cadence ci --job accessibility-e2e  # the Playwright E2E and browser-to-database job alone
 pnpm cadence ci --list                   # what each step runs locally, without running it
 ```
 
 | Option            | Description                                                                                                                                                                                                                                                                      |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `actionlint`, `lint-and-static`, `dotnet-quality`, `native-aot-build`, `docs-build`, `security`, `container-security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                                               |
+| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `actionlint`, `native-aot-build`, `lint-and-static`, `dotnet-quality`, `docs-build`, `security`, `container-security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                                               |
 | `--allow-skip`    | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `docker`, `trivy`, `bash`) or Docker daemon is unavailable with setup guidance, and accepts a run whose PostgreSQL tests or `*.database.txt` fixture metadata did not execute. |
 | `--base <ref>`    | The ref used to scope `container-security` trigger diffs and forwarded as `--base <ref>` to scoped CLI `check` steps (`Run Cadence quality sentinels`, `detect-secrets`, `deid`) and `Check GxP Snapshot Policy`. Default: `origin/main`.                                        |
 | `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                                                       |

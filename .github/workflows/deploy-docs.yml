@@ -46,7 +46,9 @@ jobs:
           cache-dependency-path: |
             global.json
             Directory.Build.props
+            Directory.Build.targets
             Directory.Packages.props
+            NuGet.Config
             **/*.csproj
 
       - name: Cache Cadence CLI
@@ -62,7 +64,7 @@ jobs:
       - name: Build Documentation Portal
         env:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
-          CADENCE_DOCS_SKIP_CHECKS: "1"
+          CADENCE_DOCS_SKIP_CHECKS: ${{ github.event_name != 'workflow_dispatch' && '1' || '0' }}
         run: pnpm docs:build
 
       - name: Build and Stage Co-Hosted Interactive Demos

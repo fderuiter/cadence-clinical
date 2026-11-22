@@ -348,7 +348,10 @@ public static class CiPlan
             },
             new("lint-and-static", "Run Markdown validation") { Commands = [NodeCli("check", "markdown")] },
             new("lint-and-static", "Validate web API clients against OpenAPI types") { Commands = [NodeCli("check", "api-clients")] },
-        ]);
+        ])
+        {
+            Needs = ["native-aot-build"],
+        };
 
         var dotnetQuality = new CiJob("dotnet-quality", ".NET Quality & Sentinel Checks",
         [
@@ -389,7 +392,10 @@ public static class CiPlan
             },
             new("docs-build", "Build and stage co-hosted interactive demos") { Commands = [Pnpm("docs:stage-demos")] },
             new("docs-build", "Verify public bundles") { Commands = [NodeCli("check", "public-bundle")] },
-        ]);
+        ])
+        {
+            Needs = ["native-aot-build"],
+        };
 
         var security = new CiJob("security", "Security and Vulnerability Audit",
         [
@@ -422,7 +428,10 @@ public static class CiPlan
                 CoveredBy = QualitySentinels,
                 Commands = [NodeCli("check", "deid") with { ForwardsBaseRef = true }],
             },
-        ]);
+        ])
+        {
+            Needs = ["native-aot-build"],
+        };
 
         var containerSecurity = new CiJob(ContainerSecurityJobKey, "Container Build & Vulnerability Scan",
         [
@@ -467,7 +476,15 @@ public static class CiPlan
         [
             new("unit-tests", "Install Node dependencies") { CoveredBy = StyleNodeInstall, Commands = [Pnpm("install", "--frozen-lockfile")] },
             new("unit-tests", "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
-            new("unit-tests", "Run frontend unit tests") { Always = true, Commands = [Pnpm("-r", "test")] },
+            new("unit-tests", "Run frontend unit tests")
+            {
+                Always = true,
+                Commands =
+                [
+                    Pnpm("-r", "test"),
+                    Pnpm("exec", "vitest", "run", "--config", "vitest.config.mjs"),
+                ],
+            },
         ]);
 
         var dotnetTests = new CiJob("dotnet-tests", ".NET 10 C# xUnit Verification",
@@ -595,14 +612,14 @@ public static class CiPlan
             },
         ])
         {
-            Needs = ["unit-tests", "dotnet-tests"],
+            Needs = ["native-aot-build", "unit-tests", "dotnet-tests"],
             NeedsStep = new Dictionary<string, string>
             {
                 ["unit-tests"] = "unit-tests/Run frontend unit tests",
             },
         };
 
-        return [actionlint, lintAndStatic, dotnetQuality, nativeAotBuild, docsBuild, security, containerSecurity, frontend, dotnetTests, e2e, compliance];
+        return [actionlint, nativeAotBuild, lintAndStatic, dotnetQuality, docsBuild, security, containerSecurity, frontend, dotnetTests, e2e, compliance];
     }
 
     /// <summary>
