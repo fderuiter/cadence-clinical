@@ -1,4 +1,5 @@
 const { execSync } = require("child_process");
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
@@ -20,26 +21,79 @@ const { STAGED_ROOT_DOCS } = fs.existsSync(rootDocsModulePath)
       }),
     };
 
-if (!process.env.AUDIT_LOG_SECRET_KEY) {
-  process.env.AUDIT_LOG_SECRET_KEY =
-    "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
-}
-if (!process.env.INBOUND_EMAIL_HMAC_SECRET) {
-  process.env.INBOUND_EMAIL_HMAC_SECRET =
-    "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
-}
-if (!process.env.GATEWAY_SECRET_KEY) {
-  process.env.GATEWAY_SECRET_KEY =
-    "development_secret_key_for_rtm_generation_32bytes"; // pragma: allowlist secret
+const VITEPRESS_ENV_ALLOWLIST = [
+  "PATH",
+  "PATHEXT",
+  "SystemRoot",
+  "ComSpec",
+  "HOME",
+  "USERPROFILE",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "XDG_CACHE_HOME",
+  "XDG_CONFIG_HOME",
+  "TMPDIR",
+  "TEMP",
+  "TMP",
+  "NODE_ENV",
+  "NODE_OPTIONS",
+  "VITEPRESS_BASE",
+  "CI",
+  "TERM",
+  "COLORTERM",
+  "FORCE_COLOR",
+  "NO_COLOR",
+  "LANG",
+  "LC_ALL",
+  "npm_config_user_agent",
+  "PNPM_HOME",
+  "COREPACK_HOME",
+];
+
+function ensureHeapNodeOptions(nodeOptions) {
+  if (!nodeOptions || !nodeOptions.includes("--max-old-space-size")) {
+    return `${nodeOptions || ""} --max-old-space-size=16384`.trim();
+  }
+  return nodeOptions;
 }
 
-// Ensure adequate heap allocation for large documentation bundles under VitePress
-if (
-  !process.env.NODE_OPTIONS ||
-  !process.env.NODE_OPTIONS.includes("--max-old-space-size")
-) {
-  process.env.NODE_OPTIONS =
-    `${process.env.NODE_OPTIONS || ""} --max-old-space-size=16384`.trim();
+/**
+ * Builds the isolated environment passed strictly to the pre-build CLI verification steps
+ * (`check openapi`, `check schema-doc`, `check markdown`, `check rtm`), generating ephemeral
+ * per-invocation signing secrets when none were supplied by the caller without mutating
+ * `process.env` or setting `RTM_DRAFT`.
+ * @param {NodeJS.ProcessEnv} [baseEnv=process.env] - Base environment variables.
+ * @returns {NodeJS.ProcessEnv} Isolated environment for CLI verification steps.
+ */
+function buildRtmEnv(baseEnv = process.env) {
+  return {
+    ...baseEnv,
+    NODE_OPTIONS: ensureHeapNodeOptions(baseEnv.NODE_OPTIONS),
+    AUDIT_LOG_SECRET_KEY:
+      baseEnv.AUDIT_LOG_SECRET_KEY || crypto.randomBytes(32).toString("hex"),
+    INBOUND_EMAIL_HMAC_SECRET:
+      baseEnv.INBOUND_EMAIL_HMAC_SECRET ||
+      crypto.randomBytes(32).toString("hex"),
+    GATEWAY_SECRET_KEY:
+      baseEnv.GATEWAY_SECRET_KEY || crypto.randomBytes(32).toString("hex"),
+  };
+}
+
+/**
+ * Builds a clean, minimal environment allowlist for VitePress static compilation so compliance
+ * signing keys, cloud credentials, and CI tokens are never exposed to `import.meta.env` or SSR plugins.
+ * @param {NodeJS.ProcessEnv} [baseEnv=process.env] - Base environment variables.
+ * @returns {NodeJS.ProcessEnv} Sanitized environment for `vitepress build docs`.
+ */
+function buildVitePressEnv(baseEnv = process.env) {
+  const cleanEnv = {};
+  for (const key of VITEPRESS_ENV_ALLOWLIST) {
+    if (baseEnv[key] !== undefined) {
+      cleanEnv[key] = baseEnv[key];
+    }
+  }
+  cleanEnv.NODE_OPTIONS = ensureHeapNodeOptions(cleanEnv.NODE_OPTIONS);
+  return cleanEnv;
 }
 
 let pnpmCmd = "pnpm";
@@ -100,11 +154,20 @@ function runPreflightChecks() {
 /**
  * Executes a shell command from the repository root directory.
  * @param {string} command - The shell command to execute.
+ * @param {NodeJS.ProcessEnv} [envOverride] - Optional explicit environment map for the child process.
  */
-function runCommand(command) {
+function runCommand(command, envOverride) {
   console.log(`Running: ${command}`);
   try {
-    execSync(command, { stdio: "inherit", cwd: repoRoot, env: process.env });
+    // Use repoRoot for cwd to keep the execution portable and environment-agnostic
+    execSync(command, {
+      stdio: "inherit",
+      cwd: repoRoot,
+      env: envOverride || {
+        ...process.env,
+        NODE_OPTIONS: ensureHeapNodeOptions(process.env.NODE_OPTIONS),
+      },
+    });
   } catch (error) {
     console.error(`Command failed: ${command}`);
     throw error;
@@ -417,80 +480,94 @@ function prepareRootDocs() {
   }
 }
 
-// `node scripts/build-docs.js --prepare-only` stages the root documents for `vitepress dev` and exits.
-if (process.argv.includes("--prepare-only")) {
-  prepareRootDocs();
-  process.exit(0);
-}
-
-// Run preflight checks before Step 1
-runPreflightChecks();
-
-try {
-  // 1. Run validation scripts
-  console.log("--- Step 1: Pre-Build Validation ---");
-  // `cadence ci` and `deploy-docs.yml` set CADENCE_DOCS_SKIP_CHECKS=1 when quality sentinels already passed on
-  // this tree: that step runs openapi, schema-doc, and markdown, so running them again here only costs minutes.
-  if (process.env.CADENCE_DOCS_SKIP_CHECKS === "1") {
-    console.log(
-      "Skipping 'openapi', 'schema-doc', and 'markdown' checks (CADENCE_DOCS_SKIP_CHECKS=1: they already passed in this run)."
-    );
-  } else {
-    runCommand("node scripts/run-cli.js check openapi");
-    runCommand("node scripts/run-cli.js check schema-doc");
-    runCommand("node scripts/run-cli.js check markdown");
+if (require.main !== module) {
+  module.exports = {
+    rewriteLinks,
+    buildRtmEnv,
+    buildVitePressEnv,
+    VITEPRESS_ENV_ALLOWLIST,
+  };
+} else {
+  // `node scripts/build-docs.js --prepare-only` stages the root documents for `vitepress dev` and exits.
+  if (process.argv.includes("--prepare-only")) {
+    prepareRootDocs();
+    process.exit(0);
   }
 
-  // 2. Validate committed GxP snapshot without mutation
-  console.log("--- Step 2: Validating GxP Compliance Snapshot ---");
-  runCommand("node scripts/run-cli.js check rtm");
+  // Run preflight checks before Step 1
+  runPreflightChecks();
 
-  // 3. Prepare files for VitePress
-  console.log("--- Step 3: Preparing Documentation Files ---");
-  prepareRootDocs();
+  const cliEnv = buildRtmEnv(process.env);
 
-  // Sweep and preprocess all docs files and subdirectories
-  sweepAndPreprocessDocs(docsRoot);
-
-  // 4. Build VitePress static portal
-  console.log("--- Step 4: Compiling VitePress Static Portal ---");
-  runCommand(`${pnpmCmd} exec vitepress build docs`);
-
-  console.log("--- Docs Build Completed Successfully! ---");
-} catch (error) {
-  console.error("Docs build pipeline failed.");
-  // exitCode, not process.exit(): exiting here would skip the cleanup in `finally`
-  // and leave the staged root docs behind to fail the next run's index check.
-  process.exitCode = 1;
-} finally {
-  console.log("--- Cleanup Temporary Docs ---");
-  const tempGeneratedDocs = new Set(
-    Object.values(STAGED_ROOT_DOCS).map((destName) =>
-      path.join(docsRoot, destName)
-    )
-  );
-
-  for (const [fullPath, originalContent] of originalFilesMap.entries()) {
-    if (tempGeneratedDocs.has(fullPath)) {
-      continue;
-    }
-    try {
-      fs.writeFileSync(fullPath, originalContent, "utf8");
+  try {
+    // 1. Run validation scripts
+    console.log("--- Step 1: Pre-Build Validation ---");
+    // `cadence ci` and `deploy-docs.yml` set CADENCE_DOCS_SKIP_CHECKS=1 when quality sentinels already passed on
+    // this tree: that step runs openapi, schema-doc, and markdown, so running them again here only costs minutes.
+    if (process.env.CADENCE_DOCS_SKIP_CHECKS === "1") {
       console.log(
-        `Restored original content for ${path.relative(repoRoot, fullPath)}`
+        "Skipping 'openapi', 'schema-doc', and 'markdown' checks (CADENCE_DOCS_SKIP_CHECKS=1: they already passed in this run)."
       );
-    } catch (err) {
-      console.warn(`Could not restore ${fullPath}:`, err);
+    } else {
+      runCommand("node scripts/run-cli.js check openapi", cliEnv);
+      runCommand("node scripts/run-cli.js check schema-doc", cliEnv);
+      runCommand("node scripts/run-cli.js check markdown", cliEnv);
     }
-  }
-  // Clean up temporary staged docs files relative to repoRoot
-  for (const filePath of tempGeneratedDocs) {
-    if (fs.existsSync(filePath)) {
+
+    // 2. Validate committed GxP snapshot without mutation
+    console.log("--- Step 2: Validating GxP Compliance Snapshot ---");
+    runCommand("node scripts/run-cli.js check rtm", cliEnv);
+
+    // 3. Prepare files for VitePress
+    console.log("--- Step 3: Preparing Documentation Files ---");
+    prepareRootDocs();
+
+    // Sweep and preprocess all docs files and subdirectories
+    sweepAndPreprocessDocs(docsRoot);
+
+    // 4. Build VitePress static portal with a strict non-secret environment allowlist
+    console.log("--- Step 4: Compiling VitePress Static Portal ---");
+    runCommand(
+      `${pnpmCmd} exec vitepress build docs`,
+      buildVitePressEnv(process.env)
+    );
+
+    console.log("--- Docs Build Completed Successfully! ---");
+  } catch (error) {
+    console.error("Docs build pipeline failed.");
+    // exitCode, not process.exit(): exiting here would skip the cleanup in `finally`
+    // and leave the staged root docs behind to fail the next run's index check.
+    process.exitCode = 1;
+  } finally {
+    console.log("--- Cleanup Temporary Docs ---");
+    const tempGeneratedDocs = new Set(
+      Object.values(STAGED_ROOT_DOCS).map((destName) =>
+        path.join(docsRoot, destName)
+      )
+    );
+
+    for (const [fullPath, originalContent] of originalFilesMap.entries()) {
+      if (tempGeneratedDocs.has(fullPath)) {
+        continue;
+      }
       try {
-        fs.unlinkSync(filePath);
-        console.log(`Cleaned up ${filePath}`);
+        fs.writeFileSync(fullPath, originalContent, "utf8");
+        console.log(
+          `Restored original content for ${path.relative(repoRoot, fullPath)}`
+        );
       } catch (err) {
-        console.warn(`Could not clean up ${filePath}:`, err);
+        console.warn(`Could not restore ${fullPath}:`, err);
+      }
+    }
+    // Clean up temporary staged docs files relative to repoRoot
+    for (const filePath of tempGeneratedDocs) {
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+          console.log(`Cleaned up ${filePath}`);
+        } catch (err) {
+          console.warn(`Could not clean up ${filePath}:`, err);
+        }
       }
     }
   }

@@ -54,6 +54,7 @@ public static class ExecutionModule
             .AddCommandHandler<CancelFormQuery, FormQueryState, CancelFormQueryHandler>()
             .AddCommandValidator<CancelFormQuery, CancelFormQueryValidator>()
             .AddKernelEventConsumer<MirrorFormQueryToKernel>(MirrorFormQueryToKernel.Name)
+            .AddKernelEventConsumer<EvaluateEditChecksOnCollectionChanged>(EvaluateEditChecksOnCollectionChanged.Name)
             .AddDbContext<ExecutionSignatureTokenDbContext>(options => options.UseNpgsql(connectionString))
             .AddCadenceDurableSigTokenStore<ExecutionSignatureTokenDbContext>();
     }

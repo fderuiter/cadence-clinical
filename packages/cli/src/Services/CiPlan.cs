@@ -265,7 +265,7 @@ public static class CiPlan
             new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
             new("dotnet-quality", "Run Cadence quality sentinels")
             {
-                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "architecture-tests", "--exclude", "unit-tests")],
+                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle", "--exclude", "architecture-tests", "--exclude", "unit-tests")],
             },
             new("dotnet-quality", "Run architecture tests")
             {
@@ -287,7 +287,8 @@ public static class CiPlan
 
         var docsBuild = new CiJob("docs-build", "Documentation Compilation",
         [
-            new("docs-build", "Install Node dependencies") { Commands = [Pnpm("install", "--frozen-lockfile")] },
+            new("docs-build", "Install Node dependencies") { CoveredBy = StyleNodeInstall, Commands = [Pnpm("install", "--frozen-lockfile")] },
+            new("docs-build", "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
             new("docs-build", "Run documentation compilation")
             {
                 Commands = [Pnpm("docs:build")],
@@ -296,6 +297,8 @@ public static class CiPlan
                 // duplicate gates when they already passed in this run (#5028), while still running 'check rtm'.
                 EnvironmentIfPassed = [new(QualitySentinels, "CADENCE_DOCS_SKIP_CHECKS", "1")],
             },
+            new("docs-build", "Build and stage co-hosted interactive demos") { Commands = [Pnpm("docs:stage-demos")] },
+            new("docs-build", "Verify public bundles") { Commands = [NodeCli("check", "public-bundle")] },
         ]);
 
         var security = new CiJob("security", "Security and Vulnerability Audit",

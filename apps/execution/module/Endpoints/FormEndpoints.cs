@@ -5,10 +5,13 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Time;
+using Cadence.Kernel.Validation;
 using Cadence.Modules.Execution.Domain;
 using Cadence.Modules.Execution.Infrastructure;
 using Cadence.Security.DependencyInjection;
@@ -19,6 +22,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Modules.Execution.Endpoints;
 
@@ -36,6 +40,8 @@ internal static class FormEndpoints
 
     /// <summary>The header carrying the command's idempotency key (K-TX-3).</summary>
     public const string IdempotencyKeyHeader = "Idempotency-Key";
+
+    private static readonly Capability SignFormCapability = new("collection.sign", VerbClass.Execute);
 
     public static IEndpointRouteBuilder MapFormEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -68,6 +74,15 @@ internal static class FormEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesKernelCommand<RecordCollectedValues>();
+
+        group.MapPost("/{formId:guid}/preview", PreviewAsync)
+            .WithName("ExecutionPreviewFormValues")
+            .WithSummary("Evaluates pinned study collection rules in memory over draft form values without mutating state (K-RULE-3).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesKernelErrors(
+                KernelErrors.ActorUnresolved,
+                KernelErrors.AuthorizationDenied,
+                KernelErrors.NotFound);
 
         return endpoints;
     }
@@ -188,7 +203,59 @@ internal static class FormEndpoints
                 .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        return TypedResults.Ok(FormResponse.From(record, layout));
+        var canSign = await access.CanExerciseAsync(
+            tenant,
+            SignFormCapability,
+            NodeRef.For(record.EnrollmentId),
+            cancellationToken).ConfigureAwait(false);
+
+        return TypedResults.Ok(FormResponse.From(record, layout, canSign));
+    }
+
+    internal static async Task<Results<Ok<FormPreviewResponse>, ProblemHttpResult>> PreviewAsync(
+        Guid formId,
+        PreviewFormValuesRequest? request,
+        HttpContext context,
+        ICollectionInstanceRecords forms,
+        IKernelReadAccess access,
+        IClock clock,
+        CancellationToken cancellationToken)
+    {
+        if (request?.Values is null || request.Values.Any(v => v is null || string.IsNullOrWhiteSpace(v.ItemId)))
+        {
+            return BadRequest("Invalid preview", "Provide values as an array of draft items naming item_id.");
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var id = CollectionInstanceId.FromGuid(formId);
+        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } record)
+        {
+            return NotFound(formId);
+        }
+
+        if (!await access.CanSeeAsync(tenant, NodeRef.For(record.EnrollmentId), cancellationToken).ConfigureAwait(false))
+        {
+            return TypedResults.Problem(
+                title: "Not visible", detail: $"You may not see form {formId:D}.", statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        var validation = context.RequestServices.GetService<ICollectionValidationService>();
+        if (validation is null)
+        {
+            return TypedResults.Ok(new FormPreviewResponse(formId, []));
+        }
+
+        var overlay = new Dictionary<string, ObservationValue?>(StringComparer.Ordinal);
+        foreach (var entry in request.Values)
+        {
+            overlay[entry.ItemId.Trim()] = entry.Value;
+        }
+
+        var asOf = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+        var warnings = await validation.PreviewFormAsync(tenant, id, overlay, asOf, cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(new FormPreviewResponse(
+            formId,
+            [.. warnings.Select(FormPreviewWarningResponse.From)]));
     }
 
     internal static async Task<Results<Ok<FormSavedResponse>, ProblemHttpResult>> SaveAsync(

@@ -199,7 +199,8 @@ internal sealed class MappingCoverageCheck(IStandardsRegistry registry, IValidat
     public async Task<KernelError?> CheckAsync(StudyId study, ProtocolDesign design, ICommandContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(design);
-        if (await registry.FindStudyStandardsAsync(context.TenantId, study, cancellationToken).ConfigureAwait(false) is not { } profile)
+        if (await registry.FindStudyStandardsAsync(context.TenantId, study, cancellationToken).ConfigureAwait(false) is not { } profile
+            || profile.StandardVersions.Count == 0)
         {
             return null;
         }

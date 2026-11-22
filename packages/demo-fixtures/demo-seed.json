@@ -91,7 +91,8 @@
         "assertion.retract",
         "collection.record_unasked",
         "execution.query.raise",
-        "execution.query.manage"
+        "execution.query.manage",
+        "study.declare_standards"
       ]
     },
     {
@@ -106,6 +107,12 @@
         "protocol.submit_for_review",
         "protocol.approve",
         "protocol.amend",
+        "standard.register",
+        "standard.approve",
+        "library_item.draft",
+        "library_item.approve",
+        "study.declare_standards",
+        "validation_run.record",
         "attestation.sign"
       ]
     },

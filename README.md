@@ -3,10 +3,10 @@
 > An operating system for clinical research: one platform for the whole lifecycle of developing
 > evidence about an intervention, from protocol design to submission.
 
-[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/)
-[![C# 14](https://img.shields.io/badge/C%23-14-239120.svg)](https://learn.microsoft.com/en-us/dotnet/csharp/)
-[![CDISC USDM](https://img.shields.io/badge/CDISC-USDM%20v3%20%7C%20v4-darkblue.svg)](https://www.cdisc.org/standards/data-exchange/usdm)
-[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
+[![.NET 10](docs/badges/dotnet-10.svg)](https://dotnet.microsoft.com/)
+[![C# 14](docs/badges/csharp-14.svg)](https://learn.microsoft.com/en-us/dotnet/csharp/)
+[![CDISC USDM](docs/badges/cdisc-usdm.svg)](https://www.cdisc.org/standards/data-exchange/usdm)
+[![License: Proprietary](docs/badges/license-proprietary.svg)](LICENSE)
 
 > [!IMPORTANT]
 > **Pre-release.** Cadence is in active initial development and is not validated for use on

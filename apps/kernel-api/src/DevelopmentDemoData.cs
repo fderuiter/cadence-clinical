@@ -18,8 +18,13 @@ using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.References;
+using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
+using Cadence.Rules.Expressions;
+using Cadence.Rules.Packs;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -60,6 +65,8 @@ internal static partial class DevelopmentDemoData
     /// <summary>When the demo world's records take effect in valid time; fixed so every start sends the same payload.</summary>
     internal static DateTimeOffset Epoch => SeedEpoch;
 
+    private static Actor DesignerLeadActor() => Actor.Person(DesignerLeadSubject);
+
     /// <summary>
     /// The Execution module's kernel event consumers (ADR-2622, #5461), each a service account with the role it needs
     /// across the tenant: opening its side of every form the kernel opens, registering pseudonymous participant ids on
@@ -69,6 +76,7 @@ internal static partial class DevelopmentDemoData
     [
         ("execution-forms", "DEMO_EXECUTION_FORMS", "Execution forms consumer", ["execution.form.open", "participant.register"]),
         ("execution-queries", "DEMO_EXECUTION_QUERIES", "Execution queries consumer", ["observation.query", "observation.query.answer", "assertion.retract"]),
+        ("execution-edit-checks", "DEMO_EXECUTION_EDIT_CHECKS", "Execution edit checks consumer", ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
     ];
 
     /// <summary>The capabilities the bootstrap grants itself, tenant-wide, to write the demo study.</summary>
@@ -87,6 +95,9 @@ internal static partial class DevelopmentDemoData
         "artifact.register",
         "effectivity.declare",
         "effectivity.change_status",
+        "standard.register",
+        "library_item.draft",
+        "study.declare_standards",
     ];
 
     /// <summary>Writes the demo study into <paramref name="tenant"/>, or replays what an earlier start wrote.</summary>
@@ -159,6 +170,7 @@ internal static partial class DevelopmentDemoData
         }
 
         await SeedEffectiveProtocolAsync(tenant, study, studySites.Values, ids, seeder, scopes, cancellationToken).ConfigureAwait(false);
+        await SeedPinnedEditCheckRulePackAsync(tenant, study, ids, seeder, scopes, cancellationToken).ConfigureAwait(false);
 
         for (int i = 0; i < Seed.Participants.Length; i++)
         {
@@ -218,7 +230,7 @@ internal static partial class DevelopmentDemoData
 
         if (!await IsProtocolApprovedAsync(tenant, versionId, scopes, cancellationToken).ConfigureAwait(false))
         {
-            var signer = Actor.Person(DesignerLeadSubject);
+            var signer = DesignerLeadActor();
             DateTimeOffset authenticatedAt;
             await using (var clockScope = scopes.CreateAsyncScope())
             {
@@ -287,6 +299,253 @@ internal static partial class DevelopmentDemoData
                 Key($"concept:{slug}"),
                 Reason),
             cancellationToken);
+
+    private static async Task SeedPinnedEditCheckRulePackAsync(
+        TenantId tenant,
+        StudyId study,
+        DemoIds ids,
+        Sender seeder,
+        IServiceScopeFactory scopes,
+        CancellationToken cancellationToken)
+    {
+        var rulePackId = ids.LibraryItem("cadence-101-edit-checks:v1");
+        var rulePackJson = RulePackJson.ToJson(BuildDemoRulePack());
+        var drafted = await seeder.SendAsync(
+            new DraftLibraryItem(
+                tenant,
+                rulePackId,
+                LibraryItemKind.RulePack,
+                "cadence-101-edit-checks",
+                "CADENCE-101 Cardiovascular Edit Checks",
+                rulePackJson,
+                [],
+                Key("library-item:cadence-101-edit-checks:v1:draft"),
+                Reason),
+            cancellationToken).ConfigureAwait(false);
+
+        if (!await IsLibraryItemApprovedAsync(tenant, rulePackId, scopes, cancellationToken).ConfigureAwait(false))
+        {
+            var signer = DesignerLeadActor();
+            DateTimeOffset authenticatedAt;
+            await using (var clockScope = scopes.CreateAsyncScope())
+            {
+                authenticatedAt = clockScope.ServiceProvider.GetRequiredService<IClock>().UtcNow.AddMinutes(-1);
+            }
+
+            var target = new AttestationTarget(NodeKinds.LibraryItem, rulePackId.Value, drafted.ContentHash);
+            var signature = await seeder.SendAsAsync(
+                signer,
+                new Attest(tenant, ids.Attestation("library-item:cadence-101-edit-checks:v1"), AttestationMeaning.Approved, target, authenticatedAt, "pwd+otp", Key("library-item:cadence-101-edit-checks:v1:attest"), Reason),
+                cancellationToken).ConfigureAwait(false);
+            await seeder.SendAsAsync(
+                signer,
+                new ApproveLibraryItem(tenant, rulePackId, signature, Key("library-item:cadence-101-edit-checks:v1:approve"), Reason),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        var standardId = await EnsureBaselineStandardApprovedAsync(tenant, ids, seeder, scopes, cancellationToken).ConfigureAwait(false);
+
+        await seeder.SendAsync(
+            new DeclareStudyStandards(
+                tenant,
+                study,
+                ids.StudyStandardsProfile(StudyCode),
+                [standardId],
+                [],
+                [rulePackId],
+                Key($"study-standards:{StudyCode}:v1"),
+                Reason),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<StandardVersionId> EnsureBaselineStandardApprovedAsync(
+        TenantId tenant,
+        DemoIds ids,
+        Sender seeder,
+        IServiceScopeFactory scopes,
+        CancellationToken cancellationToken)
+    {
+        const string code = "CDASHIG";
+        const string version = "2.3";
+        var standardId = ids.StandardVersion($"{code}:{version}");
+
+        StandardVersionSummary? summary;
+        await using (var scope = scopes.CreateAsyncScope())
+        {
+            summary = await scope.ServiceProvider.GetRequiredService<IStandardsRegistry>()
+                .FindStandardVersionAsync(tenant, code, version, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (summary is null)
+        {
+            var package = new StandardPackage(
+                code,
+                version,
+                "CDISC Clinical Data Acquisition Standards Harmonization Implementation Guide v2.3",
+                "CDISC",
+                "/mdr/cdashig/2-3",
+                new DateOnly(2023, 9, 29),
+                [
+                    new DatasetDefinitionData(
+                        "VS",
+                        "Vital Signs",
+                        "Findings",
+                        "One record per vital sign measurement per visit per subject",
+                        1,
+                        [
+                            new VariableDefinitionData(
+                                "VSORRES",
+                                "Result or Finding in Original Units",
+                                1,
+                                StandardDataType.Num,
+                                "Result Qualifier",
+                                VariableCore.Expected,
+                                [],
+                                [],
+                                null,
+                                "Recorded vital sign value in collected units."),
+                        ]),
+                ],
+                [],
+                []);
+
+            standardId = await seeder.SendAsync(
+                new RegisterStandardVersion(tenant, standardId, package, null, Key($"standard:{code}:{version}:register"), Reason),
+                cancellationToken).ConfigureAwait(false);
+
+            await using var scope = scopes.CreateAsyncScope();
+            summary = await scope.ServiceProvider.GetRequiredService<IStandardsRegistry>()
+                .FindStandardVersionAsync(tenant, standardId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (summary is not null && summary.Status != GovernanceStatus.Approved)
+        {
+            var signer = DesignerLeadActor();
+            DateTimeOffset authenticatedAt;
+            await using (var clockScope = scopes.CreateAsyncScope())
+            {
+                authenticatedAt = clockScope.ServiceProvider.GetRequiredService<IClock>().UtcNow.AddMinutes(-1);
+            }
+
+            var target = new AttestationTarget(NodeKinds.StandardVersion, summary.Id.Value, summary.ContentHash);
+            var signature = await seeder.SendAsAsync(
+                signer,
+                new Attest(tenant, ids.Attestation($"standard:{code}:{version}"), AttestationMeaning.Approved, target, authenticatedAt, "pwd+otp", Key($"standard:{code}:{version}:attest"), Reason),
+                cancellationToken).ConfigureAwait(false);
+            await seeder.SendAsAsync(
+                signer,
+                new ApproveStandardVersion(tenant, summary.Id, signature, Key($"standard:{code}:{version}:approve"), Reason),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return summary?.Id ?? standardId;
+    }
+
+    private static async Task<bool> IsLibraryItemApprovedAsync(
+        TenantId tenant, LibraryItemId itemId, IServiceScopeFactory scopes, CancellationToken cancellationToken)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var item = await scope.ServiceProvider.GetRequiredService<IStandardsRegistry>()
+            .FindLibraryItemAsync(tenant, itemId, cancellationToken)
+            .ConfigureAwait(false);
+        return item?.Status == GovernanceStatus.Approved;
+    }
+
+    private static RulePack BuildDemoRulePack()
+    {
+        var citation = new SourceCitation("CADENCE-101 Data Validation Plan", "Section 4.1", null);
+        var vitalsScope = new RuleApplicability(ValidationStage.Collection, null, null, null, "cs.vitals");
+        var peScope = new RuleApplicability(ValidationStage.Collection, null, null, null, "cs.physical_exam");
+        var sbp = new VariableExpression("item.sbp");
+        var dbp = new VariableExpression("item.dbp");
+        var hr = new VariableExpression("item.hr");
+        var peSig = new VariableExpression("item.pe_clinically_significant");
+        var aeTerm = new VariableExpression("cs.adverse_event.item.ae_term");
+
+        return new RulePack(
+            RuleAuthority.Study,
+            "CADENCE-101 Cardiovascular Edit Checks",
+            [
+                new Rule(
+                    "VS-SBP-RANGE",
+                    1,
+                    RuleAuthority.Study,
+                    citation,
+                    vitalsScope,
+                    ValidationSeverity.Error,
+                    new LogicalExpression(
+                        LogicalOperator.And,
+                        [
+                            new FunctionExpression(RuleFunction.IsNotEmpty, [sbp]),
+                            new LogicalExpression(
+                                LogicalOperator.Or,
+                                [
+                                    new ComparisonExpression(ComparisonOperator.Less, sbp, new LiteralExpression(RuleValue.FromNumber(70m))),
+                                    new ComparisonExpression(ComparisonOperator.Greater, sbp, new LiteralExpression(RuleValue.FromNumber(240m))),
+                                ]),
+                        ]),
+                    "Systolic blood pressure is outside [70, 240] mm[Hg].",
+                    "Verify seated cuff measurement against source vital signs sheet or explain out-of-range value.",
+                    EffectivePeriod.Always),
+                new Rule(
+                    "VS-DBP-LT-SBP",
+                    1,
+                    RuleAuthority.Study,
+                    citation,
+                    vitalsScope,
+                    ValidationSeverity.Error,
+                    new LogicalExpression(
+                        LogicalOperator.And,
+                        [
+                            new FunctionExpression(RuleFunction.IsNotEmpty, [dbp]),
+                            new FunctionExpression(RuleFunction.IsNotEmpty, [sbp]),
+                            new ComparisonExpression(ComparisonOperator.GreaterOrEqual, dbp, sbp),
+                        ]),
+                    "Diastolic blood pressure must be strictly less than systolic blood pressure.",
+                    "Confirm systolic and diastolic blood pressure values were not transposed.",
+                    EffectivePeriod.Always),
+                new Rule(
+                    "VS-HR-RANGE",
+                    1,
+                    RuleAuthority.Study,
+                    citation,
+                    vitalsScope,
+                    ValidationSeverity.Warning,
+                    new LogicalExpression(
+                        LogicalOperator.And,
+                        [
+                            new FunctionExpression(RuleFunction.IsNotEmpty, [hr]),
+                            new LogicalExpression(
+                                LogicalOperator.Or,
+                                [
+                                    new ComparisonExpression(ComparisonOperator.Less, hr, new LiteralExpression(RuleValue.FromNumber(40m))),
+                                    new ComparisonExpression(ComparisonOperator.Greater, hr, new LiteralExpression(RuleValue.FromNumber(150m))),
+                                ]),
+                        ]),
+                    "Resting heart rate is outside expected physiological window [40, 150] /min.",
+                    "Confirm resting pulse duration and document bradycardia or tachycardia if clinically accurate.",
+                    EffectivePeriod.Always),
+                new Rule(
+                    "PE-CLIN-SIG-AE",
+                    1,
+                    RuleAuthority.Study,
+                    citation,
+                    peScope,
+                    ValidationSeverity.Warning,
+                    new LogicalExpression(
+                        LogicalOperator.And,
+                        [
+                            new FunctionExpression(RuleFunction.IsNotEmpty, [peSig]),
+                            new ComparisonExpression(ComparisonOperator.Equal, peSig, new LiteralExpression(RuleValue.True)),
+                            new FunctionExpression(RuleFunction.IsEmpty, [aeTerm]),
+                        ]),
+                    "Clinically significant physical examination finding recorded without an Adverse Event log entry.",
+                    "Open an Adverse Event Log form for the enrollment or confirm the finding represents baseline medical history.",
+                    EffectivePeriod.Always),
+            ]);
+    }
 
     private static async Task<bool> IsProtocolApprovedAsync(
         TenantId tenant, ProtocolVersionId versionId, IServiceScopeFactory scopes, CancellationToken cancellationToken)
@@ -458,6 +717,12 @@ internal static partial class DevelopmentDemoData
         public ArtifactVersionId ArtifactVersion(string name) => ArtifactVersionId.FromGuid(Derive("artifact-version", name));
 
         public EffectivityId Effectivity(string name) => EffectivityId.FromGuid(Derive("effectivity", name));
+
+        public LibraryItemId LibraryItem(string name) => LibraryItemId.FromGuid(Derive("library-item", name));
+
+        public StandardVersionId StandardVersion(string name) => StandardVersionId.FromGuid(Derive("standard-version", name));
+
+        public StudyStandardsProfileId StudyStandardsProfile(string name) => StudyStandardsProfileId.FromGuid(Derive("study-standards-profile", name));
 
         private Guid Derive(string kind, string name)
         {

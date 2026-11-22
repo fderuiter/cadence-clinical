@@ -5,7 +5,7 @@
 | **Status**       | Proposed. Direction for all new Cadence UI; normative for the kernel read APIs it names once their module specs land.                                                   |
 | **Scope**        | The primary interaction model of the Cadence web experience, and the kernel and API capabilities that model needs                                                       |
 | **Builds on**    | [Kernel specification v0.2](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) (cited below as `§n`), its [§15 roadmap](../kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap) |
-| **Mockup**       | [Clinical Canvas primary screen](https://claude.ai/artifact/YJJUUy1LaUz8mYRN4P9jDT) (clickable, ONC-401 sample data, light and dark)                                    |
+| **Mockup**       | Clinical Canvas primary screen (artifact `YJJUUy1LaUz8mYRN4P9jDT`, clickable, ONC-401 sample data, light and dark)                                                      |
 | **Related work** | Epic #4833 (move `apps/web` onto the .NET API). This document sets the target the migrated client grows toward; §8 says what `apps/web` has built so far.               |
 
 Rules tagged `UX-…` are design invariants. Rules tagged `K-…` are the kernel invariants they rely on.
@@ -210,7 +210,7 @@ rendered as masked, never as absent (§6.13).
 
 ## 3. The primary screen
 
-The [mockup](https://claude.ai/artifact/YJJUUy1LaUz8mYRN4P9jDT) draws the study home, one participant and
+The mockup (artifact `YJJUUy1LaUz8mYRN4P9jDT`) draws the study home, one participant and
 one simulation, all with ONC-401 sample data. Its **Platform** toggle annotates every element with the
 capability it needs, matching §6.
 

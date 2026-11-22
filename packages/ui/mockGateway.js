@@ -227,11 +227,16 @@ export async function validateGatewayRequest(req, options = {}) {
     typeof req.url === "string" ? req.url : req.url?.toString() || "";
   let methodUpper = (req.method || "GET").toUpperCase();
 
+  const baseOrigin =
+    typeof globalThis.location?.origin === "string" &&
+    globalThis.location.origin.startsWith("http")
+      ? globalThis.location.origin
+      : "http://localhost";
   let url;
   try {
-    url = new URL(urlStr, "http://localhost:8000");
+    url = new URL(urlStr, baseOrigin);
   } catch {
-    url = new URL("http://localhost:8000/" + urlStr);
+    url = new URL(`${baseOrigin}/${urlStr}`);
   }
 
   const rawPath = url.pathname.replace(/^\/+/, "");
@@ -459,7 +464,6 @@ const GATEWAY_API_PREFIXES = [
 export function isGatewayApiCall(url) {
   return (
     url.port === "8000" ||
-    url.host.includes("localhost:8000") ||
     GATEWAY_API_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))
   );
 }

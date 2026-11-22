@@ -19,6 +19,7 @@ import {
   TARGET_NOT_SIGNABLE,
   type EcrfForm,
   type EcrfFormItem,
+  type EcrfFormPreviewWarning,
   type EcrfFormValue,
   type EcrfSignatureMeaning,
   type OpenEcrfForm,
@@ -30,6 +31,7 @@ import {
   type KernelObservationValue,
 } from "../api/observationValue";
 import { registerDraftSource } from "ui";
+import { canSignForms } from "../canvas/authority";
 import { useAuthStore } from "../stores/auth.js";
 import { scopedKey, storageScopeOf } from "../utils/userScopedStorage.js";
 
@@ -40,6 +42,7 @@ export const OPEN_FORM_REASON = "Form opened for data entry";
 export const ECRF_FORM_DRAFT_NAMESPACE = "ecrf_form_draft";
 
 const DRAFT_DEBOUNCE_MS = 500;
+const PREVIEW_DEBOUNCE_MS = 250;
 
 /** One unsaved item edit preserved when a 423 lock rejects a save. */
 export interface EcrfUnsavedItem {
@@ -134,6 +137,12 @@ export function useEcrfForm(
   const outcome = ref<EcrfSaveOutcome | null>(null);
   const entries = reactive<Record<string, EcrfEntry>>({});
   const itemErrors = reactive<Record<string, string[]>>({});
+  const previewWarnings = reactive<Record<string, EcrfFormPreviewWarning[]>>(
+    {}
+  );
+  const previewing = ref(false);
+  let previewTimer: ReturnType<typeof setTimeout> | null = null;
+  let previewSeq = 0;
   let pendingOpen: { request: string; formId: string; key: string } | null =
     null;
   let pendingSave: { request: string; key: string } | null = null;
@@ -214,6 +223,7 @@ export function useEcrfForm(
   function resetEntries() {
     clearRecord(entries);
     clearRecord(itemErrors);
+    clearRecord(previewWarnings);
     for (const item of items.value) {
       const unrecorded = isUnrecordedValue(item.value);
       entries[item.item_id] = {
@@ -417,11 +427,94 @@ export function useEcrfForm(
     }
   );
 
+  function cancelPreview() {
+    if (previewTimer !== null) {
+      clearTimeout(previewTimer);
+      previewTimer = null;
+    }
+    previewSeq++;
+    previewing.value = false;
+  }
+
+  /** Evaluates pinned study edit-check rule packs in memory for current draft edits without mutating server state. */
+  async function runPreview(): Promise<void> {
+    const current = form.value;
+    if (
+      !current ||
+      locked.value ||
+      !dirty.value ||
+      typeof ecrfFormsApi.previewValues !== "function"
+    ) {
+      clearRecord(previewWarnings);
+      previewing.value = false;
+      return;
+    }
+
+    const draftValues: EcrfFormValue[] = [];
+    for (const item of editedItems.value) {
+      const val = valueOf(item);
+      if (typeof val === "string") continue;
+      draftValues.push({
+        item_id: item.item_id,
+        value: val,
+        expected_revision: Number(item.revision),
+        observation_id: null,
+        observed_at: null,
+      });
+    }
+    if (draftValues.length === 0) {
+      clearRecord(previewWarnings);
+      previewing.value = false;
+      return;
+    }
+
+    const seq = ++previewSeq;
+    previewing.value = true;
+    try {
+      const response = await ecrfFormsApi.previewValues(
+        current.form_id,
+        draftValues
+      );
+      if (seq !== previewSeq) return;
+      clearRecord(previewWarnings);
+      for (const warning of response.warnings ?? []) {
+        const key = warning.item_id || "__form__";
+        if (!previewWarnings[key]) previewWarnings[key] = [];
+        previewWarnings[key].push(warning);
+      }
+    } catch {
+      if (seq === previewSeq) {
+        clearRecord(previewWarnings);
+      }
+    } finally {
+      if (seq === previewSeq) {
+        previewing.value = false;
+      }
+    }
+  }
+
+  function schedulePreview() {
+    if (previewTimer !== null) {
+      clearTimeout(previewTimer);
+      previewTimer = null;
+    }
+    if (!form.value || locked.value || !dirty.value) {
+      clearRecord(previewWarnings);
+      previewing.value = false;
+      return;
+    }
+    previewTimer = setTimeout(() => {
+      previewTimer = null;
+      void runPreview();
+    }, PREVIEW_DEBOUNCE_MS);
+  }
+
   watch(
     entries,
     () => {
       draftCleared = false;
       scheduleDraftSave();
+      schedulePreview();
     },
     { deep: true }
   );
@@ -433,14 +526,28 @@ export function useEcrfForm(
 
   if (getCurrentInstance()) {
     onUnmounted(() => {
+      cancelPreview();
       flushDraft();
       unregisterDraftSource();
     });
   }
 
-  /** A form can be signed as read: it has values (a content hash) and no unsaved entries. */
+  const hasSignAuthority = computed(() => {
+    if (typeof form.value?.can_sign === "boolean") {
+      return form.value.can_sign;
+    }
+    try {
+      const auth = useAuthStore();
+      return auth.isAuthenticated ? canSignForms(auth) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  /** A form can be signed as read: the caller holds `collection.sign`, it has values (a content hash), and no unsaved entries. */
   const canSign = computed(
     () =>
+      hasSignAuthority.value &&
       !!form.value?.content_hash &&
       !dirty.value &&
       !saving.value &&
@@ -763,8 +870,10 @@ export function useEcrfForm(
     signOutcome.value = null;
     pendingSign = null;
     pendingSave = null;
+    cancelPreview();
     clearRecord(entries);
     clearRecord(itemErrors);
+    clearRecord(previewWarnings);
   }
 
   /** Flushes any pending browser draft and clears in-memory state without deleting saved browser drafts. */
@@ -786,6 +895,9 @@ export function useEcrfForm(
     items,
     entries,
     itemErrors,
+    previewWarnings,
+    previewing,
+    runPreview,
     loading,
     loadError,
     opening,

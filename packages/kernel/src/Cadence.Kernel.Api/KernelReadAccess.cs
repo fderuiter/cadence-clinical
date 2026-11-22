@@ -1,7 +1,9 @@
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 
@@ -13,12 +15,32 @@ namespace Cadence.Kernel.Api;
 /// </summary>
 /// <param name="visibility">The host's visibility.</param>
 /// <param name="actor">The request's verified actor.</param>
-public sealed class KernelReadAccess(INodeVisibility visibility, ICurrentActor actor) : IKernelReadAccess
+/// <param name="probe">Optional dry-run authorization probe for capability checks.</param>
+public sealed class KernelReadAccess(
+    INodeVisibility visibility,
+    ICurrentActor actor,
+    IAuthorizationProbe? probe = null) : IKernelReadAccess
 {
     /// <inheritdoc />
     public async ValueTask<bool> CanSeeAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken)
     {
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [node], cancellationToken).ConfigureAwait(false);
         return masks.For(node) is null;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<bool> CanExerciseAsync(
+        TenantId tenant,
+        Capability capability,
+        NodeRef resource,
+        CancellationToken cancellationToken)
+    {
+        if (probe is null)
+        {
+            return true;
+        }
+
+        var decision = await probe.CanIAsync(tenant, capability, resource, cancellationToken).ConfigureAwait(false);
+        return decision.Permitted;
     }
 }

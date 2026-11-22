@@ -22,7 +22,7 @@ outbox rows and its idempotency record in one PostgreSQL transaction. Only the k
 - Each scaffold service therefore built its own write path: its own audit table or interceptor, its own validation, its
   own error shapes and, in Execution, its own MassTransit outbox.
 
-The gate 2 design (https://claude.ai/code/artifact/1f45ecf7-2a47-4a7c-a000-9b36be29e2eb) proposed one path for every
+The gate 2 design (artifact `1f45ecf7-2a47-4a7c-a000-9b36be29e2eb`) proposed one path for every
 clinical write, kernel or module. The project owner accepted its three recommendations on 2026-10-19.
 
 ## 2. Decision Drivers & Constraints

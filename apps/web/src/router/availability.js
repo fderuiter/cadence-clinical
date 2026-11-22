@@ -202,7 +202,7 @@ export const SCREEN_CATALOG = Object.freeze({
     minimumTier: "Individual",
     isBaselineCapability: false,
     roadmapStage:
-      "Inline queries active in Data Collection; standalone rule studio in pre-release",
+      "Rule packs, edit-check previews, validation findings, and inline queries active in Study Workspace; standalone rule studio in pre-release",
     summary:
       "Edit-check specification, discrepancy query triage, and cross-visit validation rules.",
   },
