@@ -125,7 +125,9 @@
               v-for="job in exportJobs"
               :key="job.job_id"
               class="history-item"
-              :class="{ 'is-active': activeJob &amp;&amp; activeJob.job_id === job.job_id }"
+              :class="{
+                'is-active': activeJob && activeJob.job_id === job.job_id,
+              }"
             >
               <div class="history-item-header">
                 <span class="history-job-id">{{ job.job_id }}</span>
@@ -141,7 +143,7 @@
                 <span>{{ formatDate(job.created_at) }}</span>
               </div>
               <div
-                v-if="job.status === 'COMPLETED' &amp;&amp; job.download_url"
+                v-if="job.status === 'COMPLETED' && job.download_url"
                 class="history-item-action"
               >
                 <a

@@ -8,7 +8,10 @@ let nextId = 1;
  * (#4523); ToastHost.vue renders them.
  */
 export const useToastStore = defineStore("toasts", {
-  state: () => ({ toasts: [] }),
+  state: () => ({
+    /** @type {Array<{ id: number; tone: string; title: string; message: string }>} */
+    toasts: [],
+  }),
   actions: {
     push({ tone = "error", title, message, timeoutMs = 8000 }) {
       const id = nextId++;
