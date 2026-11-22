@@ -2,7 +2,6 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ctmsApi } from "../../src/api/ctmsApi";
-import { executionApi } from "../../src/api/executionApi";
 import apiClient from "../../src/services/api";
 import { useAuthStore } from "../../src/stores/auth";
 import CtmsView from "../../src/views/CtmsView.vue";
@@ -12,11 +11,11 @@ vi.mock("vue-router", () => ({
   useRouter: () => ({ push: vi.fn() }),
   useRoute: () => ({
     path: "/ctms",
-    query: { studyId: "CAD-101", siteId: "SITE-101" },
+    query: { studyId: "CAD-101", siteId: "SITE-101", tab: "monitoring" },
   }),
 }));
 
-describe("CtmsView live operations, structured visit findings, compiled letters, and CRA/Monitor split", () => {
+describe("CtmsMonitoringSection in live CTMS workspace: structured findings, compiled letters, and CRA/Monitor split", () => {
   let pinia: ReturnType<typeof createPinia>;
 
   const scheduledVisit = {
@@ -61,14 +60,6 @@ describe("CtmsView live operations, structured visit findings, compiled letters,
     pinia = createPinia();
     setActivePinia(pinia);
     vi.spyOn(apiClient, "get");
-    vi.spyOn(executionApi, "getSiteComplianceStatus").mockResolvedValue({
-      study_id: "CAD-101",
-      site_id: "SITE-101",
-      milestone: "SITE_ACTIVATION",
-      is_complete: true,
-      missing_documents: [],
-    });
-    vi.spyOn(ctmsApi, "listSiteMilestones").mockResolvedValue([]);
     vi.spyOn(ctmsApi, "listMonitoringVisits").mockResolvedValue([
       completedVisit,
       scheduledVisit,
@@ -76,7 +67,7 @@ describe("CtmsView live operations, structured visit findings, compiled letters,
     vi.spyOn(ctmsApi, "completeMonitoringVisit").mockResolvedValue({
       ...scheduledVisit,
       status: "COMPLETED",
-      actual_date: "2026-10-12T00:00:00Z",
+      actual_date: "2026-10-12T17:00:00Z",
     });
     vi.spyOn(ctmsApi, "signOffMonitoringVisit").mockResolvedValue({
       ...completedVisit,
@@ -109,23 +100,17 @@ describe("CtmsView live operations, structured visit findings, compiled letters,
     signInAs(useAuthStore(), ["CRA"], { username: "cra_alice" });
 
     const wrapper = mount(CtmsView, {
-      props: {
-        studyCode: "CAD-101",
-        initialSiteId: "SITE-101",
-        sectionMode: "monitoring",
-      },
       global: { plugins: [pinia] },
     });
     await flushPromises();
 
-    // Never calls unbacked /cra-allocations/workload or /recruitment outside demo mode
+    expect(wrapper.find("#ctms-monitoring-section").exists()).toBe(true);
     expect(apiClient.get).not.toHaveBeenCalled();
 
-    // CRA can complete scheduled visits, but supervisory Sign-off is disabled for CRA
-    const signOffBtn = wrapper.find(
-      '[data-testid="btn-signoff-visit-visit-comp-1"]'
-    );
-    expect(signOffBtn.attributes("disabled")).toBeDefined();
+    // CRA can complete scheduled visits and compile letters, while supervisory Sign-off is gated
+    expect(
+      wrapper.find('[data-testid="btn-signoff-visit-visit-comp-1"]').exists()
+    ).toBe(false);
     expect(wrapper.find("#ctms-visit-signoff-role-note").text()).toContain(
       "ctms_monitoring_visit:sign_off"
     );
@@ -159,7 +144,8 @@ describe("CtmsView live operations, structured visit findings, compiled letters,
           },
         ],
         reason_for_change: "Completed on-site IMV review",
-      })
+      }),
+      "Completed on-site IMV review"
     );
 
     // Compile a signed follow-up letter via POST /api/v1/ctms/letters/compile
@@ -167,18 +153,11 @@ describe("CtmsView live operations, structured visit findings, compiled letters,
       .find('[data-testid="btn-compile-letter-visit-comp-1"]')
       .trigger("click");
     expect(wrapper.find("#modal-compile-letter").exists()).toBe(true);
+    await wrapper.find("#compile-sig-password").setValue("Password123!");
     await wrapper
       .find("#compile-letter-reason")
       .setValue("Issue signed SIV follow-up report");
     await wrapper.find("#btn-confirm-compile-letter").trigger("click");
-    await flushPromises();
-
-    // Part 11 re-authentication modal opens for finalized letter
-    await wrapper.find("#sig-password").setValue("Password123!");
-    await wrapper
-      .findAll(".modal-footer button")
-      .find((b) => b.text().includes("Verify & Digital Sign"))!
-      .trigger("click");
     await flushPromises();
 
     expect(apiClient.post).toHaveBeenCalledWith(
@@ -204,6 +183,7 @@ describe("CtmsView live operations, structured visit findings, compiled letters,
         ],
       }),
       expect.objectContaining({
+        changeReason: "Issue signed SIV follow-up report",
         sigToken: "sig-token-letter-1",
       })
     );
@@ -215,40 +195,31 @@ describe("CtmsView live operations, structured visit findings, compiled letters,
     );
   });
 
-  it("allows Monitor role to perform supervisory visit sign-off while disabling CRA visit completion", async () => {
+  it("allows Monitor role to perform supervisory visit sign-off while gating CRA scheduling and letter compilation", async () => {
     signInAs(useAuthStore(), ["Monitor"], { username: "monitor_lead" });
 
     const wrapper = mount(CtmsView, {
-      props: {
-        studyCode: "CAD-101",
-        initialSiteId: "SITE-101",
-        sectionMode: "monitoring",
-      },
       global: { plugins: [pinia] },
     });
     await flushPromises();
 
+    expect(wrapper.find("#schedule-visit-form").exists()).toBe(false);
     expect(
-      wrapper
-        .find('[data-testid="btn-complete-visit-visit-sched-2"]')
-        .attributes("disabled")
-    ).toBeDefined();
-    expect(wrapper.find("#ctms-visit-manage-role-note").text()).toContain(
-      "ctms_monitoring_visit:update"
+      wrapper.find('[data-testid="btn-compile-letter-visit-comp-1"]').exists()
+    ).toBe(false);
+    expect(wrapper.find("#ctms-visit-schedule-role-note").text()).toContain(
+      "ctms_monitoring_visit:create"
     );
 
     const signOffBtn = wrapper.find(
       '[data-testid="btn-signoff-visit-visit-comp-1"]'
     );
-    expect(signOffBtn.attributes("disabled")).toBeUndefined();
+    expect(signOffBtn.exists()).toBe(true);
     await signOffBtn.trigger("click");
     await wrapper
-      .find("#modal-justification-reason")
+      .find("#signoff-visit-reason")
       .setValue("Supervisory MVR review complete");
-    await wrapper
-      .findAll(".modal-footer button")
-      .find((b) => b.text().includes("Confirm Change"))!
-      .trigger("click");
+    await wrapper.find("#btn-confirm-signoff-visit").trigger("click");
     await flushPromises();
 
     expect(ctmsApi.signOffMonitoringVisit).toHaveBeenCalledWith(

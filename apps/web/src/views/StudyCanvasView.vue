@@ -337,6 +337,42 @@
             v-else-if="section?.id === 'site-activation'"
             :key="studyCode"
             :study-code="studyCode"
+            :site-id="siteFilter"
+          />
+
+          <CtmsGreenlightSection
+            v-else-if="section?.id === 'startup-greenlight'"
+            :key="`greenlight-${studyCode}`"
+            :study-code="studyCode"
+            :site-id="siteFilter"
+          />
+
+          <CtmsMilestonesSection
+            v-else-if="section?.id === 'site-milestones'"
+            :key="`milestones-${studyCode}`"
+            :study-code="studyCode"
+            :site-id="siteFilter"
+          />
+
+          <CtmsDelegationSection
+            v-else-if="section?.id === 'delegation'"
+            :key="`delegation-${studyCode}`"
+            :study-code="studyCode"
+            :site-id="siteFilter"
+          />
+
+          <CtmsMonitoringSection
+            v-else-if="section?.id === 'monitoring-visits'"
+            :key="`monitoring-${studyCode}`"
+            :study-code="studyCode"
+            :site-id="siteFilter"
+          />
+
+          <RtsmSupplySection
+            v-else-if="section?.id === 'supply'"
+            :key="`supply-${studyCode}`"
+            :study-code="studyCode"
+            :site-id="siteFilter"
           />
 
           <DocumentManagerView
@@ -345,33 +381,10 @@
             :study-id="studyCode"
           />
 
-          <SsuGreenlightConsole
-            v-else-if="section?.id === 'greenlight'"
-            :key="`greenlight-${studyCode}`"
-            :study-id="studyCode"
-            :site-id="siteFilter || 'SITE-101'"
-          />
-
           <StudyTrainingView
             v-else-if="section?.id === 'training'"
             :key="`training-${studyCode}`"
             :study-id="studyCode"
-          />
-
-          <CtmsView
-            v-else-if="section?.id === 'milestones'"
-            :key="`milestones-${studyCode}`"
-            :study-code="studyCode"
-            :initial-site-id="siteFilter"
-            section-mode="milestones"
-          />
-
-          <CtmsView
-            v-else-if="section?.id === 'monitoring'"
-            :key="`monitoring-${studyCode}`"
-            :study-code="studyCode"
-            :initial-site-id="siteFilter"
-            section-mode="monitoring"
           />
 
           <QueriesSection
@@ -884,10 +897,13 @@ import QueriesSection, {
 import StudyActivity from "../components/canvas/StudyActivity.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
-import SsuGreenlightConsole from "../components/clinical/SsuGreenlightConsole.vue";
+import CtmsGreenlightSection from "../components/clinical/CtmsGreenlightSection.vue";
+import CtmsMilestonesSection from "../components/clinical/CtmsMilestonesSection.vue";
+import CtmsDelegationSection from "../components/clinical/CtmsDelegationSection.vue";
+import CtmsMonitoringSection from "../components/clinical/CtmsMonitoringSection.vue";
+import RtsmSupplySection from "../components/clinical/RtsmSupplySection.vue";
 import NeedsAttention from "../components/ai/NeedsAttention.vue";
 import ProposalReview from "../components/ai/ProposalReview.vue";
-import CtmsView from "./CtmsView.vue";
 import DocumentManagerView from "./DocumentManagerView.vue";
 import ObservationView from "./ObservationView.vue";
 import StudyTrainingView from "./StudyTrainingView.vue";

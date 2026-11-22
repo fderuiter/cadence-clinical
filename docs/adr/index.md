@@ -374,7 +374,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2425: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md) (2026-08-31)
 - [ADR-2640: Randomisation Allocates from Approved, Encrypted Scheme Versions](2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md) (2026-10-20)
 - [ADR-2641: Contextual SOP Specificity Resolution and Audited Support Ticket Escalation](2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md) (2026-11-20)
-- [ADR-2642: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks](2026-11-20-wire-web-ctms-training-and-etmf-workspaces-and-signed-completeness-webhooks.md) (2026-11-20)
+- [ADR-2642: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation](2026-11-20-ctms-core-topology-scoped-isolation-and-stateful-site-activation.md) (2026-11-20)
+- [ADR-2643: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks](2026-11-20-wire-web-ctms-training-and-etmf-workspaces-and-signed-completeness-webhooks.md) (2026-11-20)
 
 ### 5. Compliance, Audit & Governance
 

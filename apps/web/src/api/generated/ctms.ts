@@ -786,6 +786,15 @@ export interface operations {
           "application/json": components["schemas"]["Ctms_MonitoringVisitResponseDto"][];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
     };
   };
   ScheduleMonitoringVisit: {
@@ -812,6 +821,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -847,6 +865,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -894,6 +921,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
       /** @description Not Found */
       404: {
         headers: {
@@ -925,6 +961,24 @@ export interface operations {
           "application/json": components["schemas"]["Ctms_GeneratedLetterResponseDto"][];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
     };
   };
   GetMonitoringVisitLetterByType: {
@@ -946,6 +1000,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Ctms_GeneratedLetterResponseDto"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
       /** @description Not Found */
@@ -978,6 +1041,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Ctms_SiteMilestoneResponseDto"][];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
     };
@@ -1013,6 +1085,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
     };
   };
   UpdateSiteMilestone: {
@@ -1041,6 +1122,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -1272,6 +1362,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
       /** @description Not Found */
       404: {
         headers: {
@@ -1314,6 +1413,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
       /** @description Not Found */
       404: {
         headers: {
@@ -1349,6 +1457,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };

@@ -1,45 +1,70 @@
+import {
+  getBearerToken,
+  refreshBearerTokenOnUnauthorized,
+} from "./authorization.js";
 import { encodeChangeReason } from "./changeReason";
-import { createOpenApiClient, unwrapResponse } from "./client";
+import {
+  ApiError,
+  createOpenApiClient,
+  getBaseUrl,
+  unwrapResponse,
+} from "./client";
 import type { components, paths } from "./generated/ctms";
 
+/**
+ * Typed client for the .NET CTMS service, generated from docs/openapi/ctms_openapi.json (ADR-2610, ADR-2642, ADR-2643).
+ *
+ * Every CTMS call in the web app goes through this client: startup greenlight readiness and certification,
+ * site milestones, monitoring visits and compiled signed letters, and Delegation of Authority (DoA) logs.
+ */
 type Schemas = components["schemas"];
 
-export type SiteGreenlightGateResponse =
-  Schemas["Ctms_SiteGreenlightGateResponseDto"];
+export type SiteGreenlightGate = Schemas["Ctms_SiteGreenlightGateResponseDto"];
+export type SiteGreenlightGateResponse = SiteGreenlightGate;
 export type BatchCertifyRequest = Schemas["Ctms_BatchCertifyRequestDto"];
 export type BatchCertifyResponse = Schemas["Ctms_BatchCertifyResponseDto"];
 export type CertifiedSiteItem = Schemas["Ctms_CertifiedSiteItemDto"];
 
-export type SiteMilestoneResponse = Schemas["Ctms_SiteMilestoneResponseDto"];
+export type SiteMilestone = Schemas["Ctms_SiteMilestoneResponseDto"];
+export type SiteMilestoneResponse = SiteMilestone;
 export type SiteMilestoneCreate = Schemas["Ctms_SiteMilestoneCreateDto"];
 export type SiteMilestoneUpdate = Schemas["Ctms_SiteMilestoneUpdateDto"];
 
-export type MonitoringVisitResponse =
-  Schemas["Ctms_MonitoringVisitResponseDto"];
+export type MonitoringVisit = Schemas["Ctms_MonitoringVisitResponseDto"];
+export type MonitoringVisitResponse = MonitoringVisit;
 export type MonitoringVisitCreate = Schemas["Ctms_MonitoringVisitCreateDto"];
 export type MonitoringVisitComplete =
   Schemas["Ctms_MonitoringVisitCompleteDto"];
-export type FindingCreate = Schemas["Ctms_FindingCreateDto"];
-export type GeneratedLetterResponse =
-  Schemas["Ctms_GeneratedLetterResponseDto"];
+export type MonitoringFindingCreate = Schemas["Ctms_FindingCreateDto"];
+export type FindingCreate = MonitoringFindingCreate;
+export type GeneratedVisitLetter = Schemas["Ctms_GeneratedLetterResponseDto"];
+export type GeneratedLetterResponse = GeneratedVisitLetter;
 
 export type SiteVisitFindingModel = Schemas["Ctms_SiteVisitFindingModel"];
 export type SiteVisitLetterModel = Schemas["Ctms_SiteVisitLetterModel"];
 export type VisitLetterCompilationResult =
   Schemas["Ctms_VisitLetterCompilationResultDto"];
 
-export type DelegationResponse = Schemas["Ctms_DelegationResponseDto"];
+export type DoaLog = Schemas["Ctms_DoaLogResponseDto"];
+export type DoaLogResponse = DoaLog;
+export type DelegationRecord = Schemas["Ctms_DelegationResponseDto"];
+export type DelegationResponse = DelegationRecord;
 export type DelegationTaskRequest = Schemas["Ctms_DelegationTaskRequest"];
 export type RevokeDelegationRequest = Schemas["Ctms_RevokeDelegationRequest"];
 export type DoaSignOffRequest = Schemas["Ctms_DoaSignOffRequest"];
-export type DoaLogResponse = Schemas["Ctms_DoaLogResponseDto"];
+export type DoaAuditHistoryItem = Schemas["Ctms_DoaAuditHistoryItemDto"];
 
 export interface ListSiteMilestonesQuery {
+  studyId?: string;
+  siteId?: string;
   study_id?: string;
   site_id?: string;
 }
 
 export interface ListMonitoringVisitsQuery {
+  studyId?: string;
+  siteId?: string;
+  craId?: string;
   study_id?: string;
   site_id?: string;
   cra_id?: string;
@@ -64,63 +89,94 @@ function buildAuditHeaders(
   return headers;
 }
 
+async function fetchAuthenticatedPdf(pathSuffix: string): Promise<Blob> {
+  const token = await getBearerToken();
+  const baseUrl = getBaseUrl().replace(/\/+$/, "");
+  const url = `${baseUrl}${pathSuffix}`;
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  let response = await globalThis.fetch(url, { method: "GET", headers });
+  if (response.status === 401) {
+    const errBody = await response
+      .clone()
+      .json()
+      .catch(() => null);
+    const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
+    if (freshToken) {
+      response = await globalThis.fetch(url, {
+        method: "GET",
+        headers: { ...headers, Authorization: `Bearer ${freshToken}` },
+      });
+    }
+  }
+  if (!response.ok) {
+    const errData = await response.json().catch(() => null);
+    const detail =
+      (errData as Record<string, unknown> | null)?.detail ||
+      `Request failed with status ${response.status}`;
+    throw new ApiError(
+      String(detail),
+      response.status,
+      response.statusText,
+      errData
+    );
+  }
+  return response.blob();
+}
+
 const client = createOpenApiClient<paths>();
 
-/**
- * Typed client for the .NET CTMS service, generated from docs/openapi/ctms_openapi.json.
- * Every request flows through `createOpenApiClient` so `Authorization: Bearer` and
- * `X-Change-Reason` headers are attached consistently.
- */
 export const ctmsApi = {
-  /** Evaluates 6-facet greenlight readiness for a single trial site (GET /api/v1/ctms/startup/sites/{siteId}/greenlight). */
+  /** Evaluates 6-facet startup greenlight readiness for a single site. */
   evaluateSiteGreenlight(
     siteId: string,
     studyId: string,
     countryCode?: string
-  ): Promise<SiteGreenlightGateResponse> {
+  ): Promise<SiteGreenlightGate> {
     return unwrapResponse(
       client.GET("/api/v1/ctms/startup/sites/{siteId}/greenlight", {
         params: {
           path: { siteId },
           query: {
             study_id: studyId,
-            country_code: countryCode,
+            country_code: countryCode || undefined,
           },
         },
       })
     );
   },
 
-  /** Certifies greenlight activation for a single trial site (POST /api/v1/ctms/startup/sites/{siteId}/greenlight/certify). */
+  /** Certifies startup greenlight readiness for a single compliant site with Part 11 change reason. */
   certifySiteGreenlight(
     siteId: string,
     studyId: string,
-    reasonForChange: string,
+    changeReason: string,
     countryCode?: string,
     sigToken?: string
-  ): Promise<SiteGreenlightGateResponse> {
+  ): Promise<SiteGreenlightGate> {
+    const encodedReason = encodeChangeReason(changeReason);
     return unwrapResponse(
       client.POST("/api/v1/ctms/startup/sites/{siteId}/greenlight/certify", {
         params: {
           path: { siteId },
           query: {
             study_id: studyId,
-            country_code: countryCode,
+            country_code: countryCode || undefined,
           },
+          header: { "X-Change-Reason": encodedReason },
         },
-        headers: buildAuditHeaders({
-          changeReason: reasonForChange,
-          sigToken,
-        }),
+        headers: buildAuditHeaders({ changeReason, sigToken }),
       })
     );
   },
 
-  /** Fetches the country-level 6-facet greenlight matrix (GET /api/v1/ctms/startup/matrix). */
-  getCountryMatrix(
+  /** Lists 6-facet startup greenlight gates across caller-authorized sites in a country. */
+  getCountryGreenlightMatrix(
     studyId: string,
     countryCode: string
-  ): Promise<SiteGreenlightGateResponse[]> {
+  ): Promise<SiteGreenlightGate[]> {
     return unwrapResponse(
       client.GET("/api/v1/ctms/startup/matrix", {
         params: {
@@ -133,138 +189,154 @@ export const ctmsApi = {
     );
   },
 
-  /** Batch-certifies 100% compliant sites in a target country (POST /api/v1/ctms/startup/matrix/batch-certify). */
+  /** Alias for `getCountryGreenlightMatrix` used by country startup consoles. */
+  getCountryMatrix(
+    studyId: string,
+    countryCode: string
+  ): Promise<SiteGreenlightGate[]> {
+    return this.getCountryGreenlightMatrix(studyId, countryCode);
+  },
+
+  /** Batch-certifies selected 100% compliant sites in a country with a single Part 11 justification. */
   batchCertifyCountrySites(
     payload: BatchCertifyRequest,
-    reasonForChange: string,
+    changeReason: string,
     sigToken?: string
   ): Promise<BatchCertifyResponse> {
+    const encodedReason = encodeChangeReason(changeReason);
     return unwrapResponse(
       client.POST("/api/v1/ctms/startup/matrix/batch-certify", {
+        params: {
+          header: { "X-Change-Reason": encodedReason },
+        },
         body: payload,
-        headers: buildAuditHeaders({
-          changeReason: reasonForChange,
-          sigToken,
-        }),
+        headers: buildAuditHeaders({ changeReason, sigToken }),
       })
     );
   },
 
-  /** Lists site milestones filtered by study or site (GET /api/v1/ctms/site-milestones). */
+  /** Lists site milestones filtered by study and/or site within caller scope. */
   listSiteMilestones(
     query: ListSiteMilestonesQuery = {}
-  ): Promise<SiteMilestoneResponse[]> {
+  ): Promise<SiteMilestone[]> {
     return unwrapResponse(
       client.GET("/api/v1/ctms/site-milestones", {
         params: {
           query: {
-            study_id: query.study_id,
-            site_id: query.site_id,
+            study_id: (query.studyId ?? query.study_id) || undefined,
+            site_id: (query.siteId ?? query.site_id) || undefined,
           },
         },
       })
     );
   },
 
-  /** Creates a new site milestone (POST /api/v1/ctms/site-milestones). */
+  /** Creates a site milestone with a required Part 11 reason for change. */
   createSiteMilestone(
-    payload: SiteMilestoneCreate
-  ): Promise<SiteMilestoneResponse> {
+    payload: SiteMilestoneCreate,
+    changeReason?: string
+  ): Promise<SiteMilestone> {
+    const reason = changeReason ?? payload.reason_for_change ?? undefined;
     return unwrapResponse(
       client.POST("/api/v1/ctms/site-milestones", {
-        body: payload,
-        headers: buildAuditHeaders({
-          changeReason: payload.reason_for_change ?? undefined,
-        }),
+        body: {
+          ...payload,
+          reason_for_change: payload.reason_for_change ?? reason,
+        },
+        headers: buildAuditHeaders({ changeReason: reason }),
       })
     );
   },
 
-  /** Updates an existing site milestone (PUT /api/v1/ctms/site-milestones/{milestone_id}). */
+  /** Updates a site milestone status or dates with a required Part 11 reason for change. */
   updateSiteMilestone(
     milestoneId: string,
-    payload: SiteMilestoneUpdate
-  ): Promise<SiteMilestoneResponse> {
+    payload: SiteMilestoneUpdate,
+    changeReason?: string
+  ): Promise<SiteMilestone> {
+    const reason = changeReason ?? payload.reason_for_change ?? undefined;
     return unwrapResponse(
       client.PUT("/api/v1/ctms/site-milestones/{milestone_id}", {
         params: { path: { milestone_id: milestoneId } },
-        body: payload,
-        headers: buildAuditHeaders({
-          changeReason: payload.reason_for_change ?? undefined,
-        }),
+        body: {
+          ...payload,
+          reason_for_change: payload.reason_for_change ?? reason,
+        },
+        headers: buildAuditHeaders({ changeReason: reason }),
       })
     );
   },
 
-  /** Lists monitoring visits filtered by study, site, CRA, or status (GET /api/v1/ctms/monitoring-visits). */
+  /** Lists monitoring visits filtered by study, site, CRA, or status within caller scope. */
   listMonitoringVisits(
     query: ListMonitoringVisitsQuery = {}
-  ): Promise<MonitoringVisitResponse[]> {
+  ): Promise<MonitoringVisit[]> {
     return unwrapResponse(
       client.GET("/api/v1/ctms/monitoring-visits", {
         params: {
           query: {
-            study_id: query.study_id,
-            site_id: query.site_id,
-            cra_id: query.cra_id,
-            status: query.status,
+            study_id: (query.studyId ?? query.study_id) || undefined,
+            site_id: (query.siteId ?? query.site_id) || undefined,
+            cra_id: (query.craId ?? query.cra_id) || undefined,
+            status: query.status || undefined,
           },
         },
       })
     );
   },
 
-  /** Schedules a new monitoring visit (POST /api/v1/ctms/monitoring-visits). */
+  /** Schedules a new monitoring visit. */
   scheduleMonitoringVisit(
-    payload: MonitoringVisitCreate
-  ): Promise<MonitoringVisitResponse> {
+    payload: MonitoringVisitCreate,
+    changeReason?: string
+  ): Promise<MonitoringVisit> {
+    const reason = changeReason ?? payload.reason_for_change ?? undefined;
     return unwrapResponse(
       client.POST("/api/v1/ctms/monitoring-visits", {
-        body: payload,
-        headers: buildAuditHeaders({
-          changeReason: payload.reason_for_change ?? undefined,
-        }),
+        body: {
+          ...payload,
+          reason_for_change: payload.reason_for_change ?? reason,
+        },
+        headers: buildAuditHeaders({ changeReason: reason }),
       })
     );
   },
 
-  /** Completes a scheduled monitoring visit with actual date and clinical findings (POST /api/v1/ctms/monitoring-visits/{visit_id}/complete). */
+  /** Completes a scheduled monitoring visit with actual date and clinical findings. */
   completeMonitoringVisit(
     visitId: string,
-    payload: MonitoringVisitComplete
-  ): Promise<MonitoringVisitResponse> {
+    payload: MonitoringVisitComplete,
+    changeReason?: string
+  ): Promise<MonitoringVisit> {
+    const reason = changeReason ?? payload.reason_for_change ?? undefined;
     return unwrapResponse(
       client.POST("/api/v1/ctms/monitoring-visits/{visit_id}/complete", {
         params: { path: { visit_id: visitId } },
-        body: payload,
-        headers: buildAuditHeaders({
-          changeReason: payload.reason_for_change ?? undefined,
-        }),
+        body: {
+          ...payload,
+          reason_for_change: payload.reason_for_change ?? reason,
+        },
+        headers: buildAuditHeaders({ changeReason: reason }),
       })
     );
   },
 
-  /** Performs supervisory Part 11 sign-off on a completed monitoring visit (POST /api/v1/ctms/monitoring-visits/{visit_id}/sign-off). */
+  /** Records supervisory Part 11 sign-off on a completed monitoring visit. */
   signOffMonitoringVisit(
     visitId: string,
-    reasonForChange: string,
+    changeReason: string,
     sigToken?: string
-  ): Promise<MonitoringVisitResponse> {
+  ): Promise<MonitoringVisit> {
     return unwrapResponse(
       client.POST("/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", {
         params: { path: { visit_id: visitId } },
-        headers: buildAuditHeaders({
-          changeReason: reasonForChange,
-          sigToken,
-        }),
+        headers: buildAuditHeaders({ changeReason, sigToken }),
       })
     );
   },
 
-  /** Lists generated visit letters for a monitoring visit (GET /api/v1/ctms/monitoring-visits/{visit_id}/letters). */
-  getMonitoringVisitLetters(
-    visitId: string
-  ): Promise<GeneratedLetterResponse[]> {
+  /** Lists generated confirmation and follow-up letters for a monitoring visit. */
+  listMonitoringVisitLetters(visitId: string): Promise<GeneratedVisitLetter[]> {
     return unwrapResponse(
       client.GET("/api/v1/ctms/monitoring-visits/{visit_id}/letters", {
         params: { path: { visit_id: visitId } },
@@ -272,18 +344,21 @@ export const ctmsApi = {
     );
   },
 
-  /** Gets a generated visit letter by type (GET /api/v1/ctms/monitoring-visits/{visit_id}/letters/{letter_type}). */
+  /** Alias for `listMonitoringVisitLetters`. */
+  getMonitoringVisitLetters(visitId: string): Promise<GeneratedVisitLetter[]> {
+    return this.listMonitoringVisitLetters(visitId);
+  },
+
+  /** Retrieves a specific generated monitoring visit letter by type. */
   getMonitoringVisitLetterByType(
     visitId: string,
     letterType: string
-  ): Promise<GeneratedLetterResponse> {
+  ): Promise<GeneratedVisitLetter> {
     return unwrapResponse(
       client.GET(
         "/api/v1/ctms/monitoring-visits/{visit_id}/letters/{letter_type}",
         {
-          params: {
-            path: { visit_id: visitId, letter_type: letterType },
-          },
+          params: { path: { visit_id: visitId, letter_type: letterType } },
         }
       )
     );
@@ -324,20 +399,13 @@ export const ctmsApi = {
 
   /** Downloads a compiled GxP PDF visit letter with bearer authorization (GET /api/v1/ctms/letters/{letterId}/pdf). */
   downloadVisitLetterPdf(letterId: string): Promise<Blob> {
-    return unwrapResponse<Blob>(
-      client.GET("/api/v1/ctms/letters/{letterId}/pdf", {
-        params: { path: { letterId } },
-        parseAs: "blob",
-      }) as unknown as Promise<{
-        data?: Blob;
-        error?: unknown;
-        response: Response;
-      }>
+    return fetchAuthenticatedPdf(
+      `/api/v1/ctms/letters/${encodeURIComponent(letterId)}/pdf`
     );
   },
 
-  /** Fetches the active and historical Delegation of Authority log for a site (GET /api/v1/ctms/doa/sites/{site_id}/log). */
-  getSiteDoaLog(siteId: string): Promise<DoaLogResponse> {
+  /** Fetches the active and historical Delegation of Authority (DoA) log for a site. */
+  getSiteDoaLog(siteId: string): Promise<DoaLog> {
     return unwrapResponse(
       client.GET("/api/v1/ctms/doa/sites/{site_id}/log", {
         params: { path: { site_id: siteId } },
@@ -345,61 +413,65 @@ export const ctmsApi = {
     );
   },
 
-  /** Assigns site trial task delegation requiring PI sign-off (POST /api/v1/ctms/doa/delegate). */
+  /** Delegates trial duties to a site staff member pending Principal Investigator sign-off. */
   delegateSiteTasks(
-    payload: DelegationTaskRequest
-  ): Promise<DelegationResponse> {
+    payload: DelegationTaskRequest,
+    changeReason?: string
+  ): Promise<DelegationRecord> {
+    const reason = changeReason ?? payload.reason_for_change ?? undefined;
     return unwrapResponse(
       client.POST("/api/v1/ctms/doa/delegate", {
-        body: payload,
-        headers: buildAuditHeaders({
-          changeReason: payload.reason_for_change ?? undefined,
-        }),
+        body: {
+          ...payload,
+          reason_for_change: payload.reason_for_change ?? reason ?? null,
+        },
+        headers: buildAuditHeaders({ changeReason: reason }),
       })
     );
   },
 
-  /** Revokes or ends a delegated trial duty (POST /api/v1/ctms/doa/revoke). */
+  /** Revokes an active delegated trial duty with reason for change. */
   revokeSiteTasks(
-    payload: RevokeDelegationRequest
-  ): Promise<DelegationResponse> {
+    payload: RevokeDelegationRequest,
+    changeReason?: string
+  ): Promise<DelegationRecord> {
+    const reason = changeReason ?? payload.reason_for_change ?? undefined;
     return unwrapResponse(
       client.POST("/api/v1/ctms/doa/revoke", {
-        body: payload,
-        headers: buildAuditHeaders({
-          changeReason: payload.reason_for_change ?? undefined,
-        }),
+        body: {
+          ...payload,
+          reason_for_change: payload.reason_for_change ?? reason ?? null,
+        },
+        headers: buildAuditHeaders({ changeReason: reason }),
       })
     );
   },
 
-  /** Endorses Delegation of Authority task assignment with PI eSignature (POST /api/v1/ctms/doa/sign-off). */
+  /** Endorses a Delegation of Authority record with Principal Investigator sign-off. */
   signOffDelegation(
     payload: DoaSignOffRequest,
-    sigToken?: string
-  ): Promise<DelegationResponse> {
+    changeReason?: string,
+    signatureToken?: string
+  ): Promise<DelegationRecord> {
+    const reason = changeReason ?? payload.reason_for_change ?? undefined;
     return unwrapResponse(
       client.POST("/api/v1/ctms/doa/sign-off", {
-        body: payload,
+        body: {
+          ...payload,
+          reason_for_change: payload.reason_for_change ?? reason ?? null,
+        },
         headers: buildAuditHeaders({
-          changeReason: payload.reason_for_change ?? undefined,
-          sigToken,
+          changeReason: reason,
+          sigToken: signatureToken,
         }),
       })
     );
   },
 
-  /** Exports 21 CFR Part 11 signed DOA PDF log with bearer authorization (GET /api/v1/ctms/doa/sites/{site_id}/export-pdf). */
+  /** Exports the 21 CFR Part 11 signed Delegation of Authority PDF log for a site. */
   exportSiteDoaPdf(siteId: string): Promise<Blob> {
-    return unwrapResponse<Blob>(
-      client.GET("/api/v1/ctms/doa/sites/{site_id}/export-pdf", {
-        params: { path: { site_id: siteId } },
-        parseAs: "blob",
-      }) as unknown as Promise<{
-        data?: Blob;
-        error?: unknown;
-        response: Response;
-      }>
+    return fetchAuthenticatedPdf(
+      `/api/v1/ctms/doa/sites/${encodeURIComponent(siteId)}/export-pdf`
     );
   },
 };

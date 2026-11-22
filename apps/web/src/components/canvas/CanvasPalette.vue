@@ -294,6 +294,11 @@ const items = computed<PaletteItem[]>(() => {
         });
       }
     }
+  }
+  for (const wsItem of props.workspaceItems) {
+    list.push(wsItem);
+  }
+  if (study) {
     for (const participant of allParticipants.value) {
       list.push({
         key: `participant:${participant.id}`,
@@ -313,9 +318,6 @@ const items = computed<PaletteItem[]>(() => {
         },
       });
     }
-  }
-  for (const wsItem of props.workspaceItems) {
-    list.push(wsItem);
   }
   return list;
 });

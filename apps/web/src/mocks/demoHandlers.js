@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { isValidSemanticAction, isValidStepUpAction } from "ui";
-import { demoNowIso, nextDemoStep } from "../utils/demoMode.js";
+import { demoNowIso, demoNowMs, nextDemoStep } from "../utils/demoMode.js";
 import { webDemoStore } from "./demoStore.js";
 import { parseDemoProtocolImportRequest } from "./demoStudyImport.js";
 
@@ -767,6 +767,150 @@ export function createWebDemoHandlers(store = webDemoStore) {
         )
       )
     ),
+    http.get(
+      "*/api/v1/execution/rtsm/kits/inventory/:studyId/:siteId",
+      ({ params }) =>
+        HttpResponse.json(
+          store.state.ipKits.filter(
+            (k) => k.site_id === params.siteId || params.siteId === "SITE-101"
+          )
+        )
+    ),
+    http.post(
+      "*/api/v1/execution/rtsm/kits/seed-inventory",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        const items = Array.isArray(body?.kits) ? body.kits : [];
+        for (const [idx, kit] of items.entries()) {
+          store.state.ipKits.push({
+            id: `kit-${demoNowMs(idx)}`,
+            study_id: body?.study_id || "DEMO-01",
+            site_id: body?.site_id || "SITE-101",
+            kit_number: kit.kit_number || "KIT-DEMO-99",
+            lot_number: kit.lot_number || "LOT-DEMO",
+            status: "AVAILABLE",
+            expiration_date: kit.expiration_date || null,
+          });
+        }
+        return HttpResponse.json({ seeded: items.length }, { status: 201 });
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/rtsm/kits/validate-scan",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        const kit = store.state.ipKits.find(
+          (k) => k.kit_number === body?.kit_number
+        );
+        const scannedLot = body?.scanned_lot_number || null;
+        const mismatch = Boolean(
+          kit && scannedLot && kit.lot_number !== scannedLot
+        );
+        return HttpResponse.json({
+          kit_number: body?.kit_number || "",
+          study_id: body?.study_id || "DEMO-01",
+          site_id: body?.site_id || "SITE-101",
+          found_in_inventory: Boolean(kit),
+          expected_lot_number: kit?.lot_number || null,
+          scanned_lot_number: scannedLot,
+          lot_mismatch_detected: mismatch,
+          current_status: kit?.status || "UNKNOWN",
+          recommended_disposition: mismatch
+            ? "QUARANTINED"
+            : "RETURNED_TO_DEPOT",
+          warning: mismatch ? "Lot mismatch detected during scan." : null,
+        });
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/rtsm/kits/reconcile-batch",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        const items = Array.isArray(body?.items) ? body.items : [];
+        return HttpResponse.json({
+          certificate: {
+            certificate_id: `cert-${demoNowMs()}`,
+            study_id: body?.study_id || "DEMO-01",
+            site_id: body?.site_id || "SITE-101",
+            processed_by: body?.processed_by || "usr-pharm-01",
+            processed_at: demoNowIso(),
+            total_kits_reconciled: items.length,
+            items,
+          },
+        });
+      }
+    ),
+    http.get(
+      "*/api/v1/execution/rtsm/kits/certificates/:certificateId",
+      ({ params }) =>
+        HttpResponse.json({
+          certificate_id: String(params.certificateId),
+          study_id: "DEMO-01",
+          site_id: "SITE-101",
+          total_kits_reconciled: 1,
+        })
+    ),
+    http.get("*/api/v1/execution/randomization/schemes", ({ request }) => {
+      const url = new URL(request.url);
+      const studyId = url.searchParams.get("study_id") || "DEMO-01";
+      return HttpResponse.json([
+        {
+          id: "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5",
+          study_id: studyId,
+          version: 1,
+          method: "PERMUTED_BLOCK",
+          status: "APPROVED",
+          requires_kit: true,
+          approved_by: "usr-stat-01",
+          approved_at: "2026-07-10T12:00:00Z",
+        },
+      ]);
+    }),
+    http.get(
+      "*/api/v1/execution/rtsm/cgt/chain-of-custody/:studyId/:subjectId",
+      ({ params }) =>
+        HttpResponse.json({
+          study_id: String(params.studyId),
+          subject_id: String(params.subjectId),
+          din: "DIN-DEMO-ALPHA",
+          current_stage: "MANUFACTURING_RELEASED",
+          status: "IN_CUSTODY",
+          milestones: [
+            {
+              id: "cgt-ms-01",
+              stage: "APHERESIS",
+              milestone_type: "COLLECTION_VERIFIED",
+              location_name: "Clinical Site Apheresis Unit",
+            },
+          ],
+        })
+    ),
+    http.post("*/api/v1/execution/rtsm/cgt/apheresis", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(
+        {
+          id: `cgt-${demoNowMs()}`,
+          study_id: body?.study_id || "DEMO-01",
+          subject_id: body?.subject_id || "SUBJ-1001",
+          din: body?.din || "DIN-DEMO-BETA",
+          current_stage: "APHERESIS",
+        },
+        { status: 201 }
+      );
+    }),
+    http.post("*/api/v1/execution/rtsm/cgt/milestone", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(
+        { status: "RECORDED", ...body },
+        { status: 201 }
+      );
+    }),
+    http.get("*/api/v1/execution/rtsm/cgt/certificates/:studyId", () =>
+      HttpResponse.json([])
+    ),
+    http.get("*/api/v1/execution/rtsm/cgt/reconciliations/:studyId", () =>
+      HttpResponse.json([])
+    ),
     http.get("*/api/v1/execution/locks", () =>
       HttpResponse.json(store.state.locks)
     ),
@@ -874,13 +1018,29 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.get("*/api/v1/ctms/monitoring-visits/:id/letters", ({ params }) =>
       HttpResponse.json([
         {
-          id: `ltr-${params.id}-followup`,
+          id: `ltr-${params.id}`,
           visit_id: String(params.id),
-          letter_type: "FOLLOW_UP",
+          letter_type: "CONFIRMATION",
+          subject: "Monitoring Visit Confirmation",
+          body_markdown:
+            "Scheduled monitoring visit confirmation and agenda summary.",
           status: "COMPILED",
           generated_at: demoNowIso(0),
         },
       ])
+    ),
+    http.get(
+      "*/api/v1/ctms/monitoring-visits/:id/letters/:letterType",
+      ({ params }) =>
+        HttpResponse.json({
+          id: `ltr-${params.id}-${params.letterType}`,
+          visit_id: String(params.id),
+          letter_type: String(params.letterType),
+          subject: `Monitoring Visit ${params.letterType}`,
+          body_markdown: `Generated ${params.letterType} letter for visit ${params.id}.`,
+          status: "COMPILED",
+          generated_at: demoNowIso(0),
+        })
     ),
     http.post(
       "*/api/v1/ctms/monitoring-visits/:id/:action",
@@ -915,15 +1075,25 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const body = await readJsonBody(request);
       const step = nextDemoStep("ctms-letter-compile");
       const letterId = `LTR-DEMO-${step}`;
+      const templateName =
+        url.searchParams.get("templateName") || "follow_up_letter";
       return HttpResponse.json({
+        letterId,
         letter_id: letterId,
-        template_name:
-          url.searchParams.get("templateName") || "follow_up_letter",
+        visitId: body?.visitId || null,
+        letterType: templateName,
+        template_name: templateName,
         study_id: body?.studyId || "CADENCE-101",
-        site_name: body?.siteName || "SITE-101",
+        site_name: body?.siteName || body?.siteId || "SITE-101",
         compiled_at: demoNowIso(step),
+        dispatchedAt: demoNowIso(step),
+        pdfSha256Hash: `sha256-demo-letter-${step}`,
         sha256_hash: `sha256-demo-letter-${step}`,
+        isSigned: Boolean(body?.finalize),
+        status: body?.finalize ? "FINALIZED" : "COMPILED",
+        etmfDocumentId: `DOC-LTR-${step}`,
         etmf_document_id: `DOC-LTR-${step}`,
+        pdfAccessUrl: `/api/v1/ctms/letters/${letterId}/pdf`,
         pdf_download_url: `/api/v1/ctms/letters/${letterId}/pdf`,
       });
     }),

@@ -15,7 +15,13 @@ export interface RawRoleHolder {
   rawRoles?: readonly string[] | null;
 }
 
-const BACKEND_ROLE_ALIASES: Record<string, string> = {
+type AuthorityAuth = Partial<RoleHolder> & RawRoleHolder;
+
+/**
+ * Mirrors packages/security/src/Rbac/RoleNormalization.cs so workspace action gating matches backend
+ * PermissionMatrix grants without web-only role alias inflation.
+ */
+const BACKEND_ROLE_ALIASES: Readonly<Record<string, string>> = {
   "unblinded statistician": "unblinded_statistician",
   "lead unblinded statistician": "unblinded_statistician",
   unblinded_statistician: "unblinded_statistician",
@@ -40,6 +46,7 @@ const BACKEND_ROLE_ALIASES: Record<string, string> = {
   "system administrator": "sysadmin",
   system_admin: "sysadmin",
   "system-admin": "sysadmin",
+  super_admin: "sysadmin",
   "sponsor study designer": "sponsor_designer",
   sponsor_designer: "sponsor_designer",
   "sponsor-designer": "sponsor_designer",
@@ -116,6 +123,7 @@ const BACKEND_ROLE_ALIASES: Record<string, string> = {
   auditor: "auditor",
   inspector: "auditor",
   regulatory_inspector: "auditor",
+  tmf_auditor: "auditor",
   finance_officer: "finance_officer",
   "finance officer": "finance_officer",
   "finance-officer": "finance_officer",
@@ -133,14 +141,28 @@ export function normalizeBackendRole(role: string): string {
   return BACKEND_ROLE_ALIASES[norm] ?? norm;
 }
 
-function hasAnyCanonicalRole(
-  auth: RawRoleHolder | null | undefined,
-  allowedRoles: ReadonlySet<string>
+function canonicalBackendRoles(
+  auth: AuthorityAuth | null | undefined
+): string[] {
+  if (!auth) return [];
+  const raw = auth.rawRoles ?? [];
+  if (raw.length > 0) {
+    return raw.map((r) => normalizeBackendRole(r)).filter(Boolean);
+  }
+  if (typeof auth.hasRole === "function") {
+    const inferred: string[] = [];
+    if (auth.hasRole("sponsor_admin")) inferred.push("sponsor_dm");
+    if (auth.hasRole("data_manager")) inferred.push("sponsor_dm");
+    return inferred;
+  }
+  return [];
+}
+
+function holdsBackendRole(
+  auth: AuthorityAuth | null | undefined,
+  allowed: ReadonlySet<string>
 ): boolean {
-  if (!auth?.rawRoles) return false;
-  return auth.rawRoles.some((role) =>
-    allowedRoles.has(normalizeBackendRole(role))
-  );
+  return canonicalBackendRoles(auth).some((role) => allowed.has(role));
 }
 
 /**
@@ -187,40 +209,69 @@ export function canVerifySource(auth: RoleHolder): boolean {
   return MONITORING_ROLES.some((role) => auth.hasRole(role));
 }
 
-const SPONSOR_CERTIFICATION_ROLES = new Set(["sysadmin", "sponsor_dm"]);
-const SITE_MILESTONE_WRITE_ROLES = new Set([
+// Roles granted observation.correct in the kernel (site coordinators, investigators, and data managers;
+// monitors and auditors inspect observations read-only per KernelObservationEndpoints.cs).
+const OBSERVATION_CORRECTION_ROLES = [
+  "site_investigator",
+  "crc",
+  "data_manager",
+];
+
+/** Whether the caller holds a role permitted to submit observation value corrections. */
+export function canCorrectObservations(
+  auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
+): boolean {
+  if (!auth.isAuthenticated) return true;
+  if (canManageParticipants(auth)) return true;
+  return OBSERVATION_CORRECTION_ROLES.some((role) => auth.hasRole(role));
+}
+
+const SITE_ACTIVATION_ROLES = new Set(["sysadmin", "sponsor_dm"]);
+const MILESTONE_WRITE_ROLES = new Set([
   "sysadmin",
   "sponsor_dm",
   "cra",
   "monitor",
 ]);
-const MONITORING_VISIT_EXECUTION_ROLES = new Set([
+const VISIT_SCHEDULE_ROLES = new Set(["sysadmin", "sponsor_dm", "cra"]);
+const VISIT_COMPLETE_ROLES = new Set([
   "sysadmin",
   "sponsor_dm",
   "cra",
-]);
-const MONITORING_VISIT_SIGNOFF_ROLES = new Set([
-  "sysadmin",
-  "sponsor_dm",
   "monitor",
 ]);
+const VISIT_SIGN_OFF_ROLES = new Set(["sysadmin", "sponsor_dm", "monitor"]);
 const DOA_MANAGE_ROLES = new Set([
   "sysadmin",
   "sponsor_dm",
-  "cra",
-  "monitor",
-  "crc",
   "investigator",
   "principal_investigator",
   "authorized_er_physician",
   "lead_investigator",
+  "crc",
+  "cra",
+  "monitor",
 ]);
-const DOA_SIGNOFF_ROLES = new Set([
+const DOA_SIGN_OFF_ROLES = new Set([
   "sysadmin",
   "investigator",
   "principal_investigator",
   "authorized_er_physician",
   "lead_investigator",
+]);
+const PHARMACIST_ROLES = new Set(["pharmacist"]);
+const CGT_WRITE_ROLES = new Set([
+  "investigator",
+  "principal_investigator",
+  "authorized_er_physician",
+  "lead_investigator",
+  "crc",
+  "pharmacist",
+]);
+const RANDOMIZATION_SCHEME_READ_ROLES = new Set([
+  "unblinded_statistician",
+  "sponsor_dm",
+  "auditor",
 ]);
 const ETMF_STAGE_QC_ROLES = new Set([
   "sysadmin",
@@ -248,12 +299,14 @@ export const GREENLIGHT_CERTIFY_ROLE_REASON =
   "Requires Sponsor Data Manager or System Administrator role (ctms_greenlight:certify).";
 export const SITE_MILESTONE_ROLE_REASON =
   "Requires CRA, Monitor, Sponsor Data Manager, or System Administrator role (ctms_site_milestone:update).";
-export const MONITORING_VISIT_COMPLETE_ROLE_REASON =
-  "Requires CRA, Sponsor Data Manager, or System Administrator role (ctms_monitoring_visit:update). Monitors perform supervisory sign-off only.";
-export const MONITORING_LETTER_COMPILE_ROLE_REASON =
+export const MONITORING_VISIT_SCHEDULE_ROLE_REASON =
   "Requires CRA, Sponsor Data Manager, or System Administrator role (ctms_monitoring_visit:create).";
+export const MONITORING_VISIT_COMPLETE_ROLE_REASON =
+  "Requires CRA, Monitor, Sponsor Data Manager, or System Administrator role (ctms_monitoring_visit:update).";
+export const MONITORING_LETTER_COMPILE_ROLE_REASON =
+  "Requires CRA, Sponsor Data Manager, or System Administrator role (ctms_monitoring_visit:create). Monitors perform supervisory sign-off rather than scheduling visits or compiling letters.";
 export const MONITORING_VISIT_SIGNOFF_ROLE_REASON =
-  "Requires Monitor, Sponsor Data Manager, or System Administrator role (ctms_monitoring_visit:sign_off). CRAs complete visits and compile letters; Monitors sign off.";
+  "Requires Monitor, Sponsor Data Manager, or System Administrator role (ctms_monitoring_visit:sign_off). CRAs schedule/complete visits and compile letters; Monitors sign off.";
 export const DOA_SIGNOFF_ROLE_REASON =
   "Requires Investigator or System Administrator role (ctms_doa:sign_off).";
 export const ETMF_QC_REVIEW_ROLE_REASON =
@@ -263,74 +316,97 @@ export const TRAINING_ASSIGN_ROLE_REASON =
 export const TRAINING_DELEGATION_SIGN_ROLE_REASON =
   "Requires Principal Investigator role (delegation_log:sign).";
 
-/** PermissionMatrix.Execution: `site_compliance:activate` (`sysadmin`, `sponsor_dm`). */
-export function canActivateSite(auth: RawRoleHolder): boolean {
-  return hasAnyCanonicalRole(auth, SPONSOR_CERTIFICATION_ROLES);
+/** Activate a compliant site in Execution (site_compliance:activate — sysadmin & sponsor_dm only). */
+export function canActivateSite(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, SITE_ACTIVATION_ROLES);
 }
 
-/** PermissionMatrix.Ctms: `ctms_greenlight:certify` (`sysadmin`, `sponsor_dm`). */
-export function canCertifyGreenlight(auth: RawRoleHolder): boolean {
-  return hasAnyCanonicalRole(auth, SPONSOR_CERTIFICATION_ROLES);
+/** Certify startup greenlight readiness in CTMS (ctms_greenlight:certify — sysadmin & sponsor_dm only). */
+export function canCertifyGreenlight(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, SITE_ACTIVATION_ROLES);
 }
 
-/** PermissionMatrix: `ctms_site_milestone:create` / `update` (`sysadmin`, `sponsor_dm`, `cra`, `monitor`). */
-export function canManageSiteMilestones(auth: RawRoleHolder): boolean {
-  return hasAnyCanonicalRole(auth, SITE_MILESTONE_WRITE_ROLES);
+/** Create and update site milestones in CTMS (ctms_site_milestone:create/update). */
+export function canManageMilestones(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, MILESTONE_WRITE_ROLES);
 }
 
-/** PermissionMatrix: `ctms_monitoring_visit:create` / `update` (`sysadmin`, `sponsor_dm`, `cra` — NOT `monitor`). */
-export function canManageMonitoringVisits(auth: RawRoleHolder): boolean {
-  return hasAnyCanonicalRole(auth, MONITORING_VISIT_EXECUTION_ROLES);
+/** Alias for `canManageMilestones` used across CTMS views. */
+export function canManageSiteMilestones(auth: AuthorityAuth): boolean {
+  return canManageMilestones(auth);
 }
 
-/** PermissionMatrix: `ctms_monitoring_visit:sign_off` (`sysadmin`, `sponsor_dm`, `monitor` — NOT `cra`). */
-export function canSignOffMonitoringVisit(auth: RawRoleHolder): boolean {
-  return hasAnyCanonicalRole(auth, MONITORING_VISIT_SIGNOFF_ROLES);
+/** Schedule monitoring visits and compile visit letters in CTMS (ctms_monitoring_visit:create). */
+export function canScheduleMonitoringVisits(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, VISIT_SCHEDULE_ROLES);
 }
 
-/** PermissionMatrix.Ctms: `ctms_doa:assign` / `revoke`. */
-export function canManageDoa(auth: RawRoleHolder): boolean {
-  return hasAnyCanonicalRole(auth, DOA_MANAGE_ROLES);
+/** Alias for `canScheduleMonitoringVisits` (`ctms_monitoring_visit:create`). */
+export function canManageMonitoringVisits(auth: AuthorityAuth): boolean {
+  return canScheduleMonitoringVisits(auth);
 }
 
-/** PermissionMatrix.Ctms: `ctms_doa:sign_off` (`sysadmin`, `investigator`, PI variants). */
-export function canSignOffDoa(auth: RawRoleHolder): boolean {
-  return hasAnyCanonicalRole(auth, DOA_SIGNOFF_ROLES);
+/** Complete scheduled monitoring visits in CTMS (ctms_monitoring_visit:update). */
+export function canCompleteMonitoringVisits(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, VISIT_COMPLETE_ROLES);
 }
 
-/** PermissionMatrix.Etmf: `etmf_document:create` (`sysadmin`, `sponsor_dm`, `cra`, `monitor`, `crc`). */
-export function canStageEtmfQc(auth: RawRoleHolder): boolean {
-  return hasAnyCanonicalRole(auth, ETMF_STAGE_QC_ROLES);
+/** Perform supervisory sign-off on completed monitoring visits (ctms_monitoring_visit:sign_off). */
+export function canSignOffMonitoringVisits(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, VISIT_SIGN_OFF_ROLES);
 }
 
-/** PermissionMatrix: `etmf_document:transition_clinical_qc` (`sysadmin`, `sponsor_dm`, `cra`, `monitor`). */
-export function canReviewEtmfQc(auth: RawRoleHolder): boolean {
-  return hasAnyCanonicalRole(auth, ETMF_REVIEW_QC_ROLES);
+/** Alias for `canSignOffMonitoringVisits`. */
+export function canSignOffMonitoringVisit(auth: AuthorityAuth): boolean {
+  return canSignOffMonitoringVisits(auth);
 }
 
-/** PermissionMatrix.Knowledge: `training_curriculum:assign` (`sysadmin`, `sponsor_dm`). */
-export function canAssignTrainingCurriculum(auth: RawRoleHolder): boolean {
-  return hasAnyCanonicalRole(auth, TRAINING_CURRICULUM_ASSIGN_ROLES);
+/** Delegate or revoke site trial tasks in CTMS (ctms_doa:assign/revoke). */
+export function canManageDoa(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, DOA_MANAGE_ROLES);
 }
 
-/** PermissionMatrix: `delegation_log:sign` (`principal_investigator`, `authorized_er_physician`, `lead_investigator`). */
-export function canSignTrainingDelegations(auth: RawRoleHolder): boolean {
-  return hasAnyCanonicalRole(auth, TRAINING_DELEGATION_SIGN_ROLES);
+/** Sign off Delegation of Authority records as Principal Investigator (ctms_doa:sign_off). */
+export function canSignOffDoa(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, DOA_SIGN_OFF_ROLES);
 }
 
-// Roles granted observation.correct in the kernel (site coordinators, investigators, and data managers;
-// monitors and auditors inspect observations read-only per KernelObservationEndpoints.cs).
-const OBSERVATION_CORRECTION_ROLES = [
-  "site_investigator",
-  "crc",
-  "data_manager",
-];
+/** Read and reconcile blinded site IP kit inventory (rtsm_supply:read/write — pharmacist only). */
+export function canReconcileIpKits(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, PHARMACIST_ROLES);
+}
 
-/** Whether the caller holds a role permitted to submit observation value corrections. */
-export function canCorrectObservations(
-  auth: RoleHolder & RawRoleHolder & { isAuthenticated?: boolean }
-): boolean {
-  if (!auth.isAuthenticated) return true;
-  if (canManageParticipants(auth)) return true;
-  return OBSERVATION_CORRECTION_ROLES.some((role) => auth.hasRole(role));
+/** Seed a site's IP kit inventory (ip_kit_inventory:seed — sysadmin & sponsor_dm). */
+export function canSeedIpKits(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, SITE_ACTIVATION_ROLES);
+}
+
+/** Record cell and gene therapy chain-of-custody handovers (cgt_chain_of_custody:write). */
+export function canRecordChainOfCustody(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, CGT_WRITE_ROLES);
+}
+
+/** Read blinded randomization scheme configuration (randomization_scheme:read). */
+export function canReadRandomizationSchemes(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, RANDOMIZATION_SCHEME_READ_ROLES);
+}
+
+/** Stage site startup / study documents into eTMF intelligence QC (etmf_document:create). */
+export function canStageEtmfQc(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, ETMF_STAGE_QC_ROLES);
+}
+
+/** Transition staged eTMF documents through clinical QC review (etmf_document:transition_clinical_qc). */
+export function canReviewEtmfQc(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, ETMF_REVIEW_QC_ROLES);
+}
+
+/** Assign protocol training curricula to personnel (training_curriculum:assign). */
+export function canAssignTrainingCurriculum(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, TRAINING_CURRICULUM_ASSIGN_ROLES);
+}
+
+/** Sign Knowledge site delegation logs as Principal Investigator (delegation_log:sign). */
+export function canSignTrainingDelegations(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, TRAINING_DELEGATION_SIGN_ROLES);
 }

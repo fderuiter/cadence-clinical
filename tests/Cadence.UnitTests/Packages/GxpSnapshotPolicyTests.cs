@@ -200,6 +200,42 @@ public sealed class GxpSnapshotPolicyTests : IDisposable
         GxpSnapshotGuardService.Check(_dir, preCommit: false, snapshotMode: false).Should().Be(1);
     }
 
+    [Fact]
+    public void Check_WithPushBefore_RefusesUnauthorizedSnapshotPushOnMainAndRelease_AcrossMultipleCommits()
+    {
+        WriteRequirements();
+        WriteTaggedTest("First", "PRD-AAA-001");
+        RtmGeneratorService.GenerateRtm(draft: true, repoRoot: _dir).Should().Be(0);
+        Git("init", "-q", "-b", "main");
+        Git("add", "-A");
+        Git("commit", "-q", "-m", "baseline snapshot");
+        string beforeMainPush = Git("rev-parse", "HEAD").Trim();
+
+        // Commit 1 edits the snapshot directly on main; Commit 2 touches an unrelated file.
+        string rtm = Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md");
+        File.AppendAllText(rtm, "\nunauthorized edit on main\n");
+        Git("add", "-A");
+        Git("commit", "-q", "-m", "unauthorized rtm edit");
+
+        File.WriteAllText(Path.Combine(_dir, "tests", "Notes.txt"), "clean commit 2\n");
+        Git("add", "-A");
+        Git("commit", "-q", "-m", "clean follow-up");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        // Without pushBefore, HEAD == origin/main would see no branch diff, whereas pushBefore catches Commit 1 on main!
+        GxpSnapshotGuardService.Check(_dir, preCommit: false, snapshotMode: false, pushBefore: beforeMainPush).Should().Be(1);
+
+        // Repeat on release/1.0 push range.
+        Git("checkout", "-q", "-b", "release/1.0");
+        string beforeReleasePush = Git("rev-parse", "HEAD").Trim();
+        Directory.CreateDirectory(Path.Combine(_dir, "docs", "SDLC", "runs", "run-1"));
+        File.WriteAllText(Path.Combine(_dir, "docs", "SDLC", "runs", "run-1", "summary.md"), "# Unauthorized run\n");
+        Git("add", "-A");
+        Git("commit", "-q", "-m", "unauthorized run artifact on release");
+
+        GxpSnapshotGuardService.Check(_dir, preCommit: false, snapshotMode: false, pushBefore: beforeReleasePush).Should().Be(1);
+    }
+
     private void WriteRequirements()
     {
         Directory.CreateDirectory(Path.Combine(_dir, "docs", "SDLC"));

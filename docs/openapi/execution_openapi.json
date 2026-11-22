@@ -4140,6 +4140,23 @@
             "items": {
               "type": "string"
             }
+          },
+          "is_activated": {
+            "type": "boolean",
+            "default": false
+          },
+          "activated_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "activated_by": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

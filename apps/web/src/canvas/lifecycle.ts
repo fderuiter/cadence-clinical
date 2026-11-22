@@ -10,12 +10,14 @@ export type StageId =
 export type SectionId =
   | "protocol-versions"
   | "site-activation"
+  | "startup-greenlight"
   | "documents"
-  | "greenlight"
   | "training"
+  | "site-milestones"
+  | "delegation"
   | "participants"
-  | "milestones"
-  | "monitoring"
+  | "monitoring-visits"
+  | "supply"
   | "queries"
   | "locks"
   | "exports";
@@ -61,22 +63,34 @@ export const STAGES: readonly Stage[] = [
           "A site's activation documents and activating the site once they are complete",
       },
       {
+        id: "startup-greenlight",
+        label: "Startup readiness",
+        description:
+          "Six-facet country and site readiness gates and Part 11 certification",
+      },
+      {
         id: "documents",
         label: "Documents",
         description:
-          "Study and site eTMF artifacts, intelligence staging, and clinical QC approval",
-      },
-      {
-        id: "greenlight",
-        label: "Greenlight gates",
-        description:
-          "6-facet site startup readiness evaluation and greenlight certification",
+          "Study and site essential document binder, intelligence staging, and clinical QC approval",
       },
       {
         id: "training",
         label: "Training",
         description:
           "Protocol curricula, personnel training assignments, and site delegation logs",
+      },
+      {
+        id: "site-milestones",
+        label: "Site milestones",
+        description:
+          "Planned and achieved startup and operational milestones by site",
+      },
+      {
+        id: "delegation",
+        label: "Delegation log",
+        description:
+          "Delegated trial duties, Principal Investigator sign-off, and export",
       },
     ],
   },
@@ -91,16 +105,16 @@ export const STAGES: readonly Stage[] = [
         description: "The study's participants in enrollment order",
       },
       {
-        id: "milestones",
-        label: "Milestones",
+        id: "monitoring-visits",
+        label: "Monitoring visits",
         description:
-          "Planned and completed site operational milestones across the study",
+          "Site monitoring visit schedules, trip findings, compiled letters, and supervisory sign-off",
       },
       {
-        id: "monitoring",
-        label: "Monitoring",
+        id: "supply",
+        label: "Investigational supply",
         description:
-          "CRA monitoring visits, findings, compiled visit letters, and supervisory sign-off",
+          "Chain-of-custody trace, site kit accountability, and randomization schemes",
       },
     ],
   },

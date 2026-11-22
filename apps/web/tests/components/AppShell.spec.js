@@ -86,14 +86,16 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     );
     craWrapper.unmount();
 
-    // 3. Data Manager sees Studies and Data collection, without Site readiness
+    // 3. Data Manager sees Studies, Data collection (/ecrf), and Site readiness (/ctms)
     authStore.rawRoles = ["Data Manager"];
     const dmWrapper = mount(AppShell, {
       global: { plugins: [router] },
     });
     expect(dmWrapper.find("#nav-studies").exists()).toBe(true);
     expect(dmWrapper.find("#nav-data-collection").exists()).toBe(true);
-    expect(dmWrapper.find("#nav-site-readiness").exists()).toBe(false);
+    expect(dmWrapper.find("#nav-site-readiness").attributes("href")).toBe(
+      "/ctms"
+    );
     dmWrapper.unmount();
 
     // 4. Auditor and Study Designer see Studies without unauthorized workflow links
