@@ -162,6 +162,7 @@ public static class CiPlan
     private const string StyleNodeInstall = "lint-and-static/Install Node dependencies";
     private const string StyleFrontendBuild = "lint-and-static/Build frontend workspace";
     private const string E2eJob = "accessibility-e2e"; // deid-ignore: the ci.yml job key, not an account number
+    private const string PlaywrightInstallHint = "cadence ci does not download browsers; run 'pnpm --filter web exec playwright install chromium' once yourself";
 
     /// <summary>
     /// The portable runtime identifier the Native AOT publish targets: this machine's (<c>linux-x64</c> in CI), since
@@ -302,6 +303,8 @@ public static class CiPlan
             },
             new("docs-build", "Build and stage co-hosted interactive demos") { Commands = [Pnpm("docs:stage-demos")] },
             new("docs-build", "Verify public bundles") { Commands = [NodeCli("check", "public-bundle")] },
+            new("docs-build", "Install Playwright Browsers") { NotRunLocally = PlaywrightInstallHint },
+            new("docs-build", "Audit staged co-hosted demo portals") { Commands = [Pnpm("docs:audit-demos")] },
         ])
         {
             Needs = ["native-aot-build"],
@@ -395,10 +398,7 @@ public static class CiPlan
         var e2e = new CiJob(E2eJob, "Parallel E2E Accessibility Testing",
         [
             new(E2eJob, "Install Node dependencies") { CoveredBy = StyleNodeInstall, Commands = [Pnpm("install", "--frozen-lockfile")] },
-            new(E2eJob, "Install Playwright Browsers")
-            {
-                NotRunLocally = "cadence ci does not download browsers; run 'pnpm --filter web exec playwright install chromium' once yourself",
-            },
+            new(E2eJob, "Install Playwright Browsers") { NotRunLocally = PlaywrightInstallHint },
             new(E2eJob, "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
             new(E2eJob, "Run Subject Portal E2E Accessibility Tests") { Commands = [Pnpm("--filter", "subject-portal", "test:e2e")] },
             new(E2eJob, "Run Web Application E2E Accessibility Tests")

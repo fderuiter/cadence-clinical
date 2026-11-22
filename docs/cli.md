@@ -229,7 +229,7 @@ Where it differs from CI:
   skips.
 - **Checks already run once are not repeated.** `actionlint` runs `actionlint`, `lint-and-static` runs Prettier, ESLint, Hadolint, `markdown` and `api-clients`,
   `dotnet-quality` runs `cadence check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle`,
-  `docs-build` builds the VitePress portal and co-hosted interactive demos and runs `public-bundle`,
+  `docs-build` builds the VitePress portal and co-hosted interactive demos and runs `public-bundle` and `pnpm docs:audit-demos`,
   and `security` runs `detect-secrets` and `vulnerabilities`. Steps in `security` whose gate already ran inside
   `Run Cadence quality sentinels` (the static security audit, secrets and DEID) are reported as _covered_ when
   `Run Cadence quality sentinels` passed; if that step failed, each runs on its own so the summary shows which gate
