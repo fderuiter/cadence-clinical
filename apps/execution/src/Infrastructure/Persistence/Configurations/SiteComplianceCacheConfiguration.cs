@@ -52,6 +52,15 @@ public sealed class SiteComplianceCacheConfiguration : IEntityTypeConfiguration<
 
         builder.Property(x => x.Milestone).HasMaxLength(255).IsRequired();
 
+        builder.Property(x => x.IsActivated)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(x => x.ActivatedAt);
+
+        builder.Property(x => x.ActivatedBy)
+            .HasMaxLength(255);
+
         builder.HasIndex(x => new { x.TenantId, x.StudyCode, x.SiteCode, x.Milestone })
             .IsUnique()
             .HasDatabaseName("IX_site_compliance_caches_tenant_id_StudyCode_SiteCode_Milestone");

@@ -15,6 +15,7 @@
 In the Cadence Clinical high-assurance eClinical platform, engineering workflows involve autonomous AI coding agents operating across microservices, CDISC data pipelines, and strict GxP (21 CFR Part 11) compliance boundaries.
 
 While autonomous agents accelerate feature delivery, unsupervised agent operations introduce significant risks in regulated life sciences environments:
+
 1. **Destructive Operations & History Loss:** Agents may issue destructive git commands (such as `git push --force`, `git reset --hard`, `git clean -fdx`, or `git branch -D`) or dangerous shell deletions (`rm -rf /`, dropping database tables), corrupting development history and auditability.
 2. **Direct Tampering with Generated GxP Artifacts:** Generated regulatory documents (such as `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`) must only be compiled via deterministic automation (`scripts/sync_gxp.py`). Manual agent edits corrupt audit hashes and invalidate qualification records.
 3. **Silent Compliance Violations in Generated Code:** Agents frequently generate anti-patterns such as bare boolean SQL comparisons (`col == True` violating SQLAlchemy `E712` semantics) or mis-ordered imports (`I001`), leading to runtime SQL errors or CI gating failures.
@@ -119,6 +120,7 @@ The hook configuration is stored at the root of the customization directory (`.a
 All hook scripts communicate via JSON over `sys.stdin` and `sys.stdout` utilizing camelCase field names (protojson encoding):
 
 #### A. `PreToolUse` Contract (`scripts/hooks/pre_tool_guardrail.py`)
+
 - **Input (stdin):**
   ```json
   {
@@ -138,10 +140,12 @@ All hook scripts communicate via JSON over `sys.stdin` and `sys.stdout` utilizin
   - Denied: `{"decision": "deny", "reason": "GxP Guardrail: Destructive git force push is strictly prohibited."}`
 
 #### B. `PostToolUse` Contract (`scripts/hooks/post_write_check.py`)
+
 - **Input (stdin):** `{"stepIdx": 5, "conversationId": "uuid"}`
 - **Output (stdout):** `{}` (Executes fast background validation and logs any warnings to stderr).
 
 #### C. `PreInvocation` Contract (`scripts/hooks/pre_invocation_reminder.py`)
+
 - **Input (stdin):** `{"invocationNum": 1, "conversationId": "uuid"}`
 - **Output (stdout):**
   ```json
@@ -155,6 +159,7 @@ All hook scripts communicate via JSON over `sys.stdin` and `sys.stdout` utilizin
   ```
 
 #### D. `Stop` Contract (`scripts/hooks/stop_sentinel.py`)
+
 - **Input (stdin):** `{"executionNum": 1, "terminationReason": "model_stop", "fullyIdle": true}`
 - **Output (stdout):** `{"decision": "allow"}` or `{"decision": "continue", "reason": "..."}`
 
@@ -181,10 +186,12 @@ The `pre_tool_guardrail.py` script enforces the following deterministic rule set
 ## Testing Decisions
 
 ### What Makes a Good Test
+
 - Tests must assert external JSON stdin/stdout behaviors, exit codes, and decisions across all lifecycle hooks rather than mocking internal string splits.
 - Test suites must execute in sub-second time without external process spawning or internet connectivity.
 
 ### Tested Surfaces
+
 1. **`PreToolUse` Guardrail Tests (`tests/test_antigravity_gxp_hooks.py`):**
    - Validates blocking of prohibited git commands (`push --force`, `reset --hard`, `clean -fdx`).
    - Validates blocking of dangerous shell commands (`rm -rf`, `DROP DATABASE`).

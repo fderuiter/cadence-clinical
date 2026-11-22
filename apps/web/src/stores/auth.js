@@ -28,6 +28,10 @@ import {
   purgeUserScopedStorage,
   storageScopeOf,
 } from "../utils/userScopedStorage.js";
+import {
+  extractAssignedSites,
+  extractAssignedStudies,
+} from "../utils/callerScope";
 
 const EMPTY_DEMO_IDENTITY = Object.freeze({
   username: "",
@@ -321,6 +325,12 @@ function emptyAuthState() {
     siteIds: [],
     /** @type {string[]} Explicit study codes from `study_ids` token claims */
     studyIds: [],
+    /** @type {string[]} Concrete study codes from `study_ids` claim */
+    assignedStudies: [],
+    /** @type {string[]} Assigned site codes from `site_id` / `site_ids` claims */
+    assignedSites: [],
+    /** @type {boolean} True when `study_ids` carries wildcard `*` */
+    hasAllStudiesScope: false,
     /** @type {string | null} */
     currentPersona: null,
     /** @type {string | null} */
@@ -367,11 +377,19 @@ export const useAuthStore = defineStore("auth", {
     assignedSiteIds: (state) => {
       const fromState = Array.isArray(state.siteIds) ? state.siteIds : [];
       if (fromState.length > 0) return fromState;
+      const fromAssigned = Array.isArray(state.assignedSites)
+        ? state.assignedSites.filter((site) => site && site !== "*")
+        : [];
+      if (fromAssigned.length > 0) return fromAssigned;
       return Array.isArray(state.user?.siteIds) ? state.user.siteIds : [];
     },
     assignedStudyIds: (state) => {
       const fromState = Array.isArray(state.studyIds) ? state.studyIds : [];
       if (fromState.length > 0) return fromState;
+      const fromAssigned = Array.isArray(state.assignedStudies)
+        ? state.assignedStudies.filter((study) => study && study !== "*")
+        : [];
+      if (fromAssigned.length > 0) return fromAssigned;
       return Array.isArray(state.user?.studyIds) ? state.user.studyIds : [];
     },
     availablePersonas: (state) => personasForRoles(state.rawRoles),
@@ -472,6 +490,10 @@ export const useAuthStore = defineStore("auth", {
       this.rawRoles = Array.isArray(claims.realm_access?.roles)
         ? [...claims.realm_access.roles]
         : [];
+      const studyScope = extractAssignedStudies(claims);
+      this.assignedStudies = studyScope.assignedStudies;
+      this.hasAllStudiesScope = studyScope.hasAllStudiesScope;
+      this.assignedSites = extractAssignedSites(claims);
       this.authError = null;
       webSessionCoordinator.markAuthenticated();
 
@@ -518,6 +540,7 @@ export const useAuthStore = defineStore("auth", {
       this.sessionExpired = false;
       this.isLoggingOut = false;
       this.rawRoles = [...DEMO_ROLES];
+      this.hasAllStudiesScope = true;
       const entitled = personasForRoles(this.rawRoles);
       const selectedPersona =
         personaKey && entitled.some((p) => p.key === personaKey)

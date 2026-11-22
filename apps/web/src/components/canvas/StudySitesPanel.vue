@@ -369,6 +369,14 @@ async function syncCallerSiteScope(siteCode: string) {
   ) {
     authStore.siteIds = [...authStore.siteIds, siteCode];
   }
+  if (
+    Array.isArray(authStore.assignedSites) &&
+    !authStore.assignedSites.some(
+      (code: string) => code.toUpperCase() === siteCode.toUpperCase()
+    )
+  ) {
+    authStore.assignedSites = [...authStore.assignedSites, siteCode];
+  }
 }
 
 const unlinkedWorkspaceSites = computed(() => {

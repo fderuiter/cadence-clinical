@@ -27,11 +27,18 @@ public static class MarkdownValidatorService
         ];
 
         string[] mdFiles;
-        if (files != null && files.Length > 0)
+        if (files is not null)
         {
+            if (files.Length == 0)
+            {
+                Console.WriteLine("✔ Markdown validation passed cleanly (0 target files).");
+                return 0;
+            }
+
             mdFiles = files
                 .Where(f => f.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
                 .Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f))
+                .Where(f => !excludedDirs.Any(d => f.Contains(d)))
                 .Where(File.Exists)
                 .ToArray();
         }

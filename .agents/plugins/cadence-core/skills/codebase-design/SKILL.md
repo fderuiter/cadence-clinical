@@ -13,12 +13,12 @@ Vocabulary and design rules for creating deep, high-leverage modules across the 
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Seam Discovery** | `find_by_name` / `grep_search` | Query files across `apps/` and `packages/` | Identify shallow modules and leaky abstractions |
-| **Interface Inspection**| `view_file` | `AbsolutePath=".../Application/Ports/I*.cs"`, `StartLine=...` | Assess interface surface area vs. hidden complexity |
-| **Refactoring** | `replace_file_content` | Target: service/port files, surgical replacement | Deepen module by collapsing pass-through layers |
-| **Boundary Sentinel** | `run_command` | `CommandLine="dotnet cadence check --gate import-boundaries"` | Enforce no sibling database imports across boundaries |
+| Phase                    | Antigravity Tool               | Invocation Pattern                                            | Objective                                             |
+| :----------------------- | :----------------------------- | :------------------------------------------------------------ | :---------------------------------------------------- |
+| **Seam Discovery**       | `find_by_name` / `grep_search` | Query files across `apps/` and `packages/`                    | Identify shallow modules and leaky abstractions       |
+| **Interface Inspection** | `view_file`                    | `AbsolutePath=".../Application/Ports/I*.cs"`, `StartLine=...` | Assess interface surface area vs. hidden complexity   |
+| **Refactoring**          | `replace_file_content`         | Target: service/port files, surgical replacement              | Deepen module by collapsing pass-through layers       |
+| **Boundary Sentinel**    | `run_command`                  | `CommandLine="dotnet cadence check --gate import-boundaries"` | Enforce no sibling database imports across boundaries |
 
 ---
 
@@ -59,4 +59,3 @@ public interface IRepository<T>
 
 - **Vanilla CSS Design Tokens**: Use standardized CSS variables (`var(--primary)`, `var(--surface)`, `var(--border)`, `var(--radius-md)`) from `apps/web/src/style.css`. Never use Tailwind utility classes.
 - **Full-Width Workspaces**: Design high-density clinical views (SoA Matrix, Gantt visualizer) to occupy the full viewport width. Place secondary inspection panes in collapsible slide-over drawers.
-

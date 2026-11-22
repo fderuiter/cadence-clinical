@@ -20,7 +20,22 @@
           type="text"
           autocomplete="off"
           placeholder="Study code"
+          :list="
+            assignedStudies.length
+              ? 'site-activation-assigned-studies'
+              : undefined
+          "
         />
+        <datalist
+          v-if="assignedStudies.length"
+          id="site-activation-assigned-studies"
+        >
+          <option
+            v-for="study in assignedStudies"
+            :key="study"
+            :value="study"
+          />
+        </datalist>
       </template>
       <label for="site-activation-site">Site</label>
       <input
@@ -29,7 +44,13 @@
         type="text"
         autocomplete="off"
         placeholder="Site code"
+        :list="
+          assignedSites.length ? 'site-activation-assigned-sites' : undefined
+        "
       />
+      <datalist v-if="assignedSites.length" id="site-activation-assigned-sites">
+        <option v-for="site in assignedSites" :key="site" :value="site" />
+      </datalist>
       <button
         id="btn-check-site-compliance"
         type="submit"
@@ -39,6 +60,45 @@
         Check eTMF status
       </button>
     </form>
+
+    <div
+      v-if="
+        (!props.studyCode && assignedStudies.length) || assignedSites.length
+      "
+      id="site-activation-assigned-scope"
+      class="assigned-scope"
+      aria-label="Assigned scope shortcuts"
+    >
+      <div
+        v-if="!props.studyCode && assignedStudies.length"
+        class="scope-pill-group"
+      >
+        <span class="scope-pill-label">Assigned studies:</span>
+        <button
+          v-for="study in assignedStudies"
+          :key="study"
+          type="button"
+          class="scope-pill"
+          :class="{ active: studyCode.trim() === study }"
+          @click="selectAssignedStudy(study)"
+        >
+          {{ study }}
+        </button>
+      </div>
+      <div v-if="assignedSites.length" class="scope-pill-group">
+        <span class="scope-pill-label">Assigned sites:</span>
+        <button
+          v-for="site in assignedSites"
+          :key="site"
+          type="button"
+          class="scope-pill"
+          :class="{ active: siteCode.trim() === site }"
+          @click="selectAssignedSite(site)"
+        >
+          {{ site }}
+        </button>
+      </div>
+    </div>
 
     <p v-if="!checked" id="site-compliance-status" class="status" role="status">
       Enter a study and site to see whether eTMF reports the site's activation
@@ -52,6 +112,16 @@
     >
       Checking eTMF status...
     </p>
+    <div
+      v-else-if="scopeGuidance"
+      id="site-compliance-status"
+      class="status status-scope-guidance"
+      role="status"
+    >
+      <p id="site-scope-guidance" class="scope-guidance-text">
+        {{ scopeGuidance }}
+      </p>
+    </div>
     <p
       v-else-if="loadError"
       id="site-compliance-status"
@@ -61,6 +131,25 @@
       The eTMF status couldn't be loaded, so activation is unavailable.
     </p>
     <div v-else-if="compliance" id="site-compliance-status" role="status">
+      <div
+        v-if="compliance.is_activated"
+        id="site-activated-summary"
+        class="activated-banner"
+      >
+        <span class="activated-badge">Activated</span>
+        <span>
+          Site {{ compliance.site_id }} is active for enrollment in
+          {{ compliance.study_id }}
+          <template v-if="compliance.activated_by">
+            · activated by {{ compliance.activated_by }}
+          </template>
+          <template v-if="compliance.activated_at">
+            on {{ formatTimestamp(compliance.activated_at) }}
+          </template>
+          .
+        </span>
+      </div>
+
       <p v-if="compliance.is_complete" class="status status-complete">
         Complete: eTMF reports every activation document for site
         {{ compliance.site_id }} in {{ compliance.study_id }} approved.
@@ -81,7 +170,10 @@
       </p>
     </div>
 
-    <div v-if="compliance?.is_complete" class="activate">
+    <div
+      v-if="compliance?.is_complete && !compliance?.is_activated && canActivate"
+      class="activate"
+    >
       <label for="site-activation-reason">Reason for activation</label>
       <textarea
         id="site-activation-reason"
@@ -101,27 +193,37 @@
         }}
       </button>
     </div>
+    <p
+      v-else-if="
+        compliance?.is_complete && !compliance?.is_activated && !canActivate
+      "
+      id="site-activation-readonly-note"
+      class="readonly-note"
+    >
+      Read-only view: site activation requires Sponsor Data Management or System
+      Administrator authorization.
+    </p>
 
     <p v-if="!props.studyCode" class="unavailable-note">
-      Milestones, monitoring visits, delegation, financials, start-up and RTSM
-      aren't available yet in this pre-release environment (Orbit and Allocate
-      roadmap). See
-      <component
-        :is="routerLinkComponent ?? 'a'"
-        v-bind="
-          routerLinkComponent ? { to: '/plans' } : { href: fallbackPlansHref }
-        "
-        >plans &amp; product-family roadmap</component
-      >.
+      Grant financials, CRA workload allocation, recruitment target updates, and
+      adaptive dose escalation aren't available yet in this pre-release
+      environment (Orbit and Allocate roadmap). See <PlansRoadmapLink />.
     </p>
   </section>
 </template>
 
 <script setup>
-import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { executionApi } from "../../api/executionApi";
+import { canActivateSite } from "../../canvas/authority";
+import { useAuthStore } from "../../stores/auth";
 import { useClinicalStore } from "../../stores/clinical";
 import { useToastStore } from "../../stores/toasts.js";
+import {
+  formatScopeForbiddenGuidance,
+  isForbiddenScopeError,
+} from "../../utils/callerScope";
+import PlansRoadmapLink from "./PlansRoadmapLink.vue";
 
 /**
  * Site activation against Execution: the site's eTMF completeness for SITE_ACTIVATION, and activation once
@@ -131,26 +233,41 @@ import { useToastStore } from "../../stores/toasts.js";
 const props = defineProps({
   /** Fixes the study (the Clinical Canvas passes the study it shows); without it the user types the study. */
   studyCode: { type: String, default: "" },
+  /** Optional site filter passed from Clinical Canvas URL query. */
+  siteId: { type: String, default: "" },
 });
 
+const authStore = useAuthStore();
 const store = useClinicalStore();
 const toasts = useToastStore();
-const instance = getCurrentInstance();
-const routerLinkComponent = instance?.appContext.components.RouterLink;
-const fallbackPlansHref = `${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}plans`;
 
-const studyCode = ref(props.studyCode || store.activeStudyId);
-const siteCode = ref(
+const assignedStudies = computed(() => authStore.assignedStudies || []);
+const assignedSites = computed(() =>
+  (authStore.assignedSites || []).filter((site) => site && site !== "*")
+);
+const canActivate = computed(() => canActivateSite(authStore));
+
+const studyCode = ref(
+  props.studyCode ||
+    store.activeStudyId ||
+    (assignedStudies.value.length ? assignedStudies.value[0] : "")
+);
+const reusableActiveSiteId =
   props.studyCode &&
-    store.activeStudyId &&
-    store.activeStudyId !== props.studyCode
+  store.activeStudyId &&
+  store.activeStudyId !== props.studyCode
     ? ""
-    : store.activeSiteId
+    : store.activeSiteId;
+const siteCode = ref(
+  props.siteId ||
+    reusableActiveSiteId ||
+    (assignedSites.value.length ? assignedSites.value[0] : "")
 );
 const compliance = ref(null);
 const checked = ref(false);
 const loading = ref(false);
 const loadError = ref(false);
+const scopeGuidance = ref("");
 const reason = ref("");
 const activating = ref(false);
 
@@ -163,12 +280,37 @@ watch(
     compliance.value = null;
     checked.value = false;
     loadError.value = false;
+    scopeGuidance.value = "";
+  }
+);
+
+watch(
+  () => props.siteId,
+  (value) => {
+    if (!value) return;
+    siteCode.value = value;
   }
 );
 
 const canCheck = computed(
   () => Boolean(studyCode.value.trim()) && Boolean(siteCode.value.trim())
 );
+
+function formatTimestamp(iso) {
+  if (!iso) return "";
+  const parsed = new Date(iso);
+  return Number.isNaN(parsed.getTime()) ? String(iso) : parsed.toUTCString();
+}
+
+function selectAssignedStudy(study) {
+  studyCode.value = study;
+  if (canCheck.value) checkStatus();
+}
+
+function selectAssignedSite(site) {
+  siteCode.value = site;
+  if (canCheck.value) checkStatus();
+}
 
 async function checkStatus() {
   if (!canCheck.value) return;
@@ -179,12 +321,23 @@ async function checkStatus() {
   checked.value = true;
   loading.value = true;
   loadError.value = false;
+  scopeGuidance.value = "";
   compliance.value = null;
   try {
     compliance.value = await executionApi.getSiteComplianceStatus(site, study);
   } catch (err) {
-    loadError.value = true;
-    toasts.apiError("Couldn't load the site's eTMF status", err);
+    if (isForbiddenScopeError(err)) {
+      scopeGuidance.value = formatScopeForbiddenGuidance(err, {
+        studyId: study,
+        siteId: site,
+        assignedStudies: assignedStudies.value,
+        assignedSites: assignedSites.value,
+        hasAllStudiesScope: authStore.hasAllStudiesScope,
+      });
+    } else {
+      loadError.value = true;
+      toasts.apiError("Couldn't load the site's eTMF status", err);
+    }
   } finally {
     loading.value = false;
   }
@@ -193,7 +346,15 @@ async function checkStatus() {
 async function activate() {
   const current = compliance.value;
   const why = reason.value.trim();
-  if (!current?.is_complete || !why || !current.site_id) return;
+  if (
+    !canActivate.value ||
+    !current?.is_complete ||
+    current?.is_activated ||
+    !why ||
+    !current.site_id
+  ) {
+    return;
+  }
   activating.value = true;
   try {
     const result = await executionApi.activateSite(
@@ -207,14 +368,46 @@ async function activate() {
       message: result.message,
     });
     reason.value = "";
+    try {
+      const refreshed = await executionApi.getSiteComplianceStatus(
+        current.site_id,
+        current.study_id
+      );
+      if (refreshed) {
+        compliance.value = refreshed;
+      } else {
+        compliance.value = {
+          ...current,
+          is_activated: true,
+          activated_by: authStore.userId || current.activated_by || null,
+        };
+      }
+    } catch {
+      compliance.value = {
+        ...current,
+        is_activated: true,
+        activated_by: authStore.userId || current.activated_by || null,
+      };
+    }
   } catch (err) {
-    toasts.apiError(`Site ${current.site_id} was not activated`, err);
+    if (isForbiddenScopeError(err)) {
+      scopeGuidance.value = formatScopeForbiddenGuidance(err, {
+        studyId: current.study_id,
+        siteId: current.site_id,
+        assignedStudies: assignedStudies.value,
+        assignedSites: assignedSites.value,
+        hasAllStudiesScope: authStore.hasAllStudiesScope,
+      });
+      compliance.value = null;
+    } else {
+      toasts.apiError(`Site ${current.site_id} was not activated`, err);
+    }
   } finally {
     activating.value = false;
   }
 }
 
-// Opened for a study and site (CTMS reads ?studyId= and ?siteId=): show their status straight away.
+// Opened for a study and site (CTMS reads ?studyId= and ?siteId=, or token claims provide assigned scope): show status straight away.
 onMounted(() => {
   if (canCheck.value) checkStatus();
 });
@@ -251,6 +444,42 @@ defineExpose({ checkStatus });
   border-radius: 4px;
 }
 
+.assigned-scope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.scope-pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.scope-pill-label {
+  color: var(--semantic-color-text-secondary);
+  font-weight: 600;
+}
+
+.scope-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--semantic-color-border-control);
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.scope-pill.active {
+  background: var(--semantic-color-primary);
+  border-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
+}
+
 .activate {
   flex-direction: column;
   align-items: stretch;
@@ -277,6 +506,53 @@ defineExpose({ checkStatus });
 .status-incomplete,
 .status-error {
   color: var(--semantic-color-error);
+}
+
+.status-scope-guidance {
+  padding: 12px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-warning-border-strong);
+  background: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-warning-dark);
+}
+
+.scope-guidance-text {
+  margin: 0;
+}
+
+.activated-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-success-border);
+  background: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
+  font-size: 0.92rem;
+}
+
+.activated-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.readonly-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
+  color: var(--semantic-color-text-secondary);
+  font-size: 0.9rem;
 }
 
 .unavailable-note {

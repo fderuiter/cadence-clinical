@@ -30,7 +30,7 @@ Organization directory scaffold. It holds the personnel assignment, delegation o
 
 ## Key dependencies
 
-- Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Kernel.Domain`, `Cadence.Security`, `Cadence.Telemetry`, `Cadence.Contracts`, `Cadence.Database`.
+- Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Telemetry`, `Cadence.Database`.
 - Packages: `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore`, `FluentValidation` (versions in `Directory.Packages.props`).
 
 ## Tests

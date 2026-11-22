@@ -1148,14 +1148,14 @@ Every `scenario_id` in the fixtures (`SCN-001-A` … `SCN-010`) becomes one `[Th
 
 ### 6.2 Unit-level coverage beyond the HTTP fixtures
 
-| Concern                                                                                | Test approach                                                                                                                                                              |
-| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SubjectTransitionGraph.Guard` full transition matrix (SCN-003)                        | `[Theory]`/`[InlineData]` over every `(current, target)` pair in `01_spec.md` §2.1's mermaid graph, both allowed and forbidden                                             |
-| `CalculateAge` / `365.25` divisor parity (Rule 7)                                      | `[Theory]` fixed input/expected-output pairs lifted directly from Python `calculate_age` doctest-equivalent behavior, including the two date-string-parsing fallback paths |
-| `normalize_gender` full mapping table (Rule 7)                                         | `[Theory]` over every row in the Rule 7 table, both `preserve_custom` values                                                                                               |
-| `EConsentCompletedConsumer` idempotency + independent consent-cache backfill (SCN-009) | `MassTransit.Testing.ITestHarness`, asserting zero duplicate subjects on redelivery and independent backfill when the subject already exists but the consent row doesn't   |
+| Concern                                                                                | Test approach                                                                                                                                                                        |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SubjectTransitionGraph.Guard` full transition matrix (SCN-003)                        | `[Theory]`/`[InlineData]` over every `(current, target)` pair in `01_spec.md` §2.1's mermaid graph, both allowed and forbidden                                                       |
+| `CalculateAge` / `365.25` divisor parity (Rule 7)                                      | `[Theory]` fixed input/expected-output pairs lifted directly from Python `calculate_age` doctest-equivalent behavior, including the two date-string-parsing fallback paths           |
+| `normalize_gender` full mapping table (Rule 7)                                         | `[Theory]` over every row in the Rule 7 table, both `preserve_custom` values                                                                                                         |
+| `EConsentCompletedConsumer` idempotency + independent consent-cache backfill (SCN-009) | `MassTransit.Testing.ITestHarness`, asserting zero duplicate subjects on redelivery and independent backfill when the subject already exists but the consent row doesn't             |
 | `SubjectConsent.MergeResubmission` field-by-field precedence (Rule 9)                  | `[Theory]` covering each of the four field categories (unconditional replace / date-conditional / protocol-version-conditional); since #4824, also the signed-without-date rejection |
-| `GxPAuditInterceptor` Merkle chain integrity (§4.4)                                    | Two sequential `SaveChangesAsync` calls on the same entity type assert `BlockHash[n].PredecessorHash == BlockHash[n-1].BlockHash`                                          |
+| `GxPAuditInterceptor` Merkle chain integrity (§4.4)                                    | Two sequential `SaveChangesAsync` calls on the same entity type assert `BlockHash[n].PredecessorHash == BlockHash[n-1].BlockHash`                                                    |
 
 ### 6.3 Integration test strategy
 
