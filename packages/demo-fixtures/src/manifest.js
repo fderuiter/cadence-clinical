@@ -317,7 +317,7 @@ export const DEMO_MANIFEST = Object.freeze({
     Object.freeze({
       username: "stat.author",
       id: "a1b2c3d4-e5f6-4a7b-8c9d-e1f2a3b4c5d6",
-      email: "stat.author@example.com", // deid-ignore: synthetic demo manifest fixture
+      email: "stat.author@example.com",
       firstName: "Statistician",
       lastName: "Author",
       tenantId: "cadence-local",
@@ -331,7 +331,7 @@ export const DEMO_MANIFEST = Object.freeze({
     Object.freeze({
       username: "stat.approver",
       id: "b2c3d4e5-f6a7-4b8c-9d1e-f2a3b4c5d6e7",
-      email: "stat.approver@example.com", // deid-ignore: synthetic demo manifest fixture
+      email: "stat.approver@example.com",
       firstName: "Statistician",
       lastName: "Approver",
       tenantId: "cadence-local",
@@ -345,7 +345,7 @@ export const DEMO_MANIFEST = Object.freeze({
     Object.freeze({
       username: "pharmacist.site101",
       id: "c3d4e5f6-a7b8-4c9d-8e1f-a3b4c5d6e7f8",
-      email: "pharmacist.site101@example.com", // deid-ignore: synthetic demo manifest fixture
+      email: "pharmacist.site101@example.com",
       firstName: "Site",
       lastName: "Pharmacist",
       tenantId: "cadence-local",
