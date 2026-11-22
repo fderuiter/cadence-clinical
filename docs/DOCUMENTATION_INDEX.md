@@ -592,7 +592,8 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2624: Outbox Collection Edit Checks, Stateless Pre-Commit Form Preview, and ODM Rule Compilation](adr/2026-11-21-outbox-collection-edit-checks-and-pre-commit-preview.md) | Current | - Status: Accepted |
 | [ADR-2604: Signed Gateway Expiry Guard and Scoped Trial Upgrades](adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md) | Current | - Status: Accepted |
 | [ADR-2821: Migrate Web Overlays to Clinical Primitives and Enforce AST Guardrails](adr/2026-11-22-migrate-web-overlays-to-clinical-primitives-and-enforce-ast-guardrails.md) | Current | - Status: Accepted |
-| [ADR-2644: Participant ePRO Interop Endpoints and Keyed-HMAC BYOD Activation](adr/2026-11-20-participant-epro-interop-endpoints-and-keyed-hmac-byod-activation.md) | Current | - Status: Accepted |
+| [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](adr/2026-11-22-ctms-study-and-site-scope-isolation.md) | Current | - Status: Accepted |
+| [ADR-2645: Participant ePRO Interop Endpoints and Keyed-HMAC BYOD Activation](adr/2026-11-20-participant-epro-interop-endpoints-and-keyed-hmac-byod-activation.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
