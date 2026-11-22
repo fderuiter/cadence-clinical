@@ -103,9 +103,9 @@ describe("USDM Standalone Graph Validation Engine", () => {
 
     const res = validateUsdmGraph(studyWithUnwhitelisted);
     expect(res.valid).toBe(false);
-    expect(
-      res.errors.some((e) => e.code === "UNWHITELISTED_OPERATOR")
-    ).toBe(true);
+    expect(res.errors.some((e) => e.code === "UNWHITELISTED_OPERATOR")).toBe(
+      true
+    );
   });
 
   it("dynamically verifies that referenced components exist within current study projection", () => {

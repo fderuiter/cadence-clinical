@@ -57,9 +57,10 @@ Checks the local environment. It reports:
 - whether `Directory.Packages.props` exists in the current directory
 - whether the pnpm on the `PATH` runs and matches the `packageManager` pin in `package.json` (ADR-2508)
 - whether `detect-secrets-hook` runs from `.cadence/venv`, `.venv`, `PATH`, or `uvx`
+- whether `actionlint` and `hadolint` run from `.cadence/bin` or `PATH`
 - whether PostgreSQL answers on `127.0.0.1:5432`
 
-It exits `1` when the .NET SDK is missing, pnpm is missing/crashes/differs from the pin, or `detect-secrets` is unavailable, and `0` otherwise.
+It exits `1` when the .NET SDK is missing, pnpm is missing/crashes/differs from the pin, or `detect-secrets`, `actionlint`, or `hadolint` is unavailable, and `0` otherwise.
 
 | Option           | Description                                                                          |
 | ---------------- | ------------------------------------------------------------------------------------ |
@@ -105,11 +106,11 @@ must make it fail.
 | `yaml`                | `check-yaml`, `validate-yaml`                                          | yes             | Runs on the staged files                                                                                                                |
 | `trailing-whitespace` | `check-trailing-whitespace`                                            | yes             | Runs on the staged files                                                                                                                |
 | `end-of-file`         | `end-of-file-fixer`, `eof-newline`                                     | yes             | Runs on the staged files                                                                                                                |
-| `clean-secrets`       | `clean-secrets-baseline`                                               |                 | Quick: validates staged `.secrets.baseline` JSON without rewriting the working tree                                                     |
+| `clean-secrets`       | `clean-secrets-baseline`                                               |                 | Quick: validates staged `.secrets.baseline` JSON without mutating the working tree                                                      |
 | `detect-secrets`      | `secrets-scan`                                                         | yes             | Quick: scans materialized staged blobs instead of the working tree                                                                      |
 | `duplication`         | `detect-code-duplication`                                              | yes             | Runs on the staged files                                                                                                                |
 | `cli-docs`            | `validate-cli-docs`                                                    |                 | Runs                                                                                                                                    |
-| `adrs`                | `validate-adrs`                                                        |                 | Runs                                                                                                                                    |
+| `adrs`                | `validate-adrs`                                                        |                 | Quick: checks staged files for architectural changes instead of the working tree                                                        |
 | `arch-drift`          | `validate-architecture-drift`                                          |                 | Runs                                                                                                                                    |
 | `sanitizer`           | `path-requirement-sanitizer`                                           | yes             | Quick: reports lowercase `@req:prd-…` tags in staged Markdown blobs without rewriting working-tree files                                |
 | `markdown`            | `validate-markdown`                                                    | yes             | Runs on the staged files                                                                                                                |
@@ -203,8 +204,8 @@ Where it differs from CI:
   except the opt-in lineage benchmark and browser correction check listed in `DatabaseTestEvidence.OptInTests` (the
   browser correction check runs with `CADENCE_TEST_BROWSER=1` in the `accessibility-e2e` job). `--allow-skip` accepts the
   skips.
-- **Checks already run once are not repeated.** `lint-and-static` runs Prettier, ESLint, `markdown` and `api-clients`,
-  `dotnet-quality` runs `cadence check --exclude prettier --exclude eslint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities`,
+- **Checks already run once are not repeated.** `actionlint` runs `actionlint`, `lint-and-static` runs Prettier, ESLint, Hadolint, `markdown` and `api-clients`,
+  `dotnet-quality` runs `cadence check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities`,
   and `security` runs `detect-secrets` and `vulnerabilities`. Steps in `security` whose gate already ran inside
   `Run Cadence quality sentinels` (the static security audit, secrets and DEID) are reported as _covered_ when
   `Run Cadence quality sentinels` passed; if that step failed, each runs on its own so the summary shows which gate
@@ -268,13 +269,23 @@ Starts the .NET Aspire AppHost: `dotnet run --project apps/apphost/src/Cadence.A
 
 ### `cadence fix`
 
-Runs these steps in order:
+Resolves the repository root from any working directory (`Cadence.sln`) and runs the self-healing pipeline in order:
 
-1. `dotnet format Cadence.sln` in the current directory.
-2. ADR validation (same check as the `adrs` gate, without the git diff check). It does not change ADR files.
-3. `sync-openapi-spec` and `generate-api-docs` (see the tool table below).
+1. `dotnet format whitespace` and `dotnet format style` in the repository root (scoped to changed C# files by default; full `Cadence.sln` with `--full`).
+2. Root-wide Prettier auto-formatting across tracked JS, TS, Vue, CSS, JSON, Markdown and YAML files respecting `.prettierignore`.
+3. `.secrets.baseline` normalization (`SecretsBaselineCleanerService.CleanSecretsBaseline`) and upper-case `@req:PRD-...` tag sanitization in `docs/**/*.md` (excluding `docs/SDLC/runs/`).
+4. ADR index synchronization (`docs/adr/index.md`) and schema validation (`AdrValidatorService.ValidateAdrs` without git diff), quality gate table generation (`GateDocs.Write`), documentation index sync (`docs/DOCUMENTATION_INDEX.md`), and demo study manifest sync (`packages/demo-fixtures`).
+5. Diff-based EF Core schema documentation (`docs/schema/`): runs `generate-schema-doc` when EF Core entities, configurations, or migrations changed (or with `--full`), skipping otherwise.
+6. Diff-based OpenAPI specifications, API Markdown pages, and web TypeScript client types: exports `docs/openapi/` and regenerates `docs/api/` when backend C# contracts changed (or with `--openapi` / `--full`), and runs `pnpm --filter web run generate:api` whenever OpenAPI specs are exported or `apps/web/src/api/generated/` is stale so `check api-clients` passes.
 
-It exits `1` if any step fails. It has no options.
+Options:
+
+| Option      | What it does                                                                                                     |
+| ----------- | ---------------------------------------------------------------------------------------------------------------- |
+| `--openapi` | Force full OpenAPI specification export, `docs/api/` regeneration, and `pnpm --filter web run generate:api`.     |
+| `--full`    | Force full regeneration of EF Core `docs/schema/`, all OpenAPI specs, `docs/api/`, and web OpenAPI client types. |
+
+It exits `1` if any step fails.
 
 ### Tool commands
 
@@ -296,7 +307,7 @@ Paths are relative to the repository root. "Calls" is the method the command run
 | `extract-env-vars`            | Finds environment variable reads in `.cs` and `.py` files. Fails if `.env.example` is missing. With `--check`, returns exit code 1 when variables missing from `.env.example` or `docs/ENVIRONMENT_VARIABLES.md` are found. It never writes files.                                                                                                                 | `EnvVarExtractorService.ExtractAndValidateEnvVars`                                        |
 | `audit-security`              | Scans every file in the repository for secret patterns.                                                                                                                                                                                                                                                                                                            | `SecurityAuditorService.AuditSecurity`                                                    |
 | `validate-vulnerabilities`    | Audits direct and transitive NuGet, pnpm workspace and Python (`pip-audit`) dependencies against active exemptions in `docs/SDLC/vulnerability_exclusions_ledger.json`. Fails closed when any scanner is missing, unrestored, times out or emits invalid JSON, or when unapproved vulnerabilities exist.                                                           | `VulnerabilityAuditorService.AuditVulnerabilities`                                        |
-| `clean-secrets-baseline`      | Rewrites the file exclusion filter in `.secrets.baseline`. Skips if the file is missing.                                                                                                                                                                                                                                                                           | `SecretsBaselineCleanerService.CleanSecretsBaseline`                                      |
+| `clean-secrets-baseline`      | Normalizes `.secrets.baseline` and its canonical file exclusion filter. Skips if the file is missing. Option: `--check` (verify normalization without modifying `.secrets.baseline`; exits `1` when unnormalized).                                                                                                                                                 | `SecretsBaselineCleanerService.CleanSecretsBaseline`                                      |
 | `validate-architecture-drift` | Lists services in `docker/docker-compose.yml`. Warns when one is not mentioned in `ARCHITECTURE.md` or `docs/SDLC/02_Technical_Design_Document_TDD.md`. Fails only if the compose file is missing or has no services.                                                                                                                                              | `ArchitectureDriftValidatorService.ValidateArchitectureDrift`                             |
 | `sync-openapi-spec`           | Runs `Cadence.OpenApiExporter`, which boots every .NET service in memory and exports its OpenAPI document, then writes the specs and the `cdisc_openapi.json` aggregate to `docs/openapi/` and deletes top-level specs no service serves. `docs/openapi/legacy/` is left alone. Option: `--validate` (compare only; exits `1` on drift).                           | `OpenApiSyncService.SyncOpenApiSpec`                                                      |
 | `validate-openapi-drift`      | Runs `sync-openapi-spec --validate` and `generate-api-docs --validate`. Exits `1` if either finds drift.                                                                                                                                                                                                                                                           | `OpenApiDriftValidatorService.ValidateDrift`                                              |

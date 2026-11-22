@@ -15,6 +15,7 @@
 In the Cadence Clinical high-assurance eClinical platform, engineering involves both human software engineers and autonomous AI coding agents operating across microservices, CDISC data pipelines, and strict GxP (21 CFR Part 11) compliance boundaries.
 
 However, developer tooling currently exhibits critical friction points:
+
 1. **Unstructured Agent Interoperability:** Autonomous agents must invoke shell commands and parse unstructured Rich console output, leading to shell-escaping bugs, token waste, and heuristic parsing errors.
 2. **Missing Local Pre-Commit Guardrails:** Architectural violations (import ordering `I001`, SQLAlchemy boolean comparisons `E712`, secret exposures, and OpenAPI schema drift) are often discovered late in CI, causing avoidable PR roundtrips and developer friction.
 3. **Inconsistent Terminal Output:** Command line interfaces lack visual document hierarchy, status card indicators, and actionable Next-Action CTAs, confusing developers during multi-service debugging.
@@ -25,6 +26,7 @@ However, developer tooling currently exhibits critical friction points:
 ## Solution
 
 Build a unified, four-pillar developer tooling architecture:
+
 1. **Native Stdio MCP Server (`cadence mcp`):** Provide a Model Context Protocol endpoint directly within the `cadence` CLI exposing 6 workflow-centric tools with parameter-level zoom control (`summary`, `fields`, `dry_run`).
 2. **Two-Tier Staged Pre-Commit Hook:** Implement a fast, Python/UV-native git pre-commit pipeline executing sub-500ms staged file checks and PRD-SUB-001.5s repo assertions, auto-installed via `cadence doctor --auto-fix`.
 3. **Centralized `TerminalDocument` Builder:** Standardize all human CLI output into authored terminal documents with narrative headings, status metric badges, column-aligned layouts, and contextual Next-Action CTAs, paired with strict NDJSON/JSON output in non-TTY contexts.
@@ -56,6 +58,7 @@ Build a unified, four-pillar developer tooling architecture:
 ## Implementation Decisions
 
 ### 1. Native Stdio MCP Server Module
+
 - **Module Boundary:** Built inside the CLI package under an isolated MCP submodule.
 - **Protocol:** Standard JSON-RPC 2.0 over `sys.stdin` / `sys.stdout`.
 - **Tool Catalog (6 Workflow-Centric Tools):**
@@ -77,6 +80,7 @@ Build a unified, four-pillar developer tooling architecture:
   ```
 
 ### 2. Two-Tier Staged Pre-Commit Hook Module
+
 - **Stage 1 (Staged Hunks Only, Target <500ms):**
   - Extract staged `.py` and documentation paths using `git diff --cached --name-only --diff-filter=ACM`.
   - Execute `ruff check --fix` and `ruff format` exclusively against staged Python files.
@@ -88,6 +92,7 @@ Build a unified, four-pillar developer tooling architecture:
 - **Auto-Installation:** Embedded into `.git/hooks/pre-commit` as a lightweight shell wrapper delegating to `uv run python scripts/pre_commit.py`.
 
 ### 3. Centralized `TerminalDocument` Builder Module
+
 - **Encapsulation:** Implemented in `packages/cli/formatting.py` as a fluent document renderer.
 - **Visual Sections:**
   - **Narrative Header:** Bold colored title + muted subtitle.
@@ -98,6 +103,7 @@ Build a unified, four-pillar developer tooling architecture:
 - **TTY Detection:** When `not sys.stdout.isatty()` or `--json` is supplied, bypass Rich console layout and stream NDJSON/JSON.
 
 ### 4. Deterministic Self-Healing Engine
+
 - **Safe Auto-Fixes:**
   - Auto-create and initialize missing SQLite schema files.
   - Install `.git/hooks/pre-commit` if missing or outdated.
@@ -111,10 +117,12 @@ Build a unified, four-pillar developer tooling architecture:
 ## Testing Decisions
 
 ### What Makes a Good Test
+
 - Tests must assert observable public behavior (CLI exit codes, stdout/stderr document structure, structured JSON payloads, git hook exit codes) rather than mocking internal helper variables.
 - Zero network or external Docker dependencies for unit test execution.
 
 ### Tested Surfaces
+
 1. **CLI Commands (`packages/cli/src/Program.cs`):**
    - Assert `doctor`, `check`, `fix`, `test`, `mcp` subcommands with `typer.testing.CliRunner`.
    - Validate both human-readable document output and `--json` structured parity.
@@ -127,6 +135,7 @@ Build a unified, four-pillar developer tooling architecture:
    - Verify `TerminalDocument` layout rendering, column alignment, and non-TTY JSON fallback.
 
 ### Prior Art
+
 - CLI unit tests in `packages/cli/src/Program.cs`.
 - Quality gate validation in `scripts/validate_path_patterns.py` and `scripts/validate_imports.py`.
 

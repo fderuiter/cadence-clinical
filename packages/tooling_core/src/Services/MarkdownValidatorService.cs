@@ -48,6 +48,7 @@ public static class MarkdownValidatorService
                     .Where(rel => !string.IsNullOrEmpty(rel) &&
                                   (reader is not null ? reader.FileExists(rel) : File.Exists(Path.Combine(repoRoot, rel))))
                     .Select(rel => Path.Combine(repoRoot, rel!))
+                    .Where(f => !excludedDirs.Any(d => f.Contains(d)))
                     .ToArray();
             }
             else
@@ -145,16 +146,5 @@ public static class MarkdownValidatorService
         }
     }
 
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
+    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }

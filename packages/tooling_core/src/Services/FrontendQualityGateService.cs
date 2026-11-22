@@ -12,7 +12,7 @@ namespace Cadence.ToolingCore.Services;
 /// </summary>
 public static class FrontendQualityGateService
 {
-    private const int MaxFilesPerBatch = 100;
+    private const int MaxFilesPerBatch = 400;
 
     private static readonly HashSet<string> PrettierExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -28,13 +28,25 @@ public static class FrontendQualityGateService
         string? repoRoot = null,
         string[]? targetFiles = null,
         bool preCommit = false,
-        GitIndexReader? indexReader = null)
+        GitIndexReader? indexReader = null) =>
+        RunPrettier(repoRoot, targetFiles, preCommit, write: false, indexReader);
+
+    public static int FormatPrettier(string? repoRoot = null, string[]? targetFiles = null) =>
+        RunPrettier(repoRoot, targetFiles, preCommit: false, write: true, indexReader: null);
+
+    private static int RunPrettier(
+        string? repoRoot,
+        string[]? targetFiles,
+        bool preCommit,
+        bool write,
+        GitIndexReader? indexReader)
     {
-        repoRoot ??= FindRepoRoot();
         if (targetFiles is { Length: 0 })
         {
             return 0;
         }
+
+        repoRoot ??= FindRepoRoot();
 
         string? pnpm = ResolveUsablePnpm(repoRoot);
         if (pnpm is null)
@@ -47,83 +59,92 @@ public static class FrontendQualityGateService
             return 1;
         }
 
-        if (preCommit || targetFiles is not null)
+        GitIndexReader? ownedReader = null;
+        GitIndexReader? reader = !write
+            ? GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out ownedReader)
+            : null;
+        using (ownedReader)
         {
-            var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
-            using (ownedReader)
+            IEnumerable<string> rawFiles;
+            if (preCommit)
             {
-                var rawFiles = preCommit && targetFiles is null
-                    ? PreCommitOpenApiService.GetStagedFiles(repoRoot)
-                    : (IReadOnlyList<string>)targetFiles!;
+                rawFiles = targetFiles is not null
+                    ? targetFiles
+                    : PreCommitOpenApiService.GetStagedFiles(repoRoot);
+            }
+            else if (targetFiles is not null)
+            {
+                rawFiles = targetFiles;
+            }
+            else
+            {
+                rawFiles = PreCommitOpenApiService.TryGetTrackedFiles(repoRoot)
+                    ?? EnumerateRepositoryFiles(repoRoot);
+            }
 
-                var matching = SelectExistingFiles(repoRoot, rawFiles, PrettierExtensions, reader);
-                if (matching.Count == 0)
+            var matching = SelectExistingFiles(repoRoot, rawFiles, PrettierExtensions, reader);
+            if (matching.Count == 0)
+            {
+                return 0;
+            }
+
+            string ignorePath = Path.Combine(repoRoot, ".prettierignore");
+            bool hasIgnoreFile = File.Exists(ignorePath);
+
+            if (!write && reader is { HasAuthoritativeIndex: true })
+            {
+                foreach (string rel in matching)
                 {
-                    return 0;
-                }
-
-                string ignorePath = Path.Combine(repoRoot, ".prettierignore");
-                bool hasIgnoreFile = File.Exists(ignorePath);
-
-                if (reader is { HasAuthoritativeIndex: true })
-                {
-                    foreach (string rel in matching)
+                    if (!reader.TryReadBytes(rel, out byte[] blobBytes))
                     {
-                        if (!reader.TryReadBytes(rel, out byte[] blobBytes))
-                        {
-                            continue;
-                        }
-
-                        var stdinArgs = new List<string> { "exec", "prettier", "--check" };
-                        if (hasIgnoreFile)
-                        {
-                            stdinArgs.Add("--ignore-path");
-                            stdinArgs.Add(".prettierignore");
-                        }
-
-                        stdinArgs.Add("--stdin-filepath");
-                        stdinArgs.Add(rel);
-
-                        if (RunProcessWithStdin(repoRoot, pnpm, stdinArgs, blobBytes, suppressStdoutOnSuccess: true) != 0)
-                        {
-                            Console.WriteLine($"[ERROR] Prettier formatting violations detected in staged '{rel}'. Run 'pnpm format' to auto-fix.");
-                            return 1;
-                        }
+                        continue;
                     }
 
-                    return 0;
-                }
-
-                foreach (string[] batch in matching.Chunk(MaxFilesPerBatch))
-                {
-                    var args = new List<string> { "exec", "prettier", "--check" };
+                    var stdinArgs = new List<string> { "exec", "prettier", "--check" };
                     if (hasIgnoreFile)
                     {
-                        args.Add("--ignore-path");
-                        args.Add(".prettierignore");
+                        stdinArgs.Add("--ignore-path");
+                        stdinArgs.Add(".prettierignore");
                     }
 
-                    args.Add("--");
-                    args.AddRange(batch);
+                    stdinArgs.Add("--stdin-filepath");
+                    stdinArgs.Add(rel);
 
-                    if (RunProcess(repoRoot, pnpm, args) != 0)
+                    if (RunProcessWithStdin(repoRoot, pnpm, stdinArgs, blobBytes, suppressStdoutOnSuccess: true) != 0)
                     {
-                        Console.WriteLine("[ERROR] Prettier formatting violations detected. Run 'pnpm format' to auto-fix.");
+                        Console.WriteLine($"[ERROR] Prettier formatting violations detected in staged '{rel}'. Run 'pnpm cadence fix' or 'pnpm format' to auto-fix.");
                         return 1;
                     }
                 }
 
                 return 0;
             }
-        }
 
-        if (RunProcess(repoRoot, pnpm, ["--filter", "web", "--filter", "subject-portal", "--filter", "ui", "exec", "prettier", "--check", "."]) != 0)
-        {
-            Console.WriteLine("[ERROR] Prettier formatting violations detected. Run 'pnpm format' to auto-fix.");
-            return 1;
-        }
+            string modeFlag = write ? "--write" : "--check";
 
-        return 0;
+            foreach (string[] batch in matching.Chunk(MaxFilesPerBatch))
+            {
+                var args = new List<string> { "exec", "prettier", modeFlag };
+                if (hasIgnoreFile)
+                {
+                    args.Add("--ignore-path");
+                    args.Add(".prettierignore");
+                }
+
+                args.Add("--");
+                args.AddRange(batch);
+
+                if (RunProcess(repoRoot, pnpm, args) != 0)
+                {
+                    Console.WriteLine(write
+                        ? "[ERROR] Prettier auto-formatting failed."
+                        : "[ERROR] Prettier formatting violations detected. Run 'pnpm cadence fix' or 'pnpm format' to auto-fix.");
+                    return 1;
+                }
+            }
+
+            return 0;
+        }
     }
 
     public static int CheckEslint(
@@ -132,11 +153,12 @@ public static class FrontendQualityGateService
         bool preCommit = false,
         GitIndexReader? indexReader = null)
     {
-        repoRoot ??= FindRepoRoot();
         if (targetFiles is { Length: 0 })
         {
             return 0;
         }
+
+        repoRoot ??= FindRepoRoot();
 
         string? pnpm = ResolveUsablePnpm(repoRoot);
         if (pnpm is null)
@@ -293,6 +315,34 @@ public static class FrontendQualityGateService
         return false;
     }
 
+    private static IEnumerable<string> EnumerateRepositoryFiles(string repoRoot)
+    {
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            AttributesToSkip = FileAttributes.ReparsePoint,
+        };
+
+        return Directory.EnumerateFiles(repoRoot, "*", options)
+            .Where(fullPath =>
+            {
+                string rel = Path.GetRelativePath(repoRoot, fullPath).Replace('\\', '/');
+                return !rel.StartsWith(".git/", StringComparison.OrdinalIgnoreCase) &&
+                       !rel.StartsWith("node_modules/", StringComparison.OrdinalIgnoreCase) &&
+                       !rel.Contains("/node_modules/", StringComparison.OrdinalIgnoreCase) &&
+                       !rel.StartsWith(".venv/", StringComparison.OrdinalIgnoreCase) &&
+                       !rel.Contains("/.venv/", StringComparison.OrdinalIgnoreCase) &&
+                       !rel.StartsWith(".cadence/", StringComparison.OrdinalIgnoreCase) &&
+                       !rel.StartsWith("dist/", StringComparison.OrdinalIgnoreCase) &&
+                       !rel.Contains("/dist/", StringComparison.OrdinalIgnoreCase) &&
+                       !rel.StartsWith("bin/", StringComparison.OrdinalIgnoreCase) &&
+                       !rel.Contains("/bin/", StringComparison.OrdinalIgnoreCase) &&
+                       !rel.StartsWith("obj/", StringComparison.OrdinalIgnoreCase) &&
+                       !rel.Contains("/obj/", StringComparison.OrdinalIgnoreCase);
+            });
+    }
+
     private static List<string> SelectExistingFiles(
         string repoRoot,
         IEnumerable<string> candidates,
@@ -308,10 +358,32 @@ public static class FrontendQualityGateService
                 continue;
             }
 
-            bool exists = reader is not null ? reader.FileExists(rel) : File.Exists(Path.Combine(repoRoot, rel));
-            if (!exists)
+            if (reader is not null)
             {
-                continue;
+                if (!reader.FileExists(rel))
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                string fullPath = Path.Combine(repoRoot, rel);
+                if (!File.Exists(fullPath))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    if ((File.GetAttributes(fullPath) & FileAttributes.ReparsePoint) != 0)
+                    {
+                        continue;
+                    }
+                }
+                catch (IOException)
+                {
+                    continue;
+                }
             }
 
             string ext = Path.GetExtension(rel);
@@ -393,7 +465,7 @@ public static class FrontendQualityGateService
         }
     }
 
-    private static int RunProcess(string workingDirectory, string fileName, IReadOnlyList<string> arguments, bool suppressOutput = false)
+    internal static int RunProcess(string workingDirectory, string fileName, IReadOnlyList<string> arguments, bool suppressOutput = false)
     {
         var psi = new ProcessStartInfo(fileName)
         {
@@ -436,25 +508,5 @@ public static class FrontendQualityGateService
         }
     }
 
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current)
-            {
-                break;
-            }
-
-            current = parent ?? "";
-        }
-
-        return Directory.GetCurrentDirectory();
-    }
+    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }

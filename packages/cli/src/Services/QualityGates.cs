@@ -29,7 +29,7 @@ public sealed record GateContext(
     bool PreCommit = false,
     GitIndexReader? IndexReader = null)
 {
-    /// <summary>The target files (including an empty array when zero files are staged), or <c>null</c> for the whole repository.</summary>
+    /// <summary>The target files (including an empty array when zero files are staged or a commit only deletes files), or <c>null</c> for the whole repository.</summary>
     public string[]? Files => TargetFiles;
 }
 
@@ -120,11 +120,11 @@ public static class QualityGates
             ctx => FileHygieneValidatorService.ValidateEndOfFileNewline(ctx.TargetFiles, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("clean-secrets", ["clean-secrets-baseline"],
-            "Normalizes `.secrets.baseline`; fails when it is not valid JSON (CI then checks that it did not change)",
-            ctx => SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: ctx.RepoRoot, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
+            "Verifies `.secrets.baseline` is valid, normalized JSON with the canonical exclusion filter without mutating it",
+            ctx => SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: ctx.RepoRoot, check: true, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "validates staged `.secrets.baseline` JSON without rewriting the working tree",
+            PreCommitNote = "validates staged `.secrets.baseline` JSON without mutating the working tree",
         },
         new("detect-secrets", ["secrets-scan"],
             "Scans changed files against `.secrets.baseline` using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
@@ -141,7 +141,11 @@ public static class QualityGates
             "`docs/cli.md` documents every command in `Program.cs`, and the gate tables in `docs/cli.md` and `docs/CI.md` match this registry",
             ctx => CheckCliDocs(ctx.RepoRoot)),
         new("adrs", ["validate-adrs"], "ADR schema, `docs/adr/index.md` consistency, and an ADR for architectural changes",
-            ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot)),
+            ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot, preCommit: ctx.PreCommit))
+        {
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "checks staged files for architectural changes instead of the working tree",
+        },
         new("arch-drift", ["validate-architecture-drift"],
             "`docker/docker-compose.yml` exists and declares services; services missing from the architecture docs are warnings",
             ctx => ArchitectureDriftValidatorService.ValidateArchitectureDrift(ctx.RepoRoot) == 0),
@@ -358,28 +362,8 @@ public static class QualityGates
                string.Equals(fileName, ".globalconfig", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string? FindNearestCsproj(string repoRoot, string relativeFile)
-    {
-        string fullRepoRoot = Path.GetFullPath(repoRoot);
-        string? dir = Path.GetDirectoryName(Path.GetFullPath(Path.Combine(fullRepoRoot, relativeFile)));
-        while (!string.IsNullOrEmpty(dir) && dir.StartsWith(fullRepoRoot, StringComparison.Ordinal))
-        {
-            string[] projects = Directory.GetFiles(dir, "*.csproj");
-            if (projects.Length == 1)
-            {
-                return Path.GetRelativePath(fullRepoRoot, projects[0]);
-            }
-
-            if (string.Equals(dir, fullRepoRoot, StringComparison.Ordinal))
-            {
-                break;
-            }
-
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        return null;
-    }
+    private static string? FindNearestCsproj(string repoRoot, string relativeFile) =>
+        PreCommitOpenApiService.FindNearestCsproj(repoRoot, relativeFile);
 
     private static bool IsDotnetAvailable() =>
         DetectSecretsGateService.FindExecutableOnPath("dotnet", Environment.GetEnvironmentVariable("PATH")) is not null;
@@ -394,13 +378,13 @@ public static class QualityGates
         if (ctx.PreCommit)
         {
             var files = ctx.TargetFiles ?? (IEnumerable<string>)PreCommitOpenApiService.GetStagedFiles(ctx.RepoRoot);
-            if (!files.Any(AffectsEfCoreSchema))
+            if (!files.Any(AffectsSchemaDocGate))
             {
                 Console.WriteLine("Staged changes do not include Entity Framework entities, migrations, or configurations. Skipping schema documentation check...");
                 return true;
             }
         }
-        else if (ctx.Files is not null && !ctx.Files.Any(AffectsEfCoreSchema))
+        else if (ctx.Files is not null && !ctx.Files.Any(AffectsSchemaDocGate))
         {
             return true;
         }
@@ -412,40 +396,16 @@ public static class QualityGates
             indexReader: ctx.IndexReader) == 0;
     }
 
-    private static bool AffectsEfCoreSchema(string file)
+    private static bool AffectsSchemaDocGate(string file)
     {
-        string normalized = file.Replace('\\', '/');
-        if (normalized.StartsWith("docs/schema/", StringComparison.OrdinalIgnoreCase) &&
-            normalized.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        if (PreCommitOpenApiService.AffectsEfCoreSchema(file))
         {
             return true;
         }
 
-        if (!normalized.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
-            normalized.StartsWith("docs/", StringComparison.OrdinalIgnoreCase) ||
-            normalized.StartsWith("scripts/", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        string fileName = Path.GetFileNameWithoutExtension(normalized);
-
-        return normalized.Contains("/migrations/", StringComparison.OrdinalIgnoreCase) ||
-               normalized.StartsWith("migrations/", StringComparison.OrdinalIgnoreCase) ||
-               normalized.Contains("/configurations/", StringComparison.OrdinalIgnoreCase) ||
-               normalized.StartsWith("configurations/", StringComparison.OrdinalIgnoreCase) ||
-               normalized.Contains("/entities/", StringComparison.OrdinalIgnoreCase) ||
-               normalized.StartsWith("entities/", StringComparison.OrdinalIgnoreCase) ||
-               fileName.Contains("migration", StringComparison.OrdinalIgnoreCase) ||
-               fileName.Contains("configuration", StringComparison.OrdinalIgnoreCase) ||
-               fileName.Contains("entities", StringComparison.OrdinalIgnoreCase) ||
-               fileName.Contains("entity", StringComparison.OrdinalIgnoreCase) ||
-               fileName.Contains("dbcontext", StringComparison.OrdinalIgnoreCase);
+        string normalized = file.Replace('\\', '/');
+        return normalized.StartsWith("docs/schema/", StringComparison.OrdinalIgnoreCase) &&
+               normalized.EndsWith(".md", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string Normalize(string name) => name.Trim().ToLowerInvariant().Replace('_', '-');

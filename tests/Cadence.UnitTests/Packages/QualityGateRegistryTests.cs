@@ -446,6 +446,62 @@ public sealed class QualityGateRegistryTests : IDisposable
         gate.Run(context).Should().BeTrue("duplication gate fails only when a duplicate involves a C# file, even when pre-commit passes staged files");
     }
 
+    [Fact]
+    public void CleanSecretsGate_FailsOnUnnormalizedBaseline_WithoutMutatingBaselineOnDisk()
+    {
+        const string unnormalized =
+            "{\n" +
+            "  \"version\": \"1.5.0\",\n" +
+            "  \"generated_at\": \"2026-01-01T00:00:00Z\",\n" +
+            "  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n" +
+            "  \"filters_used\": [],\n" +
+            "  \"results\": {\n" +
+            "    \"src/Sample.cs\": [{ \"type\": \"Hex High Entropy String\", \"hashed_secret\": \"abc\", \"line_number\": 12 }]\n" +
+            "  }\n" +
+            "}\n";
+        Write(".secrets.baseline", unnormalized);
+
+        var gate = QualityGates.Find("clean-secrets")!;
+        gate.Run(Context()).Should().BeFalse("unnormalized .secrets.baseline must fail clean-secrets check");
+        File.ReadAllText(Path.Combine(_root, ".secrets.baseline")).Should().Be(
+            unnormalized,
+            "cadence check clean-secrets must never mutate .secrets.baseline on disk");
+
+        Cadence.ToolingCore.Services.SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: _root).Should().Be(0);
+        gate.Run(Context()).Should().BeTrue("normalized .secrets.baseline passes clean-secrets check");
+    }
+
+    [Fact]
+    public void TrailingWhitespaceGate_EnforcesLegacyMarkdownSpecsInUnscopedAndPreCommitModes()
+    {
+        Write("docs/SRS.md", "# Software Requirements Specification   \n");
+        var gate = QualityGates.Find("trailing-whitespace")!;
+
+        gate.Run(Context()).Should().BeFalse("unscoped trailing-whitespace check must not exempt docs/SRS.md");
+        gate.Run(Context(files: ["docs/SRS.md"], preCommit: true)).Should().BeFalse("pre-commit trailing-whitespace check also rejects trailing spaces");
+    }
+
+    [Fact]
+    public void DeleteOnlyPreCommit_PreservesEmptyTargetFiles_AndSkipsFullRepoScans()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "docs", "openapi"));
+        Cadence.ToolingCore.Services.ApiDocsGeneratorService.GenerateApiDocs(validate: false, repoRoot: _root).Should().Be(0);
+        Write("obsolete.md", "# Obsolete\n");
+        Write("docs/guide.md", "# Guide   \n\nSee [missing](nope.md).\n");
+        Write("scratch/notes.txt", "untracked-pattern-violation\n");
+        CommitOnMainThenBranch();
+
+        Git("rm", "-q", "obsolete.md");
+        Cadence.ToolingCore.Services.PreCommitOpenApiService.GetStagedFiles(_root).Should().BeEmpty();
+
+        string[] nonFileGates = QualityGates.All
+            .Where(g => !g.TakesFiles)
+            .Select(g => g.Name)
+            .ToArray();
+        QualityGateOrchestrator.RunQualityGates(excludedGates: nonFileGates, preCommit: true, repoRoot: _root)
+            .Should().Be(0, "a delete-only commit has zero surviving staged files and must complete all pre-commit file gates without scanning the full repository");
+    }
+
     private GateContext Context(string[]? files = null, bool preCommit = false) => new(_root, files, preCommit);
 
     private static string Region(string body) => $"{GateDocs.BeginMarker}\n\n{body.TrimEnd('\n')}\n\n{GateDocs.EndMarker}\n";

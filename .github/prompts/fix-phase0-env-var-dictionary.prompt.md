@@ -25,7 +25,7 @@ while read -r v; do
 done < /tmp/all_env_vars.txt > /tmp/env_vars_with_owners.txt
 ```
 
-Variables whose *only* owning directories are `scripts/` or `tests/` are out of scope for this dictionary (Phase 0 already established `scripts/` is cross-cutting CI tooling, explicitly not migrated, per `01_system_topology.md` §2.5, and `tests/` root fixtures are cross-service test harness, not bounded-context config). Filter those out — you are backfilling the *business-config* dictionary, not cataloging every CI script's env usage.
+Variables whose _only_ owning directories are `scripts/` or `tests/` are out of scope for this dictionary (Phase 0 already established `scripts/` is cross-cutting CI tooling, explicitly not migrated, per `01_system_topology.md` §2.5, and `tests/` root fixtures are cross-service test harness, not bounded-context config). Filter those out — you are backfilling the _business-config_ dictionary, not cataloging every CI script's env usage.
 
 ## Step 2 — Compute the real gap
 

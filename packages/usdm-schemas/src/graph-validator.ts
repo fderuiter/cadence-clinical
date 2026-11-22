@@ -38,7 +38,11 @@ export const ALLOWED_OPERATORS = new Set([
 ]);
 
 export interface GraphValidationError {
-  code: "CYCLE_DETECTED" | "MISSING_REFERENCE" | "UNWHITELISTED_OPERATOR" | "STRUCTURAL_ERROR";
+  code:
+    | "CYCLE_DETECTED"
+    | "MISSING_REFERENCE"
+    | "UNWHITELISTED_OPERATOR"
+    | "STRUCTURAL_ERROR";
   message: string;
   path?: string[];
   referencedId?: string;
@@ -90,7 +94,12 @@ export function inspectExpressionAST(
     }
 
     // Direct field_ref on node
-    if (fieldRef && fieldRef.field_id && type !== "XPATH" && type !== "field_ref") {
+    if (
+      fieldRef &&
+      fieldRef.field_id &&
+      type !== "XPATH" &&
+      type !== "field_ref"
+    ) {
       const bareField = fieldRef.field_id.split("/").pop();
       if (bareField) references.push(bareField);
     }
@@ -104,7 +113,9 @@ export function inspectExpressionAST(
       type === "function" ||
       type === "operator"
     ) {
-      const op = (typeof valAttr === "string" ? valAttr : curr.operator || "").toLowerCase();
+      const op = (
+        typeof valAttr === "string" ? valAttr : curr.operator || ""
+      ).toLowerCase();
       if (op) {
         if (!allowedOperators.has(op)) {
           unwhitelistedOps.push(op);
@@ -201,7 +212,9 @@ export function validateUsdmGraph(
 
   // Extract components from studyProjection or options
   const root = studyProjection || {};
-  const studyDesign = Array.isArray(root.studyDesigns) ? root.studyDesigns[0] || {} : root;
+  const studyDesign = Array.isArray(root.studyDesigns)
+    ? root.studyDesigns[0] || {}
+    : root;
 
   // Gather existing component IDs across studyProjection, options, and projectionContext
   const encounters = [
@@ -332,7 +345,8 @@ export function validateUsdmGraph(
       dependencyGraph.set(targetId, new Set());
     }
 
-    const ast = rule.ast || rule.expression || rule.relevant || rule.logicalExpression;
+    const ast =
+      rule.ast || rule.expression || rule.relevant || rule.logicalExpression;
     if (ast && typeof ast === "object") {
       const { references, unwhitelistedOps } = inspectExpressionAST(ast);
       for (const op of unwhitelistedOps) {
@@ -365,7 +379,11 @@ export function validateUsdmGraph(
 
   // 3. Verify direct references in payload / USDM entities
   // Check payload for referencedVisitId / referencedActivityId if root is a mutation payload
-  if (root.referencedVisitId && existingVisitIds.size > 0 && !existingVisitIds.has(root.referencedVisitId)) {
+  if (
+    root.referencedVisitId &&
+    existingVisitIds.size > 0 &&
+    !existingVisitIds.has(root.referencedVisitId)
+  ) {
     errors.push({
       code: "MISSING_REFERENCE",
       message: `Payload references non-existent visit ID '${root.referencedVisitId}'`,
@@ -373,7 +391,11 @@ export function validateUsdmGraph(
       referencedType: "visit",
     });
   }
-  if (root.referencedActivityId && existingActivityIds.size > 0 && !existingActivityIds.has(root.referencedActivityId)) {
+  if (
+    root.referencedActivityId &&
+    existingActivityIds.size > 0 &&
+    !existingActivityIds.has(root.referencedActivityId)
+  ) {
     errors.push({
       code: "MISSING_REFERENCE",
       message: `Payload references non-existent activity ID '${root.referencedActivityId}'`,
@@ -384,7 +406,12 @@ export function validateUsdmGraph(
 
   // Check Encounters epoch references
   for (const enc of encounters) {
-    if (enc && enc.epochId && existingEpochIds.size > 0 && !existingEpochIds.has(enc.epochId)) {
+    if (
+      enc &&
+      enc.epochId &&
+      existingEpochIds.size > 0 &&
+      !existingEpochIds.has(enc.epochId)
+    ) {
       errors.push({
         code: "MISSING_REFERENCE",
         message: `Encounter '${enc.id || enc.name}' references non-existent epoch '${enc.epochId}'`,

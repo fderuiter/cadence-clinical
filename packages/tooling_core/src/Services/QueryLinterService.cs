@@ -33,6 +33,7 @@ public static class QueryLinterService
                     .Where(f => f.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
                     .Select(f => GitIndexReader.TryNormalizeRelativePath(repoRoot, f))
                     .Where(rel => !string.IsNullOrEmpty(rel) &&
+                                  !IsExcludedCSharpPath(rel) &&
                                   (reader is not null ? reader.FileExists(rel) : File.Exists(Path.Combine(repoRoot, rel))))
                     .Select(rel => rel!)
                     .ToList();
@@ -40,10 +41,8 @@ public static class QueryLinterService
             else
             {
                 csRelativeFiles = Directory.EnumerateFiles(repoRoot, "*.cs", SearchOption.AllDirectories)
-                    .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") &&
-                                !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") &&
-                                !f.Contains($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}"))
                     .Select(f => Path.GetRelativePath(repoRoot, f).Replace('\\', '/'))
+                    .Where(rel => !IsExcludedCSharpPath(rel))
                     .ToList();
             }
 
@@ -114,16 +113,22 @@ public static class QueryLinterService
         }
     }
 
-    private static string FindRepoRoot()
+    private static bool IsExcludedCSharpPath(string relativePath)
     {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
+        string normalized = relativePath.Replace('\\', '/');
+        return normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/tests/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("bin/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/bin/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("obj/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/obj/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith(".git/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/.git/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("node_modules/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/node_modules/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith(".cadence/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith(".venv/", StringComparison.OrdinalIgnoreCase);
     }
+
+    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }

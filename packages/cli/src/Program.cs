@@ -52,7 +52,7 @@ public static class Program
         AddCommand(root, "ci", "Runs the jobs of .github/workflows/ci.yml on this machine while GitHub Actions is off", LocalCiCommand.Configure);
         AddCommand(root, "rulesets", "Validates and synchronizes .github/rulesets/*.json to GitHub via gh api", RulesetsCommand.Configure);
         AddCommand(root, "dev", "Starts the .NET Aspire AppHost with all local services and datastores", DevCommand.Execute);
-        AddCommand(root, "fix", "Executes self-healing auto-formatting and ADR validation pipeline", () => SelfHealService.ExecuteSelfHealing());
+        AddCommand(root, "fix", "Executes self-healing formatting, index sync, schema and OpenAPI pipeline", ToolCommands.ConfigureFix);
 
         AddCommand(root, "detect-duplication", "Finds duplicated C# and TypeScript code blocks", () => DuplicationDetectorService.DetectDuplication());
         AddCommand(root, "validate-imports", "Checks cross-service import boundaries", () => ImportValidatorService.ValidateImports());
@@ -66,7 +66,7 @@ public static class Program
         AddCommand(root, "extract-env-vars", "Checks that environment variables read in code are documented", ToolCommands.ConfigureExtractEnvVars);
         AddCommand(root, "audit-security", "Scans for hardcoded secrets", () => SecurityAuditorService.AuditSecurity());
         AddCommand(root, "validate-vulnerabilities", "Audits dependency vulnerabilities against the exclusions ledger", () => VulnerabilityAuditorService.AuditVulnerabilities());
-        AddCommand(root, "clean-secrets-baseline", "Normalizes the detect-secrets baseline", () => SecretsBaselineCleanerService.CleanSecretsBaseline());
+        AddCommand(root, "clean-secrets-baseline", "Normalizes or checks the detect-secrets baseline", ToolCommands.ConfigureCleanSecretsBaseline);
         AddCommand(root, "validate-architecture-drift", "Checks that compose services are described in the architecture docs", () => ArchitectureDriftValidatorService.ValidateArchitectureDrift());
         AddCommand(root, "sync-openapi-spec", "Exports each service's OpenAPI document into docs/openapi", ToolCommands.ConfigureSyncOpenApiSpec);
         AddCommand(root, "validate-openapi-drift", "Compares docs/openapi with the services", () => OpenApiDriftValidatorService.ValidateDrift());

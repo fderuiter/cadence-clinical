@@ -74,12 +74,12 @@ public static class DetectSecretsGateService
         Func<string, string?>? getEnvironmentVariable = null,
         GitIndexReader? indexReader = null)
     {
-        repoRoot ??= FindRepoRoot();
         if (targetFiles is { Length: 0 })
         {
             return 0;
         }
 
+        repoRoot ??= FindRepoRoot();
         getEnvironmentVariable ??= Environment.GetEnvironmentVariable;
 
         var tool = ResolveTool(repoRoot, getEnvironmentVariable);

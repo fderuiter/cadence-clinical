@@ -701,6 +701,83 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         File.SetUnixFileMode(hadolintPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
     }
 
+    [Fact]
+    public void SecretsBaselineCleaner_CheckMode_DetectsUnnormalizedBaselineWithoutMutatingDisk()
+    {
+        const string unnormalized =
+            """
+            {
+              "version": "1.5.0",
+              "generated_at": "2026-01-01T00:00:00Z",
+              "plugins_used": [{ "name": "PrivateKeyDetector" }],
+              "filters_used": [],
+              "results": {
+                "src/Sample.cs": [{ "type": "Hex High Entropy String", "hashed_secret": "def", "line_number": 42 }]
+              }
+            }
+            """;
+        string baselinePath = Write(".secrets.baseline", unnormalized);
+
+        SecretsBaselineCleanerService.CleanSecretsBaseline(baselinePath, _tempDir, check: true).Should().Be(1);
+        File.ReadAllText(baselinePath).Should().Be(unnormalized, "--check mode must never write to .secrets.baseline");
+
+        SecretsBaselineCleanerService.CleanSecretsBaseline(baselinePath, _tempDir, check: false).Should().Be(0);
+        SecretsBaselineCleanerService.CleanSecretsBaseline(baselinePath, _tempDir, check: true).Should().Be(0);
+    }
+
+    [Fact]
+    public void FrontendQualityGates_SkipEmptyTargetListWithoutFailingClosed()
+    {
+        FrontendQualityGateService.CheckPrettier(_tempDir, [], preCommit: true).Should().Be(0);
+        FrontendQualityGateService.CheckEslint(_tempDir, [], preCommit: true).Should().Be(0);
+    }
+
+    [Fact]
+    public void FindRepoRoot_ResolvesRepositoryFromNestedSubdirectory()
+    {
+        Write("Cadence.sln", "\n");
+        string nestedDir = Path.Combine(_tempDir, "apps", "web", "src", "components");
+        Directory.CreateDirectory(nestedDir);
+
+        string originalCwd = Directory.GetCurrentDirectory();
+        try
+        {
+            Directory.SetCurrentDirectory(nestedDir);
+            string expected = Path.GetFullPath(_tempDir);
+            Path.GetFullPath(PreCommitOpenApiService.FindRepoRoot()).Should().Be(expected);
+            Path.GetFullPath(QualityGateOrchestrator.FindRepoRoot()).Should().Be(expected);
+            Path.GetFullPath(FrontendQualityGateService.FindRepoRoot()).Should().Be(expected);
+            Path.GetFullPath(AdrValidatorService.FindRepoRoot()).Should().Be(expected);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalCwd);
+        }
+    }
+
+    [Fact]
+    public void PreCommitOpenApiService_ClassifiesBackendContractAndEfCoreSchemaPaths()
+    {
+        var none = PreCommitOpenApiService.AnalyzeBackendContractChanges(["apps/web/src/App.vue", "docs/cli.md"]);
+        none.ShouldExport.Should().BeFalse();
+        none.HasCsharpFiles.Should().BeFalse();
+
+        var serviceOnly = PreCommitOpenApiService.AnalyzeBackendContractChanges(["apps/execution/src/Endpoints/FormEndpoints.cs"]);
+        serviceOnly.ShouldExport.Should().BeTrue();
+        serviceOnly.TargetServices.Should().Equal("execution");
+        serviceOnly.HasCsharpFiles.Should().BeTrue();
+
+        var shared = PreCommitOpenApiService.AnalyzeBackendContractChanges(["packages/contracts/src/StudyDto.cs"]);
+        shared.ShouldExport.Should().BeTrue();
+        shared.TargetServices.Should().BeNull("shared contract changes export all backend services");
+        shared.HasCsharpFiles.Should().BeTrue();
+
+        PreCommitOpenApiService.AffectsEfCoreSchema("apps/web/src/models/FormModel.ts").Should().BeFalse();
+        PreCommitOpenApiService.AffectsEfCoreSchema("docs/schema/index.md").Should().BeFalse();
+        PreCommitOpenApiService.AffectsEfCoreSchema("apps/econsent/src/Domain/ConsentEntity.cs").Should().BeTrue();
+        PreCommitOpenApiService.AffectsEfCoreSchema("packages/kernel/src/Cadence.Kernel.Persistence/Migrations/20260101_Init.cs").Should().BeTrue();
+    }
+
     private (int ExitCode, string Stderr) RunHook(string hookPath, string pathEnv, string homeDir)
     {
         var psi = new ProcessStartInfo("/bin/sh")
