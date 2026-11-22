@@ -29,12 +29,39 @@
         <button
           class="btn btn-primary btn-sm btn-batch-accept"
           style="font-size: 12px"
-          :disabled="selectedItemIds.length === 0"
+          :disabled="!canReviewQc || selectedItemIds.length === 0"
+          :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
           @click="openBatchAcceptModal"
         >
           ✓ Batch Accept Classifications ({{ selectedItemIds.length }})
         </button>
       </div>
+    </div>
+
+    <div
+      v-if="!canReviewQc"
+      id="cra-qc-role-note"
+      class="qc-role-banner"
+      role="note"
+    >
+      {{ ETMF_QC_REVIEW_ROLE_REASON }}
+    </div>
+    <div
+      v-if="etmfStore.scopeForbiddenGuidance"
+      id="cra-qc-scope-forbidden"
+      class="qc-error-banner"
+      role="alert"
+    >
+      <strong>Study or Site Assignment Required:</strong>
+      {{ etmfStore.scopeForbiddenGuidance }}
+    </div>
+    <div
+      v-else-if="queueError"
+      id="cra-qc-error"
+      class="qc-error-banner"
+      role="alert"
+    >
+      ❌ {{ queueError }}
     </div>
 
     <!-- Selection / Filter Ribbon -->
@@ -63,6 +90,8 @@
             type="checkbox"
             :checked="isAllSelected"
             :indeterminate="isPartiallySelected"
+            :disabled="!canReviewQc"
+            :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
             @change="toggleSelectAll"
           />
           Select All ({{ queueItems.length }})
@@ -91,7 +120,24 @@
     <!-- QC Queue Table -->
     <div class="qc-table-wrapper">
       <div
-        v-if="filteredItems.length === 0"
+        v-if="etmfStore.scopeForbiddenGuidance"
+        class="empty-qc-state"
+        style="
+          padding: 40px;
+          text-align: center;
+          color: var(--semantic-color-text-secondary);
+        "
+      >
+        <span style="font-size: 32px" aria-hidden="true">🔒</span>
+        <p style="margin: 8px 0 0 0; font-size: 14px; font-weight: 600">
+          Study or Site Scope Assignment Required
+        </p>
+        <p style="margin: 4px 0 0 0; font-size: 12px">
+          {{ etmfStore.scopeForbiddenGuidance }}
+        </p>
+      </div>
+      <div
+        v-else-if="filteredItems.length === 0"
         class="empty-qc-state"
         style="
           padding: 40px;
@@ -132,6 +178,8 @@
                 type="checkbox"
                 :aria-label="`Select ${item.filename || item.document_id}`"
                 :value="item.document_id"
+                :disabled="!canReviewQc"
+                :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
               />
             </td>
             <td>
@@ -478,7 +526,10 @@
           <button
             class="btn btn-danger btn-reject-qc"
             style="font-size: 12px"
-            :disabled="!reviewReason || reviewReason.length < 10"
+            :disabled="
+              !canReviewQc || !reviewReason || reviewReason.length < 10
+            "
+            :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
             @click="submitDecision('REJECT')"
           >
             ✕ Reject
@@ -486,7 +537,10 @@
           <button
             class="btn btn-primary btn-accept-qc"
             style="font-size: 12px"
-            :disabled="!reviewReason || reviewReason.length < 10"
+            :disabled="
+              !canReviewQc || !reviewReason || reviewReason.length < 10
+            "
+            :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
             @click="
               submitDecision(overrideArtifactCode ? 'OVERRIDE' : 'ACCEPT')
             "
@@ -505,13 +559,30 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useFocusTrap } from "ui";
 import { useEtmfStore } from "../../stores/etmf.js";
+import { useAuthStore } from "../../stores/auth.js";
 import { useToastStore } from "../../stores/toasts.js";
+import {
+  canReviewEtmfQc,
+  ETMF_QC_REVIEW_ROLE_REASON,
+} from "../../canvas/authority.ts";
 
 const etmfStore = useEtmfStore();
+const authStore = useAuthStore();
 const toastStore = useToastStore();
+
+const hasActiveAuth = computed(() =>
+  Boolean(
+    authStore.isAuthenticated ||
+    (Array.isArray(authStore.rawRoles) && authStore.rawRoles.length > 0)
+  )
+);
+const canReviewQc = computed(
+  () => !hasActiveAuth.value || canReviewEtmfQc(authStore)
+);
+const queueError = ref("");
 
 const searchQuery = ref("");
 const selectedItemIds = ref([]);
@@ -573,7 +644,13 @@ function toggleSelectAll(event) {
 }
 
 async function loadQueue() {
-  await etmfStore.fetchQcQueue();
+  queueError.value = "";
+  try {
+    await etmfStore.fetchQcQueue();
+  } catch (err) {
+    queueError.value = err?.message || "Failed to load CRA QC queue.";
+    toastStore.apiError("Failed to load CRA QC queue", err);
+  }
 }
 
 function formatDate(isoStr) {
@@ -595,27 +672,40 @@ function getConfidenceClass(tier) {
 }
 
 function openBatchAcceptModal() {
+  if (!canReviewQc.value) {
+    toastStore.push({
+      message: ETMF_QC_REVIEW_ROLE_REASON,
+      tone: "warning",
+    });
+    return;
+  }
   batchReason.value =
     "Verified AI classifications against source regulatory document originals";
   showBatchModal.value = true;
 }
 
 async function executeBatchAccept() {
+  if (!canReviewQc.value) return;
   if (selectedItemIds.value.length === 0) return;
   if (!batchReason.value || batchReason.value.length < 10) return;
 
   const count = selectedItemIds.value.length;
-  await etmfStore.batchAcceptClassifications(
-    selectedItemIds.value,
-    batchReason.value
-  );
+  try {
+    await etmfStore.batchAcceptClassifications(
+      selectedItemIds.value,
+      batchReason.value
+    );
 
-  showBatchModal.value = false;
-  selectedItemIds.value = [];
-  toastStore.push({
-    message: `Batch Accepted: Approved classifications for ${count} documents.`,
-    tone: "success",
-  });
+    showBatchModal.value = false;
+    selectedItemIds.value = [];
+    toastStore.push({
+      message: `Batch Accepted: Approved classifications for ${count} documents.`,
+      tone: "success",
+    });
+  } catch (err) {
+    queueError.value = err?.message || "Batch QC acceptance failed.";
+    toastStore.apiError("Batch QC acceptance failed", err);
+  }
 }
 
 function openInspectionModal(item) {
@@ -625,23 +715,37 @@ function openInspectionModal(item) {
 }
 
 async function submitDecision(decision) {
+  if (!canReviewQc.value) return;
   if (!inspectedItem.value) return;
   if (!reviewReason.value || reviewReason.value.length < 10) return;
 
   const currentFilename = inspectedItem.value.filename;
 
-  await etmfStore.reviewQcDocument(inspectedItem.value.document_id, {
-    decision,
-    reason_for_change: reviewReason.value,
-    override_artifact_code: overrideArtifactCode.value || null,
-  });
+  try {
+    await etmfStore.reviewQcDocument(inspectedItem.value.document_id, {
+      decision,
+      reason_for_change: reviewReason.value,
+      override_artifact_code: overrideArtifactCode.value || null,
+    });
 
-  inspectedItem.value = null;
-  toastStore.push({
-    message: `QC Adjudication submitted for '${currentFilename || "document"}': ${decision}`,
-    tone: "success",
-  });
+    inspectedItem.value = null;
+    toastStore.push({
+      message: `QC Adjudication submitted for '${currentFilename || "document"}': ${decision}`,
+      tone: "success",
+    });
+  } catch (err) {
+    queueError.value = err?.message || "QC adjudication failed.";
+    toastStore.apiError("QC adjudication failed", err);
+  }
 }
+
+watch(
+  () => [etmfStore.currentStudyId, etmfStore.currentSiteId],
+  () => {
+    selectedItemIds.value = [];
+    loadQueue();
+  }
+);
 
 onMounted(() => {
   loadQueue();
@@ -664,6 +768,22 @@ onMounted(() => {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
+}
+
+.qc-role-banner {
+  padding: 8px 16px;
+  font-size: 12px;
+  background: var(--semantic-color-warning-bg-soft);
+  border-bottom: 1px solid var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
+}
+
+.qc-error-banner {
+  padding: 8px 16px;
+  font-size: 12px;
+  background: var(--semantic-color-error-bg-soft);
+  border-bottom: 1px solid var(--semantic-color-error-border-soft);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .qc-table-wrapper {

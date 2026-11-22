@@ -252,9 +252,13 @@ services:
     container_name: cadence-etmf
     ports:
       - "8003:8080"
+    volumes:
+      - etmf_storage:/tmp/cadence-etmf-storage
     environment:
       <<: *db-env
       EXECUTION_SERVICE_URL: http://execution:8080
+      Storage__Provider: filesystem
+      Storage__RootPath: /tmp/cadence-etmf-storage
     depends_on: *db-depends
 
   interop:
@@ -482,3 +486,4 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  etmf_storage:
