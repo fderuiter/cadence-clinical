@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
@@ -62,6 +63,8 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             .FirstOrDefault(s => string.Equals(s.Id, found.CollectionSpecId, StringComparison.Ordinal));
         var items = spec?.Items ?? [];
         var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
+        var codelistGroups = await LoadCodelistGroupsAsync(db, items, cancellationToken).ConfigureAwait(false);
+        var itemCodelists = MapItemCodelists(items, codelistGroups);
 
         // A signature names the revisions current when it was recorded; any later revision or value supersedes it (#5463).
         string? contentHash = values.Count == 0
@@ -100,7 +103,8 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             assertions,
             attestations,
             contentHash,
-            collectionTitle);
+            collectionTitle,
+            itemCodelists);
     }
 
     public async Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(
@@ -253,6 +257,13 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         var signaturesByInstance = rawSignatures.ToLookup(a => a.TargetId);
+        var allItems = instances
+            .SelectMany(instance =>
+                (specsByVersion.GetValueOrDefault(instance.ProtocolVersionId) ?? [])
+                    .FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal))
+                    ?.Items ?? [])
+            .ToList();
+        var codelistGroups = await LoadCodelistGroupsAsync(db, allItems, cancellationToken).ConfigureAwait(false);
 
         var records = new List<CollectionInstanceRecord>(instances.Count);
         foreach (var instance in instances)
@@ -261,6 +272,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             var spec = specs.FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal));
             var items = spec?.Items ?? [];
             var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
+            var itemCodelists = MapItemCodelists(items, codelistGroups);
 
             var values = instance.Members
                 .Where(m => observations.ContainsKey(m.ObservationId))
@@ -314,10 +326,65 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 assertions,
                 attestations,
                 contentHash,
-                collectionTitle));
+                collectionTitle,
+                itemCodelists));
         }
 
         return records;
+    }
+
+    private static async Task<Dictionary<(CodeSystemVersionId Version, string GroupCode), IReadOnlyList<CodelistOptionView>>> LoadCodelistGroupsAsync(
+        KernelDbContext db,
+        IEnumerable<CollectionItem> items,
+        CancellationToken cancellationToken)
+    {
+        var keys = items
+            .Where(i => !string.IsNullOrWhiteSpace(i.Terminology?.Codelist))
+            .Select(i => (i.Terminology!.CodeSystemVersionId, GroupCode: i.Terminology.Codelist!))
+            .Distinct()
+            .ToList();
+        if (keys.Count == 0)
+        {
+            return [];
+        }
+
+        var versionIds = keys.Select(k => k.CodeSystemVersionId).Distinct().ToList();
+        var groupCodes = keys.Select(k => k.GroupCode).Distinct(StringComparer.Ordinal).ToList();
+        var rawEntries = await db.CodeSystemEntries.AsNoTracking()
+            .Where(e => versionIds.Contains(e.CodeSystemVersionId) && e.GroupCode != null && groupCodes.Contains(e.GroupCode))
+            .OrderBy(e => e.Code)
+            .ThenBy(e => e.Ordinal)
+            .Select(e => new { e.CodeSystemVersionId, e.GroupCode, e.Code, e.Display, e.SubmissionValue })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rawEntries
+            .GroupBy(e => (e.CodeSystemVersionId, GroupCode: e.GroupCode!))
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<CodelistOptionView>)g
+                    .DistinctBy(e => e.Code, StringComparer.Ordinal)
+                    .Select(e => new CodelistOptionView(e.Code, e.Display, e.SubmissionValue))
+                    .ToList());
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<CodelistOptionView>>? MapItemCodelists(
+        IReadOnlyList<CollectionItem> items,
+        IReadOnlyDictionary<(CodeSystemVersionId Version, string GroupCode), IReadOnlyList<CodelistOptionView>> groups)
+    {
+        Dictionary<string, IReadOnlyList<CodelistOptionView>>? mapped = null;
+        foreach (var item in items)
+        {
+            if (item.Terminology is not { } terminology || string.IsNullOrWhiteSpace(terminology.Codelist))
+            {
+                continue;
+            }
+
+            mapped ??= new Dictionary<string, IReadOnlyList<CodelistOptionView>>(StringComparer.Ordinal);
+            mapped[item.Id] = groups.GetValueOrDefault((terminology.CodeSystemVersionId, terminology.Codelist)) ?? [];
+        }
+
+        return mapped;
     }
 
     private static CollectionInstanceSummary ToSummary(

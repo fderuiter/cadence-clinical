@@ -381,7 +381,43 @@
                     </div>
                   </th>
                   <td>
+                    <select
+                      v-if="item.codelist_options?.length"
+                      :id="`ecrf-item-${item.item_id}`"
+                      v-model="entries[item.item_id].text"
+                      :disabled="
+                        locked || saving || !!entries[item.item_id].missing
+                      "
+                      :aria-invalid="!!itemErrors[item.item_id]"
+                      :aria-describedby="`ecrf-item-${item.item_id}-error`"
+                    >
+                      <option value="">Select…</option>
+                      <option
+                        v-if="
+                          entries[item.item_id].text &&
+                          !item.codelist_options.some(
+                            (option) =>
+                              option.code === entries[item.item_id].text
+                          )
+                        "
+                        :value="entries[item.item_id].text"
+                      >
+                        {{ entries[item.item_id].text }}
+                      </option>
+                      <option
+                        v-for="option in item.codelist_options"
+                        :key="option.code"
+                        :value="option.code"
+                      >
+                        {{
+                          option.display && option.display !== option.code
+                            ? `${option.display} (${option.code})`
+                            : option.code
+                        }}
+                      </option>
+                    </select>
                     <input
+                      v-else
                       :id="`ecrf-item-${item.item_id}`"
                       v-model="entries[item.item_id].text"
                       type="text"
@@ -1516,9 +1552,8 @@ watch(
     await nextTick();
     const row = document.getElementById(`ecrf-row-${itemId}`);
     row?.scrollIntoView?.({ block: "center" });
-    const input = document.getElementById(
-      `ecrf-item-${itemId}`
-    ) as HTMLInputElement | null;
+    const input = document.getElementById(`ecrf-item-${itemId}`) as
+      HTMLInputElement | HTMLSelectElement | null;
     if (input && !input.disabled) {
       input.focus?.();
     }

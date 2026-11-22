@@ -482,7 +482,7 @@ the enrollment:
 - A save names items by their CollectionSpec item id; the observation records the item's concept. The validator
   refuses a malformed save (no values, an item or observation id named twice, a negative revision) with
   `K.Command.Invalid`. The handler refuses, with an error per item, an item the spec lacks and a value the item does
-  not admit (kind, UCUM unit, code-system version; 422). Required items and ranges are edit checks that run after commit
+  not admit (kind, UCUM unit, code-system version, and codelist or code-system membership via `IConceptRegistry`; 422). Required items and ranges are edit checks that run after commit
   (ADR-2622 §4.4).
 - One stale expected revision (0 for an item with no value yet) refuses the whole save with 409 and an error per
   stale item; a value equal to the current one is left as it is. The result returns every value of the form with its
@@ -495,7 +495,7 @@ the enrollment:
   `K.Observation.ParticipantWithdrawn`); a save that only corrects values goes on (see Participants and enrollment).
 - The form is a lock scope (spec §10.5): a lock on it refuses saves, and corrections and assertions of its values made
   one at a time. `ICollectionInstanceRecords` reads a form's items (the CollectionSpec's, in the governing version's
-  order), its values with their revisions, the assertions about them, the signatures over the form and the locks in
+  order) with hydrated codelist options, its values with their revisions, the assertions about them, the signatures over the form and the locks in
   force in one call.
 - Events: `CollectionInstanceOpened` and `CollectedValuesSaved` (Evidence), besides each value's `ObservationRecorded`
   or `ObservationCorrected`. Nothing consumes `CollectedValuesSaved` yet; edit checks will (#5368).

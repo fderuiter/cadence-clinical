@@ -193,7 +193,11 @@ public sealed record FormResponse(
             .Distinct(StringComparer.Ordinal)
             .ToList();
         var items = order
-            .Select(id => FormItemResponse.From(id, specification.GetValueOrDefault(id), values.GetValueOrDefault(id)))
+            .Select(id => FormItemResponse.From(
+                id,
+                specification.GetValueOrDefault(id),
+                values.GetValueOrDefault(id),
+                record.ItemCodelists?.GetValueOrDefault(id)))
             .ToList();
         var missing = items
             .Where(i => i.Required && (i.Value is null || i.Value is MissingValue { Reason: NullFlavor.NotAsked }))
@@ -236,6 +240,9 @@ public sealed record FormResponse(
 /// <param name="Revision">The value's current revision, to send as the expected revision of its next edit; 0 when it has no value.</param>
 /// <param name="RecordedBy">Who entered the current revision.</param>
 /// <param name="RecordedAt">When the current revision was entered.</param>
+/// <param name="CodeSystemVersionId">Pinned code-system version from the item's terminology binding, when governed by controlled terminology.</param>
+/// <param name="Codelist">Codelist group code within the pinned code-system version, when restricted to a codelist.</param>
+/// <param name="CodelistOptions">Hydrated codelist options when <paramref name="Codelist"/> is set.</param>
 public sealed record FormItemResponse(
     string ItemId,
     string? Concept,
@@ -246,9 +253,16 @@ public sealed record FormItemResponse(
     Guid? ObservationId,
     int Revision,
     string? RecordedBy,
-    DateTimeOffset? RecordedAt)
+    DateTimeOffset? RecordedAt,
+    Guid? CodeSystemVersionId = null,
+    string? Codelist = null,
+    IReadOnlyList<CodelistOptionView>? CodelistOptions = null)
 {
-    internal static FormItemResponse From(string id, Cadence.Kernel.Protocol.Design.CollectionItem? item, CollectedValueView? value) =>
+    internal static FormItemResponse From(
+        string id,
+        Cadence.Kernel.Protocol.Design.CollectionItem? item,
+        CollectedValueView? value,
+        IReadOnlyList<CodelistOptionView>? codelistOptions = null) =>
         new(
             id,
             item?.Concept.ToString(),
@@ -259,7 +273,10 @@ public sealed record FormItemResponse(
             value?.ObservationId.Value,
             value?.Revision ?? 0,
             value?.RecordedBy,
-            value?.RecordedAt);
+            value?.RecordedAt,
+            item?.Terminology?.CodeSystemVersionId.Value,
+            string.IsNullOrWhiteSpace(item?.Terminology?.Codelist) ? null : item.Terminology.Codelist,
+            codelistOptions);
 }
 
 /// <summary>A lock in force over a form.</summary>

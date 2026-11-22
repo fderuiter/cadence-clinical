@@ -2050,4 +2050,139 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
       "Interim freeze"
     );
   });
+
+  it("renders a <select> for codelist items, keeps text input when codelist_options is empty, and saves coded values", async () => {
+    const csVersion = "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d72";
+    const codedForm = form({
+      items: [
+        item({
+          item_id: "VSPOS",
+          concept: "C71148@1",
+          value_kind: "Coded",
+          required: true,
+          code_system_version_id: csVersion,
+          codelist: "C71148",
+          codelist_options: [
+            { code: "SITTING", display: "Sitting" },
+            { code: "SUPINE", display: "Supine" },
+          ],
+        }),
+        item({
+          item_id: "AELLT",
+          concept: "AELLT@1",
+          value_kind: "Coded",
+          code_system_version_id: csVersion,
+          codelist: null,
+          codelist_options: null,
+        }),
+      ],
+      missing_required: ["VSPOS"],
+    });
+
+    vi.mocked(ecrfFormsApi.getForm)
+      .mockResolvedValueOnce(codedForm as never)
+      .mockResolvedValueOnce(
+        form({
+          ...codedForm,
+          version: 3,
+          complete: true,
+          missing_required: [],
+        }) as never
+      );
+    vi.mocked(ecrfFormsApi.saveValues).mockResolvedValue({
+      form_id: FORM_ID,
+      version: 3,
+      values: [],
+    } as never);
+
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+    const view = wrapper;
+    await expect(view.element).toBeAccessible();
+
+    const posSelect = view.find("#ecrf-item-VSPOS");
+    expect(posSelect.element.tagName).toBe("SELECT");
+    expect(
+      posSelect.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual(["", "SITTING", "SUPINE"]);
+
+    const lltInput = view.find("#ecrf-item-AELLT");
+    expect(lltInput.element.tagName).toBe("INPUT");
+
+    await posSelect.setValue("SITTING");
+    await lltInput.setValue("LLT_HEADACHE");
+    await view.find("#ecrf-save-reason").setValue("Initial coded capture");
+    await view.find("#ecrf-form-page").trigger("submit");
+    await flushPromises();
+
+    expect(vi.mocked(ecrfFormsApi.saveValues).mock.calls[0][0].values).toEqual([
+      {
+        item_id: "VSPOS",
+        value: {
+          type: "coded",
+          code_system_version_id: csVersion,
+          code: "SITTING",
+        },
+        expected_revision: 0,
+        observation_id: null,
+        observed_at: null,
+      },
+      {
+        item_id: "AELLT",
+        value: {
+          type: "coded",
+          code_system_version_id: csVersion,
+          code: "LLT_HEADACHE",
+        },
+        expected_revision: 0,
+        observation_id: null,
+        observed_at: null,
+      },
+    ]);
+  });
+
+  it("displays a recorded code removed by an amendment until the user picks a valid codelist option", async () => {
+    const csVersion = "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d72";
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+      form({
+        items: [
+          item({
+            item_id: "VSPOS",
+            value_kind: "Coded",
+            required: true,
+            code_system_version_id: csVersion,
+            codelist: "C71148",
+            codelist_options: [
+              { code: "SITTING", display: "Sitting" },
+              { code: "SUPINE", display: "Supine" },
+            ],
+            value: {
+              type: "coded",
+              code_system_version_id: csVersion,
+              code: "STANDING",
+            },
+            observation_id: OBS_ID,
+            revision: 1,
+          }),
+        ],
+        missing_required: [],
+        complete: true,
+      }) as never
+    );
+
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+    const view = wrapper;
+    const posSelect = view.find("#ecrf-item-VSPOS");
+    expect((posSelect.element as HTMLSelectElement).value).toBe("STANDING");
+    expect(
+      posSelect.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual(["", "STANDING", "SITTING", "SUPINE"]);
+
+    await posSelect.setValue("SUPINE");
+    expect((posSelect.element as HTMLSelectElement).value).toBe("SUPINE");
+    expect(
+      posSelect.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual(["", "SITTING", "SUPINE"]);
+  });
 });

@@ -1346,6 +1346,11 @@ export interface components {
       content_hash: null | string;
       base_content_hash: null | string;
     };
+    Kernel_CodelistOptionView: {
+      code: string;
+      display: string;
+      submission_value?: null | string;
+    };
     Kernel_CodeSystemVersionId: unknown;
     /** @enum {unknown} */
     Kernel_DateTimePrecision:
@@ -1471,6 +1476,11 @@ export interface components {
       recorded_by: null | string;
       /** Format: date-time */
       recorded_at: null | string;
+      /** Format: uuid */
+      code_system_version_id?: null | string;
+      codelist?: null | string;
+      codelist_options?:
+        null | components["schemas"]["Kernel_CodelistOptionView"][];
     };
     Kernel_FormLockResponse: {
       /** Format: uuid */
@@ -2021,6 +2031,9 @@ export interface components {
       expected_unit?: null | string;
       /** Format: uuid */
       expected_code_system_version_id?: null | string;
+      expected_codelist?: null | string;
+      expected_codelist_options?:
+        null | components["schemas"]["Kernel_CodelistOptionView"][];
     };
     Kernel_KernelObservationStateResponse: {
       ref: string;

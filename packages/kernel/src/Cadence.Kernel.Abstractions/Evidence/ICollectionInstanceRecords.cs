@@ -109,6 +109,7 @@ public sealed record CollectionInstanceSummary(
 /// <para><c>ContentHash</c>: The hash a signature over the form's current values would bind to (#5463); null while the
 /// form has no values.</para>
 /// <para><c>CollectionTitle</c>: The CollectionSpec's title in the governing protocol version, when present.</para>
+/// <para><c>ItemCodelists</c>: Hydrated codelist options keyed by item id for items whose terminology declares a codelist.</para>
 /// </remarks>
 public sealed record CollectionInstanceRecord(
     CollectionInstanceId CollectionInstanceId,
@@ -129,7 +130,14 @@ public sealed record CollectionInstanceRecord(
     IReadOnlyList<AssertionView> Assertions,
     IReadOnlyList<FormAttestationView> Attestations,
     string? ContentHash,
-    string? CollectionTitle = null);
+    string? CollectionTitle = null,
+    IReadOnlyDictionary<string, IReadOnlyList<CodelistOptionView>>? ItemCodelists = null);
+
+/// <summary>One option in a collection item's governed codelist.</summary>
+/// <param name="Code">The code recorded in <see cref="CodedValue.Code"/>.</param>
+/// <param name="Display">Human-readable label for the code.</param>
+/// <param name="SubmissionValue">Optional standards submission value (for example CDISC CT submission value).</param>
+public sealed record CodelistOptionView(string Code, string Display, string? SubmissionValue = null);
 
 /// <summary>One value of a form instance.</summary>
 /// <remarks>

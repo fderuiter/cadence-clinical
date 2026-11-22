@@ -25835,6 +25835,27 @@
           }
         }
       },
+      "Kernel_CodelistOptionView": {
+        "required": [
+          "code",
+          "display"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "display": {
+            "type": "string"
+          },
+          "submission_value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Kernel_CodeSystemVersionId": {},
       "Kernel_DateTimePrecision": {
         "enum": [
@@ -26357,6 +26378,28 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "code_system_version_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "codelist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codelist_options": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_CodelistOptionView"
+            }
           }
         }
       },
@@ -28543,6 +28586,21 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "expected_codelist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expected_codelist_options": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_CodelistOptionView"
+            }
           }
         }
       },
