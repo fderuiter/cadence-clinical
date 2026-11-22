@@ -212,6 +212,35 @@
       </p>
 
       <div
+        v-if="draftSummary.imported_rule_pack"
+        :id="`${idPrefix}-rule-pack`"
+        data-testid="imported-rule-pack-banner"
+        class="banner banner-success"
+      >
+        <span>
+          Compiled ODM edit checks into RulePack
+          <strong>{{ draftSummary.imported_rule_pack.key }}</strong>
+          (v{{ draftSummary.imported_rule_pack.version }},
+          {{ draftSummary.imported_rule_pack.rule_count }}
+          {{
+            draftSummary.imported_rule_pack.rule_count === 1 ? "rule" : "rules"
+          }}, status: {{ draftSummary.imported_rule_pack.status }}).
+        </span>
+        <router-link
+          v-if="studyCode"
+          :id="`${idPrefix}-open-validation`"
+          class="btn btn-secondary"
+          :to="{
+            name: 'study',
+            params: { studyCode },
+            query: { stage: 'data', section: 'validation' },
+          }"
+        >
+          Review &amp; pin in Validation
+        </router-link>
+      </div>
+
+      <div
         v-if="draftSummary.import_notes && draftSummary.import_notes.length > 0"
         :id="`${idPrefix}-notes`"
         class="import-notes-box"
@@ -242,7 +271,9 @@
           class="draft-form-card"
         >
           <header class="draft-form-header">
-            <h4 class="draft-form-name">{{ form.name }}</h4>
+            <h4 class="draft-form-name">
+              {{ form.name }}
+            </h4>
             <span class="draft-form-meta">
               <code>{{ form.id }}</code> · {{ form.item_count }}
               {{ form.item_count === 1 ? "item" : "items" }}

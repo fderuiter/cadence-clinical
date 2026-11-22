@@ -24,6 +24,20 @@ public interface ICollectionInstanceRecords
         TenantId tenant,
         EnrollmentId enrollment,
         CancellationToken cancellationToken);
+
+    /// <summary>Every full form instance record opened for <paramref name="enrollment"/> in <paramref name="tenant"/>, oldest first.</summary>
+    Task<IReadOnlyList<CollectionInstanceRecord>> ListRecordsForEnrollmentAsync(
+        TenantId tenant,
+        EnrollmentId enrollment,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<CollectionInstanceRecord>>([]);
+
+    /// <summary>Every full form instance record opened for <paramref name="study"/> in <paramref name="tenant"/>, oldest first.</summary>
+    Task<IReadOnlyList<CollectionInstanceRecord>> ListForStudyAsync(
+        TenantId tenant,
+        StudyId study,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<CollectionInstanceRecord>>([]);
 }
 
 /// <summary>Summary of an opened form instance for an enrollment's form list.</summary>

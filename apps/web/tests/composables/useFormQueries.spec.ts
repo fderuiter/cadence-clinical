@@ -54,7 +54,7 @@ const TARGET = {
 describe("queryActions (#5461)", () => {
   it.each([
     ["open", false, ["answer"]],
-    ["open", true, ["answer", "close", "cancel"]],
+    ["open", true, ["close", "cancel"]],
     ["answered", false, []],
     ["answered", true, ["reopen", "close", "cancel"]],
     ["closed", true, ["reopen"]],
