@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   MISSING_REASONS,
   formatObservationValue,
+  correctionUnit,
   isUnrecordedValue,
   parseCorrection,
   parseFormEntry,
@@ -172,5 +173,61 @@ describe("parseFormEntry (ADR-2622)", () => {
     expect(
       isUnrecordedValue({ type: "quantity", value: 120, unit: "mm[Hg]" })
     ).toBe(false);
+  });
+});
+
+describe("ExpectedItemSpec missing-value correction & quantity preservation (AC 5)", () => {
+  it("enforces expected Quantity unit when correcting a NotAsked observation and preserves unit on later form edits", () => {
+    const notAsked: KernelObservationValue = {
+      type: "missing",
+      reason: "NotAsked",
+    };
+    const spec = { valueKind: "Quantity", unit: "mm[Hg]" };
+
+    expect(correctionUnit(notAsked, spec)).toBe("mm[Hg]");
+    expect(parseCorrection("free text", notAsked, spec).ok).toBe(false);
+    const corrected = parseCorrection("124", notAsked, spec);
+    expect(corrected).toEqual({
+      ok: true,
+      value: {
+        type: "quantity",
+        value: "124",
+        unit: "mm[Hg]",
+        comparator: null,
+      },
+    });
+
+    if (corrected.ok) {
+      const nextEdit = parseFormEntry("128", {
+        value_kind: "Quantity",
+        unit: "mm[Hg]",
+        value: corrected.value,
+      });
+      expect(nextEdit).toEqual({
+        ok: true,
+        value: {
+          type: "quantity",
+          value: "128",
+          unit: "mm[Hg]",
+          comparator: null,
+        },
+      });
+    }
+
+    expect(
+      parseFormEntry("132", {
+        value_kind: "Quantity",
+        unit: "mm[Hg]",
+        value: { type: "text", value: "124" },
+      })
+    ).toEqual({
+      ok: true,
+      value: {
+        type: "quantity",
+        value: "132",
+        unit: "mm[Hg]",
+        comparator: null,
+      },
+    });
   });
 });

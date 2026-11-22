@@ -78,6 +78,22 @@ internal sealed class KernelStandardsRegistry(KernelTenantDbContextFactory conte
         return [.. items.Select(ToView)];
     }
 
+    public async Task<IReadOnlyList<LibraryItemView>> ListLibraryItemsAsync(TenantId tenant, LibraryItemKind? kind, CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        IQueryable<LibraryItem> query = db.Set<LibraryItem>().AsNoTracking();
+        if (kind is { } filterKind)
+        {
+            query = query.Where(i => i.Kind == filterKind);
+        }
+
+        var items = await query
+            .OrderBy(i => i.Key)
+            .ThenByDescending(i => i.ItemVersion)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        return [.. items.Select(ToView)];
+    }
+
     public async Task<StudyStandardsProfileView?> FindStudyStandardsAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);

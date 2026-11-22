@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -110,6 +112,24 @@ internal sealed class CorrectObservationHandler : ICommandHandler<CorrectObserva
         {
             return ObservationErrors.VersionStale.WithMessage(
                 $"The observation is at version {observation.VersionIndex}, not {command.ExpectedVersion}; reload it and correct the current value.");
+        }
+
+        if (instance is { } instanceId
+            && ObservationValue.ProblemOf(command.Value) is null
+            && await context.Work.ReadAsync<CollectionInstance>(instanceId, cancellationToken).ConfigureAwait(false) is { } collectionInstance
+            && collectionInstance.Members.FirstOrDefault(m => m.ObservationId == command.ObservationId) is { } member
+            && await context.Work.ReadAsync<ProtocolVersion>(collectionInstance.ProtocolVersionId, cancellationToken).ConfigureAwait(false) is { } version
+            && CollectionSpecs.Of(version, collectionInstance.CollectionSpecId)
+                ?.Items.FirstOrDefault(i => string.Equals(i.Id, member.ItemId, StringComparison.Ordinal)) is { } specItem
+            && specItem.Admits(command.Value) is { } itemProblem)
+        {
+            return CollectionErrors.ValuesInvalid.WithMessage(itemProblem) with
+            {
+                Errors = new Dictionary<string, string[]>(StringComparer.Ordinal)
+                {
+                    [member.ItemId] = [itemProblem],
+                },
+            };
         }
 
         var superseded = observation.Revision;

@@ -1,6 +1,8 @@
 // This file is auto-generated from USDM models and OpenAPI specs. DO NOT EDIT DIRECTLY.
 import { z } from "zod";
 
+z.config({ jitless: true });
+
 export const CodeSchema = z.object({
   code: z.string(),
   codeSystem: z.string(),

@@ -7,7 +7,7 @@
 - **Issue:** #5458 (under #5365, gate 3 of #5310); raised on #4719
 - **Requirements:** PRD-SYS-001 (audit fields and audit entries), 21 CFR 11.10(e), 11.50 and 11.70
 - **Amends:** kernel specification §5.1 (K-TX-1), §8.1 (new K-FACT-6), §9.5, §10.2, §10.5; extends ADR-2620 and ADR-2621
-- **Design:** [eCRF reference slice: system design](https://claude.ai/code/artifact/ae008942-f0b5-4742-8fb0-71067b7b9b54)
+- **Design:** eCRF reference slice: system design (artifact `ae008942-f0b5-4742-8fb0-71067b7b9b54`)
 
 ---
 

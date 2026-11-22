@@ -459,6 +459,8 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         SecretsBaselineCleanerService.IsExcludedFile(
             "packages/kernel/src/Cadence.Kernel.Persistence/Migrations/20261120152149_CommercialSubscriptionsAndEntitlements.cs")
             .Should().BeFalse();
+        SecretsBaselineCleanerService.IsExcludedFile("apps/web/dist/assets/index.js")
+            .Should().BeFalse("ADR-2497 keeps dist/ unexcluded from secret baseline scanning");
     }
 
     [Fact]
@@ -796,6 +798,8 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             Path.GetFullPath(QualityGateOrchestrator.FindRepoRoot()).Should().Be(expected);
             Path.GetFullPath(FrontendQualityGateService.FindRepoRoot()).Should().Be(expected);
             Path.GetFullPath(AdrValidatorService.FindRepoRoot()).Should().Be(expected);
+            Path.GetFullPath(PublicBundleValidatorService.FindRepoRoot()).Should().Be(expected);
+            Path.GetFullPath(DeidComplianceService.FindRepoRoot()).Should().Be(expected);
         }
         finally
         {

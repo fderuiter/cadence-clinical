@@ -176,6 +176,150 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         ];
     }
 
+    public async Task<IReadOnlyList<CollectionInstanceRecord>> ListRecordsForEnrollmentAsync(
+        TenantId tenant,
+        EnrollmentId enrollment,
+        CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        return await LoadRecordsAsync(
+            db,
+            db.CollectionInstances.AsNoTracking().Where(c => c.EnrollmentId == enrollment),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<CollectionInstanceRecord>> ListForStudyAsync(
+        TenantId tenant,
+        StudyId study,
+        CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        return await LoadRecordsAsync(
+            db,
+            db.CollectionInstances.AsNoTracking().Where(c => c.StudyId == study),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<IReadOnlyList<CollectionInstanceRecord>> LoadRecordsAsync(
+        KernelDbContext db,
+        IQueryable<CollectionInstance> query,
+        CancellationToken cancellationToken)
+    {
+        var instances = await query
+            .OrderBy(c => c.OpenedAt).ThenBy(c => c.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (instances.Count == 0)
+        {
+            return [];
+        }
+
+        var versionIds = instances.Select(c => c.ProtocolVersionId).Distinct().ToList();
+        var rawVersions = await db.ProtocolVersions.AsNoTracking()
+            .Where(v => versionIds.Contains(v.Id))
+            .Select(v => new { v.Id, v.Content })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var specsByVersion = rawVersions.ToDictionary(
+            v => v.Id,
+            v => ProtocolDesignDocument.Read(v.Content).Design?.CollectionSpecs ?? []);
+
+        var allMemberIds = instances.SelectMany(c => c.Members.Select(m => m.ObservationId)).Distinct().ToList();
+        var observations = allMemberIds.Count == 0
+            ? new Dictionary<ObservationId, Observation>()
+            : (await db.Observations.AsNoTracking()
+                    .Where(o => allMemberIds.Contains(o.Id))
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false))
+                .ToDictionary(o => o.Id);
+
+        var scopes = instances.Select(i => NodeRef.For(i.StudyId))
+            .Concat(instances.Select(i => NodeRef.For(i.StudySiteId)))
+            .Concat(instances.Select(i => NodeRef.For(i.EnrollmentId)))
+            .Concat(instances.Select(i => NodeRef.For(i.Id)))
+            .Concat(allMemberIds.Select(o => NodeRef.For(o)))
+            .Distinct()
+            .ToList();
+        var scoped = await ScopedAssertions.ReadAsync(db, scopes, cancellationToken).ConfigureAwait(false);
+        var allLocks = scoped.Locks();
+        var allMemberGuids = allMemberIds.Select(o => o.Value).ToHashSet();
+        var allMemberAssertions = scoped.About(a => a.TargetKind == NodeKinds.Observation && allMemberGuids.Contains(a.TargetId));
+
+        var instanceGuids = instances.Select(i => i.Id.Value).ToList();
+        var rawSignatures = await db.Attestations.AsNoTracking()
+            .Where(a => a.TargetKind == NodeKinds.CollectionInstance && instanceGuids.Contains(a.TargetId))
+            .OrderBy(a => a.RecordedAt).ThenBy(a => a.Id)
+            .Select(a => new { a.Id, a.TargetId, a.Meaning, a.ActorId, a.RecordedAt, a.TargetContentHash, a.Reason })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var signaturesByInstance = rawSignatures.ToLookup(a => a.TargetId);
+
+        var records = new List<CollectionInstanceRecord>(instances.Count);
+        foreach (var instance in instances)
+        {
+            var specs = specsByVersion.GetValueOrDefault(instance.ProtocolVersionId) ?? [];
+            var spec = specs.FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal));
+            var items = spec?.Items ?? [];
+            var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
+
+            var values = instance.Members
+                .Where(m => observations.ContainsKey(m.ObservationId))
+                .OrderBy(m => m.ItemId, StringComparer.Ordinal)
+                .Select(m => (m.ItemId, Observation: observations[m.ObservationId]))
+                .Select(x => (x.ItemId, x.Observation, Current: x.Observation.Revisions.Single(r => r.Number == x.Observation.Revision)))
+                .Select(x => new CollectedValueView(
+                    x.ItemId, x.Observation.Id, x.Observation.Concept,
+                    x.Observation.Value, x.Observation.ObservedAt, x.Observation.Revision, x.Current.RecordedBy, x.Current.RecordedAt))
+                .ToList();
+
+            var memberGuids = instance.Members.Select(m => m.ObservationId.Value).ToHashSet();
+            var coveringLocks = allLocks
+                .Where(l =>
+                    (l.Scope.Kind == NodeKinds.Study && l.Scope.Id == instance.StudyId.Value)
+                    || (l.Scope.Kind == NodeKinds.StudySite && l.Scope.Id == instance.StudySiteId.Value)
+                    || (l.Scope.Kind == NodeKinds.Enrollment && l.Scope.Id == instance.EnrollmentId.Value)
+                    || (l.Scope.Kind == NodeKinds.CollectionInstance && l.Scope.Id == instance.Id.Value)
+                    || (l.Scope.Kind == NodeKinds.Observation && memberGuids.Contains(l.Scope.Id)))
+                .ToList();
+            var assertions = allMemberAssertions
+                .Where(a => memberGuids.Contains(a.Target.Id))
+                .ToList();
+
+            string? contentHash = values.Count == 0
+                ? null
+                : CollectionInstance.ContentHashOf(values.Select(v => new CollectionContentEntry(v.ObservationId, v.Revision, v.Value)));
+            var attestations = signaturesByInstance[instance.Id.Value]
+                .Select(a => new FormAttestationView(
+                    a.Id, a.Meaning, a.ActorId, a.RecordedAt, a.TargetContentHash, a.Reason,
+                    !string.Equals(a.TargetContentHash, contentHash, StringComparison.Ordinal),
+                    SignedValues(instance, observations, a.RecordedAt, a.TargetContentHash)))
+                .ToList();
+
+            records.Add(new CollectionInstanceRecord(
+                instance.Id,
+                instance.EnrollmentId,
+                instance.ParticipantId,
+                instance.StudyId,
+                instance.StudySiteId,
+                instance.ProtocolVersionId,
+                instance.CollectionSpecId,
+                instance.PlannedActivityId,
+                instance.CollectedAt,
+                instance.OpenedBy,
+                instance.OpenedAt,
+                instance.VersionIndex,
+                items,
+                values,
+                coveringLocks,
+                assertions,
+                attestations,
+                contentHash,
+                collectionTitle));
+        }
+
+        return records;
+    }
+
     private static CollectionInstanceSummary ToSummary(
         CollectionInstance instance,
         IReadOnlyList<CollectionSpec> specs,

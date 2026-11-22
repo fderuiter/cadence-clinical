@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -80,16 +81,29 @@ public sealed record ProtocolDesignImportRequest(
     ProtocolDesign? BaseDesign = null,
     string? FallbackTitle = null);
 
+/// <summary>Compiled <c>RulePack</c> library item payload produced during ODM v1.3.2 protocol import.</summary>
+/// <param name="Key">Stable library item key derived from the protocol metadata.</param>
+/// <param name="Title">Human-facing rule pack title.</param>
+/// <param name="RuleCount">Number of edit-check rules compiled into the pack.</param>
+/// <param name="Content">Serialized <c>RulePack</c> JSON content ready for <c>DraftLibraryItem</c>.</param>
+public sealed record ImportedRulePack(
+    string Key,
+    string Title,
+    int RuleCount,
+    JsonElement Content);
+
 /// <summary>Outcome of compiling an uploaded file or bundled template selection into a <see cref="ProtocolDesign"/>.</summary>
 /// <param name="Design">Validated <see cref="ProtocolDesign"/> ready to persist as a draft, or null when <paramref name="Problems"/> is non-empty.</param>
 /// <param name="Problems">Actionable structural or validation error messages explaining why the import was rejected.</param>
 /// <param name="Notes">Readable import notes describing unmapped terminology codes or optional vendor attributes.</param>
 /// <param name="PayloadTooLarge">True when the input exceeded the 10 MB synchronous import limit.</param>
+/// <param name="RulePack">Optional compiled edit-check rule pack extracted from ODM <c>RangeCheck</c> and <c>ConditionDef</c> elements.</param>
 public sealed record ProtocolDesignImportResult(
     ProtocolDesign? Design,
     IReadOnlyList<string> Problems,
     IReadOnlyList<ProtocolImportNote> Notes,
-    bool PayloadTooLarge = false)
+    bool PayloadTooLarge = false,
+    ImportedRulePack? RulePack = null)
 {
     /// <summary>True when a valid <see cref="ProtocolDesign"/> was produced with zero problems.</summary>
     public bool IsSuccess => Design is not null && Problems.Count == 0 && !PayloadTooLarge;

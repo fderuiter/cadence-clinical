@@ -200,7 +200,7 @@ jobs:
           else
             SCOPE_ARGS=(--push-before "$BEFORE_SHA")
           fi
-          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities "${SCOPE_ARGS[@]}"
+          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle "${SCOPE_ARGS[@]}"
 
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
@@ -281,11 +281,22 @@ jobs:
           path: ./bin/cadence
           key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/engine_core/src/**', 'packages/database/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/core-models/src/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
 
+      - name: Build UI package
+        run: pnpm --filter ui build
+
       - name: Run documentation compilation
         env:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
           CADENCE_DOCS_SKIP_CHECKS: "1"
         run: pnpm docs:build
+
+      - name: Build and stage co-hosted interactive demos
+        run: pnpm docs:stage-demos
+
+      - name: Verify public bundles
+        env:
+          CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
+        run: node scripts/run-cli.js check public-bundle
 
   security:
     name: Security and Vulnerability Audit
