@@ -47,6 +47,7 @@ public static partial class DeidComplianceService
         "docs/sdlc/runs/",
         "docs/openapi/",
         "docs/schema/",
+        "docs/.vitepress/.temp/",
         "docs/.vitepress/cache/",
         "docs/.vitepress/dist/",
     ];

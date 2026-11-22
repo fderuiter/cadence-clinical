@@ -190,6 +190,7 @@ function buildBinary() {
   }
 
   console.log("[run-cli] Compiling Cadence CLI binary...");
+  const cliArtifactsDir = path.join(rootDir, ".cadence", "cli-artifacts");
   const publishResult = spawnSync(
     "dotnet",
     [
@@ -198,6 +199,8 @@ function buildBinary() {
       "-c",
       "Release",
       "--self-contained",
+      "-p:UseArtifactsOutput=true",
+      `-p:ArtifactsPath=${cliArtifactsDir}`,
       "-o",
       path.join(rootDir, "bin"),
     ],
