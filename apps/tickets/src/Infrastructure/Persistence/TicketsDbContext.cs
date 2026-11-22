@@ -20,6 +20,7 @@ public sealed class TicketsDbContext(DbContextOptions<TicketsDbContext> options)
     public string? ActiveInMemoryTenantStringFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantStringFilter(this);
 
     public DbSet<Ticket> Tickets => Set<Ticket>();
+    public DbSet<TicketRevision> TicketRevisions => Set<TicketRevision>();
     public DbSet<TicketComment> TicketComments => Set<TicketComment>();
     public DbSet<TicketAttachment> TicketAttachments => Set<TicketAttachment>();
     public DbSet<TicketAuditLog> TicketAuditLogs => Set<TicketAuditLog>();
@@ -30,6 +31,7 @@ public sealed class TicketsDbContext(DbContextOptions<TicketsDbContext> options)
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplyConfiguration(new TicketConfiguration());
+        modelBuilder.ApplyConfiguration(new TicketRevisionConfiguration());
         modelBuilder.ApplyConfiguration(new TicketCommentConfiguration());
         modelBuilder.ApplyConfiguration(new TicketAttachmentConfiguration());
         modelBuilder.ApplyConfiguration(new TicketAuditLogConfiguration());

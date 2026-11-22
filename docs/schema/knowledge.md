@@ -6,13 +6,14 @@ Generated from the EF Core model of `Cadence.Apps.Knowledge.Infrastructure.Persi
 
 | Table | Entity | Columns |
 | --- | --- | --- |
-| [`knowledge.DelegationRecords`](#knowledgedelegationrecords) | `DelegationRecord` | 16 |
-| [`knowledge.OrgAuditLogs`](#knowledgeorgauditlogs) | `OrgAuditLog` | 10 |
-| [`knowledge.TrainingAssignments`](#knowledgetrainingassignments) | `TrainingAssignment` | 16 |
-| [`knowledge.TrainingCertificates`](#knowledgetrainingcertificates) | `TrainingCertificate` | 10 |
-| [`knowledge.TrainingCurricula`](#knowledgetrainingcurricula) | `TrainingCurriculum` | 10 |
+| [`knowledge.DelegationRecords`](#knowledgedelegationrecords) | `DelegationRecord` | 17 |
+| [`knowledge.OrgAuditLogs`](#knowledgeorgauditlogs) | `OrgAuditLog` | 11 |
+| [`knowledge.TrainingAssignments`](#knowledgetrainingassignments) | `TrainingAssignment` | 17 |
+| [`knowledge.TrainingCertificates`](#knowledgetrainingcertificates) | `TrainingCertificate` | 11 |
+| [`knowledge.TrainingCurricula`](#knowledgetrainingcurricula) | `TrainingCurriculum` | 11 |
 | [`knowledge.audit_log_entries`](#knowledgeaudit_log_entries) | `AuditLogEntry` | 12 |
 | [`knowledge.consumed_signature_tokens`](#knowledgeconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
+| [`knowledge.delegation_record_periods`](#knowledgedelegation_record_periods) | `DelegationRecordPeriod` | 20 |
 | [`knowledge.knowledge_article_audit_logs`](#knowledgeknowledge_article_audit_logs) | `KnowledgeArticleAuditLog` | 13 |
 | [`knowledge.knowledge_article_versions`](#knowledgeknowledge_article_versions) | `KnowledgeArticleVersion` | 12 |
 | [`knowledge.knowledge_articles`](#knowledgeknowledge_articles) | `KnowledgeArticle` | 17 |
@@ -41,6 +42,7 @@ Entity: `DelegationRecord`
 | `Status` | `text` | no |  |  |
 | `StudyId` | `text` | no |  |  |
 | `TaskCode` | `text` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -62,6 +64,7 @@ Entity: `OrgAuditLog`
 | `ReasonForChange` | `text` | no |  |  |
 | `RecordId` | `text` | yes |  |  |
 | `Timestamp` | `timestamp with time zone` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -89,6 +92,7 @@ Entity: `TrainingAssignment`
 | `UserId` | `text` | no |  |  |
 | `UserName` | `text` | no |  |  |
 | `UserRole` | `text` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -110,6 +114,7 @@ Entity: `TrainingCertificate`
 | `Sha256Seal` | `text` | no |  |  |
 | `SignerName` | `text` | no |  |  |
 | `SignerRole` | `text` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -131,6 +136,7 @@ Entity: `TrainingCurriculum`
 | `ReasonForChange` | `text` | no |  |  |
 | `StudyId` | `text` | no |  |  |
 | `Title` | `text` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -174,6 +180,43 @@ Entity: `ConsumedSignatureToken`
 Indexes:
 
 - `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
+
+## knowledge.delegation_record_periods
+
+Entity: `DelegationRecordPeriod`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `BatchTransactionId` | `character varying(100)` | yes |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `DelegationRecordId` | `text` | no |  |  |
+| `Duties` | `text` | no |  |  |
+| `PiApprovedAt` | `timestamp with time zone` | yes |  |  |
+| `PiSignatureHash` | `character varying(255)` | yes |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `Role` | `character varying(255)` | no |  |  |
+| `SignedOff` | `boolean` | no |  |  |
+| `SiteCode` | `character varying(255)` | no |  |  |
+| `StaffName` | `character varying(255)` | no |  |  |
+| `StaffUserId` | `character varying(255)` | no |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StudyCode` | `character varying(255)` | no |  |  |
+| `TaskCode` | `character varying(100)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `recorded_period` | `tstzrange` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
+
+Foreign keys:
+
+- `FK_delegation_record_periods_DelegationRecords_DelegationRecor~`: (`DelegationRecordId`) references `knowledge.DelegationRecords` (`Id`), on delete restrict
+
+Indexes:
+
+- `IX_delegation_record_periods_DelegationRecordId`: (`DelegationRecordId`)
+- `IX_delegation_record_periods_StudyCode_SiteCode`: (`StudyCode`, `SiteCode`)
+- `IX_delegation_record_periods_tenant_id`: (`tenant_id`)
 
 ## knowledge.knowledge_article_audit_logs
 
@@ -222,9 +265,14 @@ Entity: `KnowledgeArticleVersion`
 | `VersionLabel` | `character varying(50)` | no |  |  |
 | `tenant_id` | `uuid` | no |  |  |
 
+Foreign keys:
+
+- `FK_knowledge_article_versions_knowledge_articles_ArticleId`: (`ArticleId`) references `knowledge.knowledge_articles` (`Id`), on delete restrict
+
 Indexes:
 
 - `IX_knowledge_article_versions_ArticleId`: (`ArticleId`)
+- `IX_knowledge_article_versions_ArticleId_VersionIndex`: unique (`ArticleId`, `VersionIndex`)
 - `IX_knowledge_article_versions_VersionIndex`: (`VersionIndex`)
 - `IX_knowledge_article_versions_tenant_id`: (`tenant_id`)
 

@@ -7,22 +7,22 @@ Generated from the EF Core model of `Cadence.Apps.Interop.Infrastructure.Persist
 | Table | Entity | Columns |
 | --- | --- | --- |
 | [`interop.audit_log_entries`](#interopaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`interop.clinical_queries`](#interopclinical_queries) | `ClinicalQuery` | 11 |
+| [`interop.clinical_queries`](#interopclinical_queries) | `ClinicalQuery` | 12 |
 | [`interop.device_registrations`](#interopdevice_registrations) | `DeviceRegistrationRecord` | 21 |
 | [`interop.ehr_endpoints`](#interopehr_endpoints) | `EhrEndpointRecord` | 18 |
 | [`interop.ehr_reconciliation_candidates`](#interopehr_reconciliation_candidates) | `EhrReconciliationCandidateRecord` | 33 |
-| [`interop.epro_defeated_submissions`](#interopepro_defeated_submissions) | `EproSubmissionDefeated` | 9 |
-| [`interop.epro_quarantined_submissions`](#interopepro_quarantined_submissions) | `EproSubmissionQuarantine` | 13 |
+| [`interop.epro_defeated_submissions`](#interopepro_defeated_submissions) | `EproSubmissionDefeated` | 10 |
+| [`interop.epro_quarantined_submissions`](#interopepro_quarantined_submissions) | `EproSubmissionQuarantine` | 14 |
 | [`interop.epro_submissions`](#interopepro_submissions) | `EproSubmission` | 13 |
 | [`interop.instruments`](#interopinstruments) | `Instrument` | 11 |
-| [`interop.interop_audit_logs`](#interopinterop_audit_logs) | `InteropAuditLog` | 8 |
-| [`interop.sce_biostat_export_audit_logs`](#interopsce_biostat_export_audit_logs) | `BiostatExportAuditLog` | 14 |
+| [`interop.interop_audit_logs`](#interopinterop_audit_logs) | `InteropAuditLog` | 9 |
+| [`interop.sce_biostat_export_audit_logs`](#interopsce_biostat_export_audit_logs) | `BiostatExportAuditLog` | 15 |
 | [`interop.sce_database_lock_auth_tokens`](#interopsce_database_lock_auth_tokens) | `DatabaseLockAuthToken` | 19 |
 | [`interop.sce_execution_runs`](#interopsce_execution_runs) | `ExecutionRunRecord` | 34 |
 | [`interop.sce_statistical_programs`](#interopsce_statistical_programs) | `StatisticalProgram` | 18 |
-| [`interop.sensor_daily_summaries`](#interopsensor_daily_summaries) | `SensorDailySummaryRecord` | 39 |
-| [`interop.sensor_safety_alerts`](#interopsensor_safety_alerts) | `SensorSafetyAlertRecord` | 21 |
-| [`interop.sensor_telemetry_streams`](#interopsensor_telemetry_streams) | `SensorTelemetryStreamRecord` | 18 |
+| [`interop.sensor_daily_summaries`](#interopsensor_daily_summaries) | `SensorDailySummaryRecord` | 40 |
+| [`interop.sensor_safety_alerts`](#interopsensor_safety_alerts) | `SensorSafetyAlertRecord` | 22 |
+| [`interop.sensor_telemetry_streams`](#interopsensor_telemetry_streams) | `SensorTelemetryStreamRecord` | 19 |
 | [`interop.subject_assignments`](#interopsubject_assignments) | `SubjectAssignment` | 14 |
 | [`interop.subject_notifications`](#interopsubject_notifications) | `SubjectNotification` | 13 |
 
@@ -66,6 +66,7 @@ Entity: `ClinicalQuery`
 | `TestCode` | `character varying(100)` | no |  |  |
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VisitId` | `character varying(255)` | yes |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -216,6 +217,7 @@ Entity: `EproSubmissionDefeated`
 | `OfflineSyncMarkersJson` | `jsonb` | no |  |  |
 | `Status` | `character varying(100)` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -242,6 +244,7 @@ Entity: `EproSubmissionQuarantine`
 | `TriageHistoryJson` | `jsonb` | no |  |  |
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `ValidationErrorsJson` | `jsonb` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -313,6 +316,7 @@ Entity: `InteropAuditLog`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -340,6 +344,7 @@ Entity: `BiostatExportAuditLog`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -504,6 +509,7 @@ Entity: `SensorDailySummaryRecord`
 | `TbrLevel2Percentage` | `double precision` | yes |  |  |
 | `TirPercentage` | `double precision` | yes |  |  |
 | `TotalSteps` | `integer` | yes |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -544,6 +550,7 @@ Entity: `SensorSafetyAlertRecord`
 | `ThresholdValue` | `double precision` | no |  |  |
 | `TriggeredAt` | `timestamp with time zone` | no |  |  |
 | `Unit` | `character varying(50)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -583,6 +590,7 @@ Entity: `SensorTelemetryStreamRecord`
 | `StartTimestamp` | `timestamp with time zone` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:

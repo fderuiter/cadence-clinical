@@ -29,8 +29,9 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.ip_kit_reconciliation_certificates`](#edcip_kit_reconciliation_certificates) | `IpKitReconciliationCertificate` | 16 |
 | [`edc.lab_reference_ranges`](#edclab_reference_ranges) | `LabReferenceRange` | 23 |
 | [`edc.randomization_allocations`](#edcrandomization_allocations) | `RandomizationAllocation` | 19 |
-| [`edc.randomization_list_slots`](#edcrandomization_list_slots) | `RandomizationListSlot` | 7 |
+| [`edc.randomization_list_slots`](#edcrandomization_list_slots) | `RandomizationListSlot` | 8 |
 | [`edc.randomization_schemes`](#edcrandomization_schemes) | `RandomizationScheme` | 24 |
+| [`edc.site_activation_periods`](#edcsite_activation_periods) | `SiteActivationPeriod` | 15 |
 | [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 16 |
 | [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 28 |
 | [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 15 |
@@ -808,6 +809,7 @@ Entity: `RandomizationListSlot`
 | `SchemeId` | `uuid` | no |  |  |
 | `Sequence` | `integer` | no |  |  |
 | `StratumKey` | `character varying(1024)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
@@ -856,6 +858,38 @@ Indexes:
 - `IX_randomization_schemes_StudyCode_Approved`: unique (`StudyCode`) where `"Status" = 'Approved'`
 - `IX_randomization_schemes_StudyCode_Version`: unique (`StudyCode`, `Version`)
 - `IX_randomization_schemes_tenant_id`: (`tenant_id`)
+
+## edc.site_activation_periods
+
+Entity: `SiteActivationPeriod`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `ActivatedAt` | `timestamp with time zone` | yes |  |  |
+| `ActivatedBy` | `character varying(255)` | yes |  |  |
+| `IsActivated` | `boolean` | no | `False` |  |
+| `IsComplete` | `boolean` | no |  |  |
+| `Milestone` | `character varying(255)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | yes |  |  |
+| `SiteCode` | `character varying(255)` | no |  |  |
+| `SiteComplianceCacheId` | `uuid` | no |  |  |
+| `StudyCode` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `missing_documents` | `text[]` | no |  |  |
+| `recorded_period` | `tstzrange` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
+
+Foreign keys:
+
+- `FK_site_activation_periods_site_compliance_caches_SiteComplian~`: (`SiteComplianceCacheId`) references `edc.site_compliance_caches` (`Id`), on delete restrict
+
+Indexes:
+
+- `IX_site_activation_periods_SiteComplianceCacheId`: (`SiteComplianceCacheId`)
+- `IX_site_activation_periods_StudyCode_SiteCode_Milestone`: (`StudyCode`, `SiteCode`, `Milestone`)
+- `IX_site_activation_periods_tenant_id`: (`tenant_id`)
 
 ## edc.site_compliance_caches
 

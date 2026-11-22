@@ -2357,6 +2357,8 @@ export interface operations {
       query: {
         study_id: string;
         milestone?: string;
+        valid_at?: string;
+        known_at?: string;
       };
       header?: never;
       path: {

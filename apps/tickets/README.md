@@ -50,3 +50,8 @@ dotnet run --project apps/tickets/src/Cadence.Apps.Tickets.csproj
 ```
 
 The Aspire AppHost ([apps/apphost](../apphost/README.md)) also starts this service on port 8009, as docker compose does, with a reference to its `cadence` PostgreSQL database; it applies its migrations on start.
+
+## Optimistic Concurrency and Immutable Revisions
+
+- `PATCH /api/v1/tickets/{ticket_id}` updates ticket fields or status transitions under `VersionIndex` / `If-Match` optimistic concurrency (returning HTTP `409` on stale writes) and appends a numbered immutable snapshot to `ticket_revisions` (`KA001`).
+- `GET /api/v1/tickets/{ticket_id}` accepts optional `revision` and `as_of` query parameters to reconstruct prior committed revisions.

@@ -636,3 +636,53 @@ public sealed class TmfExportJob : AggregateRoot<string>
     public TmfExportJob(string id) : base(id) { }
 }
 
+public sealed class TmfDocumentRevision
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string DocumentId { get; set; } = string.Empty;
+    public long RevisionNumber { get; set; }
+    public string StudyCode { get; set; } = string.Empty;
+    public string? SiteCode { get; set; }
+    public int Zone { get; set; }
+    public string Section { get; set; } = string.Empty;
+    public string ArtifactCode { get; set; } = string.Empty;
+    public string ArtifactType { get; set; } = string.Empty;
+    public string Filename { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string MimeType { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string ApprovalStatus { get; set; } = string.Empty;
+    public string TaxonomyVersion { get; set; } = string.Empty;
+    public string? MetadataJson { get; set; }
+    public string? ObjectKey { get; set; }
+    public string? ContentChecksum { get; set; }
+    public required DateTimeOffset RecordedAt { get; set; }
+    public string RecordedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+
+    public static TmfDocumentRevision FromDocument(TmfDocument doc, DateTimeOffset recordedAt, string recordedBy) =>
+        new()
+        {
+            DocumentId = doc.Id,
+            RevisionNumber = doc.VersionIndex,
+            StudyCode = doc.StudyId,
+            SiteCode = doc.SiteId,
+            Zone = doc.Zone,
+            Section = doc.Section,
+            ArtifactCode = doc.ArtifactCode,
+            ArtifactType = doc.ArtifactType,
+            Filename = doc.Filename,
+            Content = doc.Content,
+            MimeType = doc.MimeType,
+            Status = doc.Status,
+            ApprovalStatus = doc.ApprovalStatus,
+            TaxonomyVersion = doc.TaxonomyVersion,
+            MetadataJson = doc.MetadataJson,
+            ObjectKey = doc.ObjectKey,
+            ContentChecksum = doc.ContentChecksum,
+            RecordedAt = recordedAt,
+            RecordedBy = recordedBy,
+            ReasonForChange = doc.ReasonForChange ?? "Document revision snapshot",
+        };
+}
+

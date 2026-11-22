@@ -10,10 +10,11 @@ Generated from the EF Core model of `Cadence.Apps.Etmf.Infrastructure.Persistenc
 | [`etmf.OutboxMessage`](#etmfoutboxmessage) | `OutboxMessage` | 21 |
 | [`etmf.OutboxState`](#etmfoutboxstate) | `OutboxState` | 6 |
 | [`etmf.audit_log_entries`](#etmfaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`etmf.tmf_audit_ledger_seals`](#etmftmf_audit_ledger_seals) | `TmfAuditLedgerSeal` | 7 |
+| [`etmf.tmf_audit_ledger_seals`](#etmftmf_audit_ledger_seals) | `TmfAuditLedgerSeal` | 8 |
 | [`etmf.tmf_audit_logs`](#etmftmf_audit_logs) | `TmfAuditLog` | 13 |
 | [`etmf.tmf_document_expiration_alert_states`](#etmftmf_document_expiration_alert_states) | `TmfDocumentExpirationAlertState` | 13 |
-| [`etmf.tmf_document_qc_transitions`](#etmftmf_document_qc_transitions) | `TmfDocumentQcTransition` | 10 |
+| [`etmf.tmf_document_qc_transitions`](#etmftmf_document_qc_transitions) | `TmfDocumentQcTransition` | 11 |
+| [`etmf.tmf_document_revisions`](#etmftmf_document_revisions) | `TmfDocumentRevision` | 23 |
 | [`etmf.tmf_documents`](#etmftmf_documents) | `TmfDocument` | 38 |
 | [`etmf.tmf_expected_documents`](#etmftmf_expected_documents) | `TmfExpectedDocument` | 13 |
 | [`etmf.tmf_export_jobs`](#etmftmf_export_jobs) | `TmfExportJob` | 15 |
@@ -134,6 +135,7 @@ Entity: `TmfAuditLedgerSeal`
 | `PreviousBlockHash` | `character varying(64)` | no |  |  |
 | `SealedRecordCount` | `integer` | no |  |  |
 | `Timestamp` | `timestamp with time zone` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -215,6 +217,7 @@ Entity: `TmfDocumentQcTransition`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `ToStatus` | `character varying(50)` | no |  |  |
 | `TransitionSequence` | `integer` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Foreign keys:
@@ -227,6 +230,46 @@ Indexes:
 - `IX_tmf_document_qc_transitions_DocumentId_TransitionSequence`: unique (`DocumentId`, `TransitionSequence`)
 - `IX_tmf_document_qc_transitions_Timestamp`: (`Timestamp`)
 - `IX_tmf_document_qc_transitions_tenant_id`: (`tenant_id`)
+
+## etmf.tmf_document_revisions
+
+Entity: `TmfDocumentRevision`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `ApprovalStatus` | `character varying(50)` | no |  |  |
+| `ArtifactCode` | `character varying(50)` | no |  |  |
+| `ArtifactType` | `character varying(255)` | no |  |  |
+| `Content` | `text` | no |  |  |
+| `ContentChecksum` | `character varying(64)` | yes |  |  |
+| `DocumentId` | `character varying(36)` | no |  |  |
+| `Filename` | `character varying(255)` | no |  |  |
+| `MetadataJson` | `jsonb` | yes |  |  |
+| `MimeType` | `character varying(100)` | no |  |  |
+| `ObjectKey` | `character varying(1000)` | yes |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RecordedAt` | `timestamp with time zone` | no |  |  |
+| `RecordedBy` | `character varying(255)` | no |  |  |
+| `RevisionNumber` | `bigint` | no |  |  |
+| `Section` | `character varying(255)` | no |  |  |
+| `SiteCode` | `character varying(255)` | yes |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StudyCode` | `character varying(255)` | no |  |  |
+| `TaxonomyVersion` | `character varying(50)` | no |  |  |
+| `Zone` | `integer` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Foreign keys:
+
+- `FK_tmf_document_revisions_tmf_documents_DocumentId`: (`DocumentId`) references `etmf.tmf_documents` (`Id`), on delete restrict
+
+Indexes:
+
+- `IX_tmf_document_revisions_DocumentId`: (`DocumentId`)
+- `IX_tmf_document_revisions_DocumentId_RevisionNumber`: unique (`DocumentId`, `RevisionNumber`)
+- `IX_tmf_document_revisions_tenant_id`: (`tenant_id`)
 
 ## etmf.tmf_documents
 

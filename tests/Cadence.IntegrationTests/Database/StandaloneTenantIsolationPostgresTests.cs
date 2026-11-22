@@ -468,4 +468,258 @@ public sealed class StandaloneTenantIsolationPostgresTests(ThrowawayPostgresData
             base.ConfigureWebHost(builder);
         }
     }
+
+    private sealed class FixedCurrentTenantAccessor(Guid tenantId) : ICurrentTenantAccessor
+    {
+        public Guid? GetCurrentTenantId() => tenantId;
+
+        public ValueTask<Guid?> GetCurrentTenantIdAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<Guid?>(tenantId);
+
+        public bool IsSystemSuppressed => false;
+
+        public bool HasHttpRequestWithoutTenant => false;
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task BitemporalAndInsertOnlyGuards_EnforceKt001_Ka001_Exclusion_And_AsOf_UnderAppRole()
+    {
+        database.SkipIfUnavailable();
+
+        await MigrateAndVerifySchemaAsync<Cadence.Apps.Ctms.Infrastructure.Persistence.CtmsDbContext>(database, "ctms", Ct);
+        await MigrateAndVerifySchemaAsync<Cadence.Apps.Tickets.Infrastructure.Persistence.TicketsDbContext>(database, "tickets", Ct);
+
+        string appConnString = BuildCadenceAppConnectionString(database.AdminDatabaseConnectionString!);
+        Guid tenantId = DeterministicTenantCodeResolver.ComputeDeterministicGuid("tenant-temporal-oq");
+        var t0 = new DateTimeOffset(2026, 11, 20, 10, 0, 0, TimeSpan.Zero);
+        var t1 = t0.AddHours(2);
+        var tMid = t0.AddHours(1);
+
+        var tenantAccessor = new FixedCurrentTenantAccessor(tenantId);
+        var ctmsOptionsBuilder = new DbContextOptionsBuilder<Cadence.Apps.Ctms.Infrastructure.Persistence.CtmsDbContext>();
+        ctmsOptionsBuilder
+            .UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(appConnString, "ctms"))
+            .UseCadenceStandaloneTenancy(tenantAccessor, isRelational: true)
+            .AddInterceptors(
+                StandaloneTenantConnectionInterceptor.Instance,
+                StandaloneTenantSaveChangesInterceptor.Instance,
+                Cadence.Database.Concurrency.StandaloneConcurrencyTokenInterceptor.Instance);
+        var ctmsOptions = ctmsOptionsBuilder.Options;
+
+        string doaId = Guid.NewGuid().ToString();
+        await using (var ctms = new Cadence.Apps.Ctms.Infrastructure.Persistence.CtmsDbContext(ctmsOptions))
+        {
+            var doa = new Cadence.Apps.Ctms.Domain.DoaDelegationRecord(doaId, Cadence.Apps.Ctms.Domain.DoaDelegationStatus.Active)
+            {
+                SiteId = "SITE-01",
+                StaffUserId = "user-cra-1",
+                TaskCode = "REVIEW",
+                StartDate = t0,
+                IsActive = true,
+                CreatedAt = t0.UtcDateTime,
+                CreatedBy = "pi-1",
+                ReasonForChange = "Initial delegation",
+                VersionIndex = 1,
+            };
+            ctms.DoaDelegationRecords.Add(doa);
+            ctms.DoaDelegationPeriods.Add(new Cadence.Apps.Ctms.Domain.DoaDelegationPeriod
+            {
+                DelegationRecordId = doaId,
+                SiteCode = doa.SiteId,
+                StaffUserId = doa.StaffUserId,
+                TaskCode = doa.TaskCode,
+                StartDate = t0,
+                Status = Cadence.Apps.Ctms.Domain.DoaDelegationStatus.Active,
+                IsActive = true,
+                ValidPeriod = Cadence.Database.Temporal.StandaloneBitemporalModelExtensions.CreateOpenPeriod(t0),
+                RecordedPeriod = Cadence.Database.Temporal.StandaloneBitemporalModelExtensions.CreateOpenPeriod(t0),
+                CreatedBy = "pi-1",
+                ReasonForChange = "Initial delegation",
+            });
+            await ctms.SaveChangesAsync(Ct);
+
+            // Overlapping open period for same DelegationRecordId must fail GiST exclusion (23P01)
+            await using var rawConn = new NpgsqlConnection(CadenceDatabaseExtensions.WithModuleSchema(appConnString, "ctms"));
+            await rawConn.OpenAsync(Ct);
+            await using (var overlapTx = await rawConn.BeginTransactionAsync(Ct))
+            {
+                await using (var setTenant = new NpgsqlCommand(
+                    """
+                    SELECT pg_catalog.set_config('cadence.tenant_id', @tenant, true);
+                    SET CONSTRAINTS ALL IMMEDIATE;
+                    """,
+                    rawConn,
+                    overlapTx))
+                {
+                    setTenant.Parameters.AddWithValue("tenant", tenantId.ToString("D"));
+                    await setTenant.ExecuteNonQueryAsync(Ct);
+                }
+
+                await using var dupCmd = new NpgsqlCommand(
+                    """
+                    INSERT INTO ctms.doa_delegation_periods
+                        ("Id", "DelegationRecordId", "SiteCode", "StaffUserId", "TaskCode", "StartDate",
+                         "Status", "IsActive", valid_period, recorded_period, "CreatedBy", "ReasonForChange", tenant_id, _version)
+                    VALUES
+                        (@id, @doaId, 'SITE-01', 'user-cra-1', 'REVIEW', @t0,
+                         'Active', true, tstzrange(@t0, 'infinity'::timestamptz, '[)'), tstzrange(@t0, 'infinity'::timestamptz, '[)'), 'pi-1', 'Overlap', @tenantUuid, 0);
+                    """,
+                    rawConn,
+                    overlapTx);
+                dupCmd.Parameters.AddWithValue("id", Guid.NewGuid().ToString());
+                dupCmd.Parameters.AddWithValue("doaId", doaId);
+                dupCmd.Parameters.AddWithValue("t0", t0);
+                dupCmd.Parameters.AddWithValue("tenantUuid", tenantId);
+                var pgEx = await Assert.ThrowsAsync<PostgresException>(() => dupCmd.ExecuteNonQueryAsync(Ct));
+                Assert.Equal("23P01", pgEx.SqlState);
+                await overlapTx.RollbackAsync(Ct);
+            }
+
+            // KT001 rejects in-place mutation of Status or DELETE on doa_delegation_periods
+            await using (var ktTx = await rawConn.BeginTransactionAsync(Ct))
+            {
+                await using (var setTenant = new NpgsqlCommand("SELECT pg_catalog.set_config('cadence.tenant_id', @tenant, true);", rawConn, ktTx))
+                {
+                    setTenant.Parameters.AddWithValue("tenant", tenantId.ToString("D"));
+                    await setTenant.ExecuteNonQueryAsync(Ct);
+                }
+
+                await using var mutateCmd = new NpgsqlCommand(
+                    """UPDATE ctms.doa_delegation_periods SET "Status" = 'Revoked' WHERE "DelegationRecordId" = @doaId;""",
+                    rawConn,
+                    ktTx);
+                mutateCmd.Parameters.AddWithValue("doaId", doaId);
+                var ktUpdateEx = await Assert.ThrowsAsync<PostgresException>(() => mutateCmd.ExecuteNonQueryAsync(Ct));
+                Assert.Equal("KT001", ktUpdateEx.SqlState);
+                await ktTx.RollbackAsync(Ct);
+            }
+
+            await using var ktDelTx = await rawConn.BeginTransactionAsync(Ct);
+            await using (var setTenant = new NpgsqlCommand("SELECT pg_catalog.set_config('cadence.tenant_id', @tenant, true);", rawConn, ktDelTx))
+            {
+                setTenant.Parameters.AddWithValue("tenant", tenantId.ToString("D"));
+                await setTenant.ExecuteNonQueryAsync(Ct);
+            }
+
+            await using var delCmd = new NpgsqlCommand(
+                """DELETE FROM ctms.doa_delegation_periods WHERE "DelegationRecordId" = @doaId;""",
+                rawConn,
+                ktDelTx);
+            delCmd.Parameters.AddWithValue("doaId", doaId);
+            var ktDelEx = await Assert.ThrowsAsync<PostgresException>(() => delCmd.ExecuteNonQueryAsync(Ct));
+            Assert.Equal("KT001", ktDelEx.SqlState);
+            await ktDelTx.RollbackAsync(Ct);
+        }
+
+        // Transition DOA at t1 (closing open recorded_period is allowed by KT001) and verify as_of(valid_at, known_at)
+        await using (var ctms2 = new Cadence.Apps.Ctms.Infrastructure.Persistence.CtmsDbContext(ctmsOptions))
+        {
+            var openRows = await ctms2.DoaDelegationPeriods
+                .Where(p => p.DelegationRecordId == doaId && p.RecordedPeriod.UpperBoundInfinite && p.ValidPeriod.UpperBoundInfinite)
+                .ToListAsync(Ct);
+            Assert.Single(openRows);
+            var prior = openRows[0];
+            prior.RecordedPeriod = Cadence.Database.Temporal.StandaloneBitemporalModelExtensions.CloseRecordedAt(prior.RecordedPeriod, t1);
+
+            ctms2.DoaDelegationPeriods.Add(new Cadence.Apps.Ctms.Domain.DoaDelegationPeriod
+            {
+                DelegationRecordId = doaId,
+                SiteCode = prior.SiteCode,
+                StaffUserId = prior.StaffUserId,
+                TaskCode = prior.TaskCode,
+                StartDate = prior.StartDate,
+                Status = Cadence.Apps.Ctms.Domain.DoaDelegationStatus.Active,
+                IsActive = true,
+                ValidPeriod = Cadence.Database.Temporal.StandaloneBitemporalModelExtensions.CreateClosedPeriod(t0, t1),
+                RecordedPeriod = Cadence.Database.Temporal.StandaloneBitemporalModelExtensions.CreateOpenPeriod(t1),
+                CreatedBy = "pi-1",
+                ReasonForChange = "Carry forward prior segment",
+            });
+            ctms2.DoaDelegationPeriods.Add(new Cadence.Apps.Ctms.Domain.DoaDelegationPeriod
+            {
+                DelegationRecordId = doaId,
+                SiteCode = prior.SiteCode,
+                StaffUserId = prior.StaffUserId,
+                TaskCode = prior.TaskCode,
+                StartDate = prior.StartDate,
+                EndDate = t1,
+                Status = Cadence.Apps.Ctms.Domain.DoaDelegationStatus.Revoked,
+                IsActive = false,
+                ValidPeriod = Cadence.Database.Temporal.StandaloneBitemporalModelExtensions.CreateOpenPeriod(t1),
+                RecordedPeriod = Cadence.Database.Temporal.StandaloneBitemporalModelExtensions.CreateOpenPeriod(t1),
+                CreatedBy = "pi-1",
+                ReasonForChange = "Revoked delegation",
+            });
+            await ctms2.SaveChangesAsync(Ct);
+
+            var asOfMidAtLatest = await Cadence.Database.Temporal.StandaloneBitemporalModelExtensions.QueryAsOfAsync(
+                ctms2.DoaDelegationPeriods.AsNoTracking().Where(p => p.DelegationRecordId == doaId),
+                ctms2,
+                validAt: tMid,
+                knownAt: t1.AddMinutes(5),
+                Ct);
+            Assert.Single(asOfMidAtLatest);
+            Assert.Equal(Cadence.Apps.Ctms.Domain.DoaDelegationStatus.Active, asOfMidAtLatest[0].Status);
+
+            var asOfAfterRevoke = await Cadence.Database.Temporal.StandaloneBitemporalModelExtensions.QueryAsOfAsync(
+                ctms2.DoaDelegationPeriods.AsNoTracking().Where(p => p.DelegationRecordId == doaId),
+                ctms2,
+                validAt: t1.AddMinutes(5),
+                knownAt: t1.AddMinutes(5),
+                Ct);
+            Assert.Single(asOfAfterRevoke);
+            Assert.Equal(Cadence.Apps.Ctms.Domain.DoaDelegationStatus.Revoked, asOfAfterRevoke[0].Status);
+        }
+
+        // Verify KA001 insert-only trigger blocks UPDATE and DELETE on ticket_revisions under cadence_app
+        var ticketOptionsBuilder = new DbContextOptionsBuilder<Cadence.Apps.Tickets.Infrastructure.Persistence.TicketsDbContext>();
+        ticketOptionsBuilder
+            .UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(appConnString, "tickets"))
+            .UseCadenceStandaloneTenancy(tenantAccessor, isRelational: true)
+            .AddInterceptors(
+                StandaloneTenantConnectionInterceptor.Instance,
+                StandaloneTenantSaveChangesInterceptor.Instance,
+                Cadence.Database.Concurrency.StandaloneConcurrencyTokenInterceptor.Instance);
+        var ticketOptions = ticketOptionsBuilder.Options;
+
+        string ticketId = Guid.NewGuid().ToString();
+        await using var ticketsDb = new Cadence.Apps.Tickets.Infrastructure.Persistence.TicketsDbContext(ticketOptions);
+        var ticket = new Cadence.Apps.Tickets.Domain.Ticket
+        {
+            Id = ticketId,
+            Reference = "TCK-KA001-01",
+            Title = "Monitor Calibration Issue",
+            Description = "Initial report",
+            Category = "SITE_ISSUE",
+            Priority = "HIGH",
+            Reporter = "cra-1",
+            CreatedAt = t0,
+            CreatedBy = "cra-1",
+            ReasonForChange = "Ticket opened",
+            VersionIndex = 1,
+        };
+        ticketsDb.Tickets.Add(ticket);
+        ticketsDb.TicketRevisions.Add(Cadence.Apps.Tickets.Domain.TicketRevision.FromTicket(ticket, t0, "cra-1"));
+        await ticketsDb.SaveChangesAsync(Ct);
+
+        await using var rawTicketsConn = new NpgsqlConnection(CadenceDatabaseExtensions.WithModuleSchema(appConnString, "tickets"));
+        await rawTicketsConn.OpenAsync(Ct);
+        await using var kaTx = await rawTicketsConn.BeginTransactionAsync(Ct);
+        await using (var setTenant = new NpgsqlCommand("SELECT pg_catalog.set_config('cadence.tenant_id', @tenant, true);", rawTicketsConn, kaTx))
+        {
+            setTenant.Parameters.AddWithValue("tenant", tenantId.ToString("D"));
+            await setTenant.ExecuteNonQueryAsync(Ct);
+        }
+
+        await using var updRev = new NpgsqlCommand(
+            """UPDATE tickets.ticket_revisions SET "Title" = 'Tampered' WHERE "TicketId" = @tid;""",
+            rawTicketsConn,
+            kaTx);
+        updRev.Parameters.AddWithValue("tid", ticketId);
+        var kaEx = await Assert.ThrowsAsync<PostgresException>(() => updRev.ExecuteNonQueryAsync(Ct));
+        Assert.Equal("KA001", kaEx.SqlState);
+        await kaTx.RollbackAsync(Ct);
+    }
 }

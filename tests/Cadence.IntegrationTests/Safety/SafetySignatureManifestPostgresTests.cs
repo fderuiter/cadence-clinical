@@ -43,8 +43,10 @@ public sealed class SafetySignatureManifestPostgresTests(SafetyPostgresApiFactor
     [
         "safety_reporting_evaluations",
         "safety_narratives",
+        "safety_narrative_revisions",
         "safety_signal_alerts",
         "periodic_safety_reports",
+        "periodic_safety_report_revisions",
         "device_safety_investigations",
     ];
 

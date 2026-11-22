@@ -27,6 +27,7 @@ public sealed class StandaloneTenantSaveChangesInterceptor : SaveChangesIntercep
             var ext = context.GetService<IDbContextOptions>()?.FindExtension<StandaloneTenantOptionsExtension>();
             Guid? tenantId = ext?.TenantAccessor?.GetCurrentTenantId();
             StampTenantIds(context, ext, tenantId);
+            Cadence.Database.Concurrency.StandaloneConcurrencyTokenInterceptor.IncrementConcurrencyTokens(context);
         }
 
         return base.SavingChanges(eventData, result);
@@ -44,6 +45,7 @@ public sealed class StandaloneTenantSaveChangesInterceptor : SaveChangesIntercep
                 ? await ext.TenantAccessor.GetCurrentTenantIdAsync(cancellationToken).ConfigureAwait(false)
                 : null;
             StampTenantIds(context, ext, tenantId);
+            Cadence.Database.Concurrency.StandaloneConcurrencyTokenInterceptor.IncrementConcurrencyTokens(context);
         }
 
         return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);

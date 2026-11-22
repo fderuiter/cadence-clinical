@@ -8,11 +8,11 @@ Generated from the EF Core model of `Cadence.Apps.Imaging.Infrastructure.Persist
 | --- | --- | --- |
 | [`imaging.audit_log_entries`](#imagingaudit_log_entries) | `AuditLogEntry` | 12 |
 | [`imaging.imaging_adjudication_sessions`](#imagingimaging_adjudication_sessions) | `ImagingAdjudicationSession` | 36 |
-| [`imaging.imaging_audit_logs`](#imagingimaging_audit_logs) | `ImagingAuditLog` | 8 |
+| [`imaging.imaging_audit_logs`](#imagingimaging_audit_logs) | `ImagingAuditLog` | 9 |
 | [`imaging.imaging_caliper_annotations`](#imagingimaging_caliper_annotations) | `ImagingAnnotation` | 30 |
-| [`imaging.imaging_deid_certificates`](#imagingimaging_deid_certificates) | `DeidentificationCertificate` | 20 |
-| [`imaging.imaging_instance_envelopes`](#imagingimaging_instance_envelopes) | `ImagingInstanceEnvelope` | 19 |
-| [`imaging.imaging_series_envelopes`](#imagingimaging_series_envelopes) | `ImagingSeriesEnvelope` | 11 |
+| [`imaging.imaging_deid_certificates`](#imagingimaging_deid_certificates) | `DeidentificationCertificate` | 21 |
+| [`imaging.imaging_instance_envelopes`](#imagingimaging_instance_envelopes) | `ImagingInstanceEnvelope` | 20 |
+| [`imaging.imaging_series_envelopes`](#imagingimaging_series_envelopes) | `ImagingSeriesEnvelope` | 12 |
 | [`imaging.imaging_study_envelopes`](#imagingimaging_study_envelopes) | `ImagingStudyEnvelope` | 19 |
 | [`imaging.imaging_tumor_response_assessments`](#imagingimaging_tumor_response_assessments) | `TumorResponseAssessment` | 35 |
 
@@ -109,6 +109,7 @@ Entity: `ImagingAuditLog`
 | `DetailsJson` | `jsonb` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `StudyEnvelopeId` | `character varying(36)` | yes |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -193,6 +194,7 @@ Entity: `DeidentificationCertificate`
 | `SubjectId` | `character varying(255)` | no |  |  |
 | `TargetSha256` | `character varying(64)` | no |  |  |
 | `Timestamp` | `character varying(50)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -231,6 +233,7 @@ Entity: `ImagingInstanceEnvelope`
 | `SopInstanceUid` | `character varying(64)` | no |  |  |
 | `WindowCenter` | `double precision` | yes |  |  |
 | `WindowWidth` | `double precision` | yes |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -259,6 +262,7 @@ Entity: `ImagingSeriesEnvelope`
 | `SeriesInstanceUid` | `character varying(64)` | no |  |  |
 | `SeriesNumber` | `integer` | yes |  |  |
 | `StudyEnvelopeId` | `character varying(36)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:

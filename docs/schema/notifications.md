@@ -10,8 +10,8 @@ Generated from the EF Core model of `Cadence.Apps.Notifications.Infrastructure.P
 | [`notifications.OutboxMessage`](#notificationsoutboxmessage) | `OutboxMessage` | 21 |
 | [`notifications.OutboxState`](#notificationsoutboxstate) | `OutboxState` | 6 |
 | [`notifications.audit_log_entries`](#notificationsaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`notifications.notification_audit_logs`](#notificationsnotification_audit_logs) | `NotificationAuditLog` | 7 |
-| [`notifications.notification_deliveries`](#notificationsnotification_deliveries) | `NotificationDelivery` | 10 |
+| [`notifications.notification_audit_logs`](#notificationsnotification_audit_logs) | `NotificationAuditLog` | 8 |
+| [`notifications.notification_deliveries`](#notificationsnotification_deliveries) | `NotificationDelivery` | 11 |
 | [`notifications.notification_records`](#notificationsnotification_records) | `NotificationRecord` | 17 |
 
 ## notifications.InboxState
@@ -130,6 +130,7 @@ Entity: `NotificationAuditLog`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -153,6 +154,7 @@ Entity: `NotificationDelivery`
 | `NotificationId` | `character varying(36)` | no |  |  |
 | `RetryEligible` | `boolean` | no |  |  |
 | `Status` | `character varying(50)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:

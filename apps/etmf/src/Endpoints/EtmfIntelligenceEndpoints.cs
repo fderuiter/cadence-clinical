@@ -137,6 +137,7 @@ public static class EtmfIntelligenceEndpoints
         );
 
         dbContext.TmfDocuments.Add(doc);
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
         foreach (var tr in doc.Transitions)
         {
             dbContext.TmfDocumentQcTransitions.Add(tr);
@@ -326,7 +327,10 @@ public static class EtmfIntelligenceEndpoints
             return TypedResults.BadRequest(new { error = ex.Message });
         }
 
+        long baselineVersion = dbContext.Entry(doc).Property(x => x.VersionIndex).OriginalValue;
+        doc.VersionIndex = baselineVersion + 1;
         dbContext.TmfDocumentQcTransitions.Add(transition);
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
 
         var audit = new TmfAuditLog
         {
@@ -455,6 +459,7 @@ public static class EtmfIntelligenceEndpoints
         );
 
         dbContext.TmfDocuments.Add(doc);
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
         await dbContext.SaveChangesAsync(ct);
 
         return TypedResults.Created($"/api/v1/etmf/documents/{docId}", doc);
