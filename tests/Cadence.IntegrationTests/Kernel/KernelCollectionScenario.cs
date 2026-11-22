@@ -48,7 +48,7 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
                 "https://terminology.sponsor.test/vitals",
                 "Sponsor Vitals Terminology",
                 "Sponsor",
-                LicenseClass.PublicDomain,
+                LicenseClass.Open,
                 KernelProtocolScenario.Key(),
                 "Register terminology"),
             ct);

@@ -349,6 +349,7 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
             HttpStatusCode.OK,
             ct);
         var posObsId = saved.Values.Single(v => v.ItemId == Position).ObservationId;
+        await RelayAsync(ct);
 
         // Observation GET hydrates expected_codelist and expected_codelist_options.
         var obsDetail = await SendAsync<JsonElement>(
@@ -392,6 +393,7 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
             HttpStatusCode.OK,
             ct);
         corrected.GetProperty("revision").GetInt32().Should().Be(2);
+        await RelayAsync(ct);
     }
 
     [Fact(DisplayName = "OdmImportApprovePinAndObservationCorrection_CompilesRulePack_AndEvaluatesOnObservationCorrected")]
@@ -704,7 +706,7 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
                 "https://terminology.sponsor.test/vitals",
                 "Sponsor Vitals Terminology",
                 "Sponsor",
-                LicenseClass.PublicDomain,
+                LicenseClass.Open,
                 KernelProtocolScenario.Key(),
                 "Register terminology"),
             ct);
