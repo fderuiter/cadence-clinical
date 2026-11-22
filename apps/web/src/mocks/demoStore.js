@@ -2559,9 +2559,9 @@ export function createWebDemoStore() {
         site_id: found.site_id,
         active_protocol_version: found.active_protocol_version || "2.0",
         enrollment_index: found.enrollment_index ?? 0,
-        treatment_group: found.treatment_group,
+        treatment_group: found.treatment_group ?? null,
         randomization_seed: null,
-        investigational_product_id: null,
+        investigational_product_id: found.investigational_product_id ?? null,
       };
     },
 
@@ -2583,6 +2583,12 @@ export function createWebDemoStore() {
         found = state.subjects.find((s) => s.id === created.id);
       }
       found.status = nextStatus;
+      if (nextStatus === "UNBLINDED") {
+        found.treatment_group =
+          found.unblinded_treatment_group || found.treatment_group || "ACTIVE";
+        found.investigational_product_id =
+          found.investigational_product_id || "KIT-1001";
+      }
       recordActivity(
         "execution.subject.state_changed",
         "execution",

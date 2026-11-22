@@ -346,6 +346,14 @@ const RANDOMIZATION_SCHEME_READ_ROLES = new Set([
   "sponsor_dm",
   "auditor",
 ]);
+const RANDOMIZATION_SCHEME_WRITE_ROLES = new Set(["unblinded_statistician"]);
+const UNBLIND_PARTICIPANT_ROLES = new Set([
+  "principal_investigator",
+  "principal investigator",
+  "pi",
+  "authorized_er_physician",
+  "authorized er physician",
+]);
 const ETMF_STAGE_QC_ROLES = new Set([
   "sysadmin",
   "sponsor_dm",
@@ -388,6 +396,10 @@ export const TRAINING_ASSIGN_ROLE_REASON =
   "Requires Sponsor Data Manager or System Administrator role (training_curriculum:assign).";
 export const TRAINING_DELEGATION_SIGN_ROLE_REASON =
   "Requires Principal Investigator role (delegation_log:sign).";
+export const RANDOMIZATION_SCHEME_WRITE_ROLE_REASON =
+  "Requires Unblinded Statistician role (randomization_scheme:draft/approve).";
+export const EMERGENCY_UNBLIND_ROLE_REASON =
+  "Requires Principal Investigator or Authorized ER Physician role.";
 
 /** Activate a compliant site in Execution (site_compliance:activate — sysadmin & sponsor_dm only). */
 export function canActivateSite(auth: AuthorityAuth): boolean {
@@ -462,6 +474,20 @@ export function canRecordChainOfCustody(auth: AuthorityAuth): boolean {
 /** Read blinded randomization scheme configuration (randomization_scheme:read). */
 export function canReadRandomizationSchemes(auth: AuthorityAuth): boolean {
   return holdsBackendRole(auth, RANDOMIZATION_SCHEME_READ_ROLES);
+}
+
+/** Draft and approve study randomization schemes (randomization_scheme:draft/approve — unblinded_statistician only). */
+export function canManageRandomizationSchemes(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, RANDOMIZATION_SCHEME_WRITE_ROLES);
+}
+
+/** Perform emergency participant unblinding (SubjectAuthority.CanUnblind — principal_investigator & authorized_er_physician). */
+export function canUnblindParticipant(
+  auth: RawRoleHolder | null | undefined
+): boolean {
+  return (auth?.rawRoles ?? []).some((role) =>
+    UNBLIND_PARTICIPANT_ROLES.has(role.trim().toLowerCase())
+  );
 }
 
 /** Stage site startup / study documents into eTMF intelligence QC (etmf_document:create). */

@@ -19,6 +19,16 @@ export type ComplianceStatus = Schemas["Execution_ComplianceStatusResponse"];
 export type OperationEnvelope = Schemas["Execution_OperationEnvelopeResponse"];
 export type RandomizationScheme =
   Schemas["Execution_RandomizationSchemeResponse"];
+export type RandomizationSchemeDraftRequest =
+  Schemas["Execution_RandomizationSchemeDraftRequest"];
+export type RandomizeSubjectRequest =
+  Schemas["Execution_RandomizeSubjectRequest"];
+export type RandomizationResponse = Schemas["Execution_RandomizationResponse"];
+export type ProtocolVersionPayload =
+  Schemas["Execution_ProtocolVersionPayload"];
+export type SubjectConsentRequest = Schemas["Execution_SubjectConsentRequest"];
+export type SubjectConsentResponse =
+  Schemas["Execution_SubjectConsentResponse"];
 export type IpKitBatchReconciliationRequest =
   Schemas["Execution_IpKitBatchReconciliationRequest"];
 export type IpKitItemReconcileRequest =
@@ -306,6 +316,75 @@ export const executionApi = {
     );
   },
 
+  /** Drafts the study's next randomization scheme version (POST /api/v1/execution/randomization/schemes). */
+  draftRandomizationScheme(
+    payload: RandomizationSchemeDraftRequest,
+    changeReason: string
+  ): Promise<RandomizationScheme> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/randomization/schemes", {
+        body: payload,
+        headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
+      })
+    );
+  },
+
+  /** Approves a draft randomization scheme with a single-use step-up signature token (POST /api/v1/execution/randomization/schemes/{schemeId}/approve). */
+  approveRandomizationScheme(
+    schemeId: string,
+    changeReason: string,
+    sigToken: string
+  ): Promise<RandomizationScheme> {
+    return unwrapResponse(
+      client.POST(
+        "/api/v1/execution/randomization/schemes/{schemeId}/approve",
+        {
+          params: { path: { schemeId } },
+          headers: {
+            "X-Change-Reason": encodeChangeReason(changeReason),
+            "X-Sig-Token": sigToken,
+          },
+        }
+      )
+    );
+  },
+
+  /** Records or updates informed consent for a participant (POST /api/v1/execution/subjects/{subjectId}/consent). */
+  recordSubjectConsent(
+    subjectId: string,
+    payload: SubjectConsentRequest,
+    changeReason?: string
+  ): Promise<SubjectConsentResponse> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/subjects/{subjectId}/consent", {
+        params: { path: { subjectId } },
+        body: payload,
+        headers: changeReason
+          ? { "X-Change-Reason": encodeChangeReason(changeReason) }
+          : undefined,
+      })
+    );
+  },
+
+  /** Randomizes an enrolled participant under the approved scheme with a single-use step-up signature token (POST /api/v1/execution/subjects/{subjectId}/randomize). */
+  randomizeSubject(
+    subjectId: string,
+    payload: RandomizeSubjectRequest,
+    changeReason: string,
+    sigToken: string
+  ): Promise<RandomizationResponse> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/subjects/{subjectId}/randomize", {
+        params: { path: { subjectId } },
+        body: payload,
+        headers: {
+          "X-Change-Reason": encodeChangeReason(changeReason),
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
   /** Retrieves autologous Cell & Gene Therapy chain-of-custody trace for a participant. */
   getChainOfCustody(
     studyId: string,
@@ -369,3 +448,10 @@ export const executionApi = {
     ) as unknown as Promise<Array<Record<string, unknown>>>;
   },
 };
+
+export {
+  APPROVE_RANDOMIZATION_SCHEME_SEMANTIC_ACTION,
+  RANDOMIZE_SUBJECT_SEMANTIC_ACTION,
+  approveRandomizationSchemeAction,
+  randomizeSubjectAction,
+} from "../canvas/lifecycle";

@@ -489,6 +489,7 @@
               : null
           "
           :can-manage-participants="canChangeParticipants"
+          :can-unblind-participants="canUnblindParticipants"
           :assist-prompt="askText"
           @update:collapsed="inspectorCollapsed = $event"
         />
@@ -897,6 +898,7 @@ import {
   canManageParticipants,
   canManageQueries,
   canManageRulePacks,
+  canUnblindParticipant,
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
@@ -1481,6 +1483,15 @@ const canAnswer = computed(() => canAnswerQueries(authStore));
 const canManageRules = computed(() => canManageRulePacks(authStore));
 const canVerify = computed(() => canVerifySource(authStore));
 const canChangeParticipants = computed(() => canManageParticipants(authStore));
+const canUnblindParticipants = computed(() => canUnblindParticipant(authStore));
+const callerAuthKey = computed(() =>
+  [
+    authStore.isAuthenticated ? "1" : "0",
+    authStore.user?.id ?? "",
+    authStore.user?.username ?? "",
+    ...(authStore.rawRoles ?? []),
+  ].join("|")
+);
 
 const navigatorStages = computed(() =>
   stage.value ? [stage.value] : STAGES.filter((s) => s.sections.length)
@@ -1984,12 +1995,19 @@ watch(
   { immediate: true }
 );
 
+watch(callerAuthKey, (next, prev) => {
+  if (prev !== undefined && next !== prev) {
+    canvas.clearParticipantAllocationCache();
+  }
+});
+
 watch(
   [
     studyCode,
     () => recordRef.value?.id,
     () => selectedNode.value?.id,
     () => loadedForm.value?.participant_id,
+    callerAuthKey,
   ],
   ([code, recordId, selectedId, formParticipantId]) => {
     if (!code) return;
@@ -1999,8 +2017,21 @@ watch(
       )
     );
     for (const id of ids) {
-      if (!canvas.knownParticipants[id]) {
+      const known = canvas.knownParticipants[id];
+      if (!known) {
         void canvas.ensureParticipantById(id);
+      } else if (
+        known.treatment_group === undefined &&
+        [
+          "RANDOMIZED",
+          "ACTIVE",
+          "UNBLINDED",
+          "RECONSENT_REQUIRED",
+          "COMPLETED",
+          "WITHDRAWN",
+        ].includes(known.status)
+      ) {
+        void canvas.refreshParticipantDetail(id);
       }
     }
   },

@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import {
   executionApi,
+  type RandomizationResponse,
   type SubjectDetail,
   type SubjectList,
   type SubjectSummary,
@@ -45,19 +46,35 @@ export interface PulseCount {
   count: number;
 }
 
+/** Participant summary augmented with blind-safe kit and (when authorized) unblinded treatment allocation details. */
+export type CanvasParticipant = SubjectSummary & {
+  kit_number?: string | null;
+  treatment_group?: string | null;
+  investigational_product_id?: string | null;
+};
+
+export interface RecordParticipantConsentInput {
+  versionTag: string;
+  versionIndex: number;
+  icfSignedDate: string | null;
+  isPaperOverride?: boolean;
+  requiresReconsent?: boolean;
+  reason: string;
+}
+
 // Execution may send int32 values as strings (its OpenAPI allows both).
 const toCount = (value: number | string): number => Number(value) || 0;
 
 const sortByEnrollment = (
-  known: Record<string, SubjectSummary>
-): SubjectSummary[] =>
+  known: Record<string, CanvasParticipant>
+): CanvasParticipant[] =>
   Object.values(known).sort(
     (a, b) => toCount(a.enrollment_index) - toCount(b.enrollment_index)
   );
 
 function detailToSummary(
   detail: SubjectDetail | null | undefined
-): SubjectSummary | null {
+): CanvasParticipant | null {
   if (
     !detail ||
     typeof detail !== "object" ||
@@ -74,6 +91,8 @@ function detailToSummary(
     status: detail.status,
     active_protocol_version: detail.active_protocol_version ?? "",
     enrollment_index: detail.enrollment_index ?? 0,
+    treatment_group: detail.treatment_group ?? null,
+    investigational_product_id: detail.investigational_product_id ?? null,
   };
 }
 
@@ -125,15 +144,15 @@ function fetchStudyPage(
 export const useStudyCanvasStore = defineStore("studyCanvas", {
   state: () => ({
     studyCode: "",
-    participants: [] as SubjectSummary[],
+    participants: [] as CanvasParticipant[],
     /** Study participants available to the ⌘K command palette across all views. */
-    paletteParticipants: [] as SubjectSummary[],
+    paletteParticipants: [] as CanvasParticipant[],
     paletteTotal: 0,
     paletteLoaded: false,
     paletteLoading: false,
     unfilteredLoadedCount: 0,
     /** Every participant read for this study by id, so a selection survives changing the list's filter. */
-    knownParticipants: {} as Record<string, SubjectSummary>,
+    knownParticipants: {} as Record<string, CanvasParticipant>,
     /** Participant UUIDs currently being hydrated for cold links or inspector selections. */
     participantLookups: {} as Record<string, boolean>,
     /** Participant UUIDs confirmed absent or inaccessible for the active study. */
@@ -273,17 +292,76 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     },
 
     /** Records participants for the active study and keeps `paletteParticipants` ordered. */
-    rememberParticipants(items: SubjectSummary[]) {
+    rememberParticipants(items: CanvasParticipant[]) {
       const studyId = this.studyCode;
       let changed = false;
       for (const participant of items) {
         if (participant.study_id && participant.study_id !== studyId) continue;
-        this.knownParticipants[participant.id] = participant;
-        seedParticipantNode(participant);
+        const prev = this.knownParticipants[participant.id];
+        const becameUnblinded =
+          prev?.status !== "UNBLINDED" && participant.status === "UNBLINDED";
+        const carryPrevTreatment =
+          prev?.treatment_group !== undefined &&
+          !(becameUnblinded && prev.treatment_group === null);
+        const carryPrevProduct =
+          prev?.investigational_product_id !== undefined &&
+          !(becameUnblinded && prev.investigational_product_id === null);
+        const merged: CanvasParticipant = {
+          ...prev,
+          ...participant,
+          ...(participant.kit_number !== undefined
+            ? { kit_number: participant.kit_number }
+            : prev?.kit_number !== undefined
+              ? { kit_number: prev.kit_number }
+              : {}),
+          ...(participant.treatment_group !== undefined
+            ? { treatment_group: participant.treatment_group }
+            : carryPrevTreatment
+              ? { treatment_group: prev.treatment_group }
+              : {}),
+          ...(participant.investigational_product_id !== undefined
+            ? {
+                investigational_product_id:
+                  participant.investigational_product_id,
+              }
+            : carryPrevProduct
+              ? { investigational_product_id: prev.investigational_product_id }
+              : {}),
+        };
+        this.knownParticipants[participant.id] = merged;
+        seedParticipantNode(merged);
         delete this.failedParticipantIds[participant.id];
         changed = true;
       }
       if (changed) {
+        this.paletteParticipants = sortByEnrollment(this.knownParticipants);
+      }
+    },
+
+    /** Clears caller-scoped kit and unblinded allocation fields when the signed-in identity or role set changes. */
+    clearParticipantAllocationCache() {
+      let changed = false;
+      for (const id of Object.keys(this.knownParticipants)) {
+        const existing = this.knownParticipants[id];
+        if (
+          !existing ||
+          (existing.treatment_group === undefined &&
+            existing.investigational_product_id === undefined &&
+            existing.kit_number === undefined)
+        ) {
+          continue;
+        }
+        const stripped: CanvasParticipant = { ...existing };
+        delete stripped.treatment_group;
+        delete stripped.investigational_product_id;
+        delete stripped.kit_number;
+        this.knownParticipants[id] = stripped;
+        changed = true;
+      }
+      if (changed) {
+        this.participants = this.participants.map(
+          (p) => this.knownParticipants[p.id] ?? p
+        );
         this.paletteParticipants = sortByEnrollment(this.knownParticipants);
       }
     },
@@ -594,12 +672,15 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
           offset,
         });
         if (request !== participantsRequest) return false;
+        this.rememberParticipants(page.items);
+        const hydratedItems = page.items.map(
+          (item) => this.knownParticipants[item.id] ?? item
+        );
         this.participants = append
-          ? [...this.participants, ...page.items]
-          : page.items;
+          ? [...this.participants, ...hydratedItems]
+          : hydratedItems;
         const total = toCount(page.total);
         this.participantsTotal = total;
-        this.rememberParticipants(page.items);
         if (!filter.status && !filter.siteId && !filter.q) {
           this.unfilteredLoadedCount = Math.max(
             this.unfilteredLoadedCount,
@@ -772,7 +853,154 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         return false;
       }
       await this.refreshAfterChange();
+      if (state === "UNBLINDED") {
+        await this.refreshParticipantDetail(participant.id);
+      }
       return true;
+    },
+
+    /** Hydrates participant allocation details from GetSubjectDetail when available. */
+    async refreshParticipantDetail(
+      participantId: string
+    ): Promise<CanvasParticipant | null> {
+      const studyId = this.studyCode;
+      if (
+        !studyId ||
+        !participantId ||
+        typeof executionApi.getSubjectDetail !== "function"
+      ) {
+        return this.knownParticipants[participantId] ?? null;
+      }
+      try {
+        const detail = await executionApi.getSubjectDetail(participantId);
+        if (!detail || this.studyCode !== studyId) {
+          return this.knownParticipants[participantId] ?? null;
+        }
+        if (detail.study_id && detail.study_id !== studyId) {
+          return this.knownParticipants[participantId] ?? null;
+        }
+        const summary = detailToSummary(detail);
+        if (!summary) return this.knownParticipants[participantId] ?? null;
+        this.rememberParticipants([summary]);
+        const merged = this.knownParticipants[summary.id] ?? summary;
+        const index = this.participants.findIndex((p) => p.id === summary.id);
+        if (index >= 0) this.participants.splice(index, 1, merged);
+        return merged;
+      } catch {
+        return this.knownParticipants[participantId] ?? null;
+      }
+    },
+
+    /** Records signed or paper-override informed consent for a participant in Execution. */
+    async recordParticipantConsent(
+      participant: SubjectSummary,
+      input: RecordParticipantConsentInput
+    ): Promise<boolean> {
+      const studyId = (participant.study_id || this.studyCode).trim();
+      const toasts = useToastStore();
+      if (!studyId) return false;
+      try {
+        const saved = await executionApi.recordSubjectConsent(
+          participant.id,
+          {
+            protocol_version: {
+              study_id: studyId,
+              version_tag: input.versionTag,
+              version_index: input.versionIndex,
+            },
+            icf_signed: !input.isPaperOverride || Boolean(input.icfSignedDate),
+            icf_signed_date: input.icfSignedDate,
+            requires_reconsent: Boolean(input.requiresReconsent),
+            is_paper_override: Boolean(input.isPaperOverride),
+          },
+          input.reason
+        );
+        const updated: CanvasParticipant = {
+          ...(this.knownParticipants[participant.id] ?? participant),
+          active_protocol_version:
+            saved.version_tag ||
+            input.versionTag ||
+            participant.active_protocol_version,
+        };
+        this.rememberParticipants([updated]);
+        const index = this.participants.findIndex(
+          (p) => p.id === participant.id
+        );
+        if (index >= 0) {
+          this.participants.splice(
+            index,
+            1,
+            this.knownParticipants[participant.id] ?? updated
+          );
+        }
+        toasts.push({
+          tone: "success",
+          title: `Consent recorded for ${participant.subject_id}`,
+          message: `Protocol version ${saved.version_tag || input.versionTag}`,
+        });
+      } catch (err) {
+        toasts.apiError(
+          `Consent was not recorded for ${participant.subject_id}`,
+          err
+        );
+        return false;
+      }
+      await this.refreshAfterChange();
+      return true;
+    },
+
+    /** Randomizes an enrolled participant with a single-use step-up signature token and updates blind-safe kit state. */
+    async randomizeParticipant(
+      participant: SubjectSummary,
+      stratificationFactors: Record<string, string> | null,
+      reason: string,
+      sigToken: string
+    ): Promise<RandomizationResponse | null> {
+      const toasts = useToastStore();
+      const normalizedFactors =
+        stratificationFactors && Object.keys(stratificationFactors).length > 0
+          ? stratificationFactors
+          : null;
+      let randomized: RandomizationResponse;
+      try {
+        randomized = await executionApi.randomizeSubject(
+          participant.id,
+          { stratification_factors: normalizedFactors },
+          reason,
+          sigToken
+        );
+        const updated: CanvasParticipant = {
+          ...(this.knownParticipants[participant.id] ?? participant),
+          status: randomized.status || "RANDOMIZED",
+          kit_number: randomized.kit_number ?? null,
+        };
+        this.rememberParticipants([updated]);
+        const index = this.participants.findIndex(
+          (p) => p.id === participant.id
+        );
+        if (index >= 0) {
+          this.participants.splice(
+            index,
+            1,
+            this.knownParticipants[participant.id] ?? updated
+          );
+        }
+        toasts.push({
+          tone: "success",
+          title: `${participant.subject_id} randomized`,
+          message: randomized.kit_number
+            ? `Assigned kit ${randomized.kit_number}.`
+            : "",
+        });
+      } catch (err) {
+        toasts.apiError(`${participant.subject_id} was not randomized`, err);
+        return null;
+      }
+      await Promise.all([
+        this.refreshAfterChange(),
+        this.refreshParticipantDetail(participant.id),
+      ]);
+      return randomized;
     },
 
     /** Reads the participant list and the counts again, where the canvas has already read them. */

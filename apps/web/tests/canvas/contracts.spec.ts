@@ -11,13 +11,16 @@ import {
   canActivateSite,
   canCertifyGreenlight,
   canManageParticipants,
+  canManageRandomizationSchemes,
   canReconcileIpKits,
   canSignOffDoa,
+  canUnblindParticipant,
 } from "../../src/canvas/authority";
 import {
   PARTICIPANT_STATES,
   PARTICIPANT_TRANSITIONS,
   STAGES,
+  canRandomizeParticipant,
   participantStateChanges,
   findSection,
   findStage,
@@ -173,6 +176,13 @@ describe("Canvas lifecycle", () => {
       targets: ["SCREEN_FAILED", "ENROLLED", "RECONSENT_REQUIRED", "WITHDRAWN"],
       unblindingWithheld: false,
     });
+    expect(participantStateChanges("ENROLLED")).toEqual({
+      targets: ["RECONSENT_REQUIRED", "WITHDRAWN"],
+      unblindingWithheld: false,
+    });
+    expect(canRandomizeParticipant("ENROLLED")).toBe(true);
+    expect(canRandomizeParticipant("SCREENING")).toBe(false);
+    expect(canRandomizeParticipant("RANDOMIZED")).toBe(false);
     expect(participantStateChanges("COMPLETED").targets).toEqual([]);
     expect(participantStateChanges("NOT_A_STATE").targets).toEqual([]);
   });
@@ -280,6 +290,61 @@ describe("Canvas authority mirror", () => {
       "cra",
     ]) {
       expect(canReconcileIpKits({ rawRoles: [role] }), role).toBe(false);
+    }
+
+    // randomization_scheme:draft/approve -> unblinded_statistician only
+    expect(
+      canManageRandomizationSchemes({ rawRoles: ["unblinded_statistician"] })
+    ).toBe(true);
+    for (const role of [
+      "sysadmin",
+      "sponsor_dm",
+      "Data Manager",
+      "auditor",
+      "pharmacist",
+      "crc",
+      "Principal Investigator",
+    ]) {
+      expect(canManageRandomizationSchemes({ rawRoles: [role] }), role).toBe(
+        false
+      );
+    }
+
+    // SubjectAuthority.CanUnblind -> principal_investigator & authorized_er_physician only
+    const authoritySource = readFileSync(
+      join(
+        repoRoot,
+        "apps/execution/src/Application/Subjects/SubjectAuthority.cs"
+      ),
+      "utf8"
+    );
+    const unblindMethod = authoritySource.slice(
+      authoritySource.indexOf("public static bool CanUnblind")
+    );
+    const unblindBody = unblindMethod.slice(
+      unblindMethod.indexOf("return normalized is"),
+      unblindMethod.indexOf(";", unblindMethod.indexOf("return normalized is"))
+    );
+    const unblindRoles = [...unblindBody.matchAll(/"([^"]+)"/g)].map(
+      ([, role]) => role
+    );
+    expect(unblindRoles.length).toBeGreaterThan(0);
+    for (const role of unblindRoles) {
+      expect(canUnblindParticipant({ rawRoles: [role] }), role).toBe(true);
+    }
+    for (const role of [
+      "Site Investigator",
+      "investigator",
+      "sub_investigator",
+      "lead_investigator",
+      "er_physician",
+      "er physician",
+      "crc",
+      "pharmacist",
+      "unblinded_statistician",
+      "sysadmin",
+    ]) {
+      expect(canUnblindParticipant({ rawRoles: [role] }), role).toBe(false);
     }
   });
 });

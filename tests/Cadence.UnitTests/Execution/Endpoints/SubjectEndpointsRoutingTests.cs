@@ -354,6 +354,84 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
         document.RootElement.GetProperty("investigational_product_id").GetString().Should().Be("KIT-007");
     }
 
+    [Theory]
+    [InlineData("principal_investigator")]
+    [InlineData("authorized_er_physician")]
+    public async Task GetSubjectDetailAsync_GivenEmergencyUnblindedSubjectAndUnblindingAuthority_RevealsTheAllocatedArmAndKit(string role)
+    {
+        var service = new FakeSubjectApplicationService
+        {
+            GetDetailResult = Result<SubjectDetailResponse>.Success(new SubjectDetailResponse(
+                new SubjectId(Guid.Parse("11111111-1111-1111-1111-111111111111")),
+                new SubjectCode("SUBJ-001"),
+                new StudyCode("STUDY-001"),
+                "UNBLINDED",
+                new SiteCode("SITE-001"),
+                ActiveProtocolVersion: "1.0.0",
+                EnrollmentIndex: 2,
+                TreatmentGroup: null,
+                RandomizationSeed: null,
+                InvestigationalProductId: null)),
+        };
+        var randomization = new FakeRandomizationService();
+        using var responseBody = new MemoryStream();
+        var httpContext = new DefaultHttpContext
+        {
+            User = TestSecurityContext.CreateScopedPrincipal("unblinder-001", TestSecurityContext.AllStudies, ["SITE-001"], role),
+            RequestServices = BuildJsonOptionsServiceProvider(),
+        };
+        httpContext.Response.Body = responseBody;
+
+        var result = await SubjectEndpoints.GetSubjectDetailAsync("SUBJ-001", httpContext, service, randomization,
+            TestContext.Current.CancellationToken);
+        await result.ExecuteAsync(httpContext);
+
+        randomization.RevealCalls.Should().Be(1);
+        responseBody.Seek(0, SeekOrigin.Begin);
+        using var document = await JsonDocument.ParseAsync(responseBody, cancellationToken: TestContext.Current.CancellationToken);
+        document.RootElement.GetProperty("treatment_group").GetString().Should().Be("ARM-A");
+        document.RootElement.GetProperty("investigational_product_id").GetString().Should().Be("KIT-007");
+    }
+
+    [Theory]
+    [InlineData("crc")]
+    [InlineData("Site Investigator")]
+    public async Task GetSubjectDetailAsync_GivenEmergencyUnblindedSubjectAndBlindedSiteRole_NeverRevealsTheArm(string role)
+    {
+        var service = new FakeSubjectApplicationService
+        {
+            GetDetailResult = Result<SubjectDetailResponse>.Success(new SubjectDetailResponse(
+                new SubjectId(Guid.Parse("11111111-1111-1111-1111-111111111111")),
+                new SubjectCode("SUBJ-001"),
+                new StudyCode("STUDY-001"),
+                "UNBLINDED",
+                new SiteCode("SITE-001"),
+                ActiveProtocolVersion: "1.0.0",
+                EnrollmentIndex: 2,
+                TreatmentGroup: null,
+                RandomizationSeed: null,
+                InvestigationalProductId: null)),
+        };
+        var randomization = new FakeRandomizationService();
+        using var responseBody = new MemoryStream();
+        var httpContext = new DefaultHttpContext
+        {
+            User = TestSecurityContext.CreateScopedPrincipal("site-001", TestSecurityContext.AllStudies, ["SITE-001"], role),
+            RequestServices = BuildJsonOptionsServiceProvider(),
+        };
+        httpContext.Response.Body = responseBody;
+
+        var result = await SubjectEndpoints.GetSubjectDetailAsync("SUBJ-001", httpContext, service, randomization,
+            TestContext.Current.CancellationToken);
+        await result.ExecuteAsync(httpContext);
+
+        randomization.RevealCalls.Should().Be(0);
+        responseBody.Seek(0, SeekOrigin.Begin);
+        using var document = await JsonDocument.ParseAsync(responseBody, cancellationToken: TestContext.Current.CancellationToken);
+        document.RootElement.GetProperty("treatment_group").ValueKind.Should().Be(JsonValueKind.Null);
+        document.RootElement.GetProperty("investigational_product_id").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
     // ================================================================================================
     // PUT /{subjectId}/demographics (UpdateSubjectDemographics)
     // ================================================================================================

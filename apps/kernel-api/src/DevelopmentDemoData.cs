@@ -74,6 +74,8 @@ internal static class DevelopmentDemoData
         ("DEMO_DESIGNER", "Study designer", ["organization.register", "study.register", "concept.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.approve", "protocol.amend", "standard.register", "standard.approve", "library_item.draft", "library_item.approve", "study.declare_standards", "validation_run.record", "attestation.sign"]),
         ("DEMO_SAFETY", "Safety reviewer", ["validation_finding.investigate", "validation_finding.classify"]),
         ("DEMO_AUDITOR", "Auditor", ["validation_finding.investigate"]),
+        ("DEMO_STATISTICIAN", "Unblinded statistician", ["validation_finding.investigate"]),
+        ("DEMO_PHARMACIST", "Site pharmacist", ["validation_finding.investigate"]),
     ];
 
     /// <summary>
@@ -91,6 +93,9 @@ internal static class DevelopmentDemoData
         ("designer.lead", DesignerLeadSubject, "DEMO_DESIGNER", null),
         ("safety.officer", "3d290711-4167-4da5-b55a-4c75760bd27c", "DEMO_SAFETY", null), // deid-ignore: a demo realm user's fixed subject id, not a telephone number
         ("auditor.lead", "d43095eb-1912-40dd-a528-fa04335a2342", "DEMO_AUDITOR", null),
+        ("stat.author", "a1b2c3d4-e5f6-4a7b-8c9d-e1f2a3b4c5d6", "DEMO_STATISTICIAN", null),
+        ("stat.approver", "b2c3d4e5-f6a7-4b8c-9d1e-f2a3b4c5d6e7", "DEMO_STATISTICIAN", null),
+        ("pharmacist.site101", "c3d4e5f6-a7b8-4c9d-8e1f-a3b4c5d6e7f8", "DEMO_PHARMACIST", "SITE-101"),
     ];
 
     /// <summary>

@@ -177,6 +177,18 @@ export const DEMO_MANIFEST = Object.freeze({
       roleUuid: "647a2d36-5052-8489-80a9-d0790d7b0491",
       capabilities: Object.freeze(["validation_finding.investigate"]),
     }),
+    Object.freeze({
+      code: "DEMO_STATISTICIAN",
+      name: "Unblinded statistician",
+      roleUuid: "04f0686f-8c52-8871-ba81-b53e9d392b9b",
+      capabilities: Object.freeze(["validation_finding.investigate"]),
+    }),
+    Object.freeze({
+      code: "DEMO_PHARMACIST",
+      name: "Site pharmacist",
+      roleUuid: "6fd9c67c-3dea-8be3-a385-aa2ba4bd1af7",
+      capabilities: Object.freeze(["validation_finding.investigate"]),
+    }),
   ]),
   personas: Object.freeze([
     Object.freeze({
@@ -205,7 +217,10 @@ export const DEMO_MANIFEST = Object.freeze({
       workspacePersona: "site_investigator",
       siteCode: "SITE-101",
       grantUuid: "42d3eb49-4ea8-8ec2-ad97-5ca845e2d01a",
-      realmRoles: Object.freeze(["Site Investigator"]),
+      realmRoles: Object.freeze([
+        "Site Investigator",
+        "Principal Investigator",
+      ]),
     }),
     Object.freeze({
       username: "cra.monitor",
@@ -298,6 +313,48 @@ export const DEMO_MANIFEST = Object.freeze({
       siteCode: null,
       grantUuid: "80af36e5-3725-8ca6-9686-d95c75f768fc",
       realmRoles: Object.freeze(["Auditor", "Sponsor Admin"]),
+    }),
+    Object.freeze({
+      username: "stat.author",
+      id: "a1b2c3d4-e5f6-4a7b-8c9d-e1f2a3b4c5d6",
+      email: "stat.author@example.com", // deid-ignore: synthetic demo manifest fixture
+      firstName: "Statistician",
+      lastName: "Author",
+      tenantId: "cadence-local",
+      kernelRole: "DEMO_STATISTICIAN",
+      workflow: "statistician",
+      workspacePersona: "unblinded_statistician",
+      siteCode: null,
+      grantUuid: "a78b2440-41ad-8c8c-a6cd-90d58b534faa",
+      realmRoles: Object.freeze(["unblinded_statistician"]),
+    }),
+    Object.freeze({
+      username: "stat.approver",
+      id: "b2c3d4e5-f6a7-4b8c-9d1e-f2a3b4c5d6e7",
+      email: "stat.approver@example.com", // deid-ignore: synthetic demo manifest fixture
+      firstName: "Statistician",
+      lastName: "Approver",
+      tenantId: "cadence-local",
+      kernelRole: "DEMO_STATISTICIAN",
+      workflow: "statistician_approver",
+      workspacePersona: "unblinded_statistician",
+      siteCode: null,
+      grantUuid: "1c696d34-0c4f-8f3d-b2c6-3321d223d697",
+      realmRoles: Object.freeze(["unblinded_statistician"]),
+    }),
+    Object.freeze({
+      username: "pharmacist.site101",
+      id: "c3d4e5f6-a7b8-4c9d-8e1f-a3b4c5d6e7f8",
+      email: "pharmacist.site101@example.com", // deid-ignore: synthetic demo manifest fixture
+      firstName: "Site",
+      lastName: "Pharmacist",
+      tenantId: "cadence-local",
+      kernelRole: "DEMO_PHARMACIST",
+      workflow: "pharmacist",
+      workspacePersona: "pharmacist",
+      siteCode: "SITE-101",
+      grantUuid: "1840e51a-1808-8ddc-b9e6-e3f9a0b89b9c",
+      realmRoles: Object.freeze(["pharmacist"]),
     }),
   ]),
 });

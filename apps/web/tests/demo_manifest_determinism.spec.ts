@@ -33,7 +33,7 @@ describe("Canonical Demo Manifest & Deterministic Demo Ledger (apps/web)", () =>
     resetDemoRandom();
   });
 
-  it("exports canonical CADENCE-101 study, sites, participants, and all eight synthetic realm personas", () => {
+  it("exports canonical CADENCE-101 study, sites, participants, and all synthetic realm personas", () => {
     expect(DEMO_EPOCH_ISO).toBe("2026-01-05T09:00:00Z");
     expect(DEMO_STUDY.code).toBe("CADENCE-101");
     expect(DEMO_SPONSOR.code).toBe("CADENCE-PHARMA");
@@ -52,6 +52,9 @@ describe("Canonical Demo Manifest & Deterministic Demo Ledger (apps/web)", () =>
       "designer.lead",
       "safety.officer",
       "auditor.lead",
+      "stat.author",
+      "stat.approver",
+      "pharmacist.site101",
     ]);
 
     const serialized = JSON.stringify(DEMO_MANIFEST);
