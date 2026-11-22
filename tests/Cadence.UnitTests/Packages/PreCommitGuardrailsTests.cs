@@ -357,6 +357,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         FrontendQualityGateService.CheckPrettier(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
         FrontendQualityGateService.CheckEslint(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
+        FrontendQualityGateService.CheckTypecheck(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
     }
 
     [Fact]
@@ -780,6 +781,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     {
         FrontendQualityGateService.CheckPrettier(_tempDir, [], preCommit: true).Should().Be(0);
         FrontendQualityGateService.CheckEslint(_tempDir, [], preCommit: true).Should().Be(0);
+        FrontendQualityGateService.CheckTypecheck(_tempDir, [], preCommit: true).Should().Be(0);
     }
 
     [Fact]

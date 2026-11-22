@@ -96,6 +96,14 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "lints staged JS, TS and Vue blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
         },
+        new("typecheck", ["validate-typecheck"],
+            "Workspace TypeScript and Vue SFC typecheck (`pnpm -r typecheck` via `vue-tsc` and `tsc`)",
+            ctx => FrontendQualityGateService.CheckTypecheck(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "runs `pnpm -r typecheck` when staged JS, TS, Vue, JSON or YAML files are present; fails closed when `pnpm` or `node_modules` is missing",
+        },
         new("actionlint", ["validate-workflows"],
             "GitHub Actions workflow and composite-action static analysis via `actionlint` from `.cadence/bin` or `PATH` (fails closed when missing)",
             ctx => CliLinterGateService.RunActionlint(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
@@ -200,7 +208,7 @@ public static class QualityGates
             PreCommitNote = "exports specs only for the services the staged C# files touch, otherwise checks staged `docs/api` against staged `docs/openapi`",
         },
         new("api-clients", ["validate-api-clients"],
-            "The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them",
+            "The web API types are generated from the current `docs/openapi`, and the frontend workspace typechecks against them (`pnpm -r typecheck`)",
             ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot) == 0),
         new("schema-doc", ["auto-stage-schema-doc"], "`docs/schema` matches the EF Core models",
             ctx => CheckSchemaDoc(ctx))

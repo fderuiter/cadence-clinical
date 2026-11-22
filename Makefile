@@ -47,8 +47,8 @@ fix: ## Auto-fix C# & Prettier formatting, secrets baseline, doc/ADR indexes, an
 lint-paths: ## Run the path-pattern boundary linter
 	$(CADENCE_CLI) validate-path-patterns
 
-typecheck: ## Type-check the web workspace
-	pnpm --filter web typecheck
+typecheck: ## Type-check all frontend and TypeScript workspaces
+	pnpm -r typecheck
 
 lint: lint-paths typecheck ## Check lint (no auto-fix)
 	pnpm -r lint
