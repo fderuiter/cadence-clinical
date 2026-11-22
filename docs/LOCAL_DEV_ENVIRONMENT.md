@@ -126,7 +126,8 @@ it has none, so reset Keycloak's data once if it imported the realm before the u
 
 ```bash
 export GATEWAY_SECRET="<32+ characters>"
-export ASPNETCORE_ENVIRONMENT=Development      # allows the local database fallback
+export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=...;Password=..."
+export ASPNETCORE_ENVIRONMENT=Development
 dotnet run --project apps/execution/src/Cadence.Apps.Execution.csproj
 curl http://localhost:<port>/healthz/ready
 ```
@@ -184,7 +185,7 @@ model. Agent tasks call one only when a provider is configured: `Intelligence__A
 | List applied and pending migrations     | `pnpm cadence db list [<module\|all>]`                                    |
 | Seed local development data             | `pnpm cadence db seed [<module\|all>]`                                    |
 
-`scripts/manage_migrations.sh` and `scripts/manage_migrations.ps1` are thin wrappers that forward directly to `cadence db`.
+`scripts/manage_migrations.sh` and `scripts/manage_migrations.ps1` are thin wrappers that forward directly to `cadence db`. Run `dotnet tool restore` (or `pnpm cadence doctor --auto-fix`) once so local `dotnet-ef` (`10.0.15` in `.config/dotnet-tools.json`) is available, and set `ConnectionStrings__cadence` (or `POSTGRES_CONNECTION_STRING`) before running online `reset`, `migrate`, `list`, or `seed` commands; offline `add`, `script`, `bundle`, and `optimize` commands need no database credentials ([ADR-2498](adr/2026-11-22-unify-cli-database-workflows-and-design-time-fallback.md)).
 
 ## 6. Quality gates and GxP sync
 

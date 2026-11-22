@@ -223,6 +223,7 @@ Inside each project, `Domain/` has no dependency on `Infrastructure/`, `Endpoint
 
 ### 10. Database migrations
 
+- Restore the pinned local `dotnet-ef` CLI tool (`10.0.15` in `.config/dotnet-tools.json`) once per clone with `dotnet tool restore` (or `pnpm cadence doctor --auto-fix`).
 - Add a migration (works offline; auto-formats generated C# files): `pnpm cadence db add <module> <MigrationName>`
   (or thin wrappers `scripts/manage_migrations.sh` / `pwsh scripts/manage_migrations.ps1`). Module names cover all 18
   persistence modules (`kernel`, `intelligence`, `execution-module`, `execution`, and the 14 standalone services).

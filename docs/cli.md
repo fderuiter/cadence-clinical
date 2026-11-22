@@ -411,7 +411,7 @@ pre-commit hook, as CI's `Check GxP Snapshot Policy` step does after regeneratin
 
 ### `cadence db`
 
-Unified database management and EF Core migration workflows across all 18 persistence modules in `PersistenceModuleRegistry` (`kernel`, `intelligence`, `execution-module`, `execution`, and the 14 standalone clinical services; [ADR-2498](adr/2026-11-22-unify-cli-database-workflows-and-design-time-fallback.md)). `scripts/manage_migrations.sh` and `scripts/manage_migrations.ps1` are thin wrappers over this command group.
+Unified database management and EF Core migration workflows across all 18 persistence modules in `PersistenceModuleRegistry` (`kernel`, `intelligence`, `execution-module`, `execution`, and the 14 standalone clinical services; [ADR-2498](adr/2026-11-22-unify-cli-database-workflows-and-design-time-fallback.md)). Subcommands invoke the repo-pinned local `dotnet-ef` (`10.0.15` in `.config/dotnet-tools.json`, restored via `dotnet tool restore` or `pnpm cadence doctor --auto-fix`). `scripts/manage_migrations.sh` and `scripts/manage_migrations.ps1` are thin wrappers over this command group.
 
 #### `cadence db reset`
 

@@ -120,16 +120,9 @@ public static partial class DbCommands
         string repoRoot = QualityGateOrchestrator.FindRepoRoot();
         AnsiConsole.MarkupLine($"[cyan]Applying EF Core migrations across {modules.Count} module(s)...[/]");
 
-        bool noBuild = false;
-        if (modules.Count > 1)
+        if (!TryPrepareMultiModuleBuild(repoRoot, modules.Count, out bool noBuild, out int buildExit))
         {
-            int buildExit = EnsureSolutionBuilt(repoRoot);
-            if (buildExit != 0)
-            {
-                return buildExit;
-            }
-
-            noBuild = true;
+            return buildExit;
         }
 
         foreach (var module in modules)
@@ -231,16 +224,9 @@ public static partial class DbCommands
         }
 
         string repoRoot = QualityGateOrchestrator.FindRepoRoot();
-        bool noBuild = false;
-        if (modules.Count > 1)
+        if (!TryPrepareMultiModuleBuild(repoRoot, modules.Count, out bool noBuild, out int buildExit))
         {
-            int buildExit = EnsureSolutionBuilt(repoRoot);
-            if (buildExit != 0)
-            {
-                return buildExit;
-            }
-
-            noBuild = true;
+            return buildExit;
         }
 
         foreach (var module in modules)
@@ -311,16 +297,9 @@ public static partial class DbCommands
         }
 
         string repoRoot = QualityGateOrchestrator.FindRepoRoot();
-        bool noBuild = false;
-        if (modules.Count > 1)
+        if (!TryPrepareMultiModuleBuild(repoRoot, modules.Count, out bool noBuild, out int buildExit))
         {
-            int buildExit = EnsureSolutionBuilt(repoRoot);
-            if (buildExit != 0)
-            {
-                return buildExit;
-            }
-
-            noBuild = true;
+            return buildExit;
         }
 
         foreach (var module in modules)
@@ -351,23 +330,33 @@ public static partial class DbCommands
         }
 
         string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        if (!TryPrepareMultiModuleBuild(repoRoot, modules.Count, out bool noBuild, out int buildExit))
+        {
+            return buildExit;
+        }
+
         foreach (var module in modules)
         {
             AnsiConsole.MarkupLine($"[cyan]==> [[{Markup.Escape(module.Name)}]] Generating compiled EF Core model...[/]");
-            int exitCode = RunDotnetEf(
-                repoRoot,
-                [
-                    "dbcontext",
-                    "optimize",
-                    "--project",
-                    module.ProjectPath,
-                    "--context",
-                    module.DbContextName,
-                    "--output-dir",
-                    "CompiledModels",
-                    "--namespace",
-                    module.CompiledModelsNamespace,
-                ]);
+            List<string> efArgs =
+            [
+                "dbcontext",
+                "optimize",
+                "--project",
+                module.ProjectPath,
+                "--context",
+                module.DbContextName,
+                "--output-dir",
+                "CompiledModels",
+                "--namespace",
+                module.CompiledModelsNamespace,
+            ];
+            if (noBuild)
+            {
+                efArgs.Add("--no-build");
+            }
+
+            int exitCode = RunDotnetEf(repoRoot, efArgs);
             if (exitCode != 0)
             {
                 return exitCode;
@@ -504,11 +493,12 @@ public static partial class DbCommands
         string[] subcommands = ["whitespace", "style"];
         foreach (string subcommand in subcommands)
         {
-            var args = new List<string>(5 + relativeFilePaths.Length)
+            var args = new List<string>(6 + relativeFilePaths.Length)
             {
                 "format",
                 subcommand,
                 projectPath,
+                "--no-restore",
                 "--include",
             };
             args.AddRange(relativeFilePaths);
@@ -523,10 +513,19 @@ public static partial class DbCommands
         return 0;
     }
 
-    private static int EnsureSolutionBuilt(string repoRoot)
+    private static bool TryPrepareMultiModuleBuild(string repoRoot, int moduleCount, out bool noBuild, out int buildExit)
     {
+        if (moduleCount <= 1)
+        {
+            noBuild = false;
+            buildExit = 0;
+            return true;
+        }
+
         AnsiConsole.MarkupLine("[grey]Building solution once before multi-module EF Core workflow...[/]");
-        return RunProcess(repoRoot, "dotnet", ["build", "Cadence.sln"]);
+        buildExit = RunProcess(repoRoot, "dotnet", ["build", "Cadence.sln"]);
+        noBuild = buildExit == 0;
+        return noBuild;
     }
 
     private static int RunDotnetEf(string repoRoot, IReadOnlyList<string> efArguments, string? onlineConnectionString = null)
