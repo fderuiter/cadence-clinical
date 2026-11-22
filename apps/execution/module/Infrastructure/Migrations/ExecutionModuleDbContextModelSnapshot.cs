@@ -18,7 +18,7 @@ namespace Cadence.Modules.Execution.Infrastructure.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("execution")
-                .HasAnnotation("ProductVersion", "10.0.13")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -151,11 +151,11 @@ namespace Cadence.Modules.Execution.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("kernel_answer_id");
 
-                    b.Property<Guid>("KernelQueryId")
+                    b.Property<Guid?>("KernelQueryId")
                         .HasColumnType("uuid")
                         .HasColumnName("kernel_query_id");
 
-                    b.Property<Guid>("ObservationId")
+                    b.Property<Guid?>("ObservationId")
                         .HasColumnType("uuid")
                         .HasColumnName("observation_id");
 

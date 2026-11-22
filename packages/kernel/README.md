@@ -469,11 +469,11 @@ CollectionSpec item; an observation belongs to one instance and never leaves it.
 and UI state stay with the application's form. Commands in `Commands/CollectionCommands.cs`, each authorized against
 the enrollment:
 
-| Command                       | Does                                                                                                                                                                                                     |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OpenCollectionInstance`      | Opens a form for a CollectionSpec and optional planned activity (`collection.open`) at a collection time                                                                                                 |
-| `RecordCollectedValues`       | Saves a page: records new values and corrects existing ones in one commit, each against its expected revision                                                                                            |
-| `RecordUnaskedCollectionItem` | Materializes a `MissingValue(NullFlavor.NotAsked)` observation at revision 1 on an unrecorded item (`collection.record_unasked`) so a missing-data query can target a kernel `(ObservationId, Revision)` |
+| Command                  | Does                                                                                                                         |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `OpenCollectionInstance` | Opens a form for a CollectionSpec and optional planned activity (`collection.open`) at a collection time                     |
+| `RecordCollectedValues`  | Saves a page: records new values and corrects existing ones in one commit, each against its expected revision                |
+| `SignCollectionInstance` | Signs the current content hash of a form instance (`collection.sign`) as an `Attestation` targeting the `CollectionInstance` |
 
 - The kernel, not the caller, picks the governing protocol version: the highest-numbered version effective at the
   enrollment's study site at the collection time (K-TIME-8, through `EffectivityResolution`). Its design must have the

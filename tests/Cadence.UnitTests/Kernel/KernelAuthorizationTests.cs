@@ -92,6 +92,15 @@ public sealed class KernelAuthorizationTests
             .Should().Equal(nameof(DeprecateConcept), nameof(ReviseConcept));
         KernelCommandCatalog.Kernel.ForKind(NodeKinds.Tenant).Select(e => e.Command)
             .Should().Contain(nameof(RegisterOrganization)).And.NotContain(nameof(ProvisionTenant));
+        KernelCommandCatalog.Kernel.ForKind(NodeKinds.CollectionInstance).Select(e => e.Command)
+            .Should().Equal(nameof(RecordCollectedValues), nameof(SignCollectionInstance));
+        KernelCommandCatalog.Kernel.ForKind(NodeKinds.Observation).Select(e => e.Command)
+            .Should().Equal(
+                nameof(AnswerQuery),
+                nameof(CorrectObservation),
+                nameof(RaiseQuery),
+                nameof(RetractAssertion),
+                nameof(VerifyObservation));
         KernelCommandCatalog.Kernel.Find(typeof(ProvisionTenant))!.Capability.Should().Be(new Capability("tenant.provision", VerbClass.Execute));
     }
 

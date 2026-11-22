@@ -42,8 +42,6 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
     private static readonly KernelEventAttribute SavedEvent = typeof(CollectedValuesSaved).GetCustomAttribute<KernelEventAttribute>()!;
     private static readonly KernelEventAttribute CorrectedEvent = typeof(ObservationCorrected).GetCustomAttribute<KernelEventAttribute>()!;
     private static readonly JsonSerializerOptions EventJsonOptions = new(JsonSerializerDefaults.Web);
-    private static readonly string SelfActorId = Actor.ServiceAccount(Name).Id;
-
     public bool Handles(EventEnvelope envelope) =>
         envelope is not null
         && ((string.Equals(envelope.Type, SavedEvent.Type, StringComparison.Ordinal) && envelope.SchemaVersion == SavedEvent.SchemaVersion)
@@ -52,13 +50,6 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
     public async Task ConsumeAsync(KernelEventDelivery delivery, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(delivery);
-
-        // Skip self-emitted events from RecordUnaskedCollectionItem so blank-item query seeding never loops.
-        if (string.Equals(delivery.Envelope.Actor, SelfActorId, StringComparison.Ordinal)
-            || string.Equals(delivery.Envelope.Actor, $"svc:{Name}", StringComparison.Ordinal))
-        {
-            return;
-        }
 
         TenantId tenant;
         StudyId studyId;
@@ -244,46 +235,12 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             return;
         }
 
-        ObservationId targetObservation;
-        int targetRevision;
+        ObservationId? targetObservation = null;
+        var targetRevision = 0;
         if (record.Values.FirstOrDefault(v => string.Equals(v.ItemId, itemId, StringComparison.Ordinal)) is { } existingValue)
         {
             targetObservation = existingValue.ObservationId;
             targetRevision = existingValue.Revision;
-        }
-        else
-        {
-            var derivedObsId = ObservationId.FromGuid(DeriveUnaskedObservationGuid(tenant, formId, itemId));
-            var unasked = await sender.SendAsync(
-                new RecordUnaskedCollectionItem(
-                    tenant,
-                    formId,
-                    record.EnrollmentId,
-                    itemId,
-                    derivedObsId,
-                    $"auto-query:unasked:{formId.Value:D}:{itemId}",
-                    $"Record unasked item for edit-check rule {finding.PackKey}/{finding.RuleId}"),
-                metadata,
-                cancellationToken).ConfigureAwait(false);
-            if (!unasked.IsSuccess)
-            {
-                if (unasked.Error?.Code == AssertionErrors.Locked.Code)
-                {
-                    return;
-                }
-
-                throw new InvalidOperationException(
-                    $"Recording unasked item {itemId} on form {formId} failed: {unasked.Error?.Code}.");
-            }
-
-            targetObservation = unasked.Value!.ObservationId;
-            targetRevision = unasked.Value.Revision;
-            record = await forms.FindAsync(tenant, formId, cancellationToken).ConfigureAwait(false);
-            formRecordCache[formId] = record;
-            if (record is null)
-            {
-                return;
-            }
         }
 
         if (FormQueryScopes.IsLocked(record, targetObservation))
@@ -300,6 +257,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                 queryId,
                 formId,
                 record.EnrollmentId,
+                itemId,
                 targetObservation,
                 targetRevision,
                 queryText,
@@ -312,7 +270,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         {
             var refreshed = await forms.FindAsync(tenant, formId, cancellationToken).ConfigureAwait(false);
             formRecordCache[formId] = refreshed;
-            if (refreshed?.Values.FirstOrDefault(v => v.ObservationId == targetObservation) is { } latest)
+            if (refreshed?.Values.FirstOrDefault(v => string.Equals(v.ItemId, itemId, StringComparison.Ordinal)) is { } latest)
             {
                 raiseResult = await sender.SendAsync(
                     new RaiseFormQuery(
@@ -320,7 +278,8 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                         queryId,
                         formId,
                         refreshed.EnrollmentId,
-                        targetObservation,
+                        itemId,
+                        latest.ObservationId,
                         latest.Revision,
                         queryText,
                         $"auto-query:raise:{queryId:D}:r{latest.Revision}",
@@ -392,16 +351,6 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
     {
         Span<byte> hash = stackalloc byte[32];
         SHA256.HashData(Encoding.UTF8.GetBytes($"cadence-auto-discrepancy-query:{tenant}:{findingId}:{episode}"), hash);
-        var bytes = hash[..16];
-        bytes[6] = (byte)((bytes[6] & 0x0F) | 0x80);
-        bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
-        return new Guid(bytes, bigEndian: true);
-    }
-
-    private static Guid DeriveUnaskedObservationGuid(TenantId tenant, CollectionInstanceId formId, string itemId)
-    {
-        Span<byte> hash = stackalloc byte[32];
-        SHA256.HashData(Encoding.UTF8.GetBytes($"cadence-auto-discrepancy-unasked:{tenant}:{formId}:{itemId}"), hash);
         var bytes = hash[..16];
         bytes[6] = (byte)((bytes[6] & 0x0F) | 0x80);
         bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);

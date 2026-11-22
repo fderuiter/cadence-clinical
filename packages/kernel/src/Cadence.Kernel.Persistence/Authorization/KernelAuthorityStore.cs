@@ -33,6 +33,8 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
         NodeKinds.Study,
         NodeKinds.StudySite,
         NodeKinds.Enrollment,
+        NodeKinds.CollectionInstance,
+        NodeKinds.Observation,
         NodeKinds.ProtocolVersion,
         NodeKinds.ProtocolElement,
         NodeKinds.Artifact,
@@ -462,6 +464,45 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
                             join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
                             where e.TenantId == tenant && ids.Contains(e.Id)
                             select new { e.Id, study.SponsorId, ss.StudyId, site.Country, StudySiteId = ss.Id })
+                        .ToListAsync(ct).ConfigureAwait(false);
+                    foreach (var row in rows)
+                    {
+                        resolved[(kind, row.Id.Value)] = new ScopePath(row.SponsorId, row.StudyId, row.Country, row.StudySiteId);
+                    }
+
+                    break;
+                }
+
+            case NodeKinds.CollectionInstance:
+                {
+                    var ids = rawIds.Select(CollectionInstanceId.FromGuid).ToList();
+                    var rows = await (
+                            from c in db.CollectionInstances.AsNoTracking()
+                            join ss in db.StudySites.AsNoTracking() on new { c.TenantId, Id = c.StudySiteId } equals new { ss.TenantId, ss.Id }
+                            join study in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { study.TenantId, study.Id }
+                            join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                            where c.TenantId == tenant && ids.Contains(c.Id)
+                            select new { c.Id, study.SponsorId, ss.StudyId, site.Country, StudySiteId = ss.Id })
+                        .ToListAsync(ct).ConfigureAwait(false);
+                    foreach (var row in rows)
+                    {
+                        resolved[(kind, row.Id.Value)] = new ScopePath(row.SponsorId, row.StudyId, row.Country, row.StudySiteId);
+                    }
+
+                    break;
+                }
+
+            case NodeKinds.Observation:
+                {
+                    var ids = rawIds.Select(ObservationId.FromGuid).ToList();
+                    var rows = await (
+                            from o in db.Observations.AsNoTracking()
+                            join e in db.Enrollments.AsNoTracking() on new { o.TenantId, Id = o.EnrollmentId } equals new { e.TenantId, e.Id }
+                            join ss in db.StudySites.AsNoTracking() on new { e.TenantId, Id = e.StudySiteId } equals new { ss.TenantId, ss.Id }
+                            join study in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { study.TenantId, study.Id }
+                            join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                            where o.TenantId == tenant && ids.Contains(o.Id)
+                            select new { o.Id, study.SponsorId, ss.StudyId, site.Country, StudySiteId = ss.Id })
                         .ToListAsync(ct).ConfigureAwait(false);
                     foreach (var row in rows)
                     {

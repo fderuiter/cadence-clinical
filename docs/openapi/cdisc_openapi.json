@@ -13226,7 +13226,7 @@
             }
           },
           "404": {
-            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060. Kernel errors: \u0060M.Execution.Form.CollectionInstanceUnknown\u0060, \u0060M.Execution.Query.ObservationUnknown\u0060.",
+            "description": "Not Found. Kernel errors: \u0060M.Execution.Form.CollectionInstanceUnknown\u0060, \u0060M.Execution.Query.ObservationUnknown\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -13236,7 +13236,7 @@
             }
           },
           "401": {
-            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -13246,7 +13246,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -13256,7 +13256,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.RevisionStale\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060M.Execution.Query.RevisionStale\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -13266,7 +13266,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity. Kernel errors: \u0060K.Collection.ValuesInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Collection.ValuesInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -13276,7 +13276,7 @@
             }
           },
           "423": {
-            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -13322,6 +13322,10 @@
           {
             "code": "M.Execution.Query.RevisionStale",
             "status": 409
+          },
+          {
+            "code": "K.Collection.ValuesInvalid",
+            "status": 422
           },
           {
             "code": "K.Command.IdempotencyKeyRequired",
@@ -26586,7 +26590,10 @@
             "type": "string"
           },
           "observation_id": {
-            "type": "string",
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "uuid"
           },
           "revision": {

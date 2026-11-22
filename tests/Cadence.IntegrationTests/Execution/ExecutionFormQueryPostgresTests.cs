@@ -62,7 +62,7 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         var query = await ReadQueryAsync(raised.Value!.QueryId, ct);
         var open = await KernelAssertionsAsync(tenant, ct);
         open.Should().ContainSingle().Which.Should().Match<Assertion>(a =>
-            a.Id == query.KernelQueryId && a.Kind == AssertionKind.Queried && a.TargetId == value.ObservationId.Value
+            a.Id == query.KernelQueryId!.Value && a.Kind == AssertionKind.Queried && a.TargetId == value.ObservationId.Value
             && a.Text == "Please confirm against the source" && a.AssertedBy == $"svc:{MirrorFormQueryToKernel.Name}");
 
         (await StepAsync(new AnswerFormQuery(tenant, query.Id, form.Subject.Enrollment, "Confirmed on the source document", Key(), Reason), ct))
@@ -73,8 +73,8 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
 
         var settled = await KernelAssertionsAsync(tenant, ct);
         settled.Should().HaveCount(3);
-        settled.Should().ContainSingle(a => a.Kind == AssertionKind.QueryAnswered && a.RetractsId == null && a.TargetId == query.KernelQueryId.Value);
-        settled.Should().ContainSingle(a => a.RetractsId == query.KernelQueryId, "closing the query retracts the kernel query");
+        settled.Should().ContainSingle(a => a.Kind == AssertionKind.QueryAnswered && a.RetractsId == null && a.TargetId == query.KernelQueryId!.Value.Value);
+        settled.Should().ContainSingle(a => a.RetractsId == query.KernelQueryId!.Value, "closing the query retracts the kernel query");
 
         await fixture.ExecuteAdminAsync(
             $"UPDATE kernel.outbox_messages SET dispatched_at = NULL WHERE tenant_id = '{tenant.Value:D}'", ct);
@@ -114,7 +114,7 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         await RelayAsync(ct);
         var query = await ReadQueryAsync(id, ct);
         query.KernelQueryId.Should().NotBe(firstQuery.Id, "a closed query reopens as a new kernel query");
-        (await KernelAssertionsAsync(tenant, ct)).Should().ContainSingle(a => a.Kind == AssertionKind.QueryAnswered && a.RetractsId == null && a.TargetId == query.KernelQueryId.Value);
+        (await KernelAssertionsAsync(tenant, ct)).Should().ContainSingle(a => a.Kind == AssertionKind.QueryAnswered && a.RetractsId == null && a.TargetId == query.KernelQueryId!.Value.Value);
 
         (await StepAsync(new CancelFormQuery(tenant, id, enrollment, Key(), "Raised on the wrong value"), ct)).Value!.Status.Should().Be(FormQueryStatus.Cancelled);
         foreach (var command in new ICommand<FormQueryState>[]
@@ -157,12 +157,54 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         (await ReadQueryAsync(id, ct)).Status.Should().Be(FormQueryStatus.Open);
     }
 
+    /// <summary>
+    /// Validates blank-item queries on PostgreSQL: raising on a blank item commits with <c>ObservationId == null</c> and
+    /// <c>Revision == 0</c>, mirrors zero kernel assertions across transitions, refuses a blank-item raise with
+    /// <c>409 M.Execution.Query.RevisionStale</c> once a value is saved, and refuses transitions with
+    /// <c>423 K.Assertion.Locked</c> when a later saved observation on that item is locked.
+    /// </summary>
+    [Fact(DisplayName = "FormQuery_BlankItem_WritesNoKernelAssertions_RefusesConcurrentSave_AndHonorsLaterObservationLock")]
+    public async Task FormQueryBlankItemWritesNoKernelAssertionsRefusesConcurrentSaveAndHonorsLaterObservationLock()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var scenario = new KernelCollectionScenario(fixture);
+        var form = await scenario.NewFormAsync(ct);
+        var (tenant, study, enrollment) = (form.Subject.Tenant, form.Subject.Study, form.Subject.Enrollment);
+
+        var raised = await RaiseAsync(form, Diastolic, observation: null, revision: 0, ct);
+        raised.Value!.Should().Match<FormQueryState>(q =>
+            q.ItemId == Diastolic && q.ObservationId == null && q.Revision == 0 && q.Status == FormQueryStatus.Open);
+
+        await StepAsync(new AnswerFormQuery(tenant, raised.Value!.QueryId, enrollment, "Will record value", Key(), Reason), ct);
+        await RelayAsync(ct);
+
+        var stored = await ReadQueryAsync(raised.Value.QueryId, ct);
+        stored.ObservationId.Should().BeNull();
+        stored.KernelQueryId.Should().BeNull();
+        stored.KernelAnswerId.Should().BeNull();
+        (await KernelAssertionsAsync(tenant, ct)).Should().BeEmpty("blank-item queries mirror no kernel observation assertions");
+
+        var savedDiastolic = (await scenario.Protocol.OkAsync(Save(form, Value(Diastolic, Mmhg(80))), ct)).Values.Single();
+        var staleBlank = await RaiseAsync(form, Diastolic, observation: null, revision: 0, ct);
+        staleBlank.Error!.Code.Should().Be(FormQueryErrors.RevisionStale.Code);
+
+        await scenario.Protocol.OkAsync(
+            await scenario.Observations.LockAsync(tenant, study, NodeRef.For(savedDiastolic.ObservationId), ct, LockKind.Locked),
+            ct);
+        var lockedClose = await StepAsync(new CloseFormQuery(tenant, raised.Value.QueryId, enrollment, Key(), "Attempted close under observation lock"), ct);
+        lockedClose.Error!.Code.Should().Be(AssertionErrors.Locked.Code);
+    }
+
     private static string Key() => KernelProtocolScenario.Key();
 
     private Task<CommandResult<FormQueryState>> RaiseAsync(Form form, ObservationId observation, int revision, CancellationToken ct) =>
+        RaiseAsync(form, Systolic, observation, revision, ct);
+
+    private Task<CommandResult<FormQueryState>> RaiseAsync(Form form, string itemId, ObservationId? observation, int revision, CancellationToken ct) =>
         fixture.Sender.SendAsync(
             new RaiseFormQuery(
-                form.Subject.Tenant, Guid.CreateVersion7(), form.Instance, form.Subject.Enrollment, observation, revision,
+                form.Subject.Tenant, Guid.CreateVersion7(), form.Instance, form.Subject.Enrollment, itemId, observation, revision,
                 "Please confirm against the source", Key(), Reason),
             cancellationToken: ct);
 

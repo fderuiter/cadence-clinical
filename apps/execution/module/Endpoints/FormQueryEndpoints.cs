@@ -58,7 +58,6 @@ internal static class FormQueryEndpoints
             .WithSummary("Raises a query on the current revision of one of the form's values or on a blank item (execution.query.raise).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesKernelCommand<RecordUnaskedCollectionItem>()
             .ProducesKernelCommand<RaiseFormQuery>();
 
         group.MapPost("/{formId:guid}/queries/{queryId:guid}/answer", AnswerAsync)
@@ -171,42 +170,23 @@ internal static class FormQueryEndpoints
 
         var key = FormEndpoints.IdempotencyKey(context);
         var reason = changeReason.Read(context) ?? string.Empty;
-        ObservationId targetObservation;
+        string targetItemId;
+        ObservationId? targetObservation;
         int targetRevision;
 
-        if ((request?.ObservationId is null || request.ObservationId == Guid.Empty) && !string.IsNullOrWhiteSpace(request?.ItemId))
+        if (request?.ObservationId is { } obsGuid && obsGuid != Guid.Empty)
         {
-            var itemId = request.ItemId.Trim();
-            if (record.Values.FirstOrDefault(v => string.Equals(v.ItemId, itemId, StringComparison.Ordinal)) is { } existing)
-            {
-                if (existing.Value is not MissingValue { Reason: NullFlavor.NotAsked })
-                {
-                    return KernelErrorEndpoints.Problem(
-                        FormQueryErrors.RevisionStale.WithMessage(
-                            $"Item {itemId} now holds a value at revision {existing.Revision}; reload the form and query the current value."));
-                }
-
-                targetObservation = existing.ObservationId;
-                targetRevision = existing.Revision;
-            }
-            else
-            {
-                var unaskedKey = string.IsNullOrWhiteSpace(key) ? string.Empty : $"{key}:unasked";
-                var unasked = await sender.SendAsync(
-                    new RecordUnaskedCollectionItem(tenant, form, record.EnrollmentId, itemId, ObservationId: null, unaskedKey, reason),
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-                if (unasked.Value is not { } seeded)
-                {
-                    return KernelErrorEndpoints.Problem(unasked.Error!);
-                }
-
-                targetObservation = seeded.ObservationId;
-                targetRevision = seeded.Revision;
-            }
+            var obsId = ObservationId.FromGuid(obsGuid);
+            targetObservation = obsId;
+            targetRevision = request.Revision ?? 0;
+            targetItemId = !string.IsNullOrWhiteSpace(request.ItemId)
+                ? request.ItemId.Trim()
+                : record.Values.FirstOrDefault(v => v.ObservationId == obsId)?.ItemId ?? obsGuid.ToString("D");
         }
         else
         {
-            targetObservation = ObservationId.FromGuid(request?.ObservationId ?? Guid.Empty);
+            targetItemId = request?.ItemId?.Trim() ?? string.Empty;
+            targetObservation = null;
             targetRevision = request?.Revision ?? 0;
         }
 
@@ -216,6 +196,7 @@ internal static class FormQueryEndpoints
                 request?.QueryId is { } given && given != Guid.Empty ? given : Guid.CreateVersion7(),
                 form,
                 record.EnrollmentId,
+                targetItemId,
                 targetObservation,
                 targetRevision,
                 request?.Text ?? string.Empty,
@@ -353,16 +334,14 @@ internal static class FormQueryEndpoints
             return [];
         }
 
-        var revisions = new Dictionary<ObservationId, int>();
+        var emptyRevisions = new Dictionary<string, int>(StringComparer.Ordinal);
+        var revisionsByForm = new Dictionary<CollectionInstanceId, IReadOnlyDictionary<string, int>>();
         var formContexts = new Dictionary<CollectionInstanceId, FormQueryContext>();
         foreach (var formId in queries.Select(q => q.FormId).Distinct())
         {
             if (await forms.FindAsync(tenant, formId, cancellationToken).ConfigureAwait(false) is { } record)
             {
-                foreach (var (observation, revision) in Revisions(record))
-                {
-                    revisions[observation] = revision;
-                }
+                revisionsByForm[formId] = Revisions(record);
 
                 if (knownHeaders is not null && knownHeaders.TryGetValue(record.EnrollmentId, out var header))
                 {
@@ -381,7 +360,13 @@ internal static class FormQueryEndpoints
             }
         }
 
-        return [.. queries.Select(q => FormQueryResponse.From(q, revisions, formContexts.GetValueOrDefault(q.FormId)))];
+        return
+        [
+            .. queries.Select(q => FormQueryResponse.From(
+                q,
+                revisionsByForm.GetValueOrDefault(q.FormId) ?? emptyRevisions,
+                formContexts.GetValueOrDefault(q.FormId))),
+        ];
     }
 
     private static IReadOnlyList<FormQueryResponse> ApplyPostFilters(IReadOnlyList<FormQueryResponse> responses, FormQueryListFilter filter)
@@ -467,7 +452,7 @@ internal static class FormQueryEndpoints
     {
         var record = await forms.FindAsync(tenant, state.FormId, cancellationToken).ConfigureAwait(false);
         var queryContext = record is null ? null : await BuildFormContextAsync(navigator, tenant, record, cancellationToken).ConfigureAwait(false);
-        return FormQueryResponse.From(state, record is null ? new Dictionary<ObservationId, int>() : Revisions(record), queryContext);
+        return FormQueryResponse.From(state, record is null ? new Dictionary<string, int>(StringComparer.Ordinal) : Revisions(record), queryContext);
     }
 
     private static async Task<List<FormQuery>> ReadAsync(
@@ -480,8 +465,8 @@ internal static class FormQueryEndpoints
         return await db.FormQueries.Where(filter).OrderBy(q => q.CreatedAt).ThenBy(q => q.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private static Dictionary<ObservationId, int> Revisions(CollectionInstanceRecord record) =>
-        record.Values.ToDictionary(v => v.ObservationId, v => v.Revision);
+    private static Dictionary<string, int> Revisions(CollectionInstanceRecord record) =>
+        record.Values.ToDictionary(v => v.ItemId, v => v.Revision, StringComparer.Ordinal);
 
     private static ProblemHttpResult BadRequest(string detail) =>
         TypedResults.Problem(title: "Invalid request", detail: detail, statusCode: StatusCodes.Status400BadRequest);

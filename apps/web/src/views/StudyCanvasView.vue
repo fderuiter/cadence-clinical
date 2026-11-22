@@ -470,22 +470,22 @@
           :generic-node="inspectedGenericNode"
           :generic-node-loading="inspectedGenericLoading"
           :record-location="
-            inspectedParticipant &&
-            (inspectedParticipant !== recordParticipant ||
+            inspectorLinkParticipant &&
+            (inspectorLinkParticipant !== recordParticipant ||
               hasOpenForm ||
               Boolean(openObservationRef))
-              ? recordLocationFor(inspectedParticipant)
+              ? recordLocationFor(inspectorLinkParticipant)
               : null
           "
           :data-entry-location="
-            inspectedParticipant &&
-            !(isNewForm && inspectedParticipant === recordParticipant)
-              ? dataEntryLocationFor(inspectedParticipant)
+            inspectorLinkParticipant &&
+            !(isNewForm && inspectorLinkParticipant === recordParticipant)
+              ? dataEntryLocationFor(inspectorLinkParticipant)
               : null
           "
           :handoff-location="
-            inspectedParticipant
-              ? ecrfHandoffLocationFor(inspectedParticipant)
+            inspectorLinkParticipant
+              ? ecrfHandoffLocationFor(inspectorLinkParticipant)
               : null
           "
           :can-manage-participants="canChangeParticipants"
@@ -1383,7 +1383,12 @@ const isSelectedParticipantLoading = computed(() =>
 
 const selectedGenericNodeRef = computed(() => {
   const node = anySelectedNode.value;
-  if (!node || node.kind === "protocol_version") return "";
+  if (!node) {
+    if (openObservationRef.value) return openObservationRef.value;
+    if (openFormId.value) return collectionInstanceRef(openFormId.value) ?? "";
+    return "";
+  }
+  if (node.kind === "protocol_version") return "";
   if (node.kind === "participant") {
     if (
       selectedParticipant.value ||
@@ -1464,13 +1469,46 @@ const activeEnrollmentId = computed(() => {
 
 const inspectedParticipant = computed(() => {
   if (anySelectedNode.value) return selectedParticipant.value;
+  if (openObservationRef.value || openFormId.value) return null;
   return (
     recordParticipant.value ??
     loadedFormParticipant.value ??
     lineageParticipant.value
   );
 });
+const inspectorLinkParticipant = computed(() =>
+  anySelectedNode.value
+    ? inspectedParticipant.value
+    : (inspectedParticipant.value ?? activeFormParticipant.value)
+);
+const inspectedEnrollmentId = computed(() => {
+  const participant = inspectedParticipant.value;
+  if (!participant) return null;
+  if (
+    canvas.record.subjectCode === participant.subject_id &&
+    canvas.record.enrollmentId
+  ) {
+    return canvas.record.enrollmentId;
+  }
+  if (
+    loadedForm.value?.participant_id === participant.id &&
+    loadedForm.value.enrollment_id
+  ) {
+    return loadedForm.value.enrollment_id;
+  }
+  return null;
+});
 const inspectedNodeText = computed(() => {
+  if (anySelectedNode.value && anySelectedNode.value.kind !== "participant") {
+    return formatNodeRef(anySelectedNode.value);
+  }
+  if (inspectedEnrollmentId.value) {
+    const enrollmentNode = tryNodeRef(
+      "enrollment",
+      inspectedEnrollmentId.value
+    );
+    if (enrollmentNode) return formatNodeRef(enrollmentNode);
+  }
   if (anySelectedNode.value) return formatNodeRef(anySelectedNode.value);
   const participant = inspectedParticipant.value;
   const node = participant ? tryNodeRef("participant", participant.id) : null;
@@ -1853,6 +1891,19 @@ function onFormClosed() {
 
 async function onObservationLoaded(obs: KernelObservation) {
   loadedObservation.value = obs;
+  const seededObsRef = openObservationRef.value || obs.ref;
+  if (seededObsRef) {
+    const code = obs.item_id?.trim() || null;
+    const conceptCode = obs.concept?.startsWith("concept:")
+      ? obs.concept.slice("concept:".length).split("@")[0]?.trim() || null
+      : obs.concept?.trim() || null;
+    seedNodeSummary(seededObsRef, {
+      kind: "observation",
+      code,
+      title: code ?? conceptCode ?? "Recorded observation",
+      status: "Recorded",
+    });
+  }
   if (!zoomParticipant.value && obs.enrollment_ref) {
     const lineage = await resolveEnrollmentLineage(obs.enrollment_ref);
     if (lineage?.subjectCode && !zoomParticipant.value) {
@@ -2037,11 +2088,14 @@ watch([hasOpenForm, openObservationRef], ([formOpen, obsRef]) => {
   }
 });
 
-// Open a participant's data once the canvas knows which participant it is.
+// Open a participant's data once the canvas knows which participant is active or inspected.
+const hydratedParticipant = computed(
+  () => inspectedParticipant.value ?? recordParticipant.value
+);
 watch(
-  [studyCode, () => recordParticipant.value?.subject_id],
+  [studyCode, () => hydratedParticipant.value?.subject_id],
   ([, code]) => {
-    const participant = recordParticipant.value;
+    const participant = hydratedParticipant.value;
     if (participant && code && canvas.record.subjectCode !== code)
       canvas.loadRecord(participant);
   },

@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Simulation;
+using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Standards;
 using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Validation;
@@ -104,6 +106,12 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                     : new ScopeNode(
                         EnrollmentSummary(enrollmentId, enrollment.SubjectCode, enrollment.Status, enrollment.VersionIndex),
                         ZoomRules.EnrollmentParent(enrollment.StudyId, enrollment.StudySiteId));
+
+            case NodeKinds.CollectionInstance:
+                return await CollectionInstanceAsync(db, tenant, CollectionInstanceId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false);
+
+            case NodeKinds.Observation:
+                return await ObservationAsync(db, tenant, ObservationId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false);
 
             case NodeKinds.ProtocolVersion:
                 var protocolVersionId = ProtocolVersionId.FromGuid(node.Id);
@@ -308,6 +316,73 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
         return new ScopeNode(
             new NodeSummary(NodeRef.For(id, latest.Value), elementId is null ? "Protocol element" : $"Protocol element {elementId}", elementId),
             NodeRef.For(versionId));
+    }
+
+    private static async Task<ScopeNode?> CollectionInstanceAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        CollectionInstanceId instanceId,
+        CancellationToken cancellationToken)
+    {
+        var instance = await db.CollectionInstances.AsNoTracking()
+            .Where(c => c.TenantId == tenant && c.Id == instanceId)
+            .Select(c => new { c.EnrollmentId, c.ProtocolVersionId, c.CollectionSpecId, c.PlannedActivityId, c.VersionIndex })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (instance is null)
+        {
+            return null;
+        }
+
+        var content = await db.ProtocolVersions.AsNoTracking()
+            .Where(v => v.TenantId == tenant && v.Id == instance.ProtocolVersionId)
+            .Select(v => v.Content)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var specName = content is null
+            ? null
+            : ProtocolDesignDocument.Read(content).Design?.CollectionSpecs
+                .FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal))?.Name;
+        var baseTitle = string.IsNullOrWhiteSpace(specName) ? instance.CollectionSpecId : specName;
+        var title = string.IsNullOrWhiteSpace(instance.PlannedActivityId)
+            ? baseTitle
+            : $"{baseTitle} · {instance.PlannedActivityId}";
+        return new ScopeNode(
+            new NodeSummary(NodeRef.For(instanceId, instance.VersionIndex), title, instance.CollectionSpecId),
+            NodeRef.For(instance.EnrollmentId));
+    }
+
+    private static async Task<ScopeNode?> ObservationAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        ObservationId observationId,
+        CancellationToken cancellationToken)
+    {
+        var observation = await db.Observations.AsNoTracking()
+            .Where(o => o.TenantId == tenant && o.Id == observationId)
+            .Select(o => new { o.EnrollmentId, o.ConceptId, o.Revision, o.VersionIndex })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (observation is null)
+        {
+            return null;
+        }
+
+        var member = await db.Set<CollectionInstanceMember>().AsNoTracking()
+            .Where(m => m.TenantId == tenant && m.ObservationId == observationId)
+            .Select(m => new { m.CollectionInstanceId, m.ItemId })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var concept = await db.Concepts.AsNoTracking()
+            .Where(c => c.TenantId == tenant && c.Id == observation.ConceptId)
+            .Select(c => new { c.PreferredLabel, c.ExternalCode })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var code = member?.ItemId ?? concept?.ExternalCode;
+        var title = !string.IsNullOrWhiteSpace(concept?.PreferredLabel)
+            ? concept.PreferredLabel
+            : (code ?? $"Observation r{observation.Revision}");
+        var parent = member is null
+            ? NodeRef.For(observation.EnrollmentId)
+            : NodeRef.For(member.CollectionInstanceId);
+        return new ScopeNode(
+            new NodeSummary(NodeRef.For(observationId, observation.VersionIndex), title, code, "Recorded"),
+            parent);
     }
 
     /// <summary>A proposal's label: the start of its intent, on one line.</summary>

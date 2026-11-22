@@ -10,6 +10,7 @@ const inFlight = new Map<string, Promise<string | null>>();
  * its NodeRef.
  */
 export function findKernelStudyRef(code: string): Promise<string | null> {
+  if (typeof kernelApi.search !== "function") return Promise.resolve(null);
   const pending = inFlight.get(code);
   if (pending) return pending;
   const lookup = (async () => {
@@ -19,7 +20,9 @@ export function findKernelStudyRef(code: string): Promise<string | null> {
         kinds: ["study"],
         limit: 5,
       });
-      return hits.find((hit) => hit.exact_code)?.ref ?? null;
+      return Array.isArray(hits)
+        ? (hits.find((hit) => hit.exact_code)?.ref ?? null)
+        : null;
     } finally {
       inFlight.delete(code);
     }
@@ -40,9 +43,12 @@ export async function findKernelEnrollmentRef(
   siteCode: string | null,
   subjectCode: string
 ): Promise<NodeRef | null> {
+  if (typeof kernelApi.getChildren !== "function") return null;
   const studyRef = await findKernelStudyRef(studyCode);
   if (!studyRef) return null;
-  const studySites = (await kernelApi.getChildren(studyRef)).filter(
+  const rootChildren = await kernelApi.getChildren(studyRef);
+  if (!Array.isArray(rootChildren)) return null;
+  const studySites = rootChildren.filter(
     (child) =>
       child.node.kind === "study_site" &&
       child.node.ref &&
@@ -50,7 +56,10 @@ export async function findKernelEnrollmentRef(
   );
   const enrollments = (
     await Promise.all(
-      studySites.map((site) => kernelApi.getChildren(site.node.ref as string))
+      studySites.map(async (site) => {
+        const children = await kernelApi.getChildren(site.node.ref as string);
+        return Array.isArray(children) ? children : [];
+      })
     )
   )
     .flat()

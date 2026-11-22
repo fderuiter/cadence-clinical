@@ -367,13 +367,32 @@ describe("Clinical Canvas: a participant's data", () => {
     });
     vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([]);
 
+    vi.mocked(kernelApi.getCommands).mockResolvedValue([]);
     await mountAt(
       `/studies/CAD-101?stage=conduct&form=collection_instance:${FORM_ID}`
     );
 
     expect(wrapper.find("#zoom-participant").text()).toBe("017-0001");
     expect(wrapper.find("#canvas-form-back").text()).toBe("Back to 017-0001");
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe(
+      "Vital Signs · WEEK2"
+    );
+    await wrapper.find("#verb-act").trigger("click");
+    await flushPromises();
+    expect(kernelApi.getCommands).toHaveBeenCalledWith(
+      `collection_instance:${FORM_ID}`
+    );
+
+    await router.push(
+      `/studies/CAD-101?stage=conduct&form=collection_instance:${FORM_ID}&node=participant:${PARTICIPANT_ID}`
+    );
+    await flushPromises();
     expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0001");
+    await wrapper.find("#verb-act").trigger("click");
+    await flushPromises();
+    expect(kernelApi.getCommands).toHaveBeenLastCalledWith(
+      `enrollment:${ENROLLMENT_ID}`
+    );
   });
 
   it("hydrates a cold observation link via resolveParticipantByCode", async () => {
@@ -407,6 +426,7 @@ describe("Clinical Canvas: a participant's data", () => {
       { level: "study_site", mask: null, label: "017" },
       { level: "enrollment", mask: null, label: "017-0001" },
     ]);
+    vi.mocked(kernelApi.getCommands).mockResolvedValue([]);
 
     await mountAt(
       `/studies/CAD-101?stage=conduct&observation=observation:${OBSERVATION_ID}`
@@ -415,7 +435,12 @@ describe("Clinical Canvas: a participant's data", () => {
     expect(executionApi.getSubjectDetail).toHaveBeenCalledWith("017-0001");
     expect(wrapper.find("#zoom-participant").text()).toBe("017-0001");
     expect(wrapper.find("#observation-back").text()).toBe("Back to 017-0001");
-    expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0001");
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe("systolic");
+    await wrapper.find("#verb-act").trigger("click");
+    await flushPromises();
+    expect(kernelApi.getCommands).toHaveBeenCalledWith(
+      `observation:${OBSERVATION_ID}`
+    );
   });
 
   describe("queries", () => {
@@ -432,6 +457,26 @@ describe("Clinical Canvas: a participant's data", () => {
         wrapper.find(`#query-open-form-${QUERY_ID}`).attributes("href")
       ).toBe(
         `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${FORM_ID}`
+      );
+    });
+
+    it("renders blank-item queries with null observation_id and zero revision without an observation link", async () => {
+      vi.mocked(ecrfQueriesApi.listForEnrollment).mockResolvedValue([
+        query({
+          query_id: "query-blank",
+          item_id: "DIABP",
+          observation_id: null,
+          revision: 0,
+          current_revision: null,
+          text: "Diastolic BP missing on source",
+        }),
+      ]);
+      await openRecord();
+
+      const item = wrapper.find("#query-query-blank");
+      expect(item.text()).toContain("DIABP, no value recorded");
+      expect(wrapper.find("#query-observation-query-blank").exists()).toBe(
+        false
       );
     });
 

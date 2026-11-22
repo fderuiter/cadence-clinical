@@ -79,10 +79,12 @@ public sealed class ExecutionModuleDbContext(DbContextOptions<ExecutionModuleDbC
             query.Property(q => q.FormId).HasColumnName("form_id").HasConversion(f => f.Value, v => CollectionInstanceId.FromGuid(v));
             query.Property(q => q.EnrollmentId).HasColumnName("enrollment_id").HasConversion(e => e.Value, v => EnrollmentId.FromGuid(v));
             query.Property(q => q.ItemId).HasColumnName("item_id").HasMaxLength(FormInstance.ElementIdMaxLength).IsRequired();
-            query.Property(q => q.ObservationId).HasColumnName("observation_id").HasConversion(o => o.Value, v => ObservationId.FromGuid(v));
+            query.Property(q => q.ObservationId).HasColumnName("observation_id")
+                .HasConversion(o => o == null ? (Guid?)null : o.Value.Value, v => v == null ? null : ObservationId.FromGuid(v.Value));
             query.Property(q => q.Revision).HasColumnName("revision");
             query.Property(q => q.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(16);
-            query.Property(q => q.KernelQueryId).HasColumnName("kernel_query_id").HasConversion(a => a.Value, v => AssertionId.FromGuid(v));
+            query.Property(q => q.KernelQueryId).HasColumnName("kernel_query_id")
+                .HasConversion(a => a == null ? (Guid?)null : a.Value.Value, v => v == null ? null : AssertionId.FromGuid(v.Value));
             query.Property(q => q.KernelAnswerId).HasColumnName("kernel_answer_id")
                 .HasConversion(a => a == null ? (Guid?)null : a.Value.Value, v => v == null ? null : AssertionId.FromGuid(v.Value));
             query.OwnsMany(q => q.Messages, messages =>

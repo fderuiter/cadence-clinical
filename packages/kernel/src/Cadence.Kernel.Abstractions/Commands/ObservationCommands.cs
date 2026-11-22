@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.References;
 
 namespace Cadence.Kernel.Commands;
 
@@ -50,7 +51,7 @@ public sealed record RecordObservation(
 /// <para><c>EnrollmentId</c>: The enrollment the observation belongs to; the command is authorized against it.</para>
 /// <para><c>ExpectedVersion</c>: The version the corrector saw (<see cref="ObservationState.Version"/>).</para>
 /// </remarks>
-[KernelCapability("observation.correct", VerbClass.Execute, Resource = nameof(CorrectObservation.EnrollmentId))]
+[KernelCapability("observation.correct", VerbClass.Execute, Resource = nameof(CorrectObservation.EnrollmentId), OfferedOn = [NodeKinds.Observation])]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(
     typeof(ObservationErrors),

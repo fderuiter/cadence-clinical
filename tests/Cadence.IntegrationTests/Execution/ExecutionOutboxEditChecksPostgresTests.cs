@@ -208,7 +208,7 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
         using var pi = Client(code, Investigator);
         using var monitor = Client(code, Monitor);
 
-        // Monitor raises a query on blank Systolic item -> creates NotAsked observation at revision 1.
+        // Monitor raises a query on blank Systolic item -> stores blank-item FormQuery with ObservationId = null.
         var raised = await SendAsync<FormQueryResponse>(
             monitor,
             HttpMethod.Post,
@@ -217,18 +217,37 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
             new { item_id = Systolic, text = "Systolic BP is missing." },
             HttpStatusCode.Created,
             ct);
+        raised.ObservationId.Should().BeNull();
+        raised.Revision.Should().Be(0);
+
+        // Coordinator records a reasoned missing value (NotDone) at expected_revision = 0 -> creates observation at revision 1.
+        var recordedMissing = await SendAsync<FormSavedResponse>(
+            crc,
+            HttpMethod.Put,
+            $"{FormEndpoints.RoutePrefix}/{form:D}/values",
+            "Systolic cuff unavailable initially",
+            new
+            {
+                values = new object[]
+                {
+                    new { item_id = Systolic, value = new { type = "missing", reason = "NotDone" }, expected_revision = 0 },
+                },
+            },
+            HttpStatusCode.OK,
+            ct);
+        var systolicObsId = recordedMissing.Values.Single(v => v.ItemId == Systolic).ObservationId;
 
         var obsDetail = await SendAsync<JsonElement>(
-            pi, HttpMethod.Get, $"/api/v1/kernel/observations/observation:{raised.ObservationId:D}", null, null, HttpStatusCode.OK, ct);
+            pi, HttpMethod.Get, $"/api/v1/kernel/observations/observation:{systolicObsId:D}", null, null, HttpStatusCode.OK, ct);
         obsDetail.GetProperty("expected_value_kind").GetString().Should().Be("Quantity");
         obsDetail.GetProperty("expected_unit").GetString().Should().Be("mm[Hg]");
         obsDetail.GetProperty("item_id").GetString().Should().Be(Systolic);
 
-        // Attempting to correct NotAsked quantity item with plain text is rejected with 422 K.Collection.ValuesInvalid.
+        // Attempting to correct missing-value quantity item with plain text is rejected with 422 K.Collection.ValuesInvalid.
         using (var rejected = await pi.SendAsync(
             Request(
                 HttpMethod.Post,
-                $"/api/v1/kernel/observations/observation:{raised.ObservationId:D}/corrections",
+                $"/api/v1/kernel/observations/observation:{systolicObsId:D}/corrections",
                 "Attempted text correction",
                 new
                 {
@@ -247,7 +266,7 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
         var corrected = await SendAsync<JsonElement>(
             pi,
             HttpMethod.Post,
-            $"/api/v1/kernel/observations/observation:{raised.ObservationId:D}/corrections",
+            $"/api/v1/kernel/observations/observation:{systolicObsId:D}/corrections",
             "Entered verified systolic BP",
             new
             {
@@ -280,6 +299,145 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
         var sbpAfterEdit = reloadedForm.Items.Single(v => v.ItemId == Systolic);
         sbpAfterEdit.Revision.Should().Be(3);
         (sbpAfterEdit.Value as QuantityValue)!.Unit.Should().Be("mm[Hg]");
+    }
+
+    [Fact(DisplayName = "AutoEditCheck_OnBlankItemOfSignedFrozenForm_RaisesBlankQueryWithoutSupersedingSignature")]
+    public async Task AutoEditCheckOnBlankItemOfSignedFrozenFormRaisesBlankQueryWithoutSupersedingSignature()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (code, tenant, study, enrollment, form) = await SeedStudyWithPinnedRulePackAsync(ct);
+        await RelayAsync(ct);
+
+        using var crc = Client(code, Crc);
+        using var pi = Client(code, Investigator);
+        using var monitor = Client(code, Monitor);
+        using var dm = Client(code, DataManager);
+
+        // Pin a study rule requiring optional Comment when Systolic > 180 (Comment is first variable -> Finding targets blank Comment).
+        var commentVar = new VariableExpression(Comment);
+        var sbpVar = new VariableExpression(Systolic);
+        var blankCommentPack = new RulePack(
+            RuleAuthority.Study,
+            "Blank Comment Check",
+            [
+                new Rule(
+                    "VS_COMMENT_REQUIRED_HIGH_SBP",
+                    1,
+                    RuleAuthority.Study,
+                    new SourceCitation("Test Validation Plan", "Section 2", null),
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, SpecId),
+                    ValidationSeverity.Warning,
+                    new LogicalExpression(
+                        LogicalOperator.And,
+                        [
+                            new FunctionExpression(RuleFunction.IsEmpty, [commentVar]),
+                            new FunctionExpression(RuleFunction.IsNotEmpty, [sbpVar]),
+                            new ComparisonExpression(ComparisonOperator.Greater, sbpVar, new LiteralExpression(RuleValue.FromNumber(180m))),
+                        ]),
+                    "Cuff comment is required when systolic BP exceeds 180 mm[Hg].",
+                    "Record cuff posture and rest note.",
+                    EffectivePeriod.Always),
+            ]);
+        var blankPackId = LibraryItemId.New();
+        var drafted = await _scenario.Protocol.OkAsync(
+            new DraftLibraryItem(tenant, blankPackId, LibraryItemKind.RulePack, "vitals-comment-check", blankCommentPack.Title, RulePackJson.ToJson(blankCommentPack), [], KernelProtocolScenario.Key(), "Drafted blank comment check"),
+            ct);
+        var attestation = await _scenario.Protocol.OkAsync(
+            _scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, new AttestationTarget(NodeKinds.LibraryItem, blankPackId.Value, drafted.ContentHash)),
+            ct);
+        await _scenario.Protocol.OkAsync(
+            new ApproveLibraryItem(tenant, blankPackId, attestation, KernelProtocolScenario.Key(), "Approved blank comment check"),
+            ct);
+
+        // Save required Systolic (190) and Diastolic (82) with Comment left blank, sign the form as Investigator, and freeze the form!
+        await SendAsync<FormSavedResponse>(
+            crc,
+            HttpMethod.Put,
+            $"{FormEndpoints.RoutePrefix}/{form:D}/values",
+            SaveReason,
+            new
+            {
+                values = new object[]
+                {
+                    new { item_id = Systolic, value = new { type = "quantity", value = 190m, unit = "mm[Hg]" }, expected_revision = 0 },
+                    new { item_id = Diastolic, value = new { type = "quantity", value = 82m, unit = "mm[Hg]" }, expected_revision = 0 },
+                },
+            },
+            HttpStatusCode.OK,
+            ct);
+        await RelayAsync(ct);
+
+        var signedBefore = await SendAsync<FormResponse>(pi, HttpMethod.Get, $"{FormEndpoints.RoutePrefix}/{form:D}", null, null, HttpStatusCode.OK, ct);
+        using (var signReq = Request(
+            HttpMethod.Post,
+            $"{FormEndpoints.RoutePrefix}/{form:D}/signatures",
+            "I approve these vital signs",
+            new { meaning = "approved", content_hash = signedBefore.ContentHash }))
+        {
+            signReq.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(Investigator, FormSignatureEndpoints.SignAction(form), FormSignatureEndpoints.SignSemanticAction));
+            using var signRes = await pi.SendAsync(signReq, ct);
+            signRes.StatusCode.Should().Be(HttpStatusCode.Created, await signRes.Content.ReadAsStringAsync(ct));
+        }
+
+        await _scenario.Protocol.OkAsync(
+            await _scenario.Observations.LockAsync(
+                tenant, study, NodeRef.For(CollectionInstanceId.FromGuid(form)), ct, LockKind.Frozen),
+            ct);
+
+        // Pin the blank-comment rule pack and save a sibling AE form on the same enrollment -> study-wide edit checks evaluate the signed Frozen vitals form!
+        await SendAsync<JsonElement>(
+            dm,
+            HttpMethod.Put,
+            $"/api/v1/kernel/studies/study:{study.Value:D}/standards",
+            "Pin blank comment rule pack",
+            new { rule_pack_refs = new[] { $"library_item:{blankPackId.Value:D}" } },
+            HttpStatusCode.OK,
+            ct);
+
+        var openedAe = await SendAsync<JsonElement>(
+            crc,
+            HttpMethod.Post,
+            FormEndpoints.RoutePrefix,
+            "Open sibling AE form",
+            new
+            {
+                enrollment_id = enrollment.Value,
+                collection_spec_id = "cs.ae",
+                planned_activity_id = VisitId,
+                collected_at = SystemClock.Instance.UtcNow.AddMinutes(-5),
+            },
+            HttpStatusCode.Created,
+            ct);
+        var aeFormId = openedAe.GetProperty("form_id").GetGuid();
+        await SendAsync<FormSavedResponse>(
+            crc,
+            HttpMethod.Put,
+            $"{FormEndpoints.RoutePrefix}/{aeFormId:D}/values",
+            "Save AE note",
+            new
+            {
+                values = new object[]
+                {
+                    new { item_id = "item.ae_term", value = new { type = "text", value = "Elevated BP" }, expected_revision = 0 },
+                },
+            },
+            HttpStatusCode.OK,
+            ct);
+        await RelayAsync(ct);
+
+        // Automated edit check raised a blank-item FormQuery on Comment without mutating the Frozen form or superseding its Part 11 signature!
+        var vitalsQueries = await SendAsync<FormQueryResponse[]>(
+            monitor, HttpMethod.Get, $"{FormEndpoints.RoutePrefix}/{form:D}/queries", null, null, HttpStatusCode.OK, ct);
+        vitalsQueries.Should().ContainSingle().Which.Should().Match<FormQueryResponse>(q =>
+            q.ItemId == Comment && q.ObservationId == null && q.Revision == 0 && q.Status == "open");
+
+        var signedAfter = await SendAsync<FormResponse>(pi, HttpMethod.Get, $"{FormEndpoints.RoutePrefix}/{form:D}", null, null, HttpStatusCode.OK, ct);
+        signedAfter.ContentHash.Should().Be(signedBefore.ContentHash);
+        signedAfter.Signatures.Should().ContainSingle().Which.Superseded.Should().BeFalse();
+        signedAfter.Items.Single(i => i.ItemId == Comment).ObservationId.Should().BeNull();
     }
 
     [Fact(DisplayName = "OdmImportApprovePinAndObservationCorrection_CompilesRulePack_AndEvaluatesOnObservationCorrected")]
@@ -483,11 +641,11 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
         {
             (Actor.Person(Crc), ["collection.open", "collection.record", "execution.query.answer"], AuthorityScope.StudySite(studySite)),
             (Actor.Person(Investigator), ["collection.record", "collection.sign", "observation.correct", "execution.query.answer"], AuthorityScope.StudySite(studySite)),
-            (Actor.Person(Monitor), ["collection.record_unasked", "execution.query.raise", "execution.query.manage"], AuthorityScope.Study(study)),
+            (Actor.Person(Monitor), ["execution.query.raise", "execution.query.manage"], AuthorityScope.Study(study)),
             (Actor.Person(DataManager), ["concept.define", "protocol.draft", "protocol.amend", "protocol.revise_draft", "library_item.draft", "library_item.approve", "attestation.sign", "standard.register", "standard.approve", "study.declare_standards"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount("execution-forms"), ["execution.form.open"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount("execution-queries"), ["observation.query", "observation.query.answer", "assertion.retract"], AuthorityScope.Tenant()),
-            (Actor.ServiceAccount(EvaluateEditChecksOnCollectionChanged.Name), ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"], AuthorityScope.Tenant()),
+            (Actor.ServiceAccount(EvaluateEditChecksOnCollectionChanged.Name), ["validation_run.record", "execution.query.raise", "execution.query.manage"], AuthorityScope.Tenant()),
         })
         {
             foreach (var capability in capabilities)

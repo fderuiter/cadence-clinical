@@ -45,6 +45,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
 {
     private const string Crc = "crc@execution-queries.test";
     private const string CrcSiteB = "crc-b@execution-queries.test";
+    private const string Investigator = "pi@execution-queries.test";
     private const string Monitor = "cra@execution-queries.test";
     private const string Stranger = "stranger@execution-queries.test";
 
@@ -145,18 +146,47 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
     }
 
     /// <summary>
-    /// Raising a missing-data query on a blank required item (<see cref="Diastolic"/>) records a <c>NotAsked</c> observation at
-    /// revision 1 without marking the form complete; when the site coordinator subsequently records either a reasoned missing
-    /// status (<c>NotDone</c>) or a numeric value, the form becomes complete and the query reports <c>value_changed = true</c>.
+    /// Raising a missing-data query on a blank required item (<see cref="Diastolic"/>) stores an atomic module query at
+    /// revision 0 with <c>observation_id = null</c> without writing any <c>NotAsked</c> observation (including when shape
+    /// validation fails with <c>422</c>); when the site coordinator subsequently records a reasoned missing status
+    /// (<c>NotDone</c>) at <c>expected_revision = 0</c>, the form becomes complete and the query reports
+    /// <c>value_changed = true</c>.
     /// </summary>
     [Fact(DisplayName = "HostQuery_BlankRequiredItem_KeepsFormIncompleteUntilCoordinatorRecordsValueOrReasonedMissing")]
     public async Task HostQueryBlankRequiredItemKeepsFormIncompleteUntilCoordinatorRecordsValueOrReasonedMissing()
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
-        var (code, _, _, form, _) = await SeedAsync(ct);
+        var (code, tenant, _, form, _) = await SeedAsync(ct);
         using var crc = Client(code, Crc);
         using var monitor = Client(code, Monitor);
+
+        // 422 validation failure on blank query text leaves zero orphan observations on the form or in kernel tables.
+        using (var invalidBlank = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries", "Invalid empty blank query", new
+        {
+            item_id = Diastolic,
+            text = "   ",
+        }), ct))
+        {
+            invalidBlank.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+            (await ProblemCodeAsync(invalidBlank, ct)).Should().Be(KernelErrors.CommandInvalid.Code);
+        }
+
+        using (var unknownItem = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries", "Unknown blank item", new
+        {
+            item_id = "item.unknown",
+            text = "Unknown item check",
+        }), ct))
+        {
+            unknownItem.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+            (await ProblemCodeAsync(unknownItem, ct)).Should().Be(CollectionErrors.ValuesInvalid.Code);
+        }
+
+        await using (var db = fixture.CreateAdminContext())
+        {
+            (await db.Observations.CountAsync(o => o.TenantId == tenant, ct))
+                .Should().Be(1, "a 422 blank-item query failure must not leave orphan observations beyond the seeded Systolic observation");
+        }
 
         var raised = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries", "Missing diastolic BP on source worksheet", new
         {
@@ -165,26 +195,32 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         }, HttpStatusCode.Created, ct);
 
         raised.ItemId.Should().Be(Diastolic);
-        raised.ObservationId.Should().NotBeEmpty();
-        raised.Revision.Should().Be(1);
-        raised.CurrentRevision.Should().Be(1);
+        raised.ObservationId.Should().BeNull();
+        raised.Revision.Should().Be(0);
+        raised.CurrentRevision.Should().BeNull();
         raised.ValueChanged.Should().BeFalse();
 
-        // Form must remain incomplete because NotAsked is not a recorded value or reasoned missing status!
+        // Form remains incomplete and holds zero observation rows for the blank item!
         var formAfterBlankQuery = await SendAsync<FormResponse>(monitor, HttpMethod.Get, $"/{form:D}", null, null, HttpStatusCode.OK, ct);
         formAfterBlankQuery.Complete.Should().BeFalse();
         formAfterBlankQuery.MissingRequired.Should().Equal(Diastolic);
         var diastolicItem = formAfterBlankQuery.Items.Single(i => i.ItemId == Diastolic);
-        diastolicItem.ObservationId.Should().Be(raised.ObservationId);
-        diastolicItem.Revision.Should().Be(1);
-        diastolicItem.Value.Should().Be(new MissingValue(NullFlavor.NotAsked));
+        diastolicItem.ObservationId.Should().BeNull();
+        diastolicItem.Revision.Should().Be(0);
+        diastolicItem.Value.Should().BeNull();
 
-        // Coordinator records a reasoned missing status (NotDone) at expected_revision = 1 -> form becomes complete and value_changed = true!
+        await using (var db = fixture.CreateAdminContext())
+        {
+            (await db.Observations.CountAsync(o => o.TenantId == tenant, ct))
+                .Should().Be(1, "raising a blank-item query must not synthesize a NotAsked observation");
+        }
+
+        // Coordinator records a reasoned missing status (NotDone) at expected_revision = 0 -> form becomes complete and value_changed = true!
         await SendAsync<JsonElement>(crc, HttpMethod.Put, $"/{form:D}/values", "Confirmed not measured at visit", new
         {
             values = new[]
             {
-                new { item_id = Diastolic, value = new { type = "missing", reason = "NotDone" }, expected_revision = 1 },
+                new { item_id = Diastolic, value = new { type = "missing", reason = "NotDone" }, expected_revision = 0 },
             },
         }, HttpStatusCode.OK, ct);
 
@@ -194,12 +230,14 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
 
         var queriesAfterMissing = await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/{form:D}/queries", null, null, HttpStatusCode.OK, ct);
         queriesAfterMissing.Should().ContainSingle().Which.Should().Match<FormQueryResponse>(q =>
-            q.QueryId == raised.QueryId && q.Revision == 1 && q.CurrentRevision == 2 && q.ValueChanged);
+            q.QueryId == raised.QueryId && q.ObservationId == null && q.Revision == 0 && q.CurrentRevision == 1 && q.ValueChanged);
     }
 
     /// <summary>
-    /// <c>Frozen</c> blocks form value saves (<c>423</c>) while still allowing blank-item queries and query transitions;
-    /// <c>Locked</c> refuses blank-item queries, recorded-item queries, and query transitions with <c>423 K.Assertion.Locked</c>.
+    /// <c>Frozen</c> blocks form value saves (<c>423</c>) while still allowing blank-item queries and query transitions
+    /// without mutating <c>ContentHash</c> or superseding Part 11 signatures; <c>Locked</c> (including an observation-level
+    /// lock on an item saved after the blank-item query) refuses blank-item queries, recorded-item queries, and query
+    /// transitions with <c>423 K.Assertion.Locked</c>.
     /// </summary>
     [Fact(DisplayName = "HostQuery_FrozenAllowsBlankAndTransitions_WhileLockedRefusesWith423")]
     public async Task HostQueryFrozenAllowsBlankAndTransitionsWhileLockedRefusesWith423()
@@ -208,7 +246,27 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         var ct = TestContext.Current.CancellationToken;
         var (code, tenant, enrollment, form, observation) = await SeedAsync(ct);
         using var crc = Client(code, Crc);
+        using var pi = Client(code, Investigator);
         using var monitor = Client(code, Monitor);
+
+        // Complete required Diastolic while leaving optional Comment blank, then sign the form as Investigator.
+        await SendAsync<FormSavedResponse>(crc, HttpMethod.Put, $"/{form:D}/values", SaveReason, new
+        {
+            values = new[] { new { item_id = Diastolic, value = new { type = "quantity", value = 80m, unit = "mm[Hg]" }, expected_revision = 0 } },
+        }, HttpStatusCode.OK, ct);
+        var beforeSign = await SendAsync<FormResponse>(pi, HttpMethod.Get, $"/{form:D}", null, null, HttpStatusCode.OK, ct);
+        using (var signReq = Request(HttpMethod.Post, $"/{form:D}/signatures", "I approve these values", new
+        {
+            meaning = "approved",
+            content_hash = beforeSign.ContentHash,
+        }))
+        {
+            signReq.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(Investigator, FormSignatureEndpoints.SignAction(form), FormSignatureEndpoints.SignSemanticAction));
+            using var signRes = await pi.SendAsync(signReq, ct);
+            signRes.StatusCode.Should().Be(HttpStatusCode.Created, await signRes.Content.ReadAsStringAsync(ct));
+        }
 
         var study = (await fixture.ObservationRecords.FindAsync(tenant, ObservationId.FromGuid(observation), ct))!.StudyId;
         var frozen = await _scenario.Protocol.OkAsync(
@@ -223,20 +281,47 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             frozenSave.StatusCode.Should().Be((HttpStatusCode)423);
         }
 
-        // ... while allowing blank-item query raise and answer!
+        // ... while allowing blank-item query raise and answer without mutating ContentHash or superseding the signature!
         var blankQuery = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries", "Interim freeze review", new
         {
-            item_id = Diastolic,
-            text = "Please explain missing diastolic BP",
+            item_id = Comment,
+            text = "Please confirm whether any cuff comment applies",
         }, HttpStatusCode.Created, ct);
+        blankQuery.ObservationId.Should().BeNull();
+        blankQuery.Revision.Should().Be(0);
+
         var answered = await SendAsync<FormQueryResponse>(crc, HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/answer", "Answering under freeze", new
         {
-            text = "Cuff malfunctioned; will update once unlocked",
+            text = "Will enter cuff note once freeze is lifted",
         }, HttpStatusCode.OK, ct);
         answered.Status.Should().Be("answered");
 
-        // Switch from Frozen to Locked: Locked refuses query transitions AND new queries with 423 K.Assertion.Locked!
+        var afterFrozenBlankQuery = await SendAsync<FormResponse>(monitor, HttpMethod.Get, $"/{form:D}", null, null, HttpStatusCode.OK, ct);
+        afterFrozenBlankQuery.ContentHash.Should().Be(beforeSign.ContentHash);
+        afterFrozenBlankQuery.Signatures.Should().ContainSingle().Which.Superseded.Should().BeFalse();
+
+        // Release Frozen, record a value on Comment at expected_revision = 0, and place an Observation-level Locked lock on it:
+        // FormQueryScopes.StepAsync resolves the current observation by ItemId and refuses transitions with 423 K.Assertion.Locked!
         await _scenario.Protocol.OkAsync(await _scenario.Observations.ReleaseAsync(tenant, study, frozen.LockId, ct), ct);
+        var savedComment = await SendAsync<FormSavedResponse>(crc, HttpMethod.Put, $"/{form:D}/values", SaveReason, new
+        {
+            values = new[] { new { item_id = Comment, value = new { type = "text", value = "Standard adult cuff" }, expected_revision = 0 } },
+        }, HttpStatusCode.OK, ct);
+        var commentObsId = ObservationId.FromGuid(savedComment.Values.Single(v => v.ItemId == Comment).ObservationId);
+        var obsLock = await _scenario.Protocol.OkAsync(
+            await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(commentObsId), ct, LockKind.Locked), ct);
+
+        using (var obsLockedClose = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/close", "Attempted close under observation lock", null), ct))
+        {
+            obsLockedClose.StatusCode.Should().Be((HttpStatusCode)423);
+            (await ProblemCodeAsync(obsLockedClose, ct)).Should().Be(AssertionErrors.Locked.Code);
+        }
+
+        // Switch to Enrollment-level Locked: Locked refuses query transitions AND new queries (recorded or genuinely blank) with 423 K.Assertion.Locked!
+        await _scenario.Protocol.OkAsync(await _scenario.Observations.ReleaseAsync(tenant, study, obsLock.LockId, ct), ct);
+        var unrecordedForm = CollectionInstanceId.New();
+        await _scenario.Protocol.OkAsync(
+            new OpenCollectionInstance(tenant, unrecordedForm, enrollment, KernelCollectionScenario.SpecId, null, _scenario.Tick(), KernelProtocolScenario.Key(), "Unscheduled vitals"), ct);
         await _scenario.Protocol.OkAsync(await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(enrollment), ct, LockKind.Locked), ct);
 
         using (var lockedClose = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/close", "Attempted close under lock", null), ct))
@@ -256,7 +341,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             (await ProblemCodeAsync(lockedRaise, ct)).Should().Be(AssertionErrors.Locked.Code);
         }
 
-        using var lockedBlankRaise = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries", "Attempted blank raise under lock", new
+        using var lockedBlankRaise = await monitor.SendAsync(Request(HttpMethod.Post, $"/{unrecordedForm.Value:D}/queries", "Attempted blank raise under lock", new
         {
             item_id = Comment,
             text = "Late blank query",
@@ -310,7 +395,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             await _scenario.Protocol.OkAsync(new IssueGrant(tenant, GrantId.New(), Actor.Person(CrcSiteB), capability, null, AuthorityScope.StudySite(siteB), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Site B CRC"), ct);
         }
 
-        foreach (var capability in new[] { "collection.record_unasked", "execution.query.raise", "execution.query.manage" })
+        foreach (var capability in new[] { "execution.query.raise", "execution.query.manage" })
         {
             await _scenario.Protocol.OkAsync(new IssueGrant(tenant, GrantId.New(), Actor.Person(Monitor), capability, null, AuthorityScope.Study(study), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Study monitor"), ct);
         }
@@ -400,7 +485,8 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         foreach (var (person, capabilities) in new[]
         {
             (Crc, new[] { "collection.record", "execution.query.answer" }),
-            (Monitor, new[] { "collection.record_unasked", "execution.query.raise", "execution.query.manage" }),
+            (Investigator, new[] { "collection.sign" }),
+            (Monitor, new[] { "execution.query.raise", "execution.query.manage" }),
         })
         {
             foreach (var capability in capabilities)

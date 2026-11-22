@@ -84,4 +84,10 @@ public sealed class KernelCapabilityAttribute(string token, VerbClass verbClass)
 
     /// <summary>False for commands that are never offered on an object, such as provisioning a tenant.</summary>
     public bool InCatalogue { get; init; } = true;
+
+    /// <summary>
+    /// Additional <see cref="References.NodeKinds"/> on which the command catalogue offers this command when
+    /// <see cref="Resource"/> names an owning scope (for example <c>EnrollmentId</c> on a form or observation command).
+    /// </summary>
+    public string[] OfferedOn { get; init; } = [];
 }

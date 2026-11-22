@@ -830,36 +830,14 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
       "Query raised."
     );
 
-    // Raise a missing-data query on blank required item DIABP: reloads form with NotAsked at revision 1 while keeping form incomplete.
-    const blankObsId = "0192f3c4-5e6a-7b8c-9d0e-00000000a002";
+    // Raise a missing-data query on blank required item DIABP: stores observation_id null at revision 0 without mutating the form.
     vi.mocked(ecrfQueriesApi.raise).mockResolvedValueOnce(
       formQuery({
         query_id: "query-blank",
         item_id: "DIABP",
-        observation_id: blankObsId,
-        revision: 1,
-        current_revision: 1,
-      }) as never
-    );
-    vi.mocked(ecrfFormsApi.getForm).mockResolvedValueOnce(
-      form({
-        complete: false,
-        missing_required: ["DIABP"],
-        items: [
-          form().items[0],
-          item({
-            item_id: "DIABP",
-            unit: "mm[Hg]",
-            value_kind: "Quantity",
-            required: true,
-            value: { type: "missing", reason: "NotAsked" },
-            observation_id: blankObsId,
-            revision: 1,
-            recorded_by: "monitor",
-            recorded_at: "2027-03-14T10:01:00Z",
-          }),
-          form().items[2],
-        ],
+        observation_id: null,
+        revision: 0,
+        current_revision: null,
       }) as never
     );
 
@@ -876,10 +854,14 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
     expect(vi.mocked(ecrfQueriesApi.raise).mock.calls[1][0]).toMatchObject({
       formId: FORM_ID,
       observationId: null,
-      revision: null,
+      revision: 0,
       itemId: "DIABP",
       text: "Diastolic BP missing on source",
     });
+    expect(ecrfFormsApi.getForm).toHaveBeenCalledTimes(1);
+    expect(view.find("#query-query-blank").text()).toContain(
+      "DIABP, no value recorded"
+    );
     expect(view.find('[data-testid="ecrf-form-status"]').text()).toContain(
       "Incomplete"
     );

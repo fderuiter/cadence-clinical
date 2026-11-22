@@ -141,11 +141,9 @@
               :id="`query-observation-${query.query_id}`"
               class="form-query-link"
               :to="observationLink(query)!"
-              >{{ query.item_id }}, revision {{ query.revision }}</component
+              >{{ queryTargetLabel(query) }}</component
             >
-            <template v-else
-              >{{ query.item_id }}, revision {{ query.revision }}</template
-            >
+            <template v-else>{{ queryTargetLabel(query) }}</template>
             <template v-if="showForm">
               ·
               <component
@@ -276,8 +274,14 @@ const hasRouter = Boolean(instance?.appContext.config.globalProperties.$router);
 const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
 
 function observationLink(query: FormQueryResponse): RouteLocationRaw | null {
-  if (!hasRouter || !props.observationTo) return null;
+  if (!hasRouter || !props.observationTo || !query.observation_id) return null;
   return props.observationTo(query);
+}
+
+function queryTargetLabel(query: FormQueryResponse): string {
+  return query.observation_id && query.revision > 0
+    ? `${query.item_id}, revision ${query.revision}`
+    : `${query.item_id}, no value recorded`;
 }
 
 function formLink(query: FormQueryResponse): RouteLocationRaw | null {

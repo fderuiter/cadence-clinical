@@ -24,16 +24,25 @@ internal sealed class MirrorFormQueryToKernel(IKernelCommandSender sender) : Ker
 
     protected override async Task HandleAsync(FormQueryChanged payload, KernelEventDelivery delivery, CancellationToken cancellationToken)
     {
+        if (payload.ObservationId is not { } observationId || payload.Steps.Count == 0)
+        {
+            return;
+        }
+
         var metadata = new CommandMetadata(delivery.Envelope.CorrelationId, delivery.Envelope.EventId);
         var reason = $"Execution query {payload.QueryId:D} is {payload.Status.ToString().ToLowerInvariant()}";
         for (var i = 0; i < payload.Steps.Count; i++)
         {
-            var step = payload.Steps[i];
+            if (payload.Steps[i] is not { } step)
+            {
+                continue;
+            }
+
             var key = $"{delivery.IdempotencyKey}:{i}";
             var result = step.Kind switch
             {
                 KernelAssertionStepKind.Raise => await sender.SendAsync(
-                    new RaiseQuery(payload.TenantId, step.AssertionId, payload.EnrollmentId, payload.ObservationId, step.Text!, key, reason),
+                    new RaiseQuery(payload.TenantId, step.AssertionId, payload.EnrollmentId, observationId, step.Text!, key, reason),
                     metadata,
                     cancellationToken).ConfigureAwait(false),
                 KernelAssertionStepKind.Answer => await sender.SendAsync(

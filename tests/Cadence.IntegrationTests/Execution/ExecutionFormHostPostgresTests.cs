@@ -189,7 +189,7 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
     }
 
     /// <summary>
-    /// Casebook form summaries report missing-required counts (including when a blank item holds a <c>NotAsked</c>
+    /// Casebook form summaries report missing-required counts (including when a blank item holds an open
     /// missing-data query), open and answered query counts, source verification counts, signature and superseded-signature
     /// status, and scoped freeze/lock coverage across scheduled, repeating, and unscheduled forms.
     /// </summary>
@@ -219,7 +219,7 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
                 ct);
         }
 
-        foreach (var capability in new[] { "execution.query.raise", "execution.query.manage", "observation.verify", "collection.record_unasked" })
+        foreach (var capability in new[] { "execution.query.raise", "execution.query.manage", "observation.verify" })
         {
             await _scenario.Protocol.OkAsync(
                 new IssueGrant(tenant, GrantId.New(), Actor.Person(monitorUser), capability, null, AuthorityScope.StudySite(studySite), _scenario.Tick(), null, false,
@@ -316,7 +316,7 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
             signRes.StatusCode.Should().Be(HttpStatusCode.Created, await signRes.Content.ReadAsStringAsync(ct));
         }
 
-        // Repeating form #2: save only Systolic and raise a missing-data query on blank Diastolic (NotAsked).
+        // Repeating form #2: save only Systolic and raise a missing-data query on blank Diastolic.
         await SendAsync<FormSavedResponse>(crc, HttpMethod.Put, $"/{repeating.FormId:D}/values", SaveReason,
             Page((Systolic, Quantity(130), 0)), HttpStatusCode.OK, ct);
         await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{repeating.FormId:D}/queries", "Missing diastolic", new
@@ -345,7 +345,7 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         var s2 = summariesBeforeCorrection.Single(s => s.FormId == repeating.FormId);
         s2.Complete.Should().BeFalse();
         s2.MissingRequiredCount.Should().Be(1);
-        s2.RecordedCount.Should().Be(1, "a NotAsked placeholder from a missing-data query is not counted as recorded");
+        s2.RecordedCount.Should().Be(1, "a blank-item missing-data query creates no observation");
         s2.OpenQueryCount.Should().Be(1);
 
         var s3 = summariesBeforeCorrection.Single(s => s.FormId == unscheduled.FormId);

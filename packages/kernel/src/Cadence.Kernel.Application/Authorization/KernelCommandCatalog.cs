@@ -49,20 +49,28 @@ public sealed class KernelCommandCatalog
     public Entry? Find(Type commandType) => _byType.GetValueOrDefault(commandType);
 
     /// <summary>The commands offered on objects of <paramref name="kind"/>, ordered by name.</summary>
-    public IReadOnlyList<Entry> ForKind(string kind) => [.. Entries.Where(e => e.InCatalogue && e.ResourceKind == kind)];
+    public IReadOnlyList<Entry> ForKind(string kind) =>
+        [.. Entries.Where(e => e.InCatalogue && (e.ResourceKind == kind || e.OfferedOn.Contains(kind)))];
 
     /// <summary>A command's declared capability and resource.</summary>
     public sealed class Entry
     {
         private readonly PropertyInfo _resource;
 
-        private Entry(Type type, Capability capability, PropertyInfo resource, string resourceKind, bool inCatalogue)
+        private Entry(
+            Type type,
+            Capability capability,
+            PropertyInfo resource,
+            string resourceKind,
+            bool inCatalogue,
+            FrozenSet<string> offeredOn)
         {
             CommandType = type;
             Capability = capability;
             _resource = resource;
             ResourceKind = resourceKind;
             InCatalogue = inCatalogue;
+            OfferedOn = offeredOn;
         }
 
         public Type CommandType { get; }
@@ -75,6 +83,9 @@ public sealed class KernelCommandCatalog
         public string ResourceKind { get; }
 
         public bool InCatalogue { get; }
+
+        /// <summary>Additional NodeRef kinds on which the command catalogue offers this command.</summary>
+        public FrozenSet<string> OfferedOn { get; }
 
         /// <summary>The object <paramref name="command"/> is authorized against, or null when the command leaves it empty.</summary>
         public NodeRef? ResourceOf(ICommand command)
@@ -99,7 +110,23 @@ public sealed class KernelCommandCatalog
                     $"{type.Name}.{property.Name} is a {property.PropertyType.Name}; a command's resource must be a kernel identifier with a NodeRef kind.");
             }
 
-            return new Entry(type, capability, property, NodeKinds.Of(property.PropertyType), declared.InCatalogue);
+            var offeredKinds = declared.OfferedOn ?? [];
+            foreach (var offered in offeredKinds)
+            {
+                if (!NodeKinds.IsRegistered(offered))
+                {
+                    throw new InvalidOperationException(
+                        $"{type.Name} declares OfferedOn kind '{offered}', which is not a registered NodeKind.");
+                }
+            }
+
+            return new Entry(
+                type,
+                capability,
+                property,
+                NodeKinds.Of(property.PropertyType),
+                declared.InCatalogue,
+                offeredKinds.ToFrozenSet(StringComparer.Ordinal));
         }
     }
 }

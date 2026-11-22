@@ -378,6 +378,33 @@
             <dt>Study</dt>
             <dd>{{ studyCode }}</dd>
           </dl>
+          <template v-if="!genericNodeLoading && !genericDisplay.masked">
+            <router-link
+              v-if="recordLocation"
+              id="inspector-open-record"
+              class="inspector-link"
+              :to="recordLocation"
+            >
+              Open participant's data
+            </router-link>
+            <router-link
+              v-if="dataEntryLocation"
+              id="inspector-open-data-entry"
+              class="inspector-link"
+              :to="dataEntryLocation"
+            >
+              Open in data entry
+            </router-link>
+            <router-link
+              v-if="handoffLocation"
+              id="inspector-handoff-standalone"
+              data-testid="inspector-ecrf-handoff"
+              class="inspector-link"
+              :to="handoffLocation"
+            >
+              Open standalone form view
+            </router-link>
+          </template>
         </template>
       </template>
 

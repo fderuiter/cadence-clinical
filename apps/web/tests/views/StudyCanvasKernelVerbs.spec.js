@@ -20,6 +20,7 @@ vi.mock("../../src/api/executionApi", () => ({
 vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: {
     listProposals: vi.fn(async () => []),
+    getChildren: vi.fn(),
     getCommands: vi.fn(),
     getNode: vi.fn(),
     search: vi.fn(),
@@ -31,6 +32,8 @@ vi.mock("../../src/api/kernelApi", () => ({
 
 const ID = "0192f3c4-5e6a-7b8c-9d0e-000000000001";
 const REF = `participant:${ID}`;
+const ENROLLMENT_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000e001";
+const ENROLLMENT_REF = `enrollment:${ENROLLMENT_ID}`;
 const PARTICIPANT = {
   id: ID,
   subject_id: "017-0001",
@@ -129,8 +132,10 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
       offset: 0,
     });
     vi.mocked(executionApi.getSiteComplianceStatus).mockReset();
+    vi.mocked(kernelApi.getChildren).mockReset();
     vi.mocked(kernelApi.getCommands).mockReset();
     vi.mocked(kernelApi.getNode).mockReset();
+    vi.mocked(kernelApi.search).mockReset();
     vi.mocked(kernelApi.trace).mockReset();
     vi.mocked(kernelApi.dependents).mockReset();
     vi.mocked(kernelApi.getNode).mockImplementation(async (ref) => {
@@ -455,6 +460,91 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
       "true"
     );
     expect(wrapper.find("#kernel-act").exists()).toBe(false);
+  });
+
+  it("binds enrollment:<id> across Act, Trace, and Impact when the participant has a visible enrollment", async () => {
+    const studyRef = "study:0192f3c4-5e6a-7b8c-9d0e-000000000010";
+    const siteRef = "study_site:0192f3c4-5e6a-7b8c-9d0e-000000000017";
+    vi.mocked(kernelApi.search).mockResolvedValue([
+      {
+        ref: `${studyRef}@1`,
+        kind: "study",
+        title: "Cadence 101",
+        code: "CAD-101",
+        detail: null,
+        exact_code: true,
+        rank: 1,
+      },
+    ]);
+    vi.mocked(kernelApi.getChildren).mockImplementation(async (parentRef) => {
+      if (parentRef.startsWith("study:")) {
+        return [
+          {
+            node: {
+              ref: `${siteRef}@1`,
+              kind: "study_site",
+              code: "017",
+              title: "Boston General",
+              status: "Active",
+              mask: null,
+            },
+            children: 1,
+          },
+        ];
+      }
+      return [
+        {
+          node: {
+            ref: `${ENROLLMENT_REF}@1`,
+            kind: "enrollment",
+            code: "017-0001",
+            title: "017-0001",
+            status: "Active",
+            mask: null,
+          },
+          children: 0,
+        },
+      ];
+    });
+    vi.mocked(kernelApi.getCommands).mockResolvedValue([
+      permitted("OpenCollectionInstance", "collection.open"),
+    ]);
+    vi.mocked(kernelApi.trace).mockResolvedValue({
+      nodes: [
+        {
+          ref: `${ENROLLMENT_REF}@1`,
+          kind: "enrollment",
+          depth: 0,
+          mask: null,
+          recorded_at: "2026-04-01T10:00:00Z",
+          actor_id: "crc-7",
+          action: "enrollment.screen",
+        },
+      ],
+      edges: [],
+      truncated: false,
+    });
+    vi.mocked(kernelApi.dependents).mockResolvedValue({
+      start: ENROLLMENT_REF,
+      depth: 10,
+      groups: [],
+      total: 0,
+      truncated: false,
+    });
+
+    await openParticipant();
+
+    await wrapper.find("#verb-act").trigger("click");
+    await flushPromises();
+    expect(kernelApi.getCommands).toHaveBeenCalledWith(ENROLLMENT_REF);
+
+    await wrapper.find("#verb-trace").trigger("click");
+    await flushPromises();
+    expect(kernelApi.trace).toHaveBeenCalledWith(ENROLLMENT_REF);
+
+    await wrapper.find("#verb-impact").trigger("click");
+    await flushPromises();
+    expect(kernelApi.dependents).toHaveBeenCalledWith(ENROLLMENT_REF);
   });
 });
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Commands;
@@ -53,7 +54,7 @@ public sealed record OpenCollectionInstance(
 /// <para><c>EnrollmentId</c>: The form instance's enrollment; the command is authorized against it.</para>
 /// <para><c>Values</c>: At most one per CollectionSpec item.</para>
 /// </remarks>
-[KernelCapability("collection.record", VerbClass.Execute, Resource = nameof(RecordCollectedValues.EnrollmentId))]
+[KernelCapability("collection.record", VerbClass.Execute, Resource = nameof(RecordCollectedValues.EnrollmentId), OfferedOn = [NodeKinds.CollectionInstance])]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists))]
 [RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.ValuesInvalid), nameof(CollectionErrors.RevisionStale))]
 [RaisesKernelErrors(
@@ -79,7 +80,7 @@ public sealed record RecordCollectedValues(
 /// <para><c>ContentHash</c>: The form's content hash as the signer read it (<c>content_hash</c> on the form read).</para>
 /// <para><c>AuthenticatedAt</c> and <c>Method</c>: When and how the signer re-authenticated to sign.</para>
 /// </remarks>
-[KernelCapability("collection.sign", VerbClass.Execute, Resource = nameof(SignCollectionInstance.EnrollmentId))]
+[KernelCapability("collection.sign", VerbClass.Execute, Resource = nameof(SignCollectionInstance.EnrollmentId), OfferedOn = [NodeKinds.CollectionInstance])]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 [BaselineKernelCommand]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.ReasonForChangeRequired))]
@@ -102,32 +103,6 @@ public sealed record SignCollectionInstance(
     string Method,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<AttestationId>;
-
-/// <summary>
-/// Records an unasked (<see cref="NullFlavor.NotAsked"/>) placeholder observation for an item of a form instance that has
-/// no value yet, so a missing-data query can target a kernel <c>(ObservationId, Revision)</c> without marking a required
-/// item complete. Idempotent when the item already has an observation on the form. Refused when a
-/// <see cref="LockKind.Locked"/> lock covers the form; <see cref="LockKind.Frozen"/> locks allow missing-data queries.
-/// </summary>
-/// <param name="TenantId">The tenant.</param>
-/// <param name="CollectionInstanceId">The form instance.</param>
-/// <param name="EnrollmentId">The form instance's enrollment; the command is authorized against it.</param>
-/// <param name="ItemId">The CollectionSpec item to ensure has an observation.</param>
-/// <param name="ObservationId">The observation id to use when recording a new unasked value; assigned when null.</param>
-/// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
-/// <param name="ReasonForChange">Why the unasked item is recorded.</param>
-[KernelCapability("collection.record_unasked", VerbClass.Execute, Resource = nameof(RecordUnaskedCollectionItem.EnrollmentId))]
-[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists))]
-[RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.ValuesInvalid))]
-[RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
-public sealed record RecordUnaskedCollectionItem(
-    TenantId TenantId,
-    CollectionInstanceId CollectionInstanceId,
-    EnrollmentId EnrollmentId,
-    string ItemId,
-    ObservationId? ObservationId,
-    string IdempotencyKey,
-    string ReasonForChange) : ICommand<CollectedValueState>;
 
 /// <summary>One value of a form page save.</summary>
 /// <param name="ItemId">The CollectionSpec item the value is collected for; the observation records the item's concept.</param>

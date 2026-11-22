@@ -5,26 +5,30 @@ using Cadence.Kernel;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.References;
 using Cadence.Modules.Execution.Domain;
 
 namespace Cadence.Modules.Execution.Application;
 
 /// <summary>
-/// Raises a query about the current revision of one value of a form (#5461). Refused when the revision is not the
-/// value's current one, when the observation is not a value of the form, or when a Locked lock covers it.
+/// Raises a query about the current revision of one value of a form, or about a blank item (#5461). Refused when the
+/// revision is not the value's current one, when the observation or item does not belong to the form, or when a Locked
+/// lock covers it.
 /// </summary>
 /// <param name="TenantId">The tenant.</param>
 /// <param name="QueryId">The new query's id, chosen by the client or the endpoint.</param>
 /// <param name="FormId">The form the value belongs to.</param>
 /// <param name="EnrollmentId">The form's enrollment; the command is authorized against it.</param>
-/// <param name="ObservationId">The kernel observation holding the value.</param>
-/// <param name="Revision">The revision questioned: the value's current one.</param>
+/// <param name="ItemId">The CollectionSpec item whose value or absence is queried.</param>
+/// <param name="ObservationId">The kernel observation holding the value, or null when querying a blank item.</param>
+/// <param name="Revision">The revision questioned: the value's current one, or 0 for a blank item.</param>
 /// <param name="Text">The question.</param>
 /// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
 /// <param name="ReasonForChange">Why the query is raised.</param>
-[KernelCapability("execution.query.raise", VerbClass.Execute, Resource = nameof(EnrollmentId))]
+[KernelCapability("execution.query.raise", VerbClass.Execute, Resource = nameof(EnrollmentId), OfferedOn = [NodeKinds.CollectionInstance, NodeKinds.Observation])]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
 [RaisesKernelErrors(typeof(FormErrors), nameof(FormErrors.CollectionInstanceUnknown))]
+[RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.ValuesInvalid))]
 [RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.ObservationUnknown), nameof(FormQueryErrors.RevisionStale))]
 [RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
 public sealed record RaiseFormQuery(
@@ -32,7 +36,8 @@ public sealed record RaiseFormQuery(
     Guid QueryId,
     CollectionInstanceId FormId,
     EnrollmentId EnrollmentId,
-    ObservationId ObservationId,
+    string ItemId,
+    ObservationId? ObservationId,
     int Revision,
     string Text,
     string IdempotencyKey,
@@ -45,7 +50,7 @@ public sealed record RaiseFormQuery(
 /// <param name="Text">The answer.</param>
 /// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
 /// <param name="ReasonForChange">Why the query is answered.</param>
-[KernelCapability("execution.query.answer", VerbClass.Execute, Resource = nameof(EnrollmentId))]
+[KernelCapability("execution.query.answer", VerbClass.Execute, Resource = nameof(EnrollmentId), OfferedOn = [NodeKinds.CollectionInstance, NodeKinds.Observation])]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition))]
 [RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
@@ -64,7 +69,7 @@ public sealed record AnswerFormQuery(
 /// <param name="Text">Why it is reopened, which the site answers.</param>
 /// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
 /// <param name="ReasonForChange">Why the query is reopened.</param>
-[KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(EnrollmentId))]
+[KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(EnrollmentId), OfferedOn = [NodeKinds.CollectionInstance, NodeKinds.Observation])]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition))]
 [RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
@@ -85,7 +90,7 @@ public sealed record ReopenFormQuery(
 /// <param name="EnrollmentId">The query's enrollment; the command is authorized against it.</param>
 /// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
 /// <param name="ReasonForChange">Why the query is closed.</param>
-[KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(EnrollmentId))]
+[KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(EnrollmentId), OfferedOn = [NodeKinds.CollectionInstance, NodeKinds.Observation])]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition))]
 [RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
@@ -102,7 +107,7 @@ public sealed record CloseFormQuery(
 /// <param name="EnrollmentId">The query's enrollment; the command is authorized against it.</param>
 /// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
 /// <param name="ReasonForChange">Why the query is cancelled.</param>
-[KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(EnrollmentId))]
+[KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(EnrollmentId), OfferedOn = [NodeKinds.CollectionInstance, NodeKinds.Observation])]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition))]
 [RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
@@ -118,8 +123,8 @@ public sealed record CancelFormQuery(
 /// <param name="FormId">The form the queried value belongs to.</param>
 /// <param name="EnrollmentId">The form's enrollment.</param>
 /// <param name="ItemId">The item whose value is queried.</param>
-/// <param name="ObservationId">The kernel observation holding the value.</param>
-/// <param name="Revision">The revision questioned.</param>
+/// <param name="ObservationId">The kernel observation holding the value, or null for a blank-item query.</param>
+/// <param name="Revision">The revision questioned, or 0 for a blank-item query.</param>
 /// <param name="Status">Where the query is in its workflow.</param>
 /// <param name="Messages">What happened to it, oldest first.</param>
 /// <param name="Version">The query's version, 1 when raised.</param>
@@ -128,7 +133,7 @@ public sealed record FormQueryState(
     CollectionInstanceId FormId,
     EnrollmentId EnrollmentId,
     string ItemId,
-    ObservationId ObservationId,
+    ObservationId? ObservationId,
     int Revision,
     FormQueryStatus Status,
     IReadOnlyList<FormQueryMessage> Messages,
@@ -144,13 +149,13 @@ public sealed record FormQueryState(
 
 /// <summary>
 /// A query changed (#5461): what the kernel must now assert about it, in order. The consumer that mirrors queries to
-/// kernel assertions sends one kernel command per step.
+/// kernel assertions sends one kernel command per step when the query targets a recorded observation.
 /// </summary>
 /// <param name="TenantId">The tenant.</param>
 /// <param name="QueryId">The query.</param>
 /// <param name="FormId">The form the queried value belongs to.</param>
 /// <param name="EnrollmentId">The form's enrollment.</param>
-/// <param name="ObservationId">The kernel observation the query is about.</param>
+/// <param name="ObservationId">The kernel observation the query is about, or null for a blank-item query.</param>
 /// <param name="Status">The query's status after the change.</param>
 /// <param name="Steps">The kernel assertion commands to send, in order.</param>
 [KernelEvent("execution.FormQueryChanged", 1)]
@@ -159,7 +164,7 @@ public sealed record FormQueryChanged(
     Guid QueryId,
     CollectionInstanceId FormId,
     EnrollmentId EnrollmentId,
-    ObservationId ObservationId,
+    ObservationId? ObservationId,
     FormQueryStatus Status,
     IReadOnlyList<KernelAssertionStep> Steps);
 

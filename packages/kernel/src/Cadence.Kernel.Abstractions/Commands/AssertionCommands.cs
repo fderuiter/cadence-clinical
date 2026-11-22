@@ -66,7 +66,7 @@ public sealed record ReleaseLock(
 /// <c>(ObservationId, Revision)</c>, so a later correction is not verified (ADR-2621). Refused when the revision is
 /// not the current one, or when a <see cref="LockKind.Locked"/> lock covers the observation.
 /// </summary>
-[KernelCapability("observation.verify", VerbClass.Execute, Resource = nameof(VerifyObservation.EnrollmentId))]
+[KernelCapability("observation.verify", VerbClass.Execute, Resource = nameof(VerifyObservation.EnrollmentId), OfferedOn = [NodeKinds.Observation])]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.RevisionStale), nameof(AssertionErrors.Locked))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
@@ -83,7 +83,7 @@ public sealed record VerifyObservation(
 /// Raises a query about an observation (spec §8.2). It names the <c>ObservationId</c> only, so it stays open across
 /// corrections until it is retracted. Refused when a <see cref="LockKind.Locked"/> lock covers the observation.
 /// </summary>
-[KernelCapability("observation.query", VerbClass.Execute, Resource = nameof(RaiseQuery.EnrollmentId))]
+[KernelCapability("observation.query", VerbClass.Execute, Resource = nameof(RaiseQuery.EnrollmentId), OfferedOn = [NodeKinds.Observation])]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.TextInvalid), nameof(AssertionErrors.Locked))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
@@ -97,7 +97,7 @@ public sealed record RaiseQuery(
     string ReasonForChange) : ICommand<AssertionState>;
 
 /// <summary>Answers an open query (spec §8.2). Refused when the query is closed or a lock covers its observation.</summary>
-[KernelCapability("observation.query.answer", VerbClass.Execute, Resource = nameof(AnswerQuery.EnrollmentId))]
+[KernelCapability("observation.query.answer", VerbClass.Execute, Resource = nameof(AnswerQuery.EnrollmentId), OfferedOn = [NodeKinds.Observation])]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(
     typeof(AssertionErrors),
@@ -119,7 +119,7 @@ public sealed record AnswerQuery(
 /// Retracts an assertion about an observation (spec §8.2): withdraws a verification or an answer, or closes a query.
 /// The retracted assertion stays readable. Locks are released with <see cref="ReleaseLock"/> instead.
 /// </summary>
-[KernelCapability("assertion.retract", VerbClass.Execute, Resource = nameof(RetractAssertion.EnrollmentId))]
+[KernelCapability("assertion.retract", VerbClass.Execute, Resource = nameof(RetractAssertion.EnrollmentId), OfferedOn = [NodeKinds.Observation])]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(
     typeof(AssertionErrors),

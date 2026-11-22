@@ -357,6 +357,54 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
         }
     }
 
+    /// <summary>
+    /// Site-scoped grants evaluate through <c>CollectionInstance</c> and <c>Observation</c> scope paths so
+    /// <c>GetCommandsAsync</c> offers and authorizes form and observation commands in the Clinical Canvas Inspector.
+    /// </summary>
+    [Fact(DisplayName = "Authority_CollectionInstanceAndObservation_ResolveScopePathsAndOfferCommands")]
+    public async Task AuthorityCollectionInstanceAndObservationResolveScopePathsAndOfferCommands()
+    {
+        _fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var collectionScenario = new KernelCollectionScenario(_fixture);
+        var form = await collectionScenario.NewFormAsync(ct);
+        var saved = await collectionScenario.Protocol.OkAsync(
+            KernelCollectionScenario.Save(
+                form,
+                KernelCollectionScenario.Value(KernelCollectionScenario.Systolic, KernelCollectionScenario.Mmhg(120))),
+            ct);
+        var obsId = saved.Values.Single().ObservationId;
+
+        UseProductionAuthorization();
+        var tenant = form.Subject.Tenant;
+        var studySite = form.Subject.StudySite;
+        await As(
+            Platform,
+            new IssueGrant(tenant, GrantId.New(), Crc, "collection.record", null, AuthorityScope.StudySite(studySite), _fixture.Clock.UtcNow, null, false, Key(), "Site coordinator"),
+            ct);
+        await As(
+            Platform,
+            new IssueGrant(tenant, GrantId.New(), Pi, "observation.verify", null, AuthorityScope.StudySite(studySite), _fixture.Clock.UtcNow, null, false, Key(), "Site PI"),
+            ct);
+        Tick();
+
+        var authorization = (KernelAuthorization)_fixture.Authorizer.Inner!;
+        _fixture.CurrentActor.Actor = Crc;
+        var formCommands = await authorization.GetCommandsAsync(tenant, NodeRef.For(form.Instance), ct);
+        formCommands.Select(c => (c.Command, c.Decision.Permitted)).Should().Equal(
+            (nameof(RecordCollectedValues), true),
+            (nameof(SignCollectionInstance), false));
+
+        _fixture.CurrentActor.Actor = Pi;
+        var obsCommands = await authorization.GetCommandsAsync(tenant, NodeRef.For(obsId), ct);
+        obsCommands.Select(c => (c.Command, c.Decision.Permitted)).Should().Equal(
+            (nameof(AnswerQuery), false),
+            (nameof(CorrectObservation), false),
+            (nameof(RaiseQuery), false),
+            (nameof(RetractAssertion), false),
+            (nameof(VerifyObservation), true));
+    }
+
     private async Task<ArtifactVersionId> TrainingRecordAsync(TenantId tenant, StudyId study, CancellationToken ct)
     {
         var version = ArtifactVersionId.New();

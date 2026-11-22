@@ -26,17 +26,17 @@ export interface FormQueryMessage {
   at: string;
 }
 
-/** One query on a form value (`FormQueryResponse`). */
+/** One query on a form value or blank item (`FormQueryResponse`). */
 export interface FormQueryResponse {
   query_id: string;
   form_id: string;
   enrollment_id: string;
   item_id: string;
-  observation_id: string;
-  /** The value's revision the query was raised on. */
+  observation_id: string | null;
+  /** The value's revision the query was raised on, or 0 for a blank item. */
   revision: number;
-  /** The value's revision now. */
-  current_revision: number;
+  /** The item's current revision now, or null while the item remains blank. */
+  current_revision: number | null;
   /** True once a correction moved the value past the queried revision; the monitor can then close the query. */
   value_changed: boolean;
   status: FormQueryStatus;

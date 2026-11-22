@@ -29,15 +29,15 @@ internal sealed record FormQueryContext(
     string? CollectionSpecId = null,
     string? PlannedActivityId = null);
 
-/// <summary>A data query about one revision of one eCRF value (#5461).</summary>
+/// <summary>A data query about one revision of one eCRF value, or about a blank item (#5461).</summary>
 /// <param name="QueryId">The query.</param>
 /// <param name="FormId">The form the value belongs to.</param>
 /// <param name="EnrollmentId">The form's enrollment.</param>
 /// <param name="ItemId">The item whose value is queried.</param>
-/// <param name="ObservationId">The kernel observation holding the value.</param>
-/// <param name="Revision">The revision questioned.</param>
-/// <param name="CurrentRevision">The value's revision now; null when the form no longer shows it.</param>
-/// <param name="ValueChanged">True once a correction moved the value past the questioned revision.</param>
+/// <param name="ObservationId">The kernel observation holding the value, or null when raised on a blank item.</param>
+/// <param name="Revision">The revision questioned, or 0 when raised on a blank item.</param>
+/// <param name="CurrentRevision">The item's current revision on the form; null when the item has no value yet.</param>
+/// <param name="ValueChanged">True once a recorded value or correction moved the item past the questioned revision.</param>
 /// <param name="Status">open, answered, closed or cancelled.</param>
 /// <param name="Text">The question as it now stands: the text it was raised or last reopened with.</param>
 /// <param name="Messages">What happened to the query, oldest first.</param>
@@ -55,7 +55,7 @@ public sealed record FormQueryResponse(
     Guid FormId,
     Guid EnrollmentId,
     string ItemId,
-    Guid ObservationId,
+    Guid? ObservationId,
     int Revision,
     int? CurrentRevision,
     bool ValueChanged,
@@ -72,16 +72,16 @@ public sealed record FormQueryResponse(
     string? CollectionSpecId = null,
     string? PlannedActivityId = null)
 {
-    /// <summary>A stored query, with the current revisions of its form's values.</summary>
-    internal static FormQueryResponse From(FormQuery query, IReadOnlyDictionary<ObservationId, int> revisions, FormQueryContext? context = null) =>
+    /// <summary>A stored query, with the current revisions of its form's items.</summary>
+    internal static FormQueryResponse From(FormQuery query, IReadOnlyDictionary<string, int> revisions, FormQueryContext? context = null) =>
         From(FormQueryState.Of(query, query.VersionIndex), revisions, context);
 
-    /// <summary>A query after a command, with the current revisions of its form's values.</summary>
-    internal static FormQueryResponse From(FormQueryState state, IReadOnlyDictionary<ObservationId, int> revisions, FormQueryContext? context = null)
+    /// <summary>A query after a command, with the current revisions of its form's items.</summary>
+    internal static FormQueryResponse From(FormQueryState state, IReadOnlyDictionary<string, int> revisions, FormQueryContext? context = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(revisions);
-        int? current = revisions.TryGetValue(state.ObservationId, out var revision) ? revision : null;
+        int? current = revisions.TryGetValue(state.ItemId, out var revision) ? revision : null;
         var raised = state.Messages[0];
         var question = state.Messages.Last(m => m.Kind is FormQueryMessageKind.Raised or FormQueryMessageKind.Reopened);
         return new FormQueryResponse(
@@ -89,7 +89,7 @@ public sealed record FormQueryResponse(
             state.FormId.Value,
             state.EnrollmentId.Value,
             state.ItemId,
-            state.ObservationId.Value,
+            state.ObservationId?.Value,
             state.Revision,
             current,
             current > state.Revision,

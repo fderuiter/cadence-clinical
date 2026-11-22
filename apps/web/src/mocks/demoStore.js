@@ -1339,18 +1339,61 @@ export function createWebDemoStore() {
         };
       }
       if (String(nodeRef).startsWith("enrollment:")) {
-        const rawId = String(nodeRef).replace(/^enrollment:/, "");
+        const rawId = String(nodeRef)
+          .split("@")[0]
+          .replace(/^enrollment:/, "");
         const subj = state.subjects.find((s) => s.id === rawId);
         if (subj) {
           return {
             ref: nodeRef,
             kind: "enrollment",
-            title: `Participant ${subj.subject_id}`,
+            title: subj.subject_id,
             code: subj.subject_id,
             status: subj.status,
             mask: null,
           };
         }
+      }
+      if (String(nodeRef).startsWith("collection_instance:")) {
+        const rawId = String(nodeRef)
+          .split("@")[0]
+          .replace(/^collection_instance:/, "");
+        const form = state.forms.get(rawId);
+        if (form) {
+          const baseTitle = form.collection_title || form.collection_spec_id;
+          const title = form.planned_activity_id
+            ? `${baseTitle} · ${form.planned_activity_id}`
+            : baseTitle;
+          return {
+            ref: `collection_instance:${form.form_id}@${form.version || 1}`,
+            kind: "collection_instance",
+            title,
+            code: form.collection_spec_id,
+            status: form.complete ? "Complete" : "In progress",
+            mask: null,
+          };
+        }
+      }
+      if (String(nodeRef).startsWith("observation:")) {
+        const cleanRef = String(nodeRef).split("@")[0];
+        const rawId = cleanRef.replace(/^observation:/, "");
+        const obs = state.observations.get(cleanRef);
+        let matchedItem = null;
+        for (const form of state.forms.values()) {
+          const hit = form.items.find((it) => it.observation_id === rawId);
+          if (hit) {
+            matchedItem = hit;
+            break;
+          }
+        }
+        return {
+          ref: obs ? `${cleanRef}@${obs.version || 1}` : nodeRef,
+          kind: "observation",
+          title: matchedItem?.concept || obs?.concept || "Recorded observation",
+          code: matchedItem?.item_id || obs?.concept || null,
+          status: "Recorded",
+          mask: null,
+        };
       }
       return {
         ref: nodeRef,
@@ -1523,6 +1566,55 @@ export function createWebDemoStore() {
     },
 
     getCommands(nodeRef) {
+      const refStr = String(nodeRef || "");
+      if (refStr.startsWith("collection_instance:")) {
+        return [
+          {
+            command: "RecordCollectedValues",
+            decision: buildDecision("collection.save", nodeRef, true),
+          },
+          {
+            command: "LockScope",
+            decision: buildDecision("observation.lock", nodeRef, true),
+          },
+        ];
+      }
+      if (refStr.startsWith("observation:")) {
+        return [
+          {
+            command: "CorrectObservation",
+            decision: buildDecision("observation.correct", nodeRef, true),
+          },
+          {
+            command: "VerifyObservation",
+            decision: buildDecision("assertion.verify", nodeRef, true),
+          },
+          {
+            command: "QueryObservation",
+            decision: buildDecision("assertion.query", nodeRef, true),
+          },
+          {
+            command: "LockScope",
+            decision: buildDecision("observation.lock", nodeRef, true),
+          },
+        ];
+      }
+      if (refStr.startsWith("enrollment:")) {
+        return [
+          {
+            command: "OpenCollectionInstance",
+            decision: buildDecision("collection.open", nodeRef, true),
+          },
+          {
+            command: "RecordObservation",
+            decision: buildDecision("observation.record", nodeRef, true),
+          },
+          {
+            command: "LockScope",
+            decision: buildDecision("observation.lock", nodeRef, true),
+          },
+        ];
+      }
       return [
         {
           command: "collection.correct",
@@ -3070,7 +3162,10 @@ export function createWebDemoStore() {
           }
 
           for (const q of state.queries.values()) {
-            if (q.observation_id === obsId) {
+            if (
+              q.observation_id === obsId ||
+              (q.form_id === form.form_id && q.item_id === item.item_id)
+            ) {
               q.current_revision = item.revision;
               q.value_changed = item.revision > Number(q.revision);
             }
@@ -3232,28 +3327,27 @@ export function createWebDemoStore() {
     raiseQuery(formId, body) {
       const form =
         state.forms.get(formId) || state.forms.get(DEFAULT_FORM_UUID);
-      let item =
+      const item =
         (body?.observation_id &&
           form.items.find((it) => it.observation_id === body.observation_id)) ||
         (body?.item_id &&
           form.items.find((it) => it.item_id === body.item_id)) ||
-        form.items[0];
+        (body?.observation_id ? form.items[0] : null);
       const idx = nextCounter();
       const now = new Date().toISOString();
-      if (!body?.observation_id && body?.item_id && item && !item.value) {
-        const unaskedObsId =
-          item.observation_id || makeUuidFromIndex("00006300", idx);
-        item.observation_id = unaskedObsId;
-        item.revision = Math.max(1, Number(item.revision || 0));
-        item.value = { type: "missing", reason: "not_asked" };
-        item.recorded_by = "usr-cra-01";
-        item.recorded_at = now;
-      }
       const queryId = body?.query_id || makeUuidFromIndex("00003000", idx);
       const text = String(
         body?.text || "Verify recorded value against source."
       );
-      const rev = Number(body?.revision ?? item?.revision ?? 1);
+      const isBlankItem =
+        !body?.observation_id && (!item || !item.observation_id || !item.value);
+      const observationId = isBlankItem
+        ? null
+        : body?.observation_id || item?.observation_id || OBS_1_UUID;
+      const rev = isBlankItem
+        ? 0
+        : Number(body?.revision ?? item?.revision ?? 1);
+      const currentRevision = isBlankItem ? null : (item?.revision ?? rev);
       const subjectMatch = state.subjects.find(
         (s) => s.id === form.enrollment_id
       );
@@ -3263,10 +3357,9 @@ export function createWebDemoStore() {
         form_id: form.form_id,
         enrollment_id: form.enrollment_id,
         item_id: body?.item_id || item?.item_id || "item-sysbp",
-        observation_id:
-          body?.observation_id || item?.observation_id || OBS_1_UUID,
+        observation_id: observationId,
         revision: rev,
-        current_revision: item?.revision ?? rev,
+        current_revision: currentRevision,
         value_changed: false,
         status: "open",
         text,

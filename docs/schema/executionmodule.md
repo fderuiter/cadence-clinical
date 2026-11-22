@@ -62,9 +62,9 @@ Entity: `FormQuery`, `FormQueryMessage`
 | `form_id` | `uuid` | no |  |  |
 | `item_id` | `character varying(128)` | no |  |  |
 | `kernel_answer_id` | `uuid` | yes |  |  |
-| `kernel_query_id` | `uuid` | no |  |  |
+| `kernel_query_id` | `uuid` | yes |  |  |
 | `messages` | `jsonb` | yes |  |  |
-| `observation_id` | `uuid` | no |  |  |
+| `observation_id` | `uuid` | yes |  |  |
 | `reason_for_change` | `character varying(1000)` | no |  |  |
 | `revision` | `integer` | no |  |  |
 | `status` | `character varying(16)` | no |  |  |

@@ -93,7 +93,9 @@ const formTo = computed(() =>
 const observationTo = computed(() =>
   props.observationLocation
     ? (q: FormQueryResponse) =>
-        props.observationLocation!(q.observation_id, q.form_id)
+        q.observation_id
+          ? props.observationLocation!(q.observation_id, q.form_id)
+          : null
     : undefined
 );
 

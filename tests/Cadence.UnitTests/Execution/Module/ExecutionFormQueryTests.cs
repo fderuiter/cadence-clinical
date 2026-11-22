@@ -29,8 +29,8 @@ public sealed class ExecutionFormQueryTests
     public void FormQueryStepsStateTheMatchingKernelAssertions()
     {
         var (query, raised) = Raise();
-        raised.Should().Be(new KernelAssertionStep(KernelAssertionStepKind.Raise, query.KernelQueryId, null, "Confirm the value"));
-        var firstQuery = query.KernelQueryId;
+        raised.Should().Be(new KernelAssertionStep(KernelAssertionStepKind.Raise, query.KernelQueryId!.Value, null, "Confirm the value"));
+        var firstQuery = query.KernelQueryId!.Value;
 
         var answerId = AssertionId.New();
         query.Answer(" Confirmed ", answerId, "crc", At)
@@ -90,16 +90,69 @@ public sealed class ExecutionFormQueryTests
         query.Reopen("Source reads 128", AssertionId.New(), "cra", At);
         var state = FormQueryState.Of(query, 3);
 
-        var changed = FormQueryResponse.From(state, new Dictionary<ObservationId, int> { [query.ObservationId] = 2 });
+        var changed = FormQueryResponse.From(state, new Dictionary<string, int> { [query.ItemId] = 2 });
         changed.Should().Match<FormQueryResponse>(r =>
             r.Status == "open" && r.CurrentRevision == 2 && r.ValueChanged && r.Text == "Source reads 128" && r.RaisedBy == "cra" && r.Version == 3);
         changed.Messages.Select(m => m.Kind).Should().Equal("raised", "answered", "reopened");
 
-        FormQueryResponse.From(state, new Dictionary<ObservationId, int> { [query.ObservationId] = 1 }).ValueChanged.Should().BeFalse();
-        FormQueryResponse.From(state, new Dictionary<ObservationId, int>()).Should().Match<FormQueryResponse>(r => r.CurrentRevision == null && !r.ValueChanged);
+        FormQueryResponse.From(state, new Dictionary<string, int> { [query.ItemId] = 1 }).ValueChanged.Should().BeFalse();
+        FormQueryResponse.From(state, new Dictionary<string, int>()).Should().Match<FormQueryResponse>(r => r.CurrentRevision == null && !r.ValueChanged);
     }
 
-    private static (FormQuery Query, KernelAssertionStep Step) Raise(string text = "Confirm the value") =>
+    /// <summary>
+    /// A query on a blank item starts at revision 0 with no observation or kernel query assertion, states no kernel
+    /// assertion across answer/reopen/close/cancel transitions, and reports <c>value_changed = true</c> once any value or
+    /// reasoned missing status is recorded at revision 1.
+    /// </summary>
+    [Fact(DisplayName = "FormQuery_BlankItem_SkipsKernelAssertions_AndReportsValueChangedOnceRecorded")]
+    public void FormQueryBlankItemSkipsKernelAssertionsAndReportsValueChangedOnceRecorded()
+    {
+        var (query, raisedStep) = FormQuery.Raise(
+            Guid.CreateVersion7(),
+            TenantId.New(),
+            CollectionInstanceId.New(),
+            EnrollmentId.New(),
+            "item.dbp",
+            observationId: null,
+            revision: 0,
+            "Diastolic BP is blank",
+            kernelQueryId: null,
+            "cra",
+            At);
+
+        raisedStep.Should().BeNull();
+        query.ObservationId.Should().BeNull();
+        query.Revision.Should().Be(0);
+        query.KernelQueryId.Should().BeNull();
+
+        var blankState = FormQueryState.Of(query, 1);
+        FormQueryResponse.From(blankState, new Dictionary<string, int>())
+            .Should().Match<FormQueryResponse>(r =>
+                r.ObservationId == null && r.Revision == 0 && r.CurrentRevision == null && !r.ValueChanged);
+        FormQueryResponse.From(blankState, new Dictionary<string, int> { ["item.dbp"] = 1 })
+            .Should().Match<FormQueryResponse>(r =>
+                r.ObservationId == null && r.Revision == 0 && r.CurrentRevision == 1 && r.ValueChanged);
+
+        query.TryAnswer("Not measured due to cuff issue", AssertionId.New(), "crc", At, out var answerStep).Should().BeTrue();
+        answerStep.Should().BeNull();
+        query.KernelAnswerId.Should().BeNull();
+
+        query.TryReopen("Please enter NotDone on the form", AssertionId.New(), "cra", At, out var reopenStep).Should().BeTrue();
+        reopenStep.Should().BeNull();
+
+        query.TryClose("Entered on form", AssertionId.New(), "cra", At, out var closeStep).Should().BeTrue();
+        closeStep.Should().BeNull();
+
+        query.TryReopen("Reopened for audit check", AssertionId.New(), "cra", At, out var secondReopenStep).Should().BeTrue();
+        secondReopenStep.Should().BeNull();
+
+        query.TryCancel("Cancelled after check", AssertionId.New(), "cra", At, out var cancelStep).Should().BeTrue();
+        cancelStep.Should().BeNull();
+        query.KernelQueryId.Should().BeNull();
+        query.Status.Should().Be(FormQueryStatus.Cancelled);
+    }
+
+    private static (FormQuery Query, KernelAssertionStep? Step) Raise(string text = "Confirm the value") =>
         FormQuery.Raise(
             Guid.CreateVersion7(), TenantId.New(), CollectionInstanceId.New(), EnrollmentId.New(), "item.sbp", ObservationId.New(), 1, text, AssertionId.New(), "cra", At);
 }

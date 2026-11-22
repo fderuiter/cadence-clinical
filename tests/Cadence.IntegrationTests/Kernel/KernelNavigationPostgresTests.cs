@@ -172,6 +172,40 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
         subjects.Should().Equal(NodeRef.For(tenant, 1), NodeRef.For(organization, 1));
     }
 
+    /// <summary>
+    /// Collection instances and observations resolve their canonical node summaries (title, code, status, and version)
+    /// for Clinical Canvas Inspector headers and explanations.
+    /// </summary>
+    [Fact(DisplayName = "Navigation_CollectionInstanceAndObservation_ResolveSummaries")]
+    public async Task NavigationCollectionInstanceAndObservationResolveSummaries()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var scenario = new KernelCollectionScenario(fixture);
+        var form = await scenario.NewFormAsync(ct);
+        var saved = await scenario.Protocol.OkAsync(
+            KernelCollectionScenario.Save(
+                form,
+                KernelCollectionScenario.Value(KernelCollectionScenario.Systolic, KernelCollectionScenario.Mmhg(122))),
+            ct);
+        var obsId = saved.Values.Single().ObservationId;
+
+        var navigator = new KernelNavigator(new KernelScopeGraph(fixture.TenantContexts));
+
+        var formSummary = await navigator.ResolveAsync(form.Subject.Tenant, NodeRef.For(form.Instance), ct);
+        formSummary.Should().Be(new NodeSummary(
+            NodeRef.For(form.Instance, 2),
+            $"Vital signs · {KernelCollectionScenario.VisitId}",
+            KernelCollectionScenario.SpecId));
+
+        var obsSummary = await navigator.ResolveAsync(form.Subject.Tenant, NodeRef.For(obsId), ct);
+        obsSummary.Should().Be(new NodeSummary(
+            NodeRef.For(obsId, 1),
+            "Systolic blood pressure",
+            KernelCollectionScenario.Systolic,
+            "Recorded"));
+    }
+
     private async Task<SeededTenant> SeedTenantAsync(string code)
     {
         var tenant = TenantId.New();

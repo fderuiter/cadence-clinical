@@ -1275,7 +1275,7 @@ const queries = reactive(useFormQueries());
 const raising = ref<{
   item_id: string;
   observation_id: string | null;
-  revision: number | null;
+  revision: number;
   unrecorded: boolean;
 } | null>(null);
 const raiseText = ref("");
@@ -1534,11 +1534,12 @@ function liveOn(item: EcrfFormItem) {
 
 /** Starts a query on the item's recorded value or on an unasked blank item. */
 function beginRaise(item: EcrfFormItem) {
-  const unrecorded = !item.observation_id || isUnrecordedValue(item.value);
+  const hasObservation = Boolean(item.observation_id);
+  const unrecorded = !hasObservation || isUnrecordedValue(item.value);
   raising.value = {
     item_id: item.item_id,
     observation_id: item.observation_id ?? null,
-    revision: item.observation_id ? Number(item.revision) : null,
+    revision: hasObservation ? Number(item.revision) : 0,
     unrecorded,
   };
   raiseText.value = "";
@@ -1548,7 +1549,6 @@ async function confirmRaise() {
   const target = raising.value;
   const text = raiseText.value.trim();
   if (!form.value || !target || !text) return;
-  const wasUnaskedWithoutObservation = !target.observation_id;
   const raised = await queries.raise(
     {
       formId: form.value.form_id,
@@ -1560,9 +1560,6 @@ async function confirmRaise() {
   );
   if (raised) {
     raising.value = null;
-    if (wasUnaskedWithoutObservation) {
-      await reload();
-    }
   }
 }
 
