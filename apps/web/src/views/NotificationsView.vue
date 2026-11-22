@@ -336,160 +336,121 @@
     </div>
 
     <!-- Justification Modal -->
-    <div
-      v-if="showModal"
-      id="justification-modal"
-      class="modal-overlay"
-      style="
-        display: flex;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-      "
+    <ClinicalModal
+      v-model="showModal"
+      :teleport="false"
+      overlay-id="justification-modal"
+      dialog-class="modal"
+      title="21 CFR Part 11 Justification Reason Required"
+      @close="closeModal"
     >
-      <div
-        class="modal"
+      <p
         style="
-          background: white;
-          border-radius: 12px;
-          max-width: 500px;
-          width: 100%;
-          padding: 24px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+          font-size: 0.9rem;
+          color: var(--semantic-color-text-secondary);
+          margin-bottom: 12px;
         "
       >
-        <div
-          class="modal-header"
-          style="
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--primary);
-            margin-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 8px;
-            background: none;
-          "
-        >
-          21 CFR Part 11 Justification Reason Required
-        </div>
-        <div class="modal-body" style="padding: 0; margin-bottom: 16px">
-          <p
-            style="
-              font-size: 0.9rem;
-              color: var(--semantic-color-text-secondary);
-              margin-bottom: 12px;
-            "
-          >
-            To complete this transition, you must provide a justification change
-            reason:
-          </p>
+        To complete this transition, you must provide a justification change
+        reason:
+      </p>
 
-          <!-- Inline Modal Error Banner -->
-          <div
-            v-if="modalError"
-            id="modal-error"
-            style="
-              background-color: var(--error-bg);
-              border: 1px solid var(--error);
-              color: var(--error);
-              padding: 8px;
-              border-radius: 4px;
-              margin-bottom: 12px;
-              font-size: 0.85rem;
-            "
-          >
-            {{ modalError }}
-          </div>
-
-          <div class="form-group" style="margin-bottom: 12px">
-            <label
-              for="modal-reason-select"
-              style="display: block; margin-bottom: 4px; font-weight: 600"
-              >Standard Reason</label
-            >
-            <select
-              id="modal-reason-select"
-              v-model="selectedReason"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 6px;
-              "
-            >
-              <option value="Action completed successfully">
-                Action completed successfully
-              </option>
-              <option value="Notification reviewed and logged">
-                Notification reviewed and logged
-              </option>
-              <option value="Clinical event acknowledged">
-                Clinical event acknowledged
-              </option>
-              <option value="Corrective action documented">
-                Corrective action documented
-              </option>
-              <option value="Other">Other (specify custom explanation)</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label
-              for="modal-custom-reason"
-              style="display: block; margin-bottom: 4px; font-weight: 600"
-              >Custom Explanation</label
-            >
-            <textarea
-              id="modal-custom-reason"
-              v-model="customReason"
-              placeholder="Provide details if required or if 'Other' is selected..."
-              style="
-                width: 100%;
-                height: 80px;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 6px;
-                resize: none;
-              "
-            />
-          </div>
-        </div>
-        <div
-          class="modal-footer"
-          style="
-            padding: 12px 0 0 0;
-            background: none;
-            border: none;
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-          "
-        >
-          <button id="btn-cancel-modal" class="btn" @click="closeModal">
-            Cancel
-          </button>
-          <button
-            id="btn-submit-modal"
-            class="btn btn-primary"
-            :disabled="!isReasonValid"
-            @click="submitAction"
-          >
-            Confirm
-          </button>
-        </div>
+      <!-- Inline Modal Error Banner -->
+      <div
+        v-if="modalError"
+        id="modal-error"
+        style="
+          background-color: var(--error-bg);
+          border: 1px solid var(--error);
+          color: var(--error);
+          padding: 8px;
+          border-radius: 4px;
+          margin-bottom: 12px;
+          font-size: 0.85rem;
+        "
+      >
+        {{ modalError }}
       </div>
-    </div>
+
+      <div class="form-group" style="margin-bottom: 12px">
+        <label
+          for="modal-reason-select"
+          style="display: block; margin-bottom: 4px; font-weight: 600"
+          >Standard Reason</label
+        >
+        <select
+          id="modal-reason-select"
+          v-model="selectedReason"
+          style="
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+          "
+        >
+          <option value="Action completed successfully">
+            Action completed successfully
+          </option>
+          <option value="Notification reviewed and logged">
+            Notification reviewed and logged
+          </option>
+          <option value="Clinical event acknowledged">
+            Clinical event acknowledged
+          </option>
+          <option value="Corrective action documented">
+            Corrective action documented
+          </option>
+          <option value="Other">Other (specify custom explanation)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label
+          for="modal-custom-reason"
+          style="display: block; margin-bottom: 4px; font-weight: 600"
+          >Custom Explanation</label
+        >
+        <textarea
+          id="modal-custom-reason"
+          v-model="customReason"
+          placeholder="Provide details if required or if 'Other' is selected..."
+          style="
+            width: 100%;
+            height: 80px;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            resize: none;
+          "
+        />
+      </div>
+
+      <template #footer>
+        <button
+          id="btn-cancel-modal"
+          type="button"
+          class="btn"
+          @click="closeModal"
+        >
+          Cancel
+        </button>
+        <button
+          id="btn-submit-modal"
+          type="button"
+          class="btn btn-primary"
+          :disabled="!isReasonValid"
+          @click="submitAction"
+        >
+          Confirm
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { onMounted, ref, computed } from "vue";
+import { ClinicalModal } from "ui";
 import { useRouter } from "vue-router";
 import { useNotificationsStore } from "../stores/notifications";
 

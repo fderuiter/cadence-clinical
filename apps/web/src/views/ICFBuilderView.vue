@@ -217,53 +217,50 @@
     />
 
     <!-- Publish Version GxP Modal -->
-    <div v-if="showPublishModal" class="publish-modal-overlay">
-      <div class="publish-modal card">
-        <div class="modal-header">
-          <h3>21 CFR Part 11 Change Reason Capture</h3>
-          <button class="close-btn" @click="showPublishModal = false">✕</button>
-        </div>
-        <div class="modal-body">
-          <p class="warning-text">
-            ⚠️ Publishing this Informed Consent Form (ICF) increments the active
-            protocol design version. All future subject enrollments and
-            re-consents will bind to the new version index.
-          </p>
-          <div class="form-group">
-            <label for="publish-reason"
-              >Mandatory Change Justification / Audit Reason:</label
-            >
-            <textarea
-              id="publish-reason"
-              v-model="publishReason"
-              placeholder="e.g. Protocol Amendment v2.0 - added genetic screening disclaimer."
-              rows="4"
-              class="form-control"
-            />
-            <span v-if="publishError" class="error-text">{{
-              publishError
-            }}</span>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="showPublishModal = false"
-          >
-            Cancel
-          </button>
-          <button type="button" class="btn btn-primary" @click="handlePublish">
-            Confirm & Publish
-          </button>
-        </div>
+    <ClinicalModal
+      v-model="showPublishModal"
+      :teleport="false"
+      backdrop-class="publish-modal-overlay"
+      dialog-class="publish-modal card"
+      title="21 CFR Part 11 Change Reason Capture"
+    >
+      <p class="warning-text">
+        ⚠️ Publishing this Informed Consent Form (ICF) increments the active
+        protocol design version. All future subject enrollments and re-consents
+        will bind to the new version index.
+      </p>
+      <div class="form-group">
+        <label for="publish-reason"
+          >Mandatory Change Justification / Audit Reason:</label
+        >
+        <textarea
+          id="publish-reason"
+          v-model="publishReason"
+          placeholder="e.g. Protocol Amendment v2.0 - added genetic screening disclaimer."
+          rows="4"
+          class="form-control"
+        />
+        <span v-if="publishError" class="error-text">{{ publishError }}</span>
       </div>
-    </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="showPublishModal = false"
+        >
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" @click="handlePublish">
+          Confirm & Publish
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { ClinicalModal } from "ui";
 import {
   ECONSENT_CAPTURE_SEMANTIC_ACTION,
   econsentCaptureAction,

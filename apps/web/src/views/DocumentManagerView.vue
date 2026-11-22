@@ -44,18 +44,21 @@
     </main>
 
     <!-- Document Metadata Inspection Drawer -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="inspectedDoc"
-      class="metadata-drawer-overlay"
-      @click.self="inspectedDoc = null"
+    <ClinicalDrawer
+      :is-open="Boolean(inspectedDoc)"
+      :teleport="false"
+      :dismissible="!reviewingQc"
+      overlay-class="metadata-drawer-overlay"
+      panel-class="metadata-drawer"
+      body-class="drawer-body"
+      @close="inspectedDoc = null"
     >
-      <div class="metadata-drawer">
-        <div class="drawer-header">
+      <template #header="{ titleId, close }">
+        <div v-if="inspectedDoc" class="drawer-header">
           <div style="display: flex; align-items: center; gap: 8px">
-            <span style="font-size: 20px">📋</span>
+            <span style="font-size: 20px" aria-hidden="true">📋</span>
             <div>
-              <h3 style="margin: 0; font-size: 16px">
+              <h3 :id="titleId" style="margin: 0; font-size: 16px">
                 Document Metadata &amp; 21 CFR Part 11 Manifest
               </h3>
               <p
@@ -70,261 +73,254 @@
             </div>
           </div>
           <button
+            type="button"
             class="btn btn-secondary btn-close-drawer"
             style="padding: 4px 8px; font-size: 12px; cursor: pointer"
             aria-label="Close inspection drawer"
-            @click="inspectedDoc = null"
+            :disabled="reviewingQc"
+            @click="close"
           >
             ✕
           </button>
         </div>
+      </template>
 
-        <div class="drawer-body">
-          <!-- DIA Reference Model Taxonomy Section -->
-          <div class="drawer-section">
-            <h4 class="section-heading">DIA Reference Model Taxonomy</h4>
+      <template v-if="inspectedDoc">
+        <!-- DIA Reference Model Taxonomy Section -->
+        <div class="drawer-section">
+          <h4 class="section-heading">DIA Reference Model Taxonomy</h4>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">Artifact Code</span>
+              <span class="meta-val font-mono">{{
+                inspectedDoc.artifact_code ||
+                inspectedDoc.taxonomy_code ||
+                "01.01.01"
+              }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Zone &amp; Section</span>
+              <span class="meta-val"
+                >Zone {{ inspectedDoc.zone_id || inspectedDoc.zone || 1 }} -
+                Trial Management</span
+              >
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Version</span>
+              <span class="meta-val badge status-review"
+                >v{{ inspectedDoc.version_index || 1 }}.0</span
+              >
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Lifecycle Status</span>
+              <span class="meta-val badge status-approved">{{
+                inspectedDoc.status || "DRAFT"
+              }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 21 CFR Part 11 Audit Trail & Change Justification -->
+        <div class="drawer-section">
+          <h4 class="section-heading">21 CFR Part 11 Audit Record</h4>
+          <div class="reason-box">
+            <strong>Mandatory Reason for Change:</strong>
+            <p
+              style="
+                margin: 4px 0 0 0;
+                font-size: 12px;
+                color: var(--semantic-color-text);
+              "
+            >
+              {{
+                inspectedDoc.reason_for_change ||
+                inspectedDoc.reason ||
+                "Standard clinical document ingestion and lifecycle management."
+              }}
+            </p>
+          </div>
+          <div class="meta-grid" style="margin-top: 10px">
+            <div class="meta-item">
+              <span class="meta-label">Uploaded By</span>
+              <span class="meta-val font-mono">{{
+                inspectedDoc.created_by ||
+                inspectedDoc.uploaded_by ||
+                "crc.user"
+              }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Uploaded At</span>
+              <span class="meta-val font-mono">{{
+                inspectedDoc.formattedCreatedAt ||
+                inspectedDoc.created_at ||
+                "—"
+              }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cryptographic SHA-256 Checksum & Seal -->
+        <div class="drawer-section">
+          <h4 class="section-heading">Cryptographic Integrity</h4>
+          <div class="crypto-seal-card">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 6px;
+              "
+            >
+              <span style="font-size: 11px; font-weight: 600"
+                >SHA-256 Checksum Digest</span
+              >
+              <span class="badge status-approved" style="font-size: 9px"
+                >LEDGER SEALED</span
+              >
+            </div>
+            <code class="sha256-hash-display">{{
+              getDocSha256(inspectedDoc)
+            }}</code>
+          </div>
+        </div>
+
+        <!-- De-Identification / Redaction Manifest -->
+        <div class="drawer-section">
+          <h4 class="section-heading">HIPAA / GDPR De-identification</h4>
+          <div class="redaction-info">
+            <span v-if="inspectedDoc.is_redacted" class="badge status-approved">
+              🛡️ De-Identified Copy (PHI/PII Scrubber Applied)
+            </span>
+            <span v-else class="badge status-draft">
+              🔒 Regulated Source Original
+            </span>
+          </div>
+        </div>
+
+        <!-- Multimodal DIA Document Intelligence & Signature Completeness -->
+        <div class="drawer-section">
+          <h4 class="section-heading">🤖 DIA Document Intelligence</h4>
+          <div class="intelligence-card">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+              "
+            >
+              <span style="font-size: 12px; font-weight: 600"
+                >DIA Classifier Confidence</span
+              >
+              <span
+                class="badge status-approved"
+                style="font-size: 10px; font-weight: bold"
+              >
+                {{ getDocConfidence(inspectedDoc) }}
+              </span>
+            </div>
             <div class="meta-grid">
               <div class="meta-item">
-                <span class="meta-label">Artifact Code</span>
-                <span class="meta-val font-mono">{{
-                  inspectedDoc.artifact_code ||
-                  inspectedDoc.taxonomy_code ||
-                  "01.01.01"
-                }}</span>
+                <span class="meta-label">Detected Modality</span>
+                <span class="meta-val">{{ getDocModality(inspectedDoc) }}</span>
               </div>
               <div class="meta-item">
-                <span class="meta-label">Zone &amp; Section</span>
-                <span class="meta-val"
-                  >Zone {{ inspectedDoc.zone_id || inspectedDoc.zone || 1 }} -
-                  Trial Management</span
-                >
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Version</span>
-                <span class="meta-val badge status-review"
-                  >v{{ inspectedDoc.version_index || 1 }}.0</span
-                >
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Lifecycle Status</span>
-                <span class="meta-val badge status-approved">{{
-                  inspectedDoc.status || "DRAFT"
-                }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 21 CFR Part 11 Audit Trail & Change Justification -->
-          <div class="drawer-section">
-            <h4 class="section-heading">21 CFR Part 11 Audit Record</h4>
-            <div class="reason-box">
-              <strong>Mandatory Reason for Change:</strong>
-              <p
-                style="
-                  margin: 4px 0 0 0;
-                  font-size: 12px;
-                  color: var(--semantic-color-text);
-                "
-              >
-                {{
-                  inspectedDoc.reason_for_change ||
-                  inspectedDoc.reason ||
-                  "Standard clinical document ingestion and lifecycle management."
-                }}
-              </p>
-            </div>
-            <div class="meta-grid" style="margin-top: 10px">
-              <div class="meta-item">
-                <span class="meta-label">Uploaded By</span>
-                <span class="meta-val font-mono">{{
-                  inspectedDoc.created_by ||
-                  inspectedDoc.uploaded_by ||
-                  "crc.user"
-                }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Uploaded At</span>
-                <span class="meta-val font-mono">{{
-                  inspectedDoc.formattedCreatedAt ||
-                  inspectedDoc.created_at ||
-                  "—"
-                }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Cryptographic SHA-256 Checksum & Seal -->
-          <div class="drawer-section">
-            <h4 class="section-heading">Cryptographic Integrity</h4>
-            <div class="crypto-seal-card">
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  margin-bottom: 6px;
-                "
-              >
-                <span style="font-size: 11px; font-weight: 600"
-                  >SHA-256 Checksum Digest</span
-                >
-                <span class="badge status-approved" style="font-size: 9px"
-                  >LEDGER SEALED</span
-                >
-              </div>
-              <code class="sha256-hash-display">{{
-                getDocSha256(inspectedDoc)
-              }}</code>
-            </div>
-          </div>
-
-          <!-- De-Identification / Redaction Manifest -->
-          <div class="drawer-section">
-            <h4 class="section-heading">HIPAA / GDPR De-identification</h4>
-            <div class="redaction-info">
-              <span
-                v-if="inspectedDoc.is_redacted"
-                class="badge status-approved"
-              >
-                🛡️ De-Identified Copy (PHI/PII Scrubber Applied)
-              </span>
-              <span v-else class="badge status-draft">
-                🔒 Regulated Source Original
-              </span>
-            </div>
-          </div>
-
-          <!-- Multimodal DIA Document Intelligence & Signature Completeness -->
-          <div class="drawer-section">
-            <h4 class="section-heading">🤖 DIA Document Intelligence</h4>
-            <div class="intelligence-card">
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  margin-bottom: 8px;
-                "
-              >
-                <span style="font-size: 12px; font-weight: 600"
-                  >DIA Classifier Confidence</span
-                >
-                <span
-                  class="badge status-approved"
-                  style="font-size: 10px; font-weight: bold"
-                >
-                  {{ getDocConfidence(inspectedDoc) }}
+                <span class="meta-label">Signature Verification</span>
+                <span class="meta-val" :class="getSigStatusClass(inspectedDoc)">
+                  {{ getSigStatusText(inspectedDoc) }}
                 </span>
               </div>
-              <div class="meta-grid">
-                <div class="meta-item">
-                  <span class="meta-label">Detected Modality</span>
-                  <span class="meta-val">{{
-                    getDocModality(inspectedDoc)
-                  }}</span>
-                </div>
-                <div class="meta-item">
-                  <span class="meta-label">Signature Verification</span>
-                  <span
-                    class="meta-val"
-                    :class="getSigStatusClass(inspectedDoc)"
-                  >
-                    {{ getSigStatusText(inspectedDoc) }}
-                  </span>
-                </div>
-                <div
-                  v-if="getExtractedInvestigator(inspectedDoc)"
-                  class="meta-item"
-                >
-                  <span class="meta-label">Investigator</span>
-                  <span class="meta-val font-mono">{{
-                    getExtractedInvestigator(inspectedDoc)
-                  }}</span>
-                </div>
-                <div
-                  v-if="getExtractedProtocol(inspectedDoc)"
-                  class="meta-item"
-                >
-                  <span class="meta-label">Protocol #</span>
-                  <span class="meta-val font-mono">{{
-                    getExtractedProtocol(inspectedDoc)
-                  }}</span>
-                </div>
-              </div>
               <div
-                v-if="
-                  inspectedDoc.status === 'TECHNICAL_QC' ||
-                  inspectedDoc.status === 'DRAFT'
-                "
-                class="qc-accept-panel"
+                v-if="getExtractedInvestigator(inspectedDoc)"
+                class="meta-item"
               >
-                <label for="qc-accept-reason" class="meta-label">
-                  Clinical QC Review Justification (min 10 characters)
-                </label>
-                <input
-                  id="qc-accept-reason"
-                  v-model="qcAcceptReason"
-                  type="text"
-                  class="qc-reason-input"
-                  :disabled="!canReviewQc || reviewingQc"
-                  placeholder="Verified artifact taxonomy, dates, and signatures"
-                />
-                <p
-                  v-if="!canReviewQc"
-                  id="etmf-qc-role-note"
-                  class="qc-role-note"
-                >
-                  {{ ETMF_QC_REVIEW_ROLE_REASON }}
-                </p>
-                <p
-                  v-if="qcReviewError"
-                  id="etmf-qc-review-error"
-                  class="qc-error-note"
-                  role="alert"
-                >
-                  {{ qcReviewError }}
-                </p>
-                <button
-                  id="btn-accept-ai-classification"
-                  type="button"
-                  class="btn btn-secondary"
-                  style="
-                    width: 100%;
-                    padding: 6px 10px;
-                    font-size: 11px;
-                    cursor: pointer;
-                  "
-                  :disabled="
-                    !canReviewQc ||
-                    reviewingQc ||
-                    qcAcceptReason.trim().length < 10
-                  "
-                  :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
-                  @click="handleAcceptClassification(inspectedDoc)"
-                >
-                  {{
-                    reviewingQc
-                      ? "Submitting Clinical QC..."
-                      : "✓ Accept AI Classification"
-                  }}
-                </button>
+                <span class="meta-label">Investigator</span>
+                <span class="meta-val font-mono">{{
+                  getExtractedInvestigator(inspectedDoc)
+                }}</span>
               </div>
+              <div v-if="getExtractedProtocol(inspectedDoc)" class="meta-item">
+                <span class="meta-label">Protocol #</span>
+                <span class="meta-val font-mono">{{
+                  getExtractedProtocol(inspectedDoc)
+                }}</span>
+              </div>
+            </div>
+            <div
+              v-if="
+                inspectedDoc.status === 'TECHNICAL_QC' ||
+                inspectedDoc.status === 'DRAFT'
+              "
+              class="qc-accept-panel"
+            >
+              <label for="qc-accept-reason" class="meta-label">
+                Clinical QC Review Justification (min 10 characters)
+              </label>
+              <input
+                id="qc-accept-reason"
+                v-model="qcAcceptReason"
+                type="text"
+                class="qc-reason-input"
+                :disabled="!canReviewQc || reviewingQc"
+                placeholder="Verified artifact taxonomy, dates, and signatures"
+              />
+              <p
+                v-if="!canReviewQc"
+                id="etmf-qc-role-note"
+                class="qc-role-note"
+              >
+                {{ ETMF_QC_REVIEW_ROLE_REASON }}
+              </p>
+              <p
+                v-if="qcReviewError"
+                id="etmf-qc-review-error"
+                class="qc-error-note"
+                role="alert"
+              >
+                {{ qcReviewError }}
+              </p>
+              <button
+                id="btn-accept-ai-classification"
+                type="button"
+                class="btn btn-secondary"
+                style="
+                  width: 100%;
+                  padding: 6px 10px;
+                  font-size: 11px;
+                  cursor: pointer;
+                "
+                :disabled="
+                  !canReviewQc ||
+                  reviewingQc ||
+                  qcAcceptReason.trim().length < 10
+                "
+                :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
+                @click="handleAcceptClassification(inspectedDoc)"
+              >
+                {{
+                  reviewingQc
+                    ? "Submitting Clinical QC..."
+                    : "✓ Accept AI Classification"
+                }}
+              </button>
             </div>
           </div>
         </div>
+      </template>
 
-        <!-- Drawer Footer Actions -->
-        <div class="drawer-footer">
-          <button
-            class="btn btn-primary btn-preview-from-drawer"
-            style="padding: 8px 16px; font-size: 12px; cursor: pointer"
-            @click="handlePreviewFromDrawer(inspectedDoc)"
-          >
-            👁️ Open Secure PDF Preview
-          </button>
-        </div>
-      </div>
-    </div>
+      <template #footer>
+        <button
+          v-if="inspectedDoc"
+          type="button"
+          class="btn btn-primary btn-preview-from-drawer"
+          style="padding: 8px 16px; font-size: 12px; cursor: pointer"
+          :disabled="reviewingQc"
+          @click="handlePreviewFromDrawer(inspectedDoc)"
+        >
+          👁️ Open Secure PDF Preview
+        </button>
+      </template>
+    </ClinicalDrawer>
 
     <!-- Secure PDF Preview Modal -->
     <PdfPreviewModal
@@ -339,6 +335,7 @@
 </template>
 
 <script setup>
+import { ClinicalDrawer } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import {
@@ -412,7 +409,6 @@ function handleInspectDocument(doc) {
 }
 
 function handlePreviewFromDrawer(doc) {
-  inspectedDoc.value = null;
   selectedDoc.value = doc;
 }
 
@@ -694,18 +690,8 @@ defineExpose({
   display: flex;
   flex-direction: column;
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
-  animation: slideInRight 0.2s ease-out;
   overscroll-behavior: contain;
   touch-action: pan-y;
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
 }
 
 .drawer-header {
