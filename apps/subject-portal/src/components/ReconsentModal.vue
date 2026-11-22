@@ -15,13 +15,12 @@
         @submit.prevent="submitReconsentSignature"
       >
         <div id="portal-reconsent-modal-title" class="modal-header">
-          Protocol Amendment Re-Consent Review
+          Updated Study Consent Review
         </div>
         <div class="modal-body">
           <p style="font-size: 14px; margin-bottom: 12px">
-            A new protocol amendment has been published for your clinical study.
-            Please review the change summary below and execute your electronic
-            signature to complete re-consent.
+            Your study consent form has been updated. Please review what changed
+            below and sign to continue with your study surveys.
           </p>
 
           <div
@@ -60,7 +59,7 @@
                 color: var(--semantic-color-text-dark);
               "
             >
-              Summary of Protocol Amendments:
+              What Changed in Your Study Consent:
             </h4>
             <p
               style="

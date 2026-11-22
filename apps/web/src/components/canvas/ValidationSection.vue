@@ -36,7 +36,8 @@
       {{ errorMessage }}
     </p>
     <p v-else-if="!studyRef" id="study-validation-no-study" class="status-line">
-      The kernel has no study {{ studyCode }} that you may see.
+      Study {{ studyCode }} wasn't found or isn't visible to your account, so
+      its validation rules and findings cannot be listed here.
     </p>
 
     <template v-else>

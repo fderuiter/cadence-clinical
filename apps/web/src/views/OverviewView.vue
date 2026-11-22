@@ -64,6 +64,33 @@
         >
           {{ authStore.activePlanBadge || "Individual Plan" }}
         </span>
+        <span
+          v-if="
+            authStore.subscriptionStatus === 'Trialing' &&
+            !authStore.isTrialExpired &&
+            authStore.trialDaysRemaining !== null &&
+            authStore.trialEndsAtFormatted
+          "
+          id="overview-trial-countdown"
+          class="overview-countdown-text"
+        >
+          Trial window:
+          <strong
+            >{{ authStore.trialDaysRemaining }}
+            {{ authStore.trialDaysRemaining === 1 ? "day" : "days" }}
+            remaining</strong
+          >
+          (ends {{ authStore.trialEndsAtFormatted }})
+        </span>
+        <span
+          v-else-if="authStore.isTrialExpired"
+          id="overview-expired-notice"
+          class="overview-expired-text"
+        >
+          Workspace mutations paused &mdash; clinical reads, regulated exports,
+          and Part 11 signatures remain enabled until study scoping activation
+          is completed.
+        </span>
         <span class="overview-families-text">
           Entitled families:
           <strong>{{ authStore.entitledFamilies.join(", ") }}</strong>
@@ -74,10 +101,16 @@
       </div>
       <router-link
         id="overview-link-plans"
-        to="/plans"
+        :to="
+          authStore.isTrialExpired ? '/plans#scoped-upgrade-intake' : '/plans'
+        "
         class="btn btn-secondary overview-plans-link"
       >
-        Plans &amp; entitlements
+        {{
+          authStore.isTrialExpired
+            ? "Complete Study Scoping"
+            : "Plans & entitlements"
+        }}
       </router-link>
     </section>
 
@@ -764,6 +797,17 @@ function startGuidedTour() {
 .overview-families-text {
   font-size: 0.86rem;
   color: var(--semantic-color-text-dark);
+}
+
+.overview-countdown-text {
+  font-size: 0.86rem;
+  color: var(--semantic-color-text-dark);
+}
+
+.overview-expired-text {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--semantic-color-error-dark);
 }
 
 .overview-prerelease-note {

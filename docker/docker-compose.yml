@@ -254,7 +254,9 @@ services:
     container_name: cadence-etmf
     ports:
       - "8003:8080"
-    environment: *db-env
+    environment:
+      <<: *db-env
+      EXECUTION_SERVICE_URL: http://execution:8080
     depends_on: *db-depends
 
   interop:

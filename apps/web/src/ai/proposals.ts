@@ -83,7 +83,7 @@ export function approvalBlockers(
   if (proposal.proposed_by === reviewer) {
     blockers.push({
       id: "own-proposal",
-      text: "You made this proposal, so another person approves it (ADR-2489).",
+      text: "You made this proposal, so another person must approve it.",
     });
   }
   const sources = proposalSources(proposal);
@@ -108,7 +108,7 @@ export function approvalBlockers(
   if (!signingAvailable) {
     blockers.push({
       id: "signing-unavailable",
-      text: "Approving needs an electronic signature, which the kernel can't take over the web yet (#5552). You can reject it now.",
+      text: "Approving requires an electronic signature, which isn't available in the web workspace yet. You can still reject this proposal below.",
     });
   }
   return blockers;

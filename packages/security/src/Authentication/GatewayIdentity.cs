@@ -22,6 +22,7 @@ public static class GatewayHeaders
     public const string SponsorId = "X-Sponsor-Id";
     public const string UnblindedAccess = "X-Unblinded-Access";
     public const string TenantId = "X-Tenant-Id";
+    public const string TenantReadOnly = "X-Tenant-Read-Only";
     public const string ChangeReason = "X-Change-Reason";
     public const string SigToken = "X-Sig-Token";
     public const string Timestamp = "X-Timestamp";
@@ -33,7 +34,7 @@ public static class GatewayHeaders
     /// </summary>
     public static IReadOnlyList<string> GatewayAsserted { get; } =
     [
-        UserId, Roles, SiteId, StudyIds, SubjectCode, SponsorId, UnblindedAccess, TenantId, Timestamp, Signature,
+        UserId, Roles, SiteId, StudyIds, SubjectCode, SponsorId, UnblindedAccess, TenantId, TenantReadOnly, Timestamp, Signature,
         "X-User-Role", "X-User-Site", "X-Reason-For-Change",
     ];
 }
@@ -52,7 +53,8 @@ public sealed record GatewayIdentity(
     string? ChangeReason = null,
     string? SigToken = null,
     IReadOnlyList<string>? StudyIds = null,
-    string? SubjectCode = null)
+    string? SubjectCode = null,
+    bool TenantReadOnly = false)
 {
     // ChangeReason is the decoded text the user typed, never its header encoding (see ChangeReasonHeader).
     // TenantId is the tenant code the sign-in token names, or null when it names none: there is no fallback tenant
@@ -94,13 +96,15 @@ public sealed record GatewayIdentity(
             unblindedAccess: UnblindedAccess,
             tenantId: tenantId,
             sigToken: sigToken,
-            subjectCode: subjectCode);
+            subjectCode: subjectCode,
+            tenantReadOnly: TenantReadOnly);
 
-        var headers = new Dictionary<string, string>(capacity: 12, StringComparer.OrdinalIgnoreCase)
+        var headers = new Dictionary<string, string>(capacity: 13, StringComparer.OrdinalIgnoreCase)
         {
             [GatewayHeaders.UserId] = UserId,
             [GatewayHeaders.Roles] = rolesHeader,
             [GatewayHeaders.UnblindedAccess] = UnblindedAccess ? "true" : "false",
+            [GatewayHeaders.TenantReadOnly] = TenantReadOnly ? "true" : "false",
             [GatewayHeaders.Timestamp] = timestamp,
             [GatewayHeaders.Signature] = signature,
         };

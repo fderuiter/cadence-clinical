@@ -1,8 +1,8 @@
 import { http, HttpResponse } from "msw";
 import { isValidSemanticAction, isValidStepUpAction } from "ui";
+import { demoNowIso, demoNowMs, nextDemoStep } from "../utils/demoMode.js";
 import { webDemoStore } from "./demoStore.js";
 import { parseDemoProtocolImportRequest } from "./demoStudyImport.js";
-import { demoNowIso, demoNowMs } from "../utils/demoMode.js";
 
 const DEFAULT_STUDY_REF = "study:00000000-0000-0000-0000-000000000001"; // deid-ignore
 
@@ -115,8 +115,8 @@ export function createWebDemoHandlers(store = webDemoStore) {
     ),
     http.post("*/api/v1/kernel/entitlements/tier", async ({ request }) => {
       const body = await readJsonBody(request);
-      const updated = store.upgradeSubscriptionTier(body?.tier);
-      if (!updated) {
+      const outcome = store.upgradeSubscriptionTier(body?.tier);
+      if (!outcome || outcome.error === "invalid_tier") {
         return HttpResponse.json(
           {
             type: "https://cadence.clinical/errors/K.Commercial.TierInvalid",
@@ -127,7 +127,50 @@ export function createWebDemoHandlers(store = webDemoStore) {
           { status: 400 }
         );
       }
-      return HttpResponse.json(updated);
+      if (outcome.error === "expired") {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.Subscription.Expired",
+            title: "Trial subscription expired",
+            status: 403,
+            code: "K.Subscription.Expired",
+            detail:
+              "This tenant's trial subscription has expired. Read and export access remains active; activate a subscription to resume workspace writes.",
+          },
+          { status: 403 }
+        );
+      }
+      return HttpResponse.json(outcome.data);
+    }),
+    http.post("*/api/v1/kernel/entitlements/activate", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const outcome = store.activateSubscription(body);
+      if (outcome.error === "invalid_tier") {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.Commercial.TierInvalid",
+            title: "Invalid commercial tier",
+            status: 400,
+            code: "K.Commercial.TierInvalid",
+          },
+          { status: 400 }
+        );
+      }
+      if (outcome.error === "scoping_invalid") {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.Commercial.ScopingInvalid",
+            title: "Study scoping details required for subscription activation",
+            status: 422,
+            code: "K.Commercial.ScopingInvalid",
+            detail:
+              "Activating a commercial subscription requires valid study phase, duration, participating countries, site count, participant count, active study count, and a purchase order or quote confirmation.",
+            errors: outcome.errors,
+          },
+          { status: 422 }
+        );
+      }
+      return HttpResponse.json(outcome.data);
     }),
     http.post("*/api/v1/kernel/onboarding/trial", async ({ request }) => {
       const body = await readJsonBody(request);
@@ -1045,8 +1088,9 @@ export function createWebDemoHandlers(store = webDemoStore) {
     ),
     http.post("*/api/v1/ctms/monitoring-visits", async ({ request }) => {
       const body = await readJsonBody(request);
+      const step = nextDemoStep("ctms-visit-schedule");
       const visit = {
-        id: `mv-${Date.now()}`,
+        id: `mv-demo-${step}`,
         status: "SCHEDULED",
         ...body,
       };
@@ -1059,7 +1103,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
           id: `ltr-${params.id}`,
           visit_id: String(params.id),
           letter_type: "CONFIRMATION",
-          generated_at: "2026-07-18T10:00:00Z",
+          subject: "Monitoring Visit Confirmation",
+          body_markdown:
+            "Scheduled monitoring visit confirmation and agenda summary.",
+          status: "COMPILED",
+          generated_at: demoNowIso(0),
         },
       ])
     ),
@@ -1070,19 +1118,78 @@ export function createWebDemoHandlers(store = webDemoStore) {
           id: `ltr-${params.id}-${params.letterType}`,
           visit_id: String(params.id),
           letter_type: String(params.letterType),
-          generated_at: "2026-07-18T10:00:00Z",
+          subject: `Monitoring Visit ${params.letterType}`,
+          body_markdown: `Generated ${params.letterType} letter for visit ${params.id}.`,
+          status: "COMPILED",
+          generated_at: demoNowIso(0),
         })
     ),
-    http.post("*/api/v1/ctms/monitoring-visits/:id/:action", ({ params }) => {
-      const found = store.state.monitoringVisits.find(
-        (v) => v.id === params.id
-      );
-      if (found) {
-        found.status =
-          params.action === "sign-off" ? "SIGNED_OFF" : "COMPLETED";
+    http.post(
+      "*/api/v1/ctms/monitoring-visits/:id/:action",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const found = store.state.monitoringVisits.find(
+          (v) => v.id === params.id
+        );
+        if (found) {
+          found.status =
+            params.action === "sign-off" ? "SIGNED_OFF" : "COMPLETED";
+          if (body?.actual_date) found.actual_date = body.actual_date;
+          if (Array.isArray(body?.findings)) found.findings = body.findings;
+        }
+        return HttpResponse.json(
+          found || { id: params.id, status: "COMPLETED" }
+        );
       }
-      return HttpResponse.json(found || { id: params.id, status: "COMPLETED" });
+    ),
+    http.post("*/api/v1/ctms/letters/render", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return new HttpResponse(
+        `Monitoring Visit Letter Preview — Study ${body?.studyId || "CADENCE-101"} / Site ${body?.siteName || "SITE-101"}`,
+        {
+          status: 200,
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        }
+      );
     }),
+    http.post("*/api/v1/ctms/letters/compile", async ({ request }) => {
+      const url = new URL(request.url);
+      const body = await readJsonBody(request);
+      const step = nextDemoStep("ctms-letter-compile");
+      const letterId = `LTR-DEMO-${step}`;
+      const templateName =
+        url.searchParams.get("templateName") || "follow_up_letter";
+      return HttpResponse.json({
+        letterId,
+        letter_id: letterId,
+        visitId: body?.visitId || null,
+        letterType: templateName,
+        template_name: templateName,
+        study_id: body?.studyId || "CADENCE-101",
+        site_name: body?.siteName || body?.siteId || "SITE-101",
+        compiled_at: demoNowIso(step),
+        dispatchedAt: demoNowIso(step),
+        pdfSha256Hash: `sha256-demo-letter-${step}`,
+        sha256_hash: `sha256-demo-letter-${step}`,
+        isSigned: Boolean(body?.finalize),
+        status: body?.finalize ? "FINALIZED" : "COMPILED",
+        etmfDocumentId: `DOC-LTR-${step}`,
+        etmf_document_id: `DOC-LTR-${step}`,
+        pdfAccessUrl: `/api/v1/ctms/letters/${letterId}/pdf`,
+        pdf_download_url: `/api/v1/ctms/letters/${letterId}/pdf`,
+      });
+    }),
+    http.get(
+      "*/api/v1/ctms/letters/:letterId/pdf",
+      ({ params }) =>
+        new HttpResponse(
+          `%PDF-1.4\n% Demo Compiled Monitoring Letter ${params.letterId}\n`,
+          {
+            status: 200,
+            headers: { "Content-Type": "application/pdf" },
+          }
+        )
+    ),
     http.get("*/api/v1/ctms/cra-allocations/workload", () =>
       HttpResponse.json(store.state.craWorkload)
     ),
@@ -1113,12 +1220,17 @@ export function createWebDemoHandlers(store = webDemoStore) {
         store.state.doaLogs.get(siteId) || store.state.doaLogs.get("SITE-101")
       );
     }),
-    http.get("*/api/v1/ctms/doa/sites/:siteId/export-pdf", () => {
-      return new HttpResponse("%PDF-1.4 synthetic DoA export", {
-        status: 200,
-        headers: { "Content-Type": "application/pdf" },
-      });
-    }),
+    http.get(
+      "*/api/v1/ctms/doa/sites/:siteId/export-pdf",
+      ({ params }) =>
+        new HttpResponse(
+          `%PDF-1.4\n% Demo Delegation of Authority Log ${params.siteId}\n`,
+          {
+            status: 200,
+            headers: { "Content-Type": "application/pdf" },
+          }
+        )
+    ),
     http.post("*/api/v1/ctms/doa/:action", async ({ params, request }) => {
       const body = await readJsonBody(request);
       const log = store.state.doaLogs.get("SITE-101");
@@ -1536,7 +1648,133 @@ export function createWebDemoHandlers(store = webDemoStore) {
       });
     }),
     http.get("*/api/v1/etmf/intelligence/qc-queue", () =>
-      HttpResponse.json([])
+      HttpResponse.json(
+        etmfDocuments
+          .filter((d) => d.status === "TECHNICAL_QC")
+          .map((d) => ({
+            document_id: d.id,
+            study_id: d.study_id || "CADENCE-101",
+            site_id: d.site_id || null,
+            filename: d.filename,
+            status: d.status,
+            staged_at: d.uploaded_at || demoNowIso(0),
+            staged_by: "cra.monitor",
+            qc_assigned_to: null,
+            discrepancy_notes: [],
+            intelligence_report: {
+              document_id: d.id,
+              filename: d.filename,
+              mime_type: "application/pdf",
+              sha256_hash: "sha256-demo-qc-doc",
+              confidence_tier: "HIGH",
+              qc_recommendation: "AUTO_CLASSIFY",
+              primary_classification: {
+                zone: 5,
+                section: "05.02",
+                artifact_code: d.artifact_code || "05.02.01",
+                artifact_type: d.artifact_type || "FDA Form 1572",
+                confidence: 0.98,
+              },
+              alternative_candidates: [],
+            },
+          }))
+      )
+    ),
+    http.post("*/api/v1/etmf/intelligence/classify", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json({
+        document_id: null,
+        filename: body?.filename || "document.pdf",
+        mime_type: body?.mimeType || body?.mime_type || "application/pdf",
+        sha256_hash: "sha256-demo-classified",
+        confidence_tier: "HIGH",
+        qc_recommendation: "AUTO_CLASSIFY",
+        primary_classification: {
+          zone: 5,
+          section: "05.02",
+          artifact_code: "05.02.01",
+          artifact_type: "FDA Form 1572",
+          confidence: 0.98,
+        },
+        alternative_candidates: [],
+      });
+    }),
+    http.post("*/api/v1/etmf/intelligence/stage-qc", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const step = nextDemoStep("etmf-stage-qc");
+      const docId = `DOC-DEMO-QC-${step}`;
+      const stagedAt = demoNowIso(step);
+      const studyId = body?.studyId || body?.study_id || "CADENCE-101";
+      const siteId = body?.siteId || body?.site_id || null;
+      const filename = body?.filename || "staged_document.pdf";
+      etmfDocuments.unshift({
+        id: docId,
+        study_id: studyId,
+        site_id: siteId,
+        filename,
+        zone: 5,
+        section: "05.02",
+        artifact_type: "FDA Form 1572",
+        artifact_code: "05.02.01",
+        status: "TECHNICAL_QC",
+        version_index: 1,
+        uploaded_at: stagedAt,
+      });
+      return HttpResponse.json(
+        {
+          document_id: docId,
+          study_id: studyId,
+          site_id: siteId,
+          filename,
+          status: "TECHNICAL_QC",
+          staged_at: stagedAt,
+          staged_by: "cra.monitor",
+          qc_assigned_to: body?.assignedCra || body?.assigned_cra || null,
+          discrepancy_notes: [],
+          intelligence_report: {
+            document_id: docId,
+            filename,
+            mime_type: body?.mimeType || body?.mime_type || "application/pdf",
+            sha256_hash: `sha256-demo-qc-${step}`,
+            confidence_tier: "HIGH",
+            qc_recommendation: "AUTO_CLASSIFY",
+            primary_classification: {
+              zone: 5,
+              section: "05.02",
+              artifact_code: "05.02.01",
+              artifact_type: "FDA Form 1572",
+              confidence: 0.98,
+            },
+            alternative_candidates: [],
+          },
+        },
+        { status: 201 }
+      );
+    }),
+    http.post(
+      "*/api/v1/etmf/intelligence/qc-review/:docId",
+      async ({ params, request }) => {
+        const docId = decodeURIComponent(String(params.docId));
+        const body = await readJsonBody(request);
+        const decision = String(body?.decision || "ACCEPT").toUpperCase();
+        const nextStatus = decision === "REJECT" ? "REJECTED" : "APPROVED";
+        const existing = etmfDocuments.find((d) => d.id === docId);
+        if (existing) {
+          existing.status = nextStatus;
+        }
+        return HttpResponse.json(
+          existing || {
+            id: docId,
+            study_id: "CADENCE-101",
+            filename: "reviewed_document.pdf",
+            status: nextStatus,
+            reason_for_change:
+              body?.reasonForChange ||
+              body?.reason_for_change ||
+              decodeReasonHeader(request),
+          }
+        );
+      }
     ),
     http.get("*/api/v1/etmf/export-jobs", () => HttpResponse.json([])),
     http.get("*/api/v1/execution/audit/integrity", () =>
@@ -2405,7 +2643,73 @@ export function createWebDemoHandlers(store = webDemoStore) {
         },
       })
     ),
+    http.get("*/api/v1/training/curricula/:curriculumId", ({ params }) =>
+      HttpResponse.json({
+        id: String(params.curriculumId),
+        study_id: "DEMO-01",
+        title: "DEMO-01 Protocol v2.0 Core Qualification",
+        version: "2.0",
+        status: "ACTIVE",
+        modules: [
+          {
+            id: "mod-01",
+            title: "Protocol Synopsis & Eligibility",
+            content: "Synthetic protocol qualification module.",
+            quiz_questions: [],
+          },
+        ],
+      })
+    ),
+    http.post(
+      "*/api/v1/training/curricula/batch-assign",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        const step = nextDemoStep("training-batch-assign");
+        return HttpResponse.json({
+          batch_transaction_id: `TRN-BATCH-${step}`,
+          curriculum_id: body?.curriculum_id || "curr-demo-01",
+          study_id: body?.study_id || "CADENCE-101",
+          total_eligible: 1,
+          total_assigned: 1,
+          total_skipped: 0,
+          assignments: [
+            {
+              id: `asn-batch-${step}`,
+              study_id: body?.study_id || "CADENCE-101",
+              curriculum_id: body?.curriculum_id || "curr-demo-01",
+              status: "ASSIGNED",
+            },
+          ],
+          skipped_items: [],
+          executed_at: demoNowIso(step),
+        });
+      }
+    ),
     http.get("*/api/v1/training/delegations", () => HttpResponse.json([])),
+    http.post(
+      "*/api/v1/training/delegations/bulk-signoff",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        const step = nextDemoStep("training-delegations-signoff");
+        const ids = Array.isArray(body?.delegation_ids)
+          ? body.delegation_ids
+          : [];
+        return HttpResponse.json({
+          batch_transaction_id: `DLG-BATCH-${step}`,
+          total_requested: ids.length,
+          total_signed: ids.length,
+          total_failed: 0,
+          signed_delegations: ids.map((id) => ({
+            id,
+            status: "SIGNED",
+          })),
+          failed_items: [],
+          sha256_seal: `sha256-demo-dlg-${step}`,
+          etmf_artifact_id: `DOC-DLG-${step}`,
+          executed_at: demoNowIso(step),
+        });
+      }
+    ),
     http.get("*/api/v1/training/gating-status", () =>
       HttpResponse.json({ is_gated: false })
     ),

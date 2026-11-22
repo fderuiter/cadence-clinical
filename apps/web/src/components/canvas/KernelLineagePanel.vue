@@ -8,15 +8,16 @@
       {{ title }}
     </h3>
     <p v-if="loading" class="lineage-note" role="status">
-      Reading the kernel's lineage…
+      Loading related records…
     </p>
-    <p v-else-if="error" class="lineage-note" role="alert">
-      The kernel couldn't answer: {{ error }}
-    </p>
+    <div v-else-if="error" class="lineage-note" role="alert">
+      <p class="lineage-note">Related records couldn't be loaded right now.</p>
+      <SupportDetails :detail="error" />
+    </div>
 
     <template v-else-if="mode === 'trace' && lineage">
       <p v-if="!lineage.edges.length" class="lineage-note" role="status">
-        The kernel records nothing this came from.
+        No upstream source records are recorded for this item.
       </p>
       <ol v-else :id="`kernel-${verb}-list`" class="lineage-list">
         <li
@@ -24,9 +25,41 @@
           :key="`edge-${index}`"
           class="lineage-edge"
         >
-          <span class="lineage-object">{{ describe(edge.from) }}</span>
+          <span class="lineage-object">
+            <span
+              v-if="edgeNode(edge.from) && isMasked(edgeNode(edge.from)!)"
+              class="noderef-masked"
+              >{{
+                formatMaskedNode(
+                  edgeNode(edge.from)!.kind,
+                  edgeNode(edge.from)!.mask
+                )
+              }}</span
+            >
+            <NodeRefChip
+              v-else-if="edgeNode(edge.from)?.ref"
+              :node-ref="edgeNode(edge.from)!.ref!"
+            />
+            <template v-else>{{ edge.from }}</template>
+          </span>
           <span class="lineage-kind">{{ ` ${words(edge.kind)} ` }}</span>
-          <span class="lineage-object">{{ describe(edge.to) }}</span>
+          <span class="lineage-object">
+            <span
+              v-if="edgeNode(edge.to) && isMasked(edgeNode(edge.to)!)"
+              class="noderef-masked"
+              >{{
+                formatMaskedNode(
+                  edgeNode(edge.to)!.kind,
+                  edgeNode(edge.to)!.mask
+                )
+              }}</span
+            >
+            <NodeRefChip
+              v-else-if="edgeNode(edge.to)?.ref"
+              :node-ref="edgeNode(edge.to)!.ref!"
+            />
+            <template v-else>{{ edge.to }}</template>
+          </span>
         </li>
       </ol>
       <p v-if="lineage.truncated" class="lineage-note">
@@ -42,7 +75,7 @@
           class="lineage-note"
           role="status"
         >
-          The kernel records no element this amendment changes.
+          No protocol elements were changed in this amendment.
         </p>
         <ul v-else id="kernel-amendment-changes" class="lineage-list">
           <li
@@ -58,7 +91,7 @@
               v-if="change.properties.length"
               class="lineage-note amendment-properties"
             >
-              ({{ change.properties.join(", ") }})
+              ({{ change.properties.map(formatFieldPath).join(", ") }})
             </span>
           </li>
         </ul>
@@ -67,7 +100,7 @@
         </h4>
       </template>
       <p v-if="!dependents.groups.length" class="lineage-note" role="status">
-        Nothing the kernel records depends on this.
+        No downstream records depend on this item.
       </p>
       <template v-else>
         <p :id="`kernel-${verb}-total`" class="lineage-total">
@@ -89,7 +122,11 @@
               </summary>
               <ul class="lineage-objects">
                 <li v-for="object in group.objects" :key="object.handle">
-                  {{ label(object) }}
+                  <span v-if="isMasked(object)" class="noderef-masked">
+                    {{ formatMaskedNode(object.kind, object.mask) }}
+                  </span>
+                  <NodeRefChip v-else-if="object.ref" :node-ref="object.ref" />
+                  <template v-else>{{ object.handle }}</template>
                 </li>
               </ul>
             </details>
@@ -115,14 +152,17 @@ import {
   type KernelLineage,
   type KernelLineageNode,
 } from "../../api/kernelApi";
+import {
+  ensureNodesResolved,
+  formatFieldPath,
+  formatMaskedNode,
+} from "../../canvas/nodeResolver";
+import NodeRefChip from "./NodeRefChip.vue";
+import SupportDetails from "./SupportDetails.vue";
 
 /**
- * The Trace and Impact verbs (docs/ux/CLINICAL_CANVAS.md §4, ADR-2540): the kernel's lineage walk backward from the
- * selected object, or its dependents grouped by kind with counts. Both come from the kernel as they are (Canvas D2):
- * an object the reader may not see keeps its place as its kind and mask reason, and is counted, never dropped. A
- * refusal or an unreachable kernel is reported as it is; nothing is inferred in the browser (K-TRUTH-1). On a
- * protocol amendment, Impact is the amendment's impact (K-PROT-2): the elements it adds, changes or removes, then
- * what depends on the version it amends.
+ * The Trace and Impact verbs (docs/ux/CLINICAL_CANVAS.md §4, ADR-2540): upstream lineage or downstream dependents
+ * grouped by kind with exact counts. Restricted records keep their place as masked placeholders and are counted.
  */
 const props = defineProps<{
   nodeRef: string;
@@ -156,15 +196,8 @@ function words(name: string): string {
     .toLowerCase();
 }
 
-function label(node: KernelLineageNode): string {
-  return isMasked(node)
-    ? `Hidden ${words(node.kind)} (${words(node.mask ?? "")})`
-    : (node.ref ?? node.handle);
-}
-
-function describe(handle: string): string {
-  const node = nodes.value.get(handle);
-  return node ? label(node) : handle;
+function edgeNode(handle: string): KernelLineageNode | null {
+  return nodes.value.get(handle) ?? null;
 }
 
 let latest = 0;
@@ -179,16 +212,33 @@ async function load() {
   try {
     if (props.mode === "trace") {
       const result = await kernelApi.trace(props.nodeRef);
-      if (request === latest) lineage.value = result;
+      if (request === latest) {
+        lineage.value = result;
+        ensureNodesResolved(
+          result.nodes.filter((n) => !isMasked(n)).map((n) => n.ref)
+        );
+      }
     } else if (props.mode === "amendment") {
       const result = await kernelApi.amendmentImpact(props.nodeRef);
       if (request === latest) {
         amendment.value = result;
         dependents.value = result.dependents;
+        ensureNodesResolved(
+          result.dependents.groups.flatMap((g) =>
+            g.objects.filter((o) => !isMasked(o)).map((o) => o.ref)
+          )
+        );
       }
     } else {
       const result = await kernelApi.dependents(props.nodeRef);
-      if (request === latest) dependents.value = result;
+      if (request === latest) {
+        dependents.value = result;
+        ensureNodesResolved(
+          result.groups.flatMap((g) =>
+            g.objects.filter((o) => !isMasked(o)).map((o) => o.ref)
+          )
+        );
+      }
     }
   } catch (e) {
     if (request === latest) {

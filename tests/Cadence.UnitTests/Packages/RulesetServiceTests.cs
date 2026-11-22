@@ -302,6 +302,29 @@ public sealed class RulesetServiceTests : IDisposable
         writer.ToString().Should().Contain("HTTP 403");
     }
 
+    [Fact]
+    public void Validate_WhenRulesetsDirectoryIsAbsent_StillEnforcesCiGateCoverageAndSyncFailsClosed()
+    {
+        Directory.Delete(Path.Combine(_root, ".github", "rulesets"), recursive: true);
+
+        using (var validWriter = new StringWriter())
+        {
+            RulesetService.Validate(_root, validWriter).Should().Be(0, validWriter.ToString());
+            validWriter.ToString().Should().Contain("Validated CI Gate workflow coverage");
+        }
+
+        using (var syncWriter = new StringWriter())
+        {
+            RulesetService.Sync(repoRoot: _root, dryRun: true, output: syncWriter).Should().Be(1);
+            syncWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
+        }
+
+        WriteCiWorkflow(ciGateNeeds: "[unit-tests]", ciGateIf: "success()", checkComplianceResult: false);
+        using var brokenCiGateWriter = new StringWriter();
+        RulesetService.Validate(_root, brokenCiGateWriter).Should().Be(1);
+        brokenCiGateWriter.ToString().Should().Contain("if: always()");
+    }
+
     private void SeedValidFixture()
     {
         WriteMainRuleset(strict: true, integrationId: RulesetService.GitHubActionsIntegrationId, firstCheck: "CI Gate");

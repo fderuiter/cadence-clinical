@@ -1,16 +1,20 @@
 <template>
   <div id="section-ctms" class="dashboard-section active">
     <!-- Header Section -->
-    <div class="section-header">
+    <div v-if="!sectionMode" class="section-header">
       <h2>Site readiness</h2>
       <p>
-        Monitor operational site status, track site lifecycle milestones,
-        recruitment metrics, and coordinate site readiness workflows.
+        Monitor operational site status, track site lifecycle milestones, and
+        coordinate site readiness workflows.
       </p>
     </div>
 
-    <!-- Outside demo builds, expose backed Execution & CTMS workspaces and gate unbacked actions (#4829). -->
-    <div v-if="!demoBuild" id="ctms-live-workspace" class="live-workspace">
+    <!-- Outside demo builds (when not embedded in sectionMode), expose backed Execution & CTMS workspaces and gate unbacked actions (#4829). -->
+    <div
+      v-if="!demoBuild && !sectionMode"
+      id="ctms-live-workspace"
+      class="live-workspace"
+    >
       <nav
         id="ctms-live-tabs"
         class="live-tabs"
@@ -46,8 +50,9 @@
     </div>
 
     <template v-else>
-      <!-- Live CTMS KPI Metric Cards Grid -->
+      <!-- Demo-only CTMS KPI Metric Cards Grid -->
       <div
+        v-if="demoBuild && !sectionMode"
         class="stats-grid"
         style="
           display: grid;
@@ -212,6 +217,7 @@
 
       <!-- Reactive Tabs Header -->
       <div
+        v-if="!sectionMode"
         class="tabs-container"
         style="
           display: flex;
@@ -297,6 +303,7 @@
           Delegation Matrix
         </button>
         <button
+          v-if="demoBuild"
           id="tab-financials"
           class="tab-btn clinical-tab"
           :class="{ active: activeTab === 'financials' }"
@@ -344,9 +351,10 @@
           "
           @click="activeTab = 'startup'"
         >
-          🚀 Study Startup &amp; Greenlight
+          Study Startup &amp; Greenlight
         </button>
         <button
+          v-if="demoBuild"
           id="tab-rtsm"
           class="tab-btn clinical-tab"
           :class="{ active: activeTab === 'rtsm' }"
@@ -382,14 +390,74 @@
           border-radius: 6px;
           margin-bottom: 20px;
           display: flex;
-          gap: 24px;
+          flex-wrap: wrap;
+          gap: 16px 24px;
           align-items: center;
           font-size: 14px;
           color: var(--semantic-color-text-body);
         "
       >
-        <div><strong>Study ID:</strong> {{ studyId }}</div>
-        <div><strong>Site ID:</strong> {{ siteId }}</div>
+        <template v-if="demoBuild">
+          <div><strong>Study ID:</strong> {{ studyId }}</div>
+          <div><strong>Site ID:</strong> {{ siteId }}</div>
+        </template>
+        <template v-else>
+          <div
+            v-if="props.studyCode"
+            style="display: flex; align-items: center; gap: 6px"
+          >
+            <strong>Study:</strong>
+            <span>{{ studyId }}</span>
+          </div>
+          <div v-else style="display: flex; align-items: center; gap: 8px">
+            <label
+              for="ctms-study-input"
+              style="margin: 0; font-weight: 600; white-space: nowrap"
+              >Study</label
+            >
+            <input
+              id="ctms-study-input"
+              v-model="localStudyId"
+              type="text"
+              placeholder="e.g. CAD-101"
+              style="width: 150px; padding: 5px 8px"
+              @change="syncScopeToStore"
+            />
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <label
+              for="ctms-site-picker"
+              style="margin: 0; font-weight: 600; white-space: nowrap"
+              >Site</label
+            >
+            <select
+              id="ctms-site-picker"
+              v-model="sitePickerChoice"
+              style="width: 190px; padding: 5px 8px"
+              @change="onSitePickerChange"
+            >
+              <option value="">Select site…</option>
+              <option value="SITE-101">SITE-101</option>
+              <option value="SITE-102">SITE-102</option>
+              <option value="__custom__">Custom site code…</option>
+            </select>
+            <label
+              v-if="sitePickerChoice === '__custom__'"
+              for="ctms-site-input"
+              class="sr-only"
+              >Custom site code</label
+            >
+            <input
+              v-if="sitePickerChoice === '__custom__'"
+              id="ctms-site-input"
+              v-model="localSiteId"
+              type="text"
+              placeholder="e.g. SITE-204"
+              style="width: 140px; padding: 5px 8px"
+              @change="syncScopeToStore"
+            />
+          </div>
+        </template>
         <div
           style="
             margin-left: auto;
@@ -398,12 +466,28 @@
             gap: 8px;
           "
         >
-          <strong>eTMF Compliance Status:</strong>
+          <strong>Site Document Readiness:</strong>
           <span
-            v-if="loadingCompliance"
+            v-if="!hasActiveScope"
+            style="color: var(--semantic-color-text-secondary)"
+            >Select study &amp; site</span
+          >
+          <span
+            v-else-if="loadingCompliance"
             style="color: var(--semantic-color-text-secondary)"
             >Loading...</span
           >
+          <span
+            v-else-if="complianceLoadError"
+            class="badge"
+            style="
+              background-color: var(--semantic-color-warning-dark);
+              color: var(--semantic-color-text-on-solid);
+            "
+            :title="complianceLoadError"
+          >
+            STATUS UNAVAILABLE
+          </span>
           <span
             v-else
             class="badge"
@@ -418,7 +502,7 @@
             "
             :title="
               complianceStatus.is_complete
-                ? 'All required documents approved in eTMF.'
+                ? 'All required activation documents approved.'
                 : 'Missing: ' +
                   (complianceStatus.missing_documents || []).join(', ')
             "
@@ -428,11 +512,32 @@
         </div>
       </div>
 
-      <!-- Tab 1: Core Operations -->
-      <div v-if="activeTab === 'operations'">
-        <div class="grid-2-responsive">
+      <!-- Tab 1: Core Operations / Conduct Milestones & Monitoring -->
+      <div
+        v-if="
+          sectionMode === 'milestones' ||
+          sectionMode === 'monitoring' ||
+          (!sectionMode && activeTab === 'operations')
+        "
+      >
+        <SiteActivationPanel
+          v-if="!sectionMode && !demoBuild"
+          :study-code="props.studyCode"
+          style="margin-bottom: 20px"
+        />
+
+        <div
+          v-if="operationsLoadError"
+          id="ctms-operations-error"
+          class="doa-load-error"
+          role="alert"
+        >
+          Site operations could not be loaded: {{ operationsLoadError }}
+        </div>
+
+        <div :class="sectionMode ? '' : 'grid-2-responsive'">
           <!-- Site Milestones Card -->
-          <div class="card">
+          <div v-if="!sectionMode || sectionMode === 'milestones'" class="card">
             <div class="card-title">Site Operational Milestones</div>
             <div id="ctms-milestones-container">
               <table class="clinical-visit-matrix">
@@ -474,16 +579,26 @@
                         padding: 12px;
                       "
                     >
-                      No milestones found. Create one to begin tracking.
+                      {{
+                        hasActiveScope
+                          ? "No milestones found. Create one to begin tracking."
+                          : "Select a study and site to inspect milestones."
+                      }}
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            <div style="margin-top: 12px; display: flex; gap: 8px">
+            <div
+              style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px"
+            >
               <button
                 id="btn-achieve-milestone"
                 class="btn btn-primary"
+                :disabled="!canManageMilestones || !hasActiveScope"
+                :title="
+                  !canManageMilestones ? SITE_MILESTONE_ROLE_REASON : undefined
+                "
                 @click="achieveMilestone"
               >
                 Achieve Current Milestone
@@ -491,16 +606,27 @@
               <button
                 id="btn-create-milestone"
                 class="btn btn-secondary"
+                :disabled="!canManageMilestones || !hasActiveScope"
+                :title="
+                  !canManageMilestones ? SITE_MILESTONE_ROLE_REASON : undefined
+                "
                 @click="openCreateMilestone"
               >
                 Add Milestone
               </button>
             </div>
+            <p
+              v-if="!canManageMilestones"
+              id="ctms-milestone-role-note"
+              class="role-note"
+            >
+              {{ SITE_MILESTONE_ROLE_REASON }}
+            </p>
           </div>
 
           <!-- Monitoring Visits Card -->
-          <div class="card">
-            <div class="card-title">CRA Site Monitoring Visits (MVR)</div>
+          <div v-if="!sectionMode || sectionMode === 'monitoring'" class="card">
+            <div class="card-title">Site Monitoring Visits (MVR)</div>
             <div id="ctms-visits-container">
               <table class="clinical-visit-matrix">
                 <thead>
@@ -517,6 +643,16 @@
                   <tr v-for="v in visits" :key="v.id">
                     <td>
                       <strong>{{ v.visit_type }}</strong>
+                      <div
+                        v-if="Array.isArray(v.findings) && v.findings.length"
+                        style="
+                          font-size: 11px;
+                          color: var(--semantic-color-text-secondary);
+                          margin-top: 2px;
+                        "
+                      >
+                        {{ v.findings.length }} finding(s)
+                      </div>
                     </td>
                     <td>
                       {{
@@ -537,14 +673,52 @@
                       >
                     </td>
                     <td>
-                      <button
-                        v-if="v.status === 'COMPLETED'"
-                        class="btn btn-primary btn-sm"
-                        style="padding: 2px 6px; font-size: 11px"
-                        @click="signOffVisit(v)"
-                      >
-                        Sign-off
-                      </button>
+                      <div style="display: flex; flex-wrap: wrap; gap: 4px">
+                        <button
+                          v-if="v.status === 'SCHEDULED'"
+                          type="button"
+                          class="btn btn-primary btn-sm"
+                          :data-testid="`btn-complete-visit-${v.id}`"
+                          :disabled="!canManageVisits"
+                          :title="
+                            !canManageVisits
+                              ? MONITORING_VISIT_COMPLETE_ROLE_REASON
+                              : undefined
+                          "
+                          @click="openCompleteVisitModal(v)"
+                        >
+                          Complete
+                        </button>
+                        <button
+                          v-if="v.status === 'COMPLETED'"
+                          type="button"
+                          class="btn btn-primary btn-sm"
+                          :data-testid="`btn-signoff-visit-${v.id}`"
+                          :disabled="!canSignOffVisits"
+                          :title="
+                            !canSignOffVisits
+                              ? MONITORING_VISIT_SIGNOFF_ROLE_REASON
+                              : undefined
+                          "
+                          @click="signOffVisit(v)"
+                        >
+                          Sign-off
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-secondary btn-sm"
+                          :data-testid="`btn-compile-letter-${v.id}`"
+                          :disabled="!canManageVisits"
+                          :title="
+                            !canManageVisits
+                              ? MONITORING_LETTER_COMPILE_ROLE_REASON
+                              : undefined
+                          "
+                          @click="openCompileLetterModal(v)"
+                        >
+                          Compile Letter
+                        </button>
+                      </div>
                     </td>
                   </tr>
                   <tr v-if="visits.length === 0">
@@ -556,32 +730,137 @@
                         padding: 12px;
                       "
                     >
-                      No monitoring visits scheduled.
+                      {{
+                        hasActiveScope
+                          ? "No monitoring visits scheduled."
+                          : "Select a study and site to inspect monitoring visits."
+                      }}
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            <div style="margin-top: 12px; display: flex; gap: 8px">
+            <div
+              style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px"
+            >
               <button
                 id="btn-schedule-visit"
                 class="btn btn-primary"
+                :disabled="!canManageVisits || !hasActiveScope"
+                :title="
+                  !canManageVisits
+                    ? MONITORING_VISIT_COMPLETE_ROLE_REASON
+                    : undefined
+                "
                 @click="openScheduleVisit"
               >
                 Schedule New Visit
               </button>
               <button
                 id="btn-complete-visit"
-                class="btn"
-                @click="completeVisit"
+                class="btn btn-secondary"
+                :disabled="!canManageVisits || !hasActiveScope"
+                :title="
+                  !canManageVisits
+                    ? MONITORING_VISIT_COMPLETE_ROLE_REASON
+                    : undefined
+                "
+                @click="openCompleteVisitModal()"
               >
-                Complete Current Visit
+                Complete Scheduled Visit
+              </button>
+              <button
+                id="btn-compile-visit-letter"
+                class="btn btn-secondary"
+                :disabled="!canManageVisits || !hasActiveScope"
+                :title="
+                  !canManageVisits
+                    ? MONITORING_LETTER_COMPILE_ROLE_REASON
+                    : undefined
+                "
+                @click="openCompileLetterModal()"
+              >
+                Compile Visit Letter
               </button>
             </div>
+            <p
+              v-if="!canManageVisits"
+              id="ctms-visit-manage-role-note"
+              class="role-note"
+            >
+              {{ MONITORING_VISIT_COMPLETE_ROLE_REASON }}
+            </p>
+            <p
+              v-if="!canSignOffVisits"
+              id="ctms-visit-signoff-role-note"
+              class="role-note"
+            >
+              {{ MONITORING_VISIT_SIGNOFF_ROLE_REASON }}
+            </p>
           </div>
         </div>
 
-        <div class="grid-2-responsive" style="margin-top: var(--spacing-xl)">
+        <!-- Compiled Visit Letters Card -->
+        <div
+          v-if="
+            (!sectionMode || sectionMode === 'monitoring') &&
+            compiledLetters.length > 0
+          "
+          id="ctms-compiled-letters-container"
+          class="card"
+          style="margin-top: 20px"
+        >
+          <div class="card-title">Compiled Visit Letters</div>
+          <table class="clinical-visit-matrix">
+            <thead>
+              <tr>
+                <th scope="col">Letter ID</th>
+                <th scope="col">Template</th>
+                <th scope="col">Status</th>
+                <th scope="col">PDF SHA-256</th>
+                <th scope="col">Filed Document</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="letter in compiledLetters" :key="letter.letterId">
+                <td>
+                  <code>{{ letter.letterId }}</code>
+                </td>
+                <td>{{ letter.letterType }}</td>
+                <td>
+                  <span class="badge" :class="{ gxp: letter.isSigned }">{{
+                    letter.status
+                  }}</span>
+                </td>
+                <td>
+                  <code style="font-size: 11px">{{
+                    letter.pdfSha256Hash
+                  }}</code>
+                </td>
+                <td>
+                  {{ letter.etmfDocumentId || "Draft (not filed)" }}
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    :data-testid="`btn-download-letter-${letter.letterId}`"
+                    @click="downloadCompiledLetterPdf(letter)"
+                  >
+                    Download PDF
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div
+          v-if="demoBuild && !sectionMode"
+          class="grid-2-responsive"
+          style="margin-top: var(--spacing-xl)"
+        >
           <!-- CRA Allocations & Workload Card -->
           <div class="card">
             <div class="card-title">CRA Allocation & Workload Summaries</div>
@@ -691,7 +970,7 @@
       </div>
 
       <!-- Tab 2: CRA Monitoring & SDV Console -->
-      <div v-if="activeTab === 'monitoring'">
+      <div v-if="!sectionMode && activeTab === 'monitoring'">
         <CraVerificationConsole
           :standalone="true"
           :study-id="studyId"
@@ -700,7 +979,7 @@
       </div>
 
       <!-- Tab 3: Delegation Matrix -->
-      <div v-if="activeTab === 'delegation'">
+      <div v-if="!sectionMode && activeTab === 'delegation'">
         <div class="card">
           <div
             class="card-title"
@@ -716,8 +995,9 @@
               class="btn btn-primary"
               style="
                 background: var(--semantic-color-primary-dark);
-                color: white;
+                color: var(--semantic-color-text-on-solid);
               "
+              :disabled="!siteId.trim()"
               @click="exportDoaPdf"
             >
               🖨️ Export GxP PDF
@@ -851,6 +1131,8 @@
                       v-if="!d.signed_off"
                       class="btn btn-primary btn-sm"
                       style="padding: 2px 8px; font-size: 11px"
+                      :disabled="!canSignDoa"
+                      :title="!canSignDoa ? DOA_SIGNOFF_ROLE_REASON : undefined"
                       @click="signDelegation(d)"
                     >
                       PI Sign-off
@@ -864,6 +1146,7 @@
                         border-color: var(--semantic-color-error);
                         color: var(--semantic-color-error);
                       "
+                      :disabled="!canEditDoa"
                       @click="revokeDelegation(d)"
                     >
                       Revoke
@@ -881,7 +1164,11 @@
                       padding: 12px;
                     "
                   >
-                    No delegation assignments logged for this site.
+                    {{
+                      siteId.trim()
+                        ? "No delegation assignments logged for this site."
+                        : "Select a site to inspect its Delegation of Authority log."
+                    }}
                   </td>
                 </tr>
               </tbody>
@@ -892,11 +1179,19 @@
             <button
               id="btn-delegate-task"
               class="btn btn-primary"
+              :disabled="!canEditDoa || !siteId.trim()"
               @click="openDelegate"
             >
               Delegate New Task
             </button>
           </div>
+          <p
+            v-if="!canSignDoa"
+            id="ctms-doa-signoff-role-note"
+            class="role-note"
+          >
+            {{ DOA_SIGNOFF_ROLE_REASON }}
+          </p>
         </div>
 
         <!-- Audit History Card -->
@@ -953,7 +1248,7 @@
       </div>
 
       <!-- Tab 4: Financials & Fee Matrix Engine -->
-      <div v-if="activeTab === 'financials'">
+      <div v-if="demoBuild && !sectionMode && activeTab === 'financials'">
         <!-- Grant Contract Header & Multi-Tier Template Selector -->
         <div class="card" style="margin-bottom: 20px">
           <div
@@ -2522,14 +2817,317 @@
         </div>
       </div>
 
+      <!-- Modal 8: Complete Scheduled Monitoring Visit with Structured Findings -->
+      <div
+        v-if="showCompleteVisitModal"
+        id="modal-complete-visit"
+        class="modal-overlay"
+      >
+        <div class="modal" style="max-width: 620px">
+          <div class="modal-header">Complete Monitoring Visit</div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="complete-visit-select">Scheduled Visit</label>
+              <select id="complete-visit-select" v-model="completeVisitId">
+                <option
+                  v-for="sv in scheduledVisits"
+                  :key="sv.id"
+                  :value="sv.id"
+                >
+                  {{ sv.visit_type }} —
+                  {{
+                    sv.scheduled_date ? sv.scheduled_date.slice(0, 10) : "N/A"
+                  }}
+                  ({{ sv.cra_id || "Unassigned" }})
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="complete-visit-actual-date">Actual Visit Date</label>
+              <input
+                id="complete-visit-actual-date"
+                v-model="completeVisitActualDate"
+                type="date"
+              />
+            </div>
+
+            <div class="form-group">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 8px;
+                "
+              >
+                <span
+                  style="
+                    font-weight: 600;
+                    font-size: 13px;
+                    color: var(--semantic-color-text-body);
+                  "
+                  >Monitoring Findings</span
+                >
+                <button
+                  id="btn-add-visit-finding"
+                  type="button"
+                  class="btn btn-secondary btn-sm"
+                  @click="addVisitFinding"
+                >
+                  + Add Finding
+                </button>
+              </div>
+              <div
+                v-if="completeVisitFindings.length === 0"
+                style="
+                  font-size: 12px;
+                  color: var(--semantic-color-text-secondary);
+                  margin-bottom: 6px;
+                "
+              >
+                No findings logged for this visit. Use "+ Add Finding" to record
+                deviations or action items.
+              </div>
+              <div
+                v-for="(finding, idx) in completeVisitFindings"
+                :key="idx"
+                style="
+                  border: 1px solid var(--semantic-color-border);
+                  border-radius: 6px;
+                  padding: 10px;
+                  margin-bottom: 8px;
+                  background: var(--semantic-color-surface-muted);
+                "
+              >
+                <div class="form-group" style="margin-bottom: 8px">
+                  <label :for="`finding-text-${idx}`"
+                    >Finding Description</label
+                  >
+                  <input
+                    :id="`finding-text-${idx}`"
+                    v-model="finding.text"
+                    type="text"
+                    placeholder="Describe monitoring observation or protocol finding..."
+                  />
+                </div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr auto;
+                    gap: 8px;
+                    align-items: end;
+                  "
+                >
+                  <div>
+                    <label :for="`finding-severity-${idx}`">Severity</label>
+                    <select
+                      :id="`finding-severity-${idx}`"
+                      v-model="finding.severity"
+                    >
+                      <option value="MINOR">MINOR</option>
+                      <option value="MAJOR">MAJOR</option>
+                      <option value="CRITICAL">CRITICAL</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label :for="`finding-resolution-${idx}`"
+                      >Resolution Status</label
+                    >
+                    <select
+                      :id="`finding-resolution-${idx}`"
+                      v-model="finding.resolution_status"
+                    >
+                      <option value="OPEN">OPEN</option>
+                      <option value="IN_PROGRESS">IN_PROGRESS</option>
+                      <option value="CLOSED">CLOSED</option>
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-cancel btn-sm"
+                    @click="removeVisitFinding(idx)"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="complete-visit-reason"
+                >Reason for Change / Visit Closure Summary</label
+              >
+              <textarea
+                id="complete-visit-reason"
+                v-model="completeVisitReason"
+                placeholder="State the GxP justification for completing this monitoring visit..."
+              />
+            </div>
+
+            <div v-if="completeVisitError" class="error-msg">
+              ⚠️ {{ completeVisitError }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              class="btn btn-cancel"
+              @click="showCompleteVisitModal = false"
+            >
+              Cancel
+            </button>
+            <button
+              id="btn-confirm-complete-visit"
+              class="btn btn-primary"
+              @click="confirmCompleteVisit"
+            >
+              Complete Visit
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal 9: Compile Visit Letter PDF -->
+      <div
+        v-if="showCompileLetterModal"
+        id="modal-compile-letter"
+        class="modal-overlay"
+      >
+        <div class="modal" style="max-width: 560px">
+          <div class="modal-header">Compile Site Visit Letter</div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="compile-letter-visit">Monitoring Visit</label>
+              <select id="compile-letter-visit" v-model="compileLetterVisitId">
+                <option value="">Ad-hoc / Current Site Scope</option>
+                <option v-for="mv in visits" :key="mv.id" :value="mv.id">
+                  {{ mv.visit_type }} ({{ mv.status }}) —
+                  {{
+                    mv.scheduled_date ? mv.scheduled_date.slice(0, 10) : "N/A"
+                  }}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="compile-letter-template">Letter Template</label>
+              <select
+                id="compile-letter-template"
+                v-model="compileTemplateName"
+              >
+                <option value="confirmation_letter">
+                  Visit Confirmation Letter (confirmation_letter)
+                </option>
+                <option value="follow_up_letter">
+                  Monitoring Follow-Up Letter (follow_up_letter)
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label
+                for="compile-letter-finalize"
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  cursor: pointer;
+                "
+              >
+                <input
+                  id="compile-letter-finalize"
+                  v-model="compileFinalize"
+                  type="checkbox"
+                  style="width: auto; margin: 0"
+                />
+                Finalize with Part 11 eSignature &amp; file to document vault
+              </label>
+            </div>
+
+            <div v-if="compileFinalize" class="form-group">
+              <label for="compile-signer-name">Signer Full Name</label>
+              <input
+                id="compile-signer-name"
+                v-model="compileSignerName"
+                type="text"
+                placeholder="e.g. Jane Doe, Lead CRA"
+              />
+            </div>
+
+            <div v-if="compileFinalize" class="form-group">
+              <label for="compile-signing-purpose">Signing Purpose</label>
+              <input
+                id="compile-signing-purpose"
+                v-model="compileSigningPurpose"
+                type="text"
+                placeholder="Monitoring Visit Report Issuance"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="compile-investigator-email"
+                >Investigator Dispatch Email (Optional)</label
+              >
+              <input
+                id="compile-investigator-email"
+                v-model="compileInvestigatorEmail"
+                type="email"
+                placeholder="pi.site101@example.com"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="compile-letter-reason"
+                >Reason for Change / Issuance Justification</label
+              >
+              <textarea
+                id="compile-letter-reason"
+                v-model="compileLetterReason"
+                placeholder="Document the regulatory justification for compiling this letter..."
+              />
+            </div>
+
+            <div v-if="compileLetterError" class="error-msg">
+              ⚠️ {{ compileLetterError }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              class="btn btn-cancel"
+              :disabled="compileLetterBusy"
+              @click="showCompileLetterModal = false"
+            >
+              Cancel
+            </button>
+            <button
+              id="btn-confirm-compile-letter"
+              class="btn btn-primary"
+              :disabled="compileLetterBusy"
+              @click="confirmCompileLetter"
+            >
+              {{
+                compileLetterBusy
+                  ? "Compiling..."
+                  : compileFinalize
+                    ? "Verify Signature & Compile PDF"
+                    : "Compile Draft PDF"
+              }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Startup & Greenlight Tab Content -->
-      <div v-if="activeTab === 'startup'" style="margin-top: 20px">
+      <div
+        v-if="!sectionMode && activeTab === 'startup'"
+        style="margin-top: 20px"
+      >
         <SsuGreenlightConsole :study-id="studyId" :site-id="siteId" />
       </div>
 
       <!-- RTSM & Dose Escalation Tab Content -->
       <div
-        v-if="activeTab === 'rtsm'"
+        v-if="demoBuild && !sectionMode && activeTab === 'rtsm'"
         style="
           margin-top: 20px;
           display: flex;
@@ -2616,11 +3214,33 @@ import RtsmSupplySection from "../components/clinical/RtsmSupplySection.vue";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import apiClient from "../services/api";
-import { getBaseUrl } from "../api/apiClient";
+import { ctmsApi } from "../api/ctmsApi";
+import { executionApi } from "../api/executionApi";
+import {
+  DOA_SIGNOFF_ROLE_REASON,
+  MONITORING_LETTER_COMPILE_ROLE_REASON,
+  MONITORING_VISIT_COMPLETE_ROLE_REASON,
+  MONITORING_VISIT_SIGNOFF_ROLE_REASON,
+  SITE_MILESTONE_ROLE_REASON,
+  canManageDoa,
+  canManageMonitoringVisits,
+  canManageSiteMilestones,
+  canSignOffDoa,
+  canSignOffMonitoringVisit,
+} from "../canvas/authority";
 import { useToastStore } from "../stores/toasts.js";
+
+const props = defineProps({
+  studyCode: { type: String, default: "" },
+  initialSiteId: { type: String, default: "" },
+  sectionMode: { type: String, default: "" },
+});
+
+const KNOWN_SITE_CODES = ["SITE-101", "SITE-102"];
 
 // Active session store/router setup
 const store = useClinicalStore();
+const authStore = useAuthStore();
 const route = useRoute();
 const demoBuild = isDemoBuild();
 const isIpKitReconciliationDrawerOpen = ref(false);
@@ -2642,17 +3262,106 @@ const liveTab = ref(
       : "activation"
 );
 
-// Scope comes from the route; apply it before the first render so the site activation panel sees it.
+// Scope comes from props or the route; apply before the first render so child panels see it.
 if (route && route.query) {
-  if (route.query.studyId) store.activeStudyId = route.query.studyId;
-  if (route.query.siteId) store.activeSiteId = route.query.siteId;
-  if (route.query.subjectId) store.activeSubjectId = route.query.subjectId;
-  if (route.query.visitId) store.activeVisitId = route.query.visitId;
+  if (typeof route.query.studyId === "string" && route.query.studyId) {
+    store.activeStudyId = route.query.studyId;
+  }
+  if (typeof route.query.siteId === "string" && route.query.siteId) {
+    store.activeSiteId = route.query.siteId;
+  }
+  if (typeof route.query.subjectId === "string" && route.query.subjectId) {
+    store.activeSubjectId = route.query.subjectId;
+  }
+  if (typeof route.query.visitId === "string" && route.query.visitId) {
+    store.activeVisitId = route.query.visitId;
+  }
 }
 
-// Scope properties
-const siteId = computed(() => store.activeSiteId || "SITE-001");
-const studyId = computed(() => store.activeStudyId || "STUDY-USDM-001");
+const initialResolvedSite =
+  props.initialSiteId ||
+  (typeof route?.query?.site === "string" ? route.query.site : "") ||
+  store.activeSiteId ||
+  "";
+
+const localStudyId = ref(props.studyCode || store.activeStudyId || "");
+const localSiteId = ref(initialResolvedSite);
+const sitePickerChoice = ref(
+  !initialResolvedSite
+    ? ""
+    : KNOWN_SITE_CODES.includes(initialResolvedSite)
+      ? initialResolvedSite
+      : "__custom__"
+);
+
+function onSitePickerChange() {
+  if (sitePickerChoice.value === "__custom__") {
+    if (KNOWN_SITE_CODES.includes(localSiteId.value)) {
+      localSiteId.value = "";
+    }
+  } else {
+    localSiteId.value = sitePickerChoice.value;
+  }
+  syncScopeToStore();
+}
+
+function syncScopeToStore() {
+  if (!props.studyCode) {
+    store.activeStudyId = localStudyId.value.trim();
+  }
+  store.activeSiteId = localSiteId.value.trim();
+}
+
+watch(
+  () => store.activeStudyId,
+  (next) => {
+    if (!props.studyCode && next && next !== localStudyId.value) {
+      localStudyId.value = next;
+    }
+  }
+);
+
+watch(
+  () => store.activeSiteId,
+  (next) => {
+    if (next && next !== localSiteId.value) {
+      localSiteId.value = next;
+      sitePickerChoice.value = KNOWN_SITE_CODES.includes(next)
+        ? next
+        : "__custom__";
+    }
+  }
+);
+
+// Scope properties: outside demo builds never fabricate default study/site IDs.
+const siteId = computed(() => {
+  const candidate =
+    localSiteId.value.trim() ||
+    props.initialSiteId.trim() ||
+    (store.activeSiteId || "").trim();
+  if (candidate) return candidate;
+  return demoBuild ? "SITE-001" : "";
+});
+
+const studyId = computed(() => {
+  const candidate =
+    props.studyCode.trim() ||
+    localStudyId.value.trim() ||
+    (store.activeStudyId || "").trim();
+  if (candidate) return candidate;
+  return demoBuild ? "STUDY-USDM-001" : "";
+});
+
+const hasActiveScope = computed(() =>
+  Boolean(studyId.value.trim() && siteId.value.trim())
+);
+
+// Role permissions aligned with Cadence.Security.Rbac.PermissionMatrix
+const canManageMilestones = computed(() => canManageSiteMilestones(authStore));
+const canManageVisits = computed(() => canManageMonitoringVisits(authStore));
+const canSignOffVisits = computed(() => canSignOffMonitoringVisit(authStore));
+const canEditDoa = computed(() => canManageDoa(authStore));
+const canSignDoa = computed(() => canSignOffDoa(authStore));
 
 // Tabs selection
 const activeTab = ref(
@@ -2666,6 +3375,8 @@ const milestones = ref([]);
 const visits = ref([]);
 const allocations = ref([]);
 const recruitment = ref([]);
+const operationsLoadError = ref("");
+const compiledLetters = ref([]);
 
 // Delegation state
 const delegatedStaff = ref([]);
@@ -2809,6 +3520,8 @@ const sigSigningReason = ref("INVESTIGATOR_SIGNATURE");
 const sigReasonForChange = ref("");
 const sigError = ref("");
 const sigBusy = ref(false);
+let signatureActionPath = "/api/v1/ctms/doa/sign-off";
+let signatureSemanticAction = SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF;
 let signatureCallback = null;
 
 const showScheduleVisitModal = ref(false);
@@ -2817,6 +3530,28 @@ const newVisitScheduledDate = ref("");
 const newVisitCra = ref("cra.monitor");
 const newVisitReason = ref("");
 const scheduleError = ref("");
+
+const showCompleteVisitModal = ref(false);
+const completeVisitId = ref("");
+const completeVisitActualDate = ref("");
+const completeVisitFindings = ref([]);
+const completeVisitReason = ref("");
+const completeVisitError = ref("");
+
+const showCompileLetterModal = ref(false);
+const compileLetterVisitId = ref("");
+const compileTemplateName = ref("follow_up_letter");
+const compileFinalize = ref(true);
+const compileSignerName = ref("");
+const compileSigningPurpose = ref("Monitoring Visit Report Issuance");
+const compileInvestigatorEmail = ref("");
+const compileLetterReason = ref("");
+const compileLetterError = ref("");
+const compileLetterBusy = ref(false);
+
+const scheduledVisits = computed(() =>
+  (visits.value || []).filter((v) => v.status === "SCHEDULED")
+);
 
 const showReallocateModal = ref(false);
 const allocCraId = ref("cra_alice");
@@ -2855,20 +3590,31 @@ const availableTasks = [
 
 const complianceStatus = ref({ is_complete: false, missing_documents: [] });
 const loadingCompliance = ref(false);
+const complianceLoadError = ref("");
 
 async function loadComplianceStatus() {
+  const currentStudy = studyId.value.trim();
+  const currentSite = siteId.value.trim();
+  if (!currentStudy || !currentSite) {
+    complianceStatus.value = { is_complete: false, missing_documents: [] };
+    complianceLoadError.value = "";
+    return;
+  }
   loadingCompliance.value = true;
+  complianceLoadError.value = "";
   try {
-    const res = await apiClient.get(
-      `/api/v1/execution/sites/${siteId.value}/compliance-status?study_id=${studyId.value}`
+    const res = await executionApi.getSiteComplianceStatus(
+      currentSite,
+      currentStudy
     );
     complianceStatus.value = res || {
       is_complete: false,
       missing_documents: [],
     };
   } catch (err) {
-    console.error("Failed to load site compliance status:", err);
     complianceStatus.value = { is_complete: false, missing_documents: [] };
+    complianceLoadError.value =
+      err?.message || "Site document readiness check failed.";
   } finally {
     loadingCompliance.value = false;
   }
@@ -2876,45 +3622,99 @@ async function loadComplianceStatus() {
 
 // Load Operations Data from Real-time Backend
 async function loadOperationsData() {
+  const currentStudy = studyId.value.trim();
+  const currentSite = siteId.value.trim();
+  if (!currentStudy || !currentSite) {
+    milestones.value = [];
+    visits.value = [];
+    allocations.value = [];
+    recruitment.value = [];
+    operationsLoadError.value = "";
+    return;
+  }
+
+  operationsLoadError.value = "";
   try {
     loadComplianceStatus();
-    const [milestonesRes, visitsRes, workloadRes, recruitmentRes] =
-      await Promise.all([
-        apiClient.get(
-          `/api/v1/ctms/site-milestones?site_id=${siteId.value}&study_id=${studyId.value}`
-        ),
-        apiClient.get(
-          `/api/v1/ctms/monitoring-visits?site_id=${siteId.value}&study_id=${studyId.value}`
-        ),
-        apiClient.get(`/api/v1/ctms/cra-allocations/workload`),
-        apiClient.get(
-          `/api/v1/ctms/recruitment?site_id=${siteId.value}&study_id=${studyId.value}`
-        ),
-      ]);
+    if (demoBuild) {
+      const [milestonesRes, visitsRes, workloadRes, recruitmentRes] =
+        await Promise.all([
+          ctmsApi.listSiteMilestones({
+            site_id: currentSite,
+            study_id: currentStudy,
+          }),
+          ctmsApi.listMonitoringVisits({
+            site_id: currentSite,
+            study_id: currentStudy,
+          }),
+          apiClient.get(`/api/v1/ctms/cra-allocations/workload`),
+          apiClient.get(
+            `/api/v1/ctms/recruitment?site_id=${currentSite}&study_id=${currentStudy}`
+          ),
+        ]);
+      milestones.value = milestonesRes || [];
+      visits.value = visitsRes || [];
+      allocations.value = workloadRes || [];
+      recruitment.value = recruitmentRes || [];
+      return;
+    }
+
+    if (props.sectionMode === "milestones") {
+      milestones.value =
+        (await ctmsApi.listSiteMilestones({
+          site_id: currentSite,
+          study_id: currentStudy,
+        })) || [];
+      return;
+    }
+
+    if (props.sectionMode === "monitoring") {
+      visits.value =
+        (await ctmsApi.listMonitoringVisits({
+          site_id: currentSite,
+          study_id: currentStudy,
+        })) || [];
+      return;
+    }
+
+    const [milestonesRes, visitsRes] = await Promise.all([
+      ctmsApi.listSiteMilestones({
+        site_id: currentSite,
+        study_id: currentStudy,
+      }),
+      ctmsApi.listMonitoringVisits({
+        site_id: currentSite,
+        study_id: currentStudy,
+      }),
+    ]);
     milestones.value = milestonesRes || [];
     visits.value = visitsRes || [];
-    allocations.value = workloadRes || [];
-    recruitment.value = recruitmentRes || [];
   } catch (err) {
-    console.error(
-      "Failed to load operations data from backend microservice:",
-      err
-    );
+    if (err?.name === "AbortError") return;
+    const toasts = useToastStore();
+    const toastId = toasts.apiError("Site operations could not be loaded", err);
+    operationsLoadError.value =
+      toasts.toasts.find((t) => t.id === toastId)?.message || "Request failed";
   }
 }
 
 // Load Delegation logs from Real-time Backend DoA endpoints
 async function loadDelegationData() {
+  const currentSite = siteId.value.trim();
+  if (!currentSite) {
+    delegatedStaff.value = [];
+    auditHistory.value = [];
+    piName.value = "";
+    doaLoadError.value = "";
+    return;
+  }
   try {
-    const res = await apiClient.get(
-      `/api/v1/ctms/doa/sites/${siteId.value}/log`
-    );
+    const res = await ctmsApi.getSiteDoaLog(currentSite);
     delegatedStaff.value = res?.delegated_staff || [];
     auditHistory.value = res?.audit_history || [];
     piName.value = res?.pi_name || "";
     doaLoadError.value = "";
   } catch (err) {
-    // A superseded duplicate request is aborted by apiClient; the newer request reports its own outcome.
     if (err?.name === "AbortError") return;
     delegatedStaff.value = [];
     auditHistory.value = [];
@@ -2929,17 +3729,25 @@ async function loadDelegationData() {
   }
 }
 
-// Watchers for refetch on scope or tab change
+// Watchers for refetch on scope, section mode, or tab change
 watch(
-  [siteId, studyId, activeTab],
+  [siteId, studyId, activeTab, () => props.sectionMode],
   () => {
-    // These CTMS endpoints exist only in the demo build's mock API.
-    if (!demoBuild) return;
+    if (!demoBuild && !props.sectionMode) {
+      return;
+    }
+    if (
+      props.sectionMode === "milestones" ||
+      props.sectionMode === "monitoring"
+    ) {
+      loadOperationsData();
+      return;
+    }
     if (activeTab.value === "operations") {
       loadOperationsData();
-    } else if (activeTab.value === "financials") {
+    } else if (activeTab.value === "financials" && demoBuild) {
       loadFinancialData();
-    } else {
+    } else if (activeTab.value === "delegation") {
       loadDelegationData();
     }
   },
@@ -2982,15 +3790,33 @@ function cancelSignatureModal() {
   showSignatureModal.value = false;
 }
 
-function promptSignature(callback) {
-  const authStore = useAuthStore();
-  sigUsername.value = authStore.user?.username || store.user?.username || "";
+function promptSignature(
+  callback,
+  options = {
+    action: "/api/v1/ctms/doa/sign-off",
+    semanticAction: SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF,
+    defaultSigningReason: "INVESTIGATOR_SIGNATURE",
+    initialReason: "",
+  }
+) {
+  sigUsername.value =
+    authStore.user?.username ||
+    authStore.identity?.username ||
+    store.user?.username ||
+    "";
   sigPassword.value = "";
   sigTotp.value = "";
-  sigSigningReason.value = "INVESTIGATOR_SIGNATURE";
-  sigReasonForChange.value = "";
+  sigSigningReason.value =
+    options.defaultSigningReason || "INVESTIGATOR_SIGNATURE";
+  sigReasonForChange.value = options.initialReason || "";
   sigError.value = "";
   sigBusy.value = false;
+  signatureActionPath = options.action || "/api/v1/ctms/doa/sign-off";
+  signatureSemanticAction =
+    options.semanticAction ||
+    (signatureActionPath.includes("letters/compile")
+      ? "ctms.letter.compile"
+      : SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF);
   signatureCallback = callback;
   showSignatureModal.value = true;
 }
@@ -3012,7 +3838,7 @@ async function confirmSignature() {
   const username = sigUsername.value;
   const password = sigPassword.value;
   const totp = sigTotp.value || null;
-  const reason = sigReasonForChange.value;
+  const reason = sigReasonForChange.value.trim();
 
   // Immediately scrub sensitive credentials on submit (21 CFR Part 11 hygiene)
   sigPassword.value = "";
@@ -3025,8 +3851,8 @@ async function confirmSignature() {
       username,
       password,
       totp,
-      action: "/api/v1/ctms/doa/sign-off",
-      semanticAction: SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF,
+      action: signatureActionPath,
+      semanticAction: signatureSemanticAction,
     });
 
     const reauthRes = await apiClient.post(
@@ -3034,23 +3860,29 @@ async function confirmSignature() {
       verificationPayload
     );
 
-    const sigToken = reauthRes.sig_token;
+    const sigToken = reauthRes?.sig_token;
+    if (!sigToken) {
+      throw new Error(
+        "Signature verification did not return a signature token."
+      );
+    }
 
     if (signatureCallback) {
       await signatureCallback(sigToken, reason);
     }
     showSignatureModal.value = false;
   } catch (err) {
-    sigError.value = err.message || "Part 11 identity verification failed.";
+    sigError.value = err?.message || "Part 11 identity verification failed.";
   } finally {
     sigBusy.value = false;
   }
 }
 
-// --- Write Triggers (Bypassing direct store modification) ---
+// --- Write Triggers (Typed OpenAPI Clients) ---
 
 // 1. Achieve Milestone
 function achieveMilestone() {
+  if (!canManageMilestones.value) return;
   const nextM = milestones.value.find((m) => m.status === "PLANNED");
   if (!nextM) {
     useToastStore().push({
@@ -3066,16 +3898,11 @@ function achieveMilestone() {
     "Describe the confirmation/clinical evidence of achieving this milestone...",
     async (reason) => {
       try {
-        await apiClient.put(
-          `/api/v1/ctms/site-milestones/${nextM.id}`,
-          {
-            status: "ACHIEVED",
-            actual_date: new Date().toISOString(),
-          },
-          {
-            changeReason: reason,
-          }
-        );
+        await ctmsApi.updateSiteMilestone(nextM.id, {
+          status: "ACHIEVED",
+          actual_date: new Date().toISOString(),
+          reason_for_change: reason,
+        });
         await loadOperationsData();
       } catch (err) {
         useToastStore().apiError("Failed to achieve milestone", err);
@@ -3086,6 +3913,7 @@ function achieveMilestone() {
 
 // Create Custom Milestone
 function openCreateMilestone() {
+  if (!canManageMilestones.value) return;
   newMsType.value = "SITE_ACTIVATION";
   newMsPlannedDate.value = new Date(Date.now() + 10 * 24 * 3600 * 1000)
     .toISOString()
@@ -3102,32 +3930,33 @@ async function confirmCreateMilestone() {
     return;
   }
   try {
-    const payload = {
-      site_id: siteId.value,
-      study_id: studyId.value,
+    await ctmsApi.createSiteMilestone({
+      site_id: siteId.value.trim(),
+      study_id: studyId.value.trim(),
       milestone_type: newMsType.value,
       planned_date: newMsPlannedDate.value
         ? new Date(newMsPlannedDate.value).toISOString()
         : null,
       status: newMsStatus.value,
-    };
-    await apiClient.post("/api/v1/ctms/site-milestones", payload, {
-      changeReason: newMsReason.value,
+      reason_for_change: newMsReason.value.trim(),
     });
     showCreateMilestoneModal.value = false;
     await loadOperationsData();
   } catch (err) {
-    msError.value = err.message || "Failed to add milestone.";
+    msError.value = err?.message || "Failed to add milestone.";
+    useToastStore().apiError("Failed to add milestone", err);
   }
 }
 
 // 2. Schedule Monitoring Visit
 function openScheduleVisit() {
+  if (!canManageVisits.value) return;
   newVisitType.value = "IMV";
   newVisitScheduledDate.value = new Date(Date.now() + 5 * 24 * 3600 * 1000)
     .toISOString()
     .slice(0, 10);
-  newVisitCra.value = store.user?.username || "cra.monitor";
+  newVisitCra.value =
+    authStore.identity?.username || store.user?.username || "cra.monitor";
   newVisitReason.value = "";
   scheduleError.value = "";
   showScheduleVisitModal.value = true;
@@ -3143,27 +3972,31 @@ async function confirmScheduleVisit() {
     return;
   }
   try {
-    const payload = {
-      study_id: studyId.value,
-      site_id: siteId.value,
-      cra_id: newVisitCra.value,
+    await ctmsApi.scheduleMonitoringVisit({
+      study_id: studyId.value.trim(),
+      site_id: siteId.value.trim(),
+      cra_id: newVisitCra.value.trim(),
       visit_type: newVisitType.value,
       scheduled_date: new Date(newVisitScheduledDate.value).toISOString(),
-    };
-    await apiClient.post("/api/v1/ctms/monitoring-visits", payload, {
-      changeReason: newVisitReason.value,
+      reason_for_change: newVisitReason.value.trim(),
     });
     showScheduleVisitModal.value = false;
     await loadOperationsData();
   } catch (err) {
-    scheduleError.value = err.message || "Failed to schedule monitoring visit.";
+    scheduleError.value =
+      err?.message || "Failed to schedule monitoring visit.";
+    useToastStore().apiError("Failed to schedule monitoring visit", err);
   }
 }
 
-// 3. Complete Monitoring Visit
-function completeVisit() {
-  const scheduledVisit = visits.value.find((v) => v.status === "SCHEDULED");
-  if (!scheduledVisit) {
+// 3. Complete Scheduled Monitoring Visit with Structured Findings
+function openCompleteVisitModal(targetVisit = null) {
+  if (!canManageVisits.value) return;
+  const candidate =
+    targetVisit && targetVisit.status === "SCHEDULED"
+      ? targetVisit
+      : scheduledVisits.value[0];
+  if (!candidate) {
     useToastStore().push({
       tone: "warning",
       title: "Monitoring Visits",
@@ -3171,44 +4004,77 @@ function completeVisit() {
     });
     return;
   }
-
-  promptJustification(
-    "Complete Monitoring Visit",
-    "Enter the completion details or reason for closure...",
-    async (reason) => {
-      try {
-        await apiClient.post(
-          `/api/v1/ctms/monitoring-visits/${scheduledVisit.id}/complete`,
-          {
-            actual_date: new Date().toISOString(),
-            findings: [],
-          },
-          {
-            changeReason: reason,
-          }
-        );
-        await loadOperationsData();
-      } catch (err) {
-        useToastStore().apiError("Failed to complete monitoring visit", err);
-      }
-    }
-  );
+  completeVisitId.value = candidate.id;
+  completeVisitActualDate.value = new Date().toISOString().slice(0, 10);
+  completeVisitFindings.value = [];
+  completeVisitReason.value = "";
+  completeVisitError.value = "";
+  showCompleteVisitModal.value = true;
 }
 
-// Complete Supervisory Sign-off on Visit
+function addVisitFinding() {
+  completeVisitFindings.value.push({
+    text: "",
+    severity: "MINOR",
+    resolution_status: "OPEN",
+  });
+}
+
+function removeVisitFinding(index) {
+  completeVisitFindings.value.splice(index, 1);
+}
+
+async function confirmCompleteVisit() {
+  if (!completeVisitId.value) {
+    completeVisitError.value = "Select a scheduled monitoring visit.";
+    return;
+  }
+  if (!completeVisitActualDate.value) {
+    completeVisitError.value = "Actual visit date is required.";
+    return;
+  }
+  const hasBlankFinding = completeVisitFindings.value.some(
+    (f) => !f.text || !f.text.trim()
+  );
+  if (hasBlankFinding) {
+    completeVisitError.value =
+      "Every added monitoring finding must include a non-empty description.";
+    return;
+  }
+  if (!completeVisitReason.value.trim()) {
+    completeVisitError.value = "Reason for change is required.";
+    return;
+  }
+
+  completeVisitError.value = "";
+  try {
+    await ctmsApi.completeMonitoringVisit(completeVisitId.value, {
+      actual_date: new Date(completeVisitActualDate.value).toISOString(),
+      findings: completeVisitFindings.value.map((f) => ({
+        text: f.text.trim(),
+        severity: f.severity,
+        resolution_status: f.resolution_status,
+      })),
+      reason_for_change: completeVisitReason.value.trim(),
+    });
+    showCompleteVisitModal.value = false;
+    await loadOperationsData();
+  } catch (err) {
+    completeVisitError.value =
+      err?.message || "Failed to complete monitoring visit.";
+    useToastStore().apiError("Failed to complete monitoring visit", err);
+  }
+}
+
+// Supervisory Sign-off on Completed Visit (Monitor / Sponsor DM / Sysadmin)
 function signOffVisit(visit) {
+  if (!canSignOffVisits.value) return;
   promptJustification(
     "Supervisory Sign-off on Visit",
     "Enter the review endorsement statement for signing off this completed visit...",
     async (reason) => {
       try {
-        await apiClient.post(
-          `/api/v1/ctms/monitoring-visits/${visit.id}/sign-off`,
-          {},
-          {
-            changeReason: reason,
-          }
-        );
+        await ctmsApi.signOffMonitoringVisit(visit.id, reason);
         await loadOperationsData();
       } catch (err) {
         useToastStore().apiError("Failed to sign off monitoring visit", err);
@@ -3217,7 +4083,139 @@ function signOffVisit(visit) {
   );
 }
 
-// 4. CRA Allocation Update
+// Compile Site Visit Letter (POST /api/v1/ctms/letters/compile)
+function openCompileLetterModal(targetVisit = null) {
+  if (!canManageVisits.value) return;
+  const fallbackVisit = targetVisit || visits.value[0] || null;
+  compileLetterVisitId.value = fallbackVisit ? fallbackVisit.id : "";
+  compileTemplateName.value =
+    fallbackVisit?.status === "SCHEDULED"
+      ? "confirmation_letter"
+      : "follow_up_letter";
+  compileFinalize.value = true;
+  compileSignerName.value =
+    authStore.identity?.username || store.user?.username || "";
+  compileSigningPurpose.value = "Monitoring Visit Report Issuance";
+  compileInvestigatorEmail.value = "";
+  compileLetterReason.value = "";
+  compileLetterError.value = "";
+  compileLetterBusy.value = false;
+  showCompileLetterModal.value = true;
+}
+
+function buildVisitLetterPayload(reasonForChange) {
+  const selectedVisit =
+    visits.value.find((v) => v.id === compileLetterVisitId.value) || null;
+  const fallbackCra =
+    selectedVisit?.cra_id ||
+    authStore.identity?.username ||
+    store.user?.username ||
+    "cra";
+  return {
+    craId: fallbackCra,
+    createdAt: new Date().toISOString(),
+    studyId: studyId.value.trim(),
+    siteId: siteId.value.trim(),
+    visitType: selectedVisit?.visit_type || "IMV",
+    scheduledDate: selectedVisit?.scheduled_date || null,
+    actualDate: selectedVisit?.actual_date || null,
+    findings: Array.isArray(selectedVisit?.findings)
+      ? selectedVisit.findings.map((f) => ({
+          text: f.text || "",
+          severity: f.severity || "MINOR",
+          resolutionStatus: f.resolution_status || f.resolutionStatus || "OPEN",
+        }))
+      : [],
+    visitId: selectedVisit?.id || null,
+    finalize: Boolean(compileFinalize.value),
+    signerName: compileFinalize.value
+      ? compileSignerName.value.trim() || fallbackCra
+      : null,
+    signingPurpose: compileFinalize.value
+      ? compileSigningPurpose.value.trim() || "Monitoring Visit Report Issuance"
+      : null,
+    investigatorEmail: compileInvestigatorEmail.value.trim() || null,
+    reasonForChange,
+  };
+}
+
+async function executeLetterCompilation(reason, sigToken = undefined) {
+  compileLetterBusy.value = true;
+  compileLetterError.value = "";
+  try {
+    const payload = buildVisitLetterPayload(reason);
+    const compiled = await ctmsApi.compileVisitLetter(
+      compileTemplateName.value,
+      payload,
+      {
+        changeReason: reason,
+        sigToken,
+      }
+    );
+    compiledLetters.value = [
+      compiled,
+      ...compiledLetters.value.filter((l) => l.letterId !== compiled.letterId),
+    ];
+    showCompileLetterModal.value = false;
+    useToastStore().push({
+      tone: "info",
+      title: "Visit letter compiled",
+      message: `${compiled.letterId} (${compiled.status}) compiled.`,
+    });
+  } catch (err) {
+    compileLetterError.value =
+      err?.message || "Failed to compile visit letter.";
+    useToastStore().apiError("Failed to compile visit letter", err);
+    throw err;
+  } finally {
+    compileLetterBusy.value = false;
+  }
+}
+
+async function confirmCompileLetter() {
+  const reason = compileLetterReason.value.trim();
+  if (!reason) {
+    compileLetterError.value = "Reason for change is required.";
+    return;
+  }
+  if (compileFinalize.value) {
+    promptSignature(
+      async (sigToken, signedReason) => {
+        await executeLetterCompilation(signedReason || reason, sigToken);
+      },
+      {
+        action: "/api/v1/ctms/letters/compile",
+        semanticAction: "ctms.letter.compile",
+        defaultSigningReason: "APPROVAL",
+        initialReason: reason,
+      }
+    );
+    return;
+  }
+  try {
+    await executeLetterCompilation(reason);
+  } catch {
+    // Error is already shown in modal and toast.
+  }
+}
+
+async function downloadCompiledLetterPdf(letter) {
+  try {
+    const blob = await ctmsApi.downloadVisitLetterPdf(letter.letterId);
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = `${letter.letterType}_${letter.letterId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    useToastStore().apiError("Failed to download visit letter PDF", err);
+  }
+}
+
+// 4. CRA Allocation Update (Demo-only)
 function openReallocate() {
   if (!allowUnbackedAction("CRA workload allocation")) return;
   allocCraId.value = "cra_alice";
@@ -3251,7 +4249,7 @@ async function confirmReallocate() {
   }
 }
 
-// 5. Recruitment Update
+// 5. Recruitment Update (Demo-only)
 function openRecruitment() {
   if (!allowUnbackedAction("Recruitment target update")) return;
   if (recruitment.value && recruitment.value.length > 0) {
@@ -3298,6 +4296,7 @@ async function confirmRecruitment() {
 
 // 6. Delegate Trial Task
 function openDelegate() {
+  if (!canEditDoa.value) return;
   delStaffId.value = "";
   delStartDate.value = new Date().toISOString().slice(0, 10);
   delTaskCodes.value = [];
@@ -3320,64 +4319,60 @@ async function confirmDelegate() {
     return;
   }
   try {
-    const payload = {
-      site_id: siteId.value,
-      staff_user_id: delStaffId.value,
+    await ctmsApi.delegateSiteTasks({
+      site_id: siteId.value.trim(),
+      staff_user_id: delStaffId.value.trim(),
       task_codes: delTaskCodes.value,
       start_date: delStartDate.value,
-      reason_for_change: delReason.value,
-    };
-    await apiClient.post("/api/v1/ctms/doa/delegate", payload, {
-      changeReason: delReason.value,
+      reason_for_change: delReason.value.trim(),
     });
     showDelegateModal.value = false;
     await loadDelegationData();
   } catch (err) {
-    delError.value = err.message || "Failed to request delegation assignment.";
+    delError.value = err?.message || "Failed to request delegation assignment.";
+    useToastStore().apiError("Delegation request failed", err);
   }
 }
 
 // 7. Electronic Signature (PI sign-off)
 function signDelegation(record) {
-  promptSignature(async (sigToken, reason) => {
-    try {
-      await apiClient.post(
-        "/api/v1/ctms/doa/sign-off",
-        {
-          record_id: record.record_id,
-          reason_for_change: reason,
-        },
-        {
-          headers: {
-            "X-Sig-Token": sigToken,
+  if (!canSignDoa.value) return;
+  promptSignature(
+    async (sigToken, reason) => {
+      try {
+        await ctmsApi.signOffDelegation(
+          {
+            record_id: record.record_id,
+            reason_for_change: reason,
           },
-          changeReason: reason,
-        }
-      );
-      await loadDelegationData();
-    } catch (err) {
-      useToastStore().apiError("Sign-off execution failed", err);
+          reason,
+          sigToken
+        );
+        await loadDelegationData();
+      } catch (err) {
+        useToastStore().apiError("Sign-off execution failed", err);
+      }
+    },
+    {
+      action: "/api/v1/ctms/doa/sign-off",
+      defaultSigningReason: "INVESTIGATOR_SIGNATURE",
+      initialReason: "",
     }
-  });
+  );
 }
 
 // 8. Revoke Delegation
 function revokeDelegation(record) {
+  if (!canEditDoa.value) return;
   promptJustification(
     "Revoke Delegation Assignment",
     "Enter the compliance justification reason for revoking this clinical task assignment...",
     async (reason) => {
       try {
-        await apiClient.post(
-          "/api/v1/ctms/doa/revoke",
-          {
-            record_id: record.record_id,
-            reason_for_change: reason,
-          },
-          {
-            changeReason: reason,
-          }
-        );
+        await ctmsApi.revokeSiteTasks({
+          record_id: record.record_id,
+          reason_for_change: reason,
+        });
         await loadDelegationData();
       } catch (err) {
         useToastStore().apiError("Revocation failed", err);
@@ -3388,31 +4383,14 @@ function revokeDelegation(record) {
 
 // 9. Export GxP-Compliant PDF
 async function exportDoaPdf() {
-  const authStore = useAuthStore();
-  const token = authStore?.token || authStore?.accessToken;
-  const baseUrl = getBaseUrl();
-  const url = `${baseUrl}/api/v1/ctms/doa/sites/${siteId.value}/export-pdf`;
-
-  const headers = {};
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
+  const currentSite = siteId.value.trim();
+  if (!currentSite) return;
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to export PDF: ${response.statusText}`);
-    }
-
-    const blob = await response.blob();
+    const blob = await ctmsApi.exportSiteDoaPdf(currentSite);
     const blobUrl = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = blobUrl;
-    link.download = `DOA_Log_${siteId.value}.pdf`;
+    link.download = `DOA_Log_${currentSite}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -3895,5 +4873,28 @@ table,
 th,
 td {
   font-variant-numeric: tabular-nums;
+}
+
+.role-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--semantic-color-text-secondary);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 </style>

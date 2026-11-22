@@ -1,19 +1,20 @@
 <template>
   <section id="kernel-act" class="act" aria-labelledby="kernel-act-title">
-    <h3 id="kernel-act-title">Commands</h3>
+    <h3 id="kernel-act-title">Actions</h3>
     <p v-if="loading" id="kernel-act-status" class="act-note" role="status">
-      Asking the kernel what you may do here…
+      Checking available actions…
     </p>
-    <p v-else-if="error" id="kernel-act-status" class="act-note" role="alert">
-      The kernel couldn't answer: {{ error }}
-    </p>
+    <div v-else-if="error" id="kernel-act-status" class="act-note" role="alert">
+      <p class="act-note">Available actions couldn't be loaded right now.</p>
+      <SupportDetails :detail="error" />
+    </div>
     <p
       v-else-if="!commands.length"
       id="kernel-act-status"
       class="act-note"
       role="status"
     >
-      No kernel command applies to this object.
+      No actions are available for this record.
     </p>
     <template v-else>
       <ul id="kernel-act-list" class="act-list">
@@ -24,7 +25,9 @@
           :data-command="command.command"
         >
           <div class="act-line">
-            <span class="act-command">{{ command.command }}</span>
+            <span class="act-command">{{
+              formatCommandTitle(command.command)
+            }}</span>
             <span
               class="act-decision"
               :class="command.decision.permitted ? 'permitted' : 'denied'"
@@ -45,8 +48,8 @@
         </li>
       </ul>
       <p id="kernel-act-footnote" class="act-note">
-        This is what the kernel would decide if you sent each command now. The
-        commands themselves are sent from the screens that own them.
+        Preview of whether each action is currently permitted for your role.
+        Actions are completed on their respective study screens.
       </p>
     </template>
   </section>
@@ -55,6 +58,8 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { kernelApi, type KernelCommand } from "../../api/kernelApi";
+import { formatCommandTitle } from "../../canvas/nodeResolver";
+import SupportDetails from "./SupportDetails.vue";
 
 /**
  * The Act verb (docs/ux/CLINICAL_CANVAS.md §2.4, ADR-2483): the kernel commands offered on the selected object,

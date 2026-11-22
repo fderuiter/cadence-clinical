@@ -9,54 +9,51 @@ namespace Cadence.ToolingCore.Services;
 
 public static class SecurityAuditorService
 {
-    public static int AuditSecurity(string[]? files = null, string? repoRoot = null)
+    public static int AuditSecurity(
+        string[]? files = null,
+        string? repoRoot = null,
+        bool preCommit = false,
+        GitIndexReader? indexReader = null)
     {
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Executing hardcoded secret scanner and security audit...");
 
-        IEnumerable<string> filesToScan;
-        if (files is not null)
+        if (files is { Length: 0 })
         {
-            if (files.Length == 0)
+            Console.WriteLine("✔ Security audit passed cleanly (no target files).");
+            return 0;
+        }
+
+        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
+        using (ownedReader)
+        {
+            IEnumerable<string> filesToScan;
+            if (files is not null)
             {
-                Console.WriteLine("✔ Security audit passed cleanly. Zero high-entropy secrets detected.");
-                return 0;
+                filesToScan = files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f));
+            }
+            else
+            {
+                filesToScan = Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.AllDirectories);
             }
 
-            filesToScan = files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists);
-        }
-        else
-        {
-            filesToScan = Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.AllDirectories);
-        }
+            var findings = SecretScanner.ScanFiles(repoRoot, filesToScan, reader);
 
-        var findings = SecretScanner.ScanFiles(repoRoot, filesToScan);
+            foreach (var finding in findings)
+            {
+                Console.WriteLine($"[SECURITY FINDING] Security Risk ({finding.PatternName}) in '{finding.FilePath}:{finding.LineNumber}'");
+            }
 
-        foreach (var finding in findings)
-        {
-            Console.WriteLine($"[SECURITY FINDING] Security Risk ({finding.PatternName}) in '{finding.FilePath}:{finding.LineNumber}'");
+            if (findings.Count > 0)
+            {
+                Console.WriteLine($"\n[ERROR] Found {findings.Count} security findings.");
+                return 1;
+            }
+
+            Console.WriteLine("✔ Security audit passed cleanly. Zero high-entropy secrets detected.");
+            return 0;
         }
-
-        if (findings.Count > 0)
-        {
-            Console.WriteLine($"\n[ERROR] Found {findings.Count} security findings.");
-            return 1;
-        }
-
-        Console.WriteLine("✔ Security audit passed cleanly. Zero high-entropy secrets detected.");
-        return 0;
     }
 
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
+    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }

@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+using Cadence.ToolingCore.Services;
+
 namespace Cadence.ToolingCore.Security;
 
 public record SecretScanFinding(
@@ -44,7 +46,8 @@ public static class SecretScanner
 
     public static List<SecretScanFinding> ScanFiles(
         string repoRoot,
-        IEnumerable<string> filesToScan)
+        IEnumerable<string> filesToScan,
+        GitIndexReader? indexReader = null)
     {
         ArgumentNullException.ThrowIfNull(repoRoot);
         ArgumentNullException.ThrowIfNull(filesToScan);
@@ -53,9 +56,25 @@ public static class SecretScanner
 
         foreach (var file in filesToScan)
         {
-            if (!File.Exists(file)) continue;
+            string? rel;
+            if (indexReader is not null)
+            {
+                rel = GitIndexReader.TryNormalizeRelativePath(repoRoot, file);
+                if (string.IsNullOrEmpty(rel) || !indexReader.FileExists(rel))
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                if (!File.Exists(file))
+                {
+                    continue;
+                }
 
-            string rel = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+                rel = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+            }
+
             var pathParts = rel.Split('/');
 
             if (pathParts.Any(p => ExcludedDirKeywords.Contains(p, StringComparer.OrdinalIgnoreCase)) ||
@@ -69,7 +88,7 @@ public static class SecretScanner
                 continue;
             }
 
-            string filename = Path.GetFileName(file);
+            string filename = Path.GetFileName(rel);
             if (filename is ".secrets.baseline" or "pnpm-lock.yaml" or "uv.lock" ||
                 BinaryExtensions.Any(ext => filename.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
             {
@@ -78,8 +97,23 @@ public static class SecretScanner
 
             try
             {
+                IEnumerable<string> lines;
+                if (indexReader is not null)
+                {
+                    if (!indexReader.TryReadLines(rel, out string[] indexedLines))
+                    {
+                        continue;
+                    }
+
+                    lines = indexedLines;
+                }
+                else
+                {
+                    lines = File.ReadLines(file);
+                }
+
                 int lineNum = 1;
-                foreach (var line in File.ReadLines(file))
+                foreach (var line in lines)
                 {
                     if (line.Contains("pragma: allowlist secret", StringComparison.OrdinalIgnoreCase))
                     {
@@ -99,6 +133,7 @@ public static class SecretScanner
                             ));
                         }
                     }
+
                     lineNum++;
                 }
             }

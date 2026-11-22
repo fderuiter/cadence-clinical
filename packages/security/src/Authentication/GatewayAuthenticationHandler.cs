@@ -92,6 +92,21 @@ public sealed class GatewayAuthenticationHandler(
         string sponsorId = headers[GatewayHeaders.SponsorId].ToString();
         string unblindedHeader = headers[GatewayHeaders.UnblindedAccess].ToString();
         bool unblindedAccess = string.Equals(unblindedHeader, "true", StringComparison.OrdinalIgnoreCase);
+        string tenantReadOnlyHeader = headers[GatewayHeaders.TenantReadOnly].ToString();
+        bool tenantReadOnly;
+        if (string.IsNullOrEmpty(tenantReadOnlyHeader) || string.Equals(tenantReadOnlyHeader, "false", StringComparison.OrdinalIgnoreCase))
+        {
+            tenantReadOnly = false;
+        }
+        else if (string.Equals(tenantReadOnlyHeader, "true", StringComparison.OrdinalIgnoreCase))
+        {
+            tenantReadOnly = true;
+        }
+        else
+        {
+            return Task.FromResult(AuthenticateResult.Fail("X-Tenant-Read-Only must be 'true' or 'false' when present."));
+        }
+
         // A blank tenant stays blank: the caller gets no tenant claim, never a fallback tenant (#5038).
         string? tenantId = GatewayIdentity.NullIfBlank(headers[GatewayHeaders.TenantId].ToString());
         if (!ChangeReasonHeader.TryDecode(headers[GatewayHeaders.ChangeReason].ToString(), out string? changeReason))
@@ -114,7 +129,8 @@ public sealed class GatewayAuthenticationHandler(
             unblindedAccess: unblindedAccess,
             tenantId: tenantId,
             sigToken: GatewayIdentity.NullIfBlank(sigToken),
-            subjectCode: subjectCode);
+            subjectCode: subjectCode,
+            tenantReadOnly: tenantReadOnly);
 
         if (!verified)
         {
@@ -135,6 +151,7 @@ public sealed class GatewayAuthenticationHandler(
             AssignedSites = sites,
             AssignedStudies = studies,
             UnblindedAccess = unblindedAccess,
+            TenantReadOnly = tenantReadOnly,
             SponsorId = GatewayIdentity.NullIfBlank(sponsorId),
             SubjectCode = subjectCode,
             ChangeReason = GatewayIdentity.NullIfBlank(changeReason),
@@ -168,6 +185,11 @@ public sealed class GatewayAuthenticationHandler(
             claims.Add(new Claim(CadenceClaimTypes.UnblindedAccess, "true"));
         }
 
+        if (tenantReadOnly)
+        {
+            claims.Add(new Claim(CadenceClaimTypes.TenantReadOnly, "true"));
+        }
+
         var identity = new ClaimsIdentity(claims, SchemeName, CadenceClaimTypes.Subject, ClaimTypes.Role);
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName);
         return Task.FromResult(AuthenticateResult.Success(ticket));
@@ -199,4 +221,5 @@ public static class CadenceClaimTypes
     public const string SubjectCode = "subject_code";
     public const string SponsorId = "sponsor_id";
     public const string UnblindedAccess = "unblinded_access";
+    public const string TenantReadOnly = "tenant_read_only";
 }

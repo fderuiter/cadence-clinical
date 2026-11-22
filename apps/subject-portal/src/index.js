@@ -72,11 +72,15 @@ import {
   COORDINATOR_QUARANTINE_STEPS,
   DEFAULT_SITE_CONTACT,
   SITE_CONTACT_STORAGE_KEY,
+  formatAnswerPairs,
   formatAnswersSummary,
+  getInstrumentDisplayName,
   getSiteSupportContact,
+  getSyncStatusLabel,
   hydrateSiteSupportContact,
   humanizeValidationError,
   maskParticipantIdentifier,
+  resolveQuestionLabel,
 } from "./features/site-support.js";
 import {
   closeSignatureModal,
@@ -120,7 +124,12 @@ import { markFieldInvalid } from "./widgets/field-errors.js";
 
 // Auto-run on load in DOM environments
 if (typeof document !== "undefined") {
-  if (import.meta.env?.MODE === "test" || document.readyState === "loading") {
+  if (
+    import.meta.env?.MODE === "test" ||
+    import.meta.env?.VITEST ||
+    window.__MOCK_TEST_ENV__ ||
+    document.readyState === "loading"
+  ) {
     document.addEventListener("DOMContentLoaded", initializeApp);
   } else if (
     (typeof window === "undefined" || !window.__MOCK_TEST_ENV__) &&
@@ -215,6 +224,10 @@ export {
   hydrateSiteSupportContact,
   getSiteSupportContact,
   maskParticipantIdentifier,
+  formatAnswerPairs,
   formatAnswersSummary,
+  resolveQuestionLabel,
+  getInstrumentDisplayName,
+  getSyncStatusLabel,
   humanizeValidationError,
 };

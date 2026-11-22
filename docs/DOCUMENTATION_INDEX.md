@@ -586,9 +586,11 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2549: Export Canonical Demo Manifest from Kernel Seed](adr/2026-11-20-export-canonical-demo-manifest-from-kernel-seed.md) | Current | - Status: Accepted |
 | [ADR-2551: Share Session Resilience, Draft-Safe Sign-Out, and Part 11 Signature Primitives](adr/2026-11-20-share-session-logout-and-signature-primitives.md) | Current | - Status: Accepted |
 | [ADR-2497: Dual-Layer Gates for Source and Public Bundles](adr/2026-11-20-dual-layer-gates-for-source-and-public-bundles.md) | Current | - Status: Accepted |
-| [ADR-2624: Outbox Collection Edit Checks, Stateless Pre-Commit Form Preview, and ODM Rule Compilation](adr/2026-11-21-outbox-collection-edit-checks-and-pre-commit-preview.md) | Current | - Status: Accepted |
 | [ADR-2642: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation](adr/2026-11-20-ctms-core-topology-scoped-isolation-and-stateful-site-activation.md) | Current | - Status: Accepted |
-| [ADR-2643: Participant ePRO Interop Endpoints and Keyed-HMAC BYOD Activation](adr/2026-11-20-participant-epro-interop-endpoints-and-keyed-hmac-byod-activation.md) | Current | - Status: Accepted |
+| [ADR-2643: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks](adr/2026-11-20-wire-web-ctms-training-and-etmf-workspaces-and-signed-completeness-webhooks.md) | Current | - Status: Accepted |
+| [ADR-2624: Outbox Collection Edit Checks, Stateless Pre-Commit Form Preview, and ODM Rule Compilation](adr/2026-11-21-outbox-collection-edit-checks-and-pre-commit-preview.md) | Current | - Status: Accepted |
+| [ADR-2604: Signed Gateway Expiry Guard and Scoped Trial Upgrades](adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md) | Current | - Status: Accepted |
+| [ADR-2644: Participant ePRO Interop Endpoints and Keyed-HMAC BYOD Activation](adr/2026-11-20-participant-epro-interop-endpoints-and-keyed-hmac-byod-activation.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

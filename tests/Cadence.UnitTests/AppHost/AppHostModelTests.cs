@@ -128,7 +128,9 @@ public sealed class AppHostModelTests
         // at its usual host port, where nothing listens.
         var gateway = await EnvironmentAsync(projects["gateway"]);
         gateway["EXECUTION_SERVICE_URL"].Should().BeOfType<EndpointReference>();
+        gateway["ETMF_SERVICE_URL"].Should().BeOfType<EndpointReference>();
         gateway["CTMS_SERVICE_URL"].Should().BeOfType<EndpointReference>();
+        gateway["KNOWLEDGE_SERVICE_URL"].Should().BeOfType<EndpointReference>();
         gateway["KERNEL_SERVICE_URL"].Should().BeOfType<EndpointReference>();
         foreach (var service in ServiceTopology.Services.Where(s => !s.Core))
         {
@@ -143,6 +145,8 @@ public sealed class AppHostModelTests
                 "RANDOMIZATION_ALLOCATION_KEY",
                 "FIELD_LOOKUP_HASH_KEY"
             ]);
+        (await EnvironmentAsync(projects["etmf"]))["EXECUTION_SERVICE_URL"]
+            .Should().BeOfType<EndpointReference>().Which.Resource.Name.Should().Be("execution");
     }
 
     [Fact]
