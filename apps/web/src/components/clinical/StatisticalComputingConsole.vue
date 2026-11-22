@@ -907,110 +907,101 @@
     </div>
 
     <!-- Issue Token Modal -->
-    <div v-if="showIssueTokenModal" class="modal-backdrop">
-      <div class="modal-dialog card">
-        <div class="modal-header">
-          <h3 class="modal-title">Issue Database Lock Authorization Token</h3>
-          <button
-            type="button"
-            class="btn-close"
-            @click="showIssueTokenModal = false"
-          >
-            &times;
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label" for="new-lock-id"
-              >Database Lock Reference ID</label
-            >
-            <input
-              id="new-lock-id"
-              v-model="newTokenLockId"
-              type="text"
-              class="form-input"
-              placeholder="LOCK-STUDY-901-FINAL"
-            />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="new-lock-milestone"
-              >Milestone Tier</label
-            >
-            <select
-              id="new-lock-milestone"
-              v-model="newTokenMilestone"
-              class="form-select"
-            >
-              <option value="DATABASE_LOCK">DATABASE_LOCK</option>
-              <option value="INTERIM_ANALYSIS_1">INTERIM_ANALYSIS_1</option>
-              <option value="INTERIM_ANALYSIS_2">INTERIM_ANALYSIS_2</option>
-              <option value="SAFETY_REVIEW">SAFETY_REVIEW</option>
-              <option value="REGULATORY_SUBMISSION">
-                REGULATORY_SUBMISSION
-              </option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="new-token-user"
-              >Issued To (User ID)</label
-            >
-            <input
-              id="new-token-user"
-              v-model="newTokenIssuedTo"
-              type="text"
-              class="form-input"
-              placeholder="lead_unblinded_statistician"
-            />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="new-token-hours"
-              >Validity Period (Hours)</label
-            >
-            <input
-              id="new-token-hours"
-              v-model.number="newTokenHours"
-              type="number"
-              class="form-input"
-              min="1"
-              max="720"
-            />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="new-token-reason"
-              >Regulatory Justification (21 CFR Part 11)</label
-            >
-            <textarea
-              id="new-token-reason"
-              v-model="newTokenReason"
-              class="form-input"
-              rows="3"
-              placeholder="Formally authorized by IDMC Charter for Interim Analysis 1 Unblinded Run"
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="showIssueTokenModal = false"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            :disabled="!newTokenLockId || !newTokenIssuedTo || !newTokenReason"
-            @click="confirmIssueToken"
-          >
-            Issue &amp; Cryptographically Sign Token
-          </button>
-        </div>
+    <ClinicalModal
+      v-model="showIssueTokenModal"
+      :teleport="false"
+      dialog-class="modal-dialog card"
+      title="Issue Database Lock Authorization Token"
+    >
+      <div class="form-group">
+        <label class="form-label" for="new-lock-id"
+          >Database Lock Reference ID</label
+        >
+        <input
+          id="new-lock-id"
+          v-model="newTokenLockId"
+          type="text"
+          class="form-input"
+          placeholder="LOCK-STUDY-901-FINAL"
+        />
       </div>
-    </div>
+      <div class="form-group">
+        <label class="form-label" for="new-lock-milestone"
+          >Milestone Tier</label
+        >
+        <select
+          id="new-lock-milestone"
+          v-model="newTokenMilestone"
+          class="form-select"
+        >
+          <option value="DATABASE_LOCK">DATABASE_LOCK</option>
+          <option value="INTERIM_ANALYSIS_1">INTERIM_ANALYSIS_1</option>
+          <option value="INTERIM_ANALYSIS_2">INTERIM_ANALYSIS_2</option>
+          <option value="SAFETY_REVIEW">SAFETY_REVIEW</option>
+          <option value="REGULATORY_SUBMISSION">REGULATORY_SUBMISSION</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="new-token-user"
+          >Issued To (User ID)</label
+        >
+        <input
+          id="new-token-user"
+          v-model="newTokenIssuedTo"
+          type="text"
+          class="form-input"
+          placeholder="lead_unblinded_statistician"
+        />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="new-token-hours"
+          >Validity Period (Hours)</label
+        >
+        <input
+          id="new-token-hours"
+          v-model.number="newTokenHours"
+          type="number"
+          class="form-input"
+          min="1"
+          max="720"
+        />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="new-token-reason"
+          >Regulatory Justification (21 CFR Part 11)</label
+        >
+        <textarea
+          id="new-token-reason"
+          v-model="newTokenReason"
+          class="form-input"
+          rows="3"
+          placeholder="Formally authorized by IDMC Charter for Interim Analysis 1 Unblinded Run"
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="showIssueTokenModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="!newTokenLockId || !newTokenIssuedTo || !newTokenReason"
+          @click="confirmIssueToken"
+        >
+          Issue &amp; Cryptographically Sign Token
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ClinicalModal } from "ui";
 import { ref, computed, onMounted } from "vue";
 import { statisticalComputingService } from "../../api/statisticalComputing";
 import { apiClient } from "../../api/apiClient";
