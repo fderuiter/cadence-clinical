@@ -68,7 +68,9 @@
         :schedule-loading="!formId && canvas.scheduleLoading"
         :schedule-error="!formId ? canvas.scheduleError : null"
         :can-manage-queries="canManageQueries"
+        :can-answer-queries="canAnswerQueries"
         :can-verify-source="canVerifySource"
+        :highlight-item-id="highlightItemId"
         :form-location="formLocation"
         :observation-location="observationLocation"
         @retry-schedule="canvas.retryScheduleOptions(studyCode)"
@@ -103,7 +105,9 @@ const props = defineProps<{
   plannedActivityId?: string | null;
   formLabel?: string;
   canManageQueries: boolean;
+  canAnswerQueries?: boolean;
   canVerifySource?: boolean;
+  highlightItemId?: string | null;
   backLocation: RouteLocationRaw;
   backLabel: string;
   handoffLocation?: RouteLocationRaw | null;

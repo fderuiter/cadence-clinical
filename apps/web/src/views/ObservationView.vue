@@ -211,6 +211,7 @@ import {
   formatObservationValue,
   parseCorrection,
   sameObservationValue,
+  type ExpectedItemSpec,
 } from "../api/observationValue";
 import { observationNodeRef } from "../canvas/nodeRef";
 import { canCorrectObservations } from "../canvas/authority";
@@ -350,12 +351,24 @@ function lockScopeLabel(scope: unknown): string {
 const newValue = ref("");
 const reasonOpen = ref(false);
 
-const unit = computed(() => correctionUnit(observation.value?.value));
+const expectedSpec = computed<ExpectedItemSpec | null>(() => {
+  const obs = observation.value;
+  if (!obs) return null;
+  return {
+    valueKind: obs.expected_value_kind ?? null,
+    unit: obs.expected_unit ?? null,
+    codeSystemVersionId: obs.expected_code_system_version_id ?? null,
+  };
+});
+
+const unit = computed(() =>
+  correctionUnit(observation.value?.value, expectedSpec.value)
+);
 
 const parsed = computed(() => {
   const current = observation.value?.value;
   if (!current || newValue.value.trim().length === 0) return null;
-  return parseCorrection(newValue.value, current);
+  return parseCorrection(newValue.value, current, expectedSpec.value);
 });
 
 const parseError = computed(() =>

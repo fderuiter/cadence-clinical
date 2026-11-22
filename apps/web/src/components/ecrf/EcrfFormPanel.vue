@@ -401,6 +401,22 @@
                     >
                       {{ (itemErrors[item.item_id] ?? []).join(" ") }}
                     </p>
+                    <ul
+                      v-if="previewWarnings[item.item_id]?.length"
+                      :id="`ecrf-item-${item.item_id}-warnings`"
+                      :data-testid="`ecrf-preview-warnings-${item.item_id}`"
+                      class="ecrf-preview-warnings"
+                    >
+                      <li
+                        v-for="warn in previewWarnings[item.item_id]"
+                        :key="warn.rule_id"
+                      >
+                        <strong
+                          >[{{ warn.severity }}] {{ warn.rule_id }}:</strong
+                        >
+                        {{ warn.message }}
+                      </li>
+                    </ul>
                   </td>
                   <td>
                     <select
@@ -428,9 +444,12 @@
                         :id="`ecrf-item-observation-${item.item_id}`"
                         class="ecrf-observation-link"
                         :to="itemObservationLink(item.observation_id)!"
-                        >{{ item.revision }}</component
                       >
-                      <template v-else>{{ item.revision }}</template>
+                        {{ item.revision }}
+                      </component>
+                      <template v-else>
+                        {{ item.revision }}
+                      </template>
                       by {{ item.recorded_by }} at {{ item.recorded_at }}
                     </template>
                     <template v-else> No value </template>
@@ -627,6 +646,33 @@
           </table>
         </div>
 
+        <div
+          v-if="allPreviewWarnings.length > 0"
+          id="ecrf-preview-banner"
+          data-testid="ecrf-preview-banner"
+          class="ecrf-preview-banner"
+          role="status"
+          aria-live="polite"
+        >
+          <strong>
+            Pre-commit edit check preview ({{ allPreviewWarnings.length }}
+            {{ allPreviewWarnings.length === 1 ? "warning" : "warnings" }}):
+          </strong>
+          <span>
+            Saving commits these clinical values immediately; any unresolved
+            discrepancy will raise an automated query for review.
+          </span>
+          <ul
+            v-if="previewWarnings.__form__?.length"
+            class="ecrf-preview-warnings"
+          >
+            <li v-for="warn in previewWarnings.__form__" :key="warn.rule_id">
+              <strong>[{{ warn.severity }}] {{ warn.rule_id }}:</strong>
+              {{ warn.message }}
+            </li>
+          </ul>
+        </div>
+
         <div v-if="!locked" class="ecrf-form-row">
           <label for="ecrf-save-reason">Reason for change</label>
           <input
@@ -723,6 +769,7 @@
           v-else
           :queries="queries.queries"
           :can-manage="!!canManageQueries"
+          :can-answer="effectiveCanAnswerQueries"
           :busy="queries.busy"
           :assertions-locked="assertionsLocked"
           :act="queries.act"
@@ -768,9 +815,12 @@
             v-if="assertionObservationLink(assertion.target)"
             class="ecrf-observation-link"
             :to="assertionObservationLink(assertion.target)!"
-            >{{ assertion.target }}</component
           >
-          <template v-else>{{ assertion.target }}</template>
+            {{ assertion.target }}
+          </component>
+          <template v-else>
+            {{ assertion.target }}
+          </template>
           <template v-if="assertion.revision !== null">
             (revision {{ assertion.revision }})
           </template>
@@ -852,9 +902,12 @@
                       v-if="itemObservationLink(signed.observation_id)"
                       class="ecrf-observation-link"
                       :to="itemObservationLink(signed.observation_id)!"
-                      >{{ signed.revision }}</component
                     >
-                    <template v-else>{{ signed.revision }}</template>
+                      {{ signed.revision }}
+                    </component>
+                    <template v-else>
+                      {{ signed.revision }}
+                    </template>
                   </td>
                   <td>{{ currentValueText(signed.item_id) }}</td>
                   <td>{{ currentOf(signed.item_id)?.revision ?? "None" }}</td>
@@ -864,7 +917,7 @@
           </li>
         </ul>
 
-        <div class="ecrf-form-row">
+        <div v-if="hasSignAuthority" class="ecrf-form-row">
           <label for="ecrf-sign-meaning">Meaning</label>
           <select
             id="ecrf-sign-meaning"
@@ -892,6 +945,14 @@
             >{{ signHint }}</span
           >
         </div>
+        <p
+          v-else
+          id="ecrf-sign-unauthorized"
+          class="ecrf-form-hint"
+          data-testid="ecrf-sign-unauthorized"
+        >
+          Only an authorised investigator (collection.sign) may sign this form.
+        </p>
 
         <div
           v-if="signOutcome"
@@ -969,6 +1030,10 @@ import type {
   StudyCollectionSpecOption,
   StudyPlannedActivityOption,
 } from "../../canvas/kernelStudy";
+import {
+  canAnswerQueries as hasQueryAnswerRole,
+  canSignForms,
+} from "../../canvas/authority";
 import { observationNodeRef } from "../../canvas/nodeRef";
 import {
   ASSERTION_ALREADY_RETRACTED,
@@ -999,32 +1064,39 @@ export interface CanvasFormEnrollmentContext {
   scheduleError?: string | null;
 }
 
-const props = defineProps<{
-  /** A form to load on mount, for example from the route. */
-  formId?: string | null;
-  enrollmentId?: string | null;
-  collectionSpecId?: string | null;
-  plannedActivityId?: string | null;
-  /** Enrollment and structured protocol choices supplied when embedded in Clinical Canvas. */
-  enrollmentContext?: CanvasFormEnrollmentContext | null;
-  /** True while study Schedule of Activities options are loading for a new form. */
-  scheduleLoading?: boolean;
-  /** Error message when study Schedule of Activities options fail to load. */
-  scheduleError?: string | null;
-  /** Builds a route location for an observation inside the hosting workspace. */
-  observationLocation?: (
-    observationId: string,
-    formId: string
-  ) => RouteLocationRaw | null;
-  /** Builds a route location for a form inside the hosting workspace. */
-  formLocation?: (formId: string) => RouteLocationRaw | null;
-  /** Offer raising, closing, reopening and cancelling queries (a monitor or data manager); the module still checks. */
-  canManageQueries?: boolean;
-  /** Offer verifying recorded values against source or withdrawing verifications (a monitor or data manager). */
-  canVerifySource?: boolean;
-  /** Item id to highlight and scroll into view when opened from a query worklist link. */
-  highlightItemId?: string | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    /** A form to load on mount, for example from the route. */
+    formId?: string | null;
+    enrollmentId?: string | null;
+    collectionSpecId?: string | null;
+    plannedActivityId?: string | null;
+    /** Enrollment and structured protocol choices supplied when embedded in Clinical Canvas. */
+    enrollmentContext?: CanvasFormEnrollmentContext | null;
+    /** True while study Schedule of Activities options are loading for a new form. */
+    scheduleLoading?: boolean;
+    /** Error message when study Schedule of Activities options fail to load. */
+    scheduleError?: string | null;
+    /** Builds a route location for an observation inside the hosting workspace. */
+    observationLocation?: (
+      observationId: string,
+      formId: string
+    ) => RouteLocationRaw | null;
+    /** Builds a route location for a form inside the hosting workspace. */
+    formLocation?: (formId: string) => RouteLocationRaw | null;
+    /** Offer raising, closing, reopening and cancelling queries (a monitor or data manager); the module still checks. */
+    canManageQueries?: boolean;
+    /** Offer answering open queries (site coordinator or investigator). */
+    canAnswerQueries?: boolean;
+    /** Offer verifying recorded values against source or withdrawing verifications (a monitor or data manager). */
+    canVerifySource?: boolean;
+    /** Item id to highlight and scroll into view when opened from a query worklist link. */
+    highlightItemId?: string | null;
+  }>(),
+  {
+    canAnswerQueries: undefined,
+  }
+);
 
 const emit = defineEmits<{
   (e: "dirty-change", dirty: boolean): void;
@@ -1042,6 +1114,7 @@ const {
   items,
   entries,
   itemErrors,
+  previewWarnings,
   loading,
   loadError,
   opening,
@@ -1532,6 +1605,25 @@ const signMeaning = ref<EcrfSignatureMeaning>("approved");
 const showSignModal = ref(false);
 const authStore = useAuthStore();
 
+const effectiveCanAnswerQueries = computed(() =>
+  props.canAnswerQueries !== undefined
+    ? props.canAnswerQueries
+    : authStore.isAuthenticated
+      ? hasQueryAnswerRole(authStore)
+      : !props.canManageQueries
+);
+
+const hasSignAuthority = computed(() => {
+  if (typeof form.value?.can_sign === "boolean") {
+    return form.value.can_sign;
+  }
+  return authStore.isAuthenticated ? canSignForms(authStore) : true;
+});
+
+const allPreviewWarnings = computed(() =>
+  Object.values(previewWarnings).flat()
+);
+
 const ECRF_INVESTIGATOR_REASONS = [
   "Investigator Certification",
   "INVESTIGATOR_SIGNATURE",
@@ -1937,5 +2029,20 @@ table,
 th,
 td {
   font-variant-numeric: tabular-nums;
+}
+.ecrf-preview-warnings {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 0.8rem;
+  color: var(--warning);
+}
+.ecrf-preview-banner {
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--warning);
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: 0.85rem;
 }
 </style>

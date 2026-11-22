@@ -24,6 +24,9 @@ export type EcrfFormSignature = Schemas["Kernel_FormSignatureResponse"];
 export type EcrfFormSignedValue = Schemas["Kernel_FormSignedValueResponse"];
 export type EcrfFormSaved = Schemas["Kernel_FormSavedResponse"];
 export type EcrfFormValue = Schemas["Kernel_FormValueRequest"];
+export type EcrfFormPreview = Schemas["Kernel_FormPreviewResponse"];
+export type EcrfFormPreviewWarning =
+  Schemas["Kernel_FormPreviewWarningResponse"];
 
 /** Normalizes an OpenAPI integer|string|undefined summary count to a non-negative integer. */
 export function toFormSummaryCount(
@@ -175,6 +178,22 @@ export const ecrfFormsApi = {
       })
     );
   },
+  /**
+   * Evaluates pinned study edit-check rule packs in memory over the form's current values overlaid with draft edits
+   * (POST /api/v1/execution/forms/{formId}/preview). Writes no observations, validation runs, or audit entries.
+   */
+  previewValues(
+    formId: string,
+    values: EcrfFormValue[]
+  ): Promise<EcrfFormPreview> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/forms/{formId}/preview", {
+        params: { path: { formId } },
+        body: { values },
+      })
+    );
+  },
+
   /**
    * Signs the form's current values (POST /api/v1/execution/forms/{formId}/signatures) with a gateway step-up token
    * issued for {@link formSignatureAction} and {@link FORM_SIGN_SEMANTIC_ACTION}. Rejects with an ApiError of status

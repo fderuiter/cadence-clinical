@@ -205,7 +205,7 @@
         </form>
         <div v-else class="form-query-buttons">
           <button
-            v-for="action in queryActions(query, canManage)"
+            v-for="action in queryActions(query, canManage, effectiveCanAnswer)"
             :id="`btn-${action}-${query.query_id}`"
             :key="action"
             type="button"
@@ -238,30 +238,36 @@ import {
  * target form with the questioned item highlighted, and a multi-query workflow that dispatches one transition per
  * selected query with per-query status feedback.
  */
-const props = defineProps<{
-  queries: FormQueryResponse[];
-  canManage: boolean;
-  busy: boolean;
-  /** Show each query's form link, for a list that spans an enrollment's or study's forms. */
-  showForm?: boolean;
-  /** Show each query's site and participant codes, for a study-wide worklist. */
-  showContext?: boolean;
-  studyCode?: string;
-  subjectCode?: string;
-  assertionsLocked?: boolean;
-  formTo?: (query: FormQueryResponse) => RouteLocationRaw | null;
-  observationTo?: (query: FormQueryResponse) => RouteLocationRaw | null;
-  act: (
-    query: FormQueryResponse,
-    action: FormQueryAction,
-    text: string
-  ) => Promise<boolean>;
-  actMany?: (
-    targets: FormQueryResponse[],
-    action: FormQueryAction,
-    text: string
-  ) => Promise<FormQueryBatchItemResult[]>;
-}>();
+const props = withDefaults(
+  defineProps<{
+    queries: FormQueryResponse[];
+    canManage: boolean;
+    canAnswer?: boolean;
+    busy: boolean;
+    /** Show each query's form link, for a list that spans an enrollment's or study's forms. */
+    showForm?: boolean;
+    /** Show each query's site and participant codes, for a study-wide worklist. */
+    showContext?: boolean;
+    studyCode?: string;
+    subjectCode?: string;
+    assertionsLocked?: boolean;
+    formTo?: (query: FormQueryResponse) => RouteLocationRaw | null;
+    observationTo?: (query: FormQueryResponse) => RouteLocationRaw | null;
+    act: (
+      query: FormQueryResponse,
+      action: FormQueryAction,
+      text: string
+    ) => Promise<boolean>;
+    actMany?: (
+      targets: FormQueryResponse[],
+      action: FormQueryAction,
+      text: string
+    ) => Promise<FormQueryBatchItemResult[]>;
+  }>(),
+  {
+    canAnswer: undefined,
+  }
+);
 
 const instance = getCurrentInstance();
 const hasRouter = Boolean(instance?.appContext.config.globalProperties.$router);
@@ -322,6 +328,8 @@ const ACTION_TEXT: Record<
   },
 };
 
+const effectiveCanAnswer = computed(() => props.canAnswer ?? !props.canManage);
+
 const pendingAction = ref<{ queryId: string; action: FormQueryAction } | null>(
   null
 );
@@ -335,7 +343,11 @@ const bulkResults = ref<FormQueryBatchItemResult[]>([]);
 const availableBulkActions = computed<FormQueryAction[]>(() => {
   const present = new Set<FormQueryAction>();
   for (const q of props.queries) {
-    for (const action of queryActions(q, props.canManage)) {
+    for (const action of queryActions(
+      q,
+      props.canManage,
+      effectiveCanAnswer.value
+    )) {
       present.add(action);
     }
   }
@@ -373,15 +385,17 @@ watch(bulkAction, () => {
 });
 
 watch(
-  () => [props.queries, props.canManage] as const,
-  ([nextQueries, canManage]) => {
+  () => [props.queries, props.canManage, effectiveCanAnswer.value] as const,
+  ([nextQueries, canManage, allowAnswer]) => {
     const actions = availableBulkActions.value;
     if (actions.length > 0 && !actions.includes(bulkAction.value)) {
       bulkAction.value = actions[0];
     }
     const allowedIds = new Set(
       nextQueries
-        .filter((q) => queryActions(q, canManage).includes(bulkAction.value))
+        .filter((q) =>
+          queryActions(q, canManage, allowAnswer).includes(bulkAction.value)
+        )
         .map((q) => q.query_id)
     );
     const hadSelected = selectedQueryIds.value.length > 0;
@@ -401,7 +415,7 @@ watch(
       );
       if (
         !activeTarget ||
-        !queryActions(activeTarget, canManage).includes(
+        !queryActions(activeTarget, canManage, allowAnswer).includes(
           pendingAction.value.action
         )
       ) {

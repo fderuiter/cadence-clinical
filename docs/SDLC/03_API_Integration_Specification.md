@@ -382,7 +382,7 @@ Extracts the fully resolved, CDISC USDM JSON-compliant representation of a study
     "id": "prt_cadence_001",
     "version": "1.0",
     "status": "APPROVED",
-    "document_url": "https://clinical.cadence.com/protocols/prt_cadence_001.pdf"
+    "document_url": "https://clinical.cadence.clinical/protocols/prt_cadence_001.pdf"
   },
   "study_arms": [
     {

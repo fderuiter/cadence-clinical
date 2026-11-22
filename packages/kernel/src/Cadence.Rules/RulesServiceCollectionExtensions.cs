@@ -1,5 +1,6 @@
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Validation;
 using Cadence.Rules.Amendment;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Indicators;
@@ -36,6 +37,15 @@ public static class RulesServiceCollectionExtensions
         services.TryAddSingleton<IndicatorEvaluator>();
         services.TryAddScoped<StudyIndicators>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ILibraryContentValidator, IndicatorSetContentValidator>());
+        return services;
+    }
+
+    /// <summary>
+    /// Registers <see cref="ICollectionValidationService"/> for hosts that wire kernel standards and collection persistence.
+    /// </summary>
+    public static IServiceCollection AddCadenceCollectionValidation(this IServiceCollection services)
+    {
+        services.TryAddScoped<ICollectionValidationService, CollectionValidationService>();
         return services;
     }
 }

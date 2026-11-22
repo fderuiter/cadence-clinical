@@ -15,6 +15,9 @@ using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Protocol.Import;
+using Cadence.Kernel.Validation;
+using Cadence.Rules.Expressions;
+using Cadence.Rules.Packs;
 
 namespace Cadence.Ddf;
 
@@ -24,12 +27,16 @@ namespace Cadence.Ddf;
 /// <param name="Problems">Structural or XML validation problems that prevented import.</param>
 /// <param name="Notes">Readable notes describing unmapped terminology codes, optional vendor attributes, or approximated constructs.</param>
 /// <param name="PayloadTooLarge">True when the XML payload exceeded <see cref="IProtocolDesignImporter.MaxPayloadBytes"/>.</param>
+/// <param name="Rules">Compiled collection-stage edit-check rules extracted from ODM <c>RangeCheck</c> and <c>ConditionDef</c> elements.</param>
+/// <param name="StudyOid">OID attribute on the imported ODM <c>Study</c> element, when present.</param>
 public sealed record OdmImportResult(
     string? Title,
     IReadOnlyList<CollectionSpec> CollectionSpecs,
     IReadOnlyList<string> Problems,
     IReadOnlyList<ProtocolImportNote> Notes,
-    bool PayloadTooLarge = false)
+    bool PayloadTooLarge = false,
+    IReadOnlyList<Rule>? Rules = null,
+    string? StudyOid = null)
 {
     /// <summary>True when one or more forms were imported without validation problems.</summary>
     public bool IsSuccess => Problems.Count == 0 && !PayloadTooLarge && CollectionSpecs.Count > 0;
@@ -250,17 +257,11 @@ public static partial class OdmDesignImporter
         var codeLists = ParseCodeLists(mdv);
         var itemDefs = ParseByOid(mdv, "ItemDef", problems);
         var itemGroupDefs = ParseByOid(mdv, "ItemGroupDef", problems);
+        var conditionDefs = ParseByOid(mdv, "ConditionDef", problems);
         var formDefs = Children(mdv, "FormDef").ToList();
         if (formDefs.Count == 0)
         {
             problems.Add("ODM <MetaDataVersion> contains no <FormDef> elements.");
-        }
-
-        foreach (var condition in Children(mdv, "ConditionDef"))
-        {
-            notes.Add(new ProtocolImportNote(
-                Attr(condition, "OID") ?? "ConditionDef",
-                $"Optional ODM <ConditionDef> '{Attr(condition, "Name") ?? Attr(condition, "OID")}' was noted; conditional branching is added during rule authoring."));
         }
 
         foreach (var method in Children(mdv, "MethodDef"))
@@ -275,9 +276,55 @@ public static partial class OdmDesignImporter
             return new OdmImportResult(studyTitle, [], problems, notes);
         }
 
+        var studyOid = Attr(study, "OID");
+        var formConditionOids = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (Child(mdv, "Protocol") is { } protocolEl)
+        {
+            foreach (var eventRef in Children(protocolEl, "StudyEventRef"))
+            {
+                var eventOid = Attr(eventRef, "StudyEventOID");
+                if (string.IsNullOrWhiteSpace(eventOid))
+                {
+                    continue;
+                }
+
+                var eventDef = Children(mdv, "StudyEventDef").FirstOrDefault(e => string.Equals(Attr(e, "OID"), eventOid, StringComparison.Ordinal));
+                if (eventDef is null)
+                {
+                    continue;
+                }
+
+                foreach (var formRef in Children(eventDef, "FormRef"))
+                {
+                    var fOid = Attr(formRef, "FormOID");
+                    var cOid = Attr(formRef, "CollectionExceptionConditionOID");
+                    if (!string.IsNullOrWhiteSpace(fOid) && !string.IsNullOrWhiteSpace(cOid))
+                    {
+                        formConditionOids[fOid] = cOid;
+                    }
+                }
+            }
+        }
+
+        foreach (var eventDef in Children(mdv, "StudyEventDef"))
+        {
+            foreach (var formRef in Children(eventDef, "FormRef"))
+            {
+                var fOid = Attr(formRef, "FormOID");
+                var cOid = Attr(formRef, "CollectionExceptionConditionOID");
+                if (!string.IsNullOrWhiteSpace(fOid) && !string.IsNullOrWhiteSpace(cOid))
+                {
+                    formConditionOids.TryAdd(fOid, cOid);
+                }
+            }
+        }
+
         var seenFormOids = new HashSet<string>(StringComparer.Ordinal);
         var specs = new List<CollectionSpec>(formDefs.Count);
         var notedCodeLists = new HashSet<string>(StringComparer.Ordinal);
+        var formIdByOid = new Dictionary<string, string>(StringComparer.Ordinal);
+        var importedItems = new List<ImportedItemMeta>();
+        var conditionTargets = new List<(string ConditionOid, ImportedItemMeta TargetItem)>();
 
         foreach (var formDef in formDefs)
         {
@@ -305,6 +352,8 @@ public static partial class OdmDesignImporter
             }
 
             var formId = AllocateUniqueElementId(rawFormOid, "Form", usedIds);
+            formIdByOid[rawFormOid] = formId;
+            formConditionOids.TryGetValue(rawFormOid, out var formLevelConditionOid);
             var orderedGroupRefs = OrderRefs(Children(formDef, "ItemGroupRef"), rawFormOid, "ItemGroupRef", problems);
             var items = new List<CollectionItem>();
 
@@ -318,6 +367,7 @@ public static partial class OdmDesignImporter
                 }
 
                 ValidateYesNoAttribute(groupRef, "Mandatory", $"Form '{rawFormOid}' ItemGroupRef '{igOid}'", problems);
+                var groupConditionOid = Attr(groupRef, "CollectionExceptionConditionOID");
                 if (!itemGroupDefs.TryGetValue(igOid, out var igDef))
                 {
                     problems.Add($"Form '{rawFormOid}' references ItemGroupOID '{igOid}', which does not exist in <MetaDataVersion>.");
@@ -343,6 +393,7 @@ public static partial class OdmDesignImporter
 
                     var mandatoryAttr = ValidateYesNoAttribute(itemRef, "Mandatory", $"ItemGroup '{igOid}' ItemRef '{itemOid}'", problems);
                     var required = string.Equals(mandatoryAttr, "Yes", StringComparison.OrdinalIgnoreCase);
+                    var itemConditionOid = Attr(itemRef, "CollectionExceptionConditionOID");
 
                     if (!itemDefs.TryGetValue(itemOid, out var itemDef))
                     {
@@ -367,6 +418,15 @@ public static partial class OdmDesignImporter
                     if (item is not null)
                     {
                         items.Add(item);
+                        var itemName = FirstNonBlank(Attr(itemDef, "Name"), itemOid)!;
+                        var meta = new ImportedItemMeta(formId, rawFormOid, igOid, itemOid, itemName, item, itemDef);
+                        importedItems.Add(meta);
+                        foreach (var condOid in new[] { formLevelConditionOid, groupConditionOid, itemConditionOid }
+                            .Where(c => !string.IsNullOrWhiteSpace(c))
+                            .Distinct(StringComparer.Ordinal))
+                        {
+                            conditionTargets.Add((condOid!, meta));
+                        }
                     }
                 }
             }
@@ -374,9 +434,23 @@ public static partial class OdmDesignImporter
             specs.Add(new CollectionSpec(formId, formName, items));
         }
 
+        if (problems.Count > 0)
+        {
+            return new OdmImportResult(studyTitle, [], problems, DeduplicateNotes(notes), StudyOid: studyOid);
+        }
+
+        var compiledRules = CompileOdmRules(
+            FirstNonBlank(studyOid, studyTitle, "ODM")!,
+            importedItems,
+            formIdByOid,
+            conditionDefs,
+            conditionTargets,
+            notes,
+            problems);
+
         return problems.Count > 0
-            ? new OdmImportResult(studyTitle, [], problems, DeduplicateNotes(notes))
-            : new OdmImportResult(studyTitle, specs, [], DeduplicateNotes(notes));
+            ? new OdmImportResult(studyTitle, [], problems, DeduplicateNotes(notes), StudyOid: studyOid)
+            : new OdmImportResult(studyTitle, specs, [], DeduplicateNotes(notes), Rules: compiledRules, StudyOid: studyOid);
     }
 
     private static async Task<CollectionItem?> BuildItemAsync(
@@ -400,13 +474,6 @@ public static partial class OdmDesignImporter
         var description = TranslatedText(Child(itemDef, "Description"));
         var definition = FirstNonBlank(question, description, prompt)!;
         var extCode = ExtractExtCode(itemDef);
-
-        if (Children(itemDef, "RangeCheck").Any())
-        {
-            notes.Add(new ProtocolImportNote(
-                $"{rawFormOid}/{itemOid}",
-                $"Item '{itemName}' includes ODM <RangeCheck> constraints; range edit checks are authored separately."));
-        }
 
         var unitRefOid = Attr(Child(itemDef, "MeasurementUnitRef"), "MeasurementUnitOID");
         string? ucumUnit = null;
@@ -884,6 +951,436 @@ public static partial class OdmDesignImporter
 
     [GeneratedRegex("\\s+", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 100)]
     private static partial Regex WhitespaceRegex();
+
+    [GeneratedRegex("[^A-Za-z0-9._-]+", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 100)]
+    private static partial Regex InvalidRuleIdCharsRegex();
+
+    private static List<Rule> CompileOdmRules(
+        string citationDocumentLabel,
+        IReadOnlyList<ImportedItemMeta> importedItems,
+        IReadOnlyDictionary<string, string> formIdByOid,
+        IReadOnlyDictionary<string, XElement> conditionDefs,
+        IReadOnlyList<(string ConditionOid, ImportedItemMeta TargetItem)> conditionTargets,
+        List<ProtocolImportNote> notes,
+        List<string> problems)
+    {
+        var rules = new List<Rule>();
+        var usedRuleIds = new HashSet<string>(StringComparer.Ordinal);
+        var itemsByLookup = BuildItemLookup(importedItems, formIdByOid);
+        var docTitle = TruncateText($"CDISC ODM Import ({citationDocumentLabel})", RulePackJson.MaxTextLength);
+
+        foreach (var meta in importedItems)
+        {
+            int rcIndex = 0;
+            foreach (var rangeCheck in Children(meta.ItemDef, "RangeCheck"))
+            {
+                rcIndex++;
+                var comparator = Attr(rangeCheck, "Comparator")?.ToUpperInvariant();
+                var softHard = Attr(rangeCheck, "SoftHard");
+                var severity = string.Equals(softHard, "Hard", StringComparison.OrdinalIgnoreCase)
+                    ? ValidationSeverity.Error
+                    : ValidationSeverity.Warning;
+                var errorMessage = TranslatedText(Child(rangeCheck, "ErrorMessage"));
+                var checkValues = Children(rangeCheck, "CheckValue")
+                    .Select(v => v.Value?.Trim())
+                    .Where(v => !string.IsNullOrEmpty(v))
+                    .Select(v => v!)
+                    .ToList();
+                var formalEl = Children(rangeCheck, "FormalExpression").FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.Value));
+
+                RuleExpression? condition = null;
+                if (!string.IsNullOrWhiteSpace(comparator) && checkValues.Count > 0)
+                {
+                    condition = BuildRangeCheckExpression(meta, comparator, checkValues, problems);
+                }
+                else if (formalEl is not null)
+                {
+                    var rawExpr = formalEl.Value.Trim();
+                    if (OdmFormalExpressionParser.TryParse(
+                        rawExpr,
+                        token => ResolveVariableForForm(token, meta.FormId, itemsByLookup),
+                        meta.Item.Id,
+                        out var parsedFormal,
+                        out var parseError) && parsedFormal is not null)
+                    {
+                        condition = rawExpr.StartsWith('{')
+                            ? parsedFormal
+                            : new LogicalExpression(
+                                LogicalOperator.And,
+                                [
+                                    new FunctionExpression(RuleFunction.IsNotEmpty, [new VariableExpression(meta.Item.Id)]),
+                                    new NotExpression(parsedFormal),
+                                ]);
+                    }
+                    else
+                    {
+                        notes.Add(new ProtocolImportNote(
+                            $"{meta.RawFormOid}/{meta.ItemOid}",
+                            $"RangeCheck #{rcIndex} FormalExpression on item '{meta.ItemName}' could not be compiled ({parseError}); skipped."));
+                    }
+                }
+                else
+                {
+                    problems.Add($"Item '{meta.ItemOid}' RangeCheck #{rcIndex} must define either Comparator with <CheckValue> or a <FormalExpression>.");
+                }
+
+                if (condition is null)
+                {
+                    continue;
+                }
+
+                var ruleId = AllocateRuleId($"RC.{meta.Item.Id}.{rcIndex}", usedRuleIds);
+                var explanation = TruncateText(
+                    FirstNonBlank(
+                        errorMessage,
+                        !string.IsNullOrWhiteSpace(comparator)
+                            ? $"Item '{meta.Item.Prompt ?? meta.ItemName}' must satisfy {comparator} {string.Join(", ", checkValues)}."
+                            : $"Item '{meta.Item.Prompt ?? meta.ItemName}' failed range check #{rcIndex}.")!,
+                    RulePackJson.MaxTextLength);
+
+                rules.Add(new Rule(
+                    ruleId,
+                    1,
+                    RuleAuthority.Study,
+                    new SourceCitation(docTitle, $"{meta.RawFormOid}/{meta.ItemOid}", null),
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, meta.FormId),
+                    severity,
+                    condition,
+                    explanation,
+                    RemediationGuidance: "Verify the source value and correct or explain the discrepancy.",
+                    EffectivePeriod.Always));
+            }
+        }
+
+        var targetsByCondition = conditionTargets
+            .GroupBy(t => t.ConditionOid, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.TargetItem).ToList(), StringComparer.Ordinal);
+
+        foreach (var (condOid, condDef) in conditionDefs)
+        {
+            var condName = FirstNonBlank(Attr(condDef, "Name"), condOid)!;
+            var condDesc = TranslatedText(Child(condDef, "Description"));
+            var formalElements = Children(condDef, "FormalExpression")
+                .Where(e => !string.IsNullOrWhiteSpace(e.Value))
+                .ToList();
+
+            if (formalElements.Count == 0)
+            {
+                notes.Add(new ProtocolImportNote(
+                    condOid,
+                    $"ODM <ConditionDef> '{condName}' contains no <FormalExpression>; recorded description only."));
+                continue;
+            }
+
+            RuleExpression? rawParsed = null;
+            string? lastParseError = null;
+            foreach (var fe in formalElements)
+            {
+                if (OdmFormalExpressionParser.TryParse(fe.Value, null, null, out var candidateExpr, out lastParseError)
+                    && candidateExpr is not null)
+                {
+                    rawParsed = candidateExpr;
+                    break;
+                }
+            }
+
+            if (rawParsed is null)
+            {
+                notes.Add(new ProtocolImportNote(
+                    condOid,
+                    $"ODM <ConditionDef> '{condName}' FormalExpression could not be compiled ({lastParseError}); skipped."));
+                continue;
+            }
+
+            if (targetsByCondition.TryGetValue(condOid, out var targets) && targets.Count > 0)
+            {
+                foreach (var target in targets)
+                {
+                    var resolvedCond = OdmFormalExpressionParser.RewriteVariables(
+                        rawParsed,
+                        token => ResolveVariableForForm(token, target.FormId, itemsByLookup),
+                        target.Item.Id);
+                    var exceptionViolation = new LogicalExpression(
+                        LogicalOperator.And,
+                        [
+                            resolvedCond,
+                            new FunctionExpression(RuleFunction.IsNotEmpty, [new VariableExpression(target.Item.Id)]),
+                        ]);
+                    var ruleId = AllocateRuleId($"CD.{condOid}.{target.Item.Id}", usedRuleIds);
+                    var explanation = TruncateText(
+                        FirstNonBlank(
+                            condDesc,
+                            $"Item '{target.Item.Prompt ?? target.ItemName}' must not be collected when condition '{condName}' holds.")!,
+                        RulePackJson.MaxTextLength);
+
+                    rules.Add(new Rule(
+                        ruleId,
+                        1,
+                        RuleAuthority.Study,
+                        new SourceCitation(docTitle, condOid, null),
+                        new RuleApplicability(ValidationStage.Collection, null, null, null, target.FormId),
+                        ValidationSeverity.Warning,
+                        exceptionViolation,
+                        explanation,
+                        RemediationGuidance: "Confirm whether the conditional collection exception applies or clear the unneeded item.",
+                        EffectivePeriod.Always));
+                }
+            }
+            else
+            {
+                var referencedVars = RuleExpressionJson.Variables(rawParsed);
+                var primaryFormId = ResolvePrimaryFormForStandaloneCondition(referencedVars, importedItems, itemsByLookup);
+                if (primaryFormId is null)
+                {
+                    continue;
+                }
+
+                var resolvedCond = OdmFormalExpressionParser.RewriteVariables(
+                    rawParsed,
+                    token => ResolveVariableForForm(token, primaryFormId, itemsByLookup));
+                var ruleId = AllocateRuleId($"CD.{condOid}", usedRuleIds);
+                var explanation = TruncateText(
+                    FirstNonBlank(condDesc, condName, $"Condition '{condOid}' reported a discrepancy.")!,
+                    RulePackJson.MaxTextLength);
+
+                rules.Add(new Rule(
+                    ruleId,
+                    1,
+                    RuleAuthority.Study,
+                    new SourceCitation(docTitle, condOid, null),
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, primaryFormId),
+                    ValidationSeverity.Warning,
+                    resolvedCond,
+                    explanation,
+                    RemediationGuidance: "Verify the related clinical items and resolve the conditional discrepancy.",
+                    EffectivePeriod.Always));
+            }
+        }
+
+        return rules;
+    }
+
+    private static RuleExpression? BuildRangeCheckExpression(
+        ImportedItemMeta meta,
+        string comparator,
+        IReadOnlyList<string> checkValues,
+        List<string> problems)
+    {
+        var variable = new VariableExpression(meta.Item.Id);
+        var literals = new List<RuleExpression>(checkValues.Count);
+        foreach (var rawVal in checkValues)
+        {
+            literals.Add(new LiteralExpression(ToTypedRuleValue(rawVal, meta.Item.ExpectedKind)));
+        }
+
+        switch (comparator)
+        {
+            case "LT":
+                return new ComparisonExpression(ComparisonOperator.GreaterOrEqual, variable, literals[0]);
+            case "LE":
+                return new ComparisonExpression(ComparisonOperator.Greater, variable, literals[0]);
+            case "GT":
+                return new ComparisonExpression(ComparisonOperator.LessOrEqual, variable, literals[0]);
+            case "GE":
+                return new ComparisonExpression(ComparisonOperator.Less, variable, literals[0]);
+            case "EQ":
+                return new LogicalExpression(
+                    LogicalOperator.And,
+                    [
+                        new FunctionExpression(RuleFunction.IsNotEmpty, [variable]),
+                        new ComparisonExpression(ComparisonOperator.NotEqual, variable, literals[0]),
+                    ]);
+            case "NE":
+                return new ComparisonExpression(ComparisonOperator.Equal, variable, literals[0]);
+            case "IN":
+                return new LogicalExpression(
+                    LogicalOperator.And,
+                    [
+                        new FunctionExpression(RuleFunction.IsNotEmpty, [variable]),
+                        new FunctionExpression(RuleFunction.NotIn, [variable, .. literals]),
+                    ]);
+            case "NOTIN":
+                return new FunctionExpression(RuleFunction.In, [variable, .. literals]);
+            default:
+                problems.Add($"Item '{meta.ItemOid}' RangeCheck uses unsupported ODM Comparator '{comparator}'.");
+                return null;
+        }
+    }
+
+    private static RuleValue ToTypedRuleValue(string rawValue, ObservationValueKind? expectedKind)
+    {
+        if (expectedKind == ObservationValueKind.Quantity
+            && decimal.TryParse(rawValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var numeric))
+        {
+            return RuleValue.FromNumber(numeric);
+        }
+
+        if (expectedKind == ObservationValueKind.Boolean)
+        {
+            if (string.Equals(rawValue, "true", StringComparison.OrdinalIgnoreCase) || rawValue == "1")
+            {
+                return RuleValue.True;
+            }
+
+            if (string.Equals(rawValue, "false", StringComparison.OrdinalIgnoreCase) || rawValue == "0")
+            {
+                return RuleValue.False;
+            }
+        }
+
+        if (expectedKind is null
+            && decimal.TryParse(rawValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var inferredNumeric))
+        {
+            return RuleValue.FromNumber(inferredNumeric);
+        }
+
+        return RuleValue.FromText(rawValue);
+    }
+
+    private static Dictionary<string, List<(string FormId, string ItemId)>> BuildItemLookup(
+        IReadOnlyList<ImportedItemMeta> items,
+        IReadOnlyDictionary<string, string> formIdByOid)
+    {
+        var map = new Dictionary<string, List<(string FormId, string ItemId)>>(StringComparer.Ordinal);
+        void AddKey(string key, string formId, string itemId)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return;
+            }
+
+            if (!map.TryGetValue(key, out var list))
+            {
+                list = [];
+                map[key] = list;
+            }
+
+            if (!list.Contains((formId, itemId)))
+            {
+                list.Add((formId, itemId));
+            }
+        }
+
+        foreach (var meta in items)
+        {
+            AddKey(meta.Item.Id, meta.FormId, meta.Item.Id);
+            AddKey(meta.ItemOid, meta.FormId, meta.Item.Id);
+            AddKey(meta.ItemName, meta.FormId, meta.Item.Id);
+            AddKey($"{meta.FormId}.{meta.Item.Id}", meta.FormId, meta.Item.Id);
+            AddKey($"{meta.RawFormOid}.{meta.ItemOid}", meta.FormId, meta.Item.Id);
+            AddKey($"{meta.RawFormOid}.{meta.ItemName}", meta.FormId, meta.Item.Id);
+            AddKey($"{meta.RawFormOid}/{meta.ItemOid}", meta.FormId, meta.Item.Id);
+            AddKey($"{meta.RawGroupOid}/{meta.ItemOid}", meta.FormId, meta.Item.Id);
+            AddKey($"{meta.RawFormOid}/{meta.RawGroupOid}/{meta.ItemOid}", meta.FormId, meta.Item.Id);
+            if (formIdByOid.TryGetValue(meta.RawFormOid, out var mappedFormId))
+            {
+                AddKey($"{mappedFormId}.{meta.ItemOid}", meta.FormId, meta.Item.Id);
+            }
+        }
+
+        return map;
+    }
+
+    private static string ResolveVariableForForm(
+        string rawToken,
+        string targetFormId,
+        IReadOnlyDictionary<string, List<(string FormId, string ItemId)>> lookup)
+    {
+        var cleaned = rawToken.Trim().TrimStart('/');
+        if (lookup.TryGetValue(cleaned, out var candidates) && candidates.Count > 0)
+        {
+            var sameForm = candidates.FirstOrDefault(c => string.Equals(c.FormId, targetFormId, StringComparison.Ordinal));
+            if (sameForm.ItemId is not null)
+            {
+                return sameForm.ItemId;
+            }
+
+            var sibling = candidates[0];
+            var qualified = $"{sibling.FormId}.{sibling.ItemId}";
+            return qualified.Length <= FindingTarget.MaxNameLength ? qualified : sibling.ItemId;
+        }
+
+        // Try trailing path segment for XPath-like paths such as StudyEventData/FormData/ItemGroupData/IT.SYSBP.
+        var slashIdx = cleaned.LastIndexOf('/');
+        if (slashIdx >= 0 && slashIdx + 1 < cleaned.Length)
+        {
+            return ResolveVariableForForm(cleaned[(slashIdx + 1)..], targetFormId, lookup);
+        }
+
+        return cleaned.Length <= FindingTarget.MaxNameLength ? cleaned : cleaned[..FindingTarget.MaxNameLength];
+    }
+
+    private static string? ResolvePrimaryFormForStandaloneCondition(
+        IReadOnlyList<string> referencedVariables,
+        IReadOnlyList<ImportedItemMeta> importedItems,
+        IReadOnlyDictionary<string, List<(string FormId, string ItemId)>> lookup)
+    {
+        foreach (var rawVar in referencedVariables)
+        {
+            var cleaned = rawVar.Trim().TrimStart('/');
+            if (!cleaned.Contains('/') && lookup.TryGetValue(cleaned, out var unqualified) && unqualified.Count > 0)
+            {
+                return unqualified[0].FormId;
+            }
+        }
+
+        foreach (var rawVar in referencedVariables)
+        {
+            var cleaned = rawVar.Trim().TrimStart('/');
+            if (lookup.TryGetValue(cleaned, out var candidates) && candidates.Count > 0)
+            {
+                return candidates[0].FormId;
+            }
+        }
+
+        return importedItems.FirstOrDefault()?.FormId;
+    }
+
+    internal static string AllocateRuleId(string rawCandidate, HashSet<string> usedRuleIds)
+    {
+        var cleaned = InvalidRuleIdCharsRegex().Replace(rawCandidate.Trim(), "_").Trim('_', '.', '-');
+        if (cleaned.Length == 0 || !char.IsAsciiLetterOrDigit(cleaned[0]))
+        {
+            cleaned = $"R_{cleaned}";
+        }
+
+        if (cleaned.Length > ValidationDetection.MaxRuleIdLength)
+        {
+            cleaned = cleaned[..ValidationDetection.MaxRuleIdLength];
+        }
+
+        if (usedRuleIds.Add(cleaned))
+        {
+            return cleaned;
+        }
+
+        int suffix = 2;
+        while (true)
+        {
+            var suffixText = $"_{suffix.ToString(CultureInfo.InvariantCulture)}";
+            var maxStem = ValidationDetection.MaxRuleIdLength - suffixText.Length;
+            var stem = cleaned.Length > maxStem ? cleaned[..maxStem] : cleaned;
+            var candidate = $"{stem}{suffixText}";
+            if (usedRuleIds.Add(candidate))
+            {
+                return candidate;
+            }
+
+            suffix++;
+        }
+    }
+
+    private static string TruncateText(string value, int maxLength) =>
+        value.Length <= maxLength ? value : string.Concat(value.AsSpan(0, maxLength - 1), "…");
+
+    private sealed record ImportedItemMeta(
+        string FormId,
+        string RawFormOid,
+        string RawGroupOid,
+        string ItemOid,
+        string ItemName,
+        CollectionItem Item,
+        XElement ItemDef);
 
     private sealed record ParsedCodeList(string Oid, string Name, IReadOnlyList<string> Codes);
 }
