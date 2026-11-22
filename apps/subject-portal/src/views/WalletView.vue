@@ -964,6 +964,7 @@
                 <div
                   style="
                     display: flex;
+                    flex-wrap: wrap;
                     justify-content: space-between;
                     align-items: center;
                     margin-bottom: 6px;

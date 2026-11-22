@@ -325,6 +325,9 @@ async function exportCasebook() {
 }
 
 .casebook-select {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
@@ -337,6 +340,14 @@ async function exportCasebook() {
   font-size: 0.82rem;
   padding: 4px 8px;
   border-radius: 4px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.casebook-outcome code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .casebook-outcome--ok {

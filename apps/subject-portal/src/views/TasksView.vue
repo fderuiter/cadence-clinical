@@ -77,6 +77,8 @@
         class="panel-header"
         style="
           display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
           justify-content: space-between;
           align-items: center;
           border-bottom: 1px solid var(--semantic-color-border);
