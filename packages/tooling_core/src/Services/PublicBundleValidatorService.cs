@@ -629,19 +629,8 @@ public static partial class PublicBundleValidatorService
         return (line, limit - lineStart + 1);
     }
 
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-
-        return Directory.GetCurrentDirectory();
-    }
+    /// <summary>Resolves the repository root directory from the current working directory or binary path.</summary>
+    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 
     [GeneratedRegex(@"\b\d{3}-\d{2}-\d{4}\b|\b[A-CEGHJ-PR-TW-Z][A-CEGHJ-NPR-TW-Z]\s*\d{2}\s*\d{2}\s*\d{2}\s*[A-D]\b", RegexOptions.IgnoreCase)]
     private static partial Regex BundleSsnOrNinRegex();

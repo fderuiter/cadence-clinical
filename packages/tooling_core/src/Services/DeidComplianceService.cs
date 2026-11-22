@@ -158,8 +158,14 @@ public static partial class DeidComplianceService
             }
         }
 
+        if (files is { Length: 0 })
+        {
+            Console.WriteLine("✔ DEID compliance scan passed cleanly (0 files; 0 baselined findings).");
+            return 0;
+        }
+
         string baselinePath = Path.Combine(repoRoot, BaselineFile);
-        bool fullScan = files is not { Length: > 0 };
+        bool fullScan = files is null;
         if (fullScan && Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE") == "1")
         {
             WriteBaseline(baselinePath, findings.Select(f => f.Key));
@@ -479,7 +485,7 @@ public static partial class DeidComplianceService
     // honoured by git itself rather than by the Python reference's pattern emulation.
     private static IEnumerable<string> CandidateFiles(string[]? files, string repoRoot)
     {
-        IEnumerable<string> relative = files is { Length: > 0 }
+        IEnumerable<string> relative = files is not null
             ? files.Select(f => Path.GetRelativePath(repoRoot, Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)))
             : TrackedFiles(repoRoot);
 
@@ -512,18 +518,8 @@ public static partial class DeidComplianceService
         return output.Split('\0', StringSplitOptions.RemoveEmptyEntries);
     }
 
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
+    /// <summary>Resolves the repository root directory from the current working directory or binary path.</summary>
+    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 
     [GeneratedRegex(@"\d+\.\d+")]
     private static partial Regex DecimalNumberRegex();
