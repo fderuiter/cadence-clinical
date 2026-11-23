@@ -1,150 +1,357 @@
-import { registerLogoutCleanup } from "../auth/sessionCoordinator.js";
+import { getActivePinia, type Pinia } from "pinia";
 import { kernelApi } from "../api/kernelApi";
+import {
+  registerLogoutCleanup,
+  registerSessionCacheClearHandler,
+} from "../auth/sessionCoordinator.js";
 import { parseNodeRef, type NodeRef } from "./nodeRef";
 
-let activeStudySessionKey = "";
-let sessionEpoch = 0;
-
-const studyRefCache = new Map<string, string>();
-const inFlightStudyRef = new Map<string, Promise<string | null>>();
-
-const enrollmentRefCache = new Map<string, NodeRef>();
-const inFlightEnrollmentRef = new Map<string, Promise<NodeRef | null>>();
-
-const studySitesCache = new Map<string, StudySiteOption[]>();
-const inFlightStudySites = new Map<string, Promise<StudySiteOption[]>>();
-
-const scheduleOptionsCache = new Map<string, StudyScheduleOptions>();
-const inFlightScheduleOptions = new Map<
-  string,
-  Promise<StudyScheduleOptions | null>
->();
-
-/** Clears all session-cached study, site, enrollment, and schedule lookups (e.g. on logout or study switch). */
-export function clearKernelStudyCache(): void {
-  activeStudySessionKey = "";
-  sessionEpoch += 1;
-  studyRefCache.clear();
-  inFlightStudyRef.clear();
-  enrollmentRefCache.clear();
-  inFlightEnrollmentRef.clear();
-  studySitesCache.clear();
-  inFlightStudySites.clear();
-  scheduleOptionsCache.clear();
-  inFlightScheduleOptions.clear();
+interface AuthLikeState {
+  isAuthenticated?: boolean;
+  currentPersona?: string | null;
+  user?: {
+    id?: string | null;
+    username?: string | null;
+    tenantId?: string | null;
+  } | null;
 }
 
+interface SessionCacheBucket {
+  epoch: number;
+  activeSessionKey: string;
+  studyRefs: Map<string, string>;
+  studyInFlight: Map<string, Promise<string | null>>;
+  enrollmentStudyInFlight: Map<string, Promise<string | null>>;
+  studySites: Map<string, StudySiteOption[]>;
+  studySitesInFlight: Map<string, Promise<StudySiteOption[]>>;
+  enrollments: Map<string, NodeRef>;
+  enrollmentInFlight: Map<string, Promise<NodeRef | null>>;
+  scheduleOptions: Map<string, StudyScheduleOptions>;
+  scheduleOptionsInFlight: Map<string, Promise<StudyScheduleOptions | null>>;
+}
+
+function createSessionCacheBucket(): SessionCacheBucket {
+  return {
+    epoch: 0,
+    activeSessionKey: "",
+    studyRefs: new Map(),
+    studyInFlight: new Map(),
+    enrollmentStudyInFlight: new Map(),
+    studySites: new Map(),
+    studySitesInFlight: new Map(),
+    enrollments: new Map(),
+    enrollmentInFlight: new Map(),
+    scheduleOptions: new Map(),
+    scheduleOptionsInFlight: new Map(),
+  };
+}
+
+const piniaBuckets = new WeakMap<Pinia, SessionCacheBucket>();
+const standaloneBucket = createSessionCacheBucket();
+
+function getBucket(): SessionCacheBucket {
+  const pinia = getActivePinia();
+  if (!pinia) return standaloneBucket;
+  let bucket = piniaBuckets.get(pinia);
+  if (!bucket) {
+    bucket = createSessionCacheBucket();
+    piniaBuckets.set(pinia, bucket);
+  }
+  return bucket;
+}
+
+function clearBucket(bucket: SessionCacheBucket): void {
+  bucket.epoch += 1;
+  bucket.activeSessionKey = "";
+  bucket.studyRefs.clear();
+  bucket.studyInFlight.clear();
+  bucket.enrollmentStudyInFlight.clear();
+  bucket.studySites.clear();
+  bucket.studySitesInFlight.clear();
+  bucket.enrollments.clear();
+  bucket.enrollmentInFlight.clear();
+  bucket.scheduleOptions.clear();
+  bucket.scheduleOptionsInFlight.clear();
+}
+
+/**
+ * Active caller cache scope (`tenant:actor:persona`), taken from the active Pinia auth state when present so positive
+ * study, site, enrollment, and schedule lookups never cross tenant, account, or persona boundaries.
+ */
+export function getKernelStudyCallerScopeKey(): string {
+  const pinia = getActivePinia();
+  const auth = (pinia?.state.value as { auth?: AuthLikeState } | undefined)
+    ?.auth;
+  if (!auth || !auth.isAuthenticated) {
+    return "anonymous::";
+  }
+  const tenant = String(auth.user?.tenantId ?? "").trim();
+  const actor = String(auth.user?.id || auth.user?.username || "").trim();
+  const persona = String(auth.currentPersona ?? "").trim();
+  return `${encodeURIComponent(tenant)}:${encodeURIComponent(actor)}:${encodeURIComponent(persona)}`;
+}
+
+function normalizeStudyCode(code: string): string {
+  return code.trim().toUpperCase();
+}
+
+function sessionKeyForStudy(normalizedStudy: string): string {
+  if (!normalizedStudy) return "";
+  return `${getKernelStudyCallerScopeKey()}::${encodeURIComponent(normalizedStudy)}`;
+}
+
+function studyKey(scope: string, normalizedStudy: string): string {
+  return `${scope}::study::${encodeURIComponent(normalizedStudy)}`;
+}
+
+function sitesKey(scope: string, normalizedStudy: string): string {
+  return `${scope}::sites::${encodeURIComponent(normalizedStudy)}`;
+}
+
+function scheduleKey(scope: string, normalizedStudy: string): string {
+  return `${scope}::schedule::${encodeURIComponent(normalizedStudy)}`;
+}
+
+function enrollmentKey(
+  scope: string,
+  normalizedStudy: string,
+  siteCode: string | null,
+  subjectCode: string
+): string {
+  return `${scope}::enrollment::${encodeURIComponent(normalizedStudy)}::${encodeURIComponent(siteCode ?? "*")}::${encodeURIComponent(subjectCode)}`;
+}
+
+/** Clears all cached positive study references, study site options, enrollment references, and schedules immediately. */
+export function clearKernelStudyCache(): void {
+  clearBucket(standaloneBucket);
+  const pinia = getActivePinia();
+  if (pinia) {
+    const bucket = piniaBuckets.get(pinia);
+    if (bucket) clearBucket(bucket);
+  }
+}
+
+registerSessionCacheClearHandler(() => {
+  clearKernelStudyCache();
+});
 registerLogoutCleanup(clearKernelStudyCache);
 
-/**
- * Resets cached study/site/enrollment/schedule lookups when switching to a different study session.
- * Calling with the already-active study code preserves the warm session cache.
- */
-export function resetKernelStudySession(studyCode = ""): void {
-  const normalized = studyCode.trim();
-  if (normalized && normalized === activeStudySessionKey) return;
-  clearKernelStudyCache();
-  activeStudySessionKey = normalized;
+/** Returns the active `(tenant, actor, persona, studyCode)` session key for the current Pinia bucket, if any. */
+export function getActiveKernelStudySessionKey(): string {
+  return getBucket().activeSessionKey;
 }
 
 /**
- * The kernel reference of the study with exactly this code, found with kernel search (ADR-2484), or null when the
- * kernel has no such study the reader may see. The Canvas addresses a study by its code in the URL; kernel reads take
- * its NodeRef. Positive lookups are cached for the active study session; null and 403/error responses are never cached.
+ * Resets cached study, site, enrollment, and schedule lookups when switching studies or caller scopes, while preserving
+ * warm entries when called again for the already-active `(tenant, actor, persona, studyCode)` session.
+ */
+export function resetKernelStudySession(studyCode = ""): void {
+  const normalized = normalizeStudyCode(studyCode);
+  const nextSessionKey = sessionKeyForStudy(normalized);
+  const bucket = getBucket();
+  if (nextSessionKey && nextSessionKey === bucket.activeSessionKey) {
+    return;
+  }
+  clearKernelStudyCache();
+  if (nextSessionKey) {
+    getBucket().activeSessionKey = nextSessionKey;
+  }
+}
+
+function ensureActiveStudySession(
+  bucket: SessionCacheBucket,
+  normalizedStudy: string
+): void {
+  const nextSessionKey = sessionKeyForStudy(normalizedStudy);
+  if (!nextSessionKey) return;
+  if (bucket.activeSessionKey && bucket.activeSessionKey !== nextSessionKey) {
+    clearBucket(bucket);
+  }
+  bucket.activeSessionKey = nextSessionKey;
+}
+
+/**
+ * The kernel reference of the study with exactly this code, found with kernel search (ADR-2484) — or piggybacked off
+ * an already in-flight enrollment lookup for the same study — and cached for the active `(tenant, actor, persona,
+ * studyCode)` session once positively resolved, or null when the kernel has no such study the reader may see.
  */
 export function findKernelStudyRef(code: string): Promise<string | null> {
-  const key = code.trim();
-  if (!key) return Promise.resolve(null);
-  const cached = studyRefCache.get(key);
+  const trimmed = code.trim();
+  if (!trimmed) return Promise.resolve(null);
+
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  const normalizedStudy = normalizeStudyCode(trimmed);
+  ensureActiveStudySession(bucket, normalizedStudy);
+  const key = studyKey(scope, normalizedStudy);
+
+  const cached = bucket.studyRefs.get(key);
   if (cached) return Promise.resolve(cached);
-  const pending = inFlightStudyRef.get(key);
+
+  const pending = bucket.studyInFlight.get(key);
   if (pending) return pending;
-  const epoch = sessionEpoch;
+
+  const epochAtStart = bucket.epoch;
   let lookup: Promise<string | null> | undefined;
   lookup = (async () => {
     try {
+      const inFlightEnrollmentStudy = bucket.enrollmentStudyInFlight.get(key);
+      if (inFlightEnrollmentStudy) {
+        const hinted = await inFlightEnrollmentStudy;
+        if (hinted) {
+          if (
+            bucket.epoch === epochAtStart &&
+            getKernelStudyCallerScopeKey() === scope
+          ) {
+            bucket.studyRefs.set(key, hinted);
+          }
+          return hinted;
+        }
+        const cachedAfterHint = bucket.studyRefs.get(key);
+        if (cachedAfterHint) {
+          return cachedAfterHint;
+        }
+      }
+
       const hits = await kernelApi.search({
-        text: key,
+        text: trimmed,
         kinds: ["study"],
         limit: 5,
       });
-      const found = hits.find((hit) => hit.exact_code)?.ref ?? null;
-      if (found && epoch === sessionEpoch) {
-        studyRefCache.set(key, found);
+      const resolved = hits.find((hit) => hit.exact_code)?.ref ?? null;
+      if (
+        resolved &&
+        bucket.epoch === epochAtStart &&
+        getKernelStudyCallerScopeKey() === scope
+      ) {
+        bucket.studyRefs.set(key, resolved);
       }
-      return found;
+      return resolved;
     } finally {
-      if (inFlightStudyRef.get(key) === lookup) {
-        inFlightStudyRef.delete(key);
+      if (bucket.studyInFlight.get(key) === lookup) {
+        bucket.studyInFlight.delete(key);
       }
     }
   })();
-  inFlightStudyRef.set(key, lookup);
+  bucket.studyInFlight.set(key, lookup);
   return lookup;
 }
 
 /**
- * The kernel enrollment of a participant, found by walking the kernel's zoom children (study, then its study sites,
- * then their enrollments) and matching codes, or null when the kernel has no single such enrollment the reader may
- * see. The Canvas lists participants from Execution by subject and site code; kernel module reads, such as eCRF
- * queries, take the enrollment's id. A study site is matched by site code when the participant has one; an
- * enrollment by its subject code. Two matching enrollments return null rather than a guess.
+ * The kernel enrollment of a participant, resolved in one read-only lookup over the kernel's unique study and subject
+ * indexes (`GET /api/v1/kernel/enrollments/lookup`), or null when the study, site, or enrollment is absent,
+ * mismatched, or masked for the caller (ADR-2471). Positive hits warm both the enrollment and study reference caches
+ * for the active caller session; `404` responses and transient errors are not cached so newly screened participants
+ * resolve on demand.
  */
-export async function findKernelEnrollmentRef(
+export function findKernelEnrollmentRef(
   studyCode: string,
   siteCode: string | null,
   subjectCode: string
 ): Promise<NodeRef | null> {
-  const normalizedStudy = studyCode.trim();
-  const normalizedSite = siteCode?.trim() || "";
-  const normalizedSubject = subjectCode.trim();
-  if (!normalizedStudy || !normalizedSubject) return null;
+  const trimmedStudy = studyCode.trim();
+  const trimmedSubject = subjectCode.trim();
+  const trimmedSite = siteCode?.trim() ? siteCode.trim() : null;
+  if (!trimmedStudy || !trimmedSubject) return Promise.resolve(null);
+  if (typeof kernelApi.lookupEnrollment !== "function") {
+    return Promise.resolve(null);
+  }
 
-  const cacheKey = `${normalizedStudy}\0${normalizedSite}\0${normalizedSubject}`;
-  const cached = enrollmentRefCache.get(cacheKey);
-  if (cached) return cached;
-  const pending = inFlightEnrollmentRef.get(cacheKey);
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  const normalizedStudy = normalizeStudyCode(trimmedStudy);
+  ensureActiveStudySession(bucket, normalizedStudy);
+  const key = enrollmentKey(
+    scope,
+    normalizedStudy,
+    trimmedSite,
+    trimmedSubject
+  );
+
+  const cached = bucket.enrollments.get(key);
+  if (cached) return Promise.resolve({ ...cached });
+
+  const pending = bucket.enrollmentInFlight.get(key);
   if (pending) return pending;
 
-  const epoch = sessionEpoch;
+  const sKey = studyKey(scope, normalizedStudy);
+  let resolveStudyHint = (_studyRef: string | null): void => {};
+  let studyHintPromise: Promise<string | null> | null = null;
+  if (
+    !bucket.studyRefs.has(sKey) &&
+    !bucket.enrollmentStudyInFlight.has(sKey)
+  ) {
+    studyHintPromise = new Promise<string | null>((resolve) => {
+      resolveStudyHint = resolve;
+    });
+    bucket.enrollmentStudyInFlight.set(sKey, studyHintPromise);
+  }
+
+  const epochAtStart = bucket.epoch;
   let lookup: Promise<NodeRef | null> | undefined;
-  lookup = (async () => {
+  lookup = (async (): Promise<NodeRef | null> => {
     try {
-      const studyRef = await findKernelStudyRef(normalizedStudy);
-      if (!studyRef) return null;
-      const studySites = (await kernelApi.getChildren(studyRef)).filter(
-        (child) =>
-          child.node.kind === "study_site" &&
-          child.node.ref &&
-          (!normalizedSite || child.node.code === normalizedSite)
-      );
-      const enrollments = (
-        await Promise.all(
-          studySites.map((site) =>
-            kernelApi.getChildren(site.node.ref as string)
-          )
-        )
-      )
-        .flat()
-        .filter(
-          (child) =>
-            child.node.kind === "enrollment" &&
-            child.node.code === normalizedSubject
+      const found = await kernelApi.lookupEnrollment({
+        studyCode: trimmedStudy,
+        subjectCode: trimmedSubject,
+        siteCode: trimmedSite,
+      });
+      const parsed = parseNodeRef(found.enrollment_ref);
+      const resolved = parsed?.kind === "enrollment" ? parsed : null;
+      const resolvedStudyRef = found.study_ref?.trim() || null;
+      if (
+        resolved &&
+        bucket.epoch === epochAtStart &&
+        getKernelStudyCallerScopeKey() === scope
+      ) {
+        bucket.enrollments.set(key, resolved);
+        bucket.enrollments.set(
+          enrollmentKey(scope, normalizedStudy, null, trimmedSubject),
+          resolved
         );
-      if (enrollments.length !== 1) return null;
-      const ref = parseNodeRef(enrollments[0].node.ref);
-      const resolved = ref?.kind === "enrollment" ? ref : null;
-      if (resolved && epoch === sessionEpoch) {
-        enrollmentRefCache.set(cacheKey, resolved);
+        if (found.site_code?.trim()) {
+          bucket.enrollments.set(
+            enrollmentKey(
+              scope,
+              normalizedStudy,
+              found.site_code.trim(),
+              trimmedSubject
+            ),
+            resolved
+          );
+        }
+        if (resolvedStudyRef) {
+          bucket.studyRefs.set(sKey, resolvedStudyRef);
+          if (found.study_code?.trim()) {
+            bucket.studyRefs.set(
+              studyKey(scope, normalizeStudyCode(found.study_code)),
+              resolvedStudyRef
+            );
+          }
+        }
       }
-      return resolved;
+      resolveStudyHint(resolved ? resolvedStudyRef : null);
+      return resolved ? { ...resolved } : null;
+    } catch (err) {
+      resolveStudyHint(null);
+      if ((err as { status?: number | null } | null)?.status === 404) {
+        return null;
+      }
+      throw err;
     } finally {
-      if (inFlightEnrollmentRef.get(cacheKey) === lookup) {
-        inFlightEnrollmentRef.delete(cacheKey);
+      resolveStudyHint(null);
+      if (
+        studyHintPromise &&
+        bucket.enrollmentStudyInFlight.get(sKey) === studyHintPromise
+      ) {
+        bucket.enrollmentStudyInFlight.delete(sKey);
+      }
+      if (bucket.enrollmentInFlight.get(key) === lookup) {
+        bucket.enrollmentInFlight.delete(key);
       }
     }
   })();
-  inFlightEnrollmentRef.set(cacheKey, lookup);
+  bucket.enrollmentInFlight.set(key, lookup);
   return lookup;
 }
 
@@ -153,48 +360,80 @@ export interface StudySiteOption {
   label: string;
 }
 
+function invalidateBucketStudySites(
+  bucket: SessionCacheBucket,
+  normalizedStudy?: string
+): void {
+  if (!normalizedStudy) {
+    bucket.studySites.clear();
+    bucket.studySitesInFlight.clear();
+    return;
+  }
+  const suffix = `::sites::${encodeURIComponent(normalizedStudy)}`;
+  for (const existingKey of Array.from(bucket.studySites.keys())) {
+    if (existingKey.endsWith(suffix)) {
+      bucket.studySites.delete(existingKey);
+    }
+  }
+  for (const existingKey of Array.from(bucket.studySitesInFlight.keys())) {
+    if (existingKey.endsWith(suffix)) {
+      bucket.studySitesInFlight.delete(existingKey);
+    }
+  }
+}
+
 /**
  * Invalidates cached study-site lookups (for one study or all studies) after linking a site to a study.
  */
 export function invalidateStudySitesCache(studyCode?: string): void {
-  const key = studyCode?.trim();
-  if (key) {
-    studySitesCache.delete(key);
-    inFlightStudySites.delete(key);
-    return;
+  const normalized = studyCode ? normalizeStudyCode(studyCode) : "";
+  invalidateBucketStudySites(standaloneBucket, normalized || undefined);
+  const pinia = getActivePinia();
+  if (pinia) {
+    const bucket = piniaBuckets.get(pinia);
+    if (bucket) {
+      invalidateBucketStudySites(bucket, normalized || undefined);
+    }
   }
-  studySitesCache.clear();
-  inFlightStudySites.clear();
 }
 
 /**
- * Visible study sites for `studyCode` from the kernel's zoom children (`study_site`) or study-site directory,
- * ordered by site code. Returns an empty list when the kernel has no visible study or study sites for the caller.
+ * Visible study sites for `studyCode` from the kernel's zoom children (`study_site`) or study-site directory, ordered
+ * by site code and cached for the active `(tenant, actor, persona, studyCode)` session when positive. Returns an empty
+ * list when the kernel has no visible study or study sites for the caller.
  */
-export async function findStudySites(
-  studyCode: string
-): Promise<StudySiteOption[]> {
+export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
+  const trimmed = studyCode.trim();
   if (
-    typeof kernelApi.getChildren !== "function" &&
-    typeof kernelApi.listStudySites !== "function"
+    !trimmed ||
+    (typeof kernelApi.getChildren !== "function" &&
+      typeof kernelApi.listStudySites !== "function")
   ) {
-    return [];
+    return Promise.resolve([]);
   }
-  const key = studyCode.trim();
-  if (!key) return [];
-  const cached = studySitesCache.get(key);
-  if (cached) return cached;
-  const pending = inFlightStudySites.get(key);
+
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  const normalizedStudy = normalizeStudyCode(trimmed);
+  ensureActiveStudySession(bucket, normalizedStudy);
+  const key = sitesKey(scope, normalizedStudy);
+
+  const cached = bucket.studySites.get(key);
+  if (cached) {
+    return Promise.resolve(cached.map((item) => ({ ...item })));
+  }
+
+  const pending = bucket.studySitesInFlight.get(key);
   if (pending) return pending;
 
-  const epoch = sessionEpoch;
+  const epochAtStart = bucket.epoch;
   let lookup: Promise<StudySiteOption[]> | undefined;
-  lookup = (async () => {
+  lookup = (async (): Promise<StudySiteOption[]> => {
     try {
       const byCode = new Map<string, StudySiteOption>();
       let studyRef: string | null = null;
       if (typeof kernelApi.getChildren === "function") {
-        studyRef = await findKernelStudyRef(key);
+        studyRef = await findKernelStudyRef(trimmed);
         if (studyRef) {
           const children = await kernelApi.getChildren(studyRef);
           for (const child of children) {
@@ -209,7 +448,7 @@ export async function findStudySites(
       }
       if (byCode.size === 0 && typeof kernelApi.listStudySites === "function") {
         try {
-          const linked = await kernelApi.listStudySites(studyRef ?? key);
+          const linked = await kernelApi.listStudySites(studyRef ?? trimmed);
           for (const site of linked) {
             const code = site.site_code?.trim();
             if (!code || byCode.has(code)) continue;
@@ -224,17 +463,22 @@ export async function findStudySites(
       const options = Array.from(byCode.values()).sort((a, b) =>
         a.code.localeCompare(b.code)
       );
-      if (options.length > 0 && epoch === sessionEpoch) {
-        studySitesCache.set(key, options);
+      if (
+        options.length > 0 &&
+        bucket.epoch === epochAtStart &&
+        bucket.studySitesInFlight.get(key) === lookup &&
+        getKernelStudyCallerScopeKey() === scope
+      ) {
+        bucket.studySites.set(key, options);
       }
-      return options;
+      return options.map((item) => ({ ...item }));
     } finally {
-      if (inFlightStudySites.get(key) === lookup) {
-        inFlightStudySites.delete(key);
+      if (bucket.studySitesInFlight.get(key) === lookup) {
+        bucket.studySitesInFlight.delete(key);
       }
     }
   })();
-  inFlightStudySites.set(key, lookup);
+  bucket.studySitesInFlight.set(key, lookup);
   return lookup;
 }
 
@@ -331,27 +575,35 @@ function buildScheduleEpochs(
  * Structured form and visit choices from the study's active (or latest visible) protocol version's Schedule of
  * Activities (ADR-2475), or null when the kernel has no visible protocol version or schedule for the study.
  */
-export async function findStudyScheduleOptions(
+export function findStudyScheduleOptions(
   studyCode: string
 ): Promise<StudyScheduleOptions | null> {
   if (
     typeof kernelApi.listProtocolVersions !== "function" ||
     typeof kernelApi.getScheduleOfActivities !== "function"
   ) {
-    return null;
+    return Promise.resolve(null);
   }
-  const key = studyCode.trim();
-  if (!key) return null;
-  const cached = scheduleOptionsCache.get(key);
-  if (cached) return cached;
-  const pending = inFlightScheduleOptions.get(key);
+  const trimmed = studyCode.trim();
+  if (!trimmed) return Promise.resolve(null);
+
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  const normalizedStudy = normalizeStudyCode(trimmed);
+  ensureActiveStudySession(bucket, normalizedStudy);
+  const key = scheduleKey(scope, normalizedStudy);
+
+  const cached = bucket.scheduleOptions.get(key);
+  if (cached) return Promise.resolve(cached);
+
+  const pending = bucket.scheduleOptionsInFlight.get(key);
   if (pending) return pending;
 
-  const epoch = sessionEpoch;
+  const epochAtStart = bucket.epoch;
   let lookup: Promise<StudyScheduleOptions | null> | undefined;
   lookup = (async () => {
     try {
-      const studyRef = await findKernelStudyRef(key);
+      const studyRef = await findKernelStudyRef(trimmed);
       if (!studyRef) return null;
       const versions = await kernelApi.listProtocolVersions(studyRef);
       const chosen =
@@ -414,16 +666,19 @@ export async function findStudyScheduleOptions(
           studyDay: col.studyDay,
         })),
       };
-      if (epoch === sessionEpoch) {
-        scheduleOptionsCache.set(key, resolved);
+      if (
+        bucket.epoch === epochAtStart &&
+        getKernelStudyCallerScopeKey() === scope
+      ) {
+        bucket.scheduleOptions.set(key, resolved);
       }
       return resolved;
     } finally {
-      if (inFlightScheduleOptions.get(key) === lookup) {
-        inFlightScheduleOptions.delete(key);
+      if (bucket.scheduleOptionsInFlight.get(key) === lookup) {
+        bucket.scheduleOptionsInFlight.delete(key);
       }
     }
   })();
-  inFlightScheduleOptions.set(key, lookup);
+  bucket.scheduleOptionsInFlight.set(key, lookup);
   return lookup;
 }

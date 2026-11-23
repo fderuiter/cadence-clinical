@@ -1,6 +1,6 @@
 # Tickets service
 
-Support ticket service. It serves authenticated support ticket creation (`POST /api/v1/tickets`), study/site-scoped listing (`GET /api/v1/tickets`), and ticket detail lookup (`GET /api/v1/tickets/{ticket_id}`) with deterministic 6-queue routing, Dual-Target SLA timestamps from `IClock`, participant PII rejection, mandatory `X-Change-Reason` headers, and shared `audit_log_entries` Merkle-chain auditing ([ADR-2641](../../docs/adr/2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md)).
+Support ticket service. It serves authenticated support ticket creation (`POST /api/v1/tickets`), study/site-scoped listing (`GET /api/v1/tickets`), ticket detail lookup (`GET /api/v1/tickets/{ticket_id}`), visibility-scoped discussion comments (`GET /api/v1/tickets/{ticket_id}/comments`, `POST /api/v1/tickets/{ticket_id}/comments`), workflow status transitions (`POST /api/v1/tickets/{ticket_id}/transitions`), 21 CFR Part 11 closure e-signatures (`POST /api/v1/tickets/{ticket_id}/sign`), and Merkle-chained audit trail queries (`GET /api/v1/tickets/{ticket_id}/audit-trail`) with deterministic 6-queue routing, Dual-Target SLA timestamps from `IClock`, participant PII rejection, mandatory `X-Change-Reason` headers, and shared `audit_log_entries` Merkle-chain auditing ([ADR-2641](../../docs/adr/2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md)).
 
 **Status:** a standalone ASP.NET Core 10 scaffold service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) it becomes an application module over the clinical kernel. The disposition of the scaffold services is tracked in issue #4787.
 
@@ -10,15 +10,19 @@ Support ticket service. It serves authenticated support ticket creation (`POST /
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (tickets, comments, attachments, audit log).
   Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
-- `Infrastructure/Persistence/`: `TicketsDbContext`, a design-time `TicketsDbContextFactory`, and `Configurations/` (Fluent API mappings).
-- `Infrastructure/Persistence/Migrations/`: `20260924145604_InitialCreate`.
+- `Infrastructure/Persistence/`: `TicketsDbContext`, a design-time `TicketsDbContextFactory`, and `Configurations/` (Fluent API mappings, including `ConsumedSignatureTokenConfiguration`).
+- `Infrastructure/Persistence/Migrations/`: `20260924145604_InitialCreate`, `20261122164714_AddConsumedSignatureTokens`.
 
 ## HTTP surface
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `TicketsDbContext`.
 - `GET /api/v1/tickets/status` (anonymous status payload).
 - `POST /api/v1/tickets` (`tickets:create`, requires `X-Change-Reason`, rejects direct participant PII, derives reporter/creator strictly from verified gateway claims, enforces study/site `CallerScope`, and computes Dual-Target SLA deadlines via `IClock`).
-- `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticket_id}` (`tickets:read`, filtered to the caller's authorized study and site scope).
+- `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticket_id}` (`tickets:read`, filtered to the caller's authorized study and site scope; supports UUID or human-readable `TKT-YYYY-NNNN` reference).
+- `GET /api/v1/tickets/{ticket_id}/comments` (`tickets:read`, hides `INTERNAL_SPONSOR` notes from site-bound roles) and `POST /api/v1/tickets/{ticket_id}/comments` (`tickets:comment`, requires `X-Change-Reason`, scans for participant PII, and forbids site-bound roles from posting `INTERNAL_SPONSOR` comments).
+- `POST /api/v1/tickets/{ticket_id}/transitions` (`tickets:transition`, requires `X-Change-Reason`, enforces `TicketTransitionGraph`, pauses/resumes SLA targets via `IClock`, requires root-cause summary + resolution code on `RESOLVED`, and scans for participant PII).
+- `POST /api/v1/tickets/{ticket_id}/sign` (`tickets:sign`, requires `X-Change-Reason` and a single-use step-up `X-Sig-Token` with semantic action `tickets.ticket.sign` backed by `tickets.consumed_signature_tokens`; locks the ticket against subsequent comments or transitions).
+- `GET /api/v1/tickets/{ticket_id}/audit-trail` (`tickets:read`, returns the Merkle-chained `audit_log_entries` history for the ticket and its visible comments).
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/tickets/**` to this service. Compose publishes host port 8009 (container port 8080).
 

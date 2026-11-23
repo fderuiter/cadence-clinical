@@ -1,4 +1,4 @@
-# ADR-2822: Self-Service Trial Site Workflows and Scoped Trial Coordinator Enrollment
+# ADR-2823: Self-Service Trial Site Workflows and Scoped Trial Coordinator Enrollment
 
 - **Status:** Accepted
 - **Date:** 2026-11-22
