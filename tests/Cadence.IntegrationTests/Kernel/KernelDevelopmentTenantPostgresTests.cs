@@ -250,6 +250,38 @@ public sealed class KernelDevelopmentTenantPostgresTests(KernelPostgresFixture f
         deniedEnrollment.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    /// <summary>
+    /// Demo data registers tenant-scoped <c>Person</c> and <c>TenantMembership</c> records for each staff realm user so
+    /// multiple demo tenants coexist under PostgreSQL Row-Level Security without colliding on <c>kernel.people</c>, and
+    /// <c>GET /api/v1/kernel/entitlements</c> serves enrolled staff while refusing unenrolled callers and participants.
+    /// </summary>
+    [Fact(DisplayName = "DemoData_EnrollsStaffMemberships_ServesEntitlements_AndIsolatesAcrossDemoTenants")]
+    public async Task DemoDataEnrollsStaffMembershipsServesEntitlementsAndIsolatesAcrossDemoTenants()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        string firstCode = $"dev-{Guid.NewGuid():N}"[..20];
+        string secondCode = $"dev-{Guid.NewGuid():N}"[..20];
+
+        using var firstHost = Host(firstCode, demoData: true);
+        using var secondHost = Host(secondCode, demoData: true);
+
+        foreach (var (host, code) in new[] { (firstHost, firstCode), (secondHost, secondCode) })
+        {
+            using var crc = host.CreateSignedClient(new GatewayIdentity(CrcSubject, [], [], TenantId: code));
+            var entitlements = await GetAsync(crc, "/api/v1/kernel/entitlements", ct);
+            entitlements.GetProperty("tenant_ref").GetString().Should().StartWith("tenant:");
+
+            using var stranger = host.CreateSignedClient(new GatewayIdentity("stranger@dev-tenant.test", [], [], TenantId: code));
+            using var strangerEntitlements = await stranger.GetAsync(new Uri("/api/v1/kernel/entitlements", UriKind.Relative), ct);
+            strangerEntitlements.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            using var participant = host.CreateSignedClient(new GatewayIdentity(SubjectParticipantId, ["Subject"], [], TenantId: code));
+            using var participantEntitlements = await participant.GetAsync(new Uri("/api/v1/kernel/entitlements", UriKind.Relative), ct);
+            participantEntitlements.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+    }
+
     private static HttpRequestMessage SendJsonRequest(HttpMethod method, string path, string reason, object payload)
     {
         var request = new HttpRequestMessage(method, new Uri(path, UriKind.Relative))

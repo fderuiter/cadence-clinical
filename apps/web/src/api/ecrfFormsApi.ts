@@ -1,10 +1,10 @@
 import { encodeChangeReason } from "./changeReason";
 import { ApiError, createOpenApiClient, unwrapResponse } from "./client";
-import type { components, paths } from "./generated/kernel";
+import type { components, paths } from "./generated/execution_forms";
 
 /**
  * Typed client for the Execution module's eCRF form endpoints (ADR-2622), served by the kernel host and generated
- * from docs/openapi/kernel_openapi.json.
+ * from docs/openapi/execution_forms_openapi.json.
  *
  * A form is a kernel CollectionInstance: it is opened once for a participant's visit, read with its items in layout
  * order, and saved a page at a time. Every write is a kernel command, so it carries the reason as `X-Change-Reason`
@@ -13,20 +13,21 @@ import type { components, paths } from "./generated/kernel";
  */
 type Schemas = components["schemas"];
 
-export type EcrfFormState = Schemas["Kernel_FormStateResponse"];
-export type EcrfFormSummary = Schemas["Kernel_FormSummaryResponse"];
-export type EcrfForm = Schemas["Kernel_FormResponse"];
-export type EcrfFormItem = Schemas["Kernel_FormItemResponse"];
-export type EcrfFormLock = Schemas["Kernel_FormLockResponse"];
-export type EcrfFormAssertion = Schemas["Kernel_FormAssertionResponse"];
+export type EcrfFormState = Schemas["ExecutionForms_FormStateResponse"];
+export type EcrfFormSummary = Schemas["ExecutionForms_FormSummaryResponse"];
+export type EcrfForm = Schemas["ExecutionForms_FormResponse"];
+export type EcrfFormItem = Schemas["ExecutionForms_FormItemResponse"];
+export type EcrfFormLock = Schemas["ExecutionForms_FormLockResponse"];
+export type EcrfFormAssertion = Schemas["ExecutionForms_FormAssertionResponse"];
 /** A signature on the form; `superseded` once a later correction changed what it signed (then `signed_values` says what that was). */
-export type EcrfFormSignature = Schemas["Kernel_FormSignatureResponse"];
-export type EcrfFormSignedValue = Schemas["Kernel_FormSignedValueResponse"];
-export type EcrfFormSaved = Schemas["Kernel_FormSavedResponse"];
-export type EcrfFormValue = Schemas["Kernel_FormValueRequest"];
-export type EcrfFormPreview = Schemas["Kernel_FormPreviewResponse"];
+export type EcrfFormSignature = Schemas["ExecutionForms_FormSignatureResponse"];
+export type EcrfFormSignedValue =
+  Schemas["ExecutionForms_FormSignedValueResponse"];
+export type EcrfFormSaved = Schemas["ExecutionForms_FormSavedResponse"];
+export type EcrfFormValue = Schemas["ExecutionForms_FormValueRequest"];
+export type EcrfFormPreview = Schemas["ExecutionForms_FormPreviewResponse"];
 export type EcrfFormPreviewWarning =
-  Schemas["Kernel_FormPreviewWarningResponse"];
+  Schemas["ExecutionForms_FormPreviewWarningResponse"];
 
 /** Normalizes an OpenAPI integer|string|undefined summary count to a non-negative integer. */
 export function toFormSummaryCount(

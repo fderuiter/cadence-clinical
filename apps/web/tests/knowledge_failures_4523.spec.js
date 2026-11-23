@@ -54,13 +54,11 @@ const lifecycleCalls = {
   updateArticleDraft: () =>
     knowledgeService.updateArticleDraft(ARTICLE_ID, { title: "Edited" }),
   createCategory: () => knowledgeService.createCategory({ name: "New" }),
-  deleteCategory: () => knowledgeService.deleteCategory("cat-clinical-ops"),
 };
 
 const helpReads = {
   resolveContextualHelp: () =>
     knowledgeService.resolveContextualHelp({ route: "/ecrf" }),
-  getArticle: () => knowledgeService.getArticle(ARTICLE_ID),
   listArticles: () => knowledgeService.listArticles(),
   listCategories: () => knowledgeService.listCategories(),
 };

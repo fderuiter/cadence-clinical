@@ -1091,7 +1091,7 @@ public static partial class RulesetService
     private static bool IsPushOnlyJob(WorkflowJobInfo job) =>
         job.IfCondition is not null && RequiresPushEvent(job.IfCondition);
 
-    private static bool RequiresPushEvent(string expression)
+    public static bool RequiresPushEvent(string expression)
     {
         string trimmed = UnwrapExpression(expression);
         if (trimmed.Length == 0)

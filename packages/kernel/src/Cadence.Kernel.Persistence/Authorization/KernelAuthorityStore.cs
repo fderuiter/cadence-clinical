@@ -64,13 +64,65 @@ internal sealed class KernelAuthorityStore(
         NodeKinds.Attestation,
         NodeKinds.ValidationFinding);
 
+    private const string BlindedMarkerRegexSql =
+        "(treatment[_ ]assignment|treatment[_ ]group|treatment[_ ]allocation|treatment[_ ]arm|rand_arm|randomi[sz]ation|randomized_to|assigned[_ ]intervention|investigational[_ ]product|kit[_ ]number|dispensation|unblind|blinded[_ ]treatment|study[_ ]drug)";
+
+    private static string StudyMayHaveBlindedEvidenceSql(string studyIdExpr) => $"""
+        (
+            EXISTS (
+                SELECT 1
+                FROM kernel.protocol_versions AS pv_blind
+                WHERE pv_blind.tenant_id = @tenant
+                  AND pv_blind.study_id = {studyIdExpr}
+                  AND (
+                      CASE
+                          WHEN LEFT(LTRIM(pv_blind.content), 1) = chr(123) THEN
+                              COALESCE((pv_blind.content::jsonb -> 'collectionSpecs')::text, '') ~* '{BlindedMarkerRegexSql}'
+                              OR jsonb_path_exists(pv_blind.content::jsonb, '$.interventions[*] ? (@.product != null)')
+                          ELSE pv_blind.content ~* '{BlindedMarkerRegexSql}'
+                      END
+                  )
+            )
+            OR EXISTS (
+                SELECT 1
+                FROM kernel.concepts AS c_blind
+                WHERE c_blind.tenant_id = @tenant
+                  AND (COALESCE(c_blind.external_code, '') || ' ' || c_blind.preferred_label || ' ' || c_blind.definition) ~* '{BlindedMarkerRegexSql}'
+            )
+            OR EXISTS (
+                SELECT 1
+                FROM kernel.observations AS o_blind
+                WHERE o_blind.tenant_id = @tenant
+                  AND o_blind.study_id = {studyIdExpr}
+                  AND o_blind.value::text ILIKE '%Masked%'
+            )
+            OR EXISTS (
+                SELECT 1
+                FROM kernel.collection_instances AS ci_blind
+                WHERE ci_blind.tenant_id = @tenant
+                  AND ci_blind.study_id = {studyIdExpr}
+                  AND (
+                      ci_blind.collection_spec_id ~* '{BlindedMarkerRegexSql}'
+                      OR EXISTS (
+                          SELECT 1
+                          FROM kernel.collection_instance_members AS cim_blind
+                          WHERE cim_blind.tenant_id = ci_blind.tenant_id
+                            AND cim_blind.collection_instance_id = ci_blind.id
+                            AND cim_blind.item_id ~* '{BlindedMarkerRegexSql}'
+                      )
+                  )
+            )
+        )
+        """;
+
     private const string ProtocolElementPathsSql = """
         SELECT DISTINCT ON (le.to_id)
             le.to_id AS "Id",
             s.sponsor_id AS "OrganizationId",
             pv.study_id AS "StudyId",
             NULL::text AS "Country",
-            NULL::uuid AS "StudySiteId"
+            NULL::uuid AS "StudySiteId",
+            FALSE AS "MayBeBlinded"
         FROM kernel.lineage_edges AS le
         JOIN kernel.protocol_versions AS pv
             ON pv.tenant_id = le.tenant_id AND pv.id = le.from_id
@@ -84,13 +136,14 @@ internal sealed class KernelAuthorityStore(
         ORDER BY le.to_id, le.recorded_at DESC, le.id DESC
         """;
 
-    private const string FormQueryPathsSql = """
+    private static readonly string FormQueryPathsSql = $"""
         SELECT DISTINCT ON (le.to_id)
             le.to_id AS "Id",
             study.sponsor_id AS "OrganizationId",
             ss.study_id AS "StudyId",
             site.country AS "Country",
-            ss.id AS "StudySiteId"
+            ss.id AS "StudySiteId",
+            {StudyMayHaveBlindedEvidenceSql("ss.study_id")} AS "MayBeBlinded"
         FROM kernel.lineage_edges AS le
         JOIN kernel.enrollments AS e
             ON e.tenant_id = le.tenant_id AND e.id = le.from_id
@@ -126,7 +179,8 @@ internal sealed class KernelAuthorityStore(
             END AS "Country",
             CASE
                 WHEN g.scope_level = 'StudySite' AND ss_study.id IS NOT NULL AND ss_site.id IS NOT NULL THEN ss.id
-            END AS "StudySiteId"
+            END AS "StudySiteId",
+            FALSE AS "MayBeBlinded"
         FROM kernel.grants AS g
         LEFT JOIN kernel.organizations AS o
             ON g.scope_level = 'Organization' AND o.tenant_id = g.tenant_id AND o.id = g.scope_target_id
@@ -159,7 +213,8 @@ internal sealed class KernelAuthorityStore(
             END AS "Country",
             CASE
                 WHEN r.scope_level = 'StudySite' AND ss_study.id IS NOT NULL AND ss_site.id IS NOT NULL THEN ss.id
-            END AS "StudySiteId"
+            END AS "StudySiteId",
+            FALSE AS "MayBeBlinded"
         FROM kernel.qualification_requirements AS r
         LEFT JOIN kernel.organizations AS o
             ON r.scope_level = 'Organization' AND o.tenant_id = r.tenant_id AND o.id = r.scope_target_id
@@ -194,7 +249,8 @@ internal sealed class KernelAuthorityStore(
             END AS "Country",
             CASE
                 WHEN e.scope_study_site_id IS NOT NULL AND ss_study.id IS NOT NULL AND ss_site.id IS NOT NULL THEN ss.id
-            END AS "StudySiteId"
+            END AS "StudySiteId",
+            FALSE AS "MayBeBlinded"
         FROM kernel.effectivities AS e
         LEFT JOIN kernel.studies AS s
             ON e.scope_study_site_id IS NULL AND s.tenant_id = e.tenant_id AND s.id = e.study_id
@@ -213,7 +269,8 @@ internal sealed class KernelAuthorityStore(
             s.sponsor_id AS "OrganizationId",
             ci.study_id AS "StudyId",
             ss_site.country AS "Country",
-            ss.id AS "StudySiteId"
+            ss.id AS "StudySiteId",
+            FALSE AS "MayBeBlinded"
         FROM kernel.collection_instances AS ci
         JOIN kernel.studies AS s
             ON s.tenant_id = ci.tenant_id AND s.id = ci.study_id
@@ -224,13 +281,14 @@ internal sealed class KernelAuthorityStore(
         WHERE ci.tenant_id = @tenant AND ci.id = ANY(@ids)
         """;
 
-    private const string ObservationPathsSql = """
+    private static readonly string ObservationPathsSql = $"""
         SELECT
             o.id AS "Id",
             s.sponsor_id AS "OrganizationId",
             o.study_id AS "StudyId",
             ss_site.country AS "Country",
-            ss.id AS "StudySiteId"
+            ss.id AS "StudySiteId",
+            {StudyMayHaveBlindedEvidenceSql("o.study_id")} AS "MayBeBlinded"
         FROM kernel.observations AS o
         JOIN kernel.enrollments AS e
             ON e.tenant_id = o.tenant_id AND e.id = o.enrollment_id
@@ -243,22 +301,33 @@ internal sealed class KernelAuthorityStore(
         WHERE o.tenant_id = @tenant AND o.id = ANY(@ids)
         """;
 
-    private const string AssertionPathsSql = """
+    private static readonly string AssertionPathsSql = $"""
         SELECT
             a.id AS "Id",
             s.sponsor_id AS "OrganizationId",
             s.id AS "StudyId",
             ss_site.country AS "Country",
-            ss.id AS "StudySiteId"
+            ss.id AS "StudySiteId",
+            {StudyMayHaveBlindedEvidenceSql("s.id")} AS "MayBeBlinded"
         FROM kernel.assertions AS a
         JOIN kernel.studies AS s
             ON s.tenant_id = a.tenant_id AND s.id = a.study_id
+        LEFT JOIN kernel.assertions AS pa
+            ON a.enrollment_id IS NULL
+           AND (a.target_kind = 'assertion' OR a.retracts_id IS NOT NULL)
+           AND pa.tenant_id = a.tenant_id
+           AND pa.id = COALESCE(a.retracts_id, CASE WHEN a.target_kind = 'assertion' THEN a.target_id END)
         LEFT JOIN kernel.enrollments AS e
-            ON a.enrollment_id IS NOT NULL AND e.tenant_id = a.tenant_id AND e.id = a.enrollment_id
+            ON COALESCE(a.enrollment_id, pa.enrollment_id) IS NOT NULL
+           AND e.tenant_id = a.tenant_id
+           AND e.id = COALESCE(a.enrollment_id, pa.enrollment_id)
         LEFT JOIN kernel.study_sites AS ss
             ON ss.tenant_id = a.tenant_id
            AND ss.study_id = a.study_id
-           AND ss.id = COALESCE(e.study_site_id, CASE WHEN a.target_kind = 'study_site' THEN a.target_id END)
+           AND ss.id = COALESCE(
+               e.study_site_id,
+               CASE WHEN a.target_kind = 'study_site' THEN a.target_id END,
+               CASE WHEN pa.target_kind = 'study_site' THEN pa.target_id END)
         LEFT JOIN kernel.sites AS ss_site
             ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
         WHERE a.tenant_id = @tenant AND a.id = ANY(@ids)
@@ -278,15 +347,25 @@ internal sealed class KernelAuthorityStore(
             CASE
                 WHEN d.target_key ~* '^observation:{UuidPatternSql}(@[0-9]+)?$'
                     THEN split_part(split_part(d.target_key, ':', 2), '@', 1)::uuid
+                WHEN d.target_kind = 'Observation'
+                 AND d.target_key ~* '^{UuidPatternSql}$'
+                    THEN d.target_key::uuid
             END AS observation_id,
             CASE
                 WHEN d.target_key ~* '^enrollment:{UuidPatternSql}(@[0-9]+)?$'
                     THEN split_part(split_part(d.target_key, ':', 2), '@', 1)::uuid
+                WHEN d.target_kind = 'DatasetRecord'
+                 AND d.target_key ~* '^{UuidPatternSql}$'
+                    THEN d.target_key::uuid
             END AS enrollment_id,
             CASE
                 WHEN d.target_key ~* '^study_site:{UuidPatternSql}(@[0-9]+)?$'
                     THEN split_part(split_part(d.target_key, ':', 2), '@', 1)::uuid
-            END AS direct_study_site_id
+            END AS direct_study_site_id,
+            CASE
+                WHEN d.target_kind = 'DatasetRecord' AND d.target_key IS NOT NULL
+                    THEN split_part(d.target_key, ':', 1)
+            END AS subject_code_candidate
         """;
 
     private const string ObservationClassificationSql = """
@@ -352,11 +431,15 @@ internal sealed class KernelAuthorityStore(
             ON d.observation_id IS NOT NULL
            AND vf_obs.tenant_id = d.tenant_id AND vf_obs.id = d.observation_id AND vf_obs.study_id = d.study_id
         LEFT JOIN kernel.enrollments AS vf_enr
-            ON COALESCE(vf_obs.enrollment_id, d.enrollment_id) IS NOT NULL
+            ON vf_ci.id IS NULL
+           AND COALESCE(vf_obs.enrollment_id, d.enrollment_id) IS NOT NULL
            AND vf_enr.tenant_id = d.tenant_id AND vf_enr.id = COALESCE(vf_obs.enrollment_id, d.enrollment_id) AND vf_enr.study_id = d.study_id
+        LEFT JOIN kernel.enrollments AS vf_subj_enr
+            ON vf_ci.id IS NULL AND vf_enr.id IS NULL AND d.subject_code_candidate IS NOT NULL
+           AND vf_subj_enr.tenant_id = d.tenant_id AND vf_subj_enr.study_id = d.study_id AND vf_subj_enr.subject_code = d.subject_code_candidate
         """;
 
-    private const string ValidationFindingPathsSql = $"""
+    private static readonly string ValidationFindingPathsSql = $"""
         WITH detected AS (
             SELECT DISTINCT ON (d.finding_id)
                 d.tenant_id,
@@ -365,22 +448,53 @@ internal sealed class KernelAuthorityStore(
         {FindingTargetParseColumnsSql}
             FROM kernel.validation_detections AS d
             WHERE d.tenant_id = @tenant AND d.finding_id = ANY(@ids)
-            ORDER BY d.finding_id
+            ORDER BY d.finding_id, d.run_id DESC
+        ),
+        finding_base AS (
+            SELECT * FROM detected
+            UNION ALL
+            SELECT
+                vf.tenant_id,
+                vf.id AS finding_id,
+                vf.study_id,
+                NULL::uuid AS collection_instance_id,
+                NULL::uuid AS observation_id,
+                NULL::uuid AS enrollment_id,
+                NULL::uuid AS direct_study_site_id,
+                NULL::text AS subject_code_candidate
+            FROM kernel.validation_findings AS vf
+            WHERE vf.tenant_id = @tenant
+              AND vf.id = ANY(@ids)
+              AND NOT EXISTS (SELECT 1 FROM detected AS d WHERE d.finding_id = vf.id)
         )
         SELECT
             d.finding_id AS "Id",
             s.sponsor_id AS "OrganizationId",
             s.id AS "StudyId",
             ss_site.country AS "Country",
-            ss.id AS "StudySiteId"
-        FROM detected AS d
+            ss.id AS "StudySiteId",
+            (
+                {StudyMayHaveBlindedEvidenceSql("s.id")}
+                OR EXISTS (
+                    SELECT 1
+                    FROM kernel.validation_detections AS vd_blind
+                    WHERE vd_blind.tenant_id = @tenant
+                      AND vd_blind.finding_id = d.finding_id
+                      AND (
+                          vd_blind.dataset ~* '{BlindedMarkerRegexSql}'
+                          OR COALESCE(vd_blind.variable, '') ~* '{BlindedMarkerRegexSql}'
+                          OR vd_blind.observed::text ~* '{BlindedMarkerRegexSql}'
+                      )
+                )
+            ) AS "MayBeBlinded"
+        FROM finding_base AS d
         JOIN kernel.studies AS s
             ON s.tenant_id = d.tenant_id AND s.id = d.study_id
         {FindingTargetSiteJoinsSql}
         LEFT JOIN kernel.study_sites AS ss
             ON ss.tenant_id = d.tenant_id
            AND ss.study_id = d.study_id
-           AND ss.id = COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, d.direct_study_site_id)
+           AND ss.id = COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id)
         LEFT JOIN kernel.sites AS ss_site
             ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
         """;
@@ -490,7 +604,7 @@ internal sealed class KernelAuthorityStore(
         LEFT JOIN kernel.study_sites AS ss
             ON ss.tenant_id = d.tenant_id
            AND ss.study_id = d.study_id
-           AND ss.id = COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, d.direct_study_site_id)
+           AND ss.id = COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id)
         LEFT JOIN kernel.sites AS ss_site
             ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
         LEFT JOIN kernel.concepts AS vf_obs_c
@@ -525,14 +639,14 @@ internal sealed class KernelAuthorityStore(
             JOIN kernel.validation_detections AS d
                 ON req.target_kind = 'validation_finding'
                AND d.tenant_id = req.tenant_id AND d.finding_id = req.target_id
-            ORDER BY d.finding_id
+            ORDER BY d.finding_id, d.run_id DESC
         ),
         vf_scoped AS (
             SELECT
                 d.tenant_id,
                 d.finding_id,
                 d.study_id,
-                COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, d.direct_study_site_id) AS study_site_id
+                COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id) AS study_site_id
             FROM vf_detected AS d
         {FindingTargetSiteJoinsSql}
         ),
@@ -572,7 +686,8 @@ internal sealed class KernelAuthorityStore(
             s.sponsor_id AS "OrganizationId",
             s.id AS "StudyId",
             ss_site.country AS "Country",
-            ss.id AS "StudySiteId"
+            ss.id AS "StudySiteId",
+            FALSE AS "MayBeBlinded"
         FROM resolved_targets AS t
         JOIN kernel.studies AS s
             ON t.study_id IS NOT NULL AND s.tenant_id = t.tenant_id AND s.id = t.study_id
@@ -675,7 +790,20 @@ internal sealed class KernelAuthorityStore(
             .Select(n => n.Id)
             .Distinct()
             .ToArray();
-        if (obsIds.Length == 0 && findingIds.Length == 0)
+        var assertionIds = distinct
+            .Where(n => n.Kind == NodeKinds.Assertion)
+            .Select(n => AssertionId.FromGuid(n.Id))
+            .Distinct()
+            .ToList();
+        var formQueryIds = distinct
+            .Where(n => n.Kind == NodeKinds.FormQuery)
+            .Select(n => n.Id)
+            .Distinct()
+            .ToList();
+        if (obsIds.Length == 0
+            && findingIds.Length == 0
+            && assertionIds.Count == 0
+            && formQueryIds.Count == 0)
         {
             return new Dictionary<NodeRef, EvidenceNodeClassification>();
         }
@@ -686,17 +814,17 @@ internal sealed class KernelAuthorityStore(
         await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (obsIds.Length > 0)
-            {
-                await LoadObservationClassificationsAsync(db, tenant, obsIds, resolvedPaths, resolvedEvidence, cancellationToken)
-                    .ConfigureAwait(false);
-            }
-
-            if (findingIds.Length > 0)
-            {
-                await LoadValidationFindingClassificationsAsync(db, tenant, findingIds, resolvedPaths, resolvedEvidence, cancellationToken)
-                    .ConfigureAwait(false);
-            }
+            await ClassifyEvidenceInOpenConnectionAsync(
+                    db,
+                    tenant,
+                    obsIds,
+                    findingIds,
+                    assertionIds,
+                    formQueryIds,
+                    resolvedPaths,
+                    resolvedEvidence,
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
         finally
         {
@@ -734,30 +862,55 @@ internal sealed class KernelAuthorityStore(
 
         var resolvedPaths = new Dictionary<(string Kind, Guid Id), ScopePath>();
         var resolvedEvidence = new Dictionary<(string Kind, Guid Id), EvidenceNodeClassification>();
+        var dummyPotentiallyBlinded = new HashSet<NodeRef>();
         if (byKind.Count > 0)
         {
             await using var db = contexts.Create(tenant);
             await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
             try
             {
+                var obsIds = Array.Empty<Guid>();
+                var findingIds = Array.Empty<Guid>();
+                var assertionIds = new List<AssertionId>();
+                var formQueryIds = new List<Guid>();
+
                 foreach (var group in byKind)
                 {
                     var ids = group.Select(r => r.Id).ToArray();
-                    if (string.Equals(group.Key, NodeKinds.Observation, StringComparison.Ordinal))
+                    switch (group.Key)
                     {
-                        await LoadObservationClassificationsAsync(db, tenant, ids, resolvedPaths, resolvedEvidence, cancellationToken)
-                            .ConfigureAwait(false);
+                        case NodeKinds.Observation:
+                            obsIds = ids;
+                            break;
+                        case NodeKinds.ValidationFinding:
+                            findingIds = ids;
+                            break;
+                        case NodeKinds.Assertion:
+                            assertionIds = [.. ids.Select(AssertionId.FromGuid)];
+                            break;
+                        case NodeKinds.FormQuery:
+                            formQueryIds = [.. ids];
+                            break;
+                        default:
+                            await LoadPathsForKindAsync(db, tenant, group.Key, ids, resolvedPaths, dummyPotentiallyBlinded, cancellationToken)
+                                .ConfigureAwait(false);
+                            break;
                     }
-                    else if (string.Equals(group.Key, NodeKinds.ValidationFinding, StringComparison.Ordinal))
-                    {
-                        await LoadValidationFindingClassificationsAsync(db, tenant, ids, resolvedPaths, resolvedEvidence, cancellationToken)
-                            .ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await LoadPathsForKindAsync(db, tenant, group.Key, ids, resolvedPaths, cancellationToken)
-                            .ConfigureAwait(false);
-                    }
+                }
+
+                if (obsIds.Length > 0 || findingIds.Length > 0 || assertionIds.Count > 0 || formQueryIds.Count > 0)
+                {
+                    await ClassifyEvidenceInOpenConnectionAsync(
+                            db,
+                            tenant,
+                            obsIds,
+                            findingIds,
+                            assertionIds,
+                            formQueryIds,
+                            resolvedPaths,
+                            resolvedEvidence,
+                            cancellationToken)
+                        .ConfigureAwait(false);
                 }
             }
             finally
@@ -778,6 +931,251 @@ internal sealed class KernelAuthorityStore(
         }
 
         return (paths, evidence);
+    }
+
+    private async Task ClassifyEvidenceInOpenConnectionAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        Guid[] requestedObsIds,
+        Guid[] requestedFindingIds,
+        List<AssertionId> requestedAssertionIds,
+        List<Guid> requestedFormQueryIds,
+        Dictionary<(string Kind, Guid Id), ScopePath> resolvedPaths,
+        Dictionary<(string Kind, Guid Id), EvidenceNodeClassification> resolvedEvidence,
+        CancellationToken cancellationToken)
+    {
+        var extraObsGuids = new HashSet<Guid>(requestedObsIds);
+        var assertionTargetObs = new Dictionary<AssertionId, Guid>();
+        var assertionScopeHints = new Dictionary<AssertionId, (StudyId StudyId, EnrollmentId? EnrollmentId, StudySiteId? DirectStudySiteId)>();
+        var formQueryTargetObs = new Dictionary<Guid, Guid>();
+        var formQueryEnrollments = new Dictionary<Guid, EnrollmentId>();
+
+        if (requestedAssertionIds.Count > 0)
+        {
+            var assertions = await db.Assertions.AsNoTracking()
+                .Where(a => a.TenantId == tenant && requestedAssertionIds.Contains(a.Id))
+                .Select(a => new { a.Id, a.StudyId, a.EnrollmentId, a.TargetKind, a.TargetId, a.RetractsId })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            var parentAssertionIds = assertions
+                .Select(a => a.RetractsId ?? (a.TargetKind == NodeKinds.Assertion ? AssertionId.FromGuid(a.TargetId) : (AssertionId?)null))
+                .Where(id => id is not null)
+                .Select(id => id!.Value)
+                .Distinct()
+                .ToList();
+
+            var parentById = parentAssertionIds.Count == 0
+                ? new Dictionary<AssertionId, (EnrollmentId? EnrollmentId, string TargetKind, Guid TargetId)>()
+                : (await db.Assertions.AsNoTracking()
+                        .Where(a => a.TenantId == tenant && parentAssertionIds.Contains(a.Id))
+                        .Select(a => new { a.Id, a.EnrollmentId, a.TargetKind, a.TargetId })
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false))
+                    .ToDictionary(a => a.Id, a => (a.EnrollmentId, a.TargetKind, a.TargetId));
+
+            foreach (var a in assertions)
+            {
+                var parentId = a.RetractsId ?? (a.TargetKind == NodeKinds.Assertion ? AssertionId.FromGuid(a.TargetId) : (AssertionId?)null);
+                var hasParent = parentId is { } pid && parentById.TryGetValue(pid, out _);
+                var parent = hasParent ? parentById[parentId!.Value] : default;
+
+                var enrollmentId = a.EnrollmentId ?? (hasParent ? parent.EnrollmentId : null);
+                StudySiteId? directSite = null;
+                if (a.TargetKind == NodeKinds.StudySite)
+                {
+                    directSite = StudySiteId.FromGuid(a.TargetId);
+                }
+                else if (hasParent && parent.TargetKind == NodeKinds.StudySite)
+                {
+                    directSite = StudySiteId.FromGuid(parent.TargetId);
+                }
+
+                assertionScopeHints[a.Id] = (a.StudyId, enrollmentId, directSite);
+
+                if (a.TargetKind == NodeKinds.Observation)
+                {
+                    assertionTargetObs[a.Id] = a.TargetId;
+                    extraObsGuids.Add(a.TargetId);
+                }
+                else if (hasParent && parent.TargetKind == NodeKinds.Observation)
+                {
+                    assertionTargetObs[a.Id] = parent.TargetId;
+                    extraObsGuids.Add(parent.TargetId);
+                }
+            }
+        }
+
+        if (requestedFormQueryIds.Count > 0)
+        {
+            var queryEdges = await db.LineageEdges.AsNoTracking()
+                .Where(e => e.TenantId == tenant
+                    && e.ToKind == NodeKinds.FormQuery
+                    && requestedFormQueryIds.Contains(e.ToId)
+                    && ((e.FromKind == NodeKinds.Observation && e.Kind == LineageEdgeKind.DerivedFrom)
+                        || (e.FromKind == NodeKinds.Enrollment && e.Kind == LineageEdgeKind.GovernedBy)))
+                .Select(e => new { e.ToId, e.FromKind, e.FromId, e.Kind })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            foreach (var edge in queryEdges)
+            {
+                if (edge.FromKind == NodeKinds.Observation && edge.Kind == LineageEdgeKind.DerivedFrom)
+                {
+                    formQueryTargetObs[edge.ToId] = edge.FromId;
+                    extraObsGuids.Add(edge.FromId);
+                }
+                else if (edge.FromKind == NodeKinds.Enrollment && edge.Kind == LineageEdgeKind.GovernedBy)
+                {
+                    formQueryEnrollments[edge.ToId] = EnrollmentId.FromGuid(edge.FromId);
+                }
+            }
+        }
+
+        if (extraObsGuids.Count > 0)
+        {
+            await LoadObservationClassificationsAsync(
+                    db,
+                    tenant,
+                    [.. extraObsGuids],
+                    resolvedPaths,
+                    resolvedEvidence,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (requestedFindingIds.Length > 0)
+        {
+            await LoadValidationFindingClassificationsAsync(
+                    db,
+                    tenant,
+                    requestedFindingIds,
+                    resolvedPaths,
+                    resolvedEvidence,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (assertionScopeHints.Count == 0 && requestedFormQueryIds.Count == 0)
+        {
+            return;
+        }
+
+        var neededStudyIds = assertionScopeHints.Values.Select(h => h.StudyId).Distinct().ToList();
+        var neededEnrollmentIds = assertionScopeHints.Values
+            .Where(h => h.EnrollmentId is not null)
+            .Select(h => h.EnrollmentId!.Value)
+            .Concat(formQueryEnrollments.Values)
+            .Distinct()
+            .ToList();
+        var neededStudySiteIds = assertionScopeHints.Values
+            .Where(h => h.DirectStudySiteId is not null)
+            .Select(h => h.DirectStudySiteId!.Value)
+            .Distinct()
+            .ToList();
+
+        var studyScopes = new Dictionary<StudyId, ScopePath>();
+        if (neededStudyIds.Count > 0)
+        {
+            var studyRows = await db.Studies.AsNoTracking()
+                .Where(s => s.TenantId == tenant && neededStudyIds.Contains(s.Id))
+                .Select(s => new { s.Id, s.SponsorId })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var row in studyRows)
+            {
+                studyScopes[row.Id] = new ScopePath(row.SponsorId, row.Id);
+            }
+        }
+
+        var enrollmentScopes = new Dictionary<EnrollmentId, ScopePath>();
+        if (neededEnrollmentIds.Count > 0)
+        {
+            var enrollmentRows = await (
+                    from e in db.Enrollments.AsNoTracking()
+                    join ss in db.StudySites.AsNoTracking() on new { e.TenantId, Id = e.StudySiteId } equals new { ss.TenantId, ss.Id }
+                    join study in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { study.TenantId, study.Id }
+                    join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                    where e.TenantId == tenant && neededEnrollmentIds.Contains(e.Id)
+                    select new { e.Id, study.SponsorId, ss.StudyId, site.Country, StudySiteId = ss.Id })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var row in enrollmentRows)
+            {
+                enrollmentScopes[row.Id] = new ScopePath(row.SponsorId, row.StudyId, row.Country, row.StudySiteId);
+            }
+        }
+
+        var studySiteScopes = new Dictionary<StudySiteId, ScopePath>();
+        if (neededStudySiteIds.Count > 0)
+        {
+            var siteRows = await (
+                    from ss in db.StudySites.AsNoTracking()
+                    join study in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { study.TenantId, study.Id }
+                    join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                    where ss.TenantId == tenant && neededStudySiteIds.Contains(ss.Id)
+                    select new { ss.Id, study.SponsorId, ss.StudyId, site.Country })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var row in siteRows)
+            {
+                studySiteScopes[row.Id] = new ScopePath(row.SponsorId, row.StudyId, row.Country, row.Id);
+            }
+        }
+
+        foreach (var (assertionId, hint) in assertionScopeHints)
+        {
+            var scope = studyScopes.GetValueOrDefault(hint.StudyId, ScopePath.TenantWide);
+            if (hint.EnrollmentId is { } eid && enrollmentScopes.TryGetValue(eid, out var enrScope))
+            {
+                scope = enrScope;
+            }
+            else if (hint.DirectStudySiteId is { } sid && studySiteScopes.TryGetValue(sid, out var siteScope))
+            {
+                scope = siteScope;
+            }
+
+            var isBlinded = false;
+            if (assertionTargetObs.TryGetValue(assertionId, out var targetObsGuid)
+                && resolvedEvidence.TryGetValue((NodeKinds.Observation, targetObsGuid), out var obsInfo))
+            {
+                scope = obsInfo.Scope;
+                isBlinded = obsInfo.IsBlinded;
+            }
+
+            resolvedPaths[(NodeKinds.Assertion, assertionId.Value)] = scope;
+            resolvedEvidence[(NodeKinds.Assertion, assertionId.Value)] = new EvidenceNodeClassification(scope, isBlinded);
+        }
+
+        foreach (var queryId in requestedFormQueryIds)
+        {
+            EvidenceNodeClassification? targetObsInfo = null;
+            if (formQueryTargetObs.TryGetValue(queryId, out var targetObsGuid)
+                && resolvedEvidence.TryGetValue((NodeKinds.Observation, targetObsGuid), out var foundObsInfo))
+            {
+                targetObsInfo = foundObsInfo;
+            }
+
+            ScopePath? scope = null;
+            if (formQueryEnrollments.TryGetValue(queryId, out var enrId)
+                && enrollmentScopes.TryGetValue(enrId, out var enrScope))
+            {
+                scope = enrScope;
+            }
+            else if (targetObsInfo is not null)
+            {
+                scope = targetObsInfo.Scope;
+            }
+
+            if (scope is null)
+            {
+                continue;
+            }
+
+            var isBlinded = targetObsInfo?.IsBlinded ?? false;
+            resolvedPaths[(NodeKinds.FormQuery, queryId)] = scope;
+            resolvedEvidence[(NodeKinds.FormQuery, queryId)] = new EvidenceNodeClassification(scope, isBlinded);
+        }
     }
 
     private async Task LoadObservationClassificationsAsync(
@@ -1022,13 +1420,17 @@ internal sealed class KernelAuthorityStore(
     }
 
     public async Task<IReadOnlyDictionary<NodeRef, ScopePath>> PathsOfAsync(
+        TenantId tenant, IReadOnlyCollection<NodeRef> resources, CancellationToken cancellationToken) =>
+        (await ResolveVisibilityPathsAsync(tenant, resources, cancellationToken).ConfigureAwait(false)).Paths;
+
+    public async Task<(IReadOnlyDictionary<NodeRef, ScopePath> Paths, IReadOnlySet<NodeRef>? PotentiallyBlindedEvidence)> ResolveVisibilityPathsAsync(
         TenantId tenant, IReadOnlyCollection<NodeRef> resources, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(resources);
         var distinct = resources.Distinct().ToList();
         if (distinct.Count == 0)
         {
-            return new Dictionary<NodeRef, ScopePath>();
+            return (new Dictionary<NodeRef, ScopePath>(), FrozenSet<NodeRef>.Empty);
         }
 
         var byKind = distinct
@@ -1039,6 +1441,7 @@ internal sealed class KernelAuthorityStore(
             .ToList();
 
         var resolved = new Dictionary<(string Kind, Guid Id), ScopePath>();
+        var potentiallyBlinded = new HashSet<NodeRef>();
         if (byKind.Count > 0)
         {
             await using var db = contexts.Create(tenant);
@@ -1047,7 +1450,14 @@ internal sealed class KernelAuthorityStore(
             {
                 foreach (var group in byKind)
                 {
-                    await LoadPathsForKindAsync(db, tenant, group.Key, [.. group.Select(r => r.Id)], resolved, cancellationToken)
+                    await LoadPathsForKindAsync(
+                            db,
+                            tenant,
+                            group.Key,
+                            [.. group.Select(r => r.Id)],
+                            resolved,
+                            potentiallyBlinded,
+                            cancellationToken)
                         .ConfigureAwait(false);
                 }
             }
@@ -1063,7 +1473,10 @@ internal sealed class KernelAuthorityStore(
             result[resource] = resolved.GetValueOrDefault((resource.Kind, resource.Id), ScopePath.TenantWide);
         }
 
-        return result;
+        var prefilteredBlinded = ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance)
+            ? (IReadOnlySet<NodeRef>?)potentiallyBlinded
+            : null;
+        return (result, prefilteredBlinded);
     }
 
     public async Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken)
@@ -1165,6 +1578,7 @@ internal sealed class KernelAuthorityStore(
         string kind,
         Guid[] rawIds,
         Dictionary<(string Kind, Guid Id), ScopePath> resolved,
+        HashSet<NodeRef> potentiallyBlinded,
         CancellationToken ct)
     {
         switch (kind)
@@ -1270,12 +1684,12 @@ internal sealed class KernelAuthorityStore(
 
             case NodeKinds.ProtocolElement:
                 // An element belongs to the study of the protocol versions that govern it (ADR-2474).
-                await LoadRawPathsAsync(db, tenant, kind, rawIds, ProtocolElementPathsSql, resolved, ct).ConfigureAwait(false);
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, ProtocolElementPathsSql, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
                 break;
 
             case NodeKinds.FormQuery:
                 // A discrepancy query belongs to the study site and study of its governing enrollment (ADR-2625).
-                await LoadRawPathsAsync(db, tenant, kind, rawIds, FormQueryPathsSql, resolved, ct).ConfigureAwait(false);
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, FormQueryPathsSql, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
                 break;
 
             case NodeKinds.Artifact:
@@ -1314,15 +1728,15 @@ internal sealed class KernelAuthorityStore(
                 }
 
             case NodeKinds.Grant:
-                await LoadRawPathsAsync(db, tenant, kind, rawIds, GrantPathsSql, resolved, ct).ConfigureAwait(false);
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, GrantPathsSql, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
                 break;
 
             case NodeKinds.QualificationRequirement:
-                await LoadRawPathsAsync(db, tenant, kind, rawIds, QualificationRequirementPathsSql, resolved, ct).ConfigureAwait(false);
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, QualificationRequirementPathsSql, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
                 break;
 
             case NodeKinds.Effectivity:
-                await LoadRawPathsAsync(db, tenant, kind, rawIds, EffectivityPathsSql, resolved, ct).ConfigureAwait(false);
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, EffectivityPathsSql, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
                 break;
 
             case NodeKinds.Proposal:
@@ -1344,23 +1758,23 @@ internal sealed class KernelAuthorityStore(
                 }
 
             case NodeKinds.CollectionInstance:
-                await LoadRawPathsAsync(db, tenant, kind, rawIds, CollectionInstancePathsSql, resolved, ct).ConfigureAwait(false);
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, CollectionInstancePathsSql, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
                 break;
 
             case NodeKinds.Observation:
-                await LoadRawPathsAsync(db, tenant, kind, rawIds, ObservationPathsSql, resolved, ct).ConfigureAwait(false);
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, ObservationPathsSql, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
                 break;
 
             case NodeKinds.Assertion:
-                await LoadRawPathsAsync(db, tenant, kind, rawIds, AssertionPathsSql, resolved, ct).ConfigureAwait(false);
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, AssertionPathsSql, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
                 break;
 
             case NodeKinds.Attestation:
-                await LoadRawPathsAsync(db, tenant, kind, rawIds, AttestationPathsSql, resolved, ct).ConfigureAwait(false);
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, AttestationPathsSql, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
                 break;
 
             case NodeKinds.ValidationFinding:
-                await LoadRawPathsAsync(db, tenant, kind, rawIds, ValidationFindingPathsSql, resolved, ct).ConfigureAwait(false);
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, ValidationFindingPathsSql, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
                 break;
 
             default:
@@ -1377,6 +1791,7 @@ internal sealed class KernelAuthorityStore(
         Guid[] rawIds,
         string sql,
         Dictionary<(string Kind, Guid Id), ScopePath> resolved,
+        HashSet<NodeRef> potentiallyBlinded,
         CancellationToken ct)
     {
         object[] parameters =
@@ -1391,6 +1806,11 @@ internal sealed class KernelAuthorityStore(
             {
                 resolved[(kind, row.Id)] = path;
             }
+
+            if (row.MayBeBlinded)
+            {
+                potentiallyBlinded.Add(new NodeRef(kind, row.Id));
+            }
         }
     }
 
@@ -1399,7 +1819,8 @@ internal sealed class KernelAuthorityStore(
         Guid? OrganizationId,
         Guid? StudyId,
         string? Country,
-        Guid? StudySiteId)
+        Guid? StudySiteId,
+        bool MayBeBlinded)
     {
         public ScopePath? ToScopePath() => BuildScopePath(OrganizationId, StudyId, Country, StudySiteId);
     }

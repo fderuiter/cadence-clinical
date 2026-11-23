@@ -448,11 +448,10 @@ function handleTreeKeyDown(e) {
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.82rem;
-  outline: none;
   box-sizing: border-box;
 }
 
-.search-input:focus {
+.search-input:focus-visible {
   border-color: var(--accent);
 }
 
@@ -463,7 +462,6 @@ function handleTreeKeyDown(e) {
   border-radius: 6px;
   font-size: 0.8rem;
   background-color: var(--semantic-color-surface-muted);
-  outline: none;
   box-sizing: border-box;
 }
 

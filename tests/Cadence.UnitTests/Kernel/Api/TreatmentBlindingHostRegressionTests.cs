@@ -570,6 +570,9 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
                 services.RemoveAll<IValidationFindings>();
                 services.AddSingleton<IValidationFindings>(state);
 
+                services.RemoveAll<IKernelCommandSender>();
+                services.AddSingleton<IKernelCommandSender>(state);
+
                 services.RemoveAll<IModuleTenantContextFactory<ExecutionModuleDbContext>>();
                 services.AddSingleton<IModuleTenantContextFactory<ExecutionModuleDbContext>>(state);
             });
@@ -590,6 +593,7 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         IKernelExportReader,
         IStandardsRegistry,
         IValidationFindings,
+        IKernelCommandSender,
         IModuleTenantContextFactory<ExecutionModuleDbContext>
     {
         private readonly string _inMemoryDbName;
@@ -600,6 +604,8 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         private readonly ScopePath _sitePath;
         private readonly StudyDirectoryEntry _studyEntry;
         private readonly OrganizationDirectoryEntry _sponsorEntry;
+        private readonly SiteDirectoryEntry _siteEntry;
+        private readonly StudySiteDirectoryEntry _studySiteEntry;
         private readonly ProtocolDesign _design;
         private readonly ProtocolVersionSummary _protocolSummary;
         private readonly ConceptVersionView _blindedConcept;
@@ -650,6 +656,10 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
             _sponsorEntry = new OrganizationDirectoryEntry(SponsorId, 1, "SPONSOR-01", "Cadence Oncology", OrganizationKind.Sponsor);
             _studyEntry = new StudyDirectoryEntry(
                 StudyId, 1, "STD-BLIND-01", "Phase 3 Randomized Study", "Phase 3", SponsorId, 1, "SPONSOR-01", "Cadence Oncology", 1);
+            _siteEntry = new SiteDirectoryEntry(
+                PhysicalSiteId, 1, SponsorId, 1, "SPONSOR-01", "Cadence Oncology", "SITE-01", "Metro Clinical Site", "US");
+            _studySiteEntry = new StudySiteDirectoryEntry(
+                SiteId, 1, StudyId, PhysicalSiteId, 1, "SITE-01", "Metro Clinical Site", "US", SponsorId, 1, "SPONSOR-01", "Cadence Oncology", "Active");
 
             // Grants:
             // - Blinded coordinator holds a tenant-wide observation.record grant (exact task scenario).
@@ -662,13 +672,31 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
                     GrantId.New(), Tenant, BlindedPerson, "observation.record", null,
                     new AuthorityScope(ScopeLevel.Tenant, null, null), T0, null, false, null, Issuer, T0).Value!,
                 Grant.Issue(
+                    GrantId.New(), Tenant, BlindedPerson, "study.export", null,
+                    AuthorityScope.Tenant(), T0, null, false, null, Issuer, T0).Value!,
+                Grant.Issue(
+                    GrantId.New(), Tenant, BlindedPerson, "enrollment.export", null,
+                    AuthorityScope.Tenant(), T0, null, false, null, Issuer, T0).Value!,
+                Grant.Issue(
                     GrantId.New(), Tenant, PharmacistPerson, "observation.record", null,
+                    AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
+                Grant.Issue(
+                    GrantId.New(), Tenant, PharmacistPerson, "study.export", null,
+                    AuthorityScope.Study(StudyId), T0, null, false, null, Issuer, T0).Value!,
+                Grant.Issue(
+                    GrantId.New(), Tenant, PharmacistPerson, "enrollment.export", null,
                     AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
                 Grant.Issue(
                     GrantId.New(), Tenant, PharmacistPerson, "enrollment.unblind", null,
                     AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
                 Grant.Issue(
                     GrantId.New(), Tenant, UnqualifiedPharmacistPerson, "observation.record", null,
+                    AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
+                Grant.Issue(
+                    GrantId.New(), Tenant, UnqualifiedPharmacistPerson, "study.export", null,
+                    AuthorityScope.Study(StudyId), T0, null, false, null, Issuer, T0).Value!,
+                Grant.Issue(
+                    GrantId.New(), Tenant, UnqualifiedPharmacistPerson, "enrollment.export", null,
                     AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
                 Grant.Issue(
                     GrantId.New(), Tenant, UnqualifiedPharmacistPerson, "enrollment.unblind", null,
@@ -1157,6 +1185,21 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         public Task<OrganizationDirectoryEntry?> FindOrganizationByCodeAsync(TenantId tenant, string code, CancellationToken cancellationToken = default) =>
             Task.FromResult(tenant == Tenant && string.Equals(code, "SPONSOR-01", StringComparison.OrdinalIgnoreCase) ? _sponsorEntry : null);
 
+        public Task<IReadOnlyList<SiteDirectoryEntry>> ListSitesAsync(TenantId tenant, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<SiteDirectoryEntry>>(tenant == Tenant ? [_siteEntry] : []);
+
+        public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(tenant == Tenant && siteId == PhysicalSiteId ? _siteEntry : null);
+
+        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken = default) =>
+            Task.FromResult(tenant == Tenant && string.Equals(siteCode, "SITE-01", StringComparison.OrdinalIgnoreCase) ? _siteEntry : null);
+
+        public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>(tenant == Tenant && studyId == StudyId ? [_studySiteEntry] : []);
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(tenant == Tenant && studySiteId == SiteId ? _studySiteEntry : null);
+
         public Task<NodeSummary?> ResolveAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default)
         {
             if (tenant != Tenant)
@@ -1490,6 +1533,35 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
                 .UseInMemoryDatabase($"{_inMemoryDbName}-{tenant.Value.ToString("N", CultureInfo.InvariantCulture)}")
                 .Options;
             return new ExecutionModuleDbContext(options);
+        }
+
+        Task<CommandResult<TResult>> IKernelCommandSender.SendAsync<TResult>(
+            ICommand<TResult> command,
+            CommandMetadata? metadata,
+            CancellationToken cancellationToken)
+        {
+            return command switch
+            {
+                ExportStudySnapshot exportStudy => Task.FromResult(
+                    CommandResult<TResult>.Success((TResult)(object)new ArtifactState(
+                        exportStudy.ArtifactId,
+                        ArtifactKind.Dataset,
+                        exportStudy.StudyId,
+                        exportStudy.Title,
+                        exportStudy.ArtifactVersionId,
+                        1,
+                        exportStudy.Content.ContentHash))),
+                ExportEnrollmentCasebook exportCasebook => Task.FromResult(
+                    CommandResult<TResult>.Success((TResult)(object)new ArtifactState(
+                        exportCasebook.ArtifactId,
+                        ArtifactKind.Dataset,
+                        exportCasebook.StudyId,
+                        exportCasebook.Title,
+                        exportCasebook.ArtifactVersionId,
+                        1,
+                        exportCasebook.Content.ContentHash))),
+                _ => throw new NotSupportedException($"Unexpected in-memory command {command.GetType().Name}."),
+            };
         }
     }
 }
