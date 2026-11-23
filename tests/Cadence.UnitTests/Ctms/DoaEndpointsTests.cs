@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -264,7 +265,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         _db.CtmsDelegations.Add(delegation);
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var caller = Caller(RoleNormalization.ROLE_INVESTIGATOR, "pi-user");
+        var caller = Caller(RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR, "pi-user");
         caller.Request.Headers["X-Change-Reason"] = "Principal Investigator eSignature review and endorsement";
 
         var request = new DoaSignOffRequest(
@@ -294,7 +295,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
     [GxPRequirement("PRD-SYS-001")]
     public async Task SignOffDelegation_WithNonExistentRecord_Returns404NotFound()
     {
-        var caller = Caller(RoleNormalization.ROLE_INVESTIGATOR, "pi-user");
+        var caller = Caller(RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR, "pi-user");
         caller.Request.Headers["X-Change-Reason"] = "Sign-off attempt";
 
         var request = new DoaSignOffRequest(
@@ -331,7 +332,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         _db.CtmsDelegations.Add(delegation);
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var caller = Caller(RoleNormalization.ROLE_INVESTIGATOR, "pi-user");
+        var caller = Caller(RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR, "pi-user");
 
         var request = new DoaSignOffRequest(
             RecordId: delegation.Id,
@@ -565,18 +566,23 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         await SeedSiteAsync();
 
         // 1. Authorized caller (investigator) can query site log
-        using var piClient = CreateClient(RoleNormalization.ROLE_INVESTIGATOR, "pi-1");
-        var response = await piClient.GetAsync($"/api/v1/ctms/doa/sites/{SiteId}/log", TestContext.Current.CancellationToken);
+        using var investigatorClient = CreateClient(RoleNormalization.ROLE_INVESTIGATOR, "inv-1");
+        var response = await investigatorClient.GetAsync($"/api/v1/ctms/doa/sites/{SiteId}/log", TestContext.Current.CancellationToken);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // 2. Caller without sign-off role (e.g. CRC) is forbidden from calling sign-off
+        // 2. Callers without PI sign-off role (CRC and base/sub-investigator) are forbidden from calling sign-off
         using var crcClient = CreateClient("Clinical Research Coordinator", "crc-1");
         var signOffPayload = new DoaSignOffRequest("rec-1", "CRC trying to sign off");
         var signOffResponse = await crcClient.PostAsJsonAsync(
             "/api/v1/ctms/doa/sign-off", signOffPayload, TestContext.Current.CancellationToken);
         signOffResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-        // 3. Authorized investigator without X-Sig-Token gets 401 REAUTHENTICATION_REQUIRED; with X-Sig-Token reaches handler (404 for missing record)
+        var investigatorSignOffResponse = await investigatorClient.PostAsJsonAsync(
+            "/api/v1/ctms/doa/sign-off", signOffPayload, TestContext.Current.CancellationToken);
+        investigatorSignOffResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        // 3. Authorized Principal Investigator without X-Sig-Token gets 401 REAUTHENTICATION_REQUIRED; with X-Sig-Token reaches handler (404 for missing record)
+        using var piClient = CreateClient(RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR, "pi-1");
         var unauthenticatedSignOff = await piClient.PostAsJsonAsync(
             "/api/v1/ctms/doa/sign-off", signOffPayload, TestContext.Current.CancellationToken);
         unauthenticatedSignOff.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -591,7 +597,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
                 userId: "pi-1",
                 action: DoaEndpoints.SignOffAction,
                 semanticAction: DoaEndpoints.SignOffSemanticAction,
-                roles: [RoleNormalization.ROLE_INVESTIGATOR],
+                roles: [RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR],
                 issuedAt: _clock.UtcNow));
         var piSignOffResponse = await piClient.SendAsync(signedPiReq, TestContext.Current.CancellationToken);
         piSignOffResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -616,5 +622,218 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         crossStudyRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         var crossStudyBody = await crossStudyRes.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
         crossStudyBody.GetProperty("code").GetString().Should().Be(CtmsScopeGuard.ForbiddenCode);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-192")]
+    public void PermissionMatrix_CtmsDoaSignOff_RestrictedToPiRolesAndSysadmin()
+    {
+        static Principal PrincipalForRole(string role) => new()
+        {
+            UserId = "user-check",
+            TenantId = TestSecurityContext.TenantCode,
+            Roles = RoleNormalization.GetNormalizedRoles([role]),
+            RawRoles = [role],
+        };
+
+        string[] admittedRoles =
+        [
+            RoleNormalization.ROLE_SYSADMIN,
+            RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR,
+            RoleNormalization.ROLE_AUTHORIZED_ER_PHYSICIAN,
+            RoleNormalization.ROLE_LEAD_INVESTIGATOR,
+            "Principal Investigator",
+        ];
+
+        foreach (string role in admittedRoles)
+        {
+            var principal = PrincipalForRole(role);
+            PermissionMatrix.HasPermission(principal, "ctms_doa:sign_off").Should().BeTrue($"role '{role}' should hold ctms_doa:sign_off");
+            PermissionMatrix.HasPermission(principal, "ctms_doa:sign").Should().BeTrue($"role '{role}' should hold ctms_doa:sign");
+        }
+
+        string[] deniedRoles =
+        [
+            "sub_investigator",
+            "sub investigator",
+            "sub-investigator",
+            RoleNormalization.ROLE_INVESTIGATOR,
+            RoleNormalization.ROLE_CRC,
+            RoleNormalization.ROLE_CRA_CANONICAL,
+            "monitor",
+            RoleNormalization.ROLE_SPONSOR_DM,
+            RoleNormalization.ROLE_SPONSOR_MM,
+            RoleNormalization.ROLE_AUDITOR_CANONICAL,
+        ];
+
+        foreach (string role in deniedRoles)
+        {
+            var principal = PrincipalForRole(role);
+            PermissionMatrix.HasPermission(principal, "ctms_doa:sign_off").Should().BeFalse($"role '{role}' must not hold ctms_doa:sign_off");
+            PermissionMatrix.HasPermission(principal, "ctms_doa:sign").Should().BeFalse($"role '{role}' must not hold ctms_doa:sign");
+        }
+
+        var subInvPrincipal = PrincipalForRole("sub_investigator");
+        var baseInvPrincipal = PrincipalForRole(RoleNormalization.ROLE_INVESTIGATOR);
+        var piPrincipal = PrincipalForRole(RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR);
+
+        foreach (string nonSignAction in new[] { "read", "assign", "create", "revoke", "update", "export" })
+        {
+            string permission = $"ctms_doa:{nonSignAction}";
+            PermissionMatrix.HasPermission(subInvPrincipal, permission).Should().BeTrue();
+            PermissionMatrix.HasPermission(baseInvPrincipal, permission).Should().BeTrue();
+            PermissionMatrix.HasPermission(piPrincipal, permission).Should().BeTrue();
+        }
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-192")]
+    public async Task SignOffDelegation_ViaProgramWebFactory_ForbidsSubInvestigatorAndAdmitsPrincipalInvestigator()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var factory = new CtmsStudySiteScopeIsolationTests.CtmsInMemoryWebFactory();
+
+        string delegationId;
+        await using (var seedScope = factory.Services.CreateAsyncScope())
+        {
+            var seedDb = seedScope.ServiceProvider.GetRequiredService<CtmsDbContext>();
+            seedDb.CtmsSiteGreenlightGates.Add(new CtmsSiteGreenlightGate
+            {
+                SiteId = SiteId,
+                SiteName = "Site 101",
+                StudyId = StudyId,
+                CountryCode = "US",
+                GreenlightCertifiedBy = "Dr. Elena Rostova",
+                CreatedAt = _clock.UtcNow.UtcDateTime,
+                CreatedBy = "seed",
+                ReasonForChange = "Test setup",
+                VersionIndex = 1,
+            });
+
+            var delegation = new CtmsDelegation
+            {
+                StudyId = StudyId,
+                SiteId = SiteId,
+                StaffUserId = "staff-crc-01",
+                TaskCodes = JsonSerializer.Serialize(new[] { "CRF_DATA_ENTRY" }),
+                StartDate = "2026-11-15",
+                IsActive = true,
+                SignedOff = false,
+                CreatedAt = _clock.UtcNow.UtcDateTime,
+                CreatedBy = "crc-1",
+                ReasonForChange = "Initial assignment",
+                VersionIndex = 1,
+            };
+            seedDb.CtmsDelegations.Add(delegation);
+            await seedDb.SaveChangesAsync(ct);
+            delegationId = delegation.Id;
+        }
+
+        string requestJson = JsonSerializer.Serialize(new
+        {
+            record_id = delegationId,
+            reason_for_change = "Endorsing delegation",
+        });
+
+        static HttpRequestMessage BuildSignOffRequest(string bodyJson)
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ctms/doa/sign-off")
+            {
+                Content = new StringContent(bodyJson, Encoding.UTF8, "application/json"),
+            };
+            req.Headers.Add("X-Change-Reason", "Endorsing delegation");
+            return req;
+        }
+
+        // 1. Sub-investigator identity (default scope and explicit site scope) receives HTTP 403 and SignedOff stays false
+        using var subInvDefaultClient = SignedClientExtensions.CreateSignedClient(
+            factory,
+            TestSecurityContext.Identity("sub-inv-1", "sub_investigator"));
+        using (var req = BuildSignOffRequest(requestJson))
+        {
+            using var res = await subInvDefaultClient.SendAsync(req, ct);
+            res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        using var subInvSiteClient = SignedClientExtensions.CreateSignedClient(
+            factory,
+            TestSecurityContext.Identity("sub-inv-1", "sub_investigator") with
+            {
+                StudyIds = [StudyId],
+                SiteIds = [SiteId],
+            });
+        using (var req = BuildSignOffRequest(requestJson))
+        {
+            using var res = await subInvSiteClient.SendAsync(req, ct);
+            res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        using var baseInvClient = SignedClientExtensions.CreateSignedClient(
+            factory,
+            TestSecurityContext.Identity("inv-1", "investigator") with
+            {
+                StudyIds = [StudyId],
+                SiteIds = [SiteId],
+            });
+        using (var req = BuildSignOffRequest(requestJson))
+        {
+            using var res = await baseInvClient.SendAsync(req, ct);
+            res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        await using (var verifyForbiddenScope = factory.Services.CreateAsyncScope())
+        {
+            var verifyDb = verifyForbiddenScope.ServiceProvider.GetRequiredService<CtmsDbContext>();
+            var unendorsed = await verifyDb.CtmsDelegations
+                .AsNoTracking()
+                .SingleAsync(d => d.Id == delegationId, ct);
+            unendorsed.SignedOff.Should().BeFalse();
+        }
+
+        // 2. Principal Investigator without X-Sig-Token receives 401; with X-Sig-Token receives HTTP 200 and SignedOff transitions to true
+        using var piClient = SignedClientExtensions.CreateSignedClient(
+            factory,
+            TestSecurityContext.Identity("pi-1", "principal_investigator") with
+            {
+                StudyIds = [StudyId],
+                SiteIds = [SiteId],
+            });
+        using (var unsignedReq = BuildSignOffRequest(requestJson))
+        {
+            using var unsignedRes = await piClient.SendAsync(unsignedReq, ct);
+            unsignedRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        var factoryClock = factory.Services.GetRequiredService<IClock>();
+        using (var req = BuildSignOffRequest(requestJson))
+        {
+            req.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(
+                    userId: "pi-1",
+                    action: DoaEndpoints.SignOffAction,
+                    semanticAction: DoaEndpoints.SignOffSemanticAction,
+                    roles: [RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR],
+                    issuedAt: factoryClock.UtcNow));
+            using var res = await piClient.SendAsync(req, ct);
+            res.StatusCode.Should().Be(HttpStatusCode.OK);
+            var dto = await res.Content.ReadFromJsonAsync<DelegationResponseDto>(ct);
+            dto.Should().NotBeNull();
+            dto!.SignedOff.Should().BeTrue();
+        }
+
+        await using (var verifyOkScope = factory.Services.CreateAsyncScope())
+        {
+            var verifyDb = verifyOkScope.ServiceProvider.GetRequiredService<CtmsDbContext>();
+            var endorsed = await verifyDb.CtmsDelegations
+                .AsNoTracking()
+                .SingleAsync(d => d.Id == delegationId, ct);
+            endorsed.SignedOff.Should().BeTrue();
+
+            var audit = await verifyDb.CtmsAuditLogs
+                .AsNoTracking()
+                .SingleOrDefaultAsync(a => a.Action == "DOA_PI_SIGN_OFF" && a.UserId == "pi-1", ct);
+            audit.Should().NotBeNull();
+        }
     }
 }

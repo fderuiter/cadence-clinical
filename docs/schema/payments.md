@@ -25,7 +25,8 @@ Entity: `AuditLogEntry`
 
 Indexes:
 
-- `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_EntityName_PredecessorHash`: (`EntityName`, `PredecessorHash`)
+- `IX_audit_log_entries_EntityName_Timestamp_VersionIndex_Id`: (`EntityName`, `Timestamp`, `VersionIndex`, `Id`)
 - `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## payments.consumed_signature_tokens

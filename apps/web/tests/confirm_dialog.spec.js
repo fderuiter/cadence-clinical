@@ -74,10 +74,47 @@ describe("Confirmation Dialog Service & Modal Host", () => {
       expect(store.activeRequest.message).toBe("Simple confirmation message");
       expect(store.activeRequest.confirmLabel).toBe("Confirm");
       expect(store.activeRequest.cancelLabel).toBe("Cancel");
-      expect(store.activeRequest.variant).toBe("danger");
+      expect(store.activeRequest.variant).toBe("info");
 
       store.resolveConfirm();
       await promise;
+    });
+
+    it("queues concurrent confirm() and prompt() calls in FIFO order without cancelling earlier requests", async () => {
+      const store = useConfirmStore();
+      const first = store.confirm({
+        title: "First Confirmation",
+        message: "Proceed with step 1?",
+      });
+      const second = store.prompt({
+        title: "Second Audit Prompt",
+        message: "Provide Part 11 justification.",
+        inputLabel: "Justification",
+        required: true,
+      });
+      const third = store.confirm({
+        title: "Third Confirmation",
+        message: "Finalize step 3?",
+        variant: "warning",
+      });
+
+      expect(store.activeRequest.title).toBe("First Confirmation");
+      expect(store.queue).toHaveLength(2);
+
+      store.resolveConfirm();
+      expect(await first).toBe(true);
+
+      expect(store.activeRequest.title).toBe("Second Audit Prompt");
+      expect(store.queue).toHaveLength(1);
+      store.setInputValue("Protocol amendment alignment");
+      store.resolveConfirm();
+      expect(await second).toBe("Protocol amendment alignment");
+
+      expect(store.activeRequest.title).toBe("Third Confirmation");
+      expect(store.queue).toHaveLength(0);
+      store.cancelConfirm();
+      expect(await third).toBe(false);
+      expect(store.activeRequest).toBeNull();
     });
 
     it("useConfirmDialog composable delegates correctly to store", async () => {
@@ -542,6 +579,8 @@ describe("Confirmation Dialog Service & Modal Host", () => {
       await nextTick();
       expect(store.activeRequest?.mode).toBe("prompt");
       expect(store.activeRequest?.title).toBe("Deactivate Synonym Rule");
+      // Part 11 prompts must require manual text entry rather than pre-populated defaultValue
+      expect(store.activeRequest?.inputValue).toBe("");
       store.cancelConfirm();
       await deactivatePromise;
 
@@ -559,6 +598,7 @@ describe("Confirmation Dialog Service & Modal Host", () => {
       await nextTick();
       expect(store.activeRequest?.mode).toBe("prompt");
       expect(store.activeRequest?.title).toBe("Register Reference Range");
+      expect(store.activeRequest?.inputValue).toBe("");
       store.cancelConfirm();
       await rangePromise;
       fetchSpy.mockRestore();
@@ -581,6 +621,67 @@ describe("Confirmation Dialog Service & Modal Host", () => {
 
       expect(promptSpy).not.toHaveBeenCalled();
       promptSpy.mockRestore();
+    });
+
+    it("focuses .btn-cancel on confirmations with aria-describedby and refocuses #confirm-dialog-prompt-input on form validation error", async () => {
+      const store = useConfirmStore();
+      const host = mount(ConfirmationDialogHost, {
+        attachTo: document.body,
+        global: { plugins: [pinia] },
+      });
+
+      const confirmPromise = store.confirm({
+        title: "Unsaved eCRF Changes",
+        message: "Discard unsaved observations?",
+        variant: "warning",
+        confirmLabel: "Discard Changes",
+        cancelLabel: "Stay on Form",
+      });
+      await nextTick();
+      await nextTick();
+
+      const alertDialog = document.body.querySelector('[role="alertdialog"]');
+      expect(alertDialog?.getAttribute("aria-describedby")).toBe(
+        "confirm-dialog-message"
+      );
+      expect(document.activeElement?.classList.contains("btn-cancel")).toBe(
+        true
+      );
+      document.activeElement.click();
+      expect(await confirmPromise).toBe(false);
+
+      const promptPromise = store.prompt({
+        title: "Audit Justification",
+        message: "Enter reason for change.",
+        inputLabel: "Reason for Change",
+        required: true,
+      });
+      await nextTick();
+      await nextTick();
+
+      const promptForm = document.getElementById("confirm-dialog-prompt-form");
+      const promptInput = document.getElementById(
+        "confirm-dialog-prompt-input"
+      );
+      const submitBtn = document.body.querySelector(".btn-confirm");
+      expect(promptForm).not.toBeNull();
+      expect(document.activeElement).toBe(promptInput);
+
+      // Move focus to submit button and submit empty prompt -> refocuses #confirm-dialog-prompt-input
+      submitBtn.focus();
+      expect(document.activeElement).toBe(submitBtn);
+      submitBtn.click();
+      await nextTick();
+      await nextTick();
+
+      expect(document.activeElement).toBe(promptInput);
+      expect(
+        document.getElementById("confirm-dialog-prompt-error")?.textContent
+      ).toContain("Reason for Change is required.");
+
+      store.cancelConfirm();
+      expect(await promptPromise).toBeNull();
+      host.unmount();
     });
   });
 });

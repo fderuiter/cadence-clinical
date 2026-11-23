@@ -202,8 +202,8 @@
         <ul v-else class="letter-list">
           <li v-for="letter in letters" :key="letter.id" class="letter-item">
             <strong>{{ formatClinicalEnum(letter.letter_type) }}</strong> ·
-            {{ letter.subject }}
-            <pre class="letter-body">{{ letter.body_markdown }}</pre>
+            {{ formatIsoDateShort(letter.created_at) }}
+            <pre class="letter-body">{{ letter.rendered_content }}</pre>
           </li>
         </ul>
       </div>
@@ -515,6 +515,14 @@ interface StructuredFindingDraft {
   resolution_status: string;
 }
 
+type MonitoringVisitRow = MonitoringVisit & {
+  findings?: Array<{
+    text: string;
+    severity: string;
+    resolution_status?: string | null;
+  }> | null;
+};
+
 const props = withDefaults(
   defineProps<{
     studyCode?: string;
@@ -557,30 +565,30 @@ const canSchedule = computed(() => canScheduleMonitoringVisits(authStore));
 const canComplete = computed(() => canCompleteMonitoringVisits(authStore));
 const canSignOff = computed(() => canSignOffMonitoringVisits(authStore));
 
-const visits = ref<MonitoringVisit[]>([]);
+const visits = ref<MonitoringVisitRow[]>([]);
 const newVisitType = ref("IMV");
 const newCraId = ref(authStore.userId || "cra_monitor");
 const newScheduledDate = ref("");
 const newReason = ref("");
 
-const activeCompleteVisit = ref<MonitoringVisit | null>(null);
+const activeCompleteVisit = ref<MonitoringVisitRow | null>(null);
 const completeActualDate = ref("");
 const completeFindingDesc = ref("");
 const structuredFindings = ref<StructuredFindingDraft[]>([]);
 const completeReason = ref("");
 
-const activeCompileVisit = ref<MonitoringVisit | null>(null);
+const activeCompileVisit = ref<MonitoringVisitRow | null>(null);
 const compileTemplateName = ref("follow_up_letter");
 const compileFinalize = ref(true);
 const compilePassword = ref("");
 const compileReason = ref("");
 const compiledLetters = ref<VisitLetterCompilationResult[]>([]);
 
-const activeSignOffVisit = ref<MonitoringVisit | null>(null);
+const activeSignOffVisit = ref<MonitoringVisitRow | null>(null);
 const signOffPassword = ref("");
 const signOffReason = ref("");
 
-const selectedLettersVisit = ref<MonitoringVisit | null>(null);
+const selectedLettersVisit = ref<MonitoringVisitRow | null>(null);
 const letters = ref<GeneratedVisitLetter[]>([]);
 
 async function loadVisits() {
@@ -649,7 +657,7 @@ async function scheduleVisit() {
   }
 }
 
-function prepareComplete(visit: MonitoringVisit) {
+function prepareComplete(visit: MonitoringVisitRow) {
   activeCompleteVisit.value = visit;
   completeActualDate.value = new Date().toISOString().slice(0, 10);
   completeFindingDesc.value = "";
@@ -721,7 +729,7 @@ async function confirmComplete() {
   }
 }
 
-function prepareCompileLetter(visit: MonitoringVisit) {
+function prepareCompileLetter(visit: MonitoringVisitRow) {
   activeCompileVisit.value = visit;
   compileTemplateName.value =
     visit.status === "SCHEDULED" ? "confirmation_letter" : "follow_up_letter";
@@ -836,7 +844,7 @@ async function downloadCompiledLetter(letter: VisitLetterCompilationResult) {
   }
 }
 
-function prepareSignOff(visit: MonitoringVisit) {
+function prepareSignOff(visit: MonitoringVisitRow) {
   activeSignOffVisit.value = visit;
   signOffPassword.value = "";
   signOffReason.value = "";
@@ -895,7 +903,7 @@ async function confirmSignOff() {
   }
 }
 
-async function viewLetters(visit: MonitoringVisit) {
+async function viewLetters(visit: MonitoringVisitRow) {
   selectedLettersVisit.value = visit;
   letters.value = [];
   try {

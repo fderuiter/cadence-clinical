@@ -13,7 +13,9 @@ Interoperability scaffold. It holds the ePRO submission, instrument, subject ass
 - `Infrastructure/Persistence/`: `InteropDbContext`, a design-time `InteropDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924145123_InitialCreate`, `20260929203013_HashDeviceTokensAtRest`,
   `20261006202718_AddSceEntities`, `20261019174341_AddEhrEndpointSigningKeyRef` (#5436: an EHR endpoint names a
-  server-side signing key reference instead of holding a private key), `20261123171215_AddConsumedSignatureTokens`.
+  server-side signing key reference instead of holding a private key), `20261120210037_EnforceTenantRowLevelSecurity`,
+  `20261122203745_EnforceStandaloneConcurrencyAndTemporalRevisions`, `20261123155232_IndexAuditLogEntryChains`,
+  `20261123171215_AddConsumedSignatureTokens`.
 
 ## HTTP surface
 
@@ -57,7 +59,7 @@ The eSource routes (`/api/v1/interop/esource/**`) need `esource_endpoint:read`/`
 
 Reconciliation candidates come only from source data (#5432):
 
-- `POST /esource/ingest` parses the posted FHIR `Bundle` (`RawFhirBundleJson`; `SiteId` and `EhrSystemId` are required). `FhirObservationMapper` turns each Observation with an id, an `effectiveDateTime`, a numeric `valueQuantity` and a supported LOINC code (systolic and diastolic blood pressure, pulse, temperature, weight, height, glucose) into one candidate. The candidate carries the bundle's value, unit, time and raw resource. Unsupported Observations are skipped and named in the response, and a resource already filed for the same variable is not filed twice.
+- `POST /esource/ingest` parses the posted FHIR `Bundle` (`RawFhirBundleJson`; `SiteId` and `EhrSystemId` are required, and `StudyId`, `SiteId`, `SubjectId` and `EhrSystemId` are trimmed). `FhirObservationMapper` turns each Observation with an id, an `effectiveDateTime`, a numeric `valueQuantity` and a supported LOINC code (systolic and diastolic blood pressure, pulse, temperature, weight, height, glucose) into one candidate. The candidate carries the bundle's value, unit, time and raw resource. Unsupported Observations are skipped and named in the response, and a resource already filed for the same subject, site and variable is not filed twice. If the subject already has candidates under another site in the study, an unauthorized site caller is refused (`403`) and a multi-site caller sending a conflicting `SiteId` receives `409` without candidate details.
 - Candidates are not compared with the eCRF here, so their discrepancy type is `NOT_COMPARED` and they carry no eCRF value.
 - A payload that is not a bundle, or a bundle with nothing to map, returns `400` and writes nothing.
 - `POST /esource/poll` returns `501` until a FHIR client for registered endpoints exists. It never fabricates rows.

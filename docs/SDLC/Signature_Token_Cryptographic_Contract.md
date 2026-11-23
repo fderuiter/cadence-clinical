@@ -55,21 +55,40 @@ The client then repeats the signature-gated request with the `X-Sig-Token` heade
 
 Signature-gated endpoints today:
 
-| Endpoint                                                                                  | `semantic_action`                       | `action`                                                     |
-| :---------------------------------------------------------------------------------------- | :-------------------------------------- | :----------------------------------------------------------- |
-| `POST /api/v1/execution/forms/{id}/approve` (and the legacy `/api/v1/forms/{id}/approve`) | `execution.form.approve`                | `/api/v1/execution/forms/{id}/approve`                       |
-| `PATCH /api/v1/execution/subjects/{subjectId}/state` (when `target` is `UNBLINDED`)       | `execution.subject.unblind`             | `/api/v1/execution/subjects/{subjectId}/state`               |
-| `POST /api/v1/ctms/doa/sign-off`                                                          | `ctms.doa.sign_off`                     | `/api/v1/ctms/doa/sign-off`                                  |
-| `POST /api/v1/ctms/monitoring-visits/{visit_id}/sign-off`                                 | `ctms.monitoring_visit.sign_off`        | `/api/v1/ctms/monitoring-visits/{visit_id}/sign-off`         |
-| `POST /api/v1/ctms/letters/compile` (when `Finalize` is `true`)                           | `ctms.letter.compile`                   | `/api/v1/ctms/letters/compile`                               |
-| `POST /api/v1/ctms/startup/sites/{siteId}/greenlight/certify`                             | `ctms.greenlight.certify`               | `/api/v1/ctms/startup/sites/{siteId}/greenlight/certify`     |
-| `POST /api/v1/ctms/startup/matrix/batch-certify`                                          | `ctms.greenlight.batch_certify`         | `/api/v1/ctms/startup/matrix/batch-certify`                  |
-| `POST /api/v1/payments/invoices/{id}/remittance-advice/sign`                              | `payments.remittance.sign`              | `/api/v1/payments/invoices/{id}/remittance-advice/sign`      |
-| `POST /api/v1/imaging/adjudications/{sessionId}/chair-adjudicate`                         | `imaging.adjudication.chair_adjudicate` | `/api/v1/imaging/adjudications/{sessionId}/chair-adjudicate` |
-| `POST /api/v1/interop/esource/reconcile/accept`                                           | `interop.esource.accept`                | `/api/v1/interop/esource/reconcile/accept`                   |
-| `POST /api/v1/interop/esource/reconcile/batch-accept`                                     | `interop.esource.batch_accept`          | `/api/v1/interop/esource/reconcile/batch-accept`             |
-| `POST /api/v1/interop/esource/reconcile/reject`                                           | `interop.esource.reject`                | `/api/v1/interop/esource/reconcile/reject`                   |
-| `POST /api/v1/interop/esource/reconcile/batch-reject`                                     | `interop.esource.batch_reject`          | `/api/v1/interop/esource/reconcile/batch-reject`             |
+<!-- signed-endpoints:begin (generated from RequireElectronicSignature call sites by `pnpm cadence generate-cli-docs`; do not edit) -->
+
+| Host        | Endpoint                                                                                            | `semantic_action`                       | `action`                                                                            |
+| ----------- | --------------------------------------------------------------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------- |
+| `ctms`      | `POST /api/v1/ctms/doa/sign-off`                                                                    | `ctms.doa.sign_off`                     | `/api/v1/ctms/doa/sign-off`                                                         |
+| `ctms`      | `POST /api/v1/ctms/letters/compile`                                                                 | `ctms.letter.compile`                   | `/api/v1/ctms/letters/compile`                                                      |
+| `ctms`      | `POST /api/v1/ctms/monitoring-visits/{visit_id}/sign-off`                                           | `ctms.monitoring_visit.sign_off`        | `/api/v1/ctms/monitoring-visits/{visit_id}/sign-off`                                |
+| `ctms`      | `POST /api/v1/ctms/startup/matrix/batch-certify`                                                    | `ctms.greenlight.batch_certify`         | `/api/v1/ctms/startup/matrix/batch-certify` (`batch_id` SHA-256)                    |
+| `ctms`      | `POST /api/v1/ctms/startup/sites/{siteId}/greenlight/certify`                                       | `ctms.greenlight.certify`               | `/api/v1/ctms/startup/sites/{siteId}/greenlight/certify`                            |
+| `econsent`  | `POST /api/v1/econsent/templates/{template_id}/capture-consent`                                     | `econsent.consent.capture`              | `/api/v1/econsent/templates/{template_id}/capture-consent`                          |
+| `econsent`  | `POST /api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent`            | `econsent.consent.capture`              | `/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent` |
+| `execution` | `POST /api/v1/execution/cec/dossiers/{id}/chair-adjudicate`                                         | `execution.cec.chair_adjudicate`        | `/api/v1/execution/cec/dossiers/{id}/chair-adjudicate`                              |
+| `execution` | `POST /api/v1/execution/labs/toxicity/review/{review_id}/action`                                    | `execution.lab_toxicity_review.action`  | `/api/v1/execution/labs/toxicity/review/{review_id}/action`                         |
+| `execution` | `POST /api/v1/execution/randomization/schemes/{schemeId}/approve`                                   | `execution.form.approve`                | `/api/v1/execution/randomization/schemes/{schemeId}/approve`                        |
+| `execution` | `POST /api/v1/execution/subjects/{subjectId}/randomize`                                             | `execution.subject.randomize`           | `/api/v1/execution/subjects/{subjectId}/randomize`                                  |
+| `execution` | `PATCH /api/v1/execution/subjects/{subjectId}/state`                                                | `execution.subject.unblind`             | `/api/v1/execution/subjects/{subjectId}/state`                                      |
+| `imaging`   | `POST /api/v1/imaging/adjudications/{sessionId}/chair-adjudicate`                                   | `imaging.adjudication.chair_adjudicate` | `/api/v1/imaging/adjudications/{sessionId}/chair-adjudicate`                        |
+| `interop`   | `POST /api/v1/interop/esource/reconcile/accept`                                                     | `interop.esource.accept`                | `/api/v1/interop/esource/reconcile/accept`                                          |
+| `interop`   | `POST /api/v1/interop/esource/reconcile/batch-accept`                                               | `interop.esource.batch_accept`          | `/api/v1/interop/esource/reconcile/batch-accept` (`batch_id` SHA-256)               |
+| `interop`   | `POST /api/v1/interop/esource/reconcile/batch-reject`                                               | `interop.esource.batch_reject`          | `/api/v1/interop/esource/reconcile/batch-reject` (`batch_id` SHA-256)               |
+| `interop`   | `POST /api/v1/interop/esource/reconcile/reject`                                                     | `interop.esource.reject`                | `/api/v1/interop/esource/reconcile/reject`                                          |
+| `kernel`    | `POST /api/v1/execution/forms/{formId}/signatures`                                                  | `execution.form.sign`                   | `/api/v1/execution/forms/{formId}/signatures`                                       |
+| `kernel`    | `POST /api/v1/kernel/library-items/{itemRef}/approve`                                               | `kernel.library_item.approve`           | `/api/v1/kernel/library-items/{itemRef}/approve`                                    |
+| `kernel`    | `POST /api/v1/kernel/locks`                                                                         | `kernel.lock.apply`                     | `/api/v1/kernel/locks`                                                              |
+| `kernel`    | `POST /api/v1/kernel/locks/{lockRef}/release`                                                       | `kernel.lock.release`                   | `/api/v1/kernel/locks/{lockRef}/release`                                            |
+| `kernel`    | `POST /api/v1/kernel/protocol-versions/{versionRef}/approve`                                        | `kernel.protocol_version.approve`       | `/api/v1/kernel/protocol-versions/{versionRef}/approve`                             |
+| `kernel`    | `POST /api/v1/kernel/validation/findings/{findingRef}/accept`                                       | `kernel.validation_finding.accept`      | `/api/v1/kernel/validation/findings/{findingRef}/accept`                            |
+| `kernel`    | `POST /api/v1/kernel/validation/findings/{findingRef}/explain`                                      | `kernel.validation_finding.explain`     | `/api/v1/kernel/validation/findings/{findingRef}/explain`                           |
+| `knowledge` | `POST /api/v1/training/delegations/bulk-signoff`                                                    | `knowledge.delegation.sign_off`         | `/api/v1/training/delegations/bulk-signoff` (`batch_id` SHA-256)                    |
+| `payments`  | `POST /api/v1/payments/invoices/{id}/remittance-advice/sign`                                        | `payments.remittance.sign`              | `/api/v1/payments/invoices/{id}/remittance-advice/sign`                             |
+| `safety`    | `POST /api/v1/safety/dsur/{id}/approve` (alias `POST /api/v1/safety/periodic-reports/{id}/approve`) | `safety.periodic_report.approve`        | `/api/v1/safety/dsur/{reportId}/approve`                                            |
+| `tickets`   | `POST /api/v1/tickets/{ticket_id}/sign`                                                             | `tickets.ticket.sign`                   | `/api/v1/tickets/{ticket_id}/sign`                                                  |
+
+<!-- signed-endpoints:end -->
 
 ---
 
@@ -77,7 +96,7 @@ Signature-gated endpoints today:
 
 Downstream microservices (via `GatewayAuthMiddleware` or specific verification components) MUST enforce the following validation pipeline upon receiving a signature-gated mutation.
 
-This verification is centralized in `SigTokenVerifier.VerifyAndConsumeAsync(token, userId, SigTokenBinding, secret)` in `packages/security` (`Cadence.Security.Authentication`). Endpoints apply it with `RequireElectronicSignature(semanticAction, resolveAction)`, `RequireElectronicSignature(resolveBinding)` when the binding (for example a `batch_id` computed via `SigTokenBatchId.FromIds(...)`) comes from the request body, or `RequireElectronicSignatureWhen(resolveBindingIfRequired)` on mixed-mode endpoints where only regulated transitions require step-up verification (such as `UNBLINDED` subject state changes or `Finalize: true` letter compilation). The filter runs before the handler and answers `401` on any failure, so no write happens; the handler reads the verified token with `HttpContext.VerifiedSigToken()`. Services add any domain-specific rules on top (such as local action gating in eConsent):
+This verification is centralized in `SigTokenVerifier.VerifyAndConsumeAsync(token, userId, SigTokenBinding, secret)` in `packages/security` (`Cadence.Security.Authentication`). Endpoints apply it with `RequireElectronicSignature(semanticAction, resolveAction)`, `RequireElectronicSignature(resolveBinding)` when the binding (for example a `batch_id` computed via `SigTokenBatchId.FromIds(...)`) comes from the request body, or `RequireElectronicSignatureWhen(requiresSignature, resolveBinding)` on mixed-mode endpoints where only regulated transitions require step-up verification (such as `UNBLINDED` subject state changes or `Finalize: true` letter compilation). The filter runs before the handler and answers `401` on any failure, so no write happens; the handler reads the verified token with `HttpContext.VerifiedSigToken()`. Services add any domain-specific rules on top (such as local action gating in eConsent):
 
 1. **Header Presence:** Extract `X-Sig-Token` from the HTTP request headers. If absent, reject with `401 Unauthorized` and payload:
    ```json
@@ -95,7 +114,24 @@ This verification is centralized in `SigTokenVerifier.VerifyAndConsumeAsync(toke
    - Extract the unique `jti` claim.
    - Only after every other check passes, record it with `ISigTokenUseStore.TryRecordFirstUseAsync(jti, exp + 5s)`. A second use, including a concurrent one, is rejected.
    - The record is kept until `exp + 5s`, the end of the acceptance window, never only until `exp`; otherwise the token could be replayed in the skew after expiry.
-   - Single use reaches exactly as far as the store is shared. Every service with an e-signature route (Execution, eConsent, Knowledge, Safety, Tickets, CTMS, Payments, Imaging, and Interop) uses `PostgresSigTokenUseStore<TContext>` (`consumed_signature_tokens` in its own schema, primary key on the token id), which holds across instances and restarts. Outside `Development` a host that maps a signed route over the process-local `ReplayCache` refuses to start (#5434, ADR-2515, [ADR-2660](../adr/2026-11-23-enforce-step-up-signature-filters-and-durable-stores.md)).
+   - Single use reaches exactly as far as the store is shared. Every host that maps a `RequireElectronicSignature` or `RequireElectronicSignatureWhen` route registers `AddCadenceDurableSigTokenStore<TContext>()` (`PostgresSigTokenUseStore<TContext>`, writing `consumed_signature_tokens` in its own schema with a primary key on the token id), which holds across instances and restarts. Outside `Development` a host that maps a signed route over the process-local `ReplayCache` refuses to start (#5434, ADR-2515, [ADR-2660](../adr/2026-11-23-enforce-step-up-signature-filters-and-durable-stores.md)):
+
+<!-- durable-sig-token-stores:begin (generated from AddCadenceDurableSigTokenStore call sites by `pnpm cadence generate-cli-docs`; do not edit) -->
+
+| Host        | DbContext                          | Table                                 | Registration                               |
+| ----------- | ---------------------------------- | ------------------------------------- | ------------------------------------------ |
+| `ctms`      | `CtmsDbContext`                    | `ctms.consumed_signature_tokens`      | `apps/ctms/src/Program.cs`                 |
+| `econsent`  | `EconsentDbContext`                | `econsent.consumed_signature_tokens`  | `apps/econsent/src/Program.cs`             |
+| `execution` | `ExecutionDbContext`               | `edc.consumed_signature_tokens`       | `apps/execution/src/Program.cs`            |
+| `imaging`   | `ImagingDbContext`                 | `imaging.consumed_signature_tokens`   | `apps/imaging/src/Program.cs`              |
+| `interop`   | `InteropDbContext`                 | `interop.consumed_signature_tokens`   | `apps/interop/src/Program.cs`              |
+| `kernel`    | `ExecutionSignatureTokenDbContext` | `execution.consumed_signature_tokens` | `apps/execution/module/ExecutionModule.cs` |
+| `knowledge` | `KnowledgeDbContext`               | `knowledge.consumed_signature_tokens` | `apps/knowledge/src/Program.cs`            |
+| `payments`  | `PaymentsDbContext`                | `payments.consumed_signature_tokens`  | `apps/payments/src/Program.cs`             |
+| `safety`    | `SafetyDbContext`                  | `safety.consumed_signature_tokens`    | `apps/safety/src/Program.cs`               |
+| `tickets`   | `TicketsDbContext`                 | `tickets.consumed_signature_tokens`   | `apps/tickets/src/Program.cs`              |
+
+<!-- durable-sig-token-stores:end -->
 
 ---
 
@@ -115,55 +151,43 @@ Only v3 tokens (with `semantic_action` and `sig_ver: "v3"`) are issued and accep
 
 ## 6. Batch Electronic Sign-Off & Token Binding Contract (Trace-14 & Trace-15)
 
-Executing batch electronic sign-offs for multiple clinical observations/form submissions in a single transaction requires strict cryptographic and database constraints to satisfy 21 CFR Part 11 and GxP standards.
+Executing single-record and multi-record electronic sign-offs across clinical forms and delegation logs requires strict cryptographic payload binding and atomic database persistence to satisfy 21 CFR Part 11 and GxP standards.
 
 ### 6.1 Role Authorization & Scopes
 
-- **Role Names:** Strictly restricted to the Principal Investigator (`pi` or `principal investigator`, mapped downstream to `ROLE_PI` or `ROLE_INVESTIGATOR`). Non-PI personas (e.g., CRC, CRA, Data Manager) are forbidden from generating batch tokens or executing batch sign-offs.
-- **Site Scopes:** The PI is site-isolated, meaning their authorization is strictly validated against their assigned site.
+- **Authorization & Grants:** Form signatures (`POST /api/v1/execution/forms/{formId}/signatures` on the `kernel` host's Execution module) authorize `SignCollectionInstance` (`collection.sign`) against the caller's kernel grants at the form's enrollment (`FormSignatureEndpoints.cs`). Bulk delegation sign-off (`POST /api/v1/training/delegations/bulk-signoff` on `knowledge`) requires the `delegation_log:sign` permission (principal investigator, authorized ER physician, or lead investigator) and `RequireCallerStudyAndSiteScope()`.
+- **Site & Study Isolation:** Callers are restricted to their gateway-signed study and site scopes or kernel enrollment grants; unauthorized personas receive `403 Forbidden` (`ProblemDetails`).
 
-### 6.2 Target Semantics & Eligibility
+### 6.2 Target Semantics & Content Binding
 
-The `/api/v1/execution/batch-sign-off` endpoint resolves eligible targets via a `target_type` parameter:
-
-- **`FORM`**: Direct list of specific `FormSubmission` primary key UUIDs.
-- **`VISIT`**: Target visit IDs (e.g. `VISIT-001`), resolving to all nested submissions for those visits.
-- **`SUBJECT`**: Subject pseudonyms, resolving to all submissions associated with those subjects.
-
-- **Eligibility Rule:** Only form submissions in the `COMPLETED` status can be approved. Submissions in `DRAFT` or already in `APPROVED` status are skipped.
+- **eCRF Form Signatures (`execution` module in `kernel-api`):** `POST /api/v1/execution/forms/{formId}/signatures` binds the step-up token to `/api/v1/execution/forms/{formId}/signatures` (`execution.form.sign`) and requires the caller to supply the exact `content_hash` they read alongside an `AttestationMeaning` (`Approved` or `Responsibility`). If the form changed after it was read, `SignCollectionInstance` rejects the command with `409 Conflict` (`ProblemDetails`).
+- **Bulk Delegation Sign-Off (`knowledge`):** `POST /api/v1/training/delegations/bulk-signoff` resolves the explicit list of delegation IDs in the request body; any unknown or out-of-scope delegation ID fails the request with `404 Not Found` or `403 Forbidden` (`ProblemDetails`) before committing changes.
 
 ### 6.3 Cryptographic Token-to-Payload Binding (`batch_id`)
 
-To prevent target swapping or interception attacks, the single-use `X-Sig-Token` JWT contains a custom `batch_id` claim.
+To prevent target swapping or interception attacks on multi-record mutations, the single-use `X-Sig-Token` JWT carries a deterministic `batch_id` claim verified by `RequireElectronicSignature(Func<EndpointFilterInvocationContext, SigTokenBinding>)`:
 
-1. The client-side application serializes the sign-off payload into a canonical, colon-delimited string:
-   `{study_id}:{target_type}:{sorted_target_ids_comma_separated}:{signing_reason}`
-2. The SHA-256 hash of this serialized string is calculated and embedded as the `batch_id` claim in the JWT.
-3. Upon receiving the mutation request, the downstream Execution service recalculates this canonical hash from the HTTP request body and verifies that it matches the token's `batch_id` exactly.
-4. Any mismatch results in immediate signature verification failure (rejection with HTTP 401 Unauthorized), and **no writes/mutations are made** to the database.
+1. The client canonicalizes the target identifiers (for example, trimmed delegation IDs sorted ordinally and joined with `,`, or a canonical colon-delimited target descriptor).
+2. The lower-case hex SHA-256 digest of that canonical string is embedded as the `batch_id` claim when requesting the token from `POST /api/v1/auth/signature-verification`.
+3. Upon receiving the mutation request, the downstream .NET endpoint filter recomputes the SHA-256 `batch_id` from the HTTP request body and passes `new SigTokenBinding(action, semanticAction, batchId)` to `SigTokenVerifier.VerifyAndConsumeAsync`.
+4. Any mismatch between the request payload and `batch_id` fails before the endpoint handler runs with HTTP `401 Unauthorized`, and **no writes or mutations are made** to PostgreSQL.
 
 ### 6.4 Single-Use Replay Prevention (`jti`)
 
-The Execution service records the `jti` in `execution.consumed_signature_tokens` (section 3, step 6), so a replay is rejected on any Execution instance and after a restart. Both batch routes, `/api/v1/execution/batch-sign-off` and its `/api/v1/execution/signatures/batch-sign-off` alias, are bound to the action `/api/v1/execution/batch-sign-off` and the semantic action `execution.form.approve`, and a request without a token is rejected before any write. The service also checks that the token's `sub` is the caller and its `batch_id` is the request's, and keys every manifest HMAC with `GATEWAY_SECRET`; with no secret it refuses to sign rather than writing a placeholder.
-
-### 6.4.1 Delegation-log sign-off
-
-`/api/v1/training/delegations/bulk-signoff` (knowledge), `/api/v1/ctms/startup/matrix/batch-certify` (CTMS, `ctms.greenlight.batch_certify`), and `/api/v1/interop/esource/reconcile/batch-accept` / `batch-reject` (Interop, `interop.esource.batch_accept` and `interop.esource.batch_reject`) follow the same contract with `batch_id` = lower-case hex SHA-256 (`SigTokenBatchId.FromIds` / `computeBatchTargetHash`) of the trimmed target ids, sorted ordinally and joined with `,`. Delegation sign-off also requires the `delegation_log:sign` permission (principal investigator, authorized ER physician, lead investigator). The signer is the verified caller, an unknown id fails the request with `404` (or `400` on missing greenlight gates), and seals are HMACs keyed with `GATEWAY_SECRET`.
+Each host records the verified token's `jti` in its schema-local `consumed_signature_tokens` table (`ctms.consumed_signature_tokens` via `CtmsDbContext` on `ctms`, `econsent.consumed_signature_tokens` via `EconsentDbContext` on `econsent`, `edc.consumed_signature_tokens` via `ExecutionDbContext` on `execution`, `imaging.consumed_signature_tokens` via `ImagingDbContext` on `imaging`, `interop.consumed_signature_tokens` via `InteropDbContext` on `interop`, `execution.consumed_signature_tokens` via `ExecutionSignatureTokenDbContext` on `kernel-api`, `knowledge.consumed_signature_tokens` via `KnowledgeDbContext` on `knowledge`, `payments.consumed_signature_tokens` via `PaymentsDbContext` on `payments`, `safety.consumed_signature_tokens` via `SafetyDbContext` on `safety`, and `tickets.consumed_signature_tokens` via `TicketsDbContext` on `tickets`; section 3, step 6), so a replay is rejected across instances and restarts. Multi-record batch routes (`/api/v1/training/delegations/bulk-signoff` on `knowledge`, `/api/v1/ctms/startup/matrix/batch-certify` on `ctms`, and `/api/v1/interop/esource/reconcile/batch-accept` & `batch-reject` on `interop`) bind `batch_id` to the lower-case hex SHA-256 (`SigTokenBatchId.FromIds` / `computeBatchBindingId`) of the trimmed, ordinally sorted target identifiers joined with `,`. Requests missing `X-Sig-Token` or carrying a mismatched `sub`, `action`, `semantic_action`, or `batch_id` are rejected before any database mutation, and HMAC seals are keyed with `GATEWAY_SECRET` (never a placeholder).
 
 ### 6.5 Individual Record Manifestation & Version Binding
 
-While the PI signs once for the batch, 21 CFR § 11.50 mandates a distinct, verifiable manifestation generated per approved submission record. The system generates and embeds the following block into each record's `signature_manifest` column and its corresponding `AuditLog` entry:
+Even when a signer authorizes multiple records in one step-up flow, 21 CFR § 11.50 mandates an attributable, verifiable manifestation bound to each signed record:
 
-- **Signer Identity:** `signer_username` and `signer_full_name`.
-- **UTC Datetime:** Precise timestamp format ending in `Z`.
-- **Meaning / Reason:** Code `PI_APPROVAL` and text `"I approve this clinical record and confirm medical responsibility."`.
-- **Record ID & Version:** Specifically binds the unique record UUID and its incremented `record_version` (e.g., from 1 to 2).
-- **Hash:** Captures the unique `canonical_signature_hash` for the record.
+- **Signer Identity:** Verified caller identity (`sub` / actor ID) and re-authentication timestamp (`token.IssuedAt` in UTC, `gateway-step-up:v3`).
+- **Meaning:** Explicit regulatory meaning (`AttestationMeaning` or `delegation_log:sign` attestation).
+- **Content & Version Binding:** Kernel `Attestation` rows bind to the exact `CollectionInstance` revision and `content_hash`, while standalone service records increment their concurrency/version index and persist an HMAC seal plus hash-chained audit entry (`GxPAuditInterceptor` / kernel audit chain).
 
 ### 6.6 Lock Checks & Transactional Atomicity Guarantees
 
 To prevent state contamination or partial-approval corruptions:
 
-1. The Execution service checks active locks at all hierarchical levels: trial, site, visit, subject, and form-level locks.
-2. If any target is locked, a `PermissionError` is raised.
-3. The entire batch is executed inside a single transaction nested scope (`session.begin_nested()`). On any lock breach or exception, the transaction is completely rolled back, leaving all targeted submissions unchanged in their original status. No partial approvals are permitted.
+1. Kernel commands (`SignCollectionInstance`, `ApplyLock`, `ReleaseLock`, `ApproveLibraryItem`) and standalone signed endpoints evaluate active locks across the study, site, enrollment, form instance, and observation hierarchy before mutating state.
+2. When any target is frozen or locked, the service returns a structured HTTP `409 Conflict` or `403 Forbidden` `ProblemDetails` response (`KernelErrorEndpoints.Problem` / `TypedResults.Problem`) without mutating clinical state.
+3. Every multi-row write executes atomically inside a single EF Core execution-strategy database transaction (`DbContext.Database.CreateExecutionStrategy()` with `BeginTransactionAsync` / `SaveChangesAsync`, ADR-2449 and ADR-2523). On any lock violation, validation error, or exception, the database transaction rolls back completely, leaving all targeted records unchanged with zero partial approvals.

@@ -421,7 +421,7 @@ public static class MatrixGapAnalyzer
         var activitiesWithTiming = design.PlannedActivities
             .Where(a => a.Timing is not null && epochOrderMap.ContainsKey(a.EpochId))
             .OrderBy(a => epochOrderMap[a.EpochId])
-            .ThenBy(a => a.Timing!.Day)
+            .ThenBy(a => ExpectedSchedule.OffsetOfStudyDay(a.Timing!.Day))
             .ToList();
 
         for (var i = 1; i < activitiesWithTiming.Count; i++)
@@ -432,15 +432,17 @@ public static class MatrixGapAnalyzer
             var prevOrder = epochOrderMap[prev.EpochId];
             var currOrder = epochOrderMap[curr.EpochId];
 
-            if (currOrder > prevOrder && curr.Timing!.Day < prev.Timing!.Day)
+            if (currOrder > prevOrder && ExpectedSchedule.OffsetOfStudyDay(curr.Timing!.Day) < ExpectedSchedule.OffsetOfStudyDay(prev.Timing!.Day))
             {
                 var currIndex = GetActivityIndex(design.PlannedActivities, curr);
+                var currDay = ExpectedSchedule.NormalizeStudyDay(curr.Timing!.Day);
+                var prevDay = ExpectedSchedule.NormalizeStudyDay(prev.Timing!.Day);
                 findings.Add(new MatrixGapFinding(
                     curr.Id,
                     MatrixGapKind.CyclicEpochTransition,
                     MatrixGapSeverity.Warning,
                     $"/plannedActivities/{currIndex}/timing/day",
-                    $"Activity '{curr.Name}' in epoch '{curr.EpochId}' (day {curr.Timing!.Day}) is scheduled before activity '{prev.Name}' in previous epoch '{prev.EpochId}' (day {prev.Timing!.Day}). Check for cyclic epoch timing.",
+                    $"Activity '{curr.Name}' in epoch '{curr.EpochId}' (day {currDay}) is scheduled before activity '{prev.Name}' in previous epoch '{prev.EpochId}' (day {prevDay}). Check for cyclic epoch timing.",
                     "Adjust study day timing so epoch progression is chronological."));
             }
         }

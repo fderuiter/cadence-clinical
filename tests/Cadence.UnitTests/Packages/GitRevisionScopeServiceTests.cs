@@ -196,13 +196,113 @@ public sealed class GitRevisionScopeServiceTests : IDisposable
             fetch.Succeeded.Should().BeTrue(fetch.ErrorMessage);
             fetch.RemoteName.Should().Be("origin");
             fetch.RemoteBranch.Should().Be("main");
+            fetch.TrackingRef.Should().Be("refs/remotes/origin/main");
+
+            var shortBranchFetch = GitRevisionScopeService.FetchBaseRef(_dir, "main");
+            shortBranchFetch.Succeeded.Should().BeTrue(shortBranchFetch.ErrorMessage);
+            shortBranchFetch.RemoteName.Should().Be("origin");
+            shortBranchFetch.RemoteBranch.Should().Be("main");
+            shortBranchFetch.TrackingRef.Should().Be("refs/remotes/origin/main");
 
             GitRevisionScopeService.TryGetBehindCount(_dir, "origin/main").Should().Be(1);
+
+            Git("tag", "v1.0.0");
+            Git("tag", "-a", "v1.1.0", "-m", "annotated release");
+            string headSha = Git("rev-parse", "HEAD").Trim();
+            string shortSha = headSha[..10];
+            string parentSha = Git("rev-parse", "HEAD~1").Trim();
+
+            // Point origin to a non-existent URL so any accidental git fetch would fail immediately.
+            Git("remote", "set-url", "origin", Path.Combine(Path.GetTempPath(), $"missing-remote-{Guid.NewGuid():N}.git"));
+
+            GitRevisionScopeService.TrySplitRemoteRef(_dir, "HEAD~1", out _, out _, out _).Should().BeFalse();
+            GitRevisionScopeService.TrySplitRemoteRef(_dir, headSha, out _, out _, out _).Should().BeFalse();
+            GitRevisionScopeService.TrySplitRemoteRef(_dir, shortSha, out _, out _, out _).Should().BeFalse();
+            GitRevisionScopeService.TrySplitRemoteRef(_dir, "v1.0.0", out _, out _, out _).Should().BeFalse();
+            GitRevisionScopeService.TrySplitRemoteRef(_dir, "v1.1.0", out _, out _, out _).Should().BeFalse();
+            GitRevisionScopeService.TrySplitRemoteRef(_dir, "refs/tags/v1.0.0", out _, out _, out _).Should().BeFalse();
+
+            var relativeFetch = GitRevisionScopeService.FetchBaseRef(_dir, "HEAD~1");
+            relativeFetch.Succeeded.Should().BeTrue(relativeFetch.ErrorMessage);
+            relativeFetch.RemoteName.Should().BeEmpty();
+            relativeFetch.TrackingRef.Should().Be(parentSha);
+
+            var fullShaFetch = GitRevisionScopeService.FetchBaseRef(_dir, headSha);
+            fullShaFetch.Succeeded.Should().BeTrue(fullShaFetch.ErrorMessage);
+            fullShaFetch.TrackingRef.Should().Be(headSha);
+
+            var shortShaFetch = GitRevisionScopeService.FetchBaseRef(_dir, shortSha);
+            shortShaFetch.Succeeded.Should().BeTrue(shortShaFetch.ErrorMessage);
+            shortShaFetch.TrackingRef.Should().Be(headSha);
+
+            var lightweightTagFetch = GitRevisionScopeService.FetchBaseRef(_dir, "v1.0.0");
+            lightweightTagFetch.Succeeded.Should().BeTrue(lightweightTagFetch.ErrorMessage);
+            lightweightTagFetch.TrackingRef.Should().Be("refs/tags/v1.0.0");
+
+            var annotatedTagFetch = GitRevisionScopeService.FetchBaseRef(_dir, "v1.1.0");
+            annotatedTagFetch.Succeeded.Should().BeTrue(annotatedTagFetch.ErrorMessage);
+            annotatedTagFetch.TrackingRef.Should().Be("refs/tags/v1.1.0");
+
+            var unknownBranchFetch = GitRevisionScopeService.FetchBaseRef(_dir, "nonexistent-branch");
+            unknownBranchFetch.Succeeded.Should().BeFalse("unknown branch names must still attempt remote fetch and fail closed");
+
+            var badRelativeFetch = GitRevisionScopeService.FetchBaseRef(_dir, "HEAD~99");
+            badRelativeFetch.Succeeded.Should().BeFalse("unresolvable relative revisions must fail closed");
         }
         finally
         {
             DeleteDirectorySafe(remoteDir);
         }
+    }
+
+    [Fact]
+    public void SynthesizeWorkingTreeSnapshot_AndPinnedRefWorktree_PreserveCallerCheckoutAndDeleteRefWithoutReflog()
+    {
+        Write("apps/staged.cs", "class Staged { int V = 1; }\n");
+        Write("apps/unstaged.cs", "class Unstaged { int V = 1; }\n");
+        Write("apps/deleted.cs", "class Deleted {}\n");
+        Commit("baseline");
+
+        Write("apps/staged.cs", "class Staged { int V = 2; }\n");
+        Git("add", "apps/staged.cs");
+        Write("apps/unstaged.cs", "class Unstaged { int V = 3; }\n");
+        File.Delete(Path.Combine(_dir, "apps", "deleted.cs"));
+        Write("apps/new/untracked.cs", "class Untracked {}\n");
+
+        string headBefore = Git("rev-parse", "HEAD").Trim();
+        string statusBefore = Git("status", "--porcelain=v1");
+        string indexPath = Path.Combine(_dir, ".git", "index");
+        byte[] indexBytesBefore = File.ReadAllBytes(indexPath);
+
+        var snapshot = GitRevisionScopeService.SynthesizeWorkingTreeSnapshot(_dir);
+        snapshot.Succeeded.Should().BeTrue(snapshot.ErrorMessage);
+        snapshot.SnapshotCommitSha.Should().HaveLength(40);
+        snapshot.SnapshotCommitSha.Should().NotBe(headBefore);
+
+        Git("rev-parse", "HEAD").Trim().Should().Be(headBefore, "caller HEAD must not move");
+        Git("status", "--porcelain=v1").Should().Be(statusBefore, "caller working tree status must remain identical");
+        File.ReadAllBytes(indexPath).Should().Equal(indexBytesBefore, "caller .git/index must not be mutated");
+
+        string pinnedRef = GitRevisionScopeService.CreateTemporaryRefName();
+        pinnedRef.Should().StartWith(GitRevisionScopeService.TemporaryRefPrefix);
+        GitRevisionScopeService.TryPinTemporaryRef(_dir, pinnedRef, snapshot.SnapshotCommitSha!, out string? pinError)
+            .Should().BeTrue(pinError);
+        Directory.Exists(Path.Combine(_dir, ".git", "logs", "refs", "cadence-ci"))
+            .Should().BeFalse("temporary refs must be created with core.logAllRefUpdates=false");
+
+        GitRevisionScopeService.TryCreateDetachedWorktree(_dir, snapshot.SnapshotCommitSha!, out var worktree, out string? wtError, pinnedRef: pinnedRef)
+            .Should().BeTrue(wtError);
+        using (worktree)
+        {
+            Git("rev-parse", "--verify", pinnedRef).Trim().Should().Be(snapshot.SnapshotCommitSha);
+            File.ReadAllText(Path.Combine(worktree!.WorktreePath, "apps", "staged.cs")).Should().Contain("V = 2");
+            File.ReadAllText(Path.Combine(worktree.WorktreePath, "apps", "unstaged.cs")).Should().Contain("V = 3");
+            File.Exists(Path.Combine(worktree.WorktreePath, "apps", "deleted.cs")).Should().BeFalse();
+            File.Exists(Path.Combine(worktree.WorktreePath, "apps", "new", "untracked.cs")).Should().BeTrue();
+        }
+
+        Git("for-each-ref", "--format=%(refname)", GitRevisionScopeService.TemporaryRefPrefix).Trim()
+            .Should().BeEmpty("DetachedGitWorktree.Dispose must delete the pinned refs/cadence-ci/<runId> ref");
     }
 
     [Fact]

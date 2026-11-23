@@ -264,7 +264,7 @@ public sealed partial class RegulatedEndpointsStepUpTests
             await db.SaveChangesAsync(Ct);
         }
 
-        var pi = TestSecurityContext.Identity("pi-1", RoleNormalization.ROLE_INVESTIGATOR) with { StudyIds = [StudyId], SiteIds = [SiteId] };
+        var pi = TestSecurityContext.Identity("pi-1", RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR) with { StudyIds = [StudyId], SiteIds = [SiteId] };
         var dm = TestSecurityContext.Identity("dm-1", "Data Manager") with { StudyIds = [StudyId], SiteIds = [], ChangeReason = "Sponsor operational sign-off" };
         var cra = TestSecurityContext.Identity("cra-verified-1", "CRA") with { StudyIds = [StudyId], SiteIds = [SiteId], ChangeReason = "Visit letter compilation" };
 
