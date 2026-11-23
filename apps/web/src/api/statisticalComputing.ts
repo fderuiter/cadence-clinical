@@ -27,18 +27,6 @@ export const statisticalComputingService = {
   },
 
   /**
-   * Retrieves a specific statistical program by ID.
-   */
-  getProgram(programId: string, options: Record<string, unknown> = {}) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/interop/sce/programs/{program_id}", {
-        params: { path: { program_id: programId } },
-        ...options,
-      })
-    );
-  },
-
-  /**
    * Validates package lockfile integrity (uv.lock / renv.lock) and qualification.
    */
   validateLockfile(payload: unknown, options: Record<string, unknown> = {}) {
@@ -149,25 +137,6 @@ export const statisticalComputingService = {
         params: { path: { run_id: runId } },
         ...options,
       })
-    );
-  },
-
-  /**
-   * Retrieves artifact content and preview.
-   */
-  getArtifact(
-    runId: string,
-    artifactId: string,
-    options: Record<string, unknown> = {}
-  ) {
-    return unwrapResponse(
-      openApiClient.GET(
-        "/api/v1/interop/sce/runs/{run_id}/artifacts/{artifact_id}",
-        {
-          params: { path: { run_id: runId, artifact_id: artifactId } },
-          ...options,
-        }
-      )
     );
   },
 };
