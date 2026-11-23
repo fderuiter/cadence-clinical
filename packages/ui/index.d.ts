@@ -34,6 +34,24 @@ export const ConfidenceBadge: DefineComponent<
   any
 >;
 
+export const ClinicalContextBar: DefineComponent<
+  {
+    studiesLabel?: string;
+    studiesTo?: string | Record<string, any>;
+    studyCode?: string;
+    studyTo?: string | Record<string, any>;
+    siteCode?: string;
+    siteLabelPrefix?: string;
+    siteTo?: string | Record<string, any>;
+    participantCode?: string;
+    participantTo?: string | Record<string, any>;
+    currentLabel?: string;
+    ariaLabel?: string;
+  },
+  {},
+  any
+>;
+
 export const AiSuggestionDrawer: DefineComponent<
   {
     modelValue?: boolean;
