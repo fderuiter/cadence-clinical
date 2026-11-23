@@ -1315,7 +1315,6 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
-  font-variant-numeric: tabular-nums;
 }
 
 .locks-table th,
