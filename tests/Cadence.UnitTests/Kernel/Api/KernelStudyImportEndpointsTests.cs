@@ -462,6 +462,7 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 services.AddSingleton<IAuthorityStore>(_world);
                 services.RemoveAll<IStudyDirectory>();
                 services.AddSingleton<IStudyDirectory>(_world);
+                services.RemoveAll<IStudyGovernanceReader>();
                 services.RemoveAll<IProtocolVersionReader>();
                 services.AddSingleton<IProtocolVersionReader>(_world);
                 services.RemoveAll<IConceptRegistry>();

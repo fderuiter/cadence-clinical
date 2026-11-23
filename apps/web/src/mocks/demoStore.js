@@ -638,25 +638,72 @@ export function createWebDemoStore() {
             },
           ];
 
-    state.studySites = new Map();
-    for (const study of state.studies.values()) {
-      const seededSites = state.sites.map((site) => ({
-        ref: `study_site:${resolveSiteUuid(site.code)}@1`,
-        study_ref: study.ref,
-        study_code: study.code,
-        site_ref: site.ref,
-        site_code: site.code,
-        site_name: site.name,
-        country: site.country,
-        institution_ref: site.institution_ref,
-        institution_code: site.institution_code,
-        institution_name: site.institution_name,
-        status: "Active",
-        is_active: true,
-        mask: null,
-      }));
-      state.studySites.set(study.code.toUpperCase(), seededSites);
-    }
+    const buildStudySitesForStudy = (studyRef, studyCode) =>
+      DEMO_SITES.length > 0
+        ? DEMO_SITES.map((site, idx) => {
+            const unversionedStudySiteRef =
+              studyRef === canonicalStudyEntry.ref && site.studySiteRef
+                ? String(site.studySiteRef).split("@")[0]
+                : `study_site:${makeUuidFromIndex("00000400", idx + 1)}`;
+            return {
+              ref: `${unversionedStudySiteRef}@1`,
+              study_site_id: unversionedStudySiteRef.replace(
+                /^study_site:/,
+                ""
+              ),
+              study_site_ref: unversionedStudySiteRef,
+              study_ref: String(studyRef).split("@")[0],
+              study_code: studyCode,
+              site_ref: `site:${site.siteUuid}@1`,
+              site_code: site.code,
+              site_name: site.name,
+              country: site.country,
+              institution_ref: `organization:${site.institutionUuid}@1`,
+              institution_code: site.institutionCode,
+              institution_name: `${site.name} Institution`,
+              status:
+                site.complianceStage === "CONDUCT" ? "Active" : "Selected",
+              is_active: true,
+              effective_versions: [],
+              mask: null,
+            };
+          })
+        : state.sites.map((site) => {
+            const siteUuid = resolveSiteUuid(site.code);
+            return {
+              ref: `study_site:${siteUuid}@1`,
+              study_site_id: siteUuid,
+              study_site_ref: `study_site:${siteUuid}`,
+              study_ref: String(studyRef).split("@")[0],
+              study_code: studyCode,
+              site_ref: site.ref,
+              site_code: site.code,
+              site_name: site.name,
+              country: site.country,
+              institution_ref: site.institution_ref,
+              institution_code: site.institution_code,
+              institution_name: site.institution_name,
+              status: "Active",
+              is_active: true,
+              effective_versions: [],
+              mask: null,
+            };
+          });
+
+    state.studySites = new Map([
+      [
+        canonicalStudyCode.toUpperCase(),
+        buildStudySitesForStudy(canonicalStudyEntry.ref, canonicalStudyCode),
+      ],
+      ["DEMO-01", buildStudySitesForStudy(STUDY_REF, "DEMO-01")],
+      [
+        "STUDY-USDM-001",
+        buildStudySitesForStudy(
+          "study:00000000-0000-0000-0000-000000000002", // deid-ignore
+          "STUDY-USDM-001"
+        ),
+      ],
+    ]);
 
     const canonicalSubjects = DEMO_PARTICIPANTS.map((participant, idx) => ({
       id: participant.enrollmentUuid,
@@ -2297,11 +2344,39 @@ export function createWebDemoStore() {
         .trim()
         .split("@")[0];
       const reqCode = String(body.site_code || "").trim();
-      const site = state.sites.find(
+      let site = state.sites.find(
         (candidate) =>
           (reqRef && candidate.ref.split("@")[0] === reqRef) ||
           (reqCode && candidate.code.toUpperCase() === reqCode.toUpperCase())
       );
+      if (
+        !site &&
+        !body.site_ref &&
+        body.site_code &&
+        (body.site_name || body.country || body.institution_ref)
+      ) {
+        const regIdx = nextCounter();
+        const code = String(body.site_code).trim();
+        site = {
+          ref: `site:${makeUuidFromIndex("00000310", regIdx)}@1`,
+          code,
+          name: String(body.site_name || code).trim(),
+          country: String(body.country || "US")
+            .trim()
+            .toUpperCase(),
+          is_active: true,
+          institution_ref:
+            body.institution_ref ||
+            matchedStudy.sponsor_ref ||
+            DEMO_ORGANIZATIONS[0].ref,
+          institution_code:
+            matchedStudy.sponsor_code || DEMO_ORGANIZATIONS[0].code,
+          institution_name:
+            matchedStudy.sponsor_name || DEMO_ORGANIZATIONS[0].name,
+          linked_study_count: 1,
+        };
+        state.sites.push(site);
+      }
       if (!site) {
         return {
           error: {
@@ -2341,9 +2416,12 @@ export function createWebDemoStore() {
       }
 
       const idx = nextCounter();
+      const studySiteUuid = makeUuidFromIndex("00000410", idx);
       const studySite = {
-        ref: `study_site:${makeUuidFromIndex("00000230", idx)}@1`,
-        study_ref: matchedStudy.ref,
+        ref: `study_site:${studySiteUuid}@1`,
+        study_site_id: studySiteUuid,
+        study_site_ref: `study_site:${studySiteUuid}`,
+        study_ref: String(matchedStudy.ref).split("@")[0],
         study_code: matchedStudy.code,
         site_ref: site.ref,
         site_code: site.code,
@@ -2354,6 +2432,7 @@ export function createWebDemoStore() {
         institution_name: site.institution_name,
         status: "Selected",
         is_active: true,
+        effective_versions: [],
         mask: null,
       };
       const nextLinks = [...existingList, studySite].sort((a, b) =>
@@ -2476,7 +2555,7 @@ export function createWebDemoStore() {
         isCustomCreated: true,
       };
       state.studies.set(code, created);
-      state.studySites.set(code, []);
+      state.studySites.set(code.toUpperCase(), []);
       let linkedSite = null;
       if (
         body.link_sandbox_site ||
