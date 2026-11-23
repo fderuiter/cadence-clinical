@@ -264,11 +264,21 @@
               :back-location="formBackLocation"
               :back-label="formBackLabel"
               :handoff-location="
-                activeFormParticipant
+                isDemoBuild() && activeFormParticipant
                   ? ecrfHandoffLocationFor(activeFormParticipant)
                   : null
               "
               :form-location="formLocationById"
+              :new-form-cell-location="
+                activeFormParticipant
+                  ? (specId, visitId) =>
+                      newFormCellLocationFor(
+                        activeFormParticipant!,
+                        specId,
+                        visitId
+                      )
+                  : undefined
+              "
               :observation-location="observationLocationFromForm"
               @dirty-change="formWorkspaceDirty = $event"
               @form-loaded="onFormLoaded"
@@ -287,7 +297,9 @@
                 (specId, visitId) =>
                   newFormCellLocationFor(recordParticipant!, specId, visitId)
               "
-              :handoff-location="ecrfHandoffLocationFor(recordParticipant)"
+              :handoff-location="
+                isDemoBuild() ? ecrfHandoffLocationFor(recordParticipant) : null
+              "
               :observation-location="observationLocationFromRecord"
               @retry="canvas.loadRecord(recordParticipant)"
             />
@@ -308,6 +320,12 @@
               >
                 Find it in Participants </router-link
               >.
+            </p>
+          </template>
+
+          <template v-else-if="isResolvingConductSubject">
+            <p id="record-loading" class="stage-empty" role="status">
+              Loading participant…
             </p>
           </template>
 
@@ -520,7 +538,7 @@
               : null
           "
           :handoff-location="
-            inspectorContextParticipant
+            isDemoBuild() && inspectorContextParticipant
               ? ecrfHandoffLocationFor(inspectorContextParticipant)
               : null
           "
@@ -1478,6 +1496,7 @@ const queryChangedFilter = computed(() => {
   const changed = single(route.query.changed).toLowerCase();
   return changed === "true" || changed === "false" ? changed : "";
 });
+
 const loadedForm = ref<EcrfForm | null>(null);
 const formWorkspaceDirty = ref(false);
 const loadedObservation = ref<KernelObservation | null>(null);
@@ -1528,6 +1547,7 @@ const {
   recordParticipant: selectionRecordParticipant,
   activeFormParticipant: selectionActiveFormParticipant,
   activeParticipantNodeText: selectionActiveParticipantNodeText,
+  formQuery,
   isNewForm,
   openFormId,
   openObservationRef,
@@ -1617,6 +1637,14 @@ const inspectedNodeText = computed(() => {
   }
   return "";
 });
+
+const conductSubjectQuery = computed(() => {
+  if (hasRecordScope.value || section.value?.id === "queries") return "";
+  if (stage.value && stage.value.id !== "conduct") return "";
+  return single(route.query.subject).trim();
+});
+const isResolvingConductSubject = ref(false);
+let conductSubjectSeq = 0;
 
 const inspectorContextParticipant = computed<SubjectSummary | null>(
   () =>
@@ -1909,6 +1937,7 @@ const isDataWorklistSection = computed(
 );
 
 function ecrfHandoffLocationFor(participant: SubjectSummary) {
+  if (!isDemoBuild()) return null;
   const query: LocationQueryRaw = {
     studyId: studyCode.value,
     subjectId: participant.subject_id,
@@ -2414,6 +2443,56 @@ watch(
     for (const id of ids) {
       if (!canvas.knownParticipants[id]) {
         void canvas.ensureParticipantById(id);
+      }
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  [studyCode, conductSubjectQuery],
+  async ([code, subjectCode]) => {
+    const seq = ++conductSubjectSeq;
+    if (!code || !subjectCode) {
+      isResolvingConductSubject.value = false;
+      return;
+    }
+    isResolvingConductSubject.value = true;
+    try {
+      const resolved = await canvas.resolveParticipantByCode(subjectCode, code);
+      if (seq !== conductSubjectSeq) return;
+      const node = resolved ? tryNodeRef("participant", resolved.id) : null;
+      if (node) {
+        await router.replace(
+          studyLocation(
+            {
+              stage: "conduct",
+              site: siteFilter.value || undefined,
+              participant: formatNodeRef(node),
+              form: formQuery.value || undefined,
+              spec: initialSpecId.value || undefined,
+              visit: initialVisitId.value || undefined,
+              item: highlightItemQuery.value || undefined,
+            },
+            code
+          )
+        );
+      } else {
+        await router.replace(
+          studyLocation(
+            {
+              stage: "conduct",
+              section: "participants",
+              site: siteFilter.value || undefined,
+              q: subjectCode,
+            },
+            code
+          )
+        );
+      }
+    } finally {
+      if (seq === conductSubjectSeq) {
+        isResolvingConductSubject.value = false;
       }
     }
   },
