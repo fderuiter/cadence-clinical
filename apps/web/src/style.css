@@ -328,6 +328,7 @@ a.skip-link.skip-link:focus-visible,
   z-index: 10000;
   text-decoration: none;
   box-shadow:
+    0 0 0 2px var(--semantic-color-text-on-solid),
     0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }

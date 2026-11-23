@@ -36,6 +36,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 using Xunit;
 
@@ -700,7 +701,16 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
 
             // Every error a query endpoint returns must be one its command declares (ADR-2600 §4.5).
-            .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
+            .ConfigureTestServices(services =>
+            {
+                services.AddDeclaredKernelErrorsCheck();
+                services.RemoveAll<KernelBackgroundOptions>();
+                services.AddSingleton(new KernelBackgroundOptions
+                {
+                    RelayInterval = TimeSpan.FromHours(1),
+                    ActivityInterval = TimeSpan.FromHours(1),
+                });
+            }));
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }
 
@@ -711,9 +721,16 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
             .ConfigureTestServices(services =>
             {
+                services.RemoveAll<IHostedService>();
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(fixture.Clock);
                 services.AddDeclaredKernelErrorsCheck();
+                services.RemoveAll<KernelBackgroundOptions>();
+                services.AddSingleton(new KernelBackgroundOptions
+                {
+                    RelayInterval = TimeSpan.FromHours(1),
+                    ActivityInterval = TimeSpan.FromHours(1),
+                });
             }));
         return _sharedClockHost.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }
@@ -722,20 +739,23 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
     {
         var seeded = await SeedAsync(ct);
         var study = (await fixture.ObservationRecords.FindAsync(seeded.Tenant, ObservationId.FromGuid(seeded.Observation), ct))!.StudyId;
-        await _scenario.Protocol.OkAsync(
-            new IssueGrant(
-                seeded.Tenant,
-                GrantId.New(),
-                Actor.Person(Monitor),
-                "execution.query.manage",
-                null,
-                AuthorityScope.Study(study),
-                _scenario.Tick(),
-                null,
-                false,
-                KernelProtocolScenario.Key(),
-                "Study monitor lead grant for SLA escalation pass"),
-            ct);
+        foreach (var monitorStudyCapability in new[] { "execution.query.manage", "enrollment.export" })
+        {
+            await _scenario.Protocol.OkAsync(
+                new IssueGrant(
+                    seeded.Tenant,
+                    GrantId.New(),
+                    Actor.Person(Monitor),
+                    monitorStudyCapability,
+                    null,
+                    AuthorityScope.Study(study),
+                    _scenario.Tick(),
+                    null,
+                    false,
+                    KernelProtocolScenario.Key(),
+                    "Study monitor lead grant for SLA escalation pass and casebook verification"),
+                ct);
+        }
         foreach (var (serviceAccount, capabilities) in new[]
         {
             ("execution-forms", new[] { "execution.form.open" }),
@@ -769,7 +789,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
     {
         for (var pass = 0; pass < 40; pass++)
         {
-            await fixture.OutboxRelay.RelayBatchAsync(500, ct);
+            await fixture.OutboxRelay.RelayBatchAsync(10_000, ct);
             await using var db = fixture.CreateAdminContext();
             var errors = await db.OutboxMessages
                 .Where(m => m.TenantId == tenant && m.LastError != null)

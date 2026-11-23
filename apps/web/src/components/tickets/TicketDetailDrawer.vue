@@ -2012,10 +2012,9 @@ const onTicketSigned = (sigPayload) => {
   font-size: 0.82rem;
   color: var(--semantic-color-text-dark);
   background: var(--semantic-color-surface);
-  outline: none;
 }
 
-.form-control:focus {
+.form-control:focus-visible {
   border-color: var(--semantic-color-interactive-primary);
 }
 

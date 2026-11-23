@@ -1,3 +1,5 @@
+using System;
+
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Evidence;
 
@@ -36,6 +38,64 @@ public sealed record AddArtifactVersion(
     string IdempotencyKey,
     string ReasonForChange) : ICommand<ArtifactState>;
 
+/// <summary>
+/// Audits and registers a streamed bitemporal study snapshot export as an immutable <see cref="ArtifactKind.Dataset"/>
+/// <c>Artifact</c> before bytes are returned to the caller (PRD-CDR-006, K-AUTH-2, K-AUTH-4).
+/// </summary>
+[KernelCapability("study.export", VerbClass.Execute, Resource = nameof(StudyId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(EvidenceErrors),
+    nameof(EvidenceErrors.StudyUnknown),
+    nameof(EvidenceErrors.TitleInvalid),
+    nameof(EvidenceErrors.KindInvalid),
+    nameof(EvidenceErrors.ContentInvalid))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
+public sealed record ExportStudySnapshot(
+    TenantId TenantId,
+    StudyId StudyId,
+    ArtifactId ArtifactId,
+    ArtifactVersionId ArtifactVersionId,
+    string Title,
+    ArtifactContent Content,
+    string Format,
+    string LockFilter,
+    DateTimeOffset ValidAt,
+    DateTimeOffset KnownAt,
+    bool IncludesUnblindedData,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<ArtifactState>;
+
+/// <summary>
+/// Audits and registers a streamed bitemporal participant casebook export as an immutable <see cref="ArtifactKind.Dataset"/>
+/// <c>Artifact</c> before bytes are returned to the caller (PRD-CDR-006, K-AUTH-2, K-AUTH-4).
+/// </summary>
+[KernelCapability("enrollment.export", VerbClass.Execute, Resource = nameof(EnrollmentId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(EvidenceErrors),
+    nameof(EvidenceErrors.EnrollmentUnknown),
+    nameof(EvidenceErrors.TitleInvalid),
+    nameof(EvidenceErrors.KindInvalid),
+    nameof(EvidenceErrors.ContentInvalid))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
+public sealed record ExportEnrollmentCasebook(
+    TenantId TenantId,
+    EnrollmentId EnrollmentId,
+    StudyId StudyId,
+    ArtifactId ArtifactId,
+    ArtifactVersionId ArtifactVersionId,
+    string Title,
+    ArtifactContent Content,
+    string Format,
+    DateTimeOffset ValidAt,
+    DateTimeOffset KnownAt,
+    bool IncludesUnblindedData,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<ArtifactState>;
+
 /// <summary>An artifact and its latest version after a command.</summary>
 public sealed record ArtifactState(
     ArtifactId ArtifactId,
@@ -60,6 +120,9 @@ public static class EvidenceErrors
 
     public static readonly KernelError StudyUnknown =
         new("K.Evidence.StudyUnknown", 404, "The study does not exist.");
+
+    public static readonly KernelError EnrollmentUnknown =
+        new("K.Evidence.EnrollmentUnknown", 404, "The enrollment does not exist.");
 
     public static readonly KernelError ContentUnchanged =
         new("K.Evidence.ContentUnchanged", 409, "The artifact already has a version with this content.");

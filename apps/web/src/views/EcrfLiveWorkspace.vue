@@ -185,6 +185,7 @@ import StudySubjectsBar from "../components/clinical/StudySubjectsBar.vue";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   canManageParticipants,
   canManageQueries,
@@ -204,6 +205,7 @@ const scopeStore = useClinicalScopeStore();
 const authStore = useAuthStore();
 const canvasStore = useStudyCanvasStore();
 const route = useRoute();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const instance = getCurrentInstance();
 const routerLinkComponent =
   instance?.appContext.components.RouterLink ||
@@ -515,6 +517,7 @@ watch(
       nextStudy && nextStudy !== scopeStore.activeStudyId
     );
     if (nextStudy) {
+      setActiveStudyCode(nextStudy);
       scopeStore.activeStudyId = nextStudy;
     }
     if (nextSubject) {
@@ -532,7 +535,13 @@ watch(
 onMounted(async () => {
   if (route && route.query) {
     if (route.query.studyId) {
-      scopeStore.activeStudyId = String(route.query.studyId);
+      const incomingStudy = String(route.query.studyId).trim();
+      if (incomingStudy) {
+        setActiveStudyCode(incomingStudy);
+        scopeStore.activeStudyId = incomingStudy;
+      }
+    } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+      scopeStore.activeStudyId = activeStudyCode.value;
     }
     if (route.query.siteId) {
       scopeStore.activeSiteId = String(route.query.siteId);
@@ -542,6 +551,8 @@ onMounted(async () => {
       scopeStore.activeSubjectId = sId;
       selectedSubjectId.value = sId;
     }
+  } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+    scopeStore.activeStudyId = activeStudyCode.value;
   }
   if (scopeStore.activeStudyId) {
     await scopeStore.loadSubjects(scopeStore.activeStudyId);

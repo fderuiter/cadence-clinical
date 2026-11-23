@@ -30,6 +30,7 @@
 import { computed, defineAsyncComponent, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import CtmsLiveWorkspace from "./CtmsLiveWorkspace.vue";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { isDemoBuild } from "../utils/demoMode.js";
 
@@ -50,6 +51,8 @@ const demoBuild = isDemoBuild();
 const demoWorkspaceRef = ref(null);
 const liveWorkspaceRef = ref(null);
 
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
+
 const initialQueryStudy =
   typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
 const initialQuerySite =
@@ -61,15 +64,19 @@ const initialQuerySite =
 
 // Apply incoming route/prop scope synchronously before child panels render.
 if (props.studyCode.trim()) {
-  scopeStore.activeStudyId = props.studyCode.trim();
+  const fixedStudy = props.studyCode.trim();
+  setActiveStudyCode(fixedStudy);
+  scopeStore.activeStudyId = fixedStudy;
+} else if (initialQueryStudy) {
+  setActiveStudyCode(initialQueryStudy);
+  scopeStore.activeStudyId = initialQueryStudy;
+} else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+  scopeStore.activeStudyId = activeStudyCode.value;
 }
 if (props.initialSiteId.trim()) {
   scopeStore.activeSiteId = props.initialSiteId.trim();
 }
 if (route && route.query) {
-  if (initialQueryStudy) {
-    scopeStore.activeStudyId = initialQueryStudy;
-  }
   if (initialQuerySite) {
     scopeStore.activeSiteId = initialQuerySite;
   }
@@ -90,6 +97,7 @@ watch(
   ([nextStudy, nextSiteId, nextSite]) => {
     const trimmedStudy = typeof nextStudy === "string" ? nextStudy.trim() : "";
     if (trimmedStudy) {
+      setActiveStudyCode(trimmedStudy);
       scopeStore.activeStudyId = trimmedStudy;
     }
     const trimmedSite =
@@ -103,6 +111,12 @@ watch(
     }
   }
 );
+
+watch(activeStudyCode, (next) => {
+  if (!props.studyCode.trim() && next && next !== scopeStore.activeStudyId) {
+    scopeStore.activeStudyId = next;
+  }
+});
 
 const activeTab = computed({
   get: () =>

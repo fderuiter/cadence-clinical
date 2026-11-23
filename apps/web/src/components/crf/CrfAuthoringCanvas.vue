@@ -338,8 +338,8 @@
                 v-model="selectedFieldRequired"
                 type="checkbox"
                 style="
-                  width: 16px;
-                  height: 16px;
+                  width: var(--semantic-control-target-min, 24px);
+                  height: var(--semantic-control-target-min, 24px);
                   cursor: pointer;
                   accent-color: var(--semantic-color-interactive-brand);
                 "
@@ -385,8 +385,8 @@
                 v-model="dismissedWarnings"
                 type="checkbox"
                 style="
-                  width: 16px;
-                  height: 16px;
+                  width: var(--semantic-control-target-min, 24px);
+                  height: var(--semantic-control-target-min, 24px);
                   cursor: pointer;
                   accent-color: var(--semantic-color-interactive-brand);
                 "
@@ -1144,15 +1144,13 @@ function onResetSimulation() {
   font-size: 0.82rem;
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
-  outline: none;
   transition: all 0.15s;
   box-sizing: border-box;
 }
 
-.inspector-input:focus,
-.inspector-select:focus {
+.inspector-input:focus-visible,
+.inspector-select:focus-visible {
   border-color: var(--semantic-color-primary);
-  box-shadow: 0 0 0 2px rgba(2, 101, 151, 0.15);
 }
 
 .btn-compile-schema {

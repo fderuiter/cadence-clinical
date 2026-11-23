@@ -4,6 +4,7 @@ import type { SubjectSummary } from "../api/executionApi";
 import { formatNodeRef, parseNodeRef, tryNodeRef } from "./nodeRef";
 import { isScreenAvailable } from "../router/availability.js";
 import { hasRequiredRole } from "../router/index.js";
+import { getSyncedStudyScope } from "../stores/studyScopeBridge";
 import { isDemoBuild } from "../utils/demoMode.js";
 
 export function readInstantiatedClinicalScope(): {
@@ -11,14 +12,18 @@ export function readInstantiatedClinicalScope(): {
   activeSiteId?: string;
   activeSubjectId?: string;
 } | null {
-  const state = getActivePinia()?.state.value?.clinical as
-    | {
-        activeStudyId?: string;
-        activeSiteId?: string;
-        activeSubjectId?: string;
-      }
+  const piniaState = getActivePinia()?.state.value as
+    | Record<
+        string,
+        | {
+            activeStudyId?: string;
+            activeSiteId?: string;
+            activeSubjectId?: string;
+          }
+        | undefined
+      >
     | undefined;
-  return state ?? null;
+  return piniaState?.clinicalScope ?? piniaState?.clinical ?? null;
 }
 
 export type PaletteWorkspaceAction =
@@ -73,6 +78,17 @@ const SITE_READINESS_SPONSOR_ROLES = [
   "sponsor_admin",
 ];
 const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+const ETMF_ROLES = [
+  "cra",
+  "monitor",
+  "data_manager",
+  "site_investigator",
+  "crc",
+  "auditor",
+  "tmf_auditor",
+  "sponsor_admin",
+];
+
 const STAFF_HUB_ROLES = [
   "sponsor_admin",
   "sponsor_designer",
@@ -90,14 +106,26 @@ const STAFF_HUB_ROLES = [
   "tmf_auditor",
 ];
 
+export function buildStudyScopedPath(
+  basePath: string,
+  studyCode?: string
+): string {
+  const code = studyCode?.trim() || "";
+  return code ? `${basePath}?studyId=${encodeURIComponent(code)}` : basePath;
+}
+
 function cleanQueryString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
 export function resolveSiteReadinessPath(
   normalizedRoles: string[],
-  scope?: { studyCode?: string; siteId?: string }
+  scopeOrStudyCode?: string | { studyCode?: string; siteId?: string }
 ): string | null {
+  const scope =
+    typeof scopeOrStudyCode === "string"
+      ? { studyCode: scopeOrStudyCode }
+      : scopeOrStudyCode;
   let basePath: string | null = null;
   if (
     isScreenAvailable("ctms") &&
@@ -215,7 +243,8 @@ export function resolveActiveWorkspaceScope(
   const clinicalStudy = !demo
     ? cleanQueryString(effectiveClinical?.activeStudyId)
     : "";
-  const studyCode = routeStudy || canvasStudy || clinicalStudy;
+  const bridgedStudy = !demo ? cleanQueryString(getSyncedStudyScope()) : "";
+  const studyCode = routeStudy || canvasStudy || clinicalStudy || bridgedStudy;
 
   const routeSite =
     cleanQueryString(route?.query?.site) ||
@@ -369,6 +398,30 @@ export function buildWorkspacePaletteItems(options: {
     });
   }
 
+  if (isScreenAvailable("etmf") && hasRequiredRole(roles, ETMF_ROLES)) {
+    items.push({
+      key: "workspace:trial-documents",
+      group: "Workspace",
+      label: "Trial documents",
+      detail: "Study binder, document classification, and clinical review",
+      target: {
+        routePath: buildStudyScopedPath("/etmf", options.activeStudyCode),
+      },
+    });
+  }
+
+  if (isScreenAvailable("training")) {
+    items.push({
+      key: "workspace:training",
+      group: "Workspace",
+      label: "Study training",
+      detail: "Protocol curricula, staff assignments, and delegation sign-off",
+      target: {
+        routePath: buildStudyScopedPath("/training", options.activeStudyCode),
+      },
+    });
+  }
+
   if (canAccessSupportHub(roles)) {
     items.push({
       key: "workspace:support",
@@ -395,7 +448,9 @@ export function buildWorkspacePaletteItems(options: {
       group: "Workspace",
       label: "Orientation",
       detail: "Role-tailored workspace orientation and setup",
-      target: { routePath: "/overview" },
+      target: {
+        routePath: buildStudyScopedPath("/overview", options.activeStudyCode),
+      },
     });
   }
 

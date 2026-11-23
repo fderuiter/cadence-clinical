@@ -1,10 +1,27 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import {
+  ASSERTION_SCOPE_NOT_READY,
   describeAssertionError,
+  describeLockError,
+  extractKernelExplanation,
   isMasked,
   kernelApi,
+  kernelEntitlementsApi,
+  kernelLocksApi,
+  kernelNavigationApi,
+  kernelObservationsApi,
+  kernelProposalsApi,
+  kernelStudiesApi,
+  kernelValidationApi,
 } from "../../src/api/kernelApi";
+import { kernelEntitlementsApi as directEntitlementsSlice } from "../../src/api/kernel/entitlements";
+import { kernelLocksApi as directLocksSlice } from "../../src/api/kernel/locks";
+import { kernelNavigationApi as directNavigationSlice } from "../../src/api/kernel/navigation";
+import { kernelObservationsApi as directObservationsSlice } from "../../src/api/kernel/observations";
+import { kernelProposalsApi as directProposalsSlice } from "../../src/api/kernel/proposals";
+import { kernelStudiesApi as directStudiesSlice } from "../../src/api/kernel/studies";
+import { kernelValidationApi as directValidationSlice } from "../../src/api/kernel/validation";
 import { ApiError } from "../../src/api/client";
 
 const STUDY = "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e@3";
@@ -612,5 +629,280 @@ describe("kernelApi simulation and matrix gap check", () => {
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(422);
     expect(err.message).toBe("Protocol JSON is invalid.");
+  });
+});
+
+describe("kernelApi domain slices", () => {
+  it("re-exports each domain slice and composes all slice methods onto kernelApi without collisions", () => {
+    expect(kernelNavigationApi).toBe(directNavigationSlice);
+    expect(kernelStudiesApi).toBe(directStudiesSlice);
+    expect(kernelObservationsApi).toBe(directObservationsSlice);
+    expect(kernelProposalsApi).toBe(directProposalsSlice);
+    expect(kernelLocksApi).toBe(directLocksSlice);
+    expect(kernelValidationApi).toBe(directValidationSlice);
+    expect(kernelEntitlementsApi).toBe(directEntitlementsSlice);
+
+    const slices = [
+      directNavigationSlice,
+      directStudiesSlice,
+      directObservationsSlice,
+      directProposalsSlice,
+      directLocksSlice,
+      directValidationSlice,
+      directEntitlementsSlice,
+    ];
+    const seen = new Set();
+    for (const slice of slices) {
+      const keys = Object.keys(slice);
+      expect(keys.length).toBeGreaterThan(0);
+      for (const key of keys) {
+        expect(seen.has(key)).toBe(false);
+        seen.add(key);
+        expect(kernelApi[key]).toBe(slice[key]);
+      }
+    }
+
+    expect(Object.keys(kernelApi).sort()).toEqual([...seen].sort());
+  });
+});
+
+describe("kernelLocksApi readiness, explanations, and archive exports (#5976)", () => {
+  const SITE = "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002@1";
+  const ENROLLMENT = "enrollment:0192f3c4-5e6a-7b8c-9d0e-00000000c004@2";
+  let fetchSpy;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  it("queries lock readiness with unversioned study and optional scope refs", async () => {
+    const readiness = {
+      study_ref: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e",
+      scope_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002",
+      ready: false,
+      open_query_count: 1,
+      missing_required_count: 0,
+      blockers: [],
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, readiness));
+
+    await expect(kernelApi.getStudyLockReadiness(STUDY, SITE)).resolves.toEqual(
+      readiness
+    );
+
+    const url = new URL(fetchSpy.mock.calls.at(-1)[0].url);
+    expect(url.pathname).toBe(
+      "/api/v1/kernel/studies/study%3A0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/locks/readiness"
+    );
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      scope_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002",
+    });
+  });
+
+  it("formats K.Assertion.ScopeNotReady explanations and unmet conditions", () => {
+    const error = new ApiError("Scope not ready", 409, null, {
+      code: ASSERTION_SCOPE_NOT_READY,
+      detail: "Cannot lock study while blockers remain.",
+      explanation: {
+        claim: "Scope is not ready to lock.",
+        conditions: [
+          { met: true, description: "Signature verified" },
+          { met: false, description: "2 open queries remain" },
+        ],
+        next_actions: [{ description: "Resolve open queries in Site 017" }],
+      },
+    });
+
+    expect(extractKernelExplanation(error)?.claim).toBe(
+      "Scope is not ready to lock."
+    );
+    expect(describeLockError(error)).toBe(
+      "Cannot lock study while blockers remain. 2 open queries remain Next actions: Resolve open queries in Site 017"
+    );
+  });
+
+  it("streams study_archive ZIP and certified casebook PDF with matching fallback filenames", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(new Uint8Array([0x50, 0x4b]), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/zip",
+          "X-Content-Sha256": "abc123",
+        },
+      })
+    );
+
+    const archive = await kernelLocksApi.streamStudyExport({
+      studyRef: STUDY,
+      format: "study_archive",
+    });
+    expect(archive.filename).toBe("study-export.study_archive.zip");
+    expect(archive.contentSha256).toBe("abc123");
+
+    fetchSpy.mockResolvedValueOnce(
+      new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "X-Content-Sha256": "def456",
+        },
+      })
+    );
+
+    const pdf = await kernelLocksApi.streamEnrollmentCasebook({
+      enrollmentRef: ENROLLMENT,
+      format: "pdf",
+    });
+    expect(pdf.filename).toBe("participant.casebook.pdf");
+    expect(pdf.contentSha256).toBe("def456");
+  });
+});
+
+describe("kernelStudiesApi site and organization setup (ADR-2552)", () => {
+  let fetchSpy;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  it("creates organizations, registers sites, lists/links study sites, and forwards initial site parameters on createStudy", async () => {
+    const org = {
+      ref: "organization:0192f3c4-5e6a-7b8c-9d0e-00000000d001",
+      code: "INST-017",
+      name: "Metro Clinical Center",
+      kind: "SiteInstitution",
+      mask: null,
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(201, org));
+    await expect(
+      kernelStudiesApi.createOrganization({
+        name: "Metro Clinical Center",
+        code: "INST-017",
+        reason: "Register site institution",
+        idempotencyKey: "idem-org-1",
+      })
+    ).resolves.toEqual(org);
+    let req = fetchSpy.mock.calls.at(-1)[0];
+    expect(new URL(req.url).pathname).toBe("/api/v1/kernel/organizations");
+    expect(req.headers.get("Idempotency-Key")).toBe("idem-org-1");
+    expect(await req.json()).toEqual({
+      name: "Metro Clinical Center",
+      code: "INST-017",
+      kind: "SiteInstitution",
+    });
+
+    const site = {
+      ref: "site:0192f3c4-5e6a-7b8c-9d0e-00000000d002",
+      site_code: "017",
+      name: "Boston Site 017",
+      country: "US",
+      institution_ref: org.ref,
+      institution_code: org.code,
+      institution_name: org.name,
+      mask: null,
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, [site]));
+    await expect(kernelApi.listSites()).resolves.toEqual([site]);
+    expect(new URL(fetchSpy.mock.calls.at(-1)[0].url).pathname).toBe(
+      "/api/v1/kernel/sites"
+    );
+
+    fetchSpy.mockResolvedValueOnce(jsonResponse(201, site));
+    await expect(
+      kernelStudiesApi.createSite({
+        siteCode: "017",
+        name: "Boston Site 017",
+        country: "US",
+        institutionRef: org.ref,
+        reason: "Register investigational site",
+        idempotencyKey: "idem-site-1",
+      })
+    ).resolves.toEqual(site);
+    req = fetchSpy.mock.calls.at(-1)[0];
+    expect(new URL(req.url).pathname).toBe("/api/v1/kernel/sites");
+    expect(await req.json()).toEqual({
+      site_code: "017",
+      name: "Boston Site 017",
+      country: "US",
+      institution_ref: org.ref,
+      institution_code: null,
+      institution_name: null,
+    });
+
+    const studySite = {
+      ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000d003",
+      study_ref: STUDY,
+      site_ref: site.ref,
+      site_code: "017",
+      site_name: "Boston Site 017",
+      country: "US",
+      status: "Active",
+      mask: null,
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, [studySite]));
+    await expect(kernelApi.listStudySites(STUDY)).resolves.toEqual([studySite]);
+    expect(new URL(fetchSpy.mock.calls.at(-1)[0].url).pathname).toBe(
+      `/api/v1/kernel/studies/${encodeURIComponent(STUDY)}/sites`
+    );
+
+    fetchSpy.mockResolvedValueOnce(jsonResponse(201, studySite));
+    await expect(
+      kernelStudiesApi.linkSiteToStudy({
+        studyRef: STUDY,
+        siteCode: "017",
+        reason: "Activate site 017 on study",
+        idempotencyKey: "idem-link-1",
+      })
+    ).resolves.toEqual(studySite);
+    req = fetchSpy.mock.calls.at(-1)[0];
+    expect(new URL(req.url).pathname).toBe(
+      `/api/v1/kernel/studies/${encodeURIComponent(STUDY)}/sites`
+    );
+    expect(await req.json()).toEqual({
+      site_ref: null,
+      site_code: "017",
+    });
+
+    const createdStudy = {
+      ref: STUDY,
+      study_code: "CAD-201",
+      title: "Phase II Trial",
+      phase: "Phase II",
+      mask: null,
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(201, createdStudy));
+    await expect(
+      kernelStudiesApi.createStudy({
+        code: "CAD-201",
+        title: "Phase II Trial",
+        phase: "Phase II",
+        linkSandboxSite: true,
+        initialSiteCode: "017",
+        reason: "Initialize study with starter site",
+        idempotencyKey: "idem-study-201",
+      })
+    ).resolves.toEqual(createdStudy);
+    req = fetchSpy.mock.calls.at(-1)[0];
+    expect(await req.json()).toEqual({
+      study_code: "CAD-201",
+      title: "Phase II Trial",
+      phase: "Phase II",
+      sponsor_ref: null,
+      sponsor_code: null,
+      sponsor_name: null,
+      link_sandbox_site: true,
+      initial_site_ref: null,
+      initial_site_code: "017",
+    });
   });
 });

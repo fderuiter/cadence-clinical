@@ -72,6 +72,40 @@ public sealed class ModuleAuthorizationTests
         kernel.Should().Throw<ArgumentException>();
     }
 
+    /// <summary>
+    /// Validates that each registered module declares a unique, well-formed OpenAPI document name (defaulting to its
+    /// module name when omitted) and refuses reserved or duplicate OpenAPI document names.
+    /// </summary>
+    [Fact(DisplayName = "AddCadenceModule_RegistersOpenApiDocument_AndRefusesReservedOrDuplicateDocuments")]
+    public void AddCadenceModuleRegistersOpenApiDocumentAndRefusesReservedOrDuplicateDocuments()
+    {
+        var services = new ServiceCollection()
+            .AddCadenceModule("probe_module", typeof(AnnotateStudy).Assembly)
+            .AddCadenceModule("execution", typeof(AssertionExtensions).Assembly, openApiDocument: "execution_forms");
+
+        using var provider = services.BuildServiceProvider();
+        var registrations = provider.GetServices<CadenceModuleRegistration>();
+        registrations.Should().SatisfyRespectively(
+            first => first.EffectiveOpenApiDocument.Should().Be("probe_module"),
+            second =>
+            {
+                second.Name.Should().Be("execution");
+                second.EffectiveOpenApiDocument.Should().Be("execution_forms");
+            });
+
+        var duplicateDoc = () => services.AddCadenceModule("another_module", typeof(NullLogger).Assembly, openApiDocument: "execution_forms");
+        var reservedKernel = () => new ServiceCollection().AddCadenceModule("probe_module", typeof(AnnotateStudy).Assembly, openApiDocument: "kernel");
+        var reservedDefault = () => new ServiceCollection().AddCadenceModule("probe_module", typeof(AnnotateStudy).Assembly, openApiDocument: "v1");
+        var reservedAggregate = () => new ServiceCollection().AddCadenceModule("probe_module", typeof(AnnotateStudy).Assembly, openApiDocument: "cdisc");
+        var malformedDoc = () => new ServiceCollection().AddCadenceModule("probe_module", typeof(AnnotateStudy).Assembly, openApiDocument: "ExecutionForms");
+
+        duplicateDoc.Should().Throw<InvalidOperationException>();
+        reservedKernel.Should().Throw<ArgumentException>();
+        reservedDefault.Should().Throw<ArgumentException>();
+        reservedAggregate.Should().Throw<ArgumentException>();
+        malformedDoc.Should().Throw<ArgumentException>();
+    }
+
     private static IAuthorizer Authorizer(RecordingEvaluator evaluator, Func<IServiceCollection, IServiceCollection> configure) =>
         configure(new ServiceCollection()
                 .AddSingleton<IClock>(new FakeClock())
