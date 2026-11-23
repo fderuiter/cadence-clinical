@@ -66,10 +66,15 @@ public sealed record KernelChildResponse(KernelNodeResponse Node, int? ChildCoun
 /// <param name="Evidence">NodeRefs of the objects the decision rests on.</param>
 public sealed record KernelConditionResponse(string Code, string Description, bool Met, IReadOnlyList<string> Evidence)
 {
-    internal static KernelConditionResponse From(EvaluatedCondition condition) =>
-        new(condition.Code, condition.Description, condition.Met, Refs(condition.Evidence));
+    internal static KernelConditionResponse From(EvaluatedCondition condition, IReadOnlyDictionary<NodeRef, MaskReason>? masks = null) =>
+        new(
+            condition.Code,
+            ExplanationMasking.ScrubInlineRefs(condition.Description, masks)!,
+            condition.Met,
+            ExplanationMasking.FormatAll(condition.Evidence, masks));
 
-    internal static IReadOnlyList<string> Refs(IEnumerable<NodeRef> refs) => [.. refs.Select(r => r.ToString())];
+    internal static IReadOnlyList<string> Refs(IEnumerable<NodeRef> refs, IReadOnlyDictionary<NodeRef, MaskReason>? masks = null) =>
+        ExplanationMasking.FormatAll(refs, masks);
 }
 
 /// <summary>One claim in an explanation's chain, with the objects that support it.</summary>
@@ -98,14 +103,19 @@ public sealed record KernelExplanationResponse(
     IReadOnlyList<KernelConditionResponse> Conditions,
     IReadOnlyList<KernelNextActionResponse> NextActions)
 {
-    internal static KernelExplanationResponse From(Explanation explanation) =>
+    internal static KernelExplanationResponse From(Explanation explanation, IReadOnlyDictionary<NodeRef, MaskReason>? masks = null) =>
         new(
-            explanation.Subject?.ToString(),
-            explanation.Claim,
+            ExplanationMasking.FormatOptional(explanation.Subject, masks),
+            ExplanationMasking.ScrubInlineRefs(explanation.Claim, masks)!,
             explanation.Producer,
-            [.. explanation.Steps.Select(s => new KernelExplanationStepResponse(s.Claim, KernelConditionResponse.Refs(s.Evidence)))],
-            [.. explanation.Conditions.Select(KernelConditionResponse.From)],
-            [.. explanation.NextActions.Select(a => new KernelNextActionResponse(a.Description, a.Capability, a.Target?.ToString()))]);
+            [.. explanation.Steps.Select(s => new KernelExplanationStepResponse(
+                ExplanationMasking.ScrubInlineRefs(s.Claim, masks)!,
+                KernelConditionResponse.Refs(s.Evidence, masks)))],
+            [.. explanation.Conditions.Select(c => KernelConditionResponse.From(c, masks))],
+            [.. explanation.NextActions.Select(a => new KernelNextActionResponse(
+                ExplanationMasking.ScrubInlineRefs(a.Description, masks)!,
+                a.Capability,
+                ExplanationMasking.FormatOptional(a.Target, masks)))]);
 }
 
 /// <summary>
@@ -126,9 +136,19 @@ public sealed record KernelDecisionResponse(
     string? Reason,
     KernelExplanationResponse Explanation)
 {
-    internal static KernelDecisionResponse From(Capability capability, NodeRef resource, AuthorizationDecision decision, Explanation explanation) =>
-        new(capability.Token, capability.VerbClass.ToString(), resource.ToString(), decision.Permitted, decision.Reason,
-            KernelExplanationResponse.From(explanation));
+    internal static KernelDecisionResponse From(
+        Capability capability,
+        NodeRef resource,
+        AuthorizationDecision decision,
+        Explanation explanation,
+        IReadOnlyDictionary<NodeRef, MaskReason>? masks = null) =>
+        new(
+            capability.Token,
+            capability.VerbClass.ToString(),
+            resource.ToString(),
+            decision.Permitted,
+            ExplanationMasking.ScrubInlineRefs(decision.Reason, masks),
+            KernelExplanationResponse.From(explanation, masks));
 }
 
 /// <summary>A kernel command offered on an object, with the calling actor's dry-run decision (ADR-2483).</summary>
@@ -136,8 +156,8 @@ public sealed record KernelDecisionResponse(
 /// <param name="Decision">Whether the actor may send it now, and why.</param>
 public sealed record KernelCommandResponse(string Command, KernelDecisionResponse Decision)
 {
-    internal static KernelCommandResponse From(CommandAvailability command) =>
-        new(command.Command, KernelDecisionResponse.From(command.Capability, command.Resource, command.Decision, command.Explanation));
+    internal static KernelCommandResponse From(CommandAvailability command, IReadOnlyDictionary<NodeRef, MaskReason>? masks = null) =>
+        new(command.Command, KernelDecisionResponse.From(command.Capability, command.Resource, command.Decision, command.Explanation, masks));
 }
 
 /// <summary>One search result (ADR-2484).</summary>

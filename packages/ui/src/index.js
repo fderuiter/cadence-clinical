@@ -71,3 +71,13 @@ export {
   useFocusTrap,
   useSignOutGuard,
 };
+
+export { default as EntityLink } from "./components/clinical/EntityLink.vue";
+export { default as ClinicalExplanation } from "./components/clinical/ClinicalExplanation.vue";
+export { default as ClinicalGatedAction } from "./components/clinical/ClinicalGatedAction.vue";
+export {
+  parseNodeRef,
+  stripRawPermissionTokens,
+  registerEntityPeekHandler,
+  openEntityPeek,
+} from "./utils/entityPeekRegistry.js";

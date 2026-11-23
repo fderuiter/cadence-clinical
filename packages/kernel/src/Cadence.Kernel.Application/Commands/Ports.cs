@@ -71,8 +71,58 @@ public sealed record AuthorizationDecision(bool Permitted, string? Reason = null
         ArgumentException.ThrowIfNullOrWhiteSpace(action);
         var claim = Permitted ? $"{action} is permitted." : $"{action} is not permitted.";
         var steps = Reason is null ? [] : new[] { new ExplanationStep(Reason, [.. Conditions.SelectMany(c => c.Evidence).Distinct()]) };
-        var next = Conditions.Where(c => !c.Met).Select(c => new NextAction(c.Description)).ToArray();
+        var next = Conditions.Where(c => !c.Met).Select(c => ToNextAction(c, subject)).ToArray();
         return new Explanation(subject, claim, ExplanationProducer, steps, Conditions, next);
+    }
+
+    private static NextAction ToNextAction(EvaluatedCondition condition, NodeRef? subject)
+    {
+        var target = condition.Evidence.Count > 0 ? condition.Evidence[0] : subject;
+        var capability = condition.Code switch
+        {
+            "grant.active" or "grant.delegable" or "authority.grant" => "grant.issue",
+            "qualification.current" or "authority.qualification" => "qualification.record",
+            "subscription.active" => "subscription.activate",
+            "entitlement.active" => "entitlement.grant",
+            "scope.unlocked" or "lock.unlocked" => "lock.release",
+            _ => null,
+        };
+        return new NextAction(condition.Description, capability, target);
+    }
+}
+
+/// <summary>
+/// Evaluates <see cref="INodeVisibility"/> for the request's <see cref="ICurrentActor"/> when kernel or module HTTP
+/// endpoints serialize <see cref="Explanation"/> payloads (K-EXP-2).
+/// </summary>
+public sealed class KernelExplanationMasker(ICurrentActor currentActor, INodeVisibility? visibility = null) : IKernelExplanationMasker
+{
+    private static readonly IReadOnlyDictionary<NodeRef, MaskReason> None = new Dictionary<NodeRef, MaskReason>();
+
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        if (visibility is null)
+        {
+            return None;
+        }
+
+        var distinct = nodes.Distinct().ToList();
+        if (distinct.Count == 0)
+        {
+            return None;
+        }
+
+        if (currentActor.Actor is not { } reader)
+        {
+            return distinct.ToDictionary(n => n, _ => MaskReason.NotPermitted);
+        }
+
+        return await visibility.MaskAsync(tenant, reader, distinct, cancellationToken).ConfigureAwait(false);
     }
 }
 

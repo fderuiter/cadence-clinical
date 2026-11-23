@@ -67,7 +67,11 @@ public static class EtmfIntelligenceEndpoints
 
     private const int MaxStoredExcerptChars = 8192;
 
-    private static IResult ForbiddenScope(string detail = ClinicalScopeGuard.StudyAccessDeniedDetail) =>
+    private static IResult ForbiddenScope(
+        string detail = ClinicalScopeGuard.StudyAccessDeniedDetail,
+        string conditionCode = RbacExplanationBuilder.StudyScopeCondition,
+        string? targetKind = null,
+        string? targetIdentifier = null) =>
         TypedResults.Problem(
             title: "Forbidden",
             detail: detail,
@@ -75,18 +79,28 @@ public static class EtmfIntelligenceEndpoints
             extensions: new Dictionary<string, object?>
             {
                 ["code"] = "FORBIDDEN_SCOPE",
+                ["explanation"] = Cadence.Kernel.Explanations.ProblemExplanation.From(
+                    RbacExplanationBuilder.ForScopeDenial(detail, conditionCode, targetKind, targetIdentifier)),
             });
 
     private static IResult? CheckStudyAndOptionalSiteScope(HttpContext httpContext, string? studyId, string? siteId)
     {
         if (!ClinicalScopeGuard.CanAccessStudy(httpContext, studyId))
         {
-            return ForbiddenScope(ClinicalScopeGuard.StudyAccessDeniedDetail);
+            return ForbiddenScope(
+                ClinicalScopeGuard.StudyAccessDeniedDetail,
+                RbacExplanationBuilder.StudyScopeCondition,
+                Cadence.Kernel.References.NodeKinds.Study,
+                studyId);
         }
 
         if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, studyId, siteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
-            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
+            return ForbiddenScope(
+                ClinicalScopeGuard.SiteAccessDeniedDetail,
+                RbacExplanationBuilder.SiteScopeCondition,
+                Cadence.Kernel.References.NodeKinds.StudySite,
+                siteId);
         }
 
         return null;

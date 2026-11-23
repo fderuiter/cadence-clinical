@@ -247,10 +247,19 @@ public static class ExecutionScopeGuard
         return query.ToList();
     }
 
-    public static IResult Forbidden(string detail) =>
+    public static IResult Forbidden(
+        string detail,
+        string conditionCode = RbacExplanationBuilder.StudyScopeCondition,
+        string? targetKind = null,
+        string? targetIdentifier = null) =>
         Results.Problem(
             detail: detail,
             statusCode: StatusCodes.Status403Forbidden,
             title: "Forbidden",
-            extensions: new Dictionary<string, object?> { ["code"] = ForbiddenCode });
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = ForbiddenCode,
+                ["explanation"] = Cadence.Kernel.Explanations.ProblemExplanation.From(
+                    RbacExplanationBuilder.ForScopeDenial(detail, conditionCode, targetKind, targetIdentifier)),
+            });
 }

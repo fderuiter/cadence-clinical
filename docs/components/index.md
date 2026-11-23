@@ -73,3 +73,10 @@ Viewport-relative design tokens defined in `packages/ui/tokens.css` specify stan
 | `--drawer-width-xl` | `--semantic-drawer-width-xl` | `min(100vw, 920px)` | 920px            |
 
 Responsive utilities in `packages/ui/responsive.css` provide `.drawer-mobile-full` and `.drawer-panel-mobile-full` for expanding side drawer panels to full viewport width on mobile viewports (<= 640px).
+
+
+### Inline Explanation & Gated Action Primitives
+
+- `EntityLink`: Renders Clinical Kernel `NodeRef` links in monospace with K-EXP-2 masked badge support and scope-preserving peek-drawer activation.
+- `ClinicalExplanation`: Renders ADR-2482 `Explanation` claims, evaluated met/unmet conditions, reasoning steps, and clickable `NextAction.Target` links.
+- `ClinicalGatedAction`: Keeps blocked clinical controls visible with accessible why-blocked explanations.

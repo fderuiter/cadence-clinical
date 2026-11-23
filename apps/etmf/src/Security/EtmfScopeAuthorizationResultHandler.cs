@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 using Cadence.Security.Rbac;
@@ -17,48 +15,12 @@ namespace Cadence.Apps.Etmf.Security;
 /// </summary>
 public sealed class EtmfScopeAuthorizationResultHandler : IAuthorizationMiddlewareResultHandler
 {
-    private readonly AuthorizationMiddlewareResultHandler _defaultHandler = new();
+    private readonly CadenceAuthorizationMiddlewareResultHandler _handler = new();
 
-    public async Task HandleAsync(
+    public Task HandleAsync(
         RequestDelegate next,
         HttpContext context,
         AuthorizationPolicy policy,
-        PolicyAuthorizationResult authorizeResult)
-    {
-        if (authorizeResult.Forbidden && authorizeResult.AuthorizationFailure is { } failure)
-        {
-            var failedRequirements = failure.FailedRequirements;
-            bool hasNonScopeFailure = failedRequirements.Any(req =>
-                req is PermissionRequirement
-                || req is RoleRequirement
-                || req is UndeclaredEndpointRequirement
-                || req is AuditorReadOnlyRequirement
-                || req is ChangeJustificationRequirement);
-
-            bool hasScopeFailure = !hasNonScopeFailure && failedRequirements.Any(req =>
-                req is TenantScopeRequirement
-                || req is CallerStudyScopeRequirement
-                || req is CallerStudyAndSiteScopeRequirement
-                || req is StudyScopeRequirement
-                || req is SiteScopeRequirement);
-
-            if (hasScopeFailure)
-            {
-                string detail = failure.FailureReasons.FirstOrDefault()?.Message
-                    ?? ClinicalScopeGuard.StudyAccessDeniedDetail;
-
-                await Results.Problem(
-                    title: "Forbidden",
-                    detail: detail,
-                    statusCode: StatusCodes.Status403Forbidden,
-                    extensions: new Dictionary<string, object?>
-                    {
-                        ["code"] = "FORBIDDEN_SCOPE",
-                    }).ExecuteAsync(context);
-                return;
-            }
-        }
-
-        await _defaultHandler.HandleAsync(next, context, policy, authorizeResult);
-    }
+        PolicyAuthorizationResult authorizeResult) =>
+        _handler.HandleAsync(next, context, policy, authorizeResult);
 }

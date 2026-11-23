@@ -244,20 +244,22 @@ public sealed class KernelCommandPipeline(
         var snapshot = await reader
             .GetEntitlementsAsync(execution.Command.TenantId, execution.RecordedAt, cancellationToken)
             .ConfigureAwait(false);
+        var tenantRef = NodeRef.For(execution.Command.TenantId);
         if (snapshot.IsReadOnly)
         {
             var condition = EvaluatedCondition.Unsatisfied(
                 "subscription.active",
-                "Activate or renew the workspace subscription to record new study mutations; regulated reads, exports, closeout signatures, and audit trails remain available.");
+                "Activate or renew the workspace subscription to record new study mutations; regulated reads, exports, closeout signatures, and audit trails remain available.",
+                tenantRef);
             var refusal = KernelErrors.SubscriptionExpired with
             {
                 Explanation = new Explanation(
-                    NodeRef.For(execution.Command.TenantId),
+                    tenantRef,
                     $"{execution.CommandType} is refused because the workspace trial subscription has expired.",
                     "kernel.subscription",
-                    [new ExplanationStep(KernelErrors.SubscriptionExpired.Message, [])],
+                    [new ExplanationStep(KernelErrors.SubscriptionExpired.Message, [tenantRef])],
                     [condition],
-                    [new NextAction(condition.Description)]),
+                    [new NextAction(condition.Description, "subscription.activate", tenantRef)]),
             };
             await transaction.RecordRefusalAsync(refusal, cancellationToken).ConfigureAwait(false);
             return refusal;
@@ -269,17 +271,18 @@ public sealed class KernelCommandPipeline(
             string familyList = string.Join(", ", requiredFamilies.Select(static f => f.ToString()));
             var condition = EvaluatedCondition.Unsatisfied(
                 "subscription.product_family",
-                $"Enable one of the required product families ({familyList}) on the workspace subscription.");
+                $"Enable one of the required product families ({familyList}) on the workspace subscription.",
+                tenantRef);
             var refusal = CommercialErrors.ProductFamilyNotEntitled
                 .WithMessage($"{CommercialErrors.ProductFamilyNotEntitled.Message} Required product family: {familyList}.") with
             {
                 Explanation = new Explanation(
-                    NodeRef.For(execution.Command.TenantId),
+                    tenantRef,
                     $"{execution.CommandType} is refused because the workspace is not entitled to {familyList}.",
                     "kernel.subscription",
-                    [new ExplanationStep(CommercialErrors.ProductFamilyNotEntitled.Message, [])],
+                    [new ExplanationStep(CommercialErrors.ProductFamilyNotEntitled.Message, [tenantRef])],
                     [condition],
-                    [new NextAction(condition.Description)]),
+                    [new NextAction(condition.Description, "entitlement.grant", tenantRef)]),
             };
             await transaction.RecordRefusalAsync(refusal, cancellationToken).ConfigureAwait(false);
             return refusal;
@@ -288,16 +291,16 @@ public sealed class KernelCommandPipeline(
         if (snapshot.Scoping is { } scoping
             && await CheckSubscriptionScopingCapsAsync(execution.Command, execution.RecordedAt, scoping, cancellationToken).ConfigureAwait(false) is { } capDetail)
         {
-            var condition = EvaluatedCondition.Unsatisfied("subscription.scoping", capDetail);
+            var condition = EvaluatedCondition.Unsatisfied("subscription.scoping", capDetail, tenantRef);
             var refusal = CommercialErrors.ScopingCapExceeded.WithMessage(capDetail) with
             {
                 Explanation = new Explanation(
-                    NodeRef.For(execution.Command.TenantId),
+                    tenantRef,
                     $"{execution.CommandType} is refused because it exceeds the workspace subscription's contracted scoping parameters.",
                     "kernel.subscription",
-                    [new ExplanationStep(capDetail, [])],
+                    [new ExplanationStep(capDetail, [tenantRef])],
                     [condition],
-                    [new NextAction("Update the workspace subscription against a new commercial quote covering the expanded study scope.")]),
+                    [new NextAction("Update the workspace subscription against a new commercial quote covering the expanded study scope.", "subscription.activate", tenantRef)]),
             };
             await transaction.RecordRefusalAsync(refusal, cancellationToken).ConfigureAwait(false);
             return refusal;
@@ -584,6 +587,7 @@ public static class KernelApplicationServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddScoped<IKernelCommandSender, KernelCommandPipeline>();
+        services.TryAddScoped<IKernelExplanationMasker, KernelExplanationMasker>();
         services.TryAddScoped<ConsumerActor>();
         services.AddTransient<ICommandHandler<ProvisionTenant, TenantId>, ProvisionTenantHandler>();
         services.AddTransient<ICommandHandler<RegisterOrganization, OrganizationId>, RegisterOrganizationHandler>();

@@ -293,13 +293,16 @@ internal static class ObservationAssertions
         }
 
         var instance = await CollectionMembership.InstanceOfAsync(context.Work, observationId, cancellationToken).ConfigureAwait(false);
-        if (await LocksInForce.AnyAsync(
+        if (await LocksInForce.RefusalAsync(
             context.Work,
             LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id, observationId, instance),
             LocksInForce.DenyingAssertions,
-            cancellationToken).ConfigureAwait(false))
+            AssertionErrors.Locked,
+            "Assertion",
+            NodeRef.For(observationId),
+            cancellationToken).ConfigureAwait(false) is { } locked)
         {
-            return (null, AssertionErrors.Locked);
+            return (null, locked);
         }
 
         return await context.Work.ReadAsync<Observation>(observationId, cancellationToken).ConfigureAwait(false) is { } observation

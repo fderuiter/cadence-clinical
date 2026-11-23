@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 
+using Cadence.Kernel.Explanations;
+using Cadence.Kernel.References;
 using Cadence.Security.Authentication;
 
 using Microsoft.AspNetCore.Http;
@@ -90,7 +92,7 @@ public static class ClinicalScopeGuard
         }
 
         tenantId = string.Empty;
-        return Forbidden(TenantAccessDeniedDetail);
+        return Forbidden(TenantAccessDeniedDetail, RbacExplanationBuilder.TenantScopeCondition);
     }
 
     public static bool CanAccessStudy(HttpContext? httpContext, string? studyId) =>
@@ -157,7 +159,7 @@ public static class ClinicalScopeGuard
 
         if (!HasValidSiteScopeIfRequired(principal))
         {
-            return Forbidden(SiteAccessDeniedDetail);
+            return Forbidden(SiteAccessDeniedDetail, RbacExplanationBuilder.SiteScopeCondition);
         }
 
         return null;
@@ -181,7 +183,7 @@ public static class ClinicalScopeGuard
         var principal = ResolvePrincipal(httpContext);
         if (!StudyAccessEvaluator.CanAccessStudy(principal, studyId))
         {
-            return Forbidden(StudyAccessDeniedDetail);
+            return Forbidden(StudyAccessDeniedDetail, RbacExplanationBuilder.StudyScopeCondition, NodeKinds.Study, studyId);
         }
 
         return null;
@@ -192,7 +194,7 @@ public static class ClinicalScopeGuard
         var principal = ResolvePrincipal(httpContext);
         if (!SiteAccessEvaluator.CanAccessSite(principal, siteId))
         {
-            return Forbidden(SiteAccessDeniedDetail);
+            return Forbidden(SiteAccessDeniedDetail, RbacExplanationBuilder.SiteScopeCondition, NodeKinds.StudySite, siteId);
         }
 
         return null;
@@ -217,7 +219,7 @@ public static class ClinicalScopeGuard
         var principal = ResolvePrincipal(httpContext);
         if (!StudyAccessEvaluator.CanAccessStudy(principal, studyId))
         {
-            return Forbidden(StudyAccessDeniedDetail);
+            return Forbidden(StudyAccessDeniedDetail, RbacExplanationBuilder.StudyScopeCondition, NodeKinds.Study, studyId);
         }
 
         if (string.IsNullOrWhiteSpace(siteId))
@@ -225,7 +227,7 @@ public static class ClinicalScopeGuard
             if (IsSiteBound(principal)
                 && (!allowUnassignedSiteForScopedCaller || !HasValidSiteScopeIfRequired(principal)))
             {
-                return Forbidden(SiteAccessDeniedDetail);
+                return Forbidden(SiteAccessDeniedDetail, RbacExplanationBuilder.SiteScopeCondition);
             }
 
             return null;
@@ -233,7 +235,7 @@ public static class ClinicalScopeGuard
 
         return SiteAccessEvaluator.CanAccessSite(principal, siteId)
             ? null
-            : Forbidden(SiteAccessDeniedDetail);
+            : Forbidden(SiteAccessDeniedDetail, RbacExplanationBuilder.SiteScopeCondition, NodeKinds.StudySite, siteId);
     }
 
     public static bool ResolveStudyFilter(
@@ -256,7 +258,7 @@ public static class ClinicalScopeGuard
             if (!StudyAccessEvaluator.CanAccessStudy(principal, trimmed))
             {
                 allowedStudies = [];
-                errorResult = Forbidden(StudyAccessDeniedDetail);
+                errorResult = Forbidden(StudyAccessDeniedDetail, RbacExplanationBuilder.StudyScopeCondition, NodeKinds.Study, trimmed);
                 return false;
             }
 
@@ -299,7 +301,7 @@ public static class ClinicalScopeGuard
         if (principal is null)
         {
             allowedSites = [];
-            errorResult = Forbidden(SiteAccessDeniedDetail);
+            errorResult = Forbidden(SiteAccessDeniedDetail, RbacExplanationBuilder.SiteScopeCondition);
             return false;
         }
 
@@ -309,7 +311,7 @@ public static class ClinicalScopeGuard
             if (!SiteAccessEvaluator.CanAccessSite(principal, trimmed))
             {
                 allowedSites = [];
-                errorResult = Forbidden(SiteAccessDeniedDetail);
+                errorResult = Forbidden(SiteAccessDeniedDetail, RbacExplanationBuilder.SiteScopeCondition, NodeKinds.StudySite, trimmed);
                 return false;
             }
 
@@ -333,7 +335,7 @@ public static class ClinicalScopeGuard
         if (sites.Count == 0)
         {
             allowedSites = [];
-            errorResult = Forbidden(SiteAccessDeniedDetail);
+            errorResult = Forbidden(SiteAccessDeniedDetail, RbacExplanationBuilder.SiteScopeCondition);
             return false;
         }
 
@@ -396,9 +398,38 @@ public static class ClinicalScopeGuard
         return items;
     }
 
-    public static IResult Forbidden(string detail) =>
+    public static IResult Forbidden(
+        string detail,
+        string conditionCode = RbacExplanationBuilder.StudyScopeCondition,
+        string? targetKind = null,
+        string? targetIdentifier = null) =>
         Results.Problem(
             title: "Forbidden",
             detail: detail,
-            statusCode: StatusCodes.Status403Forbidden);
+            statusCode: StatusCodes.Status403Forbidden,
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "FORBIDDEN_SCOPE",
+                ["explanation"] = ProblemExplanation.From(
+                    RbacExplanationBuilder.ForScopeDenial(
+                        detail,
+                        ResolveScopeConditionCode(detail, conditionCode),
+                        targetKind,
+                        targetIdentifier)),
+            });
+
+    private static string ResolveScopeConditionCode(string detail, string fallback)
+    {
+        if (string.Equals(detail, TenantAccessDeniedDetail, StringComparison.Ordinal))
+        {
+            return RbacExplanationBuilder.TenantScopeCondition;
+        }
+
+        if (string.Equals(detail, SiteAccessDeniedDetail, StringComparison.Ordinal))
+        {
+            return RbacExplanationBuilder.SiteScopeCondition;
+        }
+
+        return fallback;
+    }
 }

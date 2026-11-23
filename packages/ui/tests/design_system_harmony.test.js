@@ -10,6 +10,9 @@ const portalSrcDir = path.join(repoRoot, "apps/subject-portal/src");
 const docsComponentsDir = path.join(repoRoot, "docs/components");
 
 const EXPECTED_SHARED_COMPONENTS = [
+  "EntityLink",
+  "ClinicalExplanation",
+  "ClinicalGatedAction",
   "AiActionButton",
   "AiSuggestionDrawer",
   "AuditLogViewer",

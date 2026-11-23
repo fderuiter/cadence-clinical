@@ -79,6 +79,8 @@ function resolveLabel(
 export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
   const authStore = useAuthStore();
 
+  const canApplyExplanation = ref<Record<string, unknown> | null>(null);
+  const canReleaseExplanation = ref<Record<string, unknown> | null>(null);
   const canApply = ref(false);
   const canRelease = ref(false);
   const readiness = ref<KernelLockReadiness | null>(null);
@@ -251,7 +253,9 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
   async function executeSign(sigToken: string, signingReason: string) {
     const op = modalOp.value;
     const currentStudyRef = options.studyRef();
-    if (!op || !currentStudyRef) return { kind: "signed" as const };
+    if (!op || !currentStudyRef) return {
+    canApplyExplanation,
+    canReleaseExplanation, kind: "signed" as const };
     const meaning: KernelLockMeaning =
       signingReason === "Responsibility" ? "Responsibility" : "Approved";
     busy.value = true;

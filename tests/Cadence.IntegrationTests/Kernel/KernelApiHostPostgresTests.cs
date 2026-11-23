@@ -316,6 +316,72 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
         }
     }
 
+    /// <summary>
+    /// K-EXP-2 end-to-end over PostgreSQL: a caller without visibility over another site's enrollment or draft protocol
+    /// version receives masked NodeRefs (<c>masked:&lt;kind&gt;:NotPermitted</c>) in <c>can-i</c>, <c>commands</c>, and HTTP
+    /// 403 <c>ProblemDetails.explanation</c> responses without leaking hidden UUIDs, while the denial audit entry in
+    /// PostgreSQL preserves unredacted evidence.
+    /// </summary>
+    [Fact(DisplayName = "HostExplanations_MaskRestrictedNodeRefs_WhileKeepingAuditUnredacted")]
+    [Cadence.Testing.KernelRule("K-EXP-2")]
+    public async Task HostExplanationsMaskRestrictedNodeRefsWhileKeepingAuditUnredacted()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var code = $"T-EXP-{Guid.NewGuid():N}"[..16];
+        var tenant = TenantId.New();
+        await _scenario.OkAsync(new ProvisionTenant(tenant, code, "Explanation masking tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+        var (_, study) = await _scenario.NewStudyAsync(tenant, ct);
+        var first = await ApproveFirstAsync(tenant, study, ct);
+        var amendment = await ForkRewordedAsync(tenant, first, ct);
+        var ownSite = await AddStudySiteAsync(tenant, study, ct);
+        var otherSite = await AddStudySiteAsync(tenant, study, ct);
+        var otherEnrollment = NodeRef.For(await ScreenAsync(tenant, otherSite, "EXP-002", ct), 1);
+
+        await _scenario.OkAsync(
+            new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), "observation.record", null, AuthorityScope.StudySite(ownSite), Tick(), null, false,
+                KernelProtocolScenario.Key(), "Own-site CRC appointed"),
+            ct);
+        Tick();
+
+        using var stranger = Client(code, Stranger);
+        using var canIResp = await stranger.GetAsync(
+            new Uri($"/api/v1/kernel/can-i?capability=observation.record&resource={Uri.EscapeDataString(otherEnrollment.ToString())}", UriKind.Relative), ct);
+        canIResp.IsSuccessStatusCode.Should().BeTrue();
+        var canIBody = await canIResp.Content.ReadAsStringAsync(ct);
+        canIBody.Should().NotContain(otherEnrollment.Id.ToString("D"));
+        using var canIDoc = JsonDocument.Parse(canIBody);
+        canIDoc.RootElement.GetProperty("permitted").GetBoolean().Should().BeFalse();
+        canIDoc.RootElement.GetProperty("explanation").GetProperty("subject").GetString()
+            .Should().Be($"masked:{NodeKinds.Enrollment}:{NotPermitted}");
+
+        using var cmdsResp = await stranger.GetAsync(
+            new Uri($"/api/v1/kernel/nodes/{Uri.EscapeDataString(otherEnrollment.ToString())}/commands?capabilities=observation.record", UriKind.Relative), ct);
+        cmdsResp.IsSuccessStatusCode.Should().BeTrue();
+        var cmdsBody = await cmdsResp.Content.ReadAsStringAsync(ct);
+        cmdsBody.Should().NotContain(otherEnrollment.Id.ToString("D"));
+        using var cmdsDoc = JsonDocument.Parse(cmdsBody);
+        cmdsDoc.RootElement.GetProperty("subject").GetString()
+            .Should().Be($"masked:{NodeKinds.Enrollment}:{NotPermitted}");
+
+        using var denied = await stranger.PostAsJsonAsync(
+            new Uri($"/api/v1/kernel/protocol-versions/{NodeRef.For(amendment)}/submit", UriKind.Relative),
+            new { idempotency_key = KernelProtocolScenario.Key(), reason = "Unauthorized submit" },
+            Json,
+            ct);
+        denied.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var deniedBody = await denied.Content.ReadAsStringAsync(ct);
+        using var deniedDoc = JsonDocument.Parse(deniedBody);
+        deniedDoc.RootElement.TryGetProperty("explanation", out var expEl).Should().BeTrue();
+        expEl.GetProperty("producer").GetString().Should().Be("kernel.authorization");
+
+        await using var db = fixture.CreateAdminContext();
+        var denialAudit = await db.AuditEntries.AsNoTracking()
+            .Where(a => a.TenantId == tenant && a.Action == "SubmitProtocolVersionForReview.Denied")
+            .SingleAsync(ct);
+        denialAudit.Changes.Should().NotContain("masked:");
+    }
+
     /// <summary>A client signed as <paramref name="userId"/> in <paramref name="tenantCode"/>, on one host per test class.</summary>
     private HttpClient Client(string tenantCode, string userId)
     {

@@ -85,6 +85,7 @@ public static class CadenceSecurityServiceCollectionExtensions
         services.AddSingleton<IAuthorizationHandler, AuditorReadOnlyAuthorizationHandler>();
         // RequirePermission("resource:action") names a policy built on demand from the permission matrix (ADR-2510).
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+        services.TryAddSingleton<IAuthorizationMiddlewareResultHandler, CadenceAuthorizationMiddlewareResultHandler>();
 
         services.AddAuthorization(authOptions =>
         {

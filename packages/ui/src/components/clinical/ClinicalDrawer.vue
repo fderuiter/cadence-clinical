@@ -301,7 +301,8 @@ useFocusTrap(drawerRef, {
 
 .clinical-drawer-title {
   margin: 0;
-  font-size: var(--font-size-md, 16px);
+  font-docked: { type: Boolean, default: false },
+  size: var(--font-size-md, 16px);
   font-weight: 600;
   color: var(--color-text);
 }
@@ -356,6 +357,14 @@ useFocusTrap(drawerRef, {
   .clinical-drawer-footer {
     padding-left: 16px;
     padding-right: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .clinical-drawer {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 90dvh;
   }
 }
 </style>

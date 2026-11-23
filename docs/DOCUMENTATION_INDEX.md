@@ -768,3 +768,4 @@ Write relative links and heading anchors as you would for GitHub. On the site, l
 outside `docs/`, to non-Markdown files or to folders without an `index.md` open on GitHub
 (`docs/.vitepress/repoLinks.mjs`), while headings emit both VitePress and GitHub slugs. Any link to a
 missing page or missing `#anchor` fragment, including in the nav and sidebar, fails the build.
+- [ADR-2660: Inline Explanation Primitives and RBAC Problem Details](adr/2026-11-22-inline-explanation-primitives-and-rbac-problem-details.md)

@@ -4,7 +4,8 @@
   </AppShell>
   <ContextualHelpDrawer />
   <Teleport to="body">
-    <ToastHost />
+    <EntityPeekDrawerHost />
+  <ToastHost />
   </Teleport>
   <ConfirmationDialogHost />
 </template>
@@ -14,6 +15,7 @@ import { onMounted } from "vue";
 import { getActivePinia } from "pinia";
 import AppShell from "./components/AppShell.vue";
 import ContextualHelpDrawer from "./components/ContextualHelpDrawer.vue";
+import EntityPeekDrawerHost from "./components/canvas/EntityPeekDrawerHost.vue";
 import ToastHost from "./components/ToastHost.vue";
 import ConfirmationDialogHost from "./components/ConfirmationDialogHost.vue";
 import { isDemoBuild } from "./utils/demoMode.js";

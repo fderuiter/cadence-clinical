@@ -37,3 +37,10 @@ in `vite.config.js` are a ratchet floor: raise them when coverage rises, never l
 ## Used by
 
 [apps/web](../../apps/web/README.md) and [apps/subject-portal](../../apps/subject-portal/README.md) (`"ui": "workspace:*"`). Both apps build it before their own build and test runs.
+
+
+### Inline Explanation & Gated Action Primitives
+
+- `EntityLink`: Renders Clinical Kernel `NodeRef` links in monospace with K-EXP-2 masked badge support and scope-preserving peek-drawer activation.
+- `ClinicalExplanation`: Renders ADR-2482 `Explanation` claims, evaluated met/unmet conditions, reasoning steps, and clickable `NextAction.Target` links.
+- `ClinicalGatedAction`: Keeps blocked clinical controls visible with accessible why-blocked explanations.

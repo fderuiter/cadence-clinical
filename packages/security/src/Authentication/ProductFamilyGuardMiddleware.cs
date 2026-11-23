@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Tenancy;
 using Cadence.Security.Rbac;
 
@@ -123,6 +124,12 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
         context.Response.ContentType = "application/problem+json";
         string requiredNames = string.Join(", ", requiredAnyOf.Select(static f => f.ToString()));
+        string detail = $"{CommercialErrors.ProductFamilyNotEntitled.Message} Required product family: {requiredNames}.";
+        var explanation = RbacExplanationBuilder.ForSubscriptionDenial(
+            detail,
+            $"Enable one of the required product families ({requiredNames}) on this workspace subscription.",
+            $"Ask a workspace administrator to add {requiredNames} to the workspace subscription.",
+            "subscription.amend");
         await JsonSerializer.SerializeAsync(
             context.Response.Body,
             new
@@ -130,8 +137,9 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
                 type = $"https://cadence.clinical/errors/{CommercialErrors.ProductFamilyNotEntitled.Code}",
                 title = "Workspace product family not entitled",
                 status = StatusCodes.Status403Forbidden,
-                detail = $"{CommercialErrors.ProductFamilyNotEntitled.Message} Required product family: {requiredNames}.",
+                detail,
                 code = CommercialErrors.ProductFamilyNotEntitled.Code,
+                explanation = ProblemExplanation.From(explanation),
             },
             cancellationToken: context.RequestAborted);
     }

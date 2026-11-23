@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Explanations;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Authorization;
@@ -298,6 +299,11 @@ public sealed class SubscriptionScopingGuardMiddleware : IMiddleware
     {
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
         context.Response.ContentType = "application/problem+json";
+        var explanation = RbacExplanationBuilder.ForSubscriptionDenial(
+            detail,
+            "Stay within the workspace subscription's contracted study, site, country, and participant scoping caps.",
+            "Ask a workspace administrator to amend the workspace subscription scoping caps.",
+            "subscription.amend");
         return JsonSerializer.SerializeAsync(
             context.Response.Body,
             new
@@ -307,6 +313,7 @@ public sealed class SubscriptionScopingGuardMiddleware : IMiddleware
                 status = StatusCodes.Status403Forbidden,
                 detail,
                 code,
+                explanation = ProblemExplanation.From(explanation),
             },
             cancellationToken: context.RequestAborted);
     }

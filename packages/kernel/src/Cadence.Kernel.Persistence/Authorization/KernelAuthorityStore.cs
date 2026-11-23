@@ -638,6 +638,24 @@ internal sealed class KernelAuthorityStore(
             .ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyDictionary<ProtocolVersionId, int>> ProtocolVersionNumbersAsync(
+        TenantId tenant, IReadOnlyCollection<ProtocolVersionId> versions, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(versions);
+        var ids = versions.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return new Dictionary<ProtocolVersionId, int>();
+        }
+
+        await using var db = contexts.Create(tenant);
+        var rows = await db.ProtocolVersions.AsNoTracking()
+            .Where(v => v.TenantId == tenant && ids.Contains(v.Id))
+            .Select(v => new { v.Id, v.Number })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        return rows.ToDictionary(r => r.Id, r => r.Number);
+    }
+
     public async Task<IReadOnlyList<Qualification>> QualificationsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(actor);

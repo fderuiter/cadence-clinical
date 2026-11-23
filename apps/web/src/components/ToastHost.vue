@@ -40,6 +40,7 @@
 </template>
 
 <script setup>
+import { EntityLink } from "ui";
 import { getCurrentInstance } from "vue";
 import { useToastStore } from "../stores/toasts.js";
 

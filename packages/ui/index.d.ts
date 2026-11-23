@@ -698,3 +698,11 @@ export function createOidcSessionCoordinator(options?: {
   storage?: Storage | null;
   returnUrlKey?: string;
 }): OidcSessionCoordinator;
+
+export const EntityLink: import("vue").DefineComponent<Record<string, any>>;
+export const ClinicalExplanation: import("vue").DefineComponent<Record<string, any>>;
+export const ClinicalGatedAction: import("vue").DefineComponent<Record<string, any>>;
+export function parseNodeRef(raw: string): Record<string, any>;
+export function stripRawPermissionTokens(text: string): string;
+export function registerEntityPeekHandler(handler: (payload: Record<string, any>) => void): () => void;
+export function openEntityPeek(nodeRef: string, context?: Record<string, any>): boolean;

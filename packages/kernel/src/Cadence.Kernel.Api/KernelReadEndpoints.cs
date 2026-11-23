@@ -206,15 +206,27 @@ public static class KernelReadEndpoints
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelCommandResponse>>, ProblemHttpResult>> GetCommandsAsync(
-        string nodeRef, HttpContext context, IAuthorizationProbe probe, CancellationToken cancellationToken)
+        string nodeRef,
+        HttpContext context,
+        IAuthorizationProbe probe,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
     {
         if (!NodeRef.TryParse(nodeRef, out var node))
         {
             return KernelProblems.InvalidNodeRef(nodeRef);
         }
 
-        var commands = await probe.GetCommandsAsync(KernelRequestTenant.Get(context), node, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok<IReadOnlyList<KernelCommandResponse>>([.. commands.Select(KernelCommandResponse.From)]);
+        var tenant = KernelRequestTenant.Get(context);
+        var commands = await probe.GetCommandsAsync(tenant, node, cancellationToken).ConfigureAwait(false);
+        var masks = await KernelReadMasking.MaskExplanationsAsync(
+            visibility,
+            actor,
+            tenant,
+            commands.Select(c => c.Explanation),
+            cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok<IReadOnlyList<KernelCommandResponse>>([.. commands.Select(c => KernelCommandResponse.From(c, masks))]);
     }
 
     internal static async Task<Results<Ok<KernelDecisionResponse>, ProblemHttpResult>> CanIAsync(
@@ -223,6 +235,8 @@ public static class KernelReadEndpoints
         HttpContext context,
         IAuthorizationProbe probe,
         KernelCommandCatalog catalog,
+        INodeVisibility visibility,
+        ICurrentActor actor,
         CancellationToken cancellationToken)
     {
         if (!NodeRef.TryParse(resource, out var node))
@@ -237,8 +251,16 @@ public static class KernelReadEndpoints
             return KernelProblems.BadRequest("Unknown capability", $"No kernel command declares the capability '{capability}'.");
         }
 
-        var decision = await probe.CanIAsync(KernelRequestTenant.Get(context), declared, node, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok(KernelDecisionResponse.From(declared, node, decision, decision.Explain(declared.Token, node)));
+        var tenant = KernelRequestTenant.Get(context);
+        var decision = await probe.CanIAsync(tenant, declared, node, cancellationToken).ConfigureAwait(false);
+        var explanation = decision.Explain(declared.Token, node);
+        var masks = await KernelReadMasking.MaskExplanationsAsync(
+            visibility,
+            actor,
+            tenant,
+            [explanation],
+            cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(KernelDecisionResponse.From(declared, node, decision, explanation, masks));
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelSearchHitResponse>>, ProblemHttpResult>> SearchAsync(

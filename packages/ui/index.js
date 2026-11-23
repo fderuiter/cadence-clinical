@@ -946,3 +946,13 @@ export function initHoverDetection() {
 }
 
 initHoverDetection();
+
+export { default as EntityLink } from "./src/components/clinical/EntityLink.vue";
+export { default as ClinicalExplanation } from "./src/components/clinical/ClinicalExplanation.vue";
+export { default as ClinicalGatedAction } from "./src/components/clinical/ClinicalGatedAction.vue";
+export {
+  parseNodeRef,
+  stripRawPermissionTokens,
+  registerEntityPeekHandler,
+  openEntityPeek,
+} from "./src/utils/entityPeekRegistry.js";
