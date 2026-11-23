@@ -349,6 +349,8 @@ public sealed record KernelObservationStateResponse(string Ref, string Enrollmen
 /// <param name="ExpectedValueKind">Expected value kind declared by the owning collection item.</param>
 /// <param name="ExpectedUnit">Expected UCUM unit declared by the owning collection item.</param>
 /// <param name="ExpectedCodeSystemVersionId">Expected code-system version declared by the owning collection item.</param>
+/// <param name="ExpectedCodelist">Expected codelist group code declared by the owning collection item.</param>
+/// <param name="ExpectedCodelistOptions">Hydrated codelist options declared by the owning collection item.</param>
 public sealed record KernelObservationResponse(
     string Ref,
     string EnrollmentRef,
@@ -364,7 +366,9 @@ public sealed record KernelObservationResponse(
     string? ItemId = null,
     string? ExpectedValueKind = null,
     string? ExpectedUnit = null,
-    Guid? ExpectedCodeSystemVersionId = null)
+    Guid? ExpectedCodeSystemVersionId = null,
+    string? ExpectedCodelist = null,
+    IReadOnlyList<CodelistOptionView>? ExpectedCodelistOptions = null)
 {
     internal static KernelObservationResponse From(ObservationRecord record) =>
         new(
@@ -382,5 +386,7 @@ public sealed record KernelObservationResponse(
             record.ItemId,
             record.ExpectedValueKind?.ToString(),
             record.ExpectedUnit,
-            record.ExpectedCodeSystemVersionId?.Value);
+            record.ExpectedCodeSystemVersionId?.Value,
+            record.ExpectedCodelist,
+            record.ExpectedCodelistOptions?.ToList());
 }

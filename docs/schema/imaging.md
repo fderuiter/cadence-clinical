@@ -97,6 +97,7 @@ Entity: `ImagingAuditLog`
 | `DetailsJson` | `jsonb` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `StudyEnvelopeId` | `character varying(36)` | yes |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -181,6 +182,7 @@ Entity: `DeidentificationCertificate`
 | `SubjectId` | `character varying(255)` | no |  |  |
 | `TargetSha256` | `character varying(64)` | no |  |  |
 | `Timestamp` | `character varying(50)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -219,6 +221,7 @@ Entity: `ImagingInstanceEnvelope`
 | `SopInstanceUid` | `character varying(64)` | no |  |  |
 | `WindowCenter` | `double precision` | yes |  |  |
 | `WindowWidth` | `double precision` | yes |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -247,6 +250,7 @@ Entity: `ImagingSeriesEnvelope`
 | `SeriesInstanceUid` | `character varying(64)` | no |  |  |
 | `SeriesNumber` | `integer` | yes |  |  |
 | `StudyEnvelopeId` | `character varying(36)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:

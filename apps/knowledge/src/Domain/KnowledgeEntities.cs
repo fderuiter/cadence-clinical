@@ -1,5 +1,9 @@
 using System;
 
+using Cadence.Database.Temporal;
+
+using NpgsqlTypes;
+
 namespace Cadence.Apps.Knowledge.Domain;
 
 public class KnowledgeCategory
@@ -153,6 +157,28 @@ public class DelegationRecord
     public string? BatchTransactionId { get; set; }
     public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
+}
+
+public class DelegationRecordPeriod : IBitemporalPeriodEntity
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string DelegationRecordId { get; set; } = string.Empty;
+    public string StudyCode { get; set; } = string.Empty;
+    public string SiteCode { get; set; } = string.Empty;
+    public string StaffUserId { get; set; } = string.Empty;
+    public string StaffName { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public string TaskCode { get; set; } = string.Empty;
+    public string Duties { get; set; } = string.Empty;
+    public string Status { get; set; } = "PENDING";
+    public bool SignedOff { get; set; }
+    public string? PiSignatureHash { get; set; }
+    public DateTimeOffset? PiApprovedAt { get; set; }
+    public string? BatchTransactionId { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+    public NpgsqlRange<DateTimeOffset> ValidPeriod { get; set; }
+    public NpgsqlRange<DateTimeOffset> RecordedPeriod { get; set; }
 }
 
 public class OrgAuditLog
