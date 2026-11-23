@@ -42,16 +42,21 @@ export function hasRequiredRole(userRoles, requiredRoles) {
 }
 
 function effectiveRolesForStore(personaKey) {
+  const preset = PERSONA_PRESETS.find((p) => p.key === personaKey);
   try {
     const authStore = useAuthStore();
     if (authStore?.rawRoles?.length > 0) {
-      return authStore.normalizedRoles || [];
+      const roles = authStore.normalizedRoles || [];
+      return preset &&
+        personaKey !== "super_admin" &&
+        roles.includes("sponsor_admin")
+        ? preset.requires
+        : roles;
     }
   } catch {
     // Pinia or auth store may not be initialized yet
   }
-  const preset = PERSONA_PRESETS.find((p) => p.key === personaKey);
-  return preset ? [...preset.requires] : ["sponsor_admin"];
+  return preset?.requires || ["sponsor_admin"];
 }
 
 function normalizeTaskRouteName(task) {
@@ -540,7 +545,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Study Workspace",
       description:
         "Open any study by code to navigate its lifecycle across Design, Start, Conduct, Data, Analyze, and Submit.",
@@ -593,7 +598,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "ecrf",
-      targetSelector: "#nav-data-collection",
+      targetSelector: "#nav-data-collection, #btn-mobile-menu-toggle",
       title: "Data Collection & Validation",
       description:
         "Verify range checks, required clinical observations, and discrepancy query transitions in real time.",
@@ -603,7 +608,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 3,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Study Conduct & Data Stages",
       description:
         "Open a study workspace to inspect participant counts, review proposals, and trace study activity.",
@@ -646,7 +651,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "ctms",
-      targetSelector: "#nav-site-readiness",
+      targetSelector: "#nav-site-readiness, #btn-mobile-menu-toggle",
       title: "Site Readiness & Activation",
       description:
         "Track site activation requirements, operational readiness, and site startup progress.",
@@ -656,7 +661,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 3,
       routeName: "ecrf",
-      targetSelector: "#nav-data-collection",
+      targetSelector: "#nav-data-collection, #btn-mobile-menu-toggle",
       title: "Source Data Verification",
       description:
         "Navigate to participant case report forms to verify clinical observations and manage queries.",
@@ -666,7 +671,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 4,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Study Lifecycle Overview",
       description:
         "Open a study workspace to inspect participant state counts, site progress, and open proposals.",
@@ -699,7 +704,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Study Activity & Provenance",
       description:
         "Open a study by code to review its activity stream, protocol version history, and proposal decisions.",
@@ -752,7 +757,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "ecrf",
-      targetSelector: ".subject-selector-card",
+      targetSelector: "#ecrf-participant-bar, .subject-enrollment-card",
       title: "Participant Selection & Visits",
       description:
         "Select study participants, review visit progress, and enroll new subjects for your site.",
@@ -762,7 +767,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 3,
       routeName: "ecrf",
-      targetSelector: ".ecrf-form-renderer",
+      targetSelector: ".crc-form-renderer, #ecrf-form-instance",
       title: "Case Report Form Entry",
       description:
         "Enter vital signs and clinical observations with real-time validation checks and query flags.",
@@ -772,7 +777,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 4,
       routeName: "ssu",
-      targetSelector: "#nav-site-readiness",
+      targetSelector: "#nav-site-readiness, #btn-mobile-menu-toggle",
       title: "Site Readiness",
       description:
         "Check site activation tasks and operational readiness status for your clinical site.",
@@ -782,7 +787,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 5,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Tour Complete!",
       description:
         "Your site coordinator orientation is complete. Move seamlessly across Studies, Data collection, and Site readiness.",
@@ -805,7 +810,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Studies & Lifecycle",
       description:
         "Open any study by code to follow its lifecycle from Design through Submit in three panes.",
@@ -815,7 +820,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 3,
       routeName: "ecrf",
-      targetSelector: "#nav-data-collection",
+      targetSelector: "#nav-data-collection, #btn-mobile-menu-toggle",
       title: "Data Collection",
       description:
         "Review clinical case report forms, field validations, and discrepancy management.",
@@ -825,7 +830,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 4,
       routeName: "ctms",
-      targetSelector: "#nav-site-readiness",
+      targetSelector: "#nav-site-readiness, #btn-mobile-menu-toggle",
       title: "Site Readiness",
       description:
         "Monitor site activation checklists, startup progress, and site operational status.",
@@ -906,11 +911,11 @@ function getSequenceForPersona(personaKey) {
     baseSequence = ROLE_STEP_SEQUENCES[personaKey];
   } else if (personaKey === "designer" || personaKey === "study_designer") {
     baseSequence = ROLE_STEP_SEQUENCES.sponsor_designer;
-  } else if (personaKey === "crc") {
+  } else if (personaKey === "crc" || personaKey === "site_investigator") {
     baseSequence = ROLE_STEP_SEQUENCES.site_crc;
   } else if (personaKey === "cra" || personaKey === "monitor") {
     baseSequence = ROLE_STEP_SEQUENCES.cra_monitor;
-  } else if (personaKey === "tmf_auditor") {
+  } else if (personaKey === "tmf_auditor" || personaKey === "safety_officer") {
     baseSequence = ROLE_STEP_SEQUENCES.auditor;
   } else if (personaKey === "sponsor_admin") {
     baseSequence = ROLE_STEP_SEQUENCES.super_admin;
@@ -941,10 +946,7 @@ function getSequenceForPersona(personaKey) {
       ROLE_STEP_SEQUENCES.sponsor_designer;
   }
 
-  const effectiveRoles =
-    authStore?.rawRoles?.length > 0
-      ? roles
-      : effectiveRolesForStore(personaKey);
+  const effectiveRoles = effectiveRolesForStore(personaKey);
   const filtered = baseSequence
     .filter((step) => isTourRouteAuthorized(step.routeName, effectiveRoles))
     .map((step, idx) => ({ ...step, step: idx + 1 }));

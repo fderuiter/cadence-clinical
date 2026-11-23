@@ -1,5 +1,6 @@
-// Bootstrap: restores the session, mounts the shell, signs in, loads the
-// participant's data, renders the views and starts the offline sync.
+// Bootstrap: restores the session, signs in, hydrates participant tasks & drafts,
+// mounts the shell so initial route guards see authenticated state, renders views,
+// and starts offline sync.
 import { initHoverDetection } from "ui";
 
 import { isAuthenticatedSession } from "../api/client.js";
@@ -8,13 +9,16 @@ import {
   MOCK_INSTRUMENTS,
   MOCK_NOTIFICATIONS,
 } from "../data/mock-data.js";
-import { logAuditRecord } from "../features/audit.js";
+import { logAuditRecord, renderLedger } from "../features/audit.js";
 import { restoreSession, signIn, watchUserIdentity } from "../features/auth.js";
 import { loadCompliance, renderCompliance } from "../features/compliance.js";
 import { loadNotifications, renderInbox } from "../features/inbox.js";
 import { showView } from "../features/navigation.js";
 import { checkPINWrapper } from "../features/pin.js";
-import { checkPendingReconsent } from "../features/reconsent.js";
+import {
+  checkPendingReconsent,
+  resolveReconsentStudyId,
+} from "../features/reconsent.js";
 import {
   hydrateSiteSupportContact,
   maskParticipantIdentifier,
@@ -40,6 +44,7 @@ import {
   getPortalRouter,
   isPortalRouterMounted,
   resolveDefaultPortalRoute,
+  syncActiveRouteEntities,
 } from "../router/index.js";
 import { state } from "../stores/state.js";
 import { getAssignmentsFromDB, getInstrumentsFromDB } from "../sync-queue.js";
@@ -54,7 +59,7 @@ export async function initializeApp() {
   hydrateSiteSupportContact();
   await restoreSession();
 
-  // Initialize and await MSW Mock Gateway Worker in explicit demo builds or opt-in MSW runs before mounting views
+  // Initialize and await MSW Mock Gateway Worker in explicit demo builds or opt-in MSW runs before network calls or mounting
   const shouldEnableMsw =
     import.meta.env.MODE === "demo" ||
     import.meta.env.VITE_DEMO_MODE === "true" ||
@@ -73,49 +78,41 @@ export async function initializeApp() {
     }
   }
 
-  // Mount Vue application
-  if (typeof document !== "undefined") {
-    const appEl = document.getElementById("app");
-    if (appEl) {
-      mountPortal(appEl);
-    }
-
-    // Dynamic Hover Pointer Capability Detection
-    initHoverDetection();
-  }
-
-  // Graceful OIDC Keycloak setup
+  // Hydrate OIDC / session credentials BEFORE mounting Vue & evaluating initial route guards
   await signIn();
 
-  // Reconcile initial route once session credentials are known
+  // Reconcile pre-mounted router if a caller mounted before initializeApp()
   if (isPortalRouterMounted()) {
-    const portalRouter = getPortalRouter();
-    await portalRouter.isReady();
-    const activeRoute = portalRouter.currentRoute.value;
+    const existingRouter = getPortalRouter();
+    await existingRouter.isReady();
+    const activeRoute = existingRouter.currentRoute.value;
     if (activeRoute.name === "unavailable") {
       const requestedScreen = activeRoute.query?.screen
         ? String(activeRoute.query.screen)
         : "";
       if (requestedScreen && isScreenAvailable(requestedScreen)) {
         state.unavailableScreen = null;
-        await portalRouter.replace({ name: requestedScreen });
+        await existingRouter.replace({
+          name: requestedScreen,
+          query: { ...activeRoute.query, screen: undefined },
+        });
       } else if (!requestedScreen) {
         const defaultRoute = resolveDefaultPortalRoute();
         if (defaultRoute.name !== "unavailable") {
           state.unavailableScreen = null;
-          await portalRouter.replace(defaultRoute);
+          await existingRouter.replace(defaultRoute);
         }
       }
     } else if (activeRoute.name && !isScreenAvailable(activeRoute.name)) {
       if (activeRoute.path === "/" && activeRoute.name === "tasks") {
         state.unavailableScreen = null;
-        await portalRouter.replace(resolveDefaultPortalRoute());
+        await existingRouter.replace(resolveDefaultPortalRoute());
       } else {
         const blocked = String(activeRoute.name);
         state.unavailableScreen = blocked;
-        await portalRouter.replace({
+        await existingRouter.replace({
           name: "unavailable",
-          query: { screen: blocked },
+          query: { ...activeRoute.query, screen: blocked },
         });
       }
     }
@@ -132,25 +129,9 @@ export async function initializeApp() {
     showView("view-wallet");
   }
 
-  // Set participant visual name (masked if email/PII)
-  const nameEl = document.getElementById("session-subject-id");
-  if (nameEl) {
-    nameEl.textContent =
-      maskParticipantIdentifier(state.session.userId) || "Not signed in";
-  }
-
-  // Initialize genesis compliance ledger
-  await logAuditRecord(
-    "GENESIS",
-    {
-      platform: import.meta.env.VITE_BRAND_NAME
-        ? `${import.meta.env.VITE_BRAND_NAME} MyPortal`
-        : "Cadence MyPortal",
-      roles: state.session.roles,
-    },
-    "Patient companion portal session securely booted."
-  );
-
+  // Hydrate available screens' data BEFORE mountPortal so cold reloads see hydrated state
+  // while sending zero requests to unmounted interop/econsent endpoints outside demo builds.
+  let initialWalletHydration = null;
   if (isAuthenticatedSession()) {
     const userId = state.session.userId;
     if (isScreenAvailable("tasks")) {
@@ -179,7 +160,7 @@ export async function initializeApp() {
       !state.walletLoading &&
       !hasAttemptedWalletHydration()
     ) {
-      void loadParticipantWallet().catch((err) => {
+      initialWalletHydration = loadParticipantWallet().catch((err) => {
         console.warn(
           "[Wallet] Initial wallet hydration warning:",
           err?.message
@@ -216,16 +197,64 @@ export async function initializeApp() {
 
   await hydrateDraftPresence(state.session.userId);
 
-  // Draw Initial Views
+  // Mount Vue application & router AFTER session and task state are ready
+  let portalRouter = null;
+  if (typeof document !== "undefined") {
+    const appEl = document.getElementById("app");
+    if (appEl) {
+      mountPortal(appEl);
+      portalRouter = getPortalRouter();
+      await portalRouter.isReady().catch(() => {});
+    }
+
+    // Dynamic Hover Pointer Capability Detection
+    initHoverDetection();
+  }
+
+  // Set participant visual name (masked if email/PII)
+  const nameEl = document.getElementById("session-subject-id");
+  if (nameEl) {
+    nameEl.textContent =
+      maskParticipantIdentifier(state.session.userId) || "Not signed in";
+  }
+
+  // Initialize genesis compliance ledger
+  await logAuditRecord(
+    "GENESIS",
+    {
+      platform: import.meta.env.VITE_BRAND_NAME
+        ? `${import.meta.env.VITE_BRAND_NAME} MyPortal`
+        : "Cadence MyPortal",
+      roles: state.session.roles,
+    },
+    "Patient companion portal session securely booted."
+  );
+
+  // Draw Initial Views now that DOM containers are mounted
   renderTasks();
   renderCompliance();
   renderInbox();
+  renderLedger();
+
+  // SyncNow, questionnaire, signature modal, eConsent and retry buttons
+  bindPortalControls();
+
+  // Restore active route entities (e.g. cold reload on /questionnaire?assignmentId=... or peek query params)
+  if (portalRouter) {
+    await syncActiveRouteEntities(portalRouter.currentRoute.value);
+  }
 
   // Check for pending active re-consent only when the consent screen is available and signed in or in demo mode
   if (
     isScreenAvailable("consent") &&
     (isAuthenticatedSession() || isDemoModeActive())
   ) {
+    if (!resolveReconsentStudyId() && initialWalletHydration) {
+      await Promise.race([
+        initialWalletHydration,
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
+    }
     await checkPendingReconsent();
   }
 
@@ -273,9 +302,6 @@ export async function initializeApp() {
       });
     });
   }
-
-  // Sync Now, questionnaire, signature modal, eConsent and retry buttons
-  bindPortalControls();
 
   // Switch database context and prompt PIN unlock/setup when active user identity changes
   watchUserIdentity();

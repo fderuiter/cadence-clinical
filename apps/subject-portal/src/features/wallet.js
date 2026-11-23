@@ -228,6 +228,13 @@ function applyWalletProjection(summaryOrWallet) {
     state.walletSiteId ??
     (isDemoModeActive() ? DEFAULT_DEMO_SITE?.code || null : null);
 
+  if (!state.session.studyId && state.walletStudyId) {
+    state.session.studyId = state.walletStudyId;
+  }
+  if (!state.session.siteId && state.walletSiteId) {
+    state.session.siteId = state.walletSiteId;
+  }
+
   const currentBal = w.currentBalance ?? w.current_balance;
   if (typeof currentBal === "number") {
     state.walletBalance = currentBal;

@@ -1,17 +1,88 @@
+using System.Data.Common;
+
 using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database;
+using Cadence.Database.Configurations;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
 
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 using Xunit;
 
 namespace Cadence.UnitTests.Execution.Persistence;
+
+internal sealed class AuditTipCommandRecorder : DbCommandInterceptor
+{
+    public sealed record CapturedCommand(string CommandText, IReadOnlyList<(string Name, object? Value)> Parameters);
+
+    public List<CapturedCommand> Commands { get; } = [];
+
+    public void Clear() => Commands.Clear();
+
+    public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+        DbCommand command,
+        CommandEventData eventData,
+        InterceptionResult<DbDataReader> result,
+        CancellationToken cancellationToken = default)
+    {
+        var parameters = new List<(string Name, object? Value)>(command.Parameters.Count);
+        foreach (DbParameter parameter in command.Parameters)
+        {
+            parameters.Add((parameter.ParameterName, parameter.Value));
+        }
+
+        Commands.Add(new CapturedCommand(command.CommandText, parameters));
+        return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+    }
+
+    public static async Task<List<string>> ExplainSqlitePlanAsync(SqliteConnection connection, CapturedCommand captured, CancellationToken ct)
+    {
+        await using var explain = connection.CreateCommand();
+        explain.CommandText = "EXPLAIN QUERY PLAN " + captured.CommandText;
+        foreach ((string name, object? value) in captured.Parameters)
+        {
+            explain.Parameters.AddWithValue(name, value ?? DBNull.Value);
+        }
+
+        var details = new List<string>();
+        await using var reader = await explain.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            details.Add(reader.GetString(3));
+        }
+
+        return details;
+    }
+
+    public static void AssertSqlitePlanUsesOnlyIndexSeeks(
+        IReadOnlyCollection<string> planDetails,
+        string sequenceIndexName,
+        string predecessorIndexName)
+    {
+        planDetails.Should().NotBeEmpty();
+        var coroutineScans = planDetails
+            .Where(d => d.StartsWith("CO-ROUTINE ", StringComparison.Ordinal))
+            .Select(d => "SCAN " + d["CO-ROUTINE ".Length..])
+            .ToHashSet(StringComparer.Ordinal);
+
+        planDetails.Where(d => d.StartsWith("SCAN ", StringComparison.Ordinal))
+            .Should().OnlyContain(
+                d => coroutineScans.Contains(d),
+                "only 1-row UNION ALL co-routines may be scanned; every physical table access must be an index SEARCH");
+        planDetails.Should().NotContain(
+            d => d.Contains("USE TEMP B-TREE", StringComparison.OrdinalIgnoreCase),
+            "descending tip order must be satisfied directly by the composite sequence index");
+        planDetails.Should().Contain(d => d.Contains(sequenceIndexName, StringComparison.Ordinal));
+        planDetails.Should().Contain(d => d.Contains(predecessorIndexName, StringComparison.Ordinal));
+    }
+}
 
 /// <summary>
 /// Coverage for `MIG-SUBJ-007`'s <see cref="GxPAuditInterceptor"/> generalization: field stamping for
@@ -47,6 +118,12 @@ public class GxPAuditInterceptorMerkleChainTests
         public DbSet<TestSubject> StringAggregates => Set<TestSubject>();
         public DbSet<RawAuditableEntity> RawEntities => Set<RawAuditableEntity>();
         public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        }
     }
 
     private static MerkleChainTestDbContext CreateContext(string databaseName, IClock? clock = null) =>
@@ -235,5 +312,81 @@ public class GxPAuditInterceptorMerkleChainTests
 
         save.Should().Throw<InvalidOperationException>().WithMessage("*SaveChangesAsync*");
         context.AuditLogEntries.Should().BeEmpty();
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-003")]
+    public async Task SaveChangesAsync_GivenSharedAuditConfigurationOnSqlite_PrefetchesThreeChainsInOneIndexedQueryAndChainsSameTypeInMemory()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var clock = new FakeClock(new DateTimeOffset(2026, 2, 1, 8, 30, 0, TimeSpan.Zero));
+        using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync(ct);
+
+        var recorder = new AuditTipCommandRecorder();
+        MerkleChainTestDbContext CreateSqliteContext() =>
+            new(new DbContextOptionsBuilder<MerkleChainTestDbContext>()
+                .UseSqlite(connection)
+                .AddInterceptors(recorder, new GxPAuditInterceptor(() => "qa.reviewer@site.org", clock))
+                .Options);
+
+        await using (var setup = CreateSqliteContext())
+        {
+            await setup.Database.EnsureCreatedAsync(ct);
+        }
+
+        Guid firstGuidId = Guid.NewGuid();
+        string firstStringId = Guid.NewGuid().ToString();
+
+        await using (var seed = CreateSqliteContext())
+        {
+            seed.GuidAggregates.Add(new GuidKeyedAggregate(firstGuidId, "Seed-A"));
+            seed.StringAggregates.Add(new TestSubject(firstStringId, "SITE-1"));
+            await seed.SaveChangesAsync(ct);
+        }
+
+        clock.Advance(TimeSpan.FromSeconds(5));
+
+        await using (var batch = CreateSqliteContext())
+        {
+            var existingGuid = await batch.GuidAggregates.SingleAsync(a => a.Id == firstGuidId, ct);
+            var existingString = await batch.StringAggregates.SingleAsync(a => a.Id == firstStringId, ct);
+            existingGuid.Name = "Updated-A";
+            existingString.Status = "ENROLLED";
+
+            batch.GuidAggregates.Add(new GuidKeyedAggregate(Guid.NewGuid(), "Added-B"));
+            batch.RawEntities.Add(new RawAuditableEntity());
+            AuditActions.Record(batch, new AuditAction(
+                nameof(GuidKeyedAggregate),
+                Guid.NewGuid().ToString(),
+                "AUDIT_ACTION_NOTE",
+                "auditor@site.org",
+                "Action-only event on same chain",
+                "{\"note\":\"verified\"}"));
+
+            recorder.Clear();
+            await batch.SaveChangesAsync(ct);
+
+            var tipReads = recorder.Commands
+                .Where(c => c.CommandText.Contains("SELECT", StringComparison.OrdinalIgnoreCase)
+                    && c.CommandText.Contains("audit_log_entries", StringComparison.Ordinal))
+                .ToList();
+            tipReads.Should().ContainSingle("three distinct EntityName chains (two persisted, one genesis, plus in-memory chaining and AuditActions) must issue one batched SELECT");
+
+            var planDetails = await AuditTipCommandRecorder.ExplainSqlitePlanAsync(connection, tipReads[0], ct);
+            AuditTipCommandRecorder.AssertSqlitePlanUsesOnlyIndexSeeks(
+                planDetails,
+                "IX_audit_log_entries_EntityName_Timestamp_VersionIndex_Id",
+                "IX_audit_log_entries_EntityName_PredecessorHash");
+        }
+
+        await using var verify = CreateSqliteContext();
+        var entries = await verify.AuditLogEntries.AsNoTracking().ToListAsync(ct);
+        entries.Should().HaveCount(7);
+
+        var results = AuditLogChainVerifier.Verify(entries);
+        results.Should().HaveCount(3).And.OnlyContain(r => r.Valid);
+        results.Single(r => r.EntityName == nameof(GuidKeyedAggregate)).VerifiedCount.Should().Be(4,
+            "the persisted GuidKeyedAggregate entry, two GuidKeyedAggregate mutations, and unmatched AuditAction must form one unbroken 4-block chain");
     }
 }
