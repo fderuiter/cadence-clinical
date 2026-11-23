@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { runLogoutCleanups } from "../../src/auth/sessionCoordinator.js";
 import { kernelApi } from "../../src/api/kernelApi";
 import {
+  clearKernelStudyCache,
   findEnrollmentScheduleOptions,
   findKernelEnrollmentRef,
+  findKernelStudyRef,
   findStudySites,
+  resetKernelStudySession,
 } from "../../src/canvas/kernelStudy";
 
 vi.mock("../../src/api/kernelApi", () => ({
@@ -29,6 +33,7 @@ function child(kind: string, ref: string | null, code: string) {
 
 describe("findKernelEnrollmentRef (#5461)", () => {
   beforeEach(() => {
+    clearKernelStudyCache();
     vi.mocked(kernelApi.search).mockReset();
     vi.mocked(kernelApi.getChildren).mockReset();
     vi.mocked(kernelApi.search).mockResolvedValue([
@@ -102,6 +107,7 @@ describe("findKernelEnrollmentRef (#5461)", () => {
 
 describe("findStudySites", () => {
   beforeEach(() => {
+    clearKernelStudyCache();
     vi.mocked(kernelApi.search).mockReset();
     vi.mocked(kernelApi.getChildren).mockReset();
   });
@@ -247,5 +253,97 @@ describe("findEnrollmentScheduleOptions (PRD-SUB-007)", () => {
         requiredSince: "2026-10-15T12:00:00Z",
       },
     ]);
+  });
+});
+
+describe("kernelStudy session cache", () => {
+  beforeEach(() => {
+    clearKernelStudyCache();
+    vi.mocked(kernelApi.search).mockReset();
+    vi.mocked(kernelApi.getChildren).mockReset();
+    vi.mocked(kernelApi.search).mockResolvedValue([
+      {
+        ref: STUDY_REF,
+        kind: "study",
+        title: "Study",
+        code: "CAD-101",
+        detail: null,
+        exact_code: true,
+        rank: 1,
+      },
+    ]);
+    vi.mocked(kernelApi.getChildren).mockImplementation(async (ref) => {
+      if (ref === STUDY_REF) {
+        return [child("study_site", SITE_A, "017")];
+      }
+      return [child("enrollment", `enrollment:${ENROLLMENT_ID}@2`, "017-0001")];
+    });
+  });
+
+  it("reuses positive lookups within a study session and invalidates on study switch or logout", async () => {
+    resetKernelStudySession("CAD-101");
+
+    await expect(findKernelStudyRef("CAD-101")).resolves.toBe(STUDY_REF);
+    await expect(findStudySites("CAD-101")).resolves.toEqual([
+      { code: "017", label: "017" },
+    ]);
+    await expect(findStudySites("CAD-101")).resolves.toEqual([
+      { code: "017", label: "017" },
+    ]);
+    await expect(
+      findKernelEnrollmentRef("CAD-101", "017", "017-0001")
+    ).resolves.toEqual({
+      kind: "enrollment",
+      id: ENROLLMENT_ID,
+      version: 2,
+    });
+    await expect(
+      findKernelEnrollmentRef("CAD-101", "017", "017-0001")
+    ).resolves.toEqual({
+      kind: "enrollment",
+      id: ENROLLMENT_ID,
+      version: 2,
+    });
+
+    expect(kernelApi.search).toHaveBeenCalledTimes(1);
+
+    // Calling resetKernelStudySession with the same study preserves the warm cache.
+    resetKernelStudySession("CAD-101");
+    await findKernelStudyRef("CAD-101");
+    expect(kernelApi.search).toHaveBeenCalledTimes(1);
+
+    // Switching studies clears the cache.
+    resetKernelStudySession("CAD-202");
+    await findKernelStudyRef("CAD-101");
+    expect(kernelApi.search).toHaveBeenCalledTimes(2);
+
+    // Running logout cleanups also clears the cache.
+    runLogoutCleanups();
+    await findKernelStudyRef("CAD-101");
+    expect(kernelApi.search).toHaveBeenCalledTimes(3);
+  });
+
+  it("never caches null, empty, or rejected lookups", async () => {
+    vi.mocked(kernelApi.search)
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("Temporary 503"))
+      .mockResolvedValueOnce([
+        {
+          ref: STUDY_REF,
+          kind: "study",
+          title: "Study",
+          code: "CAD-101",
+          detail: null,
+          exact_code: true,
+          rank: 1,
+        },
+      ]);
+
+    await expect(findKernelStudyRef("CAD-101")).resolves.toBeNull();
+    await expect(findKernelStudyRef("CAD-101")).rejects.toThrow(
+      "Temporary 503"
+    );
+    await expect(findKernelStudyRef("CAD-101")).resolves.toBe(STUDY_REF);
+    expect(kernelApi.search).toHaveBeenCalledTimes(3);
   });
 });

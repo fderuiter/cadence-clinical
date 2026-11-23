@@ -4,7 +4,9 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 
+using Cadence.Kernel;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Validation;
 using Cadence.Rules.Evaluation;
@@ -169,8 +171,90 @@ public class RulePackTests
         total.Should().BeGreaterThan(500);
     }
 
+    [Fact(DisplayName = "RulePackLoader_LoadForStudyAsync_BatchesPinnedLibraryItemsInOneLookup")]
+    [Trait("Category", "Unit")]
+    public async Task RulePackLoaderLoadForStudyAsyncBatchesPinnedLibraryItemsInOneLookup()
+    {
+        var tenant = TenantId.New();
+        var study = StudyId.New();
+        var packBId = LibraryItemId.New();
+        var packAId = LibraryItemId.New();
+        var nonRulePackId = LibraryItemId.New();
+        var packJson = RulePackJson.ToJson(SampleRulePacks.Sample());
+        var otherJson = JsonDocument.Parse("""{"name":"form-template"}""").RootElement;
+
+        var items = new Dictionary<LibraryItemId, LibraryItemView>
+        {
+            [packBId] = new(
+                packBId, LibraryItemKind.RulePack, "z.pack", 2, "Z Pack", packJson, "hash-z",
+                GovernanceStatus.Approved, [], AttestationId.New(), null),
+            [packAId] = new(
+                packAId, LibraryItemKind.RulePack, "a.pack", 1, "A Pack", packJson, "hash-a",
+                GovernanceStatus.Approved, [], AttestationId.New(), null),
+            [nonRulePackId] = new(
+                nonRulePackId, LibraryItemKind.CollectionSpecification, "tmpl.vitals", 1, "Vitals Template", otherJson, "hash-t",
+                GovernanceStatus.Approved, [], AttestationId.New(), null),
+        };
+        var profile = new StudyStandardsProfileView(
+            StudyStandardsProfileId.New(), study, 1, [], [], [packBId, nonRulePackId, packAId]);
+        var registry = new BatchCountingStandardsRegistry(profile, items);
+
+        var loaded = await new RulePackLoader(registry).LoadForStudyAsync(tenant, study, TestContext.Current.CancellationToken);
+
+        registry.FindLibraryItemsCalls.Should().Be(1);
+        registry.FindSingleLibraryItemCalls.Should().Be(0);
+        loaded.Select(p => p.Key).Should().Equal("a.pack", "z.pack");
+    }
+
     private static List<string> Describe(IEnumerable<RuleViolation> violations) =>
         [.. violations.Select(v => $"{v.Dataset}|{v.RecordKey}|{v.RuleId}@{v.RuleVersion}|{v.Severity}|{string.Join(",", v.Observed.Select(o => $"{o.Variable}={o.Value}"))}")];
+
+    private sealed class BatchCountingStandardsRegistry(
+        StudyStandardsProfileView? profile,
+        IReadOnlyDictionary<LibraryItemId, LibraryItemView> items) : IStandardsRegistry
+    {
+        public int FindSingleLibraryItemCalls { get; private set; }
+        public int FindLibraryItemsCalls { get; private set; }
+
+        public Task<IReadOnlyList<StandardVersionSummary>> ListStandardVersionsAsync(TenantId tenant, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<StandardVersionSummary>>([]);
+
+        public Task<StandardVersionSummary?> FindStandardVersionAsync(TenantId tenant, StandardVersionId id, CancellationToken cancellationToken) =>
+            Task.FromResult<StandardVersionSummary?>(null);
+
+        public Task<StandardVersionSummary?> FindStandardVersionAsync(TenantId tenant, string standardCode, string version, CancellationToken cancellationToken) =>
+            Task.FromResult<StandardVersionSummary?>(null);
+
+        public Task<StandardPackage?> GetStandardPackageAsync(TenantId tenant, StandardVersionId id, CancellationToken cancellationToken) =>
+            Task.FromResult<StandardPackage?>(null);
+
+        public Task<LibraryItemView?> FindLibraryItemAsync(TenantId tenant, LibraryItemId id, CancellationToken cancellationToken)
+        {
+            FindSingleLibraryItemCalls++;
+            return Task.FromResult(items.GetValueOrDefault(id));
+        }
+
+        public Task<IReadOnlyDictionary<LibraryItemId, LibraryItemView>> FindLibraryItemsAsync(
+            TenantId tenant,
+            IReadOnlyCollection<LibraryItemId> ids,
+            CancellationToken cancellationToken)
+        {
+            FindLibraryItemsCalls++;
+            var matched = ids
+                .Distinct()
+                .Where(items.ContainsKey)
+                .ToDictionary(id => id, id => items[id]);
+            return Task.FromResult<IReadOnlyDictionary<LibraryItemId, LibraryItemView>>(matched);
+        }
+
+        public Task<IReadOnlyList<LibraryItemView>> ListLibraryItemVersionsAsync(
+            TenantId tenant, LibraryItemKind kind, string key, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<LibraryItemView>>([]);
+
+        public Task<StudyStandardsProfileView?> FindStudyStandardsAsync(
+            TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
+            Task.FromResult(profile);
+    }
 
     private static T UnderCulture<T>(string name, Func<T> action)
     {

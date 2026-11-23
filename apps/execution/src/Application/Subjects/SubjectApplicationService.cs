@@ -478,6 +478,65 @@ public sealed class SubjectApplicationService(
     }
 
     /// <inheritdoc />
+    public async Task<Result<SubjectCountsResponse>> GetCountsAsync(
+        string? studyId,
+        string? siteId,
+        CancellationToken ct,
+        IReadOnlyCollection<string>? allowedSiteIds = null)
+    {
+        if (string.IsNullOrWhiteSpace(studyId))
+        {
+            return DomainError.Validation("STUDY_ID_REQUIRED", "study_id is required to count subjects.");
+        }
+
+        StudyCode studyCode;
+        try
+        {
+            studyCode = new StudyCode(studyId);
+        }
+        catch (ArgumentException ex)
+        {
+            return DomainError.Validation("INVALID_STUDY_CODE", ex.Message);
+        }
+
+        SiteCode? siteCode = null;
+        if (!string.IsNullOrWhiteSpace(siteId))
+        {
+            try
+            {
+                siteCode = new SiteCode(siteId);
+            }
+            catch (ArgumentException ex)
+            {
+                return DomainError.Validation("INVALID_SITE_CODE", ex.Message);
+            }
+        }
+
+        IReadOnlyCollection<SiteCode>? allowedSites = null;
+        if (siteCode is null && allowedSiteIds is not null)
+        {
+            allowedSites = allowedSiteIds
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => new SiteCode(s.Trim()))
+                .ToList();
+        }
+
+        var grouped = await subjects
+            .CountByStatusAsync(new SubjectCountCriteria(studyCode, siteCode, allowedSites), ct)
+            .ConfigureAwait(false);
+
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        int total = 0;
+        foreach (var (state, count) in grouped)
+        {
+            counts[SubjectStateCodec.ToCode(state)] = count;
+            total += count;
+        }
+
+        return new SubjectCountsResponse(total, counts);
+    }
+
+    /// <inheritdoc />
     public async Task<(StudyCode StudyId, SiteCode? SiteId)?> GetSubjectScopeAsync(string subjectIdOrCode, CancellationToken ct = default)
     {
         var subject = await ResolveSubjectAsync(subjectIdOrCode, ct).ConfigureAwait(false);
