@@ -115,6 +115,13 @@ builder.Services.AddOptions<AllocationProtectionOptions>()
     .ValidateOnStart();
 builder.Services.AddSingleton<IAllocationProtector, AesGcmAllocationProtector>();
 
+// CGT chain-of-custody barcode HMAC-SHA256 key: verifies bag barcodes at bedside and during reconciliation. No
+// default: the host refuses to start without a valid 32-byte key.
+builder.Services.AddOptions<CgtBarcodeProtectionOptions>()
+    .Configure(options => options.KeyBase64 ??= builder.Configuration[CgtBarcodeProtectionOptions.ConfigurationKey])
+    .Validate(options => FieldProtectionKey.IsValid(options.KeyBase64), CgtBarcodeProtectionOptions.InvalidKeyMessage)
+    .ValidateOnStart();
+
 // IClock / IDemographicsEncryptionService / IDemographicsNormalizationService -- all three Singleton per
 // `02_technical_design.md` §2's DI-lifetime table ("stateless, holds [at most] configured key material").
 // DemographicsNormalizationService itself depends on IDemographicsEncryptionService + IClock, both already

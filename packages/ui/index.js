@@ -86,6 +86,8 @@ export {
   isValidStepUpAction,
   isValidSemanticAction,
   buildStepUpVerificationPayload,
+  formatCgtBedsideBindingId,
+  formatCgtDestructionBindingId,
   SIGNATURE_OTHER_REASON,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
   requiresCustomSignatureReason,

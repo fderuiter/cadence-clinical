@@ -746,6 +746,8 @@ export const SEMANTIC_ACTIONS: Readonly<{
   ECONSENT_CAPTURE: "econsent.consent.capture";
   ECONSENT_RECONSENT_SIGN: "econsent.reconsent.sign";
   CEC_CHAIR_ADJUDICATE: "execution.cec.chair_adjudicate";
+  CGT_BEDSIDE_VERIFY: "execution.cgt.bedside_verify";
+  CGT_DESTRUCTION_CERTIFY: "execution.cgt.destruction_certify";
   ETMF_DOCUMENT_SIGN_OFF: "etmf.document.sign_off";
   COLLECTION_SIGN: "collection.sign";
   SOA_APPROVE: "designer.soa.approve";
@@ -775,6 +777,18 @@ export interface StepUpVerificationPayload {
 export function buildStepUpVerificationPayload(
   input: StepUpVerificationPayloadInput
 ): StepUpVerificationPayload;
+export function formatCgtBedsideBindingId(input?: {
+  studyId?: string | null;
+  subjectId?: string | null;
+  din?: string | null;
+  batchId?: string | null;
+}): string;
+export function formatCgtDestructionBindingId(input?: {
+  studyId?: string | null;
+  siteId?: string | null;
+  lotNumber?: string | null;
+  din?: string | null;
+}): string;
 
 export const SIGNATURE_OTHER_REASON: "Other";
 export const SIGNATURE_PASSWORD_INPUT_ATTRS: Readonly<{

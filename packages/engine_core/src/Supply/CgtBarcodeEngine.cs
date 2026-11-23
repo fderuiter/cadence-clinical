@@ -8,15 +8,21 @@ namespace Cadence.Core.Domain.Supply;
 
 public static class CgtBarcodeEngine
 {
-    private static readonly byte[] DefaultSecretKey = Encoding.UTF8.GetBytes("Cadence-CGT-HMAC-Secret-Key-2026!");
+    public const int SecretKeySizeBytes = 32;
 
     public static (bool IsValid, string? FailureReason, Dictionary<string, string?> DecodedData) VerifyCryptoBarcode(
         string barcodePayload,
+        byte[] secretKey,
         string? expectedSubjectId = null,
         string? expectedDin = null,
-        string? expectedBatchId = null,
-        byte[]? secretKey = null)
+        string? expectedBatchId = null)
     {
+        ArgumentNullException.ThrowIfNull(secretKey);
+        if (secretKey.Length != SecretKeySizeBytes)
+        {
+            throw new ArgumentException($"CGT barcode HMAC key must be {SecretKeySizeBytes} bytes.", nameof(secretKey));
+        }
+
         var decodedData = new Dictionary<string, string?>();
         if (string.IsNullOrWhiteSpace(barcodePayload))
         {
@@ -64,14 +70,15 @@ public static class CgtBarcodeEngine
 
             dict.TryGetValue("batch_id", out var batchId);
 
-            byte[] key = secretKey ?? DefaultSecretKey;
+            if (claimedHash is not { Length: 64 } || !TryDecodeSha256Hex(claimedHash, out byte[] claimedHashBytes))
+            {
+                return (false, "Cryptographic signature verification failed: barcode signature is not a valid SHA-256 digest.", decodedData);
+            }
+
             string canonicalMsg = $"BARCODE_ID:{barcodeId}|STUDY:{studyId}|SITE:{siteId}|SUBJ:{subjectId}|DIN:{din}|BATCH:{batchId ?? ""}|TIME:{createdAt}";
+            byte[] expectedHashBytes = HMACSHA256.HashData(secretKey, Encoding.UTF8.GetBytes(canonicalMsg));
 
-            using var hmac = new HMACSHA256(key);
-            byte[] hashBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(canonicalMsg));
-            string expectedHash = Convert.ToHexString(hashBytes).ToLowerInvariant();
-
-            if (!string.Equals(claimedHash, expectedHash, StringComparison.OrdinalIgnoreCase))
+            if (!CryptographicOperations.FixedTimeEquals(claimedHashBytes, expectedHashBytes))
             {
                 return (false, "Cryptographic signature verification failed: barcode payload has been tampered with.", decodedData);
             }
@@ -96,6 +103,20 @@ public static class CgtBarcodeEngine
         catch (Exception ex)
         {
             return (false, $"Failed to parse barcode payload: {ex.Message}", decodedData);
+        }
+    }
+
+    private static bool TryDecodeSha256Hex(string hex, out byte[] bytes)
+    {
+        try
+        {
+            bytes = Convert.FromHexString(hex);
+            return bytes.Length == SecretKeySizeBytes;
+        }
+        catch (FormatException)
+        {
+            bytes = [];
+            return false;
         }
     }
 }

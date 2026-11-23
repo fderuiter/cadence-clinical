@@ -105,7 +105,7 @@ public sealed class GatewayRouteCoverageTests
             .UseTestGatewaySecret()
             .UseTestPostgresConnectionString()
             .UseTestStorage()
-            .UseTestDemographicsKey().UseTestRandomizationKey()
+            .UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey()
             .UseTestFieldProtectionKeys()
             .UseTestSceSigningKey()
             .UseTestImagingDeidentificationKeys());
@@ -120,10 +120,9 @@ public sealed class GatewayRouteCoverageTests
     }
 
     private static List<string> PathsOf(IServiceProvider services) =>
-        services.GetServices<EndpointDataSource>()
+        [.. services.GetServices<EndpointDataSource>()
             .SelectMany(source => source.Endpoints)
             .OfType<RouteEndpoint>()
             .Select(endpoint => "/" + (endpoint.RoutePattern.RawText ?? string.Empty).Trim('/'))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
+            .Distinct(StringComparer.Ordinal)];
 }

@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Cgt;
 using Cadence.Apps.Execution.Domain.Cgt.Errors;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
@@ -32,9 +34,11 @@ public static class CgtEndpoints
                 return denied;
             }
 
+            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+
             try
             {
-                var result = await service.InitializeApheresisAsync(request, ct);
+                var result = await service.InitializeApheresisAsync(request, callerUserId, ct);
                 return Results.Ok(result);
             }
             catch (InvalidDinException ex)
@@ -55,9 +59,11 @@ public static class CgtEndpoints
                 return denied;
             }
 
+            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+
             try
             {
-                var result = await service.RecordMilestoneAsync(request, ct);
+                var result = await service.RecordMilestoneAsync(request, callerUserId, ct);
                 return Results.Ok(result);
             }
             catch (ChainOfCustodyNotFoundException ex)
@@ -78,9 +84,11 @@ public static class CgtEndpoints
                 return denied;
             }
 
+            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+
             try
             {
-                var result = await service.BindManufacturingBatchAsync(request, ct);
+                var result = await service.BindManufacturingBatchAsync(request, callerUserId, ct);
                 return Results.Ok(result);
             }
             catch (ChainOfCustodyNotFoundException ex)
@@ -106,21 +114,37 @@ public static class CgtEndpoints
                 return cocDenied;
             }
 
+            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+            if (string.IsNullOrWhiteSpace(callerUserId))
+            {
+                return ElectronicSignatureEndpointFilter.ReauthenticationRequired();
+            }
+
             try
             {
-                var result = await service.VerifyBedsideAsync(request, ct);
+                var result = await service.VerifyBedsideAsync(request, callerUserId, ct);
                 return Results.Ok(result);
             }
             catch (DuplicateVerifierException ex)
             {
                 return Results.UnprocessableEntity(new { detail = ex.Message });
             }
+            catch (CallerIdentityMismatchException ex)
+            {
+                return SignerMismatch(ex.Message);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return ElectronicSignatureEndpointFilter.ReauthenticationRequired();
+            }
             catch (BarcodeVerificationException ex)
             {
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden);
 
         group.MapPost("/infuse", async (
             CgtInfusionExecuteRequest request,
@@ -138,10 +162,20 @@ public static class CgtEndpoints
                 return cocDenied;
             }
 
+            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+            if (string.IsNullOrWhiteSpace(callerUserId))
+            {
+                return SignerMismatch("Authenticated caller identity is required.");
+            }
+
             try
             {
-                var result = await service.ExecuteInfusionAsync(request, ct);
+                var result = await service.ExecuteInfusionAsync(request, callerUserId, ct);
                 return Results.Ok(result);
+            }
+            catch (CallerIdentityMismatchException ex)
+            {
+                return SignerMismatch(ex.Message);
             }
             catch (ChainOfCustodyNotFoundException ex)
             {
@@ -152,7 +186,8 @@ public static class CgtEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
+        .ProducesProblem(StatusCodes.Status403Forbidden);
 
         group.MapPost("/returns", async (
             CgtVialReturnReconciliationRequest request,
@@ -170,7 +205,9 @@ public static class CgtEndpoints
                 return cocDenied;
             }
 
-            var result = await service.LogVialReturnAsync(request, ct);
+            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+
+            var result = await service.LogVialReturnAsync(request, callerUserId, ct);
             return Results.Ok(result);
         })
         .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
@@ -192,17 +229,33 @@ public static class CgtEndpoints
                 return cocDenied;
             }
 
+            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+            if (string.IsNullOrWhiteSpace(callerUserId))
+            {
+                return ElectronicSignatureEndpointFilter.ReauthenticationRequired();
+            }
+
             try
             {
-                var result = await service.GenerateDestructionCertificateAsync(request, ct);
+                var result = await service.GenerateDestructionCertificateAsync(request, callerUserId, ct);
                 return Results.Ok(result);
             }
             catch (DuplicateWitnessException ex)
             {
                 return Results.UnprocessableEntity(new { detail = ex.Message });
             }
+            catch (CallerIdentityMismatchException ex)
+            {
+                return SignerMismatch(ex.Message);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return ElectronicSignatureEndpointFilter.ReauthenticationRequired();
+            }
         })
-        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden);
 
         group.MapPost("/verify-barcode", (
             CgtBarcodeVerifyRequest request,
@@ -315,4 +368,11 @@ public static class CgtEndpoints
 
     private static IResult? GuardCocScope(HttpContext httpContext, (string StudyId, string SiteId)? scope) =>
         scope is { } s ? ExecutionScopeGuard.RequireStudyAndSite(httpContext, s.StudyId, s.SiteId) : null;
+
+    private static IResult SignerMismatch(string detail) =>
+        Results.Problem(
+            detail: detail,
+            statusCode: StatusCodes.Status403Forbidden,
+            title: "Forbidden",
+            extensions: new Dictionary<string, object?> { ["error"] = "SIGNER_MISMATCH" });
 }

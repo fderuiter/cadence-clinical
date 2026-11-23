@@ -522,7 +522,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
             ChangeReason = "All startup artifacts verified complete"
         });
 
-        var webhook = new EtmfCompletenessWebhookPayload("STUDY-ACT-1", "SITE-ACT-1", "SITE_ACTIVATION", true, Array.Empty<string>());
+        var webhook = new EtmfCompletenessWebhookPayload("STUDY-ACT-1", "SITE-ACT-1", "SITE_ACTIVATION", true, []);
         (await etmf.PostAsJsonAsync("/api/v1/execution/webhooks/etmf", webhook,
             ExecutionProgramTestFactory.JsonOptions, TestContext.Current.CancellationToken)).StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -564,7 +564,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            builder.UseTestGatewaySecret().UseTestDemographicsKey().UseTestRandomizationKey();
+            builder.UseTestGatewaySecret().UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey();
             builder.UseTestPostgresConnectionString();
 
             builder.ConfigureServices(services =>

@@ -657,6 +657,7 @@ public sealed class StandaloneScopePostgresFixture : IAsyncLifetime
                 .UseTestStorage()
                 .UseTestDemographicsKey()
                 .UseTestRandomizationKey()
+                .UseTestCgtBarcodeKey()
                 .UseTestFieldProtectionKeys()
                 .UseTestSceSigningKey()
                 .UseTestImagingDeidentificationKeys()

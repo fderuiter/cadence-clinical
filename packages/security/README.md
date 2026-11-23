@@ -25,8 +25,9 @@ signatures and audit digests shared by every Cadence service.
 
 - **Authentication:** `GatewayAuthenticationHandler` (the `CadenceGateway` scheme: verifies the
   gateway's HMAC-signed identity headers, fail-closed), `GatewayIdentity`, `GatewayHeaders`,
-  `CadenceClaimTypes`, `HmacSigner`, `SigTokenVerifier` (`VerifyAndConsumeAsync`, acceptance window
-  `iat - 5s <= now < exp + 5s`) with `ISigTokenUseStore` for single use: `ReplayCache` is the process-local default,
+  `CadenceClaimTypes`, `HmacSigner`, `SigTokenVerifier` (`VerifyAndConsumeAsync`, including atomic dual-signer
+  verification before consuming either `jti` via `ISigTokenUseStore.TryRecordFirstUseBatchAsync`, acceptance window
+  `iat - 5s <= now < exp + 5s`, [ADR-2823](../../docs/adr/2026-11-23-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md)) with `ISigTokenUseStore` for single use: `ReplayCache` is the process-local default,
   and every host with an e-signature route replaces it with an `IDurableSigTokenUseStore` (`AddCadenceDurableSigTokenStore`
   in [packages/database](../database/README.md)). Outside `Development`, `SigTokenUseStoreStartupCheck` refuses to start a
   host that maps a `RequireElectronicSignature` route without one (#5434,

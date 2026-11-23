@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,33 +29,61 @@ public sealed class PostgresSigTokenUseStore<TContext>(IServiceScopeFactory scop
     where TContext : DbContext
 {
     /// <inheritdoc />
-    public async Task<bool> TryRecordFirstUseAsync(string tokenId, DateTimeOffset retainUntil, CancellationToken cancellationToken)
+    public Task<bool> TryRecordFirstUseAsync(string tokenId, DateTimeOffset retainUntil, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tokenId);
-        if (tokenId.Length > ConsumedSignatureTokenConfiguration.MaxTokenIdLength)
+        return TryRecordFirstUseBatchAsync([(tokenId, retainUntil)], cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> TryRecordFirstUseBatchAsync(
+        IReadOnlyList<(string TokenId, DateTimeOffset RetainUntil)> tokens,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(tokens);
+        if (tokens.Count == 0)
         {
             return false;
         }
 
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (tokenId, _) in tokens)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(tokenId);
+            if (tokenId.Length > ConsumedSignatureTokenConfiguration.MaxTokenIdLength || !seen.Add(tokenId))
+            {
+                return false;
+            }
+        }
+
         await using var scope = scopes.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<TContext>();
-        var tokens = db.Set<ConsumedSignatureToken>();
+        var consumed = db.Set<ConsumedSignatureToken>();
         var now = clock.UtcNow;
 
         // Rows past their window can never match an acceptable token again.
-        await tokens.Where(t => t.RetainUntil < now).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        await consumed.Where(t => t.RetainUntil < now).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
 
-        tokens.Add(new ConsumedSignatureToken { TokenId = tokenId, ConsumedAt = now, RetainUntil = retainUntil });
+        foreach (var (tokenId, retainUntil) in tokens)
+        {
+            consumed.Add(new ConsumedSignatureToken { TokenId = tokenId, ConsumedAt = now, RetainUntil = retainUntil });
+        }
+
         try
         {
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return true;
         }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
             return false;
         }
     }
+
+    private static bool IsUniqueViolation(DbUpdateException ex) =>
+        ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation }
+        || (ex.InnerException?.GetType().Name == "SqliteException"
+            && ex.InnerException.Message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase));
 }
 
 /// <summary>Registration of the durable e-signature single-use store.</summary>

@@ -26,6 +26,37 @@ public interface ISigTokenUseStore
     /// concurrent attempts. Implementations must make check-and-record one atomic step.
     /// </summary>
     Task<bool> TryRecordFirstUseAsync(string tokenId, DateTimeOffset retainUntil, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Atomically records first use for every <c>(tokenId, retainUntil)</c> entry in <paramref name="tokens"/>.
+    /// Returns true only when every token is distinct and unused; if any token was already consumed, none of the
+    /// entries are recorded so a failed secondary check never burns a fresh primary token.
+    /// </summary>
+    async Task<bool> TryRecordFirstUseBatchAsync(
+        IReadOnlyList<(string TokenId, DateTimeOffset RetainUntil)> tokens,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(tokens);
+        if (tokens.Count == 0)
+        {
+            return false;
+        }
+
+        if (tokens.Select(t => t.TokenId).Distinct(StringComparer.Ordinal).Count() != tokens.Count)
+        {
+            return false;
+        }
+
+        foreach (var (tokenId, retainUntil) in tokens)
+        {
+            if (!await TryRecordFirstUseAsync(tokenId, retainUntil, cancellationToken).ConfigureAwait(false))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
 
 /// <summary>
@@ -43,7 +74,7 @@ public interface IDurableSigTokenUseStore : ISigTokenUseStore;
 public class ReplayCache(IClock? clock = null) : ISigTokenUseStore
 {
     private readonly Dictionary<string, DateTimeOffset> _used = new(StringComparer.Ordinal);
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly IClock _clock = clock ?? SystemClock.Instance;
 
     /// <inheritdoc />
@@ -51,6 +82,48 @@ public class ReplayCache(IClock? clock = null) : ISigTokenUseStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tokenId);
         return Task.FromResult(TryRecordFirstUse(tokenId, retainUntil));
+    }
+
+    /// <inheritdoc />
+    public Task<bool> TryRecordFirstUseBatchAsync(
+        IReadOnlyList<(string TokenId, DateTimeOffset RetainUntil)> tokens,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(tokens);
+        if (tokens.Count == 0)
+        {
+            return Task.FromResult(false);
+        }
+
+        foreach (var (tokenId, _) in tokens)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(tokenId);
+        }
+
+        var now = _clock.UtcNow;
+        lock (_lock)
+        {
+            foreach (string expired in _used.Where(kvp => kvp.Value <= now).Select(kvp => kvp.Key).ToList())
+            {
+                _used.Remove(expired);
+            }
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var (tokenId, _) in tokens)
+            {
+                if (!seen.Add(tokenId) || _used.ContainsKey(tokenId))
+                {
+                    return Task.FromResult(false);
+                }
+            }
+
+            foreach (var (tokenId, retainUntil) in tokens)
+            {
+                _used.Add(tokenId, retainUntil);
+            }
+
+            return Task.FromResult(true);
+        }
     }
 
     /// <summary>The synchronous form of <see cref="TryRecordFirstUseAsync"/>.</summary>

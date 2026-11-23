@@ -284,6 +284,8 @@ services:
       DemographicsEncryption__KeyBase64: Y2FkZW5jZS1sb2NhbC1kZXYtZGVtb2dyYXBoaWNzISE= # pragma: allowlist secret
       # Local-only randomisation key (#5607), different from the demographics key.
       RANDOMIZATION_ALLOCATION_KEY: Y2FkZW5jZS1sb2NhbC1kZXYtcmFuZG9taXphdGlvbiE= # pragma: allowlist secret
+      # Local-only CGT barcode HMAC-SHA256 key, different from the demographics and randomisation keys.
+      CGT_BARCODE_HMAC_KEY: Y2FkZW5jZS1sb2NhbC1kZXYtY2d0LWJhcmNvZGUxMjM= # pragma: allowlist secret
       KERNEL_SERVICE_URL: http://kernel:8080
     depends_on: *db-depends
 

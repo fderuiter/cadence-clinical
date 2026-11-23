@@ -50,7 +50,7 @@ internal static class ServiceHosts
         };
 
     /// <summary>The names of <see cref="All"/>, for <c>[MemberData]</c>.</summary>
-    public static TheoryData<string> Names => new(All.Keys);
+    public static TheoryData<string> Names => [.. All.Keys];
 
     private static BootedHost Boot<TProgram>(Action<IServiceCollection>? configure)
         where TProgram : class
@@ -60,7 +60,7 @@ internal static class ServiceHosts
             host.UseTestGatewaySecret()
                 .UseTestPostgresConnectionString()
                 .UseTestStorage()
-                .UseTestDemographicsKey().UseTestRandomizationKey()
+                .UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey()
                 .UseTestFieldProtectionKeys()
                 .UseTestSceSigningKey()
                 .UseTestImagingDeidentificationKeys();

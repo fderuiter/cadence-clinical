@@ -64,6 +64,57 @@ public class SigTokenVerifier(ISigTokenUseStore useStore, IClock? clock = null)
         ArgumentNullException.ThrowIfNull(binding);
         ArgumentNullException.ThrowIfNull(secret);
 
+        var jwtToken = ValidateBound(sigToken, expectedUserId, binding, secret);
+
+        var retainUntil = new DateTimeOffset(jwtToken.ValidTo, TimeSpan.Zero) + ClockSkew;
+        if (!await _useStore.TryRecordFirstUseAsync(jwtToken.Id, retainUntil, cancellationToken).ConfigureAwait(false))
+        {
+            throw new UnauthorizedAccessException(ReauthenticationRequired);
+        }
+
+        return jwtToken;
+    }
+
+    /// <summary>
+    /// Verifies two distinct v3 step-up tokens (primary and secondary signers / witnesses) bound to
+    /// <paramref name="binding"/> before consuming either <c>jti</c>, then atomically consumes both. A failure on the
+    /// secondary token never burns the primary token. Throws <see cref="UnauthorizedAccessException"/>
+    /// (<see cref="ReauthenticationRequired"/>) on any failure.
+    /// </summary>
+    public async Task<(JwtSecurityToken Primary, JwtSecurityToken Secondary)> VerifyAndConsumeAsync(
+        string? primarySigToken,
+        string expectedPrimaryUserId,
+        string? secondarySigToken,
+        string expectedSecondaryUserId,
+        SigTokenBinding binding,
+        byte[] secret,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(binding);
+        ArgumentNullException.ThrowIfNull(secret);
+
+        var primaryJwt = ValidateBound(primarySigToken, expectedPrimaryUserId, binding, secret);
+        var secondaryJwt = ValidateBound(secondarySigToken, expectedSecondaryUserId, binding, secret);
+
+        if (string.Equals(primaryJwt.Id, secondaryJwt.Id, StringComparison.Ordinal))
+        {
+            throw new UnauthorizedAccessException(ReauthenticationRequired);
+        }
+
+        var primaryRetainUntil = new DateTimeOffset(primaryJwt.ValidTo, TimeSpan.Zero) + ClockSkew;
+        var secondaryRetainUntil = new DateTimeOffset(secondaryJwt.ValidTo, TimeSpan.Zero) + ClockSkew;
+        if (!await _useStore.TryRecordFirstUseBatchAsync(
+                [(primaryJwt.Id, primaryRetainUntil), (secondaryJwt.Id, secondaryRetainUntil)],
+                cancellationToken).ConfigureAwait(false))
+        {
+            throw new UnauthorizedAccessException(ReauthenticationRequired);
+        }
+
+        return (primaryJwt, secondaryJwt);
+    }
+
+    private JwtSecurityToken ValidateBound(string? sigToken, string expectedUserId, SigTokenBinding binding, byte[] secret)
+    {
         var jwtToken = Validate(sigToken, expectedUserId, secret);
 
         string? Claim(string type) => jwtToken.Claims.FirstOrDefault(c => c.Type == type)?.Value;
@@ -75,12 +126,6 @@ public class SigTokenVerifier(ISigTokenUseStore useStore, IClock? clock = null)
             && (binding.BatchId is null || string.Equals(Claim(SigTokenClaims.BatchId), binding.BatchId, StringComparison.Ordinal))
             && SigTokenIssuer.MayObtainSignatureToken(jwtToken.Claims.Where(c => c.Type == SigTokenClaims.Roles).Select(c => c.Value));
         if (!bound)
-        {
-            throw new UnauthorizedAccessException(ReauthenticationRequired);
-        }
-
-        var retainUntil = new DateTimeOffset(jwtToken.ValidTo, TimeSpan.Zero) + ClockSkew;
-        if (!await _useStore.TryRecordFirstUseAsync(jwtToken.Id, retainUntil, cancellationToken).ConfigureAwait(false))
         {
             throw new UnauthorizedAccessException(ReauthenticationRequired);
         }

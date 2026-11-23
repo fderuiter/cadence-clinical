@@ -10,22 +10,43 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Domain.Cgt;
 using Cadence.Apps.Execution.Domain.Cgt.Errors;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain.Supply;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
+using Cadence.Security.FieldProtection;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Execution.Application.Cgt;
 
 public sealed class CgtApplicationService(
     ExecutionDbContext dbContext,
-    IClock clock) : ICgtApplicationService
+    IClock clock,
+    IOptions<CgtBarcodeProtectionOptions> barcodeProtection,
+    SigTokenVerifier sigTokenVerifier,
+    IOptionsMonitor<GatewayAuthenticationOptions> gatewayAuthentication) : ICgtApplicationService
 {
+    public const string BedsideVerifyAction = "/api/v1/execution/rtsm/cgt/bedside-verify";
+    public const string BedsideVerifySemanticAction = "execution.cgt.bedside_verify";
+    public const string DestructionCertificateAction = "/api/v1/execution/rtsm/cgt/destruction-certificate";
+    public const string DestructionCertificateSemanticAction = "execution.cgt.destruction_certify";
+
     private readonly ExecutionDbContext _dbContext = dbContext;
     private readonly IClock _clock = clock;
+    private readonly byte[] _barcodeHmacKey = FieldProtectionKey.Decode(
+        barcodeProtection.Value.KeyBase64,
+        CgtBarcodeProtectionOptions.ConfigurationKey);
+    private readonly SigTokenVerifier _sigTokenVerifier = sigTokenVerifier;
+    private readonly IOptionsMonitor<GatewayAuthenticationOptions> _gatewayAuthentication = gatewayAuthentication;
 
-    public async Task<CgtChainOfCustodyResponse> InitializeApheresisAsync(CgtApheresisCreateRequest request, CancellationToken cancellationToken = default)
+    public async Task<CgtChainOfCustodyResponse> InitializeApheresisAsync(
+        CgtApheresisCreateRequest request,
+        string? callerUserId = null,
+        CancellationToken cancellationToken = default)
     {
+        string actorId = ResolveActorId(callerUserId, request.CustodianId);
         string din = request.Din ?? string.Empty;
         if (string.IsNullOrWhiteSpace(din))
         {
@@ -46,7 +67,7 @@ public sealed class CgtApplicationService(
             din: din,
             collectionSiteId: request.CollectionSiteId,
             harvestedAt: request.CollectionTimestamp ?? _clock.UtcNow,
-            createdBy: request.CustodianId ?? "system",
+            createdBy: actorId,
             reasonForChange: request.Notes ?? "Apheresis harvest initialized");
 
         _dbContext.CGTChainsOfCustody.Add(coc);
@@ -60,11 +81,11 @@ public sealed class CgtApplicationService(
             timestamp: request.CollectionTimestamp ?? _clock.UtcNow,
             locationName: "Collection Facility",
             facilityId: request.CollectionSiteId,
-            custodianId: request.CustodianId,
+            custodianId: request.CustodianId ?? actorId,
             custodianName: request.CustodianName,
             custodianRole: request.CustodianRole,
             notes: request.Notes,
-            createdBy: request.CustodianId ?? "system",
+            createdBy: actorId,
             reasonForChange: "Apheresis harvest milestone logged");
 
         _dbContext.CGTMilestoneEvents.Add(milestone);
@@ -73,8 +94,12 @@ public sealed class CgtApplicationService(
         return MapCocToResponse(coc);
     }
 
-    public async Task<CgtMilestoneResponse> RecordMilestoneAsync(CgtMilestoneCreateRequest request, CancellationToken cancellationToken = default)
+    public async Task<CgtMilestoneResponse> RecordMilestoneAsync(
+        CgtMilestoneCreateRequest request,
+        string? callerUserId = null,
+        CancellationToken cancellationToken = default)
     {
+        string actorId = ResolveActorId(callerUserId, request.CustodianId);
         var coc = await _dbContext.CGTChainsOfCustody
             .FirstOrDefaultAsync(x => x.Id == request.ChainOfCustodyId, cancellationToken)
             ?? throw new ChainOfCustodyNotFoundException($"Chain of Custody record '{request.ChainOfCustodyId}' not found.");
@@ -99,7 +124,7 @@ public sealed class CgtApplicationService(
             milestoneType: request.MilestoneType,
             tempCelsius: request.TemperatureCelsius,
             isExcursion: isExcursion,
-            updatedBy: request.CustodianId ?? "system",
+            updatedBy: actorId,
             reasonForChange: request.Notes ?? $"Milestone {request.MilestoneType} logged");
 
         var milestone = new CgtMilestoneEvent(
@@ -115,7 +140,7 @@ public sealed class CgtApplicationService(
             longitude: request.Longitude,
             temperatureCelsius: request.TemperatureCelsius,
             temperatureStatus: tempStatus,
-            custodianId: request.CustodianId,
+            custodianId: request.CustodianId ?? actorId,
             custodianName: request.CustodianName,
             custodianRole: request.CustodianRole,
             carrier: request.Carrier,
@@ -124,7 +149,7 @@ public sealed class CgtApplicationService(
             sealId: request.SealId,
             dryShipperId: request.DryShipperId,
             notes: request.Notes,
-            createdBy: request.CustodianId ?? "system",
+            createdBy: actorId,
             reasonForChange: $"Milestone {request.MilestoneType} logged");
 
         _dbContext.CGTMilestoneEvents.Add(milestone);
@@ -133,8 +158,12 @@ public sealed class CgtApplicationService(
         return MapMilestoneToResponse(milestone);
     }
 
-    public async Task<CgtChainOfCustodyResponse> BindManufacturingBatchAsync(CgtManufacturingBindRequest request, CancellationToken cancellationToken = default)
+    public async Task<CgtChainOfCustodyResponse> BindManufacturingBatchAsync(
+        CgtManufacturingBindRequest request,
+        string? callerUserId = null,
+        CancellationToken cancellationToken = default)
     {
+        string actorId = ResolveActorId(callerUserId, request.QualifiedPersonSignoffId);
         var coc = await _dbContext.CGTChainsOfCustody
             .FirstOrDefaultAsync(x => x.Id == request.ChainOfCustodyId, cancellationToken)
             ?? throw new ChainOfCustodyNotFoundException($"Chain of Custody record '{request.ChainOfCustodyId}' not found.");
@@ -142,7 +171,7 @@ public sealed class CgtApplicationService(
         coc.BindManufacturingBatch(
             batchId: request.BatchId,
             manufacturingFacilityId: request.ManufacturingFacilityId,
-            updatedBy: request.QualifiedPersonSignoffId ?? "system",
+            updatedBy: actorId,
             reasonForChange: request.Notes ?? $"Manufacturing batch '{request.BatchId}' bound");
 
         var milestone = new CgtMilestoneEvent(
@@ -153,9 +182,9 @@ public sealed class CgtApplicationService(
             milestoneType: "BATCH_SYNTHESIS_BOUND",
             timestamp: request.SynthesisEnd ?? _clock.UtcNow,
             facilityId: request.ManufacturingFacilityId,
-            custodianId: request.QualifiedPersonSignoffId,
+            custodianId: request.QualifiedPersonSignoffId ?? actorId,
             notes: request.Notes,
-            createdBy: request.QualifiedPersonSignoffId ?? "system",
+            createdBy: actorId,
             reasonForChange: $"Batch '{request.BatchId}' bound");
 
         _dbContext.CGTMilestoneEvents.Add(milestone);
@@ -164,17 +193,39 @@ public sealed class CgtApplicationService(
         return MapCocToResponse(coc);
     }
 
-    public async Task<CgtBedsideVerificationResponse> VerifyBedsideAsync(CgtBedsideVerificationRequest request, CancellationToken cancellationToken = default)
+    public async Task<CgtBedsideVerificationResponse> VerifyBedsideAsync(
+        CgtBedsideVerificationRequest request,
+        string callerUserId,
+        CancellationToken cancellationToken = default)
     {
-        if (string.Equals(request.PrimaryVerifierId?.Trim(), request.SecondaryVerifierId?.Trim(), StringComparison.OrdinalIgnoreCase))
+        string primaryVerifierId = request.PrimaryVerifierId?.Trim() ?? string.Empty;
+        string secondaryVerifierId = request.SecondaryVerifierId?.Trim() ?? string.Empty;
+
+        if (string.Equals(primaryVerifierId, secondaryVerifierId, StringComparison.OrdinalIgnoreCase))
         {
             throw new DuplicateVerifierException(
                 $"GxP Compliance Violation: Bedside verification requires dual signatures from two distinct staff members. " +
                 $"Primary verifier ({request.PrimaryVerifierId}) and secondary verifier ({request.SecondaryVerifierId}) cannot be the same user.");
         }
 
+        string verifiedCallerId = RequireMatchingCaller(callerUserId, primaryVerifierId, "primary_verifier_id");
+
+        var binding = new SigTokenBinding(
+            BedsideVerifyAction,
+            BedsideVerifySemanticAction,
+            request.TargetRecordBindingId());
+        await _sigTokenVerifier.VerifyAndConsumeAsync(
+            request.PrimarySignatureToken,
+            verifiedCallerId,
+            request.SecondarySignatureToken,
+            secondaryVerifierId,
+            binding,
+            GetGatewaySecretBytes(),
+            cancellationToken).ConfigureAwait(false);
+
         var (isValid, failureReason, _) = CgtBarcodeEngine.VerifyCryptoBarcode(
             barcodePayload: request.BagBarcodePayload,
+            secretKey: _barcodeHmacKey,
             expectedSubjectId: request.SubjectId,
             expectedDin: request.Din,
             expectedBatchId: request.BatchId);
@@ -201,11 +252,11 @@ public sealed class CgtApplicationService(
             din: request.Din ?? "",
             batchId: request.BatchId,
             patientWristbandId: request.PatientWristbandId ?? "",
-            primaryVerifierId: request.PrimaryVerifierId ?? "",
+            primaryVerifierId: verifiedCallerId,
             primaryVerifierName: request.PrimaryVerifierName,
             primaryVerifierRole: request.PrimaryVerifierRole,
             primarySignatureToken: request.PrimarySignatureToken ?? "",
-            secondaryVerifierId: request.SecondaryVerifierId ?? "",
+            secondaryVerifierId: secondaryVerifierId,
             secondaryVerifierName: request.SecondaryVerifierName,
             secondaryVerifierRole: request.SecondaryVerifierRole,
             secondarySignatureToken: request.SecondarySignatureToken ?? "",
@@ -213,7 +264,7 @@ public sealed class CgtApplicationService(
             verifiedAt: now,
             isMatch: true,
             notes: request.Notes,
-            createdBy: request.PrimaryVerifierId ?? "system",
+            createdBy: verifiedCallerId,
             reasonForChange: request.Notes ?? "Bedside dual verification completed");
 
         _dbContext.CGTBedsideVerifications.Add(verification);
@@ -221,10 +272,7 @@ public sealed class CgtApplicationService(
         var coc = await _dbContext.CGTChainsOfCustody
             .FirstOrDefaultAsync(x => x.StudyId == request.StudyId && x.SubjectId == request.SubjectId, cancellationToken);
 
-        if (coc != null)
-        {
-            coc.SetBedsideVerified(unlockToken, request.PrimaryVerifierId ?? "system", "Bedside verification completed");
-        }
+        coc?.SetBedsideVerified(unlockToken, verifiedCallerId, "Bedside verification completed");
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -236,16 +284,24 @@ public sealed class CgtApplicationService(
             Din: request.Din ?? "",
             BatchId: request.BatchId,
             PatientWristbandId: request.PatientWristbandId ?? "",
-            PrimaryVerifierId: request.PrimaryVerifierId ?? "",
-            SecondaryVerifierId: request.SecondaryVerifierId ?? "",
+            PrimaryVerifierId: verifiedCallerId,
+            SecondaryVerifierId: secondaryVerifierId,
             UnlockToken: unlockToken,
             VerifiedAt: now,
             IsMatch: true,
             Status: "BEDSIDE_VERIFIED");
     }
 
-    public async Task<CgtChainOfCustodyResponse> ExecuteInfusionAsync(CgtInfusionExecuteRequest request, CancellationToken cancellationToken = default)
+    public async Task<CgtChainOfCustodyResponse> ExecuteInfusionAsync(
+        CgtInfusionExecuteRequest request,
+        string callerUserId,
+        CancellationToken cancellationToken = default)
     {
+        string verifiedCallerId = RequireMatchingCaller(
+            callerUserId,
+            request.PrimaryVerifierId?.Trim() ?? string.Empty,
+            "primary_verifier_id");
+
         var coc = await _dbContext.CGTChainsOfCustody
             .FirstOrDefaultAsync(x => x.Id == request.ChainOfCustodyId, cancellationToken)
             ?? throw new ChainOfCustodyNotFoundException($"Chain of Custody record '{request.ChainOfCustodyId}' not found.");
@@ -256,7 +312,7 @@ public sealed class CgtApplicationService(
         }
 
         DateTimeOffset infusedAt = request.InfusionEnd ?? _clock.UtcNow;
-        coc.SetInfused(infusedAt, request.PrimaryVerifierId, request.Notes ?? "Drug infusion executed");
+        coc.SetInfused(infusedAt, verifiedCallerId, request.Notes ?? "Drug infusion executed");
 
         var milestone = new CgtMilestoneEvent(
             id: Guid.NewGuid(),
@@ -265,9 +321,9 @@ public sealed class CgtApplicationService(
             stage: "INFUSION",
             milestoneType: "INFUSION_COMPLETED",
             timestamp: infusedAt,
-            custodianId: request.PrimaryVerifierId,
+            custodianId: verifiedCallerId,
             notes: request.Notes,
-            createdBy: request.PrimaryVerifierId,
+            createdBy: verifiedCallerId,
             reasonForChange: "Infusion completed");
 
         _dbContext.CGTMilestoneEvents.Add(milestone);
@@ -276,8 +332,12 @@ public sealed class CgtApplicationService(
         return MapCocToResponse(coc);
     }
 
-    public async Task<CgtVialReturnReconciliationResponse> LogVialReturnAsync(CgtVialReturnReconciliationRequest request, CancellationToken cancellationToken = default)
+    public async Task<CgtVialReturnReconciliationResponse> LogVialReturnAsync(
+        CgtVialReturnReconciliationRequest request,
+        string? callerUserId = null,
+        CancellationToken cancellationToken = default)
     {
+        string actorId = ResolveActorId(callerUserId, request.LoggedBy);
         int totalVials = request.IntactVials + request.UsedVials;
         double adherencePct = totalVials > 0 ? Math.Round((request.UsedVials / (double)totalVials) * 100.0, 2) : 100.0;
         DateTimeOffset now = _clock.UtcNow;
@@ -295,10 +355,10 @@ public sealed class CgtApplicationService(
             residualVolumeMl: request.ResidualVolumeMl,
             adherencePercentage: adherencePct,
             disposition: "QUARANTINED_FOR_DESTRUCTION",
-            loggedBy: request.LoggedBy ?? "system",
+            loggedBy: actorId,
             loggedAt: now,
             notes: request.Notes,
-            createdBy: request.LoggedBy ?? "system",
+            createdBy: actorId,
             reasonForChange: request.Notes ?? $"Vial return reconciliation logged for kit {request.KitNumber}");
 
         _dbContext.CGTVialReturnReconciliations.Add(recon);
@@ -323,14 +383,35 @@ public sealed class CgtApplicationService(
             Notes: recon.Notes);
     }
 
-    public async Task<CgtDestructionCertificateResponse> GenerateDestructionCertificateAsync(CgtDestructionCertificateCreateRequest request, CancellationToken cancellationToken = default)
+    public async Task<CgtDestructionCertificateResponse> GenerateDestructionCertificateAsync(
+        CgtDestructionCertificateCreateRequest request,
+        string callerUserId,
+        CancellationToken cancellationToken = default)
     {
-        if (string.Equals(request.Witness1Id?.Trim(), request.Witness2Id?.Trim(), StringComparison.OrdinalIgnoreCase))
+        string witness1Id = request.Witness1Id?.Trim() ?? string.Empty;
+        string witness2Id = request.Witness2Id?.Trim() ?? string.Empty;
+
+        if (string.Equals(witness1Id, witness2Id, StringComparison.OrdinalIgnoreCase))
         {
             throw new DuplicateWitnessException(
                 $"GxP Compliance Violation: Certificate of Destruction requires dual witness signatures from two distinct staff members. " +
                 $"Witness 1 ({request.Witness1Id}) and Witness 2 ({request.Witness2Id}) cannot be the same user.");
         }
+
+        string verifiedCallerId = RequireMatchingCaller(callerUserId, witness1Id, "witness_1_id");
+
+        var binding = new SigTokenBinding(
+            DestructionCertificateAction,
+            DestructionCertificateSemanticAction,
+            request.TargetRecordBindingId());
+        await _sigTokenVerifier.VerifyAndConsumeAsync(
+            request.Witness1SignatureToken,
+            verifiedCallerId,
+            request.Witness2SignatureToken,
+            witness2Id,
+            binding,
+            GetGatewaySecretBytes(),
+            cancellationToken).ConfigureAwait(false);
 
         DateTimeOffset now = _clock.UtcNow;
         string certNum = $"COD-{now.Year}-{Guid.NewGuid():N}"[..20].ToUpperInvariant();
@@ -344,8 +425,8 @@ public sealed class CgtApplicationService(
             kit_numbers = request.KitNumbers,
             vial_identifiers = request.VialIdentifiers,
             quantity_destroyed = request.QuantityDestroyed,
-            witness_1 = request.Witness1Id,
-            witness_2 = request.Witness2Id,
+            witness_1 = verifiedCallerId,
+            witness_2 = witness2Id,
             timestamp = now.ToString("o")
         };
 
@@ -369,18 +450,18 @@ public sealed class CgtApplicationService(
             destructionMethod: request.DestructionMethod ?? "",
             destructionFacility: request.DestructionFacility ?? "",
             destructionTimestamp: now,
-            witness1Id: request.Witness1Id ?? "",
+            witness1Id: verifiedCallerId,
             witness1Name: request.Witness1Name,
             witness1Role: request.Witness1Role,
             witness1SignatureToken: request.Witness1SignatureToken ?? "",
-            witness2Id: request.Witness2Id ?? "",
+            witness2Id: witness2Id,
             witness2Name: request.Witness2Name,
             witness2Role: request.Witness2Role,
             witness2SignatureToken: request.Witness2SignatureToken ?? "",
             cryptographicSeal: sealHex,
             status: "COMPLETED",
             reconciliationNotes: request.Notes,
-            createdBy: request.Witness1Id ?? "system",
+            createdBy: verifiedCallerId,
             reasonForChange: request.DestructionReason ?? "Certificate of Destruction");
 
         _dbContext.CGTDestructionCertificates.Add(cert);
@@ -389,10 +470,7 @@ public sealed class CgtApplicationService(
         {
             var coc = await _dbContext.CGTChainsOfCustody
                 .FirstOrDefaultAsync(x => x.Id == request.CocId.Value, cancellationToken);
-            if (coc != null)
-            {
-                coc.SetDestroyed(now, request.Witness1Id ?? "system", request.DestructionReason ?? "Certificate of Destruction");
-            }
+            coc?.SetDestroyed(now, verifiedCallerId, request.DestructionReason ?? "Certificate of Destruction");
         }
 
         if (request.VialIdentifiers != null && request.VialIdentifiers.Count > 0)
@@ -403,7 +481,7 @@ public sealed class CgtApplicationService(
 
             foreach (var recon in recons)
             {
-                recon.MarkDestroyed(cert.Id.ToString(), request.Witness1Id ?? "system", "Destroyed under certificate " + certNum);
+                recon.MarkDestroyed(cert.Id.ToString(), verifiedCallerId, "Destroyed under certificate " + certNum);
             }
         }
 
@@ -438,6 +516,7 @@ public sealed class CgtApplicationService(
     {
         var (isValid, failureReason, decodedData) = CgtBarcodeEngine.VerifyCryptoBarcode(
             barcodePayload: request.BarcodePayload,
+            secretKey: _barcodeHmacKey,
             expectedSubjectId: request.ExpectedSubjectId,
             expectedDin: request.ExpectedDin,
             expectedBatchId: request.ExpectedBatchId);
@@ -475,7 +554,7 @@ public sealed class CgtApplicationService(
                 .OrderBy(x => x.Timestamp)
                 .ToListAsync(cancellationToken);
 
-            milestones = msEntities.Select(MapMilestoneToResponse).ToList();
+            milestones = [.. msEntities.Select(MapMilestoneToResponse)];
         }
 
         var verification = await _dbContext.CGTBedsideVerifications
@@ -501,7 +580,7 @@ public sealed class CgtApplicationService(
             .OrderByDescending(x => x.DestructionTimestamp)
             .ToListAsync(cancellationToken);
 
-        return certs.Select(MapCertificateToResponse).ToList();
+        return [.. certs.Select(MapCertificateToResponse)];
     }
 
     public async Task<List<CgtVialReturnReconciliationResponse>> ListVialReconciliationsAsync(string studyId, CancellationToken cancellationToken = default)
@@ -512,7 +591,7 @@ public sealed class CgtApplicationService(
             .OrderByDescending(x => x.LoggedAt)
             .ToListAsync(cancellationToken);
 
-        return recons.Select(MapReconciliationToResponse).ToList();
+        return [.. recons.Select(MapReconciliationToResponse)];
     }
 
     public async Task<(string StudyId, string SiteId)?> GetChainOfCustodyScopeAsync(
@@ -642,4 +721,46 @@ public sealed class CgtApplicationService(
             LoggedAt: r.LoggedAt,
             CertificateId: r.CertificateId,
             Notes: r.Notes);
+
+    private static string RequireMatchingCaller(string? callerUserId, string claimedSignerId, string fieldName)
+    {
+        string trimmedCaller = callerUserId?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(trimmedCaller)
+            || string.IsNullOrEmpty(claimedSignerId)
+            || !string.Equals(trimmedCaller, claimedSignerId, StringComparison.Ordinal))
+        {
+            throw new CallerIdentityMismatchException(
+                $"ADR-2516 violation: '{fieldName}' ('{claimedSignerId}') must match the authenticated caller ('{trimmedCaller}').");
+        }
+
+        return trimmedCaller;
+    }
+
+    private static string ResolveActorId(string? callerUserId, string? fallbackActorId)
+    {
+        if (!string.IsNullOrWhiteSpace(callerUserId))
+        {
+            return callerUserId.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(fallbackActorId))
+        {
+            return fallbackActorId.Trim();
+        }
+
+        return "cgt_service";
+    }
+
+    private byte[] GetGatewaySecretBytes()
+    {
+        string? secret = _gatewayAuthentication
+            .Get(GatewayAuthenticationHandler.SchemeName)
+            .GatewaySecret;
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            throw new UnauthorizedAccessException(SigTokenVerifier.ReauthenticationRequired);
+        }
+
+        return GatewayIdentity.EncodeSecret(secret);
+    }
 }

@@ -46,7 +46,6 @@ apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|559
 apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|8e1803d041cfa5be
 apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|8e1803d041cfa5be
 apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|91e83f95c9d34a2c
-apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|zip_geographic|e2f374666c86f46d
 apps/web/src/components/clinical/ClinicalLakehouseConsole.vue|medical_record_account|0b3805eeabea100f
 apps/web/src/components/clinical/DeviceInvestigationConsole.vue|dates|10cd828c368dace5
 apps/web/src/components/clinical/DeviceInvestigationConsole.vue|dates|11245a86aa0115c2

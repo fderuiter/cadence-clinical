@@ -115,7 +115,14 @@ public record CgtBedsideVerificationRequest(
     [property: JsonPropertyName("secondary_verifier_role")] string? SecondaryVerifierRole = null,
     [property: JsonPropertyName("secondary_signature_token")] string SecondarySignatureToken = "",
     [property: JsonPropertyName("notes")] string? Notes = null
-);
+)
+{
+    /// <summary>
+    /// Canonical target-record binding identifier (`batch_id` claim) carried by both bedside step-up signature tokens.
+    /// </summary>
+    public string TargetRecordBindingId() =>
+        $"{(StudyId ?? string.Empty).Trim()}:{(SubjectId ?? string.Empty).Trim()}:{(Din ?? string.Empty).Trim()}:{(BatchId ?? string.Empty).Trim()}";
+}
 
 public record CgtBedsideVerificationResponse(
     [property: JsonPropertyName("verification_id")] Guid VerificationId,
@@ -203,7 +210,14 @@ public record CgtDestructionCertificateCreateRequest(
     [property: JsonPropertyName("din")] string? Din = null,
     [property: JsonPropertyName("coc_id")] Guid? CocId = null,
     [property: JsonPropertyName("notes")] string? Notes = null
-);
+)
+{
+    /// <summary>
+    /// Canonical target-record binding identifier (`batch_id` claim) carried by both destruction witness step-up tokens.
+    /// </summary>
+    public string TargetRecordBindingId() =>
+        $"{(StudyId ?? string.Empty).Trim()}:{(SiteId ?? string.Empty).Trim()}:{(LotNumber ?? string.Empty).Trim()}:{(Din ?? string.Empty).Trim()}";
+}
 
 public record CgtDestructionCertificateResponse(
     [property: JsonPropertyName("id")] Guid Id,

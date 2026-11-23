@@ -2,27 +2,26 @@ using System;
 
 namespace Cadence.Apps.Execution.Domain.Cgt.Errors;
 
-public class DuplicateVerifierException : Exception
+public class DuplicateVerifierException(string message) : Exception(message)
 {
-    public DuplicateVerifierException(string message) : base(message) { }
 }
 
-public class DuplicateWitnessException : Exception
+public class DuplicateWitnessException(string message) : Exception(message)
 {
-    public DuplicateWitnessException(string message) : base(message) { }
 }
 
-public class InvalidDinException : Exception
+public class InvalidDinException(string message) : Exception(message)
 {
-    public InvalidDinException(string message) : base(message) { }
 }
 
-public class BarcodeVerificationException : Exception
+public class BarcodeVerificationException(string message) : Exception(message)
 {
-    public BarcodeVerificationException(string message) : base(message) { }
 }
 
-public class ChainOfCustodyNotFoundException : Exception
+public class ChainOfCustodyNotFoundException(string message) : Exception(message)
 {
-    public ChainOfCustodyNotFoundException(string message) : base(message) { }
+}
+
+public class CallerIdentityMismatchException(string message) : Exception(message)
+{
 }

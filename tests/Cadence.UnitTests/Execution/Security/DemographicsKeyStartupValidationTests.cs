@@ -32,6 +32,7 @@ public sealed class DemographicsKeyStartupValidationTests
             .UseTestGatewaySecret()
             .UseTestPostgresConnectionString()
             .UseTestRandomizationKey()
+            .UseTestCgtBarcodeKey()
             .UseSetting("DemographicsEncryption:KeyBase64", keyBase64));
 
         unconfigured.ValidateStartup().Should().BeOfType<OptionsValidationException>()
@@ -53,10 +54,34 @@ public sealed class DemographicsKeyStartupValidationTests
             .UseTestGatewaySecret()
             .UseTestPostgresConnectionString()
             .UseTestDemographicsKey()
+            .UseTestCgtBarcodeKey()
             .UseSetting(AllocationProtectionOptions.ConfigurationKey, keyBase64));
 
         unconfigured.ValidateStartup().Should().BeOfType<OptionsValidationException>()
             .Which.Message.Should().Contain(AllocationProtectionOptions.ConfigurationKey);
+    }
+
+    /// <summary>
+    /// The CGT barcode HMAC-SHA256 key is checked at boot the same way, so missing, malformed, or short keys fail
+    /// startup before any bedside verification or barcode check can run.
+    /// </summary>
+    [Theory]
+    [Trait("Category", "GxP_IQ")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("not base64!")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAA==")]
+    public void HostStartup_WithoutAValidCgtBarcodeKey_FailsFast(string keyBase64)
+    {
+        using var unconfigured = new StartupValidationFactory<Cadence.Apps.Execution.Program>(builder => builder
+            .UseTestGatewaySecret()
+            .UseTestPostgresConnectionString()
+            .UseTestDemographicsKey()
+            .UseTestRandomizationKey()
+            .UseSetting(CgtBarcodeProtectionOptions.ConfigurationKey, keyBase64));
+
+        unconfigured.ValidateStartup().Should().BeOfType<OptionsValidationException>()
+            .Which.Message.Should().Contain(CgtBarcodeProtectionOptions.ConfigurationKey);
     }
 
     /// <summary>The same host with a valid key passes startup validation, so the refusals above are the key's.</summary>
@@ -67,7 +92,7 @@ public sealed class DemographicsKeyStartupValidationTests
         using var configured = new StartupValidationFactory<Cadence.Apps.Execution.Program>(builder => builder
             .UseTestGatewaySecret()
             .UseTestPostgresConnectionString()
-            .UseTestDemographicsKey().UseTestRandomizationKey());
+            .UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey());
 
         configured.ValidateStartup().Should().BeNull();
     }

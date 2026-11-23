@@ -98,7 +98,7 @@ public static class Program
         };
 
         var selectedStandalone = targetServices.Count > 0
-            ? standaloneServices.Where(s => targetServices.Contains(s.Name)).ToList()
+            ? [.. standaloneServices.Where(s => targetServices.Contains(s.Name))]
             : standaloneServices;
         bool shouldInspectKernelHost = targetServices.Count == 0
             || targetServices.Any(target => standaloneServices.All(s => !s.Name.Equals(target, StringComparison.OrdinalIgnoreCase)));
@@ -205,6 +205,7 @@ public static class Program
             .UseSetting("POSTGRES_CONNECTION_STRING", "Host=localhost;Database=cadence_openapi_export")
             .UseSetting("DemographicsEncryption:KeyBase64", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("RANDOMIZATION_ALLOCATION_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
+            .UseSetting("CGT_BARCODE_HMAC_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("FIELD_ENCRYPTION_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("FIELD_LOOKUP_HASH_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("CADENCE_SCE_SIGNING_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
@@ -234,7 +235,7 @@ public static class Program
                     .OrderBy(d => d, StringComparer.Ordinal));
 
             var documentsToExport = targetServices.Count > 0
-                ? availableDocuments.Where(targetServices.Contains).ToList()
+                ? [.. availableDocuments.Where(targetServices.Contains)]
                 : availableDocuments;
 
             if (targetServices.Count > 0)
@@ -293,7 +294,7 @@ public static class Program
         // key, and for payments, eConsent and interop the field-protection keys (ADR-2494), and for interop the SCE signing key (ADR-2515). Export only reads route metadata and never opens a connection, so throwaway secrets, an
         // unreachable authority and a credential-free connection string are enough.
         Action<IWebHostBuilder> configureHostBuilder = CreateExportHostConfiguration(svc.ContentRoot);
-        var configuredFactory = withHostBuilderMethod?.Invoke(factory, new object[] { configureHostBuilder }) ?? factory;
+        var configuredFactory = withHostBuilderMethod?.Invoke(factory, [configureHostBuilder]) ?? factory;
 
         var createClientMethod = configuredFactory.GetType().GetMethod("CreateClient", Type.EmptyTypes);
         using var client = (HttpClient)createClientMethod!.Invoke(configuredFactory, null)!;
@@ -340,9 +341,9 @@ public static class Program
             }
 
             schemas.Clear();
-            foreach (var item in renamedMap.Values)
+            foreach (var (NewKey, Node) in renamedMap.Values)
             {
-                schemas[item.NewKey] = item.Node;
+                schemas[NewKey] = Node;
             }
         }
 
@@ -393,7 +394,7 @@ public static class Program
             return refVal;
         }
 
-        string schemaName = refVal.Substring(targetPrefix.Length);
+        string schemaName = refVal[targetPrefix.Length..];
         return schemaName.StartsWith(prefix, StringComparison.Ordinal) ? refVal : $"{targetPrefix}{prefix}{schemaName}";
     }
 

@@ -27,7 +27,7 @@ public sealed class ExecutionAuditInterceptorRegistrationTests
     {
         using var host = new WebApplicationFactory<Cadence.Apps.Execution.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
-            .UseTestDemographicsKey().UseTestRandomizationKey()
+            .UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey()
             .UseTestPostgresConnectionString());
 
         ShouldHaveEachInterceptorOnce(host.Services);
@@ -42,7 +42,7 @@ public sealed class ExecutionAuditInterceptorRegistrationTests
     {
         using var host = new WebApplicationFactory<Cadence.Apps.Execution.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
-            .UseTestDemographicsKey().UseTestRandomizationKey()
+            .UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey()
             .UseTestPostgresConnectionString());
         using var scope = host.Services.CreateScope();
 
