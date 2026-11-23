@@ -57,6 +57,8 @@ public sealed class TicketEndpointsTests : IAsyncDisposable
             {
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(_clock);
+                services.RemoveAll<ISigTokenUseStore>();
+                services.AddSingleton<ISigTokenUseStore, ReplayCache>();
                 services.RemoveAll<DbContextOptions<TicketsDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<TicketsDbContext>>();
                 services.AddDbContext<TicketsDbContext>((sp, options) =>
@@ -293,5 +295,262 @@ public sealed class TicketEndpointsTests : IAsyncDisposable
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<TicketsDbContext>();
         (await db.Tickets.CountAsync(Ct)).Should().Be(0);
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-TCK-001")]
+    [GxPRequirement("PRD-SYS-192")]
+    public async Task Comments_EnforceInternalSponsorIsolation_SitePostingGuard_AndPiiRejection()
+    {
+        await EnsureDbCreatedAsync();
+        using var safetyClient = CreateScopedClient(
+            "usr-safety-01",
+            ["safety_reviewer"],
+            studyIds: ["STUDY-CMT"]);
+        using var crcClient = CreateScopedClient(
+            "usr-crc-01",
+            ["CRC"],
+            studyIds: ["STUDY-CMT"],
+            siteIds: ["SITE-101"]);
+
+        var created = await CreateTestTicketAsync(crcClient, "STUDY-CMT", "SITE-101");
+
+        // 1. Sponsor safety reviewer records both a PUBLIC note and an INTERNAL_SPONSOR note
+        using (var pubReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{created.Id}/comments")
+        {
+            Content = JsonContent.Create(new CreateTicketCommentRequestDto(
+                Body: "Please confirm laboratory centrifuge calibration date for SUBJ-8812.",
+                Visibility: "PUBLIC")),
+        })
+        {
+            pubReq.Headers.Add(GatewayHeaders.ChangeReason, "Issued public query to site");
+            (await safetyClient.SendAsync(pubReq, Ct)).StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        using (var intReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{created.Id}/comments")
+        {
+            Content = JsonContent.Create(new CreateTicketCommentRequestDto(
+                Body: "Internal medical monitor note: cross-checking DSMB charter threshold.",
+                Visibility: "INTERNAL_SPONSOR")),
+        })
+        {
+            intReq.Headers.Add(GatewayHeaders.ChangeReason, "Logged sponsor medical review note");
+            (await safetyClient.SendAsync(intReq, Ct)).StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        // 2. Safety reviewer sees both comments; site CRC sees ONLY the PUBLIC comment
+        var sponsorComments = await safetyClient.GetFromJsonAsync<List<TicketCommentResponseDto>>(
+            $"/api/v1/tickets/{created.Id}/comments",
+            Ct);
+        sponsorComments.Should().HaveCount(2);
+
+        var crcComments = await crcClient.GetFromJsonAsync<List<TicketCommentResponseDto>>(
+            $"/api/v1/tickets/{created.Id}/comments",
+            Ct);
+        crcComments.Should().ContainSingle().Which.Visibility.Should().Be("PUBLIC");
+
+        // 3. Site CRC cannot post INTERNAL_SPONSOR notes (403 Forbidden)
+        using (var crcInternalReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{created.Id}/comments")
+        {
+            Content = JsonContent.Create(new CreateTicketCommentRequestDto(
+                Body: "Attempted internal sponsor note by site user.",
+                Visibility: "INTERNAL_SPONSOR")),
+        })
+        {
+            crcInternalReq.Headers.Add(GatewayHeaders.ChangeReason, "Site internal probe");
+            (await crcClient.SendAsync(crcInternalReq, Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        // 4. Direct participant PII in comment body is rejected with 400 Bad Request
+        using (var piiCommentReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{created.Id}/comments")
+        {
+            Content = JsonContent.Create(new CreateTicketCommentRequestDto(
+                Body: "Participant email is jane.patient@clinic-mail.org", // deid-ignore: synthetic PII rejection test fixture
+                Visibility: "PUBLIC")),
+        })
+        {
+            piiCommentReq.Headers.Add(GatewayHeaders.ChangeReason, "PII comment probe");
+            (await crcClient.SendAsync(piiCommentReq, Ct)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        // 5. Site CRC audit-trail view excludes the INTERNAL_SPONSOR comment audit entry while sponsor sees all 3 entries
+        var sponsorAudit = await safetyClient.GetFromJsonAsync<List<TicketAuditEntryDto>>(
+            $"/api/v1/tickets/{created.Id}/audit-trail",
+            Ct);
+        sponsorAudit.Should().HaveCount(3);
+
+        var crcAudit = await crcClient.GetFromJsonAsync<List<TicketAuditEntryDto>>(
+            $"/api/v1/tickets/{created.Id}/audit-trail",
+            Ct);
+        crcAudit.Should().HaveCount(2);
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-TCK-002")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task Transitions_Sign_AndAuditTrail_PauseSla_EnforceSingleUsePart11Token_AndLockSignedTicket()
+    {
+        await EnsureDbCreatedAsync();
+        using var dmClient = CreateScopedClient(
+            "usr-dm-lead",
+            ["Data Manager"],
+            studyIds: ["STUDY-WF"]);
+
+        var created = await CreateTestTicketAsync(dmClient, "STUDY-WF", "SITE-101");
+        DateTimeOffset initialSlaTarget = created.SlaTargetAt!.Value;
+
+        // 1. OPEN -> IN_PROGRESS -> WAITING_ON_SITE (pauses SLA clock)
+        await TransitionAsync(dmClient, created.Id, "IN_PROGRESS", "Triaged deviation");
+        var paused = await TransitionAsync(dmClient, created.Id, "WAITING_ON_SITE", "Awaiting site calibration log");
+        paused.Status.Should().Be("WAITING_ON_SITE");
+
+        // Advance IClock by 2 hours while paused, then resume IN_PROGRESS
+        _clock.Advance(TimeSpan.FromHours(2));
+        var resumed = await TransitionAsync(dmClient, created.Id, "IN_PROGRESS", "Site supplied calibration certificate");
+        resumed.SlaTotalPausedSeconds.Should().Be(7200);
+        resumed.SlaTargetAt.Should().Be(initialSlaTarget.AddHours(2));
+
+        // 2. Resolving without root_cause_summary or with PII in root_cause_summary fails 400
+        using (var missingRcaReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{created.Id}/transitions")
+        {
+            Content = JsonContent.Create(new TransitionTicketRequestDto(
+                TargetStatus: "RESOLVED")),
+        })
+        {
+            missingRcaReq.Headers.Add(GatewayHeaders.ChangeReason, "Missing RCA check");
+            (await dmClient.SendAsync(missingRcaReq, Ct)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        using (var piiRcaReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{created.Id}/transitions")
+        {
+            Content = JsonContent.Create(new TransitionTicketRequestDto(
+                TargetStatus: "RESOLVED",
+                RootCauseCategory: "DATA_ENTRY_ERROR",
+                RootCauseSummary: "Confirmed SSN 123-45-6789 mismatch", // deid-ignore: synthetic PII rejection test fixture
+                ResolutionCode: "CORRECTED")),
+        })
+        {
+            piiRcaReq.Headers.Add(GatewayHeaders.ChangeReason, "PII RCA check");
+            (await dmClient.SendAsync(piiRcaReq, Ct)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        // 3. Valid RESOLVED transition records RCA fields
+        using (var resolveReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{created.Id}/transitions")
+        {
+            Content = JsonContent.Create(new TransitionTicketRequestDto(
+                TargetStatus: "RESOLVED",
+                RootCauseCategory: "PROCESS_WORKFLOW_DEFICIT",
+                RootCauseSummary: "Updated site binder checklist and completed coordinator retraining.",
+                ResolutionCode: "CORRECTIVE_ACTION_IMPLEMENTED")),
+        })
+        {
+            resolveReq.Headers.Add(GatewayHeaders.ChangeReason, "Resolved following CAPA verification");
+            var resolveResp = await dmClient.SendAsync(resolveReq, Ct);
+            resolveResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        // 4. Sign resolved ticket with a valid step-up X-Sig-Token
+        string signPath = $"/api/v1/tickets/{created.Id}/sign";
+        string sigToken = TestSecurityContext.CreateSigToken(
+            userId: "usr-dm-lead",
+            action: signPath,
+            semanticAction: "tickets.ticket.sign",
+            roles: ["Data Manager"],
+            issuedAt: _clock.UtcNow);
+
+        TicketResponseDto signed;
+        using (var signReq = new HttpRequestMessage(HttpMethod.Post, signPath)
+        {
+            Content = JsonContent.Create(new SignTicketRequestDto(
+                SignatureMeaning: "I approve the clinical assessment and corrective medical action.",
+                SignatureAction: "SIGN_CLOSURE")),
+        })
+        {
+            signReq.Headers.Add(GatewayHeaders.SigToken, sigToken);
+            signReq.Headers.Add(GatewayHeaders.ChangeReason, "Part 11 closure authorization");
+            var signResp = await dmClient.SendAsync(signReq, Ct);
+            signResp.StatusCode.Should().Be(HttpStatusCode.OK);
+            signed = (await signResp.Content.ReadFromJsonAsync<TicketResponseDto>(cancellationToken: Ct))!;
+        }
+
+        signed.SignatureUser.Should().Be("usr-dm-lead");
+        signed.SignatureMeaning.Should().Be("I approve the clinical assessment and corrective medical action.");
+        signed.SignatureToken.Should().NotBeNullOrWhiteSpace();
+        signed.SignatureTimestamp.Should().Be(_clock.UtcNow);
+
+        // 5. Replaying the same X-Sig-Token is refused with 401 Unauthorized
+        using (var replayReq = new HttpRequestMessage(HttpMethod.Post, signPath)
+        {
+            Content = JsonContent.Create(new SignTicketRequestDto(
+                SignatureMeaning: "Replay attempt")),
+        })
+        {
+            replayReq.Headers.Add(GatewayHeaders.SigToken, sigToken);
+            replayReq.Headers.Add(GatewayHeaders.ChangeReason, "Replay probe");
+            (await dmClient.SendAsync(replayReq, Ct)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        // 6. Signed ticket rejects further comments or status transitions with 409 Conflict
+        using (var postSignComment = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{created.Id}/comments")
+        {
+            Content = JsonContent.Create(new CreateTicketCommentRequestDto("Post-signature edit", "PUBLIC")),
+        })
+        {
+            postSignComment.Headers.Add(GatewayHeaders.ChangeReason, "Post-sign comment probe");
+            (await dmClient.SendAsync(postSignComment, Ct)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        }
+
+        using (var postSignTransition = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{created.Id}/transitions")
+        {
+            Content = JsonContent.Create(new TransitionTicketRequestDto(TargetStatus: "CLOSED")),
+        })
+        {
+            postSignTransition.Headers.Add(GatewayHeaders.ChangeReason, "Post-sign transition probe");
+            (await dmClient.SendAsync(postSignTransition, Ct)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        }
+
+        // 7. Audit trail returns tamper-evident Merkle chain covering creation, transitions, and Part 11 signature
+        var auditTrail = await dmClient.GetFromJsonAsync<List<TicketAuditEntryDto>>(
+            $"/api/v1/tickets/{created.Id}/audit-trail",
+            Ct);
+        auditTrail.Should().NotBeNull();
+        auditTrail!.Select(a => a.Action).Should().Contain(["TICKET_CREATED", "TICKET_TRANSITIONED", "TICKET_SIGNED"]);
+        auditTrail.Should().OnlyContain(a => !string.IsNullOrWhiteSpace(a.BlockHash));
+    }
+
+    private static async Task<TicketResponseDto> CreateTestTicketAsync(HttpClient client, string studyCode, string siteCode)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/tickets")
+        {
+            Content = JsonContent.Create(new CreateTicketRequestDto(
+                Title: "Cold-chain excursion follow-up",
+                Description: "Investigating logger excursion for SUBJ-8812.",
+                Category: "PROTOCOL_DEVIATION",
+                GxpSeverity: "MAJOR",
+                Priority: "HIGH",
+                StudyScope: studyCode,
+                SiteScope: siteCode,
+                SubjectCode: "SUBJ-8812",
+                SourceRoute: "/ecrf",
+                Persona: "site_crc")),
+        };
+        req.Headers.Add(GatewayHeaders.ChangeReason, "Initial ticket creation");
+        var resp = await client.SendAsync(req, Ct);
+        resp.StatusCode.Should().Be(HttpStatusCode.Created);
+        return (await resp.Content.ReadFromJsonAsync<TicketResponseDto>(cancellationToken: Ct))!;
+    }
+
+    private static async Task<TicketResponseDto> TransitionAsync(HttpClient client, string ticketId, string toStatus, string reason)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{ticketId}/transitions")
+        {
+            Content = JsonContent.Create(new TransitionTicketRequestDto(TargetStatus: toStatus)),
+        };
+        req.Headers.Add(GatewayHeaders.ChangeReason, reason);
+        var resp = await client.SendAsync(req, Ct);
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        return (await resp.Content.ReadFromJsonAsync<TicketResponseDto>(cancellationToken: Ct))!;
     }
 }

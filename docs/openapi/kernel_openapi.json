@@ -496,6 +496,91 @@
         }
       }
     },
+    "/api/v1/kernel/enrollments/lookup": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Resolves a study code, subject code, and optional site code to pinned study and enrollment references.",
+        "description": "Reads over the tenant\u0027s unique study and subject indexes without listing sites. Returns a non-confirming 404 when the study, site, or enrollment does not exist, mismatches, or is masked for the caller (ADR-2471).",
+        "operationId": "KernelLookupEnrollment",
+        "parameters": [
+          {
+            "name": "study_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelEnrollmentLookupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kernel/studies/{studyRef}/protocol-versions": {
       "get": {
         "tags": [
@@ -1140,7 +1225,7 @@
         "tags": [
           "Kernel"
         ],
-        "summary": "Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, or CDISC Dataset-JSON.",
+        "summary": "Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, CDISC Dataset-JSON, SAS bundle ZIP, R bundle ZIP, or Study Archive ZIP.",
         "description": "Projects canonical kernel observations at as_of(valid_at, known_at), applying lock_filter and masking unauthorized sites or blinded treatment values in place (K-TRUTH-1, K-AUTH-4).",
         "operationId": "KernelExportStudySnapshot",
         "parameters": [
@@ -1234,7 +1319,7 @@
           "Kernel"
         ],
         "summary": "Streams a participant casebook with revisions, queries, verifications, attestations and SHA-256 digests.",
-        "description": "Streams JSON, CDISC ODM v1.3.2 XML, or printable HTML for one enrollment at as_of(valid_at, known_at), masking unauthorized or blinded content under K-AUTH-4.",
+        "description": "Streams JSON, CDISC ODM v1.3.2 XML, printable HTML, or certified PDF (%PDF-1.7) for one enrollment at as_of(valid_at, known_at), masking unauthorized or blinded content under K-AUTH-4.",
         "operationId": "KernelExportEnrollmentCasebook",
         "parameters": [
           {
@@ -2975,7 +3060,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Assertion.AlreadyLocked\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Assertion.AlreadyLocked\u0060, \u0060K.Assertion.ScopeNotReady\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3030,6 +3115,10 @@
           },
           {
             "code": "K.Assertion.AlreadyLocked",
+            "status": 409
+          },
+          {
+            "code": "K.Assertion.ScopeNotReady",
             "status": 409
           },
           {
@@ -3295,6 +3384,74 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Kernel_KernelStudyLocksResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/studies/{studyRef}/locks/readiness": {
+      "get": {
+        "tags": [
+          "Kernel locks"
+        ],
+        "summary": "Evaluates lock readiness (open queries and missing required items) for a study or child lock scope.",
+        "operationId": "KernelGetStudyLockReadiness",
+        "parameters": [
+          {
+            "name": "studyRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope_ref",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelLockReadinessResponse"
                 }
               }
             }
@@ -10542,6 +10699,49 @@
           }
         }
       },
+      "Kernel_KernelEnrollmentLookupResponse": {
+        "required": [
+          "study_ref",
+          "study_code",
+          "study_title",
+          "study_site_ref",
+          "site_code",
+          "site_title",
+          "enrollment_ref",
+          "subject_code",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "study_ref": {
+            "type": "string"
+          },
+          "study_code": {
+            "type": "string"
+          },
+          "study_title": {
+            "type": "string"
+          },
+          "study_site_ref": {
+            "type": "string"
+          },
+          "site_code": {
+            "type": "string"
+          },
+          "site_title": {
+            "type": "string"
+          },
+          "enrollment_ref": {
+            "type": "string"
+          },
+          "subject_code": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "Kernel_KernelEnrollmentStateResponse": {
         "required": [
           "ref",
@@ -10990,6 +11190,173 @@
           },
           "truncated": {
             "type": "boolean"
+          }
+        }
+      },
+      "Kernel_KernelLockBlockerResponse": {
+        "required": [
+          "kind",
+          "owner",
+          "target_ref",
+          "target_kind",
+          "subject_code",
+          "collection_spec_id",
+          "collection_title",
+          "item_id",
+          "item_label",
+          "query_ref",
+          "query_text",
+          "answered",
+          "next_action",
+          "next_capability",
+          "masked",
+          "mask"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "target_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "target_kind": {
+            "type": "string"
+          },
+          "subject_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "collection_spec_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "collection_title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "item_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "item_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "query_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "query_text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "answered": {
+            "type": "boolean"
+          },
+          "next_action": {
+            "type": "string"
+          },
+          "next_capability": {
+            "type": "string"
+          },
+          "masked": {
+            "type": "boolean"
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelLockReadinessResponse": {
+        "required": [
+          "study_ref",
+          "study_code",
+          "scope_ref",
+          "scope_kind",
+          "ready_for_lock",
+          "can_freeze",
+          "open_query_count",
+          "missing_required_item_count",
+          "blocker_count",
+          "blockers",
+          "explanation"
+        ],
+        "type": "object",
+        "properties": {
+          "study_ref": {
+            "type": "string"
+          },
+          "study_code": {
+            "type": "string"
+          },
+          "scope_ref": {
+            "type": "string"
+          },
+          "scope_kind": {
+            "type": "string"
+          },
+          "ready_for_lock": {
+            "type": "boolean"
+          },
+          "can_freeze": {
+            "type": "boolean"
+          },
+          "open_query_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "missing_required_item_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "blocker_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelLockBlockerResponse"
+            }
+          },
+          "explanation": {
+            "$ref": "#/components/schemas/Kernel_KernelExplanationResponse"
           }
         }
       },

@@ -379,11 +379,22 @@
             :site-id="siteFilter"
           />
 
-          <DocumentManagerView
-            v-else-if="section?.id === 'documents'"
-            :key="`docs-${studyCode}`"
-            :study-id="studyCode"
-          />
+          <template v-else-if="section?.id === 'documents'">
+            <DocumentManagerView
+              v-if="canReadDocuments"
+              :key="`docs-${studyCode}`"
+              :study-id="studyCode"
+              :site-id="siteFilter"
+            />
+            <p
+              v-else
+              id="etmf-read-role-guidance"
+              class="stage-empty"
+              role="status"
+            >
+              {{ ETMF_READ_ROLE_REASON }}
+            </p>
+          </template>
 
           <StudyTrainingView
             v-else-if="section?.id === 'training'"
@@ -896,14 +907,17 @@ import {
   type NodeRef,
 } from "../canvas/nodeRef";
 import {
+  ETMF_READ_ROLE_REASON,
   canAnswerQueries,
   canManageParticipants,
   canManageQueries,
   canManageRulePacks,
+  canReadEtmf,
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -1121,6 +1135,22 @@ async function loadStudyDirectory() {
   studyDirectoryError.value = "";
   try {
     visibleStudies.value = await kernelApi.listStudies();
+    if (
+      !studyCode.value &&
+      (route.query.section === "locks" || route.query.section === "exports") &&
+      visibleStudies.value.length > 0
+    ) {
+      await router.replace(
+        studyLocation(
+          {
+            stage: stage.value?.id,
+            section: section.value?.id,
+          },
+          visibleStudies.value[0].code
+        )
+      );
+      return;
+    }
   } catch (err) {
     studyDirectoryError.value = describeKernelError(err);
   } finally {
@@ -1142,7 +1172,17 @@ async function loadStudyDirectory() {
 
 function openStudyByCode(code: string) {
   const clean = code.trim();
-  if (clean) router.push(studyLocation({}, clean));
+  if (clean) {
+    router.push(
+      studyLocation(
+        {
+          stage: stage.value?.id,
+          section: section.value?.id,
+        },
+        clean
+      )
+    );
+  }
 }
 
 function openStudyDesign(code: string) {
@@ -1499,6 +1539,11 @@ const canAnswer = computed(() => canAnswerQueries(authStore));
 const canManageRules = computed(() => canManageRulePacks(authStore));
 const canVerify = computed(() => canVerifySource(authStore));
 const canChangeParticipants = computed(() => canManageParticipants(authStore));
+const canReadDocuments = computed(() =>
+  !authStore.isAuthenticated && (authStore.rawRoles?.length ?? 0) === 0
+    ? true
+    : canReadEtmf(authStore)
+);
 
 const navigatorStages = computed(() =>
   stage.value ? [stage.value] : STAGES.filter((s) => s.sections.length)
@@ -2202,19 +2247,24 @@ function handleBeforeUnload(event: BeforeUnloadEvent) {
   }
 }
 
-function confirmDiscardUnsavedForm(): boolean {
-  // eslint-disable-next-line no-alert -- Vue Router navigation guards require synchronous window.confirm.
-  return window.confirm(UNSAVED_FORM_CONFIRM_MESSAGE);
+async function confirmDiscardUnsavedForm(): Promise<boolean> {
+  return Boolean(
+    await confirmDialog({
+      title: "Unsaved Form Changes",
+      message: UNSAVED_FORM_CONFIRM_MESSAGE,
+      confirmLabel: "Leave Without Saving",
+      cancelLabel: "Stay on Form",
+      variant: "warning",
+    })
+  );
 }
 
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
-    if (
-      formWorkspaceDirty.value &&
-      !shouldSuppressUnsavedGuard() &&
-      !confirmDiscardUnsavedForm()
-    ) {
-      return false;
+    if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+      return confirmDiscardUnsavedForm().then((confirmed) =>
+        confirmed ? undefined : false
+      );
     }
   });
 }
@@ -2224,10 +2274,11 @@ if (typeof onBeforeRouteUpdate === "function") {
     if (
       formWorkspaceDirty.value &&
       !shouldSuppressUnsavedGuard() &&
-      leavesActiveForm(to) &&
-      !confirmDiscardUnsavedForm()
+      leavesActiveForm(to)
     ) {
-      return false;
+      return confirmDiscardUnsavedForm().then((confirmed) =>
+        confirmed ? undefined : false
+      );
     }
   });
 }
@@ -2600,6 +2651,7 @@ onUnmounted(() => {
 
 .study-card-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
@@ -2672,7 +2724,7 @@ onUnmounted(() => {
 .create-study-grid {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
 }
 
@@ -2680,6 +2732,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .create-field-wide {
@@ -2691,7 +2744,7 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.create-field input,
+.create-field input:not(.sr-only),
 .create-field select {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);

@@ -1,6 +1,7 @@
 using Cadence.Apps.Tickets.Endpoints;
 using Cadence.Apps.Tickets.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+builder.Services.AddCadenceDurableSigTokenStore<TicketsDbContext>();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<TicketsDbContext>(configureOptions: static (sp, options) =>
 {

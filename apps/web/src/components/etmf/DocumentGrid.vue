@@ -14,36 +14,55 @@
       <div style="display: flex; gap: 8px">
         <button
           v-if="selectedDocumentIds.length > 0"
+          type="button"
           class="btn btn-outline-primary export-selected-btn"
-          :aria-label="
-            'Download ' +
-            selectedDocumentIds.length +
-            ' selected documents as ZIP package'
-          "
+          :disabled="!canExport"
+          :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
           @click="handleExportSelected"
         >
-          <span>📦</span> Download Selected ({{ selectedDocumentIds.length }})
+          <span aria-hidden="true">📦</span> Download Selected ({{
+            selectedDocumentIds.length
+          }})<span class="sr-only"> documents as ZIP package</span>
         </button>
         <button
+          type="button"
           class="btn btn-secondary batch-upload-trigger-btn"
-          aria-label="Batch Ingestion multi-file upload"
-          @click="isBatchDrawerOpen = true"
+          :disabled="!canStage"
+          :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
+          @click="openBatchDrawer"
         >
-          <span>📤</span> Batch Ingestion
+          <span aria-hidden="true">📤</span> Batch Ingestion<span
+            class="sr-only"
+          >
+            multi-file upload</span
+          >
         </button>
         <button
+          type="button"
           class="btn btn-primary upload-trigger-btn"
-          :disabled="!selectedArtifactCode"
-          :aria-label="
-            selectedArtifactCode
-              ? 'Upload Regulated Document for artifact ' + selectedArtifactCode
-              : 'Upload Regulated Document'
-          "
+          :disabled="!canStage || !selectedArtifactCode"
+          :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
           @click="openUploadModal"
         >
-          <span>📄</span> Upload Single Document
+          <span aria-hidden="true">📄</span> Upload Single Document<span
+            v-if="selectedArtifactCode"
+            class="sr-only"
+          >
+            for artifact {{ selectedArtifactCode }}</span
+          >
         </button>
       </div>
+    </div>
+
+    <div
+      v-if="!canStage || !canTag"
+      id="document-grid-role-note"
+      class="grid-role-note"
+      role="note"
+    >
+      <span v-if="!canStage">{{ ETMF_STAGE_ROLE_REASON }}</span>
+      <span v-if="!canStage && !canTag"> • </span>
+      <span v-if="!canTag">{{ ETMF_TAG_ROLE_REASON }}</span>
     </div>
 
     <!-- Documents Data Table -->
@@ -88,7 +107,28 @@
           </template>
           <tr v-else-if="paginatedDocuments.length === 0">
             <td colspan="8" role="gridcell" class="empty-table-cell">
+              <div
+                v-if="etmfStore.scopeForbiddenGuidance"
+                id="grid-scope-forbidden-guidance"
+                class="scope-forbidden-guidance"
+                role="alert"
+              >
+                <span class="scope-forbidden-icon" aria-hidden="true">🔒</span>
+                <h3>Study or Site Scope Assignment Required</h3>
+                <p>{{ etmfStore.scopeForbiddenGuidance }}</p>
+              </div>
+              <div
+                v-else-if="etmfStore.documentsError"
+                id="grid-documents-error"
+                class="scope-forbidden-guidance"
+                role="alert"
+              >
+                <span class="scope-forbidden-icon" aria-hidden="true">⚠️</span>
+                <h3>Unable to Load Regulated Documents</h3>
+                <p>{{ etmfStore.documentsError }}</p>
+              </div>
               <EmptyState
+                v-else
                 icon="📄"
                 title="No Regulated Documents Found"
                 message="No documents have been uploaded for this artifact yet. Upload a single document or run batch ingestion to populate the eTMF."
@@ -97,7 +137,8 @@
                   <button
                     type="button"
                     class="btn btn-primary btn-sm upload-empty-btn"
-                    :disabled="!selectedArtifactCode"
+                    :disabled="!canStage || !selectedArtifactCode"
+                    :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
                     @click="openUploadModal"
                   >
                     <span>📄</span> Upload Single Document
@@ -105,7 +146,9 @@
                   <button
                     type="button"
                     class="btn btn-secondary btn-sm batch-empty-btn"
-                    @click="isBatchDrawerOpen = true"
+                    :disabled="!canStage"
+                    :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
+                    @click="openBatchDrawer"
                   >
                     <span>📤</span> Batch Ingestion
                   </button>
@@ -170,10 +213,10 @@
                   v-if="isEditing && isCellActive(rIndex, 1)"
                   class="inline-edit-container"
                 >
-                  <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                   <select
                     ref="inlineSelectRef"
                     v-model="tempTaxonomyCode"
+                    aria-label="Reclassify DIA TMF taxonomy"
                     class="form-control inline-select"
                     @change="commitTaxonomy(doc)"
                     @keydown="handleSelectKeyDown($event, doc)"
@@ -266,14 +309,16 @@
               >
                 <div style="display: flex; gap: 4px; justify-content: flex-end">
                   <button
+                    type="button"
                     class="btn btn-sm btn-outline-secondary btn-inspect-doc"
                     title="Inspect 21 CFR Part 11 Metadata"
                     :aria-label="'Inspect metadata for ' + doc.filename"
                     @click.stop="$emit('inspect', doc)"
                   >
-                    📋 Inspect
+                    <span aria-hidden="true">📋</span> Inspect
                   </button>
                   <button
+                    type="button"
                     class="btn btn-sm btn-outline-primary btn-preview-doc"
                     title="View Watermarked PDF Preview"
                     :aria-label="
@@ -281,7 +326,7 @@
                     "
                     @click.stop="$emit('preview', doc)"
                   >
-                    👁️ Preview
+                    <span aria-hidden="true">👁️</span> Preview
                   </button>
                 </div>
               </td>
@@ -308,18 +353,20 @@
 
       <div class="pagination-buttons">
         <button
+          type="button"
           class="btn btn-sm btn-outline-secondary prev-btn"
           :disabled="currentPage === 1"
           aria-label="Previous page"
           @click="prevPage"
         >
-          ◀ Previous
+          <span aria-hidden="true">◀</span> Previous
         </button>
 
         <div class="page-numbers">
           <button
             v-for="page in totalPages"
             :key="page"
+            type="button"
             class="btn btn-sm page-num-btn"
             :class="{ active: currentPage === page }"
             :aria-label="'Go to page ' + page"
@@ -331,12 +378,13 @@
         </div>
 
         <button
+          type="button"
           class="btn btn-sm btn-outline-secondary next-btn"
           :disabled="currentPage === totalPages"
           aria-label="Next page"
           @click="nextPage"
         >
-          Next ▶
+          Next <span aria-hidden="true">▶</span>
         </button>
       </div>
     </div>
@@ -355,7 +403,9 @@
         <div class="modal-header">
           <h3>FDA 21 CFR Part 11 Compliant Document Ingestion</h3>
           <button
+            type="button"
             class="close-modal-btn"
+            style="min-width: 28px; min-height: 28px"
             aria-label="Close modal"
             @click="closeUploadModal"
           >
@@ -373,51 +423,45 @@
           </div>
 
           <!-- Drag and Drop Target -->
-          <div
+          <ClinicalDropzone
             class="drag-drop-zone"
-            :class="{ 'is-dragging': isDragging }"
-            tabindex="0"
-            role="button"
-            aria-label="Drag and drop your regulated PDF here, or press Enter or Space to browse."
-            @dragover.prevent="onDragOver"
-            @dragleave.prevent="onDragLeave"
-            @drop.prevent="onDrop"
-            @click="triggerFileSelect"
-            @keydown.enter="triggerFileSelect"
-            @keydown.space.prevent="triggerFileSelect"
+            accept=".pdf"
+            :disabled="isSubmitting"
+            :has-selection="!!selectedFile"
+            icon="☁️"
+            :prompt-text="
+              selectedFile ? '' : 'Drag and drop your regulated PDF here'
+            "
+            :button-label="
+              selectedFile ? 'Replace Regulated PDF' : 'Browse Regulated PDF'
+            "
+            input-aria-label="Regulated PDF file"
+            removable
+            remove-label="Remove File"
+            :remove-context="selectedFile ? selectedFile.name : ''"
+            @file-selected="onRegulatedFileSelected"
+            @remove="selectedFile = null"
           >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input
-              ref="fileInputRef"
-              type="file"
-              class="hidden-file-input"
-              accept=".pdf"
-              @change="onFileSelected"
-            />
-            <div class="drop-prompt-content" aria-hidden="true">
-              <span class="upload-cloud-icon">☁️</span>
-              <p v-if="!selectedFile" class="drop-text">
-                Drag and drop your regulated PDF here, or
-                <span class="highlight">browse</span>
-              </p>
-              <div v-else class="selected-file-details">
-                <p class="file-name-success">🎉 {{ selectedFile.name }}</p>
+            <template #selected>
+              <div v-if="selectedFile" class="selected-file-details">
+                <p class="file-name-success">
+                  <span aria-hidden="true">🎉 </span>{{ selectedFile.name }}
+                </p>
                 <p class="file-size-meta">
                   Size: {{ (selectedFile.size / 1024).toFixed(1) }} KB | Type:
                   {{ selectedFile.type || "application/pdf" }}
                 </p>
               </div>
-            </div>
-          </div>
+            </template>
+          </ClinicalDropzone>
 
           <!-- Upload Metadata Form -->
           <form class="upload-meta-form" @submit.prevent="submitUpload">
             <div class="form-group-row">
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Target Study ID</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="etmf-upload-study-id">Target Study ID</label>
                 <input
+                  id="etmf-upload-study-id"
                   v-model="studyId"
                   type="text"
                   class="form-control"
@@ -425,10 +469,9 @@
                 />
               </div>
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Site ID (Optional)</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="etmf-upload-site-id">Site ID (Optional)</label>
                 <input
+                  id="etmf-upload-site-id"
                   v-model="siteId"
                   type="text"
                   placeholder="e.g. SITE-01"
@@ -439,10 +482,11 @@
 
             <div class="form-group-row">
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>DIA TMF Artifact Code</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="etmf-upload-artifact-code"
+                  >DIA TMF Artifact Code</label
+                >
                 <input
+                  id="etmf-upload-artifact-code"
                   v-model="artifactCode"
                   type="text"
                   class="form-control"
@@ -450,10 +494,11 @@
                 />
               </div>
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Artifact Type (Label)</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="etmf-upload-artifact-type"
+                  >Artifact Type (Label)</label
+                >
                 <input
+                  id="etmf-upload-artifact-type"
                   v-model="artifactType"
                   type="text"
                   class="form-control"
@@ -464,12 +509,11 @@
 
             <!-- Mandatory Reason for Change under 21 CFR Part 11 -->
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="required-label">
+              <label for="etmf-upload-reason" class="required-label">
                 Reason for Change / Upload Justification
               </label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <textarea
+                id="etmf-upload-reason"
                 v-model="reasonForChange"
                 rows="3"
                 placeholder="Specify the regulatory or scientific justification for ingesting this record version (e.g. 'Initial Approved protocol for site initiation', 'Site license renewal')."
@@ -511,6 +555,7 @@
     <BatchUploadDrawer
       :is-open="isBatchDrawerOpen"
       :study-id="etmfStore.currentStudyId"
+      :site-id="etmfStore.currentSiteId || null"
       @close="isBatchDrawerOpen = false"
     />
   </div>
@@ -518,11 +563,20 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
-import { EmptyState, useFocusTrap } from "ui";
-import { useEtmfStore } from "../../stores/etmf";
+import { ClinicalDropzone, EmptyState, useFocusTrap } from "ui";
+import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf";
+import { useAuthStore } from "../../stores/auth";
 import { etmfService } from "../../api/etmf";
 import { use2DGrid } from "../../composables/use2DGrid";
 import { useToastStore } from "../../stores/toasts.js";
+import {
+  canStageEtmfQc,
+  canTagEtmf,
+  canExportEtmf,
+  ETMF_STAGE_ROLE_REASON,
+  ETMF_TAG_ROLE_REASON,
+  ETMF_EXPORT_ROLE_REASON,
+} from "../../canvas/authority.ts";
 import BatchUploadDrawer from "./BatchUploadDrawer.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 
@@ -542,6 +596,32 @@ const props = defineProps({
 defineEmits(["preview", "inspect"]);
 
 const etmfStore = useEtmfStore();
+const authStore = useAuthStore();
+
+const hasActiveAuth = computed(() =>
+  Boolean(
+    authStore.isAuthenticated ||
+    (Array.isArray(authStore.rawRoles) && authStore.rawRoles.length > 0)
+  )
+);
+const canStage = computed(
+  () => !hasActiveAuth.value || canStageEtmfQc(authStore)
+);
+const canTag = computed(() => !hasActiveAuth.value || canTagEtmf(authStore));
+const canExport = computed(
+  () => !hasActiveAuth.value || canExportEtmf(authStore)
+);
+
+function openBatchDrawer() {
+  if (!canStage.value) {
+    useToastStore().push({
+      message: ETMF_STAGE_ROLE_REASON,
+      tone: "warning",
+    });
+    return;
+  }
+  isBatchDrawerOpen.value = true;
+}
 
 // 2D Interactive Grid selection & editing state
 const containerRef = ref(null);
@@ -593,6 +673,13 @@ function getZoneAndSectionFromCode(code) {
 }
 
 async function startEditing(rIndex, doc) {
+  if (!canTag.value) {
+    useToastStore().push({
+      message: ETMF_TAG_ROLE_REASON,
+      tone: "warning",
+    });
+    return;
+  }
   grid.startEditing(rIndex, 1);
   tempTaxonomyCode.value = doc.artifact_code;
   await nextTick();
@@ -642,7 +729,7 @@ async function commitTaxonomy(doc) {
 
     await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
   } catch (err) {
-    console.error("Failed to tag/classify document:", err);
+    useToastStore().apiError("Failed to update document taxonomy", err);
   } finally {
     exitEditing();
   }
@@ -713,7 +800,6 @@ function handleSelectKeyDown(event, doc) {
 
 const selectedArtifactCode = ref("");
 const showUploadModal = ref(false);
-const isDragging = ref(false);
 const isSubmitting = ref(false);
 const uploadError = ref("");
 
@@ -747,6 +833,13 @@ function toggleSelectAll() {
 }
 
 async function handleExportSelected() {
+  if (!canExport.value) {
+    useToastStore().push({
+      message: ETMF_EXPORT_ROLE_REASON,
+      tone: "warning",
+    });
+    return;
+  }
   if (etmfStore.selectedDocumentIds.length === 0) return;
   try {
     await etmfStore.triggerExport({
@@ -760,15 +853,22 @@ async function handleExportSelected() {
 
 // Selected File reference
 const selectedFile = ref(null);
-const fileInputRef = ref(null);
 const uploadModalRef = ref(null);
 
 // Form Fields
-const studyId = ref("STUDY-USDM-001");
-const siteId = ref("");
+const studyId = ref(etmfStore.currentStudyId || "");
+const siteId = ref(etmfStore.currentSiteId || "");
 const artifactCode = ref("");
 const artifactType = ref("");
 const reasonForChange = ref("");
+
+watch(
+  () => [etmfStore.currentStudyId, etmfStore.currentSiteId],
+  ([nextStudy, nextSite]) => {
+    studyId.value = nextStudy || "";
+    siteId.value = nextSite || "";
+  }
+);
 
 useFocusTrap(uploadModalRef, {
   isOpen: showUploadModal,
@@ -882,8 +982,16 @@ function formatDate(dateStr) {
 
 // Modal Handlers
 function openUploadModal() {
+  if (!canStage.value) {
+    useToastStore().push({
+      message: ETMF_STAGE_ROLE_REASON,
+      tone: "warning",
+    });
+    return;
+  }
   if (!selectedArtifactCode.value) return;
-  studyId.value = etmfStore.currentStudyId;
+  studyId.value = etmfStore.currentStudyId || "";
+  siteId.value = etmfStore.currentSiteId || "";
   selectedFile.value = null;
   reasonForChange.value = "";
   uploadError.value = "";
@@ -895,31 +1003,9 @@ function closeUploadModal() {
   selectedFile.value = null;
 }
 
-// Drag & Drop
-function onDragOver() {
-  isDragging.value = true;
-}
-
-function onDragLeave() {
-  isDragging.value = false;
-}
-
-function onDrop(e) {
-  isDragging.value = false;
-  const files = e.dataTransfer?.files;
-  if (files && files.length > 0) {
-    selectedFile.value = files[0];
-  }
-}
-
-function triggerFileSelect() {
-  fileInputRef.value?.click();
-}
-
-function onFileSelected(e) {
-  const target = e.target;
-  if (target.files && target.files.length > 0) {
-    selectedFile.value = target.files[0];
+function onRegulatedFileSelected(file) {
+  if (file) {
+    selectedFile.value = file;
   }
 }
 
@@ -957,8 +1043,17 @@ async function submitUpload() {
           )
         );
       };
-      reader.readAsText(file.slice(0, 5000)); // Read first few KB as text safely
+      reader.readAsText(file.slice(0, 65536)); // Read initial text excerpt for search indexing
     });
+
+    let rawBuffer = null;
+    if (typeof file.arrayBuffer === "function") {
+      try {
+        rawBuffer = await file.arrayBuffer();
+      } catch {
+        rawBuffer = null;
+      }
+    }
 
     // Extract zone and section integers/strings dynamically from code
     const codeParts = artifactCode.value.split(".");
@@ -966,14 +1061,21 @@ async function submitUpload() {
     const sectionStr = codeParts.slice(0, 2).join(".");
 
     const formData = new FormData();
-    formData.append("study_id", studyId.value);
-    formData.append("site_id", siteId.value || "");
+    formData.append(
+      "study_id",
+      studyId.value || etmfStore.currentStudyId || ""
+    );
+    formData.append("site_id", siteId.value || etmfStore.currentSiteId || "");
     formData.append("artifact_type", artifactType.value);
     formData.append("filename", file.name);
     formData.append(
       "content",
       `Document content index for: ${file.name}. Raw plaintext: ${fileContent}`
     );
+    if (rawBuffer && rawBuffer.byteLength > 0) {
+      formData.append("content_base64", arrayBufferToBase64(rawBuffer));
+    }
+    formData.append("file", file);
     formData.append("mime_type", file.type || "application/pdf");
     formData.append("artifact_code", artifactCode.value);
     formData.append("zone", String(zoneInt));
@@ -1495,6 +1597,41 @@ async function submitUpload() {
   font-weight: 700;
   margin-left: 6px;
   white-space: nowrap;
+}
+
+.grid-role-note {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  background: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
+}
+
+.scope-forbidden-guidance {
+  padding: 32px 24px;
+  text-align: center;
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
+  border-radius: 8px;
+  color: var(--semantic-color-error-text-dark);
+}
+
+.scope-forbidden-guidance h3 {
+  margin: 8px 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.scope-forbidden-guidance p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.scope-forbidden-icon {
+  font-size: 1.6rem;
 }
 
 table,

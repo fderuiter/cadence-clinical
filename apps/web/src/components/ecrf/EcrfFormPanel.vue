@@ -512,7 +512,9 @@
                             :disabled="sdvBusy || assertionsLocked"
                             @click="beginVerify(item)"
                           >
-                            Verify
+                            Verify<span class="sr-only">
+                              {{ item.item_id }}</span
+                            >
                           </button>
                         </template>
                         <button
@@ -523,7 +525,9 @@
                           :disabled="sdvBusy || assertionsLocked"
                           @click="beginRetract(item, activeVerification(item)!)"
                         >
-                          Withdraw verification
+                          Withdraw verification<span class="sr-only">
+                            for {{ item.item_id }}</span
+                          >
                         </button>
                       </div>
                     </div>
@@ -553,7 +557,9 @@
                         :disabled="queries.busy || assertionsLocked"
                         @click="beginRaise(item)"
                       >
-                        Raise query
+                        Raise query<span class="sr-only">
+                          on {{ item.item_id }}</span
+                        >
                       </button>
                     </div>
                   </td>
@@ -1097,6 +1103,7 @@ import {
   type EcrfUnsavedItem,
 } from "../../composables/useEcrfForm";
 import { isLiveQuery, useFormQueries } from "../../composables/useFormQueries";
+import { confirmDialog } from "../../composables/useConfirmDialog.js";
 import { useAuthStore } from "../../stores/auth.js";
 import ScopeLockControls, {
   type CoveringScopeLockItem,
@@ -1831,14 +1838,18 @@ async function submit() {
   if (outcome.value?.kind === "saved") reason.value = "";
 }
 
-function closeForm() {
-  if (
-    dirty.value &&
-    !window.confirm(
-      "You have unsaved changes on this form. Discard them and close?"
-    )
-  ) {
-    return;
+async function closeForm() {
+  if (dirty.value) {
+    const confirmed = await confirmDialog({
+      title: "Discard Unsaved Changes",
+      message: "You have unsaved changes on this form. Discard them and close?",
+      confirmLabel: "Discard & Close",
+      cancelLabel: "Keep Editing",
+      variant: "warning",
+    });
+    if (!confirmed) {
+      return;
+    }
   }
   clearDraft();
   close();

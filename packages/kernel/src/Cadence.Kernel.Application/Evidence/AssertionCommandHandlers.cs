@@ -51,6 +51,12 @@ internal sealed class ApplyLockHandler(IAttestationVerifier verifier) : ICommand
             return AssertionErrors.AlreadyLocked;
         }
 
+        if (command.Kind == LockKind.Locked
+            && await LockReadinessEvaluator.CheckAsync(context.Work, command.StudyId, command.Scope, cancellationToken).ConfigureAwait(false) is { } notReady)
+        {
+            return notReady;
+        }
+
         var target = LockStatement.Target(command.AssertionId, LockStatement.Apply(command.AssertionId, command.Kind, command.Scope));
         if (await LockSignature.RecordOrVerifyAsync(
                 verifier,

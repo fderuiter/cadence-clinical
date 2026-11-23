@@ -57,26 +57,6 @@ public interface IKernelScopeGraph
     Task<IReadOnlyList<ScopeChild>> ChildrenAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Resolves the governing <see cref="EnrollmentId"/> for any <c>collection_instance</c> or <c>observation</c> in
-    /// <paramref name="nodes"/> (ADR-2457).
-    /// </summary>
-    Task<IReadOnlyDictionary<NodeRef, EnrollmentId>> EnrollmentsOfAsync(
-        TenantId tenant,
-        IReadOnlyCollection<NodeRef> nodes,
-        CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyDictionary<NodeRef, EnrollmentId>>(new Dictionary<NodeRef, EnrollmentId>());
-
-    /// <summary>
-    /// Returns the governing <see cref="EnrollmentId"/> for any observation in <paramref name="nodes"/> that records a
-    /// blinded treatment or intervention concept (K-AUTH-4).
-    /// </summary>
-    Task<IReadOnlyDictionary<NodeRef, EnrollmentId>> BlindedObservationsAsync(
-        TenantId tenant,
-        IReadOnlyCollection<NodeRef> nodes,
-        CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyDictionary<NodeRef, EnrollmentId>>(new Dictionary<NodeRef, EnrollmentId>());
-
-    /// <summary>
     /// Every enrollment in <paramref name="study"/> with its site code and subject code, or null when the study does not
     /// exist in <paramref name="tenant"/>.
     /// </summary>
@@ -211,26 +191,6 @@ public sealed class KernelNavigator(IKernelScopeGraph graph) : IKernelNavigator
         }
 
         return await graph.ChildrenAsync(tenant, node.Unversioned(), cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <inheritdoc />
-    public Task<IReadOnlyDictionary<NodeRef, EnrollmentId>> EnrollmentsOfAsync(
-        TenantId tenant,
-        IReadOnlyCollection<NodeRef> nodes,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(nodes);
-        return graph.EnrollmentsOfAsync(tenant, nodes, cancellationToken);
-    }
-
-    /// <inheritdoc />
-    public Task<IReadOnlyDictionary<NodeRef, EnrollmentId>> BlindedObservationsAsync(
-        TenantId tenant,
-        IReadOnlyCollection<NodeRef> nodes,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(nodes);
-        return graph.BlindedObservationsAsync(tenant, nodes, cancellationToken);
     }
 
     /// <inheritdoc />

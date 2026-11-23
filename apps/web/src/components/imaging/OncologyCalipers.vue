@@ -230,14 +230,14 @@
                   >
                     ✏️ Convert
                   </button>
-                  <button
-                    type="button"
+                  <ClinicalIconButton
                     class="btn-delete-annot"
                     title="Delete Annotation"
+                    :label="`Delete annotation ${a.lesion_id || a.id}`"
                     @click="$emit('deleteAnnotation', a.id)"
                   >
                     ✕
-                  </button>
+                  </ClinicalIconButton>
                 </div>
               </td>
             </tr>
@@ -337,9 +337,13 @@
           <h4 class="modal-title">
             Electronic Signature - Tumor Assessment Sign-off
           </h4>
-          <button type="button" class="btn-close" @click="closeSignoffModal">
+          <ClinicalIconButton
+            class="btn-close"
+            label="Close tumor assessment electronic signature dialog"
+            @click="closeSignoffModal"
+          >
             ✕
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <p class="modal-disclaimer">
@@ -396,7 +400,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 
 const props = defineProps({
   annotations: {

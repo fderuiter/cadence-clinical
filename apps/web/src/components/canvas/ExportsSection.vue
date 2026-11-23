@@ -8,8 +8,9 @@
     <header class="study-exports-header">
       <h2 id="study-exports-title">Exports</h2>
       <p class="study-exports-subtitle">
-        Stream reproducible clinical snapshots in CSV, CDISC ODM v1.3.2 XML, or
-        CDISC Dataset-JSON.
+        Stream reproducible clinical snapshots in CSV, CDISC ODM v1.3.2 XML,
+        CDISC Dataset-JSON, SAS/R statistical bundles, or regulatory Study
+        Archive ZIPs.
       </p>
     </header>
 
@@ -61,6 +62,18 @@
             </option>
             <option value="csv">
               CSV clinical dataset (Flat observation rows)
+            </option>
+            <option value="sas_bundle">
+              SAS statistical bundle (.zip — CSV + Dataset-JSON + .sas syntax +
+              manifest)
+            </option>
+            <option value="r_bundle">
+              R statistical bundle (.zip — CSV + Dataset-JSON + .R syntax +
+              manifest)
+            </option>
+            <option value="study_archive">
+              Regulatory Study Archive (.zip — datasets + syntax + PDF/ODM
+              casebooks + audit + manifest)
             </option>
           </select>
         </div>
@@ -134,6 +147,9 @@
         aria-live="polite"
       >
         {{ outcome.message }}
+        <code v-if="outcome.sha256" data-testid="study-exports-sha256">
+          SHA-256: {{ outcome.sha256 }}
+        </code>
       </p>
     </form>
   </section>
@@ -165,7 +181,11 @@ const lockFilter = ref<StudyExportLockFilter>("locked_only");
 const selectedPreset = ref("");
 const asOf = ref("");
 const streaming = ref(false);
-const outcome = ref<{ kind: "ok" | "error"; message: string } | null>(null);
+const outcome = ref<{
+  kind: "ok" | "error";
+  message: string;
+  sha256?: string | null;
+} | null>(null);
 
 const lockTimestampOptions = computed(() =>
   knownLocks.value
@@ -237,6 +257,7 @@ async function downloadSnapshot() {
     outcome.value = {
       kind: "ok",
       message: `Streamed ${result.filename} (${result.blob.size} bytes).`,
+      sha256: result.contentSha256,
     };
   } catch (err) {
     outcome.value = {

@@ -15,15 +15,7 @@
       </span>
     </header>
 
-    <p v-if="record.loading" class="status-line" role="status">
-      Loading {{ participant.subject_id }}'s data...
-    </p>
-    <p
-      v-else-if="record.error"
-      id="record-error"
-      class="status-line"
-      role="status"
-    >
+    <p v-if="record.error" id="record-error" class="status-line" role="status">
       {{ participant.subject_id }}'s data couldn't be loaded.
       <button
         id="btn-retry-record"
@@ -36,8 +28,12 @@
     </p>
 
     <template v-else>
+      <p v-if="record.loading" class="status-line" role="status">
+        Loading {{ participant.subject_id }}'s data...
+      </p>
+
       <div
-        v-if="record.enrollmentId"
+        v-if="!record.loading && record.enrollmentId"
         class="participant-governance"
         data-testid="participant-governance"
       >
@@ -96,6 +92,7 @@
             class="casebook-select"
             :disabled="casebookBusy"
           >
+            <option value="pdf">Certified PDF casebook (.pdf)</option>
             <option value="html">Printable HTML casebook</option>
             <option value="odm_xml">CDISC ODM v1.3.2 XML casebook</option>
             <option value="json">Structured JSON casebook</option>
@@ -136,6 +133,7 @@
         :study-code="canvas.studyCode"
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
+        :enrollment-loading="record.loading"
         :form-location="formLocation"
         :new-form-location="newFormLocation"
         :new-form-cell-location="newFormCellLocation"
@@ -147,6 +145,7 @@
         :study-code="canvas.studyCode"
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
+        :enrollment-loading="record.loading"
         :can-manage="canManage"
         :form-titles="formTitles"
         :form-location="formLocation"
@@ -167,7 +166,10 @@ import {
   type CasebookExportFormat,
   type KernelLock,
 } from "../../api/kernelApi";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import {
+  findKernelStudyRef,
+  getCachedEnrollmentStudySiteRef,
+} from "../../canvas/kernelStudy";
 import { participantStateLabel } from "../../canvas/lifecycle";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
@@ -240,8 +242,7 @@ const enrollmentRef = computed(() =>
   record.value.enrollmentId ? `enrollment:${record.value.enrollmentId}` : ""
 );
 
-const effectiveStudySiteRef = computed(() => {
-  if (zoomStudySiteRef.value) return zoomStudySiteRef.value;
+const lockDerivedStudySiteRef = computed(() => {
   if (!enrollmentRef.value) return null;
   for (const lock of activeStudyLocks.value) {
     if (
@@ -254,6 +255,18 @@ const effectiveStudySiteRef = computed(() => {
     }
   }
   return null;
+});
+
+const effectiveStudySiteRef = computed(() => {
+  if (zoomStudySiteRef.value) return zoomStudySiteRef.value;
+  if (
+    record.value.enrollmentId &&
+    typeof getCachedEnrollmentStudySiteRef === "function"
+  ) {
+    const cached = getCachedEnrollmentStudySiteRef(record.value.enrollmentId);
+    if (cached) return stripNodeVersion(cached);
+  }
+  return lockDerivedStudySiteRef.value;
 });
 
 const coveringParticipantLocks = computed<KernelLock[]>(() => {
@@ -301,22 +314,66 @@ async function refreshEnrollmentLocks() {
 }
 
 let lookupSeq = 0;
+let zoomSeq = 0;
 
 watch(
   () => record.value.enrollmentId,
   () => {
+    zoomSeq++;
+    zoomStudySiteRef.value = null;
     casebookOutcome.value = null;
   }
 );
 
 watch(
+  [() => record.value.enrollmentId, () => activeStudyLocks.value],
+  async ([enrollmentId, locks]) => {
+    if (!enrollmentId || zoomStudySiteRef.value) return;
+    if (
+      typeof getCachedEnrollmentStudySiteRef === "function" &&
+      getCachedEnrollmentStudySiteRef(enrollmentId)
+    ) {
+      return;
+    }
+    if (lockDerivedStudySiteRef.value) return;
+    const hasActiveSiteLock = locks.some(
+      (l) =>
+        !l.masked &&
+        !l.released &&
+        (l.scope_kind === "study_site" ||
+          l.scope_ref?.startsWith("study_site:"))
+    );
+    if (!hasActiveSiteLock || typeof kernelApi.getZoomPath !== "function") {
+      return;
+    }
+    const seq = ++zoomSeq;
+    try {
+      const zoomSteps = await kernelApi.getZoomPath(
+        `enrollment:${enrollmentId}`
+      );
+      if (seq !== zoomSeq || record.value.enrollmentId !== enrollmentId) return;
+      const siteStep = (zoomSteps ?? []).find(
+        (step) => step.level === "study_site" && !step.mask && step.node
+      );
+      zoomStudySiteRef.value = stripNodeVersion(siteStep?.node ?? null);
+    } catch {
+      if (seq === zoomSeq) {
+        zoomStudySiteRef.value = null;
+      }
+    }
+  },
+  { immediate: true }
+);
+
+watch(
   [
     () => canvas.studyCode,
-    () => record.value.enrollmentId,
+    () => props.participant.id,
     () => Boolean(props.newFormCellLocation),
   ],
-  async ([code, enrollmentId, needsSchedule]) => {
+  async ([code, , needsSchedule]) => {
     const seq = ++lookupSeq;
+    zoomSeq++;
     casebookOutcome.value = null;
     zoomStudySiteRef.value = null;
     if (!code) {
@@ -328,27 +385,9 @@ watch(
       ? canvas.loadScheduleOptions(code).catch(() => null)
       : Promise.resolve(null);
     const locksTask = (async () => {
-      if (!enrollmentId) {
-        studyRef.value = null;
-        activeStudyLocks.value = [];
-        return;
-      }
       try {
-        const zoomTask =
-          typeof kernelApi.getZoomPath === "function"
-            ? Promise.resolve()
-                .then(() => kernelApi.getZoomPath(`enrollment:${enrollmentId}`))
-                .catch(() => [])
-            : Promise.resolve([]);
-        const [resolved, zoomSteps] = await Promise.all([
-          findKernelStudyRef(code),
-          zoomTask,
-        ]);
+        const resolved = await findKernelStudyRef(code);
         if (seq !== lookupSeq) return;
-        const siteStep = (zoomSteps ?? []).find(
-          (step) => step.level === "study_site" && !step.mask && step.node
-        );
-        zoomStudySiteRef.value = stripNodeVersion(siteStep?.node ?? null);
         studyRef.value = resolved;
         if (resolved) {
           await refreshEnrollmentLocks();
@@ -357,7 +396,6 @@ watch(
         }
       } catch {
         if (seq === lookupSeq) {
-          zoomStudySiteRef.value = null;
           studyRef.value = null;
           activeStudyLocks.value = [];
         }
@@ -461,6 +499,9 @@ async function exportCasebook() {
 }
 
 .casebook-select {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
@@ -473,6 +514,14 @@ async function exportCasebook() {
   font-size: 0.82rem;
   padding: 4px 8px;
   border-radius: 4px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.casebook-outcome code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .casebook-outcome--ok {

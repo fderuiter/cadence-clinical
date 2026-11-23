@@ -1,9 +1,12 @@
 using System;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -339,7 +342,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             ct);
 
         Tick();
-        await _scenario.Protocol.OkAsync(
+        var raisedQuery = await _scenario.Protocol.OkAsync(
             new RaiseQuery(
                 tenant,
                 AssertionId.New(),
@@ -348,6 +351,27 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
                 "Confirm cuff size used at screening",
                 KernelProtocolScenario.Key(),
                 "Monitor query raised"),
+            ct);
+        Tick();
+        await _scenario.Protocol.OkAsync(
+            new AnswerQuery(
+                tenant,
+                AssertionId.New(),
+                enrollmentA,
+                raisedQuery.AssertionId,
+                "Standard adult cuff verified in source chart",
+                KernelProtocolScenario.Key(),
+                "Site coordinator response"),
+            ct);
+        Tick();
+        await _scenario.Protocol.OkAsync(
+            new RetractAssertion(
+                tenant,
+                AssertionId.New(),
+                enrollmentA,
+                raisedQuery.AssertionId,
+                KernelProtocolScenario.Key(),
+                "Monitor closed query before lock"),
             ct);
 
         // Sign the form instance over HTTP (/api/v1/execution/forms/{formA}/signatures) so an Attestation covers formA too.
@@ -783,18 +807,22 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         using var blindedStat = Client(code, BlindedStatistician);
         using var unblindedPharm = Client(code, UnblindedPharmacist);
 
-        // 1. Enrollment A children return both opened collection_instance nodes with child_count.
+        // 1. Enrollment A children return both opened collection_instance nodes with child_count and the standalone blinded observation masked in place.
         using (var childrenResp = await siteACrc.GetAsync(new Uri($"/api/v1/kernel/nodes/{enrollmentARef}/children", UriKind.Relative), ct))
         {
             var body = await childrenResp.Content.ReadAsStringAsync(ct);
             childrenResp.StatusCode.Should().Be(HttpStatusCode.OK, body);
             using var doc = JsonDocument.Parse(body);
-            var forms = doc.RootElement.EnumerateArray().ToList();
+            var children = doc.RootElement.EnumerateArray().ToList();
+            var forms = children.Where(c => c.GetProperty("node").GetProperty("kind").GetString() == NodeKinds.CollectionInstance).ToList();
             forms.Should().HaveCount(2);
             forms.Should().Contain(f =>
-                f.GetProperty("node").GetProperty("kind").GetString() == NodeKinds.CollectionInstance
-                && f.GetProperty("node").GetProperty("ref").GetString()!.StartsWith($"{formARef}@", StringComparison.Ordinal)
+                f.GetProperty("node").GetProperty("ref").GetString()!.StartsWith($"{formARef}@", StringComparison.Ordinal)
                 && f.GetProperty("child_count").GetInt32() == 2);
+            children.Should().ContainSingle(c =>
+                c.GetProperty("node").GetProperty("kind").GetString() == NodeKinds.Observation
+                && c.GetProperty("node").GetProperty("mask").GetString() == "Blinded"
+                && c.GetProperty("node").GetProperty("ref").ValueKind == JsonValueKind.Null);
         }
 
         // 2. CollectionInstance A children return its two recorded observations (Systolic and Diastolic), unmasked for Site A CRC.
@@ -841,6 +869,384 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             doc.RootElement.GetProperty("kind").GetString().Should().Be(NodeKinds.Observation);
             doc.RootElement.GetProperty("mask").ValueKind.Should().Be(JsonValueKind.Null);
             doc.RootElement.GetProperty("ref").GetString().Should().StartWith($"{blindedObsRef}@");
+        }
+    }
+
+    /// <summary>
+    /// <c>GET /api/v1/kernel/studies/{studyRef}/locks/readiness</c> reports open query and missing required item counts,
+    /// masks unauthorized site and blinded treatment blockers under <c>K-AUTH-4</c>, <c>POST /api/v1/kernel/locks</c>
+    /// rejects <c>Locked</c> with <c>409 K.Assertion.ScopeNotReady</c> + structured <c>Explanation</c> and zero orphan
+    /// <c>Attestation</c> rows while keeping <c>Frozen</c> available, and navigation <c>/nodes/{ref}/children</c> resolves
+    /// <c>collection_instance</c> and <c>observation</c> nodes under <c>K-AUTH-4</c> masking.
+    /// </summary>
+    [Fact(DisplayName = "HostLockReadiness_BlocksLockedWithExplanation_AllowsFrozen_WritesZeroOrphanAttestations_AndMasksNavigation")]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task HostLockReadinessBlocksLockedWithExplanationAllowsFrozenWritesZeroOrphanAttestationsAndMasksNavigation()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, code, study, _, siteA, siteB, enrollmentA, enrollmentB, formA, sbpObservationA) = await SeedStudyAsync(ct);
+        var studyRef = NodeRef.For(study).ToString();
+        var enrollmentARef = NodeRef.For(enrollmentA).ToString();
+        var formARef = NodeRef.For(formA).ToString();
+
+        // Open a second form on Site B with missing Diastolic AND raise an open query on Site A's systolic BP + a blinded treatment observation.
+        ProtocolVersionId version;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            version = (await db.ProtocolVersions.AsNoTracking().SingleAsync(v => v.StudyId == study, ct)).Id;
+        }
+        var subjectB = new KernelObservationScenario.Subject(tenant, study, siteB, enrollmentB);
+        var incompleteFormB = await _scenario.Protocol.OkAsync(Open(subjectB, CollectionInstanceId.New(), Tick()), ct);
+        await _scenario.Protocol.OkAsync(
+            Save(new Form(subjectB, version, incompleteFormB.CollectionInstanceId), Value(Systolic, new QuantityValue(134.00m, "mm[Hg]"))),
+            ct);
+
+        var openQueryA = await _scenario.Protocol.OkAsync(
+            new RaiseQuery(
+                tenant,
+                AssertionId.New(),
+                enrollmentA,
+                sbpObservationA,
+                "Verify supine rest duration prior to reading",
+                KernelProtocolScenario.Key(),
+                "Monitor query on Site A"),
+            ct);
+
+        var treatmentConcept = await DefineConceptWithCodeAsync(tenant, "randomization_treatment_assignment", "Randomized treatment arm", ct);
+        var blindedObsId = ObservationId.New();
+        await _scenario.Protocol.OkAsync(
+            new RecordObservation(
+                tenant,
+                blindedObsId,
+                enrollmentA,
+                treatmentConcept,
+                new TextValue("Active Drug 200mg"),
+                Tick().AddMinutes(-1),
+                KernelProtocolScenario.Key(),
+                "Randomization allocation"),
+            ct);
+        var blindedQuery = await _scenario.Protocol.OkAsync(
+            new RaiseQuery(
+                tenant,
+                AssertionId.New(),
+                enrollmentA,
+                blindedObsId,
+                "Confirm pharmacy kit reconciliation",
+                KernelProtocolScenario.Key(),
+                "Unblinded pharmacy query"),
+            ct);
+
+        using var dm = Client(code, DataManager);
+        using var siteACrc = Client(code, SiteACoordinator);
+        using var blindedStat = Client(code, BlindedStatistician);
+
+        // 1. Readiness endpoint for DataManager (study-scoped, blinded by default) reports 2 open queries + 1 missing required item,
+        // with the blinded treatment query masked as Blinded!
+        var dmReadiness = await SendAsync<KernelLockReadinessResponse>(
+            dm,
+            BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        dmReadiness.ReadyForLock.Should().BeFalse();
+        dmReadiness.OpenQueryCount.Should().Be(2);
+        dmReadiness.MissingRequiredItemCount.Should().Be(1);
+        dmReadiness.Blockers.Should().ContainSingle(b => !b.Masked && b.TargetRef == NodeRef.For(sbpObservationA).ToString() && b.Owner != null);
+        dmReadiness.Blockers.Should().ContainSingle(b => b.Masked && b.Mask == "Blinded" && b.TargetRef == null);
+        dmReadiness.Blockers.Should().ContainSingle(b => !b.Masked && b.Kind == "MissingRequiredItem" && b.TargetRef == NodeRef.For(incompleteFormB.CollectionInstanceId).ToString());
+
+        // Site A coordinator sees Site B's missing required item masked as NotPermitted and blinded query masked as Blinded.
+        var crcReadiness = await SendAsync<KernelLockReadinessResponse>(
+            siteACrc,
+            BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        crcReadiness.Blockers.Should().ContainSingle(b => b.Masked && b.Mask == "NotPermitted" && b.TargetRef == null);
+        crcReadiness.Blockers.Should().ContainSingle(b => b.Masked && b.Mask == "Blinded" && b.TargetRef == null);
+
+        // 2. Navigation /nodes/{ref}/children resolves collection_instance and observation scopes and masks unauthorized/blinded nodes.
+        using (var enrollFormsRes = await siteACrc.GetAsync(new Uri($"/api/v1/kernel/nodes/{enrollmentARef}/children", UriKind.Relative), ct))
+        {
+            enrollFormsRes.StatusCode.Should().Be(HttpStatusCode.OK);
+            var enrollFormsText = await enrollFormsRes.Content.ReadAsStringAsync(ct);
+            enrollFormsText.Should().Contain(formARef);
+            enrollFormsText.Should().Contain("Blinded").And.NotContain(blindedObsId.Value.ToString("D"));
+        }
+
+        using (var formObsRes = await siteACrc.GetAsync(new Uri($"/api/v1/kernel/nodes/{formARef}/children", UriKind.Relative), ct))
+        {
+            formObsRes.StatusCode.Should().Be(HttpStatusCode.OK);
+            var formObsText = await formObsRes.Content.ReadAsStringAsync(ct);
+            formObsText.Should().Contain(NodeRef.For(sbpObservationA).ToString());
+        }
+
+        using (var siteBFormsForCrc = await siteACrc.GetAsync(new Uri($"/api/v1/kernel/nodes/{NodeRef.For(enrollmentB)}/children", UriKind.Relative), ct))
+        {
+            siteBFormsForCrc.StatusCode.Should().Be(HttpStatusCode.Forbidden, "enumerating children of an unauthorized enrollment fails closed with 403");
+        }
+
+        // 3. Attempting Locked on enrollmentA fails with 409 K.Assertion.ScopeNotReady + structured Explanation and writes ZERO orphan Attestations!
+        int attestationsBefore;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            attestationsBefore = await db.Attestations.CountAsync(ct);
+        }
+
+        using (var blockedLock = await dm.SendAsync(
+            BuildRequest(HttpMethod.Post, "locks", LockReason, ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = enrollmentARef,
+                kind = "Locked",
+                meaning = "Approved",
+            }),
+            ct))
+        {
+            blockedLock.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            var bodyText = await blockedLock.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(bodyText);
+            doc.RootElement.GetProperty("code").GetString().Should().Be(AssertionErrors.ScopeNotReady.Code);
+            var explanation = doc.RootElement.GetProperty("explanation");
+            explanation.GetProperty("subject").GetString().Should().Be(enrollmentARef);
+            explanation.GetProperty("conditions").GetArrayLength().Should().BeGreaterThan(0);
+            explanation.GetProperty("next_actions").GetArrayLength().Should().BeGreaterThan(0);
+        }
+
+        // Unknown target scope also fails BEFORE Attest -> still zero new Attestation rows!
+        using (var missingScopeLock = await dm.SendAsync(
+            BuildRequest(HttpMethod.Post, "locks", LockReason, ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = $"enrollment:{Guid.CreateVersion7():D}",
+                kind = "Frozen",
+                meaning = "Approved",
+            }),
+            ct))
+        {
+            missingScopeLock.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            (await db.Attestations.CountAsync(ct)).Should().Be(
+                attestationsBefore,
+                "rejected Lock requests must validate readiness and scope existence before writing Attestations");
+        }
+
+        // 4. Frozen succeeds on enrollmentA even with open queries, allowing query answer and closure while Frozen!
+        var frozen = await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, "locks", "Freeze enrollment during query closure", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = enrollmentARef,
+                kind = "Frozen",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+
+        // Duplicate Frozen on enrollmentA fails with 409 AlreadyLocked and writes zero extra Attestations!
+        int attestationsAfterFreeze;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            attestationsAfterFreeze = await db.Attestations.CountAsync(ct);
+        }
+
+        using (var duplicateFreeze = await dm.SendAsync(
+            BuildRequest(HttpMethod.Post, "locks", "Duplicate freeze", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = enrollmentARef,
+                kind = "Frozen",
+                meaning = "Approved",
+            }),
+            ct))
+        {
+            duplicateFreeze.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await ProblemCodeAsync(duplicateFreeze, ct)).Should().Be(AssertionErrors.AlreadyLocked.Code);
+        }
+
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            (await db.Attestations.CountAsync(ct)).Should().Be(attestationsAfterFreeze);
+        }
+
+        // Answer and close both queries on enrollmentA while Frozen!
+        await _scenario.Protocol.OkAsync(
+            new AnswerQuery(tenant, AssertionId.New(), enrollmentA, openQueryA.AssertionId, "5 min supine rest documented", KernelProtocolScenario.Key(), "Site response"),
+            ct);
+        await _scenario.Protocol.OkAsync(
+            new RetractAssertion(tenant, AssertionId.New(), enrollmentA, openQueryA.AssertionId, KernelProtocolScenario.Key(), "Monitor closed query"),
+            ct);
+        await _scenario.Protocol.OkAsync(
+            new RetractAssertion(tenant, AssertionId.New(), enrollmentA, blindedQuery.AssertionId, KernelProtocolScenario.Key(), "Pharmacy closed query"),
+            ct);
+
+        // Release Frozen, verify enrollmentA readiness is now ready_for_lock == true, and apply Locked!
+        await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, $"locks/{frozen.Ref}/release", "Release freeze for hard lock", ReleaseToken(DataManager, frozen.Ref!), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                meaning = "Responsibility",
+            }),
+            HttpStatusCode.OK,
+            ct);
+
+        var readyNow = await SendAsync<KernelLockReadinessResponse>(
+            dm,
+            BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(enrollmentARef)}", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        readyNow.ReadyForLock.Should().BeTrue();
+        readyNow.OpenQueryCount.Should().Be(0);
+        readyNow.MissingRequiredItemCount.Should().Be(0);
+
+        var lockedEnrollmentA = await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, "locks", LockReason, ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = enrollmentARef,
+                kind = "Locked",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+        lockedEnrollmentA.Kind.Should().Be("Locked");
+        _ = siteA;
+        _ = blindedStat;
+    }
+
+    /// <summary>
+    /// Streams valid <c>%PDF-1.7</c> casebooks (<c>application/pdf</c>) and <c>sas_bundle</c>, <c>r_bundle</c>, and
+    /// <c>study_archive</c> ZIP archives (<c>application/zip</c>) with verified <c>X-Content-Sha256</c> headers,
+    /// <c>manifest.json</c> per-file SHA-256 digests, statistical syntax scripts, zero <c>IdentityVault</c> PII, and
+    /// <c>K-AUTH-4</c> masking.
+    /// </summary>
+    [Fact(DisplayName = "HostExportsAndCasebook_StreamValidPdf17Casebook_AndSasRAndStudyArchiveZipsWithVerifiedManifests")]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task HostExportsAndCasebookStreamValidPdf17CasebookAndSasRAndStudyArchiveZipsWithVerifiedManifests()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, code, study, studyCode, _, _, enrollmentA, enrollmentB, _, _) = await SeedStudyAsync(ct);
+        var studyRef = NodeRef.For(study).ToString();
+        var enrollmentARef = NodeRef.For(enrollmentA).ToString();
+        var enrollmentBRef = NodeRef.For(enrollmentB).ToString();
+
+        var treatmentConcept = await DefineConceptWithCodeAsync(tenant, "randomization_treatment_assignment", "Randomized treatment arm", ct);
+        await _scenario.Protocol.OkAsync(
+            new RecordObservation(
+                tenant,
+                ObservationId.New(),
+                enrollmentA,
+                treatmentConcept,
+                new TextValue("Investigational Arm X"),
+                Tick().AddMinutes(-1),
+                KernelProtocolScenario.Key(),
+                "Randomization allocation"),
+            ct);
+
+        using var dm = Client(code, DataManager);
+        using var siteACrc = Client(code, SiteACoordinator);
+        using var unblindedPharm = Client(code, UnblindedPharmacist);
+
+        // 1. PDF-1.7 casebook stream + SHA-256 + K-AUTH-4 masking
+        var (pdfBytes, pdfSha) = await GetBytesWithShaHeaderAsync(dm, $"enrollments/{enrollmentARef}/casebook?format=pdf", "application/pdf", ct);
+        Convert.ToHexStringLower(SHA256.HashData(pdfBytes)).Should().Be(pdfSha);
+        var pdfText = Encoding.ASCII.GetString(pdfBytes);
+        pdfText.Should().StartWith("%PDF-1.7\n");
+        pdfText.Should().Contain("/Type /Catalog").And.Contain("/Type /Pages").And.Contain("\nxref\n").And.Contain("%%EOF");
+        pdfText.Should().Contain("SUBJ-A").And.Contain("120.50");
+        pdfText.Should().NotContain("Investigational Arm X", "DataManager lacks enrollment.unblind");
+        pdfText.Should().Contain("Blinded");
+        AssertNoDirectIdentifiers(pdfText);
+
+        var (maskedPdfBytes, maskedPdfSha) = await GetBytesWithShaHeaderAsync(siteACrc, $"enrollments/{enrollmentBRef}/casebook?format=pdf", "application/pdf", ct);
+        Convert.ToHexStringLower(SHA256.HashData(maskedPdfBytes)).Should().Be(maskedPdfSha);
+        var maskedPdfText = Encoding.ASCII.GetString(maskedPdfBytes);
+        maskedPdfText.Should().StartWith("%PDF-1.7\n");
+        maskedPdfText.Should().NotContain("SUBJ-B").And.NotContain("138.25").And.Contain("NotPermitted");
+
+        var (pharmPdfBytes, _) = await GetBytesWithShaHeaderAsync(unblindedPharm, $"enrollments/{enrollmentARef}/casebook?format=pdf", "application/pdf", ct);
+        Encoding.ASCII.GetString(pharmPdfBytes).Should().Contain("Investigational Arm X");
+
+        // 2. SAS bundle, R bundle, and Study Archive ZIP streams + manifest SHA-256 verification + K-AUTH-4 masking
+        foreach (var format in new[] { "sas_bundle", "r_bundle", "study_archive" })
+        {
+            var (zipBytes, zipSha) = await GetBytesWithShaHeaderAsync(
+                siteACrc,
+                $"studies/{studyRef}/exports?format={format}&lock_filter=all",
+                "application/zip",
+                ct);
+            Convert.ToHexStringLower(SHA256.HashData(zipBytes)).Should().Be(zipSha);
+
+            using var archive = new ZipArchive(new MemoryStream(zipBytes), ZipArchiveMode.Read);
+            var manifestEntry = archive.GetEntry("manifest.json");
+            manifestEntry.Should().NotBeNull($"{format} must include manifest.json");
+
+            string manifestText;
+            await using var manifestStream = await manifestEntry!.OpenAsync(ct);
+            using (var reader = new StreamReader(manifestStream, Encoding.UTF8))
+            {
+                manifestText = await reader.ReadToEndAsync(ct);
+            }
+
+            using var manifestDoc = JsonDocument.Parse(manifestText);
+            manifestDoc.RootElement.GetProperty("study_code").GetString().Should().Be(studyCode);
+            manifestDoc.RootElement.GetProperty("format").GetString().Should().Be(format);
+
+            var filesArray = manifestDoc.RootElement.GetProperty("files");
+            filesArray.GetArrayLength().Should().BeGreaterThan(0);
+
+            foreach (var fileElem in filesArray.EnumerateArray())
+            {
+                var entryPath = fileElem.GetProperty("path").GetString()!;
+                var expectedSha = fileElem.GetProperty("sha256").GetString()!;
+                var expectedSize = fileElem.GetProperty("size_bytes").GetInt64();
+
+                var entry = archive.GetEntry(entryPath);
+                entry.Should().NotBeNull($"manifest entry {entryPath} must exist in {format}");
+                using var ms = new MemoryStream();
+                await using (var entryStream = await entry!.OpenAsync(ct))
+                {
+                    await entryStream.CopyToAsync(ms, ct);
+                }
+
+                var entryBytes = ms.ToArray();
+                entryBytes.LongLength.Should().Be(expectedSize, $"byte length of {entryPath} in {format}");
+                Convert.ToHexStringLower(SHA256.HashData(entryBytes)).Should().Be(expectedSha, $"SHA-256 digest of {entryPath} in {format}");
+
+                var asText = Encoding.UTF8.GetString(entryBytes);
+                AssertNoDirectIdentifiers(asText);
+                asText.Should().NotContain("SUBJ-B", $"Site A coordinator ZIP {format} entry {entryPath} must mask Site B");
+                asText.Should().NotContain("138.25", $"Site A coordinator ZIP {format} entry {entryPath} must mask Site B values");
+                asText.Should().NotContain("Investigational Arm X", $"Site A coordinator ZIP {format} entry {entryPath} must mask blinded treatment");
+            }
+
+            var entryNames = archive.Entries.Select(e => e.FullName).ToList();
+            entryNames.Should().Contain("data/observations.csv");
+            entryNames.Should().Contain("data/dataset.json");
+
+            if (format == "sas_bundle")
+            {
+                entryNames.Should().Contain(n => n.EndsWith(".sas", StringComparison.Ordinal));
+            }
+            else if (format == "r_bundle")
+            {
+                entryNames.Should().Contain(n => n.EndsWith(".R", StringComparison.Ordinal));
+            }
+            else
+            {
+                entryNames.Should().Contain(n => n.EndsWith(".sas", StringComparison.Ordinal));
+                entryNames.Should().Contain(n => n.EndsWith(".R", StringComparison.Ordinal));
+                entryNames.Should().Contain(n => n.EndsWith(".odm.xml", StringComparison.Ordinal));
+                entryNames.Should().Contain(n => n.StartsWith("casebooks/", StringComparison.Ordinal) && n.EndsWith(".pdf", StringComparison.Ordinal));
+                entryNames.Should().Contain("locks/locks.json");
+                entryNames.Should().Contain("audit/audit_trail.json");
+            }
         }
     }
 

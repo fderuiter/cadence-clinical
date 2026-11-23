@@ -98,26 +98,6 @@ public interface IKernelNavigator
     Task<IReadOnlyList<ScopeChild>?> GetChildrenAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Resolves the governing <see cref="EnrollmentId"/> for any <c>collection_instance</c> or <c>observation</c> in
-    /// <paramref name="nodes"/> so read endpoints inherit enrollment scope visibility (ADR-2457).
-    /// </summary>
-    Task<IReadOnlyDictionary<NodeRef, EnrollmentId>> EnrollmentsOfAsync(
-        TenantId tenant,
-        IReadOnlyCollection<NodeRef> nodes,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyDictionary<NodeRef, EnrollmentId>>(new Dictionary<NodeRef, EnrollmentId>());
-
-    /// <summary>
-    /// Returns the governing <see cref="EnrollmentId"/> for any observation in <paramref name="nodes"/> that records a
-    /// blinded treatment or intervention concept (K-AUTH-4), so read endpoints can enforce <c>enrollment.unblind</c>.
-    /// </summary>
-    Task<IReadOnlyDictionary<NodeRef, EnrollmentId>> BlindedObservationsAsync(
-        TenantId tenant,
-        IReadOnlyCollection<NodeRef> nodes,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyDictionary<NodeRef, EnrollmentId>>(new Dictionary<NodeRef, EnrollmentId>());
-
-    /// <summary>
     /// Every enrollment in <paramref name="study"/> with its site code and subject code, or null when the study does not
     /// exist in <paramref name="tenant"/>.
     /// </summary>

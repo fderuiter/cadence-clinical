@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
@@ -16,6 +18,7 @@ using Cadence.Kernel.Search;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Kernel.Api;
@@ -31,8 +34,6 @@ namespace Cadence.Kernel.Api;
 /// </summary>
 public static class KernelReadEndpoints
 {
-    private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
-
     /// <summary>Maps the read endpoints on the kernel route group (<see cref="KernelApiEndpointRouteBuilderExtensions.MapKernelApi"/>).</summary>
     public static RouteGroupBuilder MapKernelReads(this RouteGroupBuilder kernel)
     {
@@ -90,6 +91,15 @@ public static class KernelReadEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        reads.MapGet("/enrollments/lookup", LookupEnrollmentAsync)
+            .WithName("KernelLookupEnrollment")
+            .WithSummary("Resolves a study code, subject code, and optional site code to pinned study and enrollment references.")
+            .WithDescription("Reads over the tenant's unique study and subject indexes without listing sites. Returns a non-confirming 404 when the study, site, or enrollment does not exist, mismatches, or is masked for the caller (ADR-2471).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         reads.MapGet("/studies/{studyRef}/protocol-versions", ListProtocolVersionsAsync)
             .WithName("KernelListProtocolVersions")
             .WithSummary("A study's protocol versions, newest first, without their content.")
@@ -124,12 +134,7 @@ public static class KernelReadEndpoints
     }
 
     internal static async Task<Results<Ok<KernelNodeResponse>, ProblemHttpResult>> GetNodeAsync(
-        string nodeRef,
-        HttpContext context,
-        IKernelNavigator navigator,
-        INodeVisibility visibility,
-        IAuthorizationProbe probe,
-        ICurrentActor actor,
+        string nodeRef, HttpContext context, IKernelNavigator navigator, INodeVisibility visibility, ICurrentActor actor,
         CancellationToken cancellationToken)
     {
         if (!NodeRef.TryParse(nodeRef, out var node))
@@ -143,17 +148,12 @@ public static class KernelReadEndpoints
             return KernelProblems.NotFound(node);
         }
 
-        var masks = await MaskWithBlindingAsync(visibility, navigator, probe, actor, tenant, [summary.Ref], cancellationToken).ConfigureAwait(false);
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [summary.Ref], cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok(KernelNodeResponse.From(summary, masks.For(summary.Ref)));
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelZoomStepResponse>>, ProblemHttpResult>> GetZoomPathAsync(
-        string nodeRef,
-        HttpContext context,
-        IKernelNavigator navigator,
-        INodeVisibility visibility,
-        IAuthorizationProbe probe,
-        ICurrentActor actor,
+        string nodeRef, HttpContext context, IKernelNavigator navigator, INodeVisibility visibility, ICurrentActor actor,
         CancellationToken cancellationToken)
     {
         if (!NodeRef.TryParse(nodeRef, out var node))
@@ -167,18 +167,13 @@ public static class KernelReadEndpoints
             return KernelProblems.NotFound(node);
         }
 
-        var stepRefs = path.Where(s => s.Ref is not null).Select(s => s.Ref!).ToList();
-        var masks = await MaskWithBlindingAsync(visibility, navigator, probe, actor, tenant, stepRefs, cancellationToken).ConfigureAwait(false);
+        var masks = await KernelReadMasking.MaskAsync(
+            visibility, actor, tenant, path.Where(s => s.Ref is not null).Select(s => s.Ref!), cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok<IReadOnlyList<KernelZoomStepResponse>>([.. path.Select((s, i) => KernelZoomStepResponse.From(s, MaskOfStep(path, i, masks)))]);
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelChildResponse>>, ProblemHttpResult>> GetChildrenAsync(
-        string nodeRef,
-        HttpContext context,
-        IKernelNavigator navigator,
-        INodeVisibility visibility,
-        IAuthorizationProbe probe,
-        ICurrentActor actor,
+        string nodeRef, HttpContext context, IKernelNavigator navigator, INodeVisibility visibility, ICurrentActor actor,
         CancellationToken cancellationToken)
     {
         if (!NodeRef.TryParse(nodeRef, out var node))
@@ -194,7 +189,7 @@ public static class KernelReadEndpoints
 
         // Visibility reaches up the scope path, so every child of a hidden object is hidden too: even masked, the list
         // would say how many there are (a site's enrolled participants, a study's sites). It is refused, not masked (#5033).
-        var parentMasks = await MaskWithBlindingAsync(visibility, navigator, probe, actor, tenant, [parent.Ref], cancellationToken).ConfigureAwait(false);
+        var parentMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [parent.Ref], cancellationToken).ConfigureAwait(false);
         if (parentMasks.For(parent.Ref) is { } parentMask)
         {
             return KernelProblems.NotVisible($"You can't see this {node.Kind} ({parentMask}), so its children are not listed.");
@@ -205,8 +200,8 @@ public static class KernelReadEndpoints
             return KernelProblems.NotFound(node);
         }
 
-        var childRefs = children.Select(c => c.Node.Ref).ToList();
-        var masks = await MaskWithBlindingAsync(visibility, navigator, probe, actor, tenant, childRefs, cancellationToken).ConfigureAwait(false);
+        var masks = await KernelReadMasking.MaskAsync(
+            visibility, actor, tenant, children.Select(c => c.Node.Ref), cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok<IReadOnlyList<KernelChildResponse>>([.. children.Select(c => KernelChildResponse.From(c, masks.For(c.Node.Ref)))]);
     }
 
@@ -270,6 +265,58 @@ public static class KernelReadEndpoints
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, hits.Select(h => h.Ref), cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok<IReadOnlyList<KernelSearchHitResponse>>(
             [.. hits.Where(h => masks.For(h.Ref) is null).Select(KernelSearchHitResponse.From)]);
+    }
+
+    internal static async Task<Results<Ok<KernelEnrollmentLookupResponse>, ProblemHttpResult>> LookupEnrollmentAsync(
+        [FromQuery(Name = "study_code")] string? studyCode,
+        [FromQuery(Name = "subject_code")] string? subjectCode,
+        [FromQuery(Name = "site_code")] string? siteCode,
+        HttpContext context,
+        IEnrollmentDirectory enrollments,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
+    {
+        var trimmedStudyCode = studyCode?.Trim();
+        var trimmedSubjectCode = subjectCode?.Trim();
+        var trimmedSiteCode = string.IsNullOrWhiteSpace(siteCode) ? null : siteCode.Trim();
+
+        if (string.IsNullOrEmpty(trimmedStudyCode)
+            || trimmedStudyCode.Length > SubjectCode.MaxLength
+            || trimmedStudyCode.Any(char.IsControl)
+            || (trimmedSiteCode is not null && (trimmedSiteCode.Length > SubjectCode.MaxLength || trimmedSiteCode.Any(char.IsControl)))
+            || !SubjectCode.TryFrom(trimmedSubjectCode, out var parsedSubjectCode))
+        {
+            return KernelProblems.BadRequest(
+                "Invalid lookup query",
+                "Name a valid study_code, subject_code, and optional site_code.");
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        if (await enrollments.LookupByCodeAsync(tenant, trimmedStudyCode, parsedSubjectCode, trimmedSiteCode, cancellationToken).ConfigureAwait(false)
+            is not { } match)
+        {
+            return KernelProblems.EnrollmentLookupNotFound();
+        }
+
+        var studyRef = NodeRef.For(match.StudyId, match.StudyVersion);
+        var studySiteRef = NodeRef.For(match.StudySiteId, match.StudySiteVersion);
+        var enrollmentRef = NodeRef.For(match.EnrollmentId, match.EnrollmentVersion);
+
+        // As in SearchAsync, a code lookup matches caller-supplied codes, so confirming a hidden study, study site,
+        // or enrollment would reveal that it exists (ADR-2471): any masked node returns the same 404 as absent.
+        var masks = await KernelReadMasking.MaskAsync(
+            visibility,
+            actor,
+            tenant,
+            [studyRef, studySiteRef, enrollmentRef],
+            cancellationToken).ConfigureAwait(false);
+        if (masks.For(studyRef) is not null || masks.For(studySiteRef) is not null || masks.For(enrollmentRef) is not null)
+        {
+            return KernelProblems.EnrollmentLookupNotFound();
+        }
+
+        return TypedResults.Ok(KernelEnrollmentLookupResponse.From(match));
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelProtocolVersionResponse>>, ProblemHttpResult>> ListProtocolVersionsAsync(
@@ -376,76 +423,6 @@ public static class KernelReadEndpoints
         return await reader.GetScheduleOfActivitiesAsync(tenant, id, cancellationToken).ConfigureAwait(false) is { } matrix
             ? TypedResults.Ok(KernelScheduleOfActivitiesResponse.From(version, matrix))
             : KernelProblems.BadRequest("Not a typed design", $"{node} holds content that is not a typed protocol design, so it has no Schedule of Activities.");
-    }
-
-    /// <summary>
-    /// Applies grant-based visibility masking and, for visible <c>observation</c> nodes, checks whether the observation
-    /// records a blinded treatment or intervention concept without <c>enrollment.unblind</c> (<c>K-AUTH-4</c>).
-    /// </summary>
-    private static async Task<IReadOnlyDictionary<NodeRef, MaskReason>> MaskWithBlindingAsync(
-        INodeVisibility visibility,
-        IKernelNavigator navigator,
-        IAuthorizationProbe probe,
-        ICurrentActor actor,
-        TenantId tenant,
-        IReadOnlyCollection<NodeRef> nodes,
-        CancellationToken cancellationToken)
-    {
-        // CollectionInstance and Observation scopes inherit grant visibility from their Enrollment (ADR-2457).
-        var enrollmentsByNode = await navigator.EnrollmentsOfAsync(tenant, nodes, cancellationToken).ConfigureAwait(false);
-        var visibilityInputs = new List<NodeRef>(nodes.Count);
-        foreach (var node in nodes)
-        {
-            visibilityInputs.Add(enrollmentsByNode.TryGetValue(node, out var enrollmentId)
-                ? NodeRef.For(enrollmentId)
-                : node);
-        }
-
-        var rawMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, visibilityInputs, cancellationToken).ConfigureAwait(false);
-        var merged = new Dictionary<NodeRef, MaskReason>();
-        foreach (var node in nodes)
-        {
-            var mask = enrollmentsByNode.TryGetValue(node, out var enrollmentId)
-                ? rawMasks.For(NodeRef.For(enrollmentId))
-                : rawMasks.For(node);
-            if (mask is { } reason)
-            {
-                merged[node] = reason;
-            }
-        }
-
-        var unmaskedObservations = nodes
-            .Where(n => n.Kind == NodeKinds.Observation && merged.For(n) is null)
-            .Distinct()
-            .ToList();
-        if (unmaskedObservations.Count == 0)
-        {
-            return merged;
-        }
-
-        var blindedByObservation = await navigator.BlindedObservationsAsync(tenant, unmaskedObservations, cancellationToken).ConfigureAwait(false);
-        if (blindedByObservation.Count == 0)
-        {
-            return merged;
-        }
-
-        var unblindByEnrollment = new Dictionary<EnrollmentId, bool>();
-        foreach (var (obsRef, enrollmentId) in blindedByObservation)
-        {
-            if (!unblindByEnrollment.TryGetValue(enrollmentId, out var mayUnblind))
-            {
-                var decision = await probe.CanIAsync(tenant, EnrollmentUnblindCapability, NodeRef.For(enrollmentId), cancellationToken).ConfigureAwait(false);
-                mayUnblind = decision.Permitted;
-                unblindByEnrollment[enrollmentId] = mayUnblind;
-            }
-
-            if (!mayUnblind)
-            {
-                merged[obsRef] = MaskReason.Blinded;
-            }
-        }
-
-        return merged;
     }
 
     /// <summary>
