@@ -238,7 +238,7 @@ public static class QualityGates
             "NuGet, pnpm and Python dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing or broken scanners)",
             ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot) == 0),
         new("dependencies", ["validate-dependencies"],
-            "Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, and no client-side crypto package (`node-forge`, `elliptic`, `jose`)",
+            "Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, no client-side crypto package (`node-forge`, `elliptic`, `jose`), and no test harness package (`axe-core`, `@axe-core/playwright`, `vitest`, `@vue/test-utils`, `jsdom`, `fake-indexeddb`, `msw`) in runtime `dependencies`",
             ctx => DependencyValidatorService.ValidateDependencies(ctx.RepoRoot) == 0),
         new("doc-index", ["validate-doc-index"], "Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`",
             ctx => DocIndexSyncService.SyncDocIndex(check: true, repoRoot: ctx.RepoRoot) == 0),
@@ -268,7 +268,7 @@ public static class QualityGates
             PreCommitNote = "checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH=\"<reason>\"` admits growth",
         },
         new("public-bundle", ["validate-public-bundle"],
-            "Zero-exemption post-build scan of `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` for national IDs, unapproved emails, secrets, external assets, executable local URLs, and CSP meta headers (skipped in unscoped `cadence check` only when all three `dist/` folders are absent; fails closed on partial `dist/` or direct `check public-bundle`)",
+            "Zero-exemption post-build scan of `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` for national IDs, unapproved emails, secrets, external assets, executable local URLs, CSP meta headers, `axe-core`/`keycloak-js` demo contamination, forbidden modulepreloads, and staged demo byte budgets (skipped in unscoped `cadence check` only when all three `dist/` folders are absent; fails closed on partial `dist/` or direct `check public-bundle`)",
             ctx => PublicBundleValidatorService.ValidatePublicBundles(ctx.RepoRoot) == 0)
         {
             PreCommit = PreCommitMode.Skipped,

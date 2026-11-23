@@ -87,6 +87,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import ProtocolTrainingConsole from "../components/clinical/ProtocolTrainingConsole.vue";
 import { trainingApi } from "../api/training";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useToastStore } from "../stores/toasts.js";
 
 const props = defineProps({
@@ -101,6 +102,7 @@ const props = defineProps({
 });
 
 const route = useRoute();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const activeCurriculaCount = ref(0);
 const completedQualificationsCount = ref(0);
 const pendingGatedCount = ref(0);
@@ -110,7 +112,24 @@ const protocolVersionFilter = ref(
 );
 
 const effectiveStudyId = computed(
-  () => props.studyId || String(route?.query?.studyId || "")
+  () =>
+    props.studyId.trim() ||
+    String(route?.query?.studyId || "").trim() ||
+    activeStudyCode.value
+);
+
+watch(
+  () => [props.studyId, route?.query?.studyId],
+  ([propStudy, queryStudy]) => {
+    const incoming =
+      (typeof propStudy === "string" && propStudy.trim()) ||
+      (typeof queryStudy === "string" && queryStudy.trim()) ||
+      "";
+    if (incoming) {
+      setActiveStudyCode(incoming);
+    }
+  },
+  { immediate: true }
 );
 const effectiveProtocolVersion = computed(
   () =>
@@ -182,6 +201,29 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.protocol-filter-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--semantic-color-text-dark);
+}
+
+.protocol-filter-input {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 6px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  box-sizing: border-box;
 }
 
 .header-badge-row {

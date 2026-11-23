@@ -1,7 +1,6 @@
 // Cadence Clinical Vue SPA Bootstrap entrypoint
 import { createApp } from "vue";
 import { createPinia } from "pinia";
-import Keycloak from "keycloak-js";
 import { initHoverDetection, sanitizeReturnUrl } from "ui";
 import App from "./App.vue";
 import { installAuthorizedFetch } from "./api/authorization.js";
@@ -57,6 +56,7 @@ async function bootstrapApp() {
     if (isDemoBuild()) {
       authStore.startDemoSession();
     } else {
+      const { default: Keycloak } = await import("keycloak-js");
       await initKeycloakAuth({
         authStore,
         Keycloak,
