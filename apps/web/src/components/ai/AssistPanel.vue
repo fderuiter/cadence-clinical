@@ -93,8 +93,8 @@ import { computed, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import { kernelApi, type KernelProposal } from "../../api/kernelApi";
 import { isAgentProposal, proposalSources } from "../../ai/proposals";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
+import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import NodeRefChip from "../canvas/NodeRefChip.vue";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
@@ -119,8 +119,21 @@ const PROPOSAL_LIMIT = 100;
 
 const question = ref(props.prefill ?? "");
 const proposals = ref<KernelProposal[]>([]);
-const loading = ref(false);
-const error = ref("");
+
+const { studyLoading: loading, studyError: error } = useKernelStudyRef(
+  () => props.studyCode,
+  {
+    onReset: () => {
+      proposals.value = [];
+    },
+    onResolved: async (studyRef, { isCurrent }) => {
+      const found = await kernelApi.listProposals(studyRef, {
+        limit: PROPOSAL_LIMIT,
+      });
+      if (isCurrent()) proposals.value = found;
+    },
+  }
+);
 
 const target = computed(() =>
   props.nodeRef ? parseNodeRef(props.nodeRef) : null
@@ -160,36 +173,12 @@ function reviewLocation(ref: string): RouteLocationRaw {
   };
 }
 
-let latest = 0;
-
-async function load() {
-  const request = ++latest;
-  loading.value = true;
-  error.value = "";
-  proposals.value = [];
-  try {
-    const studyRef = await findKernelStudyRef(props.studyCode);
-    if (request !== latest || !studyRef) return;
-    const found = await kernelApi.listProposals(studyRef, {
-      limit: PROPOSAL_LIMIT,
-    });
-    if (request === latest) proposals.value = found;
-  } catch (e) {
-    if (request === latest) {
-      error.value = e instanceof Error ? e.message : String(e);
-    }
-  } finally {
-    if (request === latest) loading.value = false;
-  }
-}
-
 watch(
   () => props.prefill,
   (text) => {
     if (text) question.value = text;
   }
 );
-watch(() => props.studyCode, load, { immediate: true });
 </script>
 
 <style scoped>

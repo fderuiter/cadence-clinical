@@ -191,23 +191,28 @@ public static class FrontendQualityGateService
                     return 0;
                 }
 
+                const string EcrfStoreRelPath = "apps/web/src/stores/demo/clinicalEcrf.ts";
                 string duplicateCheckScript = Path.Combine(repoRoot, "scripts", "check_duplicate_identifiers.js");
                 if (File.Exists(duplicateCheckScript) &&
-                    matching.Any(f => f.Equals("apps/web/src/stores/clinical.ts", StringComparison.OrdinalIgnoreCase)))
+                    matching.Any(f => f.Equals(EcrfStoreRelPath, StringComparison.OrdinalIgnoreCase)))
                 {
                     if (reader is { HasAuthoritativeIndex: true })
                     {
-                        using var storeWorkspace = reader.Materialize(["apps/web/src/stores/clinical.ts"]);
-                        string tempStorePath = Path.Combine(storeWorkspace.RootPath, "apps", "web", "src", "stores", "clinical.ts");
+                        using var storeWorkspace = reader.Materialize([EcrfStoreRelPath]);
+                        string tempStorePath = Path.Combine(storeWorkspace.RootPath, "apps", "web", "src", "stores", "demo", "clinicalEcrf.ts");
                         if (File.Exists(tempStorePath) &&
                             RunProcess(Path.Combine(repoRoot, "apps", "web"), "node", [duplicateCheckScript, tempStorePath]) != 0)
                         {
                             return 1;
                         }
                     }
-                    else if (RunProcess(Path.Combine(repoRoot, "apps", "web"), "node", [duplicateCheckScript]) != 0)
+                    else
                     {
-                        return 1;
+                        string diskStorePath = Path.Combine(repoRoot, "apps", "web", "src", "stores", "demo", "clinicalEcrf.ts");
+                        if (RunProcess(Path.Combine(repoRoot, "apps", "web"), "node", [duplicateCheckScript, diskStorePath]) != 0)
+                        {
+                            return 1;
+                        }
                     }
                 }
 

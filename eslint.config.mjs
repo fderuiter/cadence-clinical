@@ -954,6 +954,7 @@ export default [
       "**/coverage/**",
       "**/.claude/**",
       "scripts/**",
+      "docs/.vitepress/.temp/**",
       "docs/.vitepress/cache/**",
       "docs/.vitepress/dist/**",
       "**/mockServiceWorker.js",
@@ -1031,6 +1032,31 @@ export default [
     rules: {
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
+    },
+  },
+  {
+    files: ["docs/.vitepress/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        process: "readonly",
+      },
+    },
+  },
+  {
+    files: ["docs/.vitepress/*.cjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "commonjs",
+      globals: {
+        module: "readonly",
+        exports: "writable",
+        require: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        process: "readonly",
+      },
     },
   },
   {
