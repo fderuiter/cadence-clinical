@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -7,6 +8,11 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cadence.Kernel;
+using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Commands;
+using Cadence.Kernel.Tenancy;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,16 +23,22 @@ using Microsoft.Extensions.Options;
 namespace Cadence.Kernel.Host.Onboarding;
 
 /// <summary>
-/// Writes the isolated trial workspace claim (<c>tenant_id</c>) and initial realm roles back to the OIDC
-/// identity provider so a subsequent token refresh resolves the caller's newly provisioned kernel tenant.
+/// Writes trial workspace claims (<c>tenant_id</c>, explicit <c>site_id</c>, explicit <c>study_ids</c>) and initial
+/// realm roles back to the OIDC identity provider (<c>ADMIN_EDIT</c> user-profile attributes) so a subsequent token
+/// refresh resolves the caller's newly provisioned kernel tenant without granting global wildcard study access (<c>*</c>).
 /// </summary>
-public interface IKeycloakOnboardingClient
+public interface IKeycloakOnboardingClient : IKernelIdentityScopeSynchronizer
 {
-    /// <summary>Assigns <paramref name="tenantCode"/> and <paramref name="realmRoles"/> to <paramref name="subjectId"/>.</summary>
+    /// <summary>
+    /// Assigns <paramref name="tenantCode"/>, <paramref name="realmRoles"/>, explicit <paramref name="siteCodes"/>,
+    /// and explicit <paramref name="studyCodes"/> to <paramref name="subjectId"/>.
+    /// </summary>
     Task AssignTrialWorkspaceAsync(
         string subjectId,
         string tenantCode,
         IReadOnlyList<string> realmRoles,
+        IReadOnlyList<string> siteCodes,
+        IReadOnlyList<string> studyCodes,
         CancellationToken cancellationToken);
 }
 
@@ -83,31 +95,38 @@ internal sealed partial class HttpKeycloakOnboardingClient(
         string subjectId,
         string tenantCode,
         IReadOnlyList<string> realmRoles,
+        IReadOnlyList<string> siteCodes,
+        IReadOnlyList<string> studyCodes,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
         ArgumentException.ThrowIfNullOrWhiteSpace(tenantCode);
         ArgumentNullException.ThrowIfNull(realmRoles);
+        ArgumentNullException.ThrowIfNull(siteCodes);
+        ArgumentNullException.ThrowIfNull(studyCodes);
 
         var config = options.Value;
-        if (string.IsNullOrWhiteSpace(config.BaseUrl)
-            || !Uri.TryCreate(config.BaseUrl.Trim(), UriKind.Absolute, out _)
-            || string.IsNullOrWhiteSpace(config.Realm)
-            || string.IsNullOrWhiteSpace(config.AdminRealm)
-            || string.IsNullOrWhiteSpace(config.ClientId)
-            || string.IsNullOrWhiteSpace(config.AdminUsername)
-            || string.IsNullOrWhiteSpace(config.AdminPassword))
+        if (!IsConfigured(config))
         {
             LogWritebackMisconfigured(logger, subjectId, tenantCode);
             throw new KeycloakOnboardingException(
                 "KeycloakAdmin BaseUrl, realm, client_id, and admin credentials must be configured for trial workspace synchronization.");
         }
 
-        string baseUrl = config.BaseUrl.Trim().TrimEnd('/');
+        string baseUrl = config.BaseUrl!.Trim().TrimEnd('/');
         try
         {
             string accessToken = await AcquireAdminTokenAsync(baseUrl, config, cancellationToken).ConfigureAwait(false);
-            await UpdateUserTenantAttributesAsync(baseUrl, config.Realm, accessToken, subjectId, tenantCode, cancellationToken).ConfigureAwait(false);
+            await UpdateUserTenantAttributesAsync(
+                baseUrl,
+                config.Realm,
+                accessToken,
+                subjectId,
+                tenantCode,
+                siteCodes,
+                studyCodes,
+                preserveExistingTenantScopes: true,
+                cancellationToken).ConfigureAwait(false);
             await AssignRealmRolesAsync(baseUrl, config.Realm, accessToken, subjectId, realmRoles, cancellationToken).ConfigureAwait(false);
             LogWritebackCompleted(logger, subjectId, tenantCode);
         }
@@ -121,6 +140,53 @@ internal sealed partial class HttpKeycloakOnboardingClient(
             throw new KeycloakOnboardingException("Failed to synchronize trial workspace attributes with Keycloak.", ex);
         }
     }
+
+    public async Task GrantStudyScopeAsync(
+        Actor caller,
+        TenantId tenantId,
+        string? tenantCode,
+        string studyCode,
+        CancellationToken cancellationToken = default)
+    {
+        if (caller is not { Kind: ActorKind.Person, Id.Length: > 0 } || string.IsNullOrWhiteSpace(studyCode))
+        {
+            return;
+        }
+
+        string trimmedStudy = studyCode.Trim();
+        if (string.Equals(trimmedStudy, "*", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var config = options.Value;
+        if (!IsConfigured(config))
+        {
+            LogStudyScopeSkipped(logger, caller.Id, trimmedStudy);
+            return;
+        }
+
+        string baseUrl = config.BaseUrl!.Trim().TrimEnd('/');
+        try
+        {
+            string accessToken = await AcquireAdminTokenAsync(baseUrl, config, cancellationToken).ConfigureAwait(false);
+            await AppendUserStudyScopeAsync(baseUrl, config.Realm, accessToken, caller.Id, tenantCode, trimmedStudy, cancellationToken).ConfigureAwait(false);
+            LogStudyScopeSynced(logger, caller.Id, trimmedStudy);
+        }
+        catch (Exception ex) when (ex is KeycloakOnboardingException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            LogStudyScopeSyncFailed(logger, ex, caller.Id, trimmedStudy);
+        }
+    }
+
+    private static bool IsConfigured(KeycloakAdminOptions config) =>
+        !string.IsNullOrWhiteSpace(config.BaseUrl)
+        && Uri.TryCreate(config.BaseUrl.Trim(), UriKind.Absolute, out _)
+        && !string.IsNullOrWhiteSpace(config.Realm)
+        && !string.IsNullOrWhiteSpace(config.AdminRealm)
+        && !string.IsNullOrWhiteSpace(config.ClientId)
+        && !string.IsNullOrWhiteSpace(config.AdminUsername)
+        && !string.IsNullOrWhiteSpace(config.AdminPassword);
 
     private async Task<string> AcquireAdminTokenAsync(
         string baseUrl,
@@ -162,6 +228,9 @@ internal sealed partial class HttpKeycloakOnboardingClient(
         string accessToken,
         string subjectId,
         string tenantCode,
+        IReadOnlyList<string> siteCodes,
+        IReadOnlyList<string> studyCodes,
+        bool preserveExistingTenantScopes,
         CancellationToken cancellationToken)
     {
         string userUrl = $"{baseUrl}/admin/realms/{Uri.EscapeDataString(realm)}/users/{Uri.EscapeDataString(subjectId)}";
@@ -183,7 +252,20 @@ internal sealed partial class HttpKeycloakOnboardingClient(
             user["attributes"] = attributes;
         }
 
+        bool sameTenant = preserveExistingTenantScopes
+            && ReadAttributeStrings(attributes, "tenant_id")
+                .Any(existing => string.Equals(existing, tenantCode, StringComparison.Ordinal));
+
+        var effectiveSites = MergeExplicitScopeValues(
+            sameTenant ? ReadAttributeStrings(attributes, "site_id") : [],
+            siteCodes);
+        var effectiveStudies = MergeExplicitScopeValues(
+            sameTenant ? ReadAttributeStrings(attributes, "study_ids") : [],
+            studyCodes);
+
         attributes["tenant_id"] = new JsonArray(tenantCode);
+        WriteOrRemoveScopeAttribute(attributes, "site_id", effectiveSites);
+        WriteOrRemoveScopeAttribute(attributes, "study_ids", effectiveStudies);
 
         using var putRequest = AuthorizedJson(HttpMethod.Put, userUrl, accessToken, user);
         using var putResponse = await httpClient.SendAsync(putRequest, cancellationToken).ConfigureAwait(false);
@@ -191,6 +273,123 @@ internal sealed partial class HttpKeycloakOnboardingClient(
         {
             throw new KeycloakOnboardingException($"Keycloak user attribute update returned HTTP {(int)putResponse.StatusCode}.");
         }
+    }
+
+    private async Task AppendUserStudyScopeAsync(
+        string baseUrl,
+        string realm,
+        string accessToken,
+        string subjectId,
+        string? tenantCode,
+        string studyCode,
+        CancellationToken cancellationToken)
+    {
+        string userUrl = $"{baseUrl}/admin/realms/{Uri.EscapeDataString(realm)}/users/{Uri.EscapeDataString(subjectId)}";
+        using var getRequest = Authorized(HttpMethod.Get, userUrl, accessToken);
+        using var getResponse = await httpClient.SendAsync(getRequest, cancellationToken).ConfigureAwait(false);
+        if (!getResponse.IsSuccessStatusCode)
+        {
+            throw new KeycloakOnboardingException($"Keycloak user lookup returned HTTP {(int)getResponse.StatusCode}.");
+        }
+
+        if (JsonNode.Parse(await getResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false)) is not JsonObject user)
+        {
+            throw new KeycloakOnboardingException("Keycloak user representation was invalid JSON.");
+        }
+
+        if (user["attributes"] is not JsonObject attributes)
+        {
+            attributes = new JsonObject();
+            user["attributes"] = attributes;
+        }
+
+        var existingTenants = ReadAttributeStrings(attributes, "tenant_id");
+        if (existingTenants.Count > 0 && !string.IsNullOrWhiteSpace(tenantCode)
+            && !existingTenants.Any(t => string.Equals(t, tenantCode.Trim(), StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        if (existingTenants.Count == 0 && !string.IsNullOrWhiteSpace(tenantCode))
+        {
+            attributes["tenant_id"] = new JsonArray(tenantCode.Trim());
+        }
+
+        var mergedStudies = MergeExplicitScopeValues(ReadAttributeStrings(attributes, "study_ids"), [studyCode]);
+        WriteOrRemoveScopeAttribute(attributes, "study_ids", mergedStudies);
+
+        using var putRequest = AuthorizedJson(HttpMethod.Put, userUrl, accessToken, user);
+        using var putResponse = await httpClient.SendAsync(putRequest, cancellationToken).ConfigureAwait(false);
+        if (!putResponse.IsSuccessStatusCode)
+        {
+            throw new KeycloakOnboardingException($"Keycloak user attribute update returned HTTP {(int)putResponse.StatusCode}.");
+        }
+    }
+
+    private static List<string> ReadAttributeStrings(JsonObject attributes, string key)
+    {
+        var results = new List<string>();
+        if (attributes[key] is JsonArray array)
+        {
+            foreach (var node in array)
+            {
+                if (node?.GetValue<string>() is { Length: > 0 } value && !string.IsNullOrWhiteSpace(value))
+                {
+                    results.Add(value.Trim());
+                }
+            }
+        }
+        else if (attributes[key] is JsonValue scalar
+            && scalar.TryGetValue<string>(out var single)
+            && !string.IsNullOrWhiteSpace(single))
+        {
+            results.Add(single.Trim());
+        }
+
+        return results;
+    }
+
+    private static List<string> MergeExplicitScopeValues(IEnumerable<string> existing, IEnumerable<string> incoming)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var ordered = new List<string>();
+        foreach (string candidate in existing.Concat(incoming))
+        {
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                continue;
+            }
+
+            string trimmed = candidate.Trim();
+            if (string.Equals(trimmed, "*", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (seen.Add(trimmed))
+            {
+                ordered.Add(trimmed);
+            }
+        }
+
+        return ordered;
+    }
+
+    private static void WriteOrRemoveScopeAttribute(JsonObject attributes, string key, IReadOnlyList<string> values)
+    {
+        if (values.Count == 0)
+        {
+            attributes.Remove(key);
+            return;
+        }
+
+        var array = new JsonArray();
+        foreach (string value in values)
+        {
+            array.Add(value);
+        }
+
+        attributes[key] = array;
     }
 
     private async Task AssignRealmRolesAsync(
@@ -260,14 +459,23 @@ internal sealed partial class HttpKeycloakOnboardingClient(
     [LoggerMessage(EventId = 2590, Level = LogLevel.Warning, Message = "KeycloakAdmin configuration is incomplete; refusing claim writeback for subject {SubjectId} -> {TenantCode}")]
     private static partial void LogWritebackMisconfigured(ILogger logger, string subjectId, string tenantCode);
 
-    [LoggerMessage(EventId = 2591, Level = LogLevel.Information, Message = "Assigned trial tenant {TenantCode} and initial roles in Keycloak for subject {SubjectId}")]
+    [LoggerMessage(EventId = 2591, Level = LogLevel.Information, Message = "Assigned trial tenant {TenantCode}, sandbox site scope, and initial roles in Keycloak for subject {SubjectId}")]
     private static partial void LogWritebackCompleted(ILogger logger, string subjectId, string tenantCode);
 
     [LoggerMessage(EventId = 2592, Level = LogLevel.Warning, Message = "Keycloak writeback failed for subject {SubjectId} -> {TenantCode}")]
     private static partial void LogWritebackFailed(ILogger logger, Exception exception, string subjectId, string tenantCode);
+
+    [LoggerMessage(EventId = 2593, Level = LogLevel.Debug, Message = "KeycloakAdmin:BaseUrl is unset; skipped explicit study_ids sync for subject {SubjectId} -> {StudyCode}")]
+    private static partial void LogStudyScopeSkipped(ILogger logger, string subjectId, string studyCode);
+
+    [LoggerMessage(EventId = 2594, Level = LogLevel.Information, Message = "Appended explicit study scope {StudyCode} in Keycloak for subject {SubjectId}")]
+    private static partial void LogStudyScopeSynced(ILogger logger, string subjectId, string studyCode);
+
+    [LoggerMessage(EventId = 2596, Level = LogLevel.Warning, Message = "Failed to append explicit study scope {StudyCode} in Keycloak for subject {SubjectId}")]
+    private static partial void LogStudyScopeSyncFailed(ILogger logger, Exception exception, string subjectId, string studyCode);
 }
 
-/// <summary>DI registration for Keycloak trial onboarding writeback.</summary>
+/// <summary>DI registration for Keycloak trial onboarding and explicit scope writeback.</summary>
 public static class KeycloakOnboardingServiceCollectionExtensions
 {
     /// <summary>Named <see cref="HttpClient"/> used for Keycloak Admin REST requests.</summary>
@@ -281,6 +489,7 @@ public static class KeycloakOnboardingServiceCollectionExtensions
         services.Configure<KeycloakAdminOptions>(configuration.GetSection(KeycloakAdminOptions.SectionName));
         services.AddHttpClient<HttpKeycloakOnboardingClient>(HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15));
         services.TryAddTransient<IKeycloakOnboardingClient>(sp => sp.GetRequiredService<HttpKeycloakOnboardingClient>());
+        services.TryAddTransient<IKernelIdentityScopeSynchronizer>(sp => sp.GetRequiredService<IKeycloakOnboardingClient>());
         return services;
     }
 }

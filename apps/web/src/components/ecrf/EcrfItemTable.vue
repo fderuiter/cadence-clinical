@@ -804,10 +804,4 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   color: var(--warning);
   font-size: 0.85rem;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

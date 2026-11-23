@@ -610,10 +610,4 @@ td {
 .observation-audit td:nth-child(2) {
   min-width: 8.5rem;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>
