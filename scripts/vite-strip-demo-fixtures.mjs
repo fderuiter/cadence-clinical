@@ -2,20 +2,21 @@ import fs from "fs";
 import path from "path";
 
 const VIRTUAL_DEMO_FIXTURES_ID = "\0virtual:demo-fixtures-prod-stub";
+const VIRTUAL_DEMO_RUNTIME_ID = "\0virtual:demo-fixtures-runtime-prod-stub";
 const VIRTUAL_DEMO_VIEW_PREFIX = "\0virtual:demo-view-prod-stub:";
 const VIRTUAL_DEMO_STORE_PREFIX = "\0virtual:demo-store-prod-stub:";
 
 const EMPTY_PROD_STUB_SOURCE = `
-const EMPTY_LIST = Object.freeze([]);
-const EMPTY_RECORD = Object.freeze({});
+const EMPTY_LIST = /* @__PURE__ */ Object.freeze([]);
+const EMPTY_RECORD = /* @__PURE__ */ Object.freeze({});
 
-export const DEMO_MANIFEST = Object.freeze({
+export const DEMO_MANIFEST = /* @__PURE__ */ Object.freeze({
   tenantCode: "",
   tenantUuid: "",
   epochIso: "",
   epochMs: 0,
-  sponsor: Object.freeze({ code: "", name: "", organizationUuid: "" }),
-  study: Object.freeze({
+  sponsor: /* @__PURE__ */ Object.freeze({ code: "", name: "", organizationUuid: "" }),
+  study: /* @__PURE__ */ Object.freeze({
     code: "",
     title: "",
     phase: "",
@@ -66,6 +67,78 @@ export function getDemoPersonaForWorkspace() {
 
 export function toDemoAuthUser() {
   return null;
+}
+`;
+
+const EMPTY_PROD_RUNTIME_STUB_SOURCE = `
+const UINT32_MODULO = 2 ** 32;
+const DEFAULT_UNBACKED_ACTION_DETAIL =
+  "No Cadence service records this action yet, so nothing was saved.";
+
+export function isDemoBuild(env) {
+  return env !== undefined
+    ? env?.MODE === "demo" || env?.VITE_DEMO_MODE === "true"
+    : false;
+}
+
+function liveRandom() {
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
+    const buf = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(buf);
+    return buf[0] / UINT32_MODULO;
+  }
+  return 0.5;
+}
+
+export function createDemoRuntime({ defaultTokenLength = 7 } = {}) {
+  function demoRandomToken(length = defaultTokenLength, radix = 36) {
+    const alphabet = "0123456789abcdefghijklmnopqrstuvwxyz".slice(0, radix);
+    let out = "";
+    for (let i = 0; i < length; i++) {
+      out += alphabet[Math.floor(liveRandom() * alphabet.length)];
+    }
+    return out;
+  }
+
+  return {
+    createDemoPrng: () => liveRandom,
+    resetDemoRandom() {},
+    nextDemoStep: () => 0,
+    demoNowMs: () => Date.now(),
+    demoNowDate: () => new Date(),
+    demoNowIso: () => new Date().toISOString(),
+    demoRandom: liveRandom,
+    demoRandomInt(min, maxInclusive) {
+      const lower = Math.ceil(min);
+      return Math.floor(lower + liveRandom() * (Math.floor(maxInclusive) - lower + 1));
+    },
+    demoRandomToken,
+  };
+}
+
+export function createUnbackedActionGuard({
+  isAllowed = (env) => isDemoBuild(env),
+  defaultDetail = DEFAULT_UNBACKED_ACTION_DETAIL,
+  onRefuse,
+} = {}) {
+  function refuseUnbackedAction(action, customDetail = null) {
+    const title = \`\${action} isn't available yet\`;
+    const detail = customDetail || defaultDetail;
+    const message = \`\${title}. \${detail}\`;
+    return typeof onRefuse === "function"
+      ? onRefuse({ action, title, detail, message, customDetail })
+      : message;
+  }
+
+  return {
+    allowUnbackedAction(action, env) {
+      if (isAllowed(env)) return true;
+      refuseUnbackedAction(action);
+      return false;
+    },
+    refuseUnbackedAction,
+    unbackedActionsEnabled: (env) => Boolean(isAllowed(env)),
+  };
 }
 `;
 
@@ -263,6 +336,10 @@ export function createDemoFixturesPlugin(appDir) {
     appDir,
     "../../packages/demo-fixtures/src/index.js"
   );
+  const demoFixturesRuntimeEntry = path.resolve(
+    appDir,
+    "../../packages/demo-fixtures/src/runtime.js"
+  );
   const viewsDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/views/demo"))}/`;
   const storesDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/stores/demo"))}/`;
 
@@ -296,6 +373,11 @@ export function createDemoFixturesPlugin(appDir) {
       if (source === "demo-fixtures") {
         return stripDemoFixtures ? VIRTUAL_DEMO_FIXTURES_ID : demoFixturesEntry;
       }
+      if (source === "demo-fixtures/runtime") {
+        return stripDemoFixtures
+          ? VIRTUAL_DEMO_RUNTIME_ID
+          : demoFixturesRuntimeEntry;
+      }
       if (!stripDemoFixtures) {
         return null;
       }
@@ -314,6 +396,9 @@ export function createDemoFixturesPlugin(appDir) {
     load(id) {
       if (id === VIRTUAL_DEMO_FIXTURES_ID) {
         return EMPTY_PROD_STUB_SOURCE;
+      }
+      if (id === VIRTUAL_DEMO_RUNTIME_ID) {
+        return EMPTY_PROD_RUNTIME_STUB_SOURCE;
       }
       if (id.startsWith(VIRTUAL_DEMO_VIEW_PREFIX)) {
         return EMPTY_DEMO_VIEW_STUB_SOURCE;

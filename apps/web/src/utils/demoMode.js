@@ -29,7 +29,7 @@ export function resolveGatewayBaseUrl() {
   return "http://localhost:8000";
 }
 
-const webDemoRuntime = createDemoRuntime({
+const webDemoRuntime = /* @__PURE__ */ createDemoRuntime({
   isDemoActive: () => isDemoBuild(),
   epochIso: DEMO_EPOCH_ISO,
   epochMs: DEMO_EPOCH_MS,
