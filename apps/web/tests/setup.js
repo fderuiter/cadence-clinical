@@ -1,6 +1,6 @@
 import { vi, expect } from "vitest";
 import { config } from "@vue/test-utils";
-import { toBeAccessible } from "ui";
+import { toBeAccessible } from "ui/vitest";
 import * as usdmSchemas from "usdm-schemas";
 import { i18n } from "../src/i18n/index.js";
 

@@ -328,4 +328,36 @@ onUnmounted(() => {
   min-width: 0;
   max-width: 100%;
 }
+.ecrf-form-panel
+  :deep(
+    input:not([type="checkbox"]):not([type="radio"]):not(.clinical-input):not(
+        .sr-only
+      ):not(.visually-hidden)
+  ),
+.ecrf-form-panel
+  :deep(select:not(.clinical-input):not(.sr-only):not(.visually-hidden)) {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 4px 8px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 4px;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  box-sizing: border-box;
+}
+.ecrf-form-panel
+  :deep(input[type="checkbox"]:not(.sr-only):not(.visually-hidden)),
+.ecrf-form-panel
+  :deep(input[type="radio"]:not(.sr-only):not(.visually-hidden)) {
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
+  margin: 0;
+  cursor: pointer;
+}
+.ecrf-form-panel :deep(button:not(.sr-only):not(.visually-hidden)) {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+}
 </style>

@@ -238,6 +238,12 @@
 import { computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
+import {
+  buildDataCollectionPath,
+  buildStudyScopedPath,
+  resolveSiteReadinessPath,
+} from "../canvas/palette";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding";
 import { isScreenAvailable } from "../router/availability";
@@ -246,6 +252,7 @@ import { hasRequiredRole } from "../router";
 const router = useRouter();
 const authStore = useAuthStore();
 const onboardingStore = useOnboardingStore();
+const { activeStudyCode } = useActiveStudyScope();
 
 onMounted(() => {
   if (
@@ -277,8 +284,10 @@ const effectiveRoles = computed(() => {
 
 function resolveAuthorizedRoute(routeSpec) {
   if (!routeSpec) return null;
+  const studyCode = activeStudyCode.value;
   if (routeSpec === "study" || routeSpec === "/studies") {
-    return isScreenAvailable("study") ? "/studies" : null;
+    if (!isScreenAvailable("study")) return null;
+    return studyCode ? `/studies/${encodeURIComponent(studyCode)}` : "/studies";
   }
   if (routeSpec === "ecrf" || routeSpec === "/ecrf") {
     return isScreenAvailable("ecrf") &&
@@ -290,33 +299,22 @@ function resolveAuthorizedRoute(routeSpec) {
         "cra",
         "monitor",
       ])
-      ? "/ecrf"
+      ? buildDataCollectionPath({ studyCode })
       : null;
   }
-  if (
-    routeSpec === "site-readiness" ||
-    routeSpec === "ctms" ||
-    routeSpec === "/ctms"
-  ) {
-    if (
-      isScreenAvailable("ctms") &&
+  if (routeSpec === "site-readiness") {
+    return resolveSiteReadinessPath(effectiveRoles.value, studyCode);
+  }
+  if (routeSpec === "ctms" || routeSpec === "/ctms") {
+    return isScreenAvailable("ctms") &&
       hasRequiredRole(effectiveRoles.value, [
         "cra",
         "monitor",
         "data_manager",
         "sponsor_admin",
       ])
-    ) {
-      return "/ctms";
-    }
-    if (
-      routeSpec === "site-readiness" &&
-      isScreenAvailable("ssu") &&
-      hasRequiredRole(effectiveRoles.value, ["site_investigator", "crc"])
-    ) {
-      return "/ssu";
-    }
-    return null;
+      ? buildStudyScopedPath("/ctms", studyCode)
+      : null;
   }
   if (routeSpec === "ssu" || routeSpec === "/ssu") {
     return isScreenAvailable("ssu") &&
@@ -328,7 +326,27 @@ function resolveAuthorizedRoute(routeSpec) {
         "site_investigator",
         "crc",
       ])
-      ? "/ssu"
+      ? buildStudyScopedPath("/ssu", studyCode)
+      : null;
+  }
+  if (routeSpec === "etmf" || routeSpec === "/etmf") {
+    return isScreenAvailable("etmf") &&
+      hasRequiredRole(effectiveRoles.value, [
+        "cra",
+        "monitor",
+        "data_manager",
+        "site_investigator",
+        "crc",
+        "auditor",
+        "tmf_auditor",
+        "sponsor_admin",
+      ])
+      ? buildStudyScopedPath("/etmf", studyCode)
+      : null;
+  }
+  if (routeSpec === "training" || routeSpec === "/training") {
+    return isScreenAvailable("training")
+      ? buildStudyScopedPath("/training", studyCode)
       : null;
   }
   return null;
@@ -726,11 +744,14 @@ function startGuidedTour() {
 }
 
 .pref-toggle-checkbox {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   margin-top: 2px;
   cursor: pointer;
   accent-color: var(--semantic-color-accent-inverse);
+  flex-shrink: 0;
 }
 
 .toggle-text {
@@ -949,11 +970,14 @@ function startGuidedTour() {
 }
 
 .task-checkbox {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   margin-top: 2px;
   cursor: pointer;
   accent-color: var(--semantic-color-success);
+  flex-shrink: 0;
 }
 
 .task-content {

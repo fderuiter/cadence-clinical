@@ -82,6 +82,9 @@ public sealed record CiStep(string Job, string Name)
     /// <summary>The text of the CI command that <see cref="InProcess"/> stands in for.</summary>
     public string? InProcessCiText { get; init; }
 
+    /// <summary>Whether <see cref="InProcess"/> forwards <see cref="LocalCiOptions.BaseRef"/>, matching <c>SCOPE_ARGS</c> in CI.</summary>
+    public bool InProcessForwardsBaseRef { get; init; }
+
     /// <summary>The step has <c>if: always()</c> in CI, so it runs after an earlier step of its job failed.</summary>
     public bool Always { get; init; }
 
@@ -103,8 +106,17 @@ public sealed record CiStep(string Job, string Name)
     /// <summary>Why the step never runs locally (it needs Docker, a GitHub token or a cache).</summary>
     public string? NotRunLocally { get; init; }
 
+    /// <summary>The step builds or scans container images and needs a reachable Docker daemon.</summary>
+    public bool NeedsDocker { get; init; }
+
     /// <summary>The step runs tests that need PostgreSQL (<c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c>).</summary>
     public bool NeedsPostgres { get; init; }
+
+    /// <summary>
+    /// The step runs a filtered PostgreSQL test outside <c>dotnet-tests</c>, so full-repository TRX and <c>*.database.txt</c>
+    /// discovery stays scoped to <c>dotnet-tests</c> and <c>compliance</c>.
+    /// </summary>
+    public bool ScopedDatabaseTest { get; init; }
 
     /// <summary>Files appended to the last command.</summary>
     public CiFileSource Files { get; init; }
@@ -150,6 +162,13 @@ public sealed record CiJob(string Key, string Name, IReadOnlyList<CiStep> Steps)
     public string? OnRequestOnly { get; init; }
 }
 
+/// <summary>One container image built and scanned by <c>container-security</c> in <c>.github/workflows/ci.yml</c>.</summary>
+public sealed record CiContainerScanTarget(string Target, string Context, string Dockerfile, string AppName)
+{
+    /// <summary>The local tag built and passed to Trivy (<c>cadence-&lt;target&gt;:latest</c>).</summary>
+    public string ImageTag => $"cadence-{Target}:latest";
+}
+
 /// <summary>
 /// The jobs and steps of <c>.github/workflows/ci.yml</c>, as <c>cadence ci</c> runs them on a developer machine while
 /// GitHub Actions does not run jobs for this repository (#5017). <c>LocalCiPlanTests</c> reads <c>ci.yml</c> and fails
@@ -157,11 +176,15 @@ public sealed record CiJob(string Key, string Name, IReadOnlyList<CiStep> Steps)
 /// </summary>
 public static class CiPlan
 {
+    /// <summary>The job key of the container build and Trivy scan job in <c>ci.yml</c>.</summary>
+    public const string ContainerSecurityJobKey = "container-security";
+
     private const string Cli = "packages/cli/src/Cadence.Cli.csproj";
     private const string QualitySentinels = "dotnet-quality/Run Cadence quality sentinels";
     private const string StyleNodeInstall = "lint-and-static/Install Node dependencies";
     private const string StyleFrontendBuild = "lint-and-static/Build frontend workspace";
     private const string E2eJob = "accessibility-e2e"; // deid-ignore: the ci.yml job key, not an account number
+    private const string DockerBuildCiText = "docker build -t \"cadence-${TARGET}:latest\" -f \"$DOCKERFILE\" \"${BUILD_ARGS[@]}\" \"$CONTEXT\"";
 
     /// <summary>
     /// The portable runtime identifier the Native AOT publish targets: this machine's (<c>linux-x64</c> in CI), since
@@ -182,12 +205,79 @@ public static class CiPlan
     /// <summary>Jobs of <c>ci.yml</c> that act on GitHub itself and have no local meaning, with the reason.</summary>
     public static IReadOnlyDictionary<string, string> GitHubOnlyJobs { get; } = new Dictionary<string, string>
     {
-        ["container-security"] = "builds container images across a matrix and uploads Trivy SARIF to GitHub Code Scanning",
         ["ci-gate"] = "aggregates pull-request validation job outcomes into one required branch ruleset status check",
         ["classify"] = "classifies changed paths and labels same-repository pull requests through the GitHub API",
         ["release-and-archive"] = "calls the production pipeline on pushes or ref-guarded dispatches to main, release/* and v* tags",
         ["deploy-docs"] = "deploys the documentation portal to GitHub Pages on pushes or ref-guarded dispatches to main",
     };
+
+    /// <summary>Container matrix targets in <c>.github/workflows/ci.yml</c>.</summary>
+    public static IReadOnlyList<CiContainerScanTarget> ContainerScanTargets { get; } =
+    [
+        new("gateway", ".", "docker/Dockerfile.dotnet", "gateway"),
+        new("kernel-api", ".", "docker/Dockerfile.dotnet", "kernel-api"),
+        new("sce-python", "docker/sce/python", "docker/sce/python/Dockerfile", ""),
+        new("sce-r", "docker/sce/r", "docker/sce/r/Dockerfile", ""),
+    ];
+
+    /// <summary>
+    /// File globs in <c>.github/workflows/ci.yml</c> (<c>classify</c>) that set <c>container_scan=true</c> on pull requests.
+    /// </summary>
+    public static IReadOnlyList<string> ContainerScanTriggerGlobs { get; } =
+    [
+        "docker/*",
+        "Dockerfile*",
+        "*/Dockerfile*",
+        ".dockerignore",
+        ".github/dependabot.yml",
+        ".github/workflows/ci.yml",
+        "global.json",
+        "Directory.Build.props",
+        "Directory.Build.targets",
+        "Directory.Packages.props",
+        "NuGet.Config",
+        "*.csproj",
+        "package.json",
+        "*/package.json",
+        "pnpm-lock.yaml",
+    ];
+
+    /// <summary>Whether a repository-relative path matches <see cref="ContainerScanTriggerGlobs"/> as bash <c>case</c> evaluates them.</summary>
+    public static bool IsContainerScanTrigger(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        string normalized = path.Replace('\\', '/').Trim();
+        while (normalized.StartsWith("./", StringComparison.Ordinal))
+        {
+            normalized = normalized[2..];
+        }
+
+        normalized = normalized.TrimStart('/');
+        if (normalized.Length == 0)
+        {
+            return false;
+        }
+
+        return normalized.StartsWith("docker/", StringComparison.Ordinal)
+            || normalized.StartsWith("Dockerfile", StringComparison.Ordinal)
+            || normalized.Contains("/Dockerfile", StringComparison.Ordinal)
+            || normalized.EndsWith(".csproj", StringComparison.Ordinal)
+            || normalized.EndsWith("/package.json", StringComparison.Ordinal)
+            || normalized is ".dockerignore"
+                or ".github/dependabot.yml"
+                or ".github/workflows/ci.yml"
+                or "global.json"
+                or "Directory.Build.props"
+                or "Directory.Build.targets"
+                or "Directory.Packages.props"
+                or "NuGet.Config"
+                or "package.json"
+                or "pnpm-lock.yaml";
+    }
 
     /// <summary>The jobs, in the order <c>cadence ci</c> runs them.</summary>
     public static IReadOnlyList<CiJob> Jobs { get; } = BuildJobs();
@@ -208,7 +298,7 @@ public static class CiPlan
 
     /// <summary><c>node scripts/run-cli.js args</c>, as the Node-equipped CI steps call the CLI.</summary>
     private static CiCommand NodeCli(params string[] args) =>
-        new("node", ["scripts/run-cli.js", .. args], ForwardsBaseRef: args.FirstOrDefault() == "check");
+        new("node", ["scripts/run-cli.js", .. args]);
 
     private static List<CiJob> BuildJobs()
     {
@@ -323,17 +413,56 @@ public static class CiPlan
                 Always = true,
                 RequiredTool = "detect-secrets-hook",
                 ToolHint = $"run './scripts/setup_wizard.sh --minimal' or 'python3 -m venv .cadence/venv && .cadence/venv/bin/python -m pip install --upgrade pip detect-secrets=={DetectSecretsGateService.PinnedVersion}'",
-                Commands = [NodeCli("check", "detect-secrets")],
+                Commands = [NodeCli("check", "detect-secrets") with { ForwardsBaseRef = true }],
             },
             new("security", "Run DEID compliance scan")
             {
                 Always = true,
                 CoveredBy = QualitySentinels,
-                Commands = [NodeCli("check", "deid")],
+                Commands = [NodeCli("check", "deid") with { ForwardsBaseRef = true }],
             },
         ])
         {
             Needs = ["native-aot-build"],
+        };
+
+        var containerSecurity = new CiJob(ContainerSecurityJobKey, "Container Build & Vulnerability Scan",
+        [
+            new(ContainerSecurityJobKey, "Build container image for security scan")
+            {
+                RequiredTool = "docker",
+                NeedsDocker = true,
+                ToolHint = "install Docker and start the Docker daemon (docs/LOCAL_DEV_ENVIRONMENT.md)",
+                Commands =
+                [
+                    .. ContainerScanTargets.Select(t => new CiCommand(
+                        "docker",
+                        string.IsNullOrEmpty(t.AppName)
+                            ? ["build", "-t", t.ImageTag, "-f", t.Dockerfile, t.Context]
+                            : ["build", "-t", t.ImageTag, "-f", t.Dockerfile, "--target", "runtime", "--build-arg", $"APP_NAME={t.AppName}", t.Context],
+                        CiText: DockerBuildCiText)),
+                ],
+            },
+            new(ContainerSecurityJobKey, "Run container vulnerability scan")
+            {
+                RequiredTool = "trivy",
+                NeedsDocker = true,
+                ToolHint = "install Trivy on PATH (for example 'brew install trivy' or your system package manager)",
+                Commands =
+                [
+                    .. ContainerScanTargets.Select(t => new CiCommand(
+                        "trivy",
+                        ["image", "--exit-code", "1", "--ignore-unfixed", "--pkg-types", "os,library", "--severity", "CRITICAL,HIGH", t.ImageTag],
+                        CiText: "trivy image")),
+                ],
+            },
+            new(ContainerSecurityJobKey, "Upload Trivy scan results to GitHub Security tab")
+            {
+                NotRunLocally = "uploads Trivy SARIF files to GitHub Code Scanning",
+            },
+        ])
+        {
+            Needs = ["classify"],
         };
 
         var frontend = new CiJob("unit-tests", "Frontend Unit Tests",
@@ -374,13 +503,23 @@ public static class CiPlan
             },
             new("dotnet-tests", "Fail the run when a PostgreSQL test did not execute")
             {
-                // LocalCiRunner checks DatabaseTestEvidence on DefaultResultsDir when NeedsPostgres is set (unless
-                // --allow-db-skip is passed), standing in for check-database-test-results.sh while also running its self-test.
+                // Runs the shell gate self-test and invokes SyncGxPService.VerifyDatabaseEvidence in-process so unit-only
+                // TRX reports or missing *.database.txt files fail unless --allow-db-skip (or --allow-skip) is passed.
                 NeedsPostgres = true,
                 RequiredTool = "bash",
-                ToolHint = "install bash to run the shell gate self-test; DatabaseTestEvidence already checked the TRX reports",
+                ToolHint = "install bash to run the shell gate self-test; SyncGxPService.VerifyDatabaseEvidence checks TRX and *.database.txt reports",
                 Commands = [new CiCommand("bash", ["scripts/test-check-database-test-results.sh"])],
-                InProcessDisplay = $"verify no PostgreSQL test in {RtmGeneratorService.DefaultResultsDir} was skipped",
+                InProcess = (repoRoot, options) =>
+                {
+                    if (options.AllowDbSkip)
+                    {
+                        return 0;
+                    }
+
+                    string results = Path.Combine(repoRoot, RtmGeneratorService.DefaultResultsDir);
+                    return SyncGxPService.VerifyDatabaseEvidence(results, RtmGeneratorService.DefaultResultsDir, repoRoot) ? 0 : 1;
+                },
+                InProcessDisplay = $"verify no PostgreSQL test in {RtmGeneratorService.DefaultResultsDir} was skipped and *.database.txt evidence was recorded",
                 InProcessCiText = "bash scripts/check-database-test-results.sh",
             },
         ]);
@@ -411,6 +550,7 @@ public static class CiPlan
             new(E2eJob, "Run Browser-to-Database Correction Integration Test")
             {
                 NeedsPostgres = true,
+                ScopedDatabaseTest = true,
                 Environment = new Dictionary<string, string> { ["CADENCE_TEST_BROWSER"] = "1" },
                 Commands =
                 [
@@ -430,24 +570,42 @@ public static class CiPlan
             new("compliance", "Install Node dependencies") { CoveredBy = StyleNodeInstall, Commands = [Pnpm("install", "--frozen-lockfile")] },
             new("compliance", "Generate Compliance Reports")
             {
-                // A feature branch writes a preview and validates its tags and results; only snapshot mode writes
-                // docs/SDLC (ADR-2532). Unknown requirement IDs and failing tagged tests fail both.
-                InProcess = (repoRoot, _) =>
+                // A feature branch writes a preview and validates its tags, results, and PostgreSQL evidence; only snapshot
+                // mode writes docs/SDLC (ADR-2532). Unknown requirement IDs, failing tagged tests, skipped database tests,
+                // and missing *.database.txt files fail unless --allow-db-skip is set outside snapshot mode.
+                InProcess = (repoRoot, options) =>
                 {
                     bool snapshot = GxpSnapshotPolicy.IsSnapshotMode();
                     string outputDir = snapshot ? "docs/SDLC" : GxpSnapshotPolicy.PreviewDir;
                     string results = Path.Combine(repoRoot, RtmGeneratorService.DefaultResultsDir);
+                    bool hasTrx = Directory.Exists(results) && Directory.EnumerateFiles(results, "*.trx", SearchOption.AllDirectories).Any();
+                    bool draft = options.AllowDbSkip && !snapshot && !hasTrx;
                     int generated = RtmGeneratorService.GenerateRtm(
-                        outputDir: outputDir, draft: false, validateOnly: false, reportPath: results, repoRoot: repoRoot,
+                        outputDir: outputDir, draft: draft, validateOnly: false, reportPath: results, repoRoot: repoRoot,
                         honorDraftEnvironment: false, evidence: RtmEvidenceContext.Capture(repoRoot, "pnpm cadence ci", SystemClock.Instance));
-                    return generated != 0
-                        ? generated
-                        : RtmGeneratorService.GenerateRtm(
-                            outputDir: outputDir, validateOnly: true, reportPath: results, repoRoot: repoRoot, honorDraftEnvironment: false,
-                            requireCurrentSnapshot: snapshot, requireRecordedEvidence: true);
+                    if (generated != 0)
+                    {
+                        return generated;
+                    }
+
+                    int validated = RtmGeneratorService.GenerateRtm(
+                        outputDir: "docs/SDLC", draft: draft, validateOnly: true, reportPath: results, repoRoot: repoRoot, honorDraftEnvironment: false,
+                        requireCurrentSnapshot: snapshot, requireRecordedEvidence: true);
+                    if (validated != 0)
+                    {
+                        return validated;
+                    }
+
+                    if ((!options.AllowDbSkip || snapshot)
+                        && !SyncGxPService.VerifyDatabaseEvidence(results, RtmGeneratorService.DefaultResultsDir, repoRoot, requireBrowserEvidence: snapshot))
+                    {
+                        return 1;
+                    }
+
+                    return 0;
                 },
                 InProcessDisplay = $"generate the RTM and IQ/OQ/PQ report from {RtmGeneratorService.DefaultResultsDir} into {GxpSnapshotPolicy.PreviewDir} " +
-                    $"(docs/SDLC with {GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1) and validate tags and results; nothing is staged",
+                    $"(docs/SDLC with {GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1) and validate tags, results, and PostgreSQL evidence; nothing is staged",
                 InProcessCiText = "node scripts/run-cli.js gxp sync --results-dir TestResults/gxp",
             },
             new("compliance", "Check GxP Snapshot Policy")
@@ -457,6 +615,7 @@ public static class CiPlan
                 InProcess = (repoRoot, options) => GxpSnapshotGuardService.Check(repoRoot, preCommit: false, baseRef: options.BaseRef),
                 InProcessDisplay = $"refuse branch changes to the generated GxP snapshot ({GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1: compare the regenerated documents with it)",
                 InProcessCiText = "node scripts/run-cli.js check gxp-snapshot",
+                InProcessForwardsBaseRef = true,
             },
         ])
         {
@@ -467,7 +626,7 @@ public static class CiPlan
             },
         };
 
-        return [actionlint, nativeAotBuild, lintAndStatic, dotnetQuality, docsBuild, security, frontend, dotnetTests, e2e, compliance];
+        return [actionlint, nativeAotBuild, lintAndStatic, dotnetQuality, docsBuild, security, containerSecurity, frontend, dotnetTests, e2e, compliance];
     }
 
     /// <summary>
@@ -490,7 +649,7 @@ public static class CiPlan
                     ? $"Job '{key}' {why}, so it has no local equivalent."
                     : $"Unknown job '{key}'. Jobs: {string.Join(", ", Jobs.Select(j => j.Key))}.");
             wanted.Add(job.Key);
-            wanted.UnionWith(job.Needs);
+            wanted.UnionWith(job.Needs.Where(need => !GitHubOnlyJobs.ContainsKey(need)));
         }
 
         return [.. Jobs.Where(j => wanted.Contains(j.Key))];
