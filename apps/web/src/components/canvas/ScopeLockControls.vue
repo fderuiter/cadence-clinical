@@ -72,7 +72,13 @@
           Locked blocked: {{ readiness.open_query_count }} open
           {{ readiness.open_query_count === 1 ? "query" : "queries" }},
           {{ readiness.missing_required_item_count }} missing required
-          {{ readiness.missing_required_item_count === 1 ? "item" : "items" }}
+          {{ readiness.missing_required_item_count === 1 ? "item" : "items"
+          }}<template v-if="(readiness.open_error_finding_count ?? 0) > 0"
+            >, {{ readiness.open_error_finding_count }} error
+            {{
+              readiness.open_error_finding_count === 1 ? "finding" : "findings"
+            }}</template
+          >
           (Freeze {{ scopeLabel }} remains available).
         </template>
       </span>
@@ -128,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import type { KernelLock, KernelLockKind } from "../../api/kernelApi";
 import type {
   CoveringScopeLockItem,
@@ -180,6 +186,7 @@ const {
   outcome,
   modalOp,
   signatureModalProps,
+  reloadReadiness,
   openApply: openSignedApply,
   openRelease: openSignedRelease,
   closeModal,
@@ -221,6 +228,13 @@ const showControls = computed(
     canLock.value ||
     releasableLocks.value.length > 0 ||
     outcome.value !== null
+);
+
+watch(
+  () => props.directLocks,
+  () => {
+    void reloadReadiness();
+  }
 );
 
 function openApply(lockKind: KernelLockKind) {
