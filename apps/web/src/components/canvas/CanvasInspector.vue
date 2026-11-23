@@ -440,6 +440,7 @@ import {
   type KernelSimulationResult,
 } from "../../api/kernelApi";
 import { parseNodeRef } from "../../canvas/nodeRef";
+import { resolveCachedOrInFlightEnrollmentDetail } from "../../canvas/kernelStudy";
 import {
   formatCommandTitle,
   formatFieldPath,
@@ -656,6 +657,7 @@ const designSummary = ref<KernelProtocolDraftSummary | null>(null);
 let designSummaryReq = 0;
 
 const kernelEnrollment = ref<KernelEnrollmentState | null>(null);
+const kernelEnrollmentNumber = ref<number | null>(null);
 const kernelEnrollmentLoaded = ref(false);
 let kernelEnrollmentReq = 0;
 
@@ -669,12 +671,28 @@ watch(
   async ([studyCode, subjectCode]) => {
     const req = ++kernelEnrollmentReq;
     kernelEnrollment.value = null;
+    kernelEnrollmentNumber.value = null;
     kernelEnrollmentLoaded.value = false;
-    if (
-      !studyCode ||
-      !subjectCode ||
-      typeof kernelApi.getEnrollmentBySubject !== "function"
-    ) {
+    if (!studyCode || !subjectCode) {
+      return;
+    }
+    if (typeof resolveCachedOrInFlightEnrollmentDetail === "function") {
+      const fromLookup = await resolveCachedOrInFlightEnrollmentDetail(
+        studyCode,
+        subjectCode
+      );
+      if (req !== kernelEnrollmentReq) {
+        return;
+      }
+      if (fromLookup) {
+        if (fromLookup.hasEnrollmentNumber) {
+          kernelEnrollmentNumber.value = fromLookup.enrollmentNumber;
+          kernelEnrollmentLoaded.value = true;
+        }
+        return;
+      }
+    }
+    if (typeof kernelApi.getEnrollmentBySubject !== "function") {
       return;
     }
     try {
@@ -684,12 +702,16 @@ watch(
       );
       if (req === kernelEnrollmentReq) {
         kernelEnrollment.value = state;
-        kernelEnrollmentLoaded.value = true;
+        if (state) {
+          kernelEnrollmentNumber.value = state.enrollment_number ?? null;
+        }
+        kernelEnrollmentLoaded.value = Boolean(state);
       }
     } catch {
       if (req === kernelEnrollmentReq) {
         kernelEnrollment.value = null;
-        kernelEnrollmentLoaded.value = true;
+        kernelEnrollmentNumber.value = null;
+        kernelEnrollmentLoaded.value = false;
       }
     }
   },
@@ -698,10 +720,10 @@ watch(
 
 const enrollmentNumberDisplay = computed(() => {
   if (!props.participant) return "Not assigned";
-  if (kernelEnrollmentLoaded.value && kernelEnrollment.value) {
-    return kernelEnrollment.value.enrollment_number !== null &&
-      kernelEnrollment.value.enrollment_number !== undefined
-      ? String(kernelEnrollment.value.enrollment_number)
+  if (kernelEnrollmentLoaded.value) {
+    return kernelEnrollmentNumber.value !== null &&
+      kernelEnrollmentNumber.value !== undefined
+      ? String(kernelEnrollmentNumber.value)
       : "Not assigned";
   }
   if (

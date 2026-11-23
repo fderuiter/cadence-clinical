@@ -277,6 +277,21 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const limit = url.searchParams.get("limit") || "25";
       return HttpResponse.json(store.searchKernel({ q, kinds, limit }));
     }),
+    http.get("*/api/v1/kernel/enrollments/lookup", ({ request }) => {
+      const url = new URL(request.url);
+      const result = store.lookupEnrollment({
+        studyCode: url.searchParams.get("study_code") || "",
+        subjectCode: url.searchParams.get("subject_code") || "",
+        siteCode: url.searchParams.get("site_code"),
+      });
+      if (result.error) {
+        return HttpResponse.json(result.error.problem, {
+          status: result.error.status,
+          headers: { "Content-Type": "application/problem+json" },
+        });
+      }
+      return HttpResponse.json(result.data);
+    }),
     http.get("*/api/v1/kernel/authorization/can-i", ({ request }) => {
       const url = new URL(request.url);
       const capability = url.searchParams.get("capability") || "kernel.read";
@@ -445,10 +460,36 @@ export function createWebDemoHandlers(store = webDemoStore) {
         });
       }
     ),
+    http.get(
+      "*/api/v1/kernel/studies/:studyRef/locks/readiness",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        const studyRef = decodeURIComponent(String(params.studyRef));
+        const scopeRef = url.searchParams.get("scope_ref") || undefined;
+        return HttpResponse.json(store.getLockReadiness(studyRef, scopeRef));
+      }
+    ),
     http.post("*/api/v1/kernel/locks", async ({ request }) => {
       const body = await readJsonBody(request);
       const now = new Date().toISOString();
-      const scopeRef = body?.scope_ref || DEFAULT_STUDY_REF;
+      const studyRef = body?.study_ref || DEFAULT_STUDY_REF;
+      const scopeRef = body?.scope_ref || studyRef;
+      const kind = body?.kind || "Frozen";
+      if (String(kind).toLowerCase() === "locked") {
+        const readiness = store.getLockReadiness(studyRef, scopeRef);
+        if (!readiness.ready_for_lock) {
+          return HttpResponse.json(
+            {
+              title: "K.Assertion.ScopeNotReady",
+              status: 409,
+              code: "K.Assertion.ScopeNotReady",
+              detail: readiness.explanation.claim,
+              explanation: readiness.explanation,
+            },
+            { status: 409 }
+          );
+        }
+      }
       const scopeKind =
         body?.scope_kind || String(scopeRef).split(":")[0] || "study";
       const suffix = String(Date.now()).slice(-12).padStart(12, "0");
@@ -558,7 +599,25 @@ export function createWebDemoHandlers(store = webDemoStore) {
             { headers: digestHeader }
           );
         }
-        return new HttpResponse("STUDYID,USUBJID\nCAD-ONC-2026,SUBJ-001\n", {
+        if (
+          format === "sas_bundle" ||
+          format === "r_bundle" ||
+          format === "study_archive"
+        ) {
+          // Valid empty-archive PK\x05\x06 End of Central Directory (22 bytes) for browser/unit download checks
+          const eocd = new Uint8Array([
+            0x50, 0x4b, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+          ]);
+          return new HttpResponse(eocd, {
+            headers: {
+              "Content-Type": "application/zip",
+              "Content-Disposition": `attachment; filename="CAD-ONC-2026.${format}.zip"`,
+              ...digestHeader,
+            },
+          });
+        }
+        return new HttpResponse("STUDYID,USUBJID\nCAD-ONC-2026,SUBJ-1001\n", {
           headers: {
             "Content-Type": "text/csv",
             ...digestHeader,
@@ -616,6 +675,17 @@ export function createWebDemoHandlers(store = webDemoStore) {
               },
             }
           );
+        }
+        if (format === "pdf") {
+          // deid-ignore: PDF-1.7 10-digit xref byte offsets are structural PDF syntax, not telephone numbers
+          const pdfText = `%PDF-1.7\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Kids [] /Count 0 >> endobj\nxref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \ntrailer << /Size 3 /Root 1 0 R >>\nstartxref\n115\n%%EOF\n`; // deid-ignore
+          return new HttpResponse(pdfText, {
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Disposition": `attachment; filename="CAD-ONC-2026.${enrollmentRef.replace(/[^a-zA-Z0-9_-]/g, "_")}.casebook.pdf"`,
+              ...digestHeader,
+            },
+          });
         }
         return HttpResponse.json(
           { enrollment_ref: enrollmentRef, observations: [] },

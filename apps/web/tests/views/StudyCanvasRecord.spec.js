@@ -9,6 +9,7 @@ import { kernelApi } from "../../src/api/kernelApi";
 import { ApiError } from "../../src/api/client";
 import {
   findKernelEnrollmentRef,
+  findKernelStudyRef,
   findStudyScheduleOptions,
 } from "../../src/canvas/kernelStudy";
 import { useAuthStore } from "../../src/stores/auth";
@@ -58,6 +59,7 @@ vi.mock("../../src/api/kernelApi", () => ({
     listProposals: vi.fn(async () => []),
     search: vi.fn(async () => []),
     getChildren: vi.fn(async () => []),
+    listStudyLocks: vi.fn(async () => ({ locks: [] })),
     getCommands: vi.fn(),
     getObservation: vi.fn(),
     getZoomPath: vi.fn(async () => []),
@@ -69,6 +71,7 @@ vi.mock("../../src/canvas/kernelStudy", async (importOriginal) => {
   return {
     ...actual,
     findKernelEnrollmentRef: vi.fn(),
+    findKernelStudyRef: vi.fn(async () => null),
     findStudyScheduleOptions: vi.fn(async () => null),
   };
 });
@@ -177,8 +180,12 @@ describe("Clinical Canvas: a participant's data", () => {
       kind: "enrollment",
       id: ENROLLMENT_ID,
     });
+    vi.mocked(findKernelStudyRef).mockReset();
+    vi.mocked(findKernelStudyRef).mockResolvedValue(null);
     vi.mocked(findStudyScheduleOptions).mockReset();
     vi.mocked(findStudyScheduleOptions).mockResolvedValue(null);
+    vi.mocked(kernelApi.listStudyLocks).mockReset();
+    vi.mocked(kernelApi.listStudyLocks).mockResolvedValue({ locks: [] });
     vi.mocked(ecrfQueriesApi.listForEnrollment).mockResolvedValue([query()]);
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -1151,20 +1158,65 @@ describe("Clinical Canvas: a participant's data", () => {
       offset: 0,
     });
     vi.mocked(findStudyScheduleOptions).mockResolvedValue({
-      protocolVersionRef:
-        "protocol_version:0192f3c4-5e6a-7b8c-9d0e-00000000b001@1",
+      versionRef: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-00000000b001@1",
+      title: "Protocol 3.0",
+      epochs: [
+        {
+          epochId: "treatment",
+          name: "Treatment",
+          order: 1,
+          firstColumn: 0,
+          columnCount: 2,
+        },
+      ],
+      columns: [
+        {
+          activityId: "WEEK2",
+          name: "Week 2",
+          epochId: "treatment",
+          studyDay: 14,
+          windowBefore: 2,
+          windowAfter: 2,
+          locations: ["Clinic"],
+        },
+        {
+          activityId: "WEEK4",
+          name: "Week 4",
+          epochId: "treatment",
+          studyDay: 28,
+          windowBefore: 2,
+          windowAfter: 2,
+          locations: ["Clinic"],
+        },
+      ],
+      scheduledRows: [
+        {
+          collectionSpecId: "VS",
+          name: "Vital Signs",
+          itemCount: 2,
+          columnIndices: [0, 1],
+          plannedActivityIds: ["WEEK2", "WEEK4"],
+        },
+      ],
+      unscheduledRows: [
+        {
+          collectionSpecId: "AE",
+          name: "Adverse Events",
+          itemCount: 3,
+          columnIndices: [],
+          plannedActivityIds: [],
+        },
+      ],
       collectionSpecs: [
         {
           id: "VS",
           name: "Vital Signs",
           plannedActivityIds: ["WEEK2", "WEEK4"],
-          repeating: true,
         },
         {
           id: "AE",
           name: "Adverse Events",
           plannedActivityIds: [],
-          unscheduled: true,
         },
       ],
       plannedActivities: [
@@ -1220,5 +1272,53 @@ describe("Clinical Canvas: a participant's data", () => {
     await flushPromises();
     expect(wrapper.find("#canvas-form-terminal-blocked").exists()).toBe(false);
     expect(wrapper.find("#zoom-form").text()).toBe("Vital Signs · WEEK2");
+  });
+
+  it("starts enrollment lookup, schedule loading, and lock checks concurrently when opening a participant", async () => {
+    const studyRef = "study:0192f3c4-5e6a-7b8c-9d0e-00000000c101@1";
+    let resolveEnrollment;
+    const enrollmentPromise = new Promise((resolve) => {
+      resolveEnrollment = resolve;
+    });
+    let resolveSchedule;
+    const schedulePromise = new Promise((resolve) => {
+      resolveSchedule = resolve;
+    });
+    let resolveLocks;
+    const locksPromise = new Promise((resolve) => {
+      resolveLocks = resolve;
+    });
+
+    vi.mocked(findKernelEnrollmentRef).mockReturnValueOnce(enrollmentPromise);
+    vi.mocked(findStudyScheduleOptions).mockReturnValueOnce(schedulePromise);
+    vi.mocked(findKernelStudyRef).mockResolvedValue(studyRef);
+    vi.mocked(kernelApi.listStudyLocks).mockReturnValueOnce(locksPromise);
+
+    await mountAt("/studies/CAD-101?section=participants");
+    await wrapper.find("#participant-017-0001").trigger("click");
+    await flushPromises();
+    await wrapper.find("#inspector-open-record").trigger("click");
+    await flushPromises();
+
+    // All three independent streams are already in-flight before enrollment lookup settles.
+    expect(findKernelEnrollmentRef).toHaveBeenCalledTimes(1);
+    expect(findStudyScheduleOptions).toHaveBeenCalledWith("CAD-101");
+    expect(kernelApi.listStudyLocks).toHaveBeenCalledWith(studyRef, {
+      activeOnly: true,
+    });
+    expect(ecrfFormsApi.listForEnrollment).not.toHaveBeenCalled();
+    expect(ecrfQueriesApi.listForEnrollment).not.toHaveBeenCalled();
+    expect(wrapper.find("#record-forms-no-enrollment").exists()).toBe(false);
+    expect(wrapper.find("#queries-no-enrollment").exists()).toBe(false);
+
+    resolveSchedule(null);
+    resolveLocks({ locks: [] });
+    resolveEnrollment({ kind: "enrollment", id: ENROLLMENT_ID, version: 1 });
+    await flushPromises();
+
+    expect(ecrfFormsApi.listForEnrollment).toHaveBeenCalledWith(ENROLLMENT_ID);
+    expect(ecrfQueriesApi.listForEnrollment).toHaveBeenCalledWith(
+      ENROLLMENT_ID
+    );
   });
 });

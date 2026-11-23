@@ -29,7 +29,7 @@
     </div>
 
     <p
-      v-if="enrollmentId && isTerminal"
+      v-if="!loading && !enrollmentLoading && enrollmentId && isTerminal"
       id="record-forms-terminal-note"
       data-testid="record-forms-terminal-note"
       class="status-line"
@@ -39,12 +39,16 @@
       correction.
     </p>
 
-    <p v-if="!enrollmentId" id="record-forms-no-enrollment" class="status-line">
+    <p v-if="loading || enrollmentLoading" class="status-line" role="status">
+      Loading {{ subjectCode }}'s forms…
+    </p>
+    <p
+      v-else-if="!enrollmentId"
+      id="record-forms-no-enrollment"
+      class="status-line"
+    >
       There is no enrollment for {{ subjectCode }} visible to your account, so
       forms can't be listed or opened here.
-    </p>
-    <p v-else-if="loading" class="status-line" role="status">
-      Loading {{ subjectCode }}'s forms…
     </p>
     <div
       v-else-if="loadError"
@@ -566,6 +570,7 @@ const props = defineProps<{
   subjectCode: string;
   participantStatus?: string | null;
   enrollmentId: string | null;
+  enrollmentLoading?: boolean;
   schedule?: StudyScheduleOptions | null;
   formLocation: (
     formId: string,
@@ -918,18 +923,19 @@ const lockedFormsCount = computed(
 );
 
 async function loadFormsAndSchedule() {
+  const scheduleTask =
+    props.schedule === undefined && props.studyCode && props.newFormCellLocation
+      ? canvas.loadScheduleOptions(props.studyCode).catch(() => null)
+      : Promise.resolve(null);
   const enrollmentId = props.enrollmentId;
   if (!enrollmentId) {
     forms.value = [];
     loading.value = false;
     loadError.value = "";
     emit("forms-loaded", []);
+    void scheduleTask;
     return;
   }
-  const scheduleTask =
-    props.schedule === undefined && props.studyCode && props.newFormCellLocation
-      ? canvas.loadScheduleOptions(props.studyCode).catch(() => null)
-      : Promise.resolve(null);
   if (typeof ecrfFormsApi?.listForEnrollment !== "function") {
     forms.value = [];
     emit("forms-loaded", []);
