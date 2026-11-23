@@ -1480,8 +1480,10 @@ const onTicketSigned = (sigPayload) => {
 
 .drawer-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   padding: 12px 24px;
   background: var(--semantic-color-surface-muted);
   border-bottom: 1px solid var(--semantic-color-border);
@@ -1489,6 +1491,9 @@ const onTicketSigned = (sigPayload) => {
 
 .action-btn-group {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
   gap: 8px;
 }
 
@@ -1732,6 +1737,7 @@ const onTicketSigned = (sigPayload) => {
 
 .comment-submit-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -2299,10 +2305,37 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .transition-reason-field {
-  min-width: 190px;
-  max-width: 240px;
+  flex: 1 1 160px;
+  min-width: 0;
+  max-width: 100%;
   padding: 4px 8px;
   font-size: 0.78rem;
+}
+
+@media (max-width: 640px), (max-height: 640px) {
+  .drawer-panel {
+    overflow-y: auto;
+  }
+
+  .drawer-header {
+    padding: 16px;
+  }
+
+  .drawer-header-meta {
+    padding-right: 44px;
+  }
+
+  .drawer-actions,
+  .resolve-panel,
+  .drawer-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .drawer-body {
+    flex: 1 0 auto;
+    overflow-y: visible;
+  }
 }
 
 .resolve-panel {

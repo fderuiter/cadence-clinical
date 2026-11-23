@@ -323,6 +323,12 @@
             </dd>
           </dl>
 
+          <ParticipantSiteAssignment
+            v-if="canManageParticipants && !participant.site_id"
+            :participant="participant"
+            :study-code="studyCode"
+          />
+
           <ParticipantStateChange
             v-if="canManageParticipants"
             :participant="participant"
@@ -345,7 +351,7 @@
             Open in data entry
           </router-link>
           <router-link
-            v-if="handoffLocation"
+            v-if="isDemoBuild() && handoffLocation"
             id="inspector-handoff-standalone"
             data-testid="inspector-ecrf-handoff"
             class="inspector-link"
@@ -413,7 +419,7 @@
             Open in data entry
           </router-link>
           <router-link
-            v-if="handoffLocation"
+            v-if="isDemoBuild() && handoffLocation"
             id="inspector-handoff-standalone"
             data-testid="inspector-ecrf-handoff"
             class="inspector-link"
@@ -505,6 +511,7 @@ import { ChevronLeft, ChevronRight } from "lucide-vue-next";
 import type { RouteLocationRaw } from "vue-router";
 import type { SubjectSummary } from "../../api/executionApi";
 import { participantStateLabel } from "../../canvas/lifecycle";
+import ParticipantSiteAssignment from "./ParticipantSiteAssignment.vue";
 import ParticipantStateChange from "./ParticipantStateChange.vue";
 import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 import KernelActPanel from "./KernelActPanel.vue";
@@ -529,6 +536,7 @@ import { useAiAssistance } from "../../ai/aiAssistance";
 import { useKernelCanI } from "../../composables/useKernelCanI";
 import { useRovingToolbar } from "../../composables/useRovingToolbar";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import { isDemoBuild } from "../../utils/demoMode";
 import AssistPanel from "../ai/AssistPanel.vue";
 
 /**
