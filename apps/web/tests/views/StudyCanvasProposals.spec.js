@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mount, flushPromises } from "@vue/test-utils";
+import { mount, flushPromises, DOMWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
@@ -445,13 +445,14 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
     });
 
     it("turns a sentence in the palette into a question for Assist on the selection", async () => {
+      const body = new DOMWrapper(document.body);
       await selectParticipant();
 
       await wrapper.find("#btn-open-palette").trigger("click");
-      await wrapper
+      await body
         .find("#canvas-palette-input")
         .setValue("which visits are out of window");
-      const options = wrapper.findAll("#canvas-palette-list [role=option]");
+      const options = body.findAll("#canvas-palette-list [role=option]");
       const ask = options.find((o) => o.text().includes("Ask AI"));
       expect(ask?.text()).toContain("Nothing changes until a person decides");
       await ask.trigger("click");
@@ -467,17 +468,19 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
     });
 
     it("offers no Ask for fewer than three words", async () => {
+      const body = new DOMWrapper(document.body);
       await open();
 
       await wrapper.find("#btn-open-palette").trigger("click");
-      await wrapper.find("#canvas-palette-input").setValue("conduct");
+      await body.find("#canvas-palette-input").setValue("conduct");
 
-      expect(wrapper.text()).not.toContain("Ask AI");
+      expect(body.find("#canvas-palette").text()).not.toContain("Ask AI");
     });
   });
 
   describe("with AI assistance off", () => {
     it("hides Assist and Ask, keeps Needs attention and review, and remembers the choice", async () => {
+      const body = new DOMWrapper(document.body);
       await selectAndTurnOff();
 
       expect(
@@ -488,10 +491,10 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       expect(wrapper.find("#ai-assist").exists()).toBe(false);
 
       await wrapper.find("#btn-open-palette").trigger("click");
-      await wrapper
+      await body
         .find("#canvas-palette-input")
         .setValue("which visits are out of window");
-      expect(wrapper.text()).not.toContain("Ask AI");
+      expect(body.find("#canvas-palette").text()).not.toContain("Ask AI");
 
       await router.push("/studies/CAD-101");
       await flushPromises();

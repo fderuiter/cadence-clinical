@@ -12,7 +12,7 @@ Clinical trial management scaffold. It holds the CTMS persistence model (monitor
   Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `CtmsDbContext`, a design-time `CtmsDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: schema, audit cascade restrictions, visit letter PDF/dispatch fields, greenlight gates, transactional outbox, tenant RLS, and persisted `StudyId`/`SiteId` scope columns (`20261122171757_AddCtmsStudyAndSiteScopeColumns`).
-- `../Templates/`: Liquid templates (`confirmation_letter.liquid`, `follow_up_letter.liquid`) embedded into the assembly and rendered via `Cadence.Kernel.Templating`.
+- `../Templates/`: Liquid templates (`confirmation_letter.html.liquid`, `follow_up_letter.html.liquid`) embedded into the assembly and rendered via `Cadence.Kernel.Templating`.
 
 ## HTTP surface
 
