@@ -1,4 +1,5 @@
 using Cadence.Apps.Knowledge.Domain;
+using Cadence.Database.Temporal;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -56,6 +57,11 @@ public class KnowledgeArticleVersionConfiguration : IEntityTypeConfiguration<Kno
         builder.Property(x => x.ArticleId).HasMaxLength(36).IsRequired();
         builder.HasIndex(x => x.ArticleId);
         builder.HasIndex(x => x.VersionIndex);
+        builder.HasIndex(x => new { x.ArticleId, x.VersionIndex }).IsUnique();
+        builder.HasOne<KnowledgeArticle>()
+            .WithMany()
+            .HasForeignKey(x => x.ArticleId)
+            .OnDelete(DeleteBehavior.Restrict);
         builder.Property(x => x.VersionLabel).HasMaxLength(50).IsRequired();
         builder.Property(x => x.StatusAtSnapshot).HasMaxLength(50).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
@@ -124,5 +130,37 @@ public class ProtocolKnowledgeChunkConfiguration : IEntityTypeConfiguration<Prot
         builder.HasIndex(x => x.PageNumber);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+    }
+}
+
+public sealed class DelegationRecordPeriodConfiguration(DbContext dbContext) : IEntityTypeConfiguration<DelegationRecordPeriod>
+{
+    public void Configure(EntityTypeBuilder<DelegationRecordPeriod> builder)
+    {
+        builder.ToTable("delegation_record_periods");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.DelegationRecordId).IsRequired();
+        builder.Property(x => x.StudyCode).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.SiteCode).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.StaffUserId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.StaffName).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.Role).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.TaskCode).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Duties).IsRequired();
+        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.PiSignatureHash).HasMaxLength(255);
+        builder.Property(x => x.BatchTransactionId).HasMaxLength(100);
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+
+        builder.HasOne<DelegationRecord>()
+            .WithMany()
+            .HasForeignKey(x => x.DelegationRecordId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => x.DelegationRecordId);
+        builder.HasIndex(x => new { x.StudyCode, x.SiteCode });
+        builder.ConfigureStandaloneBitemporal(dbContext);
     }
 }

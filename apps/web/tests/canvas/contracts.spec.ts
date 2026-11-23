@@ -28,6 +28,7 @@ import {
   canManageMonitoringVisits,
   canManageParticipants,
   canManageQueries,
+  canManageRandomizationSchemes,
   canManageRulePacks,
   canManageSiteMilestones,
   canReadEtmf,
@@ -44,6 +45,7 @@ import {
   canSignTrainingDelegations,
   canStageEtmfQc,
   canTagEtmf,
+  canUnblindParticipant,
   canVerifySource,
   normalizeBackendRole,
 } from "../../src/canvas/authority";
@@ -51,6 +53,7 @@ import {
   PARTICIPANT_STATES,
   PARTICIPANT_TRANSITIONS,
   STAGES,
+  canRandomizeParticipant,
   participantStateChanges,
   findSection,
   findStage,
@@ -217,6 +220,13 @@ describe("Canvas lifecycle", () => {
       targets: ["SCREEN_FAILED", "ENROLLED", "RECONSENT_REQUIRED", "WITHDRAWN"],
       unblindingWithheld: false,
     });
+    expect(participantStateChanges("ENROLLED")).toEqual({
+      targets: ["RECONSENT_REQUIRED", "WITHDRAWN"],
+      unblindingWithheld: false,
+    });
+    expect(canRandomizeParticipant("ENROLLED")).toBe(true);
+    expect(canRandomizeParticipant("SCREENING")).toBe(false);
+    expect(canRandomizeParticipant("RANDOMIZED")).toBe(false);
     expect(participantStateChanges("COMPLETED").targets).toEqual([]);
     expect(participantStateChanges("NOT_A_STATE").targets).toEqual([]);
   });
@@ -284,7 +294,7 @@ describe("Generated canvas contracts freshness & drift gate", () => {
   });
 });
 
-describe("Canvas authority mirror & all 31 can* helpers", () => {
+describe("Canvas authority mirror & all 33 can* helpers", () => {
   const { roleAliases: csharpRoleAliases } = parseRoleNormalization();
   const { permissionRoles: csharpPermissionRoles } = parsePermissionMatrix();
 
@@ -400,7 +410,7 @@ describe("Canvas authority mirror & all 31 can* helpers", () => {
     }
   });
 
-  it("validates all 31 can* authority helpers against PermissionMatrix*.cs and Execution/Kernel contracts", () => {
+  it("validates all 33 can* authority helpers against PermissionMatrix*.cs and Execution/Kernel contracts", () => {
     const exportedCanNames = Object.keys(authority)
       .filter(
         (key) =>
@@ -500,6 +510,11 @@ describe("Canvas authority mirror & all 31 can* helpers", () => {
         permission: "randomization_scheme:read",
       },
       {
+        name: "canManageRandomizationSchemes",
+        fn: canManageRandomizationSchemes,
+        permission: "randomization_scheme:draft",
+      },
+      {
         name: "canReadEtmf",
         fn: canReadEtmf,
         permission: "etmf_document:read",
@@ -588,6 +603,14 @@ describe("Canvas authority mirror & all 31 can* helpers", () => {
         ],
       },
       {
+        name: "canUnblindParticipant",
+        fn: canUnblindParticipant,
+        allowedCanonicalRoles: [
+          "principal_investigator",
+          "authorized_er_physician",
+        ],
+      },
+      {
         name: "canGovernProtocols",
         fn: canGovernProtocols,
         allowedCanonicalRoles: [
@@ -608,10 +631,10 @@ describe("Canvas authority mirror & all 31 can* helpers", () => {
       ...matrixBackedChecks.map((c) => c.name),
       ...serviceBackedChecks.map((c) => c.name),
     ].sort();
-    expect(exportedCanNames).toHaveLength(31);
+    expect(exportedCanNames).toHaveLength(33);
     expect(testedNames).toEqual(exportedCanNames);
 
-    // Verify all 24 PermissionMatrix-backed helpers against C# PermissionMatrix*.cs across every canonical role
+    // Verify all 25 PermissionMatrix-backed helpers against C# PermissionMatrix*.cs across every canonical role
     for (const { name, fn, permission } of matrixBackedChecks) {
       const grantedSet = new Set(csharpPermissionRoles[permission] ?? []);
       expect(grantedSet.size, `${name} (${permission})`).toBeGreaterThan(0);
@@ -629,7 +652,7 @@ describe("Canvas authority mirror & all 31 can* helpers", () => {
       }
     }
 
-    // Verify the 7 Execution/Kernel service-backed helpers across every canonical role
+    // Verify the 8 Execution/Kernel service-backed helpers across every canonical role
     for (const { name, fn, allowedCanonicalRoles } of serviceBackedChecks) {
       const allowedSet = new Set(allowedCanonicalRoles);
       for (const role of CANONICAL_TEST_ROLES) {
@@ -660,6 +683,61 @@ describe("Canvas authority mirror & all 31 can* helpers", () => {
       "cra",
     ]) {
       expect(canReconcileIpKits({ rawRoles: [role] }), role).toBe(false);
+    }
+
+    // randomization_scheme:draft/approve -> unblinded_statistician only
+    expect(
+      canManageRandomizationSchemes({ rawRoles: ["unblinded_statistician"] })
+    ).toBe(true);
+    for (const role of [
+      "sysadmin",
+      "sponsor_dm",
+      "Data Manager",
+      "auditor",
+      "pharmacist",
+      "crc",
+      "Principal Investigator",
+    ]) {
+      expect(canManageRandomizationSchemes({ rawRoles: [role] }), role).toBe(
+        false
+      );
+    }
+
+    // SubjectAuthority.CanUnblind -> principal_investigator & authorized_er_physician only
+    const authoritySource = readFileSync(
+      join(
+        repoRoot,
+        "apps/execution/src/Application/Subjects/SubjectAuthority.cs"
+      ),
+      "utf8"
+    );
+    const unblindMethod = authoritySource.slice(
+      authoritySource.indexOf("public static bool CanUnblind")
+    );
+    const unblindBody = unblindMethod.slice(
+      unblindMethod.indexOf("return normalized is"),
+      unblindMethod.indexOf(";", unblindMethod.indexOf("return normalized is"))
+    );
+    const unblindRoles = [...unblindBody.matchAll(/"([^"]+)"/g)].map(
+      ([, role]) => role
+    );
+    expect(unblindRoles.length).toBeGreaterThan(0);
+    for (const role of unblindRoles) {
+      expect(canUnblindParticipant({ rawRoles: [role] }), role).toBe(true);
+    }
+    for (const role of [
+      "Site Investigator",
+      "investigator",
+      "sub_investigator",
+      "lead_investigator",
+      "er_physician",
+      "er physician",
+      "crc",
+      "pharmacist",
+      "unblinded_statistician",
+      "sysadmin",
+    ]) {
+      expect(canUnblindParticipant({ rawRoles: [role] }), role).toBe(false);
     }
 
     // eTMF permission matrix mirror (PermissionMatrix.Etmf.cs + PermissionMatrix.cs)

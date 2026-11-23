@@ -6,7 +6,9 @@
   >
     <div class="section-header-row">
       <div>
-        <h3 id="ctms-milestones-title" class="card-title">Site milestones</h3>
+        <h3 id="ctms-milestones-title" class="card-title" tabindex="-1">
+          Site milestones
+        </h3>
         <p class="section-subtitle">
           Track planned and achieved site startup and conduct milestones.
         </p>

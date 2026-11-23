@@ -6,7 +6,7 @@
   >
     <header class="sites-header">
       <div>
-        <h2 id="sites-section-title">Sites</h2>
+        <h2 id="sites-section-title" tabindex="-1">Sites</h2>
         <p id="sites-status-line" class="sites-status" role="status">
           {{ statusLine }}
         </p>

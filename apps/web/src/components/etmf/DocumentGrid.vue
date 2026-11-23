@@ -2,7 +2,9 @@
   <div class="document-grid-container">
     <div class="grid-header">
       <div class="header-titles">
-        <h2>Artifact Documents Registry</h2>
+        <h2 id="document-grid-heading" tabindex="-1">
+          Artifact Documents Registry
+        </h2>
         <p v-if="selectedArtifactCode" class="active-artifact-subtitle">
           Showing documents for Artifact:
           <strong>{{ selectedArtifactCode }}</strong>
@@ -615,6 +617,7 @@ const canExport = computed(
 function openBatchDrawer() {
   if (!canStage.value) {
     useToastStore().push({
+      title: "Document Staging Restricted",
       message: ETMF_STAGE_ROLE_REASON,
       tone: "warning",
     });
@@ -675,6 +678,7 @@ function getZoneAndSectionFromCode(code) {
 async function startEditing(rIndex, doc) {
   if (!canTag.value) {
     useToastStore().push({
+      title: "Taxonomy Editing Restricted",
       message: ETMF_TAG_ROLE_REASON,
       tone: "warning",
     });
@@ -835,6 +839,7 @@ function toggleSelectAll() {
 async function handleExportSelected() {
   if (!canExport.value) {
     useToastStore().push({
+      title: "eTMF Export Restricted",
       message: ETMF_EXPORT_ROLE_REASON,
       tone: "warning",
     });
@@ -986,6 +991,7 @@ function formatDate(dateStr) {
 function openUploadModal() {
   if (!canStage.value) {
     useToastStore().push({
+      title: "Document Upload Restricted",
       message: ETMF_STAGE_ROLE_REASON,
       tone: "warning",
     });

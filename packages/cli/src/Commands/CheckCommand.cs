@@ -24,6 +24,10 @@ public static class CheckCommand
         {
             Description = "Run the pre-commit guardrails against staged files (used by .githooks/pre-commit).",
         };
+        var failFast = new Option<bool>("--fail-fast")
+        {
+            Description = "Stop at the first failing quality gate (enabled by default with --pre-commit).",
+        };
         var exclude = new Option<string[]>("--exclude")
         {
             Description = "Skip a quality gate by name or alias when running all gates; repeat for more.",
@@ -48,6 +52,7 @@ public static class CheckCommand
         command.Arguments.Add(gate);
         command.Arguments.Add(files);
         command.Options.Add(preCommit);
+        command.Options.Add(failFast);
         command.Options.Add(exclude);
         command.Options.Add(baseRef);
         command.Options.Add(pushBefore);
@@ -73,13 +78,17 @@ public static class CheckCommand
         {
             string[] targets = result.GetValue(files) ?? [];
             string[] excluded = result.GetValue(exclude) ?? [];
+            bool? failFastOverride = result.GetResult(failFast) is { Implicit: false }
+                ? result.GetValue(failFast)
+                : null;
             return QualityGateOrchestrator.RunQualityGates(
                 result.GetValue(gate),
                 targets.Length == 0 ? null : targets,
                 result.GetValue(preCommit),
                 excluded.Length == 0 ? null : excluded,
                 baseRef: result.GetValue(baseRef),
-                pushBefore: result.GetValue(pushBefore));
+                pushBefore: result.GetValue(pushBefore),
+                failFast: failFastOverride);
         });
     }
 

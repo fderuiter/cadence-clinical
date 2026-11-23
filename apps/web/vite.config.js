@@ -7,6 +7,7 @@ import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock
 import {
   createConstantFoldDemoModePlugin,
   createDemoFixturesPlugin,
+  createUiWorkspaceAliases,
 } from "../../scripts/vite-strip-demo-fixtures.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -131,25 +132,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: [
-      // The mock gateway and Vitest accessibility matcher are kept out of the library's root export (#5335).
-      {
-        find: /^ui\/testing$/,
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/ui/mockGateway.js"
-        ),
-      },
-      {
-        find: /^ui\/vitest$/,
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/ui/accessibility-matcher.js"
-        ),
-      },
-      {
-        find: /^ui$/,
-        replacement: path.resolve(__dirname, "../../packages/ui/dist/index.js"),
-      },
+      ...createUiWorkspaceAliases(__dirname, { uiEntry: "dist/index.js" }),
       { find: "@", replacement: path.resolve(__dirname, "./src") },
       {
         find: "pinia",

@@ -4,7 +4,9 @@
     class="card site-activation"
     aria-labelledby="site-activation-title"
   >
-    <h3 id="site-activation-title" class="card-title">Site activation</h3>
+    <h3 id="site-activation-title" class="card-title" tabindex="-1">
+      Site activation
+    </h3>
 
     <form
       id="site-activation-scope"
@@ -531,6 +533,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { handoffFocus } from "ui";
 import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
 import { describeKernelError, kernelApi } from "../../api/kernelApi";
@@ -846,8 +849,13 @@ function nextQuickSiteKey(prefix) {
 }
 
 function toggleCreateSiteShortcut() {
-  showCreateSiteForm.value = !showCreateSiteForm.value;
+  const opening = !showCreateSiteForm.value;
+  showCreateSiteForm.value = opening;
   quickSiteError.value = "";
+  void handoffFocus(
+    opening ? "#site-activation-new-code" : "#btn-site-activation-new-site",
+    { scrollIfOffscreen: opening }
+  );
 }
 
 async function loadKernelLinkedSites() {
@@ -923,6 +931,10 @@ async function submitQuickSite() {
     newSiteName.value = "";
     newSiteInstitution.value = "";
     newSiteReason.value = "";
+    void handoffFocus([
+      "#site-activation-site-picker",
+      "#site-activation-site",
+    ]);
     toasts.push({
       tone: "success",
       title: `Site ${created.code} registered`,

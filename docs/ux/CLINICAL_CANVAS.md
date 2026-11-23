@@ -354,17 +354,24 @@ issue under epic #4719.
 
 ## 8. Relationship to the current web app
 
-`apps/web` today is a Vue client typed against Python-era API specifications and is being moved onto the
-real .NET API under epic #4833; only Execution is a real backend so far. This document does not ask that
-work to change course. It adds three constraints for any screen built or rebuilt from now on:
+`apps/web` is a Vue 3 client backed by the `.NET 10` service topology (`18` hosts behind `apps/gateway` on port `8000`;
+epic #4833). Its API layer in `apps/web/src/api/` compiles against OpenAPI-generated TypeScript definitions
+(`apps/web/scripts/generate-api-types.js` -> `apps/web/src/api/generated/<contract>.ts`, enforced by `cadence check api-clients`)
+discovered automatically from every `docs/openapi/*_openapi.json` service and module contract (excluding the aggregated
+`cdisc_openapi.json` snapshot; [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md)). On the backend,
+`apps/kernel-api` composes three EF Core module schemas (`kernel`, `intelligence`, and `execution`), and `13` mutating
+routes across `econsent`, `execution`, `kernel`, `knowledge`, `safety`, and `tickets` enforce 21 CFR Part 11 electronic
+signatures via `.RequireElectronicSignature(...)` ([Signature Token Cryptographic Contract](../SDLC/Signature_Token_Cryptographic_Contract.md)).
+Screens still migrating off legacy contracts are tracked in [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md); this
+document sets three constraints for every screen built or rebuilt:
 
 1. Use the three-pane model (UX-3) and study-centric navigation (UX-1) for new screens.
 2. Read clinical facts, explanations and lineage from the kernel; never reconstruct them in the client.
    Explanations are rendered from the kernel's `Explanation` (ADR-2482, K-EXP-1), never built in the web app.
 3. Render authorization and blinding outcomes as the kernel returns them (UX-9, §5).
 
-The first shell is in `apps/web` at `/studies/:studyCode` (`StudyCanvasView.vue`). It has the lifecycle
-rail, the three panes (collapsing an empty inspector into a toggle rail to widen the workspace until a study object or Assist prompt is selected, and keeping the zoom path, navigator and inspector sticky on scroll), visible-on-focus skip links to `#main-content` and `#canvas-workspace`, the zoom path, the `⌘K` palette, and the `⌘E` / `Ctrl+E` Explain shortcut (`useStudyCanvasStore`), and shows only what Execution and the kernel serve today:
+The Canvas shell is in `apps/web` at `/studies/:studyCode` (`StudyCanvasView.vue`). It has the lifecycle
+rail, the three panes (collapsing an empty inspector into a toggle rail to widen the workspace until a study object or Assist prompt is selected, and keeping the zoom path, navigator and inspector sticky on scroll), visible-on-focus skip links to `#main-content` and `#canvas-workspace`, the zoom path, the `⌘K` palette, and the `⌘E` / `Ctrl+E` Explain shortcut (`useStudyCanvasStore`), and integrates `execution` and `kernel` reads and workflows:
 participants by state on study home (an interim count from Execution's list totals until Pulse metrics are
 Indicators, D6), the study's recent activity on study home from the kernel's activity stream (PX-11), newest first and
 filterable by family, with entries about hidden objects kept in place as hidden, the Participants section (filtering by subject code search, state and study site, adding a participant in screening, and moving a participant between

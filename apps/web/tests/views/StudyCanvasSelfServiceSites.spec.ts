@@ -105,12 +105,13 @@ describe("Self-service trial site workflows across StudyCanvasView, Participants
 
     expect(await findStudySites("CADENCE-202")).toEqual([]);
 
-    const wrapper = await mountCanvas(
-      "/studies/CADENCE-202?stage=conduct&section=sites"
-    );
+    const wrapper = await mountCanvas("/studies/CADENCE-202");
     expect(wrapper.find("#nav-sites").exists()).toBe(true);
+    await wrapper.find("#nav-sites").trigger("click");
+    await flushPromises();
     expect(wrapper.find("#sites-section").exists()).toBe(true);
     await vi.waitFor(() => {
+      expect(document.activeElement?.id).toBe("sites-section-title");
       expect(
         (wrapper.find("#btn-refresh-sites").element as HTMLButtonElement)
           .disabled
@@ -202,8 +203,14 @@ describe("Self-service trial site workflows across StudyCanvasView, Participants
     await flushPromises();
 
     expect(founderWrapper.find("#add-participant-form").exists()).toBe(true);
+    await vi.waitFor(() => {
+      expect(document.activeElement?.id).toBe("add-participant-code");
+    });
     await founderWrapper.find("#btn-add-participant-new-site").trigger("click");
     await flushPromises();
+    await vi.waitFor(() => {
+      expect(document.activeElement?.id).toBe("inline-site-code");
+    });
 
     await founderWrapper.find("#inline-site-code").setValue("SITE-05");
     await founderWrapper
@@ -222,6 +229,7 @@ describe("Self-service trial site workflows across StudyCanvasView, Participants
       const siteSelect = founderWrapper.find("select#add-participant-site");
       expect(siteSelect.exists()).toBe(true);
       expect((siteSelect.element as HTMLSelectElement).value).toBe("SITE-05");
+      expect(document.activeElement?.id).toBe("add-participant-site");
     });
 
     await founderWrapper.find("#add-participant-code").setValue("SUBJ-001");
@@ -260,10 +268,14 @@ describe("Self-service trial site workflows across StudyCanvasView, Participants
     const wrapper = mount(SiteActivationPanel, {
       props: { studyCode: "CADENCE-404" },
       global: { plugins: [pinia] },
+      attachTo: document.body,
     });
     await flushPromises();
 
     await wrapper.find("#btn-site-activation-new-site").trigger("click");
+    await vi.waitFor(() => {
+      expect(document.activeElement?.id).toBe("site-activation-new-code");
+    });
     await wrapper.find("#site-activation-new-code").setValue("SITE-404");
     await wrapper.find("#site-activation-new-country").setValue("DE");
     await wrapper
@@ -282,6 +294,7 @@ describe("Self-service trial site workflows across StudyCanvasView, Participants
         (wrapper.find("#site-activation-site").element as HTMLInputElement)
           .value
       ).toBe("SITE-404");
+      expect(document.activeElement?.id).toBe("site-activation-site-picker");
     });
     const optionTexts = wrapper
       .findAll("#site-activation-site-picker option")

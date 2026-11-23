@@ -29,6 +29,7 @@ public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> option
     public IFieldEncryptor FieldEncryptor { get; } = fieldEncryptor;
 
     public DbSet<ConsentDocument> ConsentDocuments => Set<ConsentDocument>();
+    public DbSet<ConsentDocumentRevision> ConsentDocumentRevisions => Set<ConsentDocumentRevision>();
     public DbSet<EtmfArchivalDelivery> EtmfArchivalDeliveries => Set<EtmfArchivalDelivery>();
     public DbSet<SubjectConsent> SubjectConsents => Set<SubjectConsent>();
     public DbSet<ComprehensionCheck> ComprehensionChecks => Set<ComprehensionCheck>();
@@ -58,6 +59,7 @@ public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> option
         modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
 
         modelBuilder.ApplyConfiguration(new ConsentDocumentConfiguration());
+        modelBuilder.ApplyConfiguration(new ConsentDocumentRevisionConfiguration());
         modelBuilder.ApplyConfiguration(new EtmfArchivalDeliveryConfiguration());
         modelBuilder.ApplyConfiguration(new SubjectConsentConfiguration());
         modelBuilder.ApplyConfiguration(new ComprehensionCheckConfiguration());

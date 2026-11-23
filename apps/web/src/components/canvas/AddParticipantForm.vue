@@ -33,7 +33,7 @@
           id="btn-add-participant-toggle-site-mode"
           type="button"
           class="link-button"
-          @click="manualSiteMode = !manualSiteMode"
+          @click="toggleSiteMode"
         >
           {{ manualSiteMode ? "Pick linked site" : "Enter custom code" }}
         </button>
@@ -185,7 +185,12 @@
       >
         Add participant
       </button>
-      <button type="button" class="btn btn-secondary" @click="emit('close')">
+      <button
+        id="btn-cancel-add-participant"
+        type="button"
+        class="btn btn-secondary"
+        @click="emit('close')"
+      >
         Cancel
       </button>
     </div>
@@ -194,6 +199,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { handoffFocus } from "ui";
 import type { SubjectSummary } from "../../api/executionApi";
 import { describeKernelError, kernelApi } from "../../api/kernelApi";
 import {
@@ -203,6 +209,7 @@ import {
 } from "../../canvas/kernelStudy";
 import { useAuthStore } from "../../stores/auth";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import { addParticipantMutation } from "../../stores/studyCanvasParticipantMutations";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
 /**
@@ -312,9 +319,19 @@ async function loadSites() {
   }
 }
 
+function toggleSiteMode() {
+  manualSiteMode.value = !manualSiteMode.value;
+  void handoffFocus("#add-participant-site");
+}
+
 function toggleInlineSiteForm() {
-  showInlineSiteForm.value = !showInlineSiteForm.value;
+  const opening = !showInlineSiteForm.value;
+  showInlineSiteForm.value = opening;
   inlineSiteError.value = "";
+  void handoffFocus(
+    opening ? "#inline-site-code" : "#btn-add-participant-new-site",
+    { scrollIfOffscreen: opening }
+  );
 }
 
 async function submitInlineSite() {
@@ -374,6 +391,10 @@ async function submitInlineSite() {
     inlineSiteName.value = "";
     inlineInstitutionName.value = "";
     inlineSiteReason.value = "";
+    void handoffFocus([
+      "#add-participant-site",
+      "#btn-add-participant-new-site",
+    ]);
   } catch (err) {
     inlineSiteError.value = describeKernelError(err);
   } finally {
@@ -403,7 +424,12 @@ async function submit() {
   if (!code || !why || busy.value) return;
   busy.value = true;
   try {
-    const result = await canvas.addParticipant(code, siteId.value.trim(), why);
+    const result = await addParticipantMutation(
+      canvas,
+      code,
+      siteId.value.trim(),
+      why
+    );
     // When adding fails nothing was created: keep the form so the user can correct it.
     if (result.added) emit("added", result.participant);
   } finally {
@@ -412,7 +438,8 @@ async function submit() {
 }
 
 onMounted(() => {
-  loadSites();
+  void handoffFocus("#add-participant-code", { scrollIfOffscreen: true });
+  void loadSites();
 });
 </script>
 

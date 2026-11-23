@@ -7140,6 +7140,27 @@
           }
         }
       },
+      "Kernel_CodelistOptionView": {
+        "required": [
+          "code",
+          "display"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "display": {
+            "type": "string"
+          },
+          "submission_value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Kernel_CodeSystemVersionId": {},
       "Kernel_DateTimePrecision": {
         "enum": [
@@ -9316,6 +9337,21 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "expected_codelist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expected_codelist_options": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_CodelistOptionView"
+            }
           }
         }
       },
