@@ -782,7 +782,8 @@ import {
   onUnmounted,
   getCurrentInstance,
 } from "vue";
-import { useRoute } from "vue-router";
+import { getActivePinia } from "pinia";
+import { useRoute, useRouter } from "vue-router";
 import {
   ClinicalDrawer,
   ClinicalIconButton,
@@ -790,6 +791,11 @@ import {
   useEscapeClose,
 } from "ui";
 import { isScreenAvailable } from "../router/availability.js";
+import {
+  buildScopedWorkflowPath,
+  resolveWorkspaceNavigationScope,
+} from "../canvas/palette";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   canonicalizeContextualRoute,
   useKnowledgeStore,
@@ -799,6 +805,7 @@ import {
   PERSONA_PRESETS,
   normalizeRole,
 } from "../stores/auth.js";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 
 function makeLucideIcon(nodes) {
   const Icon = (props, { attrs }) =>
@@ -960,6 +967,17 @@ const authStore = useAuthStore();
 const toastStore = useToastStore();
 const route = useRoute();
 const instance = getCurrentInstance();
+const { activeStudyCode } = useActiveStudyScope();
+const activeCanvasStore = computed(() => {
+  const pinia = getActivePinia();
+  return pinia ? useStudyCanvasStore(pinia) : null;
+});
+let injectedRouter = null;
+try {
+  injectedRouter = useRouter();
+} catch {
+  injectedRouter = null;
+}
 
 const drawerRootRef = ref(null);
 const searchInputRef = ref(null);
@@ -989,10 +1007,22 @@ function resolveEscalationRoute() {
 }
 
 function openHubRoute(path) {
+  const scope = resolveWorkspaceNavigationScope(
+    route,
+    activeCanvasStore.value,
+    undefined,
+    activeStudyCode.value
+  );
+  const scopedPath = buildScopedWorkflowPath(path, {
+    studyCode: scope.studyCode,
+    siteId: scope.siteId,
+    subjectCode: scope.subjectCode,
+  });
   knowledgeStore.closeDrawer();
-  const router = instance?.appContext?.config?.globalProperties?.$router;
+  const router =
+    injectedRouter || instance?.appContext?.config?.globalProperties?.$router;
   if (router && typeof router.push === "function") {
-    router.push(path);
+    router.push(scopedPath);
   }
 }
 
