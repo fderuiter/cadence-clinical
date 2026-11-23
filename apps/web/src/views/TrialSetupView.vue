@@ -17,9 +17,10 @@
         <p class="setup-subtitle">
           Signed in as
           <strong>{{ authStore.identity?.username || "your account" }}</strong>.
-          Create an isolated study workspace for your sponsor organization with
-          Sponsor Administrator and Protocol Designer access and starter product
-          entitlements.
+          Create an isolated study workspace for your sponsor organization,
+          starter clinical site institution, and sandbox study site with Sponsor
+          Administrator, Protocol Designer, and Site Investigator access and
+          starter product entitlements.
         </p>
       </header>
 
@@ -173,6 +174,17 @@ async function submitOnboarding() {
       authStore.rawRoles = [
         ...new Set([...authStore.rawRoles, ...response.assigned_roles]),
       ];
+    }
+    const fallbackSites = Array.isArray(response.assigned_site_ids)
+      ? response.assigned_site_ids
+      : response.sandbox_site_code
+        ? [response.sandbox_site_code]
+        : [];
+    if (fallbackSites.length > 0 && authStore.assignedSiteIds.length === 0) {
+      authStore.siteIds = [...fallbackSites];
+    }
+    if (!authStore.currentPersona && authStore.availablePersonas.length > 0) {
+      authStore.currentPersona = authStore.availablePersonas[0].key;
     }
 
     await authStore.loadEntitlements({ force: true });

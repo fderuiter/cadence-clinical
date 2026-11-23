@@ -27,8 +27,7 @@ internal sealed class KernelSubjectTenantBindingProbe(KernelTenantDbContextFacto
             return false;
         }
 
-        string trimmed = subjectId.Trim();
-        PersonId? directPersonId = Guid.TryParse(trimmed, out var parsed)
+        PersonId? directPersonId = Guid.TryParse(subjectId, out var parsed)
             ? PersonId.FromGuid(parsed)
             : null;
 
@@ -40,16 +39,16 @@ internal sealed class KernelSubjectTenantBindingProbe(KernelTenantDbContextFacto
                 continue;
             }
 
-            PersonId demoPersonId = KernelTenantMembershipReader.DeriveDemoPersonId(tenantId, trimmed);
             await using var db = tenantFactory.Create(tenantId);
             if (await db.Grants
                     .AsNoTracking()
-                    .AnyAsync(g => g.GranteeKind == ActorKind.Person && g.GranteeId == trimmed, cancellationToken)
+                    .AnyAsync(g => g.GranteeKind == ActorKind.Person && g.GranteeId == subjectId, cancellationToken)
                     .ConfigureAwait(false))
             {
                 return true;
             }
 
+            PersonId demoPersonId = KernelTenantMembershipReader.DeriveDemoPersonId(tenantId, subjectId);
             if (await db.TenantMemberships
                     .AsNoTracking()
                     .AnyAsync(

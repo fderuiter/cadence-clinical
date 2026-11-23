@@ -19,6 +19,7 @@ namespace Cadence.Apps.Execution.Domain.Subjects;
 /// </summary>
 public sealed class ClinicalSubject : AggregateRoot<SubjectId>
 {
+    public Guid TenantId { get; internal set; }
     public SubjectCode SubjectCode { get; private set; } = default!;
     public StudyCode StudyCode { get; private set; } = default!;
     public SiteCode? SiteCode { get; private set; }

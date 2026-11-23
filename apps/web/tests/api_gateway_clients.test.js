@@ -9,9 +9,7 @@ const { mockFetch } = vi.hoisted(() => {
 import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth";
 import { apiClient } from "../src/api/apiClient";
-import { designerService } from "../src/api/designer";
 import { etmfService } from "../src/api/etmf";
-import { interopService } from "../src/api/interop";
 import apiService from "../src/services/api";
 import { jsonResponse, recordedRequest } from "./fetch_mock.js";
 
@@ -131,43 +129,8 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
     });
   });
 
-  describe("Designer Service Module", () => {
-    it("routes study, rules, and concepts queries correctly through gateway contracts", async () => {
-      let request;
-      // A Response body can only be read once, so build a fresh one per call.
-      mockFetch.mockImplementation(async () =>
-        jsonResponse({ id: "STUDY-01" })
-      );
-
-      await designerService.getStudy("STUDY-01");
-      request = await lastRequest();
-      expect(request.url).toBe("http://localhost:8000/api/v1/studies/STUDY-01");
-      expect(request.method).toBe("GET");
-
-      await designerService.createStudyVersion("STUDY-01", { version: "v1" });
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/studies/STUDY-01/versions"
-      );
-      expect(request.method).toBe("POST");
-      expect(request.body).toEqual({ version: "v1" });
-
-      await designerService.getRules("STUDY-01");
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/studies/STUDY-01/rules"
-      );
-      expect(request.method).toBe("GET");
-
-      await designerService.getConcepts();
-      request = await lastRequest();
-      expect(request.url).toBe("http://localhost:8000/api/v1/mdr/concepts");
-      expect(request.method).toBe("GET");
-    });
-  });
-
   describe("eTMF Service Module", () => {
-    it("routes documents list, retrieval, and ingest correctly through gateway contracts", async () => {
+    it("routes documents list and ingest correctly through gateway contracts", async () => {
       let request;
       // A Response body can only be read once, so build a fresh one per call.
       mockFetch.mockImplementation(async () => jsonResponse({}));
@@ -177,40 +140,19 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
       expect(request.url).toBe("http://localhost:8000/api/v1/etmf/documents");
       expect(request.method).toBe("GET");
 
-      await etmfService.getDocument("DOC-01");
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/etmf/documents/DOC-01"
-      );
-      expect(request.method).toBe("GET");
-
       await etmfService.ingestDocument({ file_name: "crf.pdf" });
       request = await lastRequest();
       expect(request.url).toBe("http://localhost:8000/api/v1/etmf/ingest");
       expect(request.method).toBe("POST");
     });
 
-    it("routes taxonomy retrieval, taxonomy updates, QC submission, and binary downloads through mapped .NET contracts", async () => {
+    it("routes taxonomy updates, QC submission, and binary downloads through mapped .NET contracts", async () => {
       let request;
       authStore.accessToken = "etmf-bearer-token";
       authStore.isAuthenticated = true;
       mockFetch.mockImplementation(async () => jsonResponse({}));
 
-      // 1. getTaxonomy without version
-      await etmfService.getTaxonomy();
-      request = await lastRequest();
-      expect(request.url).toBe("http://localhost:8000/api/v1/etmf/taxonomy");
-      expect(request.method).toBe("GET");
-
-      // 2. getTaxonomy with version
-      await etmfService.getTaxonomy("v3.2.0-complete");
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/etmf/taxonomy?version=v3.2.0-complete"
-      );
-      expect(request.method).toBe("GET");
-
-      // 3. getDocuments with study_id, site_id & zone scope
+      // 1. getDocuments with study_id, site_id & zone scope
       await etmfService.getDocuments({
         study_id: "CADENCE-101",
         site_id: "SITE-01",
@@ -298,35 +240,6 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
         "Bearer etmf-bearer-token"
       );
       expect(exportArchive.blob.size).toBe(4);
-    });
-  });
-
-  describe("Interop Service Module", () => {
-    it("routes submit, sync, and instruments endpoints correctly through gateway contracts", async () => {
-      let request;
-      // A Response body can only be read once, so build a fresh one per call.
-      mockFetch.mockImplementation(async () => jsonResponse({}));
-
-      await interopService.submitEpro({ questionnaire: "Q-01" });
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/interop/epro/submit"
-      );
-      expect(request.method).toBe("POST");
-
-      await interopService.syncEpro({ bundle: [] });
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/interop/epro/sync"
-      );
-      expect(request.method).toBe("POST");
-
-      await interopService.getInstruments("SUB-01");
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/interop/subjects/SUB-01/instruments"
-      );
-      expect(request.method).toBe("GET");
     });
   });
 

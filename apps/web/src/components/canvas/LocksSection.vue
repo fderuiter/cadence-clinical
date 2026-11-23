@@ -559,16 +559,9 @@
 
     <SignatureCaptureModal
       v-if="modalOp"
-      :is-open="Boolean(modalOp)"
-      :username="signerUsername"
-      :signer-name="signerFullName"
-      signer-role="Data Manager"
-      :reasons="LOCK_SIGNING_REASONS"
-      :action-url="modalActionUrl"
-      :semantic-action="modalSemanticAction"
-      :on-sign="executeModalSign"
-      @cancel="modalOp = null"
-      @success="modalOp = null"
+      v-bind="signatureModalProps"
+      @cancel="closeModal"
+      @success="closeModal"
     />
   </section>
 </template>
@@ -577,30 +570,22 @@
 import { computed, ref, watch } from "vue";
 import { ClinicalModal } from "ui";
 import {
-  describeLockError,
   kernelApi,
-  LOCK_APPLY_ACTION,
-  LOCK_APPLY_SEMANTIC_ACTION,
-  LOCK_RELEASE_SEMANTIC_ACTION,
-  lockReleaseAction,
   type KernelChild,
   type KernelLock,
   type KernelLockKind,
-  type KernelLockMeaning,
-  type KernelLockReadiness,
 } from "../../api/kernelApi";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import { fetchStudyLocks } from "../../canvas/kernelLocks";
 import {
   getNodeDisplay,
   normalizeLookupNodeRef,
   seedNodeSummary,
 } from "../../canvas/nodeResolver";
-import { useAuthStore } from "../../stores/auth.js";
+import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
+import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import SupportDetails from "./SupportDetails.vue";
-
-const LOCK_SIGNING_REASONS = ["Approved", "Responsibility"];
 
 const SCOPE_LABELS: Record<string, string> = {
   study: "study",
@@ -617,15 +602,13 @@ interface PickerOption {
   masked: boolean;
 }
 
+type QuickDialogState =
+  | { mode: "apply"; kind: KernelLockKind }
+  | { mode: "release"; lockRef: string; lockKind: string };
+
 const props = defineProps<{
   studyCode: string;
 }>();
-
-const authStore = useAuthStore();
-
-const studyRef = ref<string | null>(null);
-const studyLoading = ref(false);
-const studyError = ref<string | null>(null);
 
 const locks = ref<KernelLock[]>([]);
 const locksLoading = ref(false);
@@ -633,8 +616,6 @@ const locksError = ref<string | null>(null);
 const activeOnly = ref(false);
 const asOfInput = ref("");
 
-const canApply = ref(false);
-const canRelease = ref(false);
 const studyChildren = ref<KernelChild[]>([]);
 const siteEnrollments = ref<KernelChild[] | null>(null);
 const enrollmentsLoading = ref(false);
@@ -652,33 +633,6 @@ const selectedObservationRef = ref("");
 const applyKind = ref<KernelLockKind>("Frozen");
 const applyReason = ref("");
 const releaseReason = ref("");
-const busy = ref(false);
-const outcome = ref<{ kind: "ok" | "error"; message: string } | null>(null);
-
-const readiness = ref<KernelLockReadiness | null>(null);
-const readinessLoading = ref(false);
-
-type ModalOperation =
-  | {
-      mode: "apply";
-      idempotencyKey: string;
-      lockId: string;
-      attestationId: string;
-    }
-  | {
-      mode: "release";
-      lockRef: string;
-      lockKind: string;
-      idempotencyKey: string;
-      assertionId: string;
-      attestationId: string;
-    };
-
-const modalOp = ref<ModalOperation | null>(null);
-
-type QuickDialogState =
-  | { mode: "apply"; kind: KernelLockKind }
-  | { mode: "release"; lockRef: string; lockKind: string };
 
 const quickDialog = ref<QuickDialogState | null>(null);
 const quickDialogReason = ref("");
@@ -693,12 +647,119 @@ const quickDialogTitle = computed(() => {
     : "Apply Cryptographic Hard Lock";
 });
 
-const signerUsername = computed(
-  () => authStore?.user?.email || authStore?.user?.username || "data-manager"
-);
-const signerFullName = computed(
-  () =>
-    authStore?.user?.name || authStore?.user?.full_name || signerUsername.value
+let siteSeq = 0;
+let enrollmentSeq = 0;
+let formSeq = 0;
+
+function scopeLabel(kind: string): string {
+  return SCOPE_LABELS[kind] ?? kind;
+}
+
+function seedVisibleChildren(children: KernelChild[]) {
+  for (const child of children) {
+    if (child.node.ref && !child.node.mask) {
+      seedNodeSummary(child.node.ref, {
+        kind: child.node.kind,
+        code: child.node.code,
+        title: child.node.title,
+        status: child.node.status,
+      });
+    }
+  }
+}
+
+async function reloadLocks() {
+  if (!studyRef.value || typeof kernelApi.listStudyLocks !== "function") return;
+  locksLoading.value = true;
+  locksError.value = null;
+  try {
+    locks.value = await fetchStudyLocks(studyRef.value, {
+      activeOnly: activeOnly.value || undefined,
+      asOf: asOfInput.value.trim() || undefined,
+    });
+  } catch (err) {
+    locksError.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    locksLoading.value = false;
+  }
+}
+
+const {
+  canApply,
+  canRelease,
+  readiness,
+  readinessLoading,
+  isLockBlockedByReadiness,
+  busy,
+  outcome,
+  modalOp,
+  signatureModalProps,
+  probePermissions,
+  reloadReadiness,
+  openApply,
+  openRelease,
+  closeModal,
+} = useSignedKernelLock({
+  studyRef: () => studyRef.value,
+  scopeRef: () => applyScopeRef.value,
+  watchPermissions: false,
+  onApplied: async () => {
+    applyReason.value = "";
+    await reloadLocks();
+  },
+  onReleased: async () => {
+    releaseReason.value = "";
+    await reloadLocks();
+  },
+});
+
+const { studyRef, studyLoading, studyError } = useKernelStudyRef(
+  () => props.studyCode,
+  {
+    onReset: () => {
+      siteSeq++;
+      enrollmentSeq++;
+      formSeq++;
+      locks.value = [];
+      studyChildren.value = [];
+      siteEnrollments.value = null;
+      enrollmentForms.value = [];
+      formObservations.value = [];
+      enrollmentsLoading.value = false;
+      formsLoading.value = false;
+      observationsLoading.value = false;
+      selectedSiteRef.value = "";
+      selectedEnrollmentRef.value = "";
+      selectedFormRef.value = "";
+      selectedObservationRef.value = "";
+      quickDialog.value = null;
+      outcome.value = null;
+      closeModal();
+      void probePermissions(null);
+    },
+    onResolved: async (resolved, { code, isCurrent }) => {
+      seedNodeSummary(resolved, { kind: "study", code });
+      applyScopeKind.value = "study";
+
+      const tasks: Promise<unknown>[] = [
+        reloadLocks(),
+        probePermissions(resolved),
+      ];
+      if (typeof kernelApi.getChildren === "function") {
+        tasks.push(
+          kernelApi
+            .getChildren(resolved)
+            .then((children) => {
+              if (!isCurrent()) return;
+              studyChildren.value = children ?? [];
+              seedVisibleChildren(studyChildren.value);
+            })
+            .catch(() => undefined)
+        );
+      }
+      await Promise.all(tasks);
+    },
+  }
 );
 
 const needsSitePicker = computed(() => applyScopeKind.value !== "study");
@@ -747,19 +808,6 @@ function buildPickerOptions(
         masked: false,
       };
     });
-}
-
-function seedVisibleChildren(children: KernelChild[]) {
-  for (const child of children) {
-    if (child.node.ref && !child.node.mask) {
-      seedNodeSummary(child.node.ref, {
-        kind: child.node.kind,
-        code: child.node.code,
-        title: child.node.title,
-        status: child.node.status,
-      });
-    }
-  }
 }
 
 const sitePickerOptions = computed(() =>
@@ -831,10 +879,7 @@ const applyScopeRef = computed(() => {
 });
 
 const isLockedBlockedByReadiness = computed(
-  () =>
-    applyKind.value === "Locked" &&
-    readiness.value !== null &&
-    !readiness.value.ready_for_lock
+  () => applyKind.value === "Locked" && isLockBlockedByReadiness.value
 );
 
 const isApplyDisabled = computed(
@@ -845,31 +890,13 @@ const isApplyDisabled = computed(
     isLockedBlockedByReadiness.value
 );
 
-const modalActionUrl = computed(() => {
-  if (!modalOp.value) return LOCK_APPLY_ACTION;
-  return modalOp.value.mode === "apply"
-    ? LOCK_APPLY_ACTION
-    : lockReleaseAction(modalOp.value.lockRef);
+watch([studyRef, applyScopeRef, canApply], () => {
+  void reloadReadiness();
 });
-
-const modalSemanticAction = computed(() =>
-  modalOp.value?.mode === "release"
-    ? LOCK_RELEASE_SEMANTIC_ACTION
-    : LOCK_APPLY_SEMANTIC_ACTION
-);
-
-function scopeLabel(kind: string): string {
-  return SCOPE_LABELS[kind] ?? kind;
-}
 
 function firstUnmaskedRef(options: PickerOption[]): string {
   return options.find((opt) => !opt.masked)?.ref ?? "";
 }
-
-let siteSeq = 0;
-let enrollmentSeq = 0;
-let formSeq = 0;
-let readinessSeq = 0;
 
 async function loadEnrollmentsForSelectedSite(siteRef: string) {
   const seq = ++siteSeq;
@@ -1028,131 +1055,9 @@ async function onFormPickerChange() {
   }
 }
 
-async function reloadReadiness() {
-  const seq = ++readinessSeq;
-  const currentStudy = studyRef.value;
-  const targetScope = applyScopeRef.value.trim();
-  if (
-    !currentStudy ||
-    !targetScope ||
-    !canApply.value ||
-    typeof kernelApi.getStudyLockReadiness !== "function"
-  ) {
-    readiness.value = null;
-    readinessLoading.value = false;
-    return;
-  }
-
-  readinessLoading.value = true;
-  try {
-    const result = await kernelApi.getStudyLockReadiness(
-      currentStudy,
-      targetScope
-    );
-    if (seq !== readinessSeq) return;
-    readiness.value = result ?? null;
-  } catch {
-    if (seq === readinessSeq) readiness.value = null;
-  } finally {
-    if (seq === readinessSeq) readinessLoading.value = false;
-  }
-}
-
-watch([studyRef, applyScopeRef, canApply], () => {
-  void reloadReadiness();
-});
-
-let loadSeq = 0;
-
-async function reloadLocks() {
-  if (!studyRef.value || typeof kernelApi.listStudyLocks !== "function") return;
-  locksLoading.value = true;
-  locksError.value = null;
-  try {
-    const res = await kernelApi.listStudyLocks(studyRef.value, {
-      activeOnly: activeOnly.value || undefined,
-      asOf: asOfInput.value.trim() || undefined,
-    });
-    locks.value = res.locks ?? [];
-  } catch (err) {
-    locksError.value = err instanceof Error ? err.message : String(err);
-  } finally {
-    locksLoading.value = false;
-  }
-}
-
-watch(
-  () => props.studyCode,
-  async (code) => {
-    const seq = ++loadSeq;
-    studyRef.value = null;
-    studyError.value = null;
-    locks.value = [];
-    studyChildren.value = [];
-    siteEnrollments.value = null;
-    enrollmentForms.value = [];
-    formObservations.value = [];
-    selectedSiteRef.value = "";
-    selectedEnrollmentRef.value = "";
-    selectedFormRef.value = "";
-    selectedObservationRef.value = "";
-    readiness.value = null;
-    outcome.value = null;
-    if (!code) return;
-
-    studyLoading.value = true;
-    try {
-      const resolved = await findKernelStudyRef(code);
-      if (seq !== loadSeq) return;
-      studyRef.value = resolved;
-      if (!resolved) return;
-      seedNodeSummary(resolved, { kind: "study", code });
-
-      applyScopeKind.value = "study";
-
-      const tasks: Promise<unknown>[] = [reloadLocks()];
-      if (typeof kernelApi.canI === "function") {
-        tasks.push(
-          Promise.all([
-            kernelApi.canI("lock.apply", resolved),
-            kernelApi.canI("lock.release", resolved),
-          ]).then(([applyDec, releaseDec]) => {
-            if (seq !== loadSeq) return;
-            canApply.value = Boolean(applyDec?.permitted);
-            canRelease.value = Boolean(releaseDec?.permitted);
-          })
-        );
-      }
-      if (typeof kernelApi.getChildren === "function") {
-        tasks.push(
-          kernelApi
-            .getChildren(resolved)
-            .then((children) => {
-              if (seq !== loadSeq) return;
-              studyChildren.value = children ?? [];
-              seedVisibleChildren(studyChildren.value);
-            })
-            .catch(() => undefined)
-        );
-      }
-      await Promise.all(tasks);
-    } catch (err) {
-      if (seq !== loadSeq) return;
-      studyError.value = err instanceof Error ? err.message : String(err);
-    } finally {
-      if (seq === loadSeq) studyLoading.value = false;
-    }
-  },
-  { immediate: true }
-);
-
 function openQuickApplyDialog(kind: KernelLockKind) {
   if (busy.value || !applyScopeRef.value.trim()) return;
-  if (
-    kind === "Locked" &&
-    readiness.value !== null &&
-    !readiness.value.ready_for_lock
-  ) {
+  if (kind === "Locked" && isLockBlockedByReadiness.value) {
     return;
   }
   applyKind.value = kind;
@@ -1181,13 +1086,13 @@ function confirmQuickDialog() {
 
 function openApplyModal() {
   if (isApplyDisabled.value) return;
-  outcome.value = null;
-  modalOp.value = {
-    mode: "apply",
-    idempotencyKey: globalThis.crypto.randomUUID(),
-    lockId: globalThis.crypto.randomUUID(),
-    attestationId: globalThis.crypto.randomUUID(),
-  };
+  const scopeRef = applyScopeRef.value.trim();
+  openApply({
+    scopeRef,
+    kind: applyKind.value,
+    reason: applyReason.value,
+    targetLabel: () => getNodeDisplay(scopeRef).label,
+  });
 }
 
 function openReleaseModal(lockRef: string, lockKind: string) {
@@ -1196,68 +1101,11 @@ function openReleaseModal(lockRef: string, lockKind: string) {
     quickDialog.value = { mode: "release", lockRef, lockKind };
     return;
   }
-  outcome.value = null;
-  modalOp.value = {
-    mode: "release",
+  openRelease({
     lockRef,
     lockKind,
-    idempotencyKey: globalThis.crypto.randomUUID(),
-    assertionId: globalThis.crypto.randomUUID(),
-    attestationId: globalThis.crypto.randomUUID(),
-  };
-}
-
-async function executeModalSign(sigToken: string, signingReason: string) {
-  const op = modalOp.value;
-  if (!op || !studyRef.value) return { kind: "signed" as const };
-  const meaning: KernelLockMeaning =
-    signingReason === "Responsibility" ? "Responsibility" : "Approved";
-  busy.value = true;
-  try {
-    if (op.mode === "apply") {
-      await kernelApi.applyLock({
-        studyRef: studyRef.value,
-        scopeRef: applyScopeRef.value.trim(),
-        kind: applyKind.value,
-        meaning,
-        lockId: op.lockId,
-        attestationId: op.attestationId,
-        sigToken,
-        reason: applyReason.value.trim(),
-        idempotencyKey: op.idempotencyKey,
-      });
-      const scopeDisplay = getNodeDisplay(applyScopeRef.value.trim());
-      outcome.value = {
-        kind: "ok",
-        message: `${applyKind.value} applied to ${scopeDisplay.label}.`,
-      };
-      applyReason.value = "";
-    } else {
-      await kernelApi.releaseLock({
-        lockRef: op.lockRef,
-        studyRef: studyRef.value,
-        meaning,
-        assertionId: op.assertionId,
-        attestationId: op.attestationId,
-        sigToken,
-        reason: releaseReason.value.trim(),
-        idempotencyKey: op.idempotencyKey,
-      });
-      outcome.value = {
-        kind: "ok",
-        message: `${op.lockKind} released.`,
-      };
-      releaseReason.value = "";
-    }
-    await Promise.all([reloadLocks(), reloadReadiness()]);
-    return { kind: "signed" as const };
-  } catch (err) {
-    const message = describeLockError(err);
-    outcome.value = { kind: "error", message };
-    throw new Error(message, { cause: err });
-  } finally {
-    busy.value = false;
-  }
+    reason: releaseReason.value,
+  });
 }
 </script>
 
@@ -1472,7 +1320,6 @@ async function executeModalSign(sigToken: string, signingReason: string) {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
-  font-variant-numeric: tabular-nums;
 }
 
 .locks-table th,
@@ -1519,24 +1366,6 @@ async function executeModalSign(sigToken: string, signingReason: string) {
   color: var(--semantic-color-text-muted);
   font-size: 0.8rem;
 }
-
-.status-line {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--semantic-color-text-body);
-}
-
-.ok-banner {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--semantic-color-success-bg);
-  color: var(--semantic-color-success-dark);
-}
-
-.error-banner {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--semantic-color-error-bg);
-  color: var(--semantic-color-error-dark);
-}
 </style>
+
+<style scoped src="./canvasBanners.css"></style>
