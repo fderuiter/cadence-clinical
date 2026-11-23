@@ -75,6 +75,8 @@ public static class KernelEventFamilies
         ["ConsentStatusRecorded"] = EventFamily.Execution,
         ["ArtifactRegistered"] = EventFamily.Evidence,
         ["ArtifactVersioned"] = EventFamily.Evidence,
+        ["StudySnapshotExported"] = EventFamily.Evidence,
+        ["EnrollmentCasebookExported"] = EventFamily.Evidence,
         ["ObservationRecorded"] = EventFamily.Evidence,
         ["ObservationCorrected"] = EventFamily.Evidence,
         ["CollectionInstanceOpened"] = EventFamily.Evidence,

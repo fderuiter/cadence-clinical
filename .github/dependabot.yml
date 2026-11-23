@@ -172,6 +172,10 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      # PostgreSQL major is locked across PostgresTestImage, CI, AppHost, and docker-compose (ADR-2533).
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions workflow updates
   - package-ecosystem: "github-actions"

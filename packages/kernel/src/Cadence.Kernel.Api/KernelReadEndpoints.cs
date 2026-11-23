@@ -524,8 +524,8 @@ public static class KernelReadEndpoints
     }
 
     /// <summary>
-    /// A grouping level (a country) describes the object below it, so it is masked with that object; any other level
-    /// is masked when its own object is.
+    /// A grouping level (a country) describes the object below it, so it is masked with that object; any other level is
+    /// masked when its own object is.
     /// </summary>
     private static MaskReason? MaskOfStep(IReadOnlyList<ZoomStep> path, int index, IReadOnlyDictionary<NodeRef, MaskReason> masks) =>
         path[index].Ref is { } own

@@ -54,6 +54,9 @@ using Cadence.TestSupport.Database;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -151,11 +154,13 @@ public class KernelPostgresFixture : IAsyncLifetime
             "kernel", _server.Kind, AdminConnectionString, $"{KernelDbContext.Schema}.__ef_migrations_history", _appRole).ConfigureAwait(false);
 
         var services = new ServiceCollection()
+            .AddRouting()
             .AddSingleton<IClock>(Clock)
             .AddSingleton<ICurrentActor>(CurrentActor)
             .AddSingleton<IAuthorizer>(Authorizer)
             .AddSingleton<INodeVisibility>(Visibility)
             .AddSingleton<IKernelEventPublisher>(Publisher)
+            .AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance)
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
             .AddSingleton<KernelOutboxRelay>()
             .AddKernelPersistence(ConnectionString)
@@ -173,6 +178,7 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddKernelIdentityVault()
             .AddKernelIdentityVaultPersistence(VaultMasterKey, VaultRegion);
         ConfigureServices(services);
+        services.TryAddSingleton<IHostEnvironment>(new FixtureHostEnvironment());
         if (services.All(d => d.ServiceType != typeof(ITaskConfigurationCatalog)))
         {
             services
@@ -435,4 +441,15 @@ public sealed class TestNodeVisibility : INodeVisibility
 
         return ValueTask.FromResult<IReadOnlyDictionary<NodeRef, MaskReason>>(result);
     }
+}
+
+internal sealed class FixtureHostEnvironment : IHostEnvironment
+{
+    public string EnvironmentName { get; set; } = IntelligenceModule.TestingEnvironment;
+
+    public string ApplicationName { get; set; } = "Cadence.IntegrationTests";
+
+    public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+
+    public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
 }

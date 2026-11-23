@@ -40,6 +40,7 @@ import EcrfLiveWorkspace from "./EcrfLiveWorkspace.vue";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useAuthStore } from "../stores/auth";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   allowUnbackedAction,
   unbackedActionsEnabled,
@@ -60,6 +61,7 @@ const scopeStore = useClinicalScopeStore();
 const authStore = useAuthStore();
 const route = useRoute();
 const router = typeof useRouter === "function" ? useRouter() : null;
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const demoBuild = unbackedActionsEnabled();
 
 const demoWorkspaceRef = ref(null);
@@ -75,7 +77,13 @@ function routeQuery(name, targetRoute = route) {
 
 if (route && route.query) {
   if (route.query.studyId) {
-    scopeStore.activeStudyId = String(route.query.studyId);
+    const incomingStudy = String(route.query.studyId).trim();
+    if (incomingStudy) {
+      setActiveStudyCode(incomingStudy);
+      scopeStore.activeStudyId = incomingStudy;
+    }
+  } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+    scopeStore.activeStudyId = activeStudyCode.value;
   }
   if (route.query.siteId) {
     scopeStore.activeSiteId = String(route.query.siteId);
@@ -83,6 +91,8 @@ if (route && route.query) {
   if (route.query.subjectId) {
     scopeStore.activeSubjectId = String(route.query.subjectId);
   }
+} else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+  scopeStore.activeStudyId = activeStudyCode.value;
 }
 
 watch(

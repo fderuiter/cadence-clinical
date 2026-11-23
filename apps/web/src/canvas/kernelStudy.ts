@@ -465,6 +465,62 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
   return lookup;
 }
 
+/**
+ * Resolves the canonical `study_site:<uuid>` `NodeRef` for `(studyCode, siteCode)` from the kernel's
+ * study-site directory (or visible `study_site` zoom children fallback), or `null` when the study or
+ * site is not visible to the caller.
+ */
+export async function findKernelStudySiteRef(
+  studyCode: string,
+  siteCode: string
+): Promise<string | null> {
+  const normalizedStudy = studyCode.trim();
+  const normalizedSite = siteCode.trim().toLowerCase();
+  if (!normalizedStudy || !normalizedSite) {
+    return null;
+  }
+  if (typeof kernelApi.listStudySites === "function") {
+    try {
+      const linked = await kernelApi.listStudySites(normalizedStudy);
+      if (Array.isArray(linked) && linked.length > 0) {
+        const matches = linked.filter(
+          (item) =>
+            Boolean(item.ref) &&
+            item.site_code?.trim().toLowerCase() === normalizedSite
+        );
+        if (matches.length === 1) {
+          const parsed = parseNodeRef(matches[0].ref);
+          return parsed?.kind === "study_site"
+            ? `${parsed.kind}:${parsed.id}`
+            : null;
+        }
+        return null;
+      }
+    } catch {
+      // Fall back to zoom-children lookup when study-sites endpoint is unavailable or mocked out.
+    }
+  }
+  if (
+    typeof kernelApi.search !== "function" ||
+    typeof kernelApi.getChildren !== "function"
+  ) {
+    return null;
+  }
+  const studyRef = await findKernelStudyRef(normalizedStudy);
+  if (!studyRef) return null;
+  const children = await kernelApi.getChildren(studyRef);
+  const matches = children.filter(
+    (child) =>
+      child.node.kind === "study_site" &&
+      !child.node.mask &&
+      Boolean(child.node.ref) &&
+      child.node.code?.trim().toLowerCase() === normalizedSite
+  );
+  if (matches.length !== 1) return null;
+  const parsed = parseNodeRef(matches[0].node.ref);
+  return parsed?.kind === "study_site" ? `${parsed.kind}:${parsed.id}` : null;
+}
+
 export interface StudyCollectionSpecOption {
   id: string;
   name: string;

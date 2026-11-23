@@ -116,6 +116,8 @@ public sealed partial class TrialOnboardingService(
         "validation_finding.accept",
         "validation_finding.explain",
         "validation_finding.reopen",
+        "study.export",
+        "enrollment.export",
     ];
 
     private static readonly string[] SponsorDesignerCapabilities =
@@ -158,6 +160,7 @@ public sealed partial class TrialOnboardingService(
         "collection.sign",
         "attestation.sign",
         "execution.query.answer",
+        "enrollment.export",
     ];
 
     private static readonly (string Consumer, string RoleCode, string Name, string[] Capabilities)[] ModuleServiceAccounts =
