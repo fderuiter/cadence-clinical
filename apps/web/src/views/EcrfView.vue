@@ -201,8 +201,24 @@ function onFormPanelClosed() {
   }
 }
 
-function shouldSuppressUnsavedGuard() {
-  return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+function shouldSuppressUnsavedGuard(to) {
+  if (
+    !authStore.isAuthenticated ||
+    authStore.sessionExpired ||
+    authStore.isLoggingOut
+  ) {
+    return true;
+  }
+  if (
+    to &&
+    (to.name === "forbidden" ||
+      to.path === "/forbidden" ||
+      to.name === "login" ||
+      to.path === "/login")
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function handleBeforeUnload(event) {
@@ -233,8 +249,8 @@ onUnmounted(() => {
 });
 
 if (typeof onBeforeRouteLeave === "function") {
-  onBeforeRouteLeave(() => {
-    if (workspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+  onBeforeRouteLeave((to) => {
+    if (workspaceDirty.value && !shouldSuppressUnsavedGuard(to)) {
       return confirmLeaveDirtyDraft().then((confirmLeave) =>
         confirmLeave ? undefined : false
       );
@@ -244,7 +260,7 @@ if (typeof onBeforeRouteLeave === "function") {
 
 if (typeof onBeforeRouteUpdate === "function") {
   onBeforeRouteUpdate((to, from) => {
-    if (!formPanelDirty.value || shouldSuppressUnsavedGuard()) return;
+    if (!formPanelDirty.value || shouldSuppressUnsavedGuard(to)) return;
     const nextFormId = routeQuery("formId", to);
     const currentFormId =
       loadedFormId.value ?? routeQuery("formId", from ?? route);

@@ -26,6 +26,8 @@ import {
   PRE_RELEASE_ENVIRONMENT_NOTICE,
 } from "../catalog/productCatalog.js";
 import { demoNowIso, demoNowMs } from "../utils/demoMode.js";
+import { registerDemoStoreReset } from "../utils/demoReset.js";
+import { isCallerBlinded, isSitePermitted } from "./demoPolicy.js";
 
 const DEMO_TENANT_UUID =
   MANIFEST_DEMO_TENANT_UUID || "00000000-0000-0000-0000-000000000010"; // deid-ignore
@@ -1367,8 +1369,126 @@ export function createWebDemoStore() {
     return ensureStudyByCode(refOrCode);
   }
 
+  const resetListeners = new Set();
+
+  function resetStoreState() {
+    seedInitialState();
+    for (const listener of resetListeners) {
+      try {
+        listener();
+      } catch {
+        // Ignore individual listener errors
+      }
+    }
+  }
+
+  function resolveEnrollmentByIdOrCode(rawId) {
+    const cleanId = String(rawId || "")
+      .replace(/^(enrollment|allocation|randomization|treatment_arm|arm):/, "")
+      .split("@")[0];
+    return (
+      state.subjects.find(
+        (s) =>
+          s.id === cleanId ||
+          String(s.subject_id || "").toUpperCase() === cleanId.toUpperCase()
+      ) || null
+    );
+  }
+
+  function resolveSiteCodeForNodeRef(nodeRef) {
+    const refStr = String(nodeRef || "");
+    if (refStr.startsWith("study_site:")) {
+      return resolveSiteCodeFromRef(refStr, state.subjects);
+    }
+    if (
+      refStr.startsWith("enrollment:") ||
+      refStr.startsWith("allocation:") ||
+      refStr.startsWith("randomization:")
+    ) {
+      const subj = resolveEnrollmentByIdOrCode(refStr);
+      return subj?.site_id || null;
+    }
+    if (refStr.startsWith("collection_instance:")) {
+      const rawFormId = refStr
+        .replace(/^collection_instance:/, "")
+        .split("@")[0];
+      const form = state.forms.get(rawFormId);
+      if (form?.enrollment_id) {
+        const subj = resolveEnrollmentByIdOrCode(form.enrollment_id);
+        return subj?.site_id || null;
+      }
+    }
+    if (refStr.startsWith("observation:")) {
+      const cleanObsId = refStr.replace(/^observation:/, "").split("@")[0];
+      for (const form of state.forms.values()) {
+        if (
+          Array.isArray(form.items) &&
+          form.items.some((it) => it.observation_id === cleanObsId)
+        ) {
+          const subj = resolveEnrollmentByIdOrCode(form.enrollment_id);
+          return subj?.site_id || null;
+        }
+      }
+    }
+    return null;
+  }
+
+  function isAllocationNodeRef(nodeRef) {
+    const kind = String(nodeRef || "")
+      .split(":")[0]
+      .toLowerCase();
+    return (
+      kind === "allocation" ||
+      kind === "treatment_arm" ||
+      kind === "arm" ||
+      kind === "randomization"
+    );
+  }
+
+  function applyNodeVisibilityMask(
+    node,
+    caller = null,
+    { siteCode = null, isAllocation = false, subjectStatus = null } = {}
+  ) {
+    if (!caller || !node) {
+      return node;
+    }
+    const effectiveSite = siteCode || resolveSiteCodeForNodeRef(node.ref);
+    if (effectiveSite && !isSitePermitted(caller, effectiveSite)) {
+      return {
+        ...node,
+        title: null,
+        status: null,
+        mask: "NotPermitted",
+      };
+    }
+    if (
+      (isAllocation || isAllocationNodeRef(node.ref)) &&
+      isCallerBlinded(caller) &&
+      String(subjectStatus || "").toUpperCase() !== "UNBLINDED"
+    ) {
+      return {
+        ...node,
+        title: null,
+        code: null,
+        status: null,
+        mask: "Blinded",
+      };
+    }
+    return node;
+  }
+
   return {
-    reset: seedInitialState,
+    reset: resetStoreState,
+    onReset(listener) {
+      if (typeof listener !== "function") {
+        return () => {};
+      }
+      resetListeners.add(listener);
+      return () => {
+        resetListeners.delete(listener);
+      };
+    },
     state,
     buildDecision,
 
@@ -1550,21 +1670,42 @@ export function createWebDemoStore() {
       };
     },
 
-    getNode(nodeRef) {
+    getNode(nodeRef, caller = null) {
       if (String(nodeRef).startsWith("study:")) {
         return cloneJson(getStudyByRefOrCode(nodeRef));
+      }
+      if (isAllocationNodeRef(nodeRef)) {
+        const subj =
+          resolveEnrollmentByIdOrCode(nodeRef) || state.subjects[0] || null;
+        const armCode = subj?.treatment_group || "ARM-A";
+        const baseNode = {
+          ref: nodeRef,
+          kind: String(nodeRef).split(":")[0] || "allocation",
+          title: `Treatment Allocation · ${armCode}`,
+          code: armCode,
+          status: "ALLOCATED",
+          mask: null,
+        };
+        return applyNodeVisibilityMask(baseNode, caller, {
+          siteCode: subj?.site_id || null,
+          isAllocation: true,
+          subjectStatus: subj?.status || null,
+        });
       }
       if (String(nodeRef).startsWith("observation:")) {
         const obs = state.observations.get(nodeRef);
         if (obs) {
-          return {
-            ref: obs.ref,
-            kind: "observation",
-            title: `Observation ${obs.concept}`,
-            code: obs.concept,
-            status: "RECORDED",
-            mask: null,
-          };
+          return applyNodeVisibilityMask(
+            {
+              ref: obs.ref,
+              kind: "observation",
+              title: `Observation ${obs.concept}`,
+              code: obs.concept,
+              status: "RECORDED",
+              mask: null,
+            },
+            caller
+          );
         }
       }
       if (String(nodeRef).startsWith("protocol_version:")) {
@@ -1582,17 +1723,21 @@ export function createWebDemoStore() {
       }
       if (String(nodeRef).startsWith("study_site:")) {
         const siteCode = resolveSiteCodeFromRef(nodeRef, state.subjects);
-        return {
-          ref: nodeRef,
-          kind: "study_site",
-          title:
-            siteCode === "SITE-102"
-              ? "US Regional Trial Unit 2"
-              : `US Academic Clinical Research Center (${siteCode})`,
-          code: siteCode,
-          status: "ACTIVE",
-          mask: null,
-        };
+        return applyNodeVisibilityMask(
+          {
+            ref: nodeRef,
+            kind: "study_site",
+            title:
+              siteCode === "SITE-102"
+                ? "US Regional Trial Unit 2"
+                : `US Academic Clinical Research Center (${siteCode})`,
+            code: siteCode,
+            status: "ACTIVE",
+            mask: null,
+          },
+          caller,
+          { siteCode }
+        );
       }
       if (String(nodeRef).startsWith("enrollment:")) {
         const rawId = String(nodeRef)
@@ -1600,14 +1745,18 @@ export function createWebDemoStore() {
           .split("@")[0];
         const subj = state.subjects.find((s) => s.id === rawId);
         if (subj) {
-          return {
-            ref: nodeRef,
-            kind: "enrollment",
-            title: `Participant ${subj.subject_id}`,
-            code: subj.subject_id,
-            status: subj.status,
-            mask: null,
-          };
+          return applyNodeVisibilityMask(
+            {
+              ref: nodeRef,
+              kind: "enrollment",
+              title: `Participant ${subj.subject_id}`,
+              code: subj.subject_id,
+              status: subj.status,
+              mask: null,
+            },
+            caller,
+            { siteCode: subj.site_id }
+          );
         }
       }
       if (String(nodeRef).startsWith("collection_instance:")) {
@@ -1617,35 +1766,42 @@ export function createWebDemoStore() {
         const form =
           state.forms.get(rawFormId) || state.forms.get(DEFAULT_FORM_UUID);
         if (form) {
-          return {
-            ref: nodeRef,
-            kind: "collection_instance",
-            title: `${form.collection_title || resolveCollectionTitle(form.collection_spec_id) || form.collection_spec_id}${form.planned_activity_id ? ` (${form.planned_activity_id})` : ""}`,
-            code: form.collection_spec_id,
-            status: form.complete ? "COMPLETE" : "OPEN",
-            mask: null,
-          };
+          return applyNodeVisibilityMask(
+            {
+              ref: nodeRef,
+              kind: "collection_instance",
+              title: `${form.collection_title || resolveCollectionTitle(form.collection_spec_id) || form.collection_spec_id}${form.planned_activity_id ? ` (${form.planned_activity_id})` : ""}`,
+              code: form.collection_spec_id,
+              status: form.complete ? "COMPLETE" : "OPEN",
+              mask: null,
+            },
+            caller
+          );
         }
       }
-      return {
-        ref: nodeRef,
-        kind: String(nodeRef).split(":")[0] || "node",
-        title: String(nodeRef),
-        code: String(nodeRef).split(":")[1]?.slice(-6) || "DEMO",
-        status: "ACTIVE",
-        mask: null,
-      };
+      return applyNodeVisibilityMask(
+        {
+          ref: nodeRef,
+          kind: String(nodeRef).split(":")[0] || "node",
+          title: String(nodeRef),
+          code: String(nodeRef).split(":")[1]?.slice(-6) || "DEMO",
+          status: "ACTIVE",
+          mask: null,
+        },
+        caller
+      );
     },
 
-    getZoomPath(nodeRef) {
+    getZoomPath(nodeRef, caller = null) {
       const refStr = String(nodeRef || "");
       if (refStr.startsWith("enrollment:")) {
-        const rawId = refStr.replace(/^enrollment:/, "");
+        const rawId = refStr.replace(/^enrollment:/, "").split("@")[0];
         const subj = state.subjects.find((s) => s.id === rawId);
         const study = subj
           ? getStudyByRefOrCode(subj.study_id)
           : state.studies.get("DEMO-01");
         const siteCode = subj?.site_id || "SITE-101";
+        const sitePermitted = !caller || isSitePermitted(caller, siteCode);
         return [
           {
             level: "study",
@@ -1655,21 +1811,22 @@ export function createWebDemoStore() {
           },
           {
             level: "study_site",
-            label: siteCode,
+            label: sitePermitted ? siteCode : null,
             ref: `study_site:${resolveSiteUuid(siteCode)}`,
-            mask: null,
+            mask: sitePermitted ? null : "NotPermitted",
           },
           {
             level: "enrollment",
-            label: subj?.subject_id || rawId.slice(-6),
+            label: sitePermitted ? subj?.subject_id || rawId.slice(-6) : null,
             ref: refStr,
-            mask: null,
+            mask: sitePermitted ? null : "NotPermitted",
           },
         ];
       }
       if (refStr.startsWith("study_site:")) {
         const siteCode = resolveSiteCodeFromRef(refStr, state.subjects);
         const study = state.studies.get("DEMO-01");
+        const sitePermitted = !caller || isSitePermitted(caller, siteCode);
         return [
           {
             level: "study",
@@ -1679,9 +1836,9 @@ export function createWebDemoStore() {
           },
           {
             level: "study_site",
-            label: siteCode,
+            label: sitePermitted ? siteCode : null,
             ref: refStr,
-            mask: null,
+            mask: sitePermitted ? null : "NotPermitted",
           },
         ];
       }
@@ -1700,18 +1857,18 @@ export function createWebDemoStore() {
         nodeRef !== study.ref &&
         refStr.split("@")[0] !== study.ref.split("@")[0]
       ) {
-        const node = this.getNode(nodeRef);
+        const node = this.getNode(nodeRef, caller);
         steps.push({
           level: node.kind,
-          label: node.title || node.code,
+          label: node.mask ? null : node.title || node.code,
           ref: node.ref,
-          mask: null,
+          mask: node.mask ?? null,
         });
       }
       return steps;
     },
 
-    getChildren(nodeRef) {
+    getChildren(nodeRef, caller = null) {
       if (String(nodeRef).startsWith("study:")) {
         const study = getStudyByRefOrCode(nodeRef);
         const studySubjects = state.subjects.filter(
@@ -1731,17 +1888,21 @@ export function createWebDemoStore() {
             (s) => (s.site_id || "SITE-101") === siteCode
           );
           return {
-            node: {
-              ref: `study_site:${resolveSiteUuid(siteCode)}`,
-              kind: "study_site",
-              title:
-                siteCode === "SITE-102"
-                  ? "US Regional Trial Unit 2"
-                  : `US Academic Clinical Research Center (${siteCode})`,
-              code: siteCode,
-              status: "ACTIVE",
-              mask: null,
-            },
+            node: applyNodeVisibilityMask(
+              {
+                ref: `study_site:${resolveSiteUuid(siteCode)}`,
+                kind: "study_site",
+                title:
+                  siteCode === "SITE-102"
+                    ? "US Regional Trial Unit 2"
+                    : `US Academic Clinical Research Center (${siteCode})`,
+                code: siteCode,
+                status: "ACTIVE",
+                mask: null,
+              },
+              caller,
+              { siteCode }
+            ),
             child_count: siteSubjects.length,
             group: "sites",
           };
@@ -1761,14 +1922,18 @@ export function createWebDemoStore() {
           },
           ...siteNodes,
           ...effectiveSubjects.map((s) => ({
-            node: {
-              ref: `enrollment:${s.id}`,
-              kind: "enrollment",
-              title: `Participant ${s.subject_id}`,
-              code: s.subject_id,
-              status: s.status,
-              mask: null,
-            },
+            node: applyNodeVisibilityMask(
+              {
+                ref: `enrollment:${s.id}`,
+                kind: "enrollment",
+                title: `Participant ${s.subject_id}`,
+                code: s.subject_id,
+                status: s.status,
+                mask: null,
+              },
+              caller,
+              { siteCode: s.site_id || "SITE-101" }
+            ),
             child_count: 1,
             group: "enrollments",
           })),
@@ -1782,14 +1947,18 @@ export function createWebDemoStore() {
             siteCode.toUpperCase()
         );
         return siteSubjects.map((s) => ({
-          node: {
-            ref: `enrollment:${s.id}`,
-            kind: "enrollment",
-            title: `Participant ${s.subject_id}`,
-            code: s.subject_id,
-            status: s.status,
-            mask: null,
-          },
+          node: applyNodeVisibilityMask(
+            {
+              ref: `enrollment:${s.id}`,
+              kind: "enrollment",
+              title: `Participant ${s.subject_id}`,
+              code: s.subject_id,
+              status: s.status,
+              mask: null,
+            },
+            caller,
+            { siteCode }
+          ),
           child_count: 1,
           group: "enrollments",
         }));
@@ -1798,6 +1967,8 @@ export function createWebDemoStore() {
         const enrollmentId = String(nodeRef)
           .replace(/^enrollment:/, "")
           .split("@")[0];
+        const subj = state.subjects.find((s) => s.id === enrollmentId) || null;
+        const siteCode = subj?.site_id || null;
         let forms = [...state.forms.values()].filter(
           (f) => f.enrollment_id === enrollmentId
         );
@@ -1805,18 +1976,45 @@ export function createWebDemoStore() {
           const fallback = state.forms.get(DEFAULT_FORM_UUID);
           if (fallback) forms = [fallback];
         }
-        return forms.map((f) => ({
-          node: {
-            ref: `collection_instance:${f.form_id}`,
-            kind: "collection_instance",
-            title: `${f.collection_title || resolveCollectionTitle(f.collection_spec_id) || f.collection_spec_id}${f.planned_activity_id ? ` (${f.planned_activity_id})` : ""}`,
-            code: f.collection_spec_id,
-            status: f.complete ? "COMPLETE" : "OPEN",
-            mask: null,
-          },
+        const formChildren = forms.map((f) => ({
+          node: applyNodeVisibilityMask(
+            {
+              ref: `collection_instance:${f.form_id}`,
+              kind: "collection_instance",
+              title: `${f.collection_title || resolveCollectionTitle(f.collection_spec_id) || f.collection_spec_id}${f.planned_activity_id ? ` (${f.planned_activity_id})` : ""}`,
+              code: f.collection_spec_id,
+              status: f.complete ? "COMPLETE" : "OPEN",
+              mask: null,
+            },
+            caller,
+            { siteCode }
+          ),
           child_count: Array.isArray(f.items) ? f.items.length : 0,
           group: f.planned_activity_id || "forms",
         }));
+        if (subj?.treatment_group) {
+          formChildren.push({
+            node: applyNodeVisibilityMask(
+              {
+                ref: `allocation:${enrollmentId}`,
+                kind: "allocation",
+                title: `Treatment Allocation · ${subj.treatment_group}`,
+                code: subj.treatment_group,
+                status: "ALLOCATED",
+                mask: null,
+              },
+              caller,
+              {
+                siteCode,
+                isAllocation: true,
+                subjectStatus: subj.status,
+              }
+            ),
+            child_count: 0,
+            group: "allocation",
+          });
+        }
+        return formChildren;
       }
       if (String(nodeRef).startsWith("collection_instance:")) {
         const formId = String(nodeRef)
@@ -1825,17 +2023,22 @@ export function createWebDemoStore() {
         const form =
           state.forms.get(formId) || state.forms.get(DEFAULT_FORM_UUID);
         if (!form || !Array.isArray(form.items)) return [];
+        const siteCode = resolveSiteCodeForNodeRef(nodeRef);
         return form.items
           .filter((it) => it.observation_id)
           .map((it) => ({
-            node: {
-              ref: `observation:${it.observation_id}@${Math.max(1, Number(it.revision || 1))}`,
-              kind: "observation",
-              title: `${it.concept || it.item_id}: ${it.value?.value ?? "not recorded"}${it.unit ? ` ${it.unit}` : ""}`,
-              code: it.item_id,
-              status: `r${Math.max(1, Number(it.revision || 1))}`,
-              mask: null,
-            },
+            node: applyNodeVisibilityMask(
+              {
+                ref: `observation:${it.observation_id}@${Math.max(1, Number(it.revision || 1))}`,
+                kind: "observation",
+                title: `${it.concept || it.item_id}: ${it.value?.value ?? "not recorded"}${it.unit ? ` ${it.unit}` : ""}`,
+                code: it.item_id,
+                status: `r${Math.max(1, Number(it.revision || 1))}`,
+                mask: null,
+              },
+              caller,
+              { siteCode }
+            ),
             child_count: 0,
             group: null,
           }));
@@ -2688,8 +2891,9 @@ export function createWebDemoStore() {
       };
     },
 
-    getLineage(nodeRef, direction = "upstream", depth = 3) {
+    getLineage(nodeRef, direction = "upstream", depth = 3, caller = null) {
       const now = new Date().toISOString();
+      const startNode = this.getNode(nodeRef, caller);
       return {
         start: nodeRef,
         direction,
@@ -2701,7 +2905,7 @@ export function createWebDemoStore() {
             handle: "n0",
             kind: String(nodeRef).split(":")[0] || "node",
             ref: nodeRef,
-            mask: null,
+            mask: startNode?.mask ?? null,
             distance: 0,
           },
           {
@@ -2741,27 +2945,60 @@ export function createWebDemoStore() {
       };
     },
 
-    getDependents(nodeRef, depth = 3) {
+    getDependents(nodeRef, depth = 3, caller = null) {
       const now = new Date().toISOString();
+      const groups = [
+        {
+          kind: "enrollment",
+          count: state.subjects.length,
+          objects: state.subjects.map((subj, index) => {
+            const sitePermitted =
+              !caller || isSitePermitted(caller, subj.site_id || "SITE-101");
+            return {
+              handle: `dep-${index}`,
+              kind: "enrollment",
+              ref: `enrollment:${subj.id}`,
+              mask: sitePermitted ? null : "NotPermitted",
+              distance: 1,
+            };
+          }),
+        },
+      ];
+      const allocatedSubjects = state.subjects.filter(
+        (subj) => subj.treatment_group
+      );
+      if (allocatedSubjects.length > 0) {
+        groups.push({
+          kind: "allocation",
+          count: allocatedSubjects.length,
+          objects: allocatedSubjects.map((subj, index) => {
+            const sitePermitted =
+              !caller || isSitePermitted(caller, subj.site_id || "SITE-101");
+            const blinded =
+              caller &&
+              isCallerBlinded(caller) &&
+              String(subj.status || "").toUpperCase() !== "UNBLINDED";
+            return {
+              handle: `alloc-${index}`,
+              kind: "allocation",
+              ref: `allocation:${subj.id}`,
+              mask: !sitePermitted
+                ? "NotPermitted"
+                : blinded
+                  ? "Blinded"
+                  : null,
+              distance: 2,
+            };
+          }),
+        });
+      }
       return {
         start: nodeRef,
         depth,
         valid_at: now,
         known_at: now,
-        groups: [
-          {
-            kind: "enrollment",
-            count: state.subjects.length,
-            objects: state.subjects.map((subj, index) => ({
-              handle: `dep-${index}`,
-              kind: "enrollment",
-              ref: `enrollment:${subj.id}`,
-              mask: null,
-              distance: 1,
-            })),
-          },
-        ],
-        total: state.subjects.length,
+        groups,
+        total: groups.reduce((sum, g) => sum + g.count, 0),
         truncated: false,
       };
     },
@@ -3236,13 +3473,17 @@ export function createWebDemoStore() {
       };
     },
 
-    getSubjectDetail(subjectId) {
+    getSubjectDetail(subjectId, caller = null) {
       const found =
         state.subjects.find(
           (s) =>
             s.subject_id.toUpperCase() === String(subjectId).toUpperCase() ||
             s.id === subjectId
         ) || state.subjects[0];
+      const shouldBlind =
+        Boolean(caller) &&
+        isCallerBlinded(caller) &&
+        String(found.status || "").toUpperCase() !== "UNBLINDED";
       return {
         id: found.id,
         subject_id: found.subject_id,
@@ -3251,9 +3492,15 @@ export function createWebDemoStore() {
         site_id: found.site_id,
         active_protocol_version: found.active_protocol_version || "2.0",
         enrollment_index: found.enrollment_index ?? 0,
-        treatment_group: found.treatment_group ?? null,
+        treatment_group: shouldBlind
+          ? "BLINDED"
+          : (found.treatment_group ?? null),
         randomization_seed: null,
-        investigational_product_id: found.investigational_product_id ?? null,
+        investigational_product_id: shouldBlind
+          ? found.investigational_product_id
+            ? "BLINDED"
+            : null
+          : (found.investigational_product_id ?? null),
       };
     },
 
@@ -4713,3 +4960,4 @@ export function createWebDemoStore() {
 }
 
 export const webDemoStore = createWebDemoStore();
+registerDemoStoreReset(() => webDemoStore.reset());

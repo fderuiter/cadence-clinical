@@ -170,6 +170,11 @@
             <span class="user-badge">
               {{ authStore.identity?.username || "Signed in" }}
             </span>
+            <component
+              :is="DemoResetBtn"
+              v-if="DemoResetBtn"
+              @reset="statusAnnouncement = $event"
+            />
             <button
               id="btn-logout"
               type="button"
@@ -350,6 +355,7 @@
 <script setup>
 import {
   computed,
+  defineAsyncComponent,
   nextTick,
   onMounted,
   onUnmounted,
@@ -367,6 +373,7 @@ import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { isScreenAvailable } from "../router/availability";
+import { isRouteAuthorizedForRoles } from "../router";
 import { isDemoBuild } from "../utils/demoMode.js";
 import {
   buildDataCollectionPath,
@@ -381,6 +388,10 @@ import {
 import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
+
+const DemoResetBtn = isDemoBuild()
+  ? defineAsyncComponent(() => import("../views/demo/DemoResetButton.vue"))
+  : null;
 
 provide("inAppShell", true);
 
@@ -654,12 +665,21 @@ const showOnboardingTour = computed(
     route?.path !== "/unavailable"
 );
 
-function handlePersonaChange(event) {
+const checkActiveRouteAuth = () =>
+  authStore.isAuthenticated &&
+  route?.path !== "/forbidden" &&
+  route?.path !== "/login" &&
+  !isRouteAuthorizedForRoles(route, normalizedRoles.value) &&
+  router?.replace?.("/forbidden");
+
+async function handlePersonaChange(event) {
   const nextPersona = event?.target?.value;
   if (nextPersona) {
     authStore.switchPersona(nextPersona);
+    onboardingStore.loadPersonaState(authStore.currentPersona || nextPersona);
     const matched = availablePersonas.value.find((p) => p.key === nextPersona);
     statusAnnouncement.value = `Switched workspace view to ${matched?.label || nextPersona}`;
+    await checkActiveRouteAuth();
   }
 }
 
@@ -691,6 +711,9 @@ const {
   hasExternalDrafts: () => hasUserScopedDrafts(),
   onConfirmSignOut: async () => {
     await authStore.logout();
+    if (route?.path !== "/login") {
+      await router?.replace?.("/login");
+    }
   },
 });
 
@@ -708,10 +731,24 @@ function handleGlobalKeydown(event) {
 
 watch(
   () => [authStore.isAuthenticated, authStore.identity?.tenantId],
-  ([authenticated]) => {
+  ([authenticated], [wasAuthenticated] = []) => {
     if (authenticated && typeof authStore.loadEntitlements === "function") {
       authStore.loadEntitlements();
+    } else if (
+      !authenticated &&
+      wasAuthenticated &&
+      (route?.meta?.requiresAuth ||
+        route?.matched?.some((r) => r.meta?.requiresAuth))
+    ) {
+      router?.replace?.("/login");
     }
+  }
+);
+
+watch(
+  () => [authStore.currentPersona, normalizedRoles.value],
+  () => {
+    void checkActiveRouteAuth();
   }
 );
 
