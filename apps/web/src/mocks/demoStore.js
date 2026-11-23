@@ -1402,6 +1402,102 @@ export function createWebDemoStore() {
         .slice(0, Number(limit) || 25);
     },
 
+    lookupEnrollment({
+      studyCode = "",
+      subjectCode = "",
+      siteCode = null,
+    } = {}) {
+      const trimmedStudy = String(studyCode || "").trim();
+      const trimmedSubject = String(subjectCode || "").trim();
+      const trimmedSite =
+        siteCode !== null &&
+        siteCode !== undefined &&
+        String(siteCode).trim() !== ""
+          ? String(siteCode).trim()
+          : null;
+
+      if (!trimmedStudy || !trimmedSubject) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Invalid lookup query",
+              status: 400,
+              detail:
+                "Name a valid study_code, subject_code, and optional site_code.",
+            },
+          },
+        };
+      }
+
+      const notFound = {
+        error: {
+          status: 404,
+          problem: {
+            title: "Not found",
+            status: 404,
+            detail:
+              "No visible enrollment matches the requested codes in your tenant.",
+          },
+        },
+      };
+
+      let study = [...state.studies.values()].find(
+        (s) => s.code.toUpperCase() === trimmedStudy.toUpperCase()
+      );
+      if (!study && trimmedStudy.toUpperCase().startsWith("DEMO")) {
+        study = ensureStudyByCode(trimmedStudy.toUpperCase());
+      }
+      if (!study) {
+        return notFound;
+      }
+
+      const studySubjects = state.subjects.filter(
+        (s) =>
+          String(s.study_id || "").toUpperCase() === study.code.toUpperCase()
+      );
+      const candidateSubjects =
+        studySubjects.length > 0
+          ? studySubjects
+          : study.code.toUpperCase().startsWith("DEMO")
+            ? state.subjects
+            : [];
+
+      const matches = candidateSubjects.filter((s) => {
+        if (s.subject_id !== trimmedSubject) return false;
+        if (trimmedSite === null) return true;
+        return (
+          String(s.site_id || "SITE-101").toUpperCase() ===
+          trimmedSite.toUpperCase()
+        );
+      });
+
+      if (matches.length !== 1) {
+        return notFound;
+      }
+
+      const matched = matches[0];
+      const effectiveSiteCode = matched.site_id || "SITE-101";
+      const studyRef = study.ref.includes("@") ? study.ref : `${study.ref}@1`;
+
+      return {
+        data: {
+          study_ref: studyRef,
+          study_code: study.code,
+          study_title: study.title,
+          study_site_ref: `study_site:${resolveSiteUuid(effectiveSiteCode)}@1`,
+          site_code: effectiveSiteCode,
+          site_title:
+            effectiveSiteCode === "SITE-102"
+              ? "US Regional Trial Unit 2"
+              : `US Academic Clinical Research Center (${effectiveSiteCode})`,
+          enrollment_ref: `enrollment:${matched.id}@1`,
+          subject_code: matched.subject_id,
+          status: matched.status || "SCREENED",
+        },
+      };
+    },
+
     getNode(nodeRef) {
       if (String(nodeRef).startsWith("study:")) {
         return cloneJson(getStudyByRefOrCode(nodeRef));

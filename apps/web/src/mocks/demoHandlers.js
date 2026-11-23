@@ -277,6 +277,21 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const limit = url.searchParams.get("limit") || "25";
       return HttpResponse.json(store.searchKernel({ q, kinds, limit }));
     }),
+    http.get("*/api/v1/kernel/enrollments/lookup", ({ request }) => {
+      const url = new URL(request.url);
+      const result = store.lookupEnrollment({
+        studyCode: url.searchParams.get("study_code") || "",
+        subjectCode: url.searchParams.get("subject_code") || "",
+        siteCode: url.searchParams.get("site_code"),
+      });
+      if (result.error) {
+        return HttpResponse.json(result.error.problem, {
+          status: result.error.status,
+          headers: { "Content-Type": "application/problem+json" },
+        });
+      }
+      return HttpResponse.json(result.data);
+    }),
     http.get("*/api/v1/kernel/authorization/can-i", ({ request }) => {
       const url = new URL(request.url);
       const capability = url.searchParams.get("capability") || "kernel.read";

@@ -496,6 +496,91 @@
         }
       }
     },
+    "/api/v1/kernel/enrollments/lookup": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Resolves a study code, subject code, and optional site code to pinned study and enrollment references.",
+        "description": "Reads over the tenant\u0027s unique study and subject indexes without listing sites. Returns a non-confirming 404 when the study, site, or enrollment does not exist, mismatches, or is masked for the caller (ADR-2471).",
+        "operationId": "KernelLookupEnrollment",
+        "parameters": [
+          {
+            "name": "study_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelEnrollmentLookupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kernel/studies/{studyRef}/protocol-versions": {
       "get": {
         "tags": [
@@ -10571,6 +10656,49 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Kernel_KernelEnrollmentLookupResponse": {
+        "required": [
+          "study_ref",
+          "study_code",
+          "study_title",
+          "study_site_ref",
+          "site_code",
+          "site_title",
+          "enrollment_ref",
+          "subject_code",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "study_ref": {
+            "type": "string"
+          },
+          "study_code": {
+            "type": "string"
+          },
+          "study_title": {
+            "type": "string"
+          },
+          "study_site_ref": {
+            "type": "string"
+          },
+          "site_code": {
+            "type": "string"
+          },
+          "site_title": {
+            "type": "string"
+          },
+          "enrollment_ref": {
+            "type": "string"
+          },
+          "subject_code": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
           }
         }
       },
