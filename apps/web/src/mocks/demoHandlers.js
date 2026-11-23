@@ -590,7 +590,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
       ({ params, request }) => {
         const url = new URL(request.url);
         const activeOnly = url.searchParams.get("active_only") === "true";
-        const now = new Date().toISOString();
+        const now = demoNowIso();
         const studyRef = decodeURIComponent(String(params.studyRef));
         const locks = activeOnly
           ? demoLocks.filter((item) => !item.released)
@@ -615,7 +615,8 @@ export function createWebDemoHandlers(store = webDemoStore) {
     ),
     http.post("*/api/v1/kernel/locks", async ({ request }) => {
       const body = await readJsonBody(request);
-      const now = new Date().toISOString();
+      const step = nextDemoStep("kernel-lock");
+      const now = demoNowIso(step);
       const studyRef = body?.study_ref || DEFAULT_STUDY_REF;
       const scopeRef = body?.scope_ref || studyRef;
       const kind = body?.kind || "Frozen";
@@ -636,7 +637,32 @@ export function createWebDemoHandlers(store = webDemoStore) {
       }
       const scopeKind =
         body?.scope_kind || String(scopeRef).split(":")[0] || "study";
-      const suffix = String(Date.now()).slice(-12).padStart(12, "0");
+      const cleanScopeId = String(scopeRef)
+        .replace(/^[^:]+:/, "")
+        .split("@")[0];
+      let studySiteRef = null;
+      let enrollmentRef = null;
+      if (scopeKind === "study_site") {
+        studySiteRef = String(scopeRef).split("@")[0];
+      } else if (scopeKind === "enrollment") {
+        enrollmentRef = String(scopeRef).split("@")[0];
+        studySiteRef = "study_site:00000000-0000-0000-0000-000000000201"; // deid-ignore
+      } else if (scopeKind === "collection_instance") {
+        const form = store.state?.forms?.get?.(cleanScopeId);
+        studySiteRef = form?.study_site_id
+          ? `study_site:${form.study_site_id}`
+          : "study_site:00000000-0000-0000-0000-000000000201"; // deid-ignore
+        enrollmentRef = form?.enrollment_id
+          ? `enrollment:${form.enrollment_id}`
+          : null;
+      } else if (scopeKind === "observation") {
+        const obs = store.state?.observations?.get?.(
+          String(scopeRef).split("@")[0]
+        );
+        enrollmentRef = obs?.enrollment_ref || null;
+        studySiteRef = "study_site:00000000-0000-0000-0000-000000000201"; // deid-ignore
+      }
+      const suffix = String(demoNowMs(step)).slice(-12).padStart(12, "0");
       const record = {
         ref: body?.lock_id
           ? `assertion:${body.lock_id}`
@@ -644,6 +670,8 @@ export function createWebDemoHandlers(store = webDemoStore) {
         study_ref: body?.study_ref || DEFAULT_STUDY_REF,
         scope_ref: scopeRef,
         scope_kind: scopeKind,
+        study_site_ref: studySiteRef,
+        enrollment_ref: enrollmentRef,
         subject_code: null,
         kind: body?.kind || "Frozen",
         attestation_ref: body?.attestation_id
@@ -671,9 +699,10 @@ export function createWebDemoHandlers(store = webDemoStore) {
       async ({ params, request }) => {
         const body = await readJsonBody(request);
         const lockRef = decodeURIComponent(String(params.lockRef));
-        const now = new Date().toISOString();
+        const step = nextDemoStep("kernel-lock-release");
+        const now = demoNowIso(step);
         const reason = decodeReasonHeader(request) || "Released in demo";
-        const suffix = String(Date.now()).slice(-12).padStart(12, "0");
+        const suffix = String(demoNowMs(step)).slice(-12).padStart(12, "0");
         demoLocks = demoLocks.map((item) =>
           item.ref === lockRef
             ? {
@@ -694,6 +723,8 @@ export function createWebDemoHandlers(store = webDemoStore) {
           study_ref: body?.study_ref || DEFAULT_STUDY_REF,
           scope_ref: body?.study_ref || DEFAULT_STUDY_REF,
           scope_kind: "study",
+          study_site_ref: null,
+          enrollment_ref: null,
           subject_code: null,
           kind: "Frozen",
           attestation_ref: "attestation:01960000-0000-7000-8000-000000000099", // deid-ignore

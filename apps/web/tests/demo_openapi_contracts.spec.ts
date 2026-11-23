@@ -650,4 +650,77 @@ describe("Demo MSW OpenAPI Contracts & Stateful Governance Workflows", () => {
     expect(unmocked.status).toBe(501);
     expect((await unmocked.json()).error).toBe("DEMO_UNMOCKED_ENDPOINT");
   });
+
+  it("validates 5-level scope kernel lock apply, list, and release responses against Kernel_KernelLockResponse OpenAPI schema", async () => {
+    const studyRef = DEMO_STUDY.ref.split("@")[0];
+    const formScopeRef =
+      "collection_instance:00000000-0000-0000-0000-000000002001"; // deid-ignore
+
+    const applyRes = await fetch("/api/v1/kernel/locks", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Change-Reason": "Freeze baseline vital signs form for review",
+      },
+      body: JSON.stringify({
+        study_ref: studyRef,
+        scope_ref: formScopeRef,
+        kind: "Frozen",
+        meaning: "Approved",
+      }),
+    });
+    expect(applyRes.status).toBe(201);
+    const appliedLock = await applyRes.json();
+    assertMatchesOpenApiSchema(
+      appliedLock,
+      getResponseSchema("/api/v1/kernel/locks", "post", "201").schema,
+      "applyKernelLock"
+    );
+    expect(appliedLock.scope_kind).toBe("collection_instance");
+    expect(appliedLock.study_site_ref).toBe(
+      "study_site:00000000-0000-0000-0000-000000000201" // deid-ignore
+    );
+    expect(appliedLock.enrollment_ref).toBe(
+      "enrollment:00000000-0000-0000-0000-000000001001" // deid-ignore
+    );
+
+    const listRes = await fetch(
+      `/api/v1/kernel/studies/${encodeURIComponent(studyRef)}/locks?active_only=true`
+    );
+    expect(listRes.status).toBe(200);
+    const listedLocks = await listRes.json();
+    assertMatchesOpenApiSchema(
+      listedLocks,
+      getResponseSchema("/api/v1/kernel/studies/{studyRef}/locks", "get")
+        .schema,
+      "listStudyLocks"
+    );
+    expect(listedLocks.locks).toHaveLength(1);
+
+    const releaseRes = await fetch(
+      `/api/v1/kernel/locks/${encodeURIComponent(appliedLock.ref)}/release`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Change-Reason": "Release freeze for data query resolution",
+        },
+        body: JSON.stringify({
+          study_ref: studyRef,
+          meaning: "Responsibility",
+        }),
+      }
+    );
+    expect(releaseRes.status).toBe(200);
+    const releasedLock = await releaseRes.json();
+    assertMatchesOpenApiSchema(
+      releasedLock,
+      getResponseSchema("/api/v1/kernel/locks/{lockRef}/release", "post")
+        .schema,
+      "releaseKernelLock"
+    );
+    expect(releasedLock.released).toBe(true);
+    expect(releasedLock.study_site_ref).toBe(appliedLock.study_site_ref);
+    expect(releasedLock.enrollment_ref).toBe(appliedLock.enrollment_ref);
+  });
 });
