@@ -333,7 +333,8 @@ public sealed class ExecutionFormModuleTests
         params CollectedValueView[] values) =>
         new(
             CollectionInstanceId.New(), EnrollmentId.New(), ParticipantId.New(), StudyId.New(), StudySiteId.New(), ProtocolVersionId.New(),
-            "cs.vitals", "act.week12", At, "crc@example.test", At, 1 + values.Length, items, values, [], [], [], null, "Vital signs", itemCodelists);
+            "cs.vitals", "act.week12", At, "crc@example.test", At, 1 + values.Length, items, values, [], [], [], null, "Vital signs",
+            ItemCodelists: itemCodelists);
 
     private sealed class FixedTenantResolver(TenantId tenant) : IKernelTenantResolver
     {

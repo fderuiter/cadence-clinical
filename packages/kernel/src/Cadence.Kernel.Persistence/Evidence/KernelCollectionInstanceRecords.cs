@@ -84,6 +84,12 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 SignedValues(found, observations, a.RecordedAt, a.TargetContentHash)))
             .ToList();
 
+        var enrollmentVersion = await db.Enrollments.AsNoTracking()
+            .Where(e => e.Id == found.EnrollmentId)
+            .Select(e => (long?)e.VersionIndex)
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false) ?? 1L;
+
         return new CollectionInstanceRecord(
             found.Id,
             found.EnrollmentId,
@@ -104,6 +110,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             attestations,
             contentHash,
             collectionTitle,
+            enrollmentVersion,
             itemCodelists);
     }
 
@@ -306,6 +313,13 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             .ToList();
         var codelistGroups = await LoadCodelistGroupsAsync(db, allItems, cancellationToken).ConfigureAwait(false);
 
+        var enrollmentIds = instances.Select(i => i.EnrollmentId).Distinct().ToList();
+        var enrollmentVersions = await db.Enrollments.AsNoTracking()
+            .Where(e => enrollmentIds.Contains(e.Id))
+            .Select(e => new { e.Id, e.VersionIndex })
+            .ToDictionaryAsync(e => e.Id, e => e.VersionIndex, cancellationToken)
+            .ConfigureAwait(false);
+
         var records = new List<CollectionInstanceRecord>(instances.Count);
         foreach (var instance in instances)
         {
@@ -368,6 +382,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 attestations,
                 contentHash,
                 collectionTitle,
+                enrollmentVersions.GetValueOrDefault(instance.EnrollmentId, 1L),
                 itemCodelists));
         }
 

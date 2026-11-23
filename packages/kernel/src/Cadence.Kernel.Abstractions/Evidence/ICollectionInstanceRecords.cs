@@ -157,6 +157,7 @@ public sealed record CollectionInstanceSummary(
 /// <para><c>ContentHash</c>: The hash a signature over the form's current values would bind to (#5463); null while the
 /// form has no values.</para>
 /// <para><c>CollectionTitle</c>: The CollectionSpec's title in the governing protocol version, when present.</para>
+/// <para><c>EnrollmentVersion</c>: The enrollment's version index, for lineage governing edges.</para>
 /// <para><c>ItemCodelists</c>: Hydrated codelist options keyed by item id for items whose terminology declares a codelist.</para>
 /// </remarks>
 public sealed record CollectionInstanceRecord(
@@ -179,6 +180,7 @@ public sealed record CollectionInstanceRecord(
     IReadOnlyList<FormAttestationView> Attestations,
     string? ContentHash,
     string? CollectionTitle = null,
+    long EnrollmentVersion = 1,
     IReadOnlyDictionary<string, IReadOnlyList<CodelistOptionView>>? ItemCodelists = null);
 
 /// <summary>One option in a collection item's governed codelist.</summary>
