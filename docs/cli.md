@@ -57,10 +57,10 @@ Checks the local environment. It reports:
 - whether `Directory.Packages.props` exists in the current directory
 - whether the pnpm on the `PATH` runs and matches the `packageManager` pin in `package.json` (ADR-2508)
 - whether `detect-secrets-hook` runs from `.cadence/venv`, `.venv`, `PATH`, or `uvx`
-- whether `actionlint` and `hadolint` run from `.cadence/bin` or `PATH`
+- whether `actionlint`, `hadolint`, and `shellcheck` run from `.cadence/bin` or `PATH`
 - whether PostgreSQL answers on `127.0.0.1:5432`
 
-It exits `1` when the .NET SDK is missing, pnpm is missing/crashes/differs from the pin, or `detect-secrets`, `actionlint`, or `hadolint` is unavailable, and `0` otherwise.
+It exits `1` when the .NET SDK is missing, pnpm is missing/crashes/differs from the pin, or `detect-secrets`, `actionlint`, `hadolint`, or `shellcheck` is unavailable, and `0` otherwise.
 
 | Option           | Description                                                                          |
 | ---------------- | ------------------------------------------------------------------------------------ |
@@ -139,7 +139,7 @@ must make it fail.
 | `rtm`                 | `gxp-rtm-validate`                                                     |                 | Runs                                                                                                                                                              |
 | `gxp-snapshot`        | `gxp-snapshot-guard`                                                   |                 | Quick: checks the staged files instead of the branch                                                                                                              |
 | `baseline-ratchet`    | `baselines`                                                            |                 | Quick: checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH="<reason>"` admits growth                                                                     |
-| `public-bundle`       | `validate-public-bundle`                                               |                 | Skipped: checks built VitePress, staff demo, and participant demo bundles in CI and deploy-docs after compilation                                                 |
+| `public-bundle`       | `validate-public-bundle`                                               |                 | Skipped: post-build gate; skipped in unscoped `check` only when all three `dist/` folders are absent, and enforced fail-closed in `docs-build` and `deploy-docs`  |
 | `branch-freshness`    | `check-branch-freshness`, `validate-branch-freshness`                  |                 | Skipped: skipped on commit so local work-in-progress commits stay offline; run by `cadence check` before push                                                     |
 | `architecture-tests`  | `arch-tests`                                                           |                 | Skipped: full xUnit architecture suite; run by `cadence check` and CI's `dotnet-quality` job                                                                      |
 | `unit-tests`          | `dotnet-unit-tests`                                                    |                 | Skipped: full xUnit unit test suite; run by `cadence check` and CI's `dotnet-unit-tests` job                                                                      |
@@ -180,8 +180,9 @@ Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` to drop stale entries.
 The `public-bundle` gate (also `validate-public-bundle`, ADR-2497) scans every generated text file in
 `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` after compilation with zero comment or pragma
 exemptions, rejecting national identifiers, unapproved email domains, secrets, external assets, executable local backend
-URLs, and missing or permissive `Content-Security-Policy` `<meta>` directives. It is skipped by `--pre-commit` and runs
-in `docs-build` and `deploy-docs.yml`.
+URLs, and missing or permissive `Content-Security-Policy` `<meta>` directives. It is skipped by `--pre-commit`, is
+skipped by unscoped `cadence check` only when all three `dist/` folders are absent (partial `dist/` output fails
+closed), and always fails closed on direct `cadence check public-bundle` calls in `docs-build` and `deploy-docs.yml`.
 
 The `branch-freshness`, `architecture-tests` and `unit-tests` gates are also skipped by `--pre-commit` so local commits
 stay fast and offline, and run in full during `pnpm cadence check`: `branch-freshness` fails when `origin/main` (or
@@ -216,12 +217,14 @@ pnpm cadence ci --job accessibility-e2e # the Playwright E2E and browser-to-data
 pnpm cadence ci --list                  # what each step runs locally, without running it
 ```
 
-| Option            | Description                                                                                                                                                                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `actionlint`, `native-aot-build`, `lint-and-static`, `dotnet-quality`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                                           |
-| `--allow-skip`    | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `bash`) is missing on `PATH` with the install hint, and accepts a run whose database tests did not execute (without PostgreSQL or with skipped TRX). |
-| `--base <ref>`    | The ref forwarded as `--base <ref>` to CLI `check` steps and `Check GxP Snapshot Policy`. Default: `origin/main`.                                                                                                                                      |
-| `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                             |
+| Option                  | Description                                                                                                                                                                                                                 |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-j\|--job <job>`       | Runs this job and the jobs it needs. Jobs: `actionlint`, `native-aot-build`, `lint-and-static`, `dotnet-quality`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                |
+| `--allow-missing-tools` | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `bash`) is missing with the install hint, while still requiring PostgreSQL and database test execution.                   |
+| `--allow-db-skip`       | Accepts a run whose database tests did not execute (without PostgreSQL or with skipped TRX), while still requiring all external tool binaries.                                                                              |
+| `--allow-skip`          | Shorthand for `--allow-missing-tools --allow-db-skip`: skips steps whose required binary is missing with the install hint, and accepts a run whose database tests did not execute (without PostgreSQL or with skipped TRX). |
+| `--base <ref>`          | The ref forwarded as `--base <ref>` to CLI `check` steps and `Check GxP Snapshot Policy`. Default: `origin/main`.                                                                                                           |
+| `--list`                | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                  |
 
 It follows the workflow's rules: inside a job, a failed step stops the later steps unless CI gives them `if: always()`,
 and the compliance job runs only when the frontend and .NET test steps passed. The run itself never stops early. It
@@ -235,8 +238,8 @@ Where it differs from CI:
   instead of passing with every database test skipped. After the test step passes, its TRX files are read, and any test
   in `Cadence.IntegrationTests` or `Cadence.E2ETests` that was skipped or did not execute fails the step too (#5325),
   except the opt-in lineage benchmark and browser correction check listed in `DatabaseTestEvidence.OptInTests` (the
-  browser correction check runs with `CADENCE_TEST_BROWSER=1` in the `accessibility-e2e` job). `--allow-skip` accepts the
-  skips.
+  browser correction check runs with `CADENCE_TEST_BROWSER=1` in the `accessibility-e2e` job). `--allow-db-skip` (or
+  `--allow-skip`) accepts the skips.
 - **Checks already run once are not repeated.** `actionlint` runs `actionlint`, `lint-and-static` runs Prettier, ESLint, Hadolint, `markdown` and `api-clients`,
   `dotnet-quality` runs `cadence check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle --exclude architecture-tests --exclude unit-tests`
   (followed by its dedicated `Cadence.ArchitectureTests` step, while `Cadence.UnitTests` runs in `dotnet-tests`),
@@ -256,10 +259,12 @@ Where it differs from CI:
   `Check GxP Snapshot Policy` (`cadence check gxp-snapshot`) then fails if the branch changed the committed reports. With
   `CADENCE_GXP_SNAPSHOT=1` it runs `cadence gxp diff` instead, which fails if the regenerated reports differ from the
   committed ones outside their evidence block, and puts the committed copies back when they match.
-- **Required binaries must be available.** `actionlint` (`rhysd/actionlint` in CI), Hadolint, ShellCheck,
-  `detect-secrets-hook` (resolved from `.cadence/venv`, `.venv`, or `PATH`) and `bash` are not installed for you: when
-  any required binary is missing, the step fails with the install hint so an incomplete environment cannot report green.
-  Pass `--allow-skip` to record missing tool steps as skipped, with the install hint, instead of failing.
+- **Required binaries must be available.** `actionlint` (`rhysd/actionlint` in CI), Hadolint, and ShellCheck (resolved
+  from `.cadence/bin` or `PATH`), `detect-secrets-hook` (resolved from `.cadence/venv`, `.venv`, or `PATH`), and `bash`
+  are not installed automatically by `cadence ci` (provision them with `./scripts/setup_wizard.sh --minimal` or
+  `pwsh scripts/setup_wizard.ps1 -Minimal`): when any required binary is missing, the step fails with the install hint
+  so an incomplete environment cannot report green. Pass `--allow-missing-tools` (or `--allow-skip`) to record missing
+  tool steps as skipped, with the install hint, instead of failing.
 - **Not run:** the Playwright browser install, and the jobs that act on GitHub or container registries
   (`container-security`, `ci-gate`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
 - **Commit first.** CI checks out the commit, so run `cadence ci` on committed work: gates that list files with git (the
@@ -287,12 +292,10 @@ pnpm cadence rulesets --repo fderuiter/cadence-clinical # target an explicit own
 | `--dry-run`           | Validates `.github/rulesets/*.json` and workflow parity, prints the planned `gh api` reconciliation, and exits without mutating GitHub. |
 | `--repo <owner/repo>` | Target GitHub repository (`owner/repo`). Defaults to `GITHUB_REPOSITORY`, then `git remote get-url origin`.                             |
 
-Before making any API request, `cadence rulesets` requires `.github/rulesets/*.json` to be present and validates all
-declarative ruleset invariants (`RulesetService.Sync`): every branch ruleset must set
-`strict_required_status_checks_policy: true`, pin required status checks to GitHub Actions (`integration_id: 15368`),
-require `CI Gate` and `Check for Merge Conflicts`, and match active pull-request workflow jobs (`CI Gate` in
-`.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request validation job; `pnpm cadence check rulesets`
-continues to enforce `CI Gate` workflow coverage even when `.github/rulesets` is absent).
+Before making any API request, `cadence rulesets` runs the `rulesets` quality gate (`RulesetService.Validate`): every
+branch ruleset must set `strict_required_status_checks_policy: true`, pin required status checks to GitHub Actions
+(`integration_id: 15368`), require `CI Gate` and `Check for Merge Conflicts`, and match active pull-request workflow
+jobs (`CI Gate` in `.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request validation job).
 
 Without `--dry-run`, it fetches `gh api --paginate repos/<owner>/<repo>/rulesets?per_page=100`, updates existing
 rulesets by `name` (`PUT repos/<owner>/<repo>/rulesets/<id> --input <file>`), and creates missing ones
