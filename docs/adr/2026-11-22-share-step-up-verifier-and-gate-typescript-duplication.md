@@ -1,4 +1,4 @@
-# ADR-2552: Share Step-Up Verifier, Unify Web HTTP Transport, and Gate TypeScript Duplication
+# ADR-2651: Share Step-Up Verifier, Unify Web HTTP Transport, and Gate TypeScript Duplication
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

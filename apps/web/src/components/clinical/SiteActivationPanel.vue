@@ -260,7 +260,9 @@ const store = useClinicalStore();
 const toasts = useToastStore();
 
 const assignedStudies = computed(() => authStore.assignedStudies || []);
-const assignedSites = computed(() => authStore.assignedSites || []);
+const assignedSites = computed(() =>
+  (authStore.assignedSites || []).filter((site) => site && site !== "*")
+);
 const canActivate = computed(() => canActivateSite(authStore));
 
 const studyCode = ref(
@@ -268,9 +270,15 @@ const studyCode = ref(
     store.activeStudyId ||
     (assignedStudies.value.length ? assignedStudies.value[0] : "")
 );
+const reusableActiveSiteId =
+  props.studyCode &&
+  store.activeStudyId &&
+  store.activeStudyId !== props.studyCode
+    ? ""
+    : store.activeSiteId;
 const siteCode = ref(
   props.siteId ||
-    store.activeSiteId ||
+    reusableActiveSiteId ||
     (assignedSites.value.length ? assignedSites.value[0] : "")
 );
 const discoveredSites = ref([]);
