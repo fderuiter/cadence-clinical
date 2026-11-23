@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => ({
       "keycloak-js",
       "msw",
       "msw/browser",
-      "usdm-schemas > zod",
+      "usdm-schemas > zod/mini",
     ],
   },
   plugins: [

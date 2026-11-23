@@ -24,7 +24,7 @@ Dependencies point inward only (spec §2.4, enforced by `tests/Cadence.Architect
 - `Cadence.Kernel.Modules`: the module SDK ([ADR-2600](../../docs/adr/2026-10-19-modules-write-through-the-kernel-command-path.md), [ADR-2625](../../docs/adr/2026-11-22-bitemporal-form-query-aggregate-and-provenance.md)). The command handler contracts kernel and module handlers share (`ICommandHandler<TCommand, TResult>`, `ICommandContext`, `IKernelUnitOfWork`) and `AddCommandHandler<TCommand, TResult, THandler>()`; `ModuleDbContext`, `AddModuleCommandStore<TContext>()`, `ModuleTenantIsolationSql`, `ModuleBitemporalSql` (`KT001` trigger + `btree_gist` exclusion helper), `ModuleInsertOnlySql` (`KA001` trigger), and `HasModuleBitemporalPeriod` for a module's own records; `AddModuleMigrations<TContext>()` for its schema migrations and `AddModuleTenantContext<TContext>()` for its tenant-scoped reads; and, for its endpoints, the tenant resolution the host provides (`IKernelTenantResolver`, `KernelTenantFilter`, `KernelRequestTenant`), the signed change reason (`IKernelChangeReason`), whether the caller may see a kernel object as kernel reads decide it (`IKernelReadAccess`, implemented by `KernelReadAccess` in `Cadence.Kernel.Api`) and `KernelErrorEndpoints`; and, for signatures over its own records, `IAttestationVerifier`, `IAttestationTargetCheck` and `AddModuleAttestationTarget<TCheck>()` (ADR-2631). A module writes clinical state by implementing a handler and sending its command through `IKernelCommandSender`.
 - `Cadence.Kernel.Application`: the command pipeline (`KernelCommandPipeline`), its ports (`ICurrentActor`, `IAuthorizer`, `IKernelUnitOfWorkFactory`) and the kernel's command handlers, and the authority evaluator (`AuthorityEvaluator`, ADR-2455).
 - `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, tenant-scoped contexts and Row-Level Security (`Tenancy/`), the per-command unit of work and audit chain (`KernelCommandTransaction`, `KernelAuditChainVerifier`), `KernelDatabase` (migrate, grant the app role) and migrations. Referenced only by `Cadence.Kernel.Api` and the host ([apps/kernel-api](../../apps/kernel-api/README.md)).
-- `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to, the read endpoints for the Clinical Canvas (`KernelReadEndpoints`: nodes, zoom path, children, command catalogue, CanI, search, protocol versions; `KernelLineageEndpoints`: Trace, dependents, amendment impact; `KernelActivityEndpoints`: the activity stream), observation writes (`KernelObservationEndpoints`), execution enrollment screening (`KernelExecutionEndpoints`), and proposals (`KernelProposalEndpoints`) behind `KernelTenantFilter`, which resolves the caller's kernel tenant through the host's `IKernelTenantResolver`, with every returned object masked through the host's `INodeVisibility` ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). The host is [apps/kernel-api](../../apps/kernel-api/README.md).
+- `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to, the read endpoints for the Clinical Canvas (`KernelReadEndpoints`: nodes, zoom path, children, command catalogue, CanI, search, protocol versions; `KernelLineageEndpoints`: Trace, dependents, amendment impact; `KernelActivityEndpoints`: the activity stream), self-service study, site, study-site and synchronous protocol draft import endpoints (`KernelStudyImportEndpoints`), observation writes (`KernelObservationEndpoints`), execution enrollment screening (`KernelExecutionEndpoints`), and proposals (`KernelProposalEndpoints`) behind `KernelTenantFilter`, which resolves the caller's kernel tenant through the host's `IKernelTenantResolver`, with every returned object masked through the host's `INodeVisibility` ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). The host is [apps/kernel-api](../../apps/kernel-api/README.md).
 - `Cadence.Standards`: reads public CDISC Library product content into a `StandardPackage` and ships checksum-verified seeds, and holds the .NET `IMappingEngine` (see [its README](src/Cadence.Standards/README.md)). References only `Cadence.Kernel.Abstractions`.
 - `Cadence.Rules`: the rule expression language, rule packs and the `IRuleEvaluator` port with its .NET implementation (see [its README](src/Cadence.Rules/README.md) and [Rule packs](../../docs/kernel/RULE_PACKS.md)). References only `Cadence.Kernel.Abstractions`. Its benchmark is `benchmarks/Cadence.Rules.Benchmarks`.
 
@@ -431,7 +431,8 @@ Commands in `Commands/ObservationCommands.cs`, each authorized against the obser
 - A correction changes one aggregate (K-TX-1). Record and correct are refused (423) while a lock covers the
   observation (see below).
 - `IObservationRecords` reads an observation with its revisions, the locks covering it, the assertions about it and
-  its kernel audit entries.
+  its kernel audit entries under one tenant connection lease and the composite
+  `(tenant_id, aggregate_type, aggregate_id, sequence)` audit index.
 - Reactions (the eCRF projection, edit checks, queries, SDV) consume `ObservationCorrected` after commit.
 - The value is a typed `ObservationValue` (`Evidence/ObservationValue.cs`, ADR-2623): `quantity` (UCUM unit,
   optional comparator), `coded` (code-system version and code), `text`, `boolean`, `dateTime` (partial ISO 8601) or
@@ -491,8 +492,10 @@ the enrollment:
 
 - The kernel, not the caller, picks the governing protocol version: the highest-numbered version effective at the
   enrollment's study site at the collection time (K-TIME-8, through `EffectivityResolution`). Its design must have the
-  CollectionSpec, and the planned activity must list it (422 otherwise; 409 when no version is effective). The
-  version is a `GovernedBy` lineage input of the form and of every observation version a save writes. When the
+  CollectionSpec, and the planned activity must list it (422 otherwise; 409 when no version is effective). The form
+  records `CollectedBy` lineage inputs from its governing `CollectionSpec` (and `PlannedActivity`, when scheduled)
+  `protocol_element` nodes, and every observation version a save writes records a `CollectedBy` input from its
+  governing `CollectionItem` `protocol_element` node. When the
   enrollment has an `Enrolled` period and the planned activity has a timing, `OpenCollectionInstance` also evaluates
   `ExpectedSchedule.Compute` and `ExpectedSchedule.Assess` from `CollectedAt` and the `Enrolled` start date without
   reading a wall clock (K-TIME-3, K-TIME-7) and returns the optional `VisitTimingAssessment` on
@@ -800,8 +803,9 @@ context.Work.Add(mapping);
 context.Work.LinkInput(NodeRef.For(command.Concept.ConceptId, command.Concept.Version), LineageEdgeKind.DefinedBy);
 ```
 
-- The edge runs from the input to the aggregate at the version the commit stamps. It is written in the command's
-  transaction, together with a `lineage_nodes` row for that version.
+- The edge runs from the input to the aggregate at the version the commit stamps (or to the specific changed aggregate
+  named by `target` in multi-aggregate commits such as form saves). It is written in the command's transaction,
+  together with a `lineage_nodes` row for that version.
 - Updates get a `Supersedes` edge from the previous version automatically.
 - Mark an aggregate `[DerivedObject]` when every version must have inputs. The commit then throws `K-LIN-1` if a
   handler declared none.

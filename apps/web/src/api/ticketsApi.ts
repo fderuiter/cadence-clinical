@@ -53,73 +53,144 @@ const SSN_PATTERN = /\b\d{3}-\d{2}-\d{4}\b/;
 const PHONE_PATTERN =
   /(?:\+?1[-.\s]?)?(?:\(\d{3}\)\s*\d{3}[-.\s]?\d{4}|\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b)/;
 const DOB_PATTERN = /\b(?:dob|date\s+of\s+birth|born\s+on)\s*[:=-]?\s*\S+/i;
-const SUBJECT_CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]{1,63}$/i;
+const SUBJECT_CODE_PATTERN =
+  /^[A-Za-z]{2,12}[-_][A-Za-z0-9][A-Za-z0-9_-]{0,24}$/;
+
+function normalizeTicketRoute(rawRoute?: string | null): string {
+  const raw = (rawRoute || "").trim();
+  if (!raw) return "";
+  const withoutQuery = raw.split(/[?#]/)[0] || "";
+  const prefixed = withoutQuery.startsWith("/")
+    ? withoutQuery
+    : `/${withoutQuery}`;
+  return prefixed.replace(/\/+$/, "").toLowerCase();
+}
+
+function startsWithRouteSegment(route: string, prefix: string): boolean {
+  return route === prefix || route.startsWith(`${prefix}/`);
+}
 
 export function routeDemoTicketQueue(input: {
   category?: string | null;
   source_route?: string | null;
   persona?: string | null;
+  entity_type?: string | null;
 }): string {
   const category = (input.category || "SYSTEM_SUPPORT").trim().toUpperCase();
-  const route = (input.source_route || "").trim().toLowerCase();
+  const route = normalizeTicketRoute(input.source_route);
   const persona = (input.persona || "").trim().toLowerCase();
+  const entityType = (input.entity_type || "").trim().toUpperCase();
 
+  if (category === "ACCESS_CONTROL" || category === "TECHNICAL_SYSTEM") {
+    return "PLATFORM_ADMIN_ACCESS";
+  }
   if (category === "REGULATORY_QUERY" || persona === "auditor") {
     return "REGULATORY_COMPLIANCE";
-  }
-  if (category === "ACCESS_CONTROL") {
-    return "PLATFORM_ADMIN_ACCESS";
   }
   if (category === "SUPPLY_EXCURSION") {
     return "SUBJECT_MANAGEMENT_RTSM";
   }
+
   if (
-    route.startsWith("/mdr") ||
-    route.startsWith("/studies") ||
-    route.startsWith("/digitization") ||
-    route.startsWith("/amendment-diff")
-  ) {
-    return persona === "data_manager" && category === "DATA_QUERY"
-      ? "DATA_CAPTURE_ECRF"
-      : "PROTOCOL_DESIGNER";
-  }
-  if (
-    route.startsWith("/ecrf") ||
-    route.startsWith("/rules") ||
-    route.startsWith("/coding") ||
-    route.startsWith("/data-lock")
+    startsWithRouteSegment(route, "/ecrf") ||
+    startsWithRouteSegment(route, "/rules") ||
+    startsWithRouteSegment(route, "/coding") ||
+    startsWithRouteSegment(route, "/data-lock") ||
+    startsWithRouteSegment(route, "/observations")
   ) {
     return "DATA_CAPTURE_ECRF";
   }
   if (
-    route.startsWith("/ssu") ||
-    route.startsWith("/ctms") ||
-    route.startsWith("/dct")
+    startsWithRouteSegment(route, "/mdr") ||
+    startsWithRouteSegment(route, "/designer") ||
+    startsWithRouteSegment(route, "/protocol") ||
+    startsWithRouteSegment(route, "/digitization") ||
+    startsWithRouteSegment(route, "/amendment-diff")
   ) {
-    return category === "MONITORING_FINDING"
-      ? "REPORTING_ANALYTICS"
-      : "SUBJECT_MANAGEMENT_RTSM";
+    return "PROTOCOL_DESIGNER";
   }
-  if (route.startsWith("/audit") || route.startsWith("/auditor")) {
+  if (startsWithRouteSegment(route, "/studies")) {
+    if (category === "DATA_QUERY") {
+      return "DATA_CAPTURE_ECRF";
+    }
+    if (
+      category === "SITE_OPERATIONS" ||
+      category === "MONITORING_FINDING" ||
+      category === "SAFETY_ADVERSE_EVENT"
+    ) {
+      return "SUBJECT_MANAGEMENT_RTSM";
+    }
+    return "PROTOCOL_DESIGNER";
+  }
+  if (
+    startsWithRouteSegment(route, "/rtsm") ||
+    startsWithRouteSegment(route, "/supply") ||
+    startsWithRouteSegment(route, "/ssu") ||
+    startsWithRouteSegment(route, "/ctms") ||
+    startsWithRouteSegment(route, "/safety") ||
+    startsWithRouteSegment(route, "/dct") ||
+    startsWithRouteSegment(route, "/devices") ||
+    startsWithRouteSegment(route, "/device-investigation")
+  ) {
+    return "SUBJECT_MANAGEMENT_RTSM";
+  }
+  if (
+    startsWithRouteSegment(route, "/exports") ||
+    startsWithRouteSegment(route, "/analytics") ||
+    startsWithRouteSegment(route, "/reports") ||
+    startsWithRouteSegment(route, "/payments") ||
+    startsWithRouteSegment(route, "/sce") ||
+    startsWithRouteSegment(route, "/lakehouse")
+  ) {
+    return "REPORTING_ANALYTICS";
+  }
+  if (
+    startsWithRouteSegment(route, "/audit") ||
+    startsWithRouteSegment(route, "/auditor") ||
+    startsWithRouteSegment(route, "/quality") ||
+    startsWithRouteSegment(route, "/etmf") ||
+    startsWithRouteSegment(route, "/documents") ||
+    startsWithRouteSegment(route, "/eisf") ||
+    startsWithRouteSegment(route, "/econsent") ||
+    startsWithRouteSegment(route, "/econsent-authoring") ||
+    startsWithRouteSegment(route, "/icf-builder") ||
+    startsWithRouteSegment(route, "/training")
+  ) {
     return "REGULATORY_COMPLIANCE";
   }
   if (
-    route.startsWith("/quality") ||
-    route.startsWith("/exports") ||
-    route.startsWith("/lakehouse")
+    startsWithRouteSegment(route, "/admin") ||
+    startsWithRouteSegment(route, "/users") ||
+    startsWithRouteSegment(route, "/org") ||
+    startsWithRouteSegment(route, "/settings") ||
+    startsWithRouteSegment(route, "/forbidden") ||
+    startsWithRouteSegment(route, "/unavailable")
   ) {
-    return "REPORTING_ANALYTICS";
+    return "PLATFORM_ADMIN_ACCESS";
+  }
+
+  switch (entityType) {
+    case "CRF_FORM":
+      return "DATA_CAPTURE_ECRF";
+    case "SUBJECT":
+    case "SUPPLY_KIT":
+    case "SAE_CASE":
+    case "MVR_VISIT":
+      return "SUBJECT_MANAGEMENT_RTSM";
+    case "CAPA_ACTION":
+    case "TMF_DOCUMENT":
+      return "REGULATORY_COMPLIANCE";
   }
 
   switch (category) {
     case "DATA_QUERY":
-    case "PROTOCOL_DEVIATION":
       return "DATA_CAPTURE_ECRF";
     case "SITE_OPERATIONS":
+    case "MONITORING_FINDING":
     case "SAFETY_ADVERSE_EVENT":
       return "SUBJECT_MANAGEMENT_RTSM";
-    case "MONITORING_FINDING":
-      return "REPORTING_ANALYTICS";
+    case "PROTOCOL_DEVIATION":
+      return "REGULATORY_COMPLIANCE";
     default:
       return "PLATFORM_ADMIN_ACCESS";
   }
@@ -144,6 +215,15 @@ export function validateDemoTicketNoDirectPii(
   const subjectId = (payload.subject_id || "").trim();
   if (subjectId && !SUBJECT_CODE_PATTERN.test(subjectId)) {
     return "Subject ID must be a pseudonymous clinical subject code (for example SUBJ-8812) without spaces or direct identifiers.";
+  }
+  const entityType = (payload.entity_type || "").trim().toUpperCase();
+  const entityId = (payload.entity_id || "").trim();
+  if (
+    entityType === "SUBJECT" &&
+    entityId &&
+    !SUBJECT_CODE_PATTERN.test(entityId)
+  ) {
+    return "Linked SUBJECT entity ID must be a pseudonymous clinical subject code (for example SUBJ-8812).";
   }
   return null;
 }
@@ -194,6 +274,7 @@ export function createSimulatedDemoTicket(
     category,
     source_route: payload.source_route,
     persona: payload.persona,
+    entity_type: payload.entity_type,
   });
   const targets = computeDemoSlaTargets(priority, severity, nowMs);
 

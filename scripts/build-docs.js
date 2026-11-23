@@ -54,7 +54,7 @@ const VITEPRESS_ENV_ALLOWLIST = [
 
 function ensureHeapNodeOptions(nodeOptions) {
   if (!nodeOptions || !nodeOptions.includes("--max-old-space-size")) {
-    return `${nodeOptions || ""} --max-old-space-size=16384`.trim();
+    return `${nodeOptions || ""} --max-old-space-size=4096`.trim();
   }
   return nodeOptions;
 }

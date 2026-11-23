@@ -10,6 +10,7 @@ import {
   dualHeadingAnchorsPlugin,
   extractMarkdownAnchors,
   githubSlugify,
+  mermaidFencePlugin,
   repoLinksPlugin,
   toRepoUrl,
   vitepressSlugify,
@@ -17,8 +18,10 @@ import {
 import { createRequire } from "module";
 import rootDocsModule from "./rootDocs.cjs";
 import {
+  buildPortalSearchCatalog,
   parseDocumentationIndex,
   synthesizeSidebarFromIndex,
+  toSidebarLink,
 } from "./sidebar.mjs";
 
 const require = createRequire(import.meta.url);
@@ -34,14 +37,22 @@ const docsDir = path.resolve(__dirname, "..");
 const repoRoot = path.resolve(docsDir, "..");
 const indexPath = path.join(docsDir, "DOCUMENTATION_INDEX.md");
 
-function collectSidebarLinks(items, out = new Set()) {
-  for (const item of items ?? []) {
-    if (item.link) {
-      out.add(item.link.split("#")[0]);
+function collectSidebarLinks(sidebarOrItems, out = new Set()) {
+  if (!sidebarOrItems) return out;
+  if (Array.isArray(sidebarOrItems)) {
+    for (const item of sidebarOrItems) {
+      if (item.link) {
+        out.add(item.link.split("#")[0]);
+      }
+      if (item.items) {
+        collectSidebarLinks(item.items, out);
+      }
     }
-    if (item.items) {
-      collectSidebarLinks(item.items, out);
-    }
+    return out;
+  }
+
+  for (const sectionItems of Object.values(sidebarOrItems)) {
+    collectSidebarLinks(sectionItems, out);
   }
   return out;
 }
@@ -62,7 +73,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     }
   });
 
-  it("includes all 80 active non-ADR pages from docs/DOCUMENTATION_INDEX.md without manual edits", () => {
+  it("includes all 80 active non-ADR pages from docs/DOCUMENTATION_INDEX.md across route-scoped sidebars", () => {
     const indexContent = fs.readFileSync(indexPath, "utf-8");
     const parsedEntries = parseDocumentationIndex(indexContent, {
       docsDir,
@@ -104,12 +115,15 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
       docsDir,
       repoRoot,
     });
+    expect(Array.isArray(sidebar)).toBe(false);
+    expect(typeof sidebar).toBe("object");
+
     const sidebarLinks = collectSidebarLinks(sidebar);
 
     for (const route of allActiveNonAdrPortalRoutes) {
       expect(
         sidebarLinks.has(route),
-        `Expected sidebar to contain ${route}`
+        `Expected route-scoped sidebars to contain ${route}`
       ).toBe(true);
     }
 
@@ -128,9 +142,24 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(sidebarLinks.has("/ux/CLINICAL_CANVAS")).toBe(true);
     expect(sidebarLinks.has("/web/API_MIGRATION")).toBe(true);
     expect(sidebarLinks.has("/blog/index")).toBe(true);
+
+    // Verify each route prefix is compact rather than repeating all 600+ portal links
+    const rootLinks = collectSidebarLinks(sidebar["/"]);
+    expect(rootLinks.size).toBeLessThan(45);
+
+    const adrLinks = collectSidebarLinks(sidebar["/adr/"]);
+    expect(adrLinks.has("/adr/index")).toBe(true);
+    expect(adrLinks.has("/adr/TEMPLATE")).toBe(true);
+    expect(
+      adrLinks.has(
+        "/adr/2026-09-29-clinical-kernel-modular-monolith-architecture"
+      )
+    ).toBe(true);
+    expect(adrLinks.has("/adr/2023-01-01-neo4j-graph-database")).toBe(false);
+    expect(adrLinks.size).toBeLessThan(90);
   });
 
-  it("synthesizes the Engineering Blog group newest-first and excludes draft blog posts from portal routes", () => {
+  it("synthesizes the Engineering Blog group newest-first under /blog/ and excludes draft blog posts from portal routes", () => {
     const tmpRepo = makeTempWorkspace();
     const tmpDocs = path.join(tmpRepo, "docs");
     const tmpBlog = path.join(tmpDocs, "blog");
@@ -173,7 +202,9 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
       }
     );
 
-    const blogGroup = sidebar.find((g) => g.text === "Engineering Blog");
+    const blogSection = sidebar["/blog/"];
+    expect(blogSection).toBeDefined();
+    const blogGroup = blogSection.find((g) => g.text === "Engineering Blog");
     expect(blogGroup).toBeDefined();
     expect(blogGroup.collapsed).toBe(false);
     expect(blogGroup.items.map((item) => item.link)).toEqual([
@@ -183,36 +214,40 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     ]);
   });
 
-  it("groups REST API and Data Model references into collapsed sections separate from historical records", () => {
+  it("scopes REST API, Data Model, and Historical sections to their own prefixes without mixing generated and archive pages", () => {
     const sidebar = synthesizeSidebarFromIndex(indexPath, {
       docsDir,
       repoRoot,
     });
 
-    const apiGroup = sidebar.find((g) => g.text === "REST API Reference");
-    const schemaGroup = sidebar.find((g) => g.text === "Data Model Reference");
-    const archiveGroup = sidebar.find(
-      (g) => g.text === "Baseline & Historical Records"
+    const apiGroup = sidebar["/api/"]?.find(
+      (g) => g.text === "REST API Reference"
+    );
+    const schemaGroup = sidebar["/schema/"]?.find(
+      (g) => g.text === "Data Model Reference"
+    );
+    const historicalGroup = sidebar["/migration/"]?.find(
+      (g) => g.text === "Historical & Migration Records"
     );
 
     expect(apiGroup).toBeDefined();
-    expect(apiGroup.collapsed).toBe(true);
     expect(apiGroup.items[0].link).toBe("/api/index");
 
     expect(schemaGroup).toBeDefined();
-    expect(schemaGroup.collapsed).toBe(true);
     expect(schemaGroup.items[0].link).toBe("/schema/README");
     expect(schemaGroup.items.length).toBeGreaterThanOrEqual(18);
 
-    expect(archiveGroup).toBeDefined();
-    expect(archiveGroup.collapsed).toBe(true);
+    expect(historicalGroup).toBeDefined();
 
-    const archiveLinks = collectSidebarLinks(archiveGroup.items);
+    const archiveLinks = collectSidebarLinks(sidebar["/migration/"]);
     expect(archiveLinks.has("/api/kernel")).toBe(false);
     expect(archiveLinks.has("/schema/kernel")).toBe(false);
+    expect(archiveLinks.has("/adr/2023-01-01-neo4j-graph-database")).toBe(
+      false
+    );
   });
 
-  it("automatically places a newly added active Start here document row into the sidebar", () => {
+  it("automatically places a newly added active Start here document row into the / sidebar", () => {
     const originalContent = fs.readFileSync(indexPath, "utf-8");
     const modifiedContent = originalContent.replace(
       "| [CONTRIBUTING.md](../CONTRIBUTING.md) |",
@@ -225,14 +260,14 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
       indexContent: modifiedContent,
     });
 
-    const startHere = sidebar.find((g) => g.text === "Start Here");
+    const startHere = sidebar["/"]?.find((g) => g.text === "Start Here");
     expect(startHere).toBeDefined();
     expect(
       startHere.items.some((item) => item.link === "/ONBOARDING_TEST_GUIDE")
     ).toBe(true);
   });
 
-  it("stages all 8 root documents in STAGED_ROOT_DOCS and keeps their links internal while routing non-portal links to GitHub", () => {
+  it("rewrites excluded SDLC/03_API_Integration_Specification.md links to GitHub while keeping staged root docs internal", () => {
     expect(Object.keys(STAGED_ROOT_DOCS).sort()).toEqual([
       "AGENTS.md",
       "ARCHITECTURE.md",
@@ -257,6 +292,10 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     }
     fs.writeFileSync(path.join(tmpPkg, "README.md"), "# Kernel Package\n");
     fs.writeFileSync(path.join(tmpRepo, ".env.example"), "FOO=bar\n");
+    fs.writeFileSync(
+      path.join(tmpSdlc, "03_API_Integration_Specification.md"),
+      "# Baseline API Spec\n"
+    );
 
     expect(toRepoUrl("../CONTEXT.md", tmpDocs, tmpDocs, tmpRepo)).toBe(
       "CONTEXT.md"
@@ -272,6 +311,25 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     );
 
     expect(
+      toRepoUrl(
+        "SDLC/03_API_Integration_Specification.md#endpoints",
+        tmpDocs,
+        tmpDocs,
+        tmpRepo
+      )
+    ).toBe(
+      "https://github.com/fderuiter/cadence-clinical/blob/main/docs/SDLC/03_API_Integration_Specification.md#endpoints"
+    );
+    expect(
+      toSidebarLink("SDLC/03_API_Integration_Specification.md", {
+        docsDir: tmpDocs,
+        repoRoot: tmpRepo,
+      })
+    ).toBe(
+      "https://github.com/fderuiter/cadence-clinical/blob/main/docs/SDLC/03_API_Integration_Specification.md"
+    );
+
+    expect(
       toRepoUrl("../packages/kernel/README.md", tmpDocs, tmpDocs, tmpRepo)
     ).toBe(
       "https://github.com/fderuiter/cadence-clinical/blob/main/packages/kernel/README.md"
@@ -281,9 +339,10 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     );
   });
 
-  it("emits both VitePress and GitHub heading anchor IDs for numbered, punctuated, and schema table headings", async () => {
+  it("emits both VitePress and GitHub heading anchor IDs and renders deferred mermaid containers", async () => {
     const tmpDir = makeTempWorkspace();
     const md = await createMarkdownRenderer(tmpDir);
+    md.use(mermaidFencePlugin);
     md.use(dualHeadingAnchorsPlugin);
 
     const html = md.render(
@@ -299,6 +358,11 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         "## `packages/ddf`",
         "",
         "Artifact `gxp-test-evidence-${{ github.run_id }}`.",
+        "",
+        "```mermaid",
+        "flowchart LR",
+        "  A[Kernel] --> B[PostgreSQL]",
+        "```",
       ].join("\n"),
       { relativePath: "sample.md" }
     );
@@ -314,6 +378,9 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(html).toContain('id="packagesddf"');
     expect(html).toContain("<code v-pre");
 
+    // Mermaid fences render inert v-pre placeholders without build-time Mermaid imports
+    expect(html).toContain('<div class="mermaid" v-pre data-mermaid-code="');
+
     // Slug helpers agree with extracted anchor set
     expect(vitepressSlugify("15. Roadmap")).toBe("_15-roadmap");
     expect(githubSlugify("15. Roadmap")).toBe("15-roadmap");
@@ -322,10 +389,10 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     );
   });
 
-  it("fails closed in repoLinksPlugin and assertThemeLinksExist when a link targets a missing heading anchor", async () => {
+  it("fails closed in repoLinksPlugin and assertThemeLinksExist for both array and route-keyed sidebars", async () => {
     const tmpRepo = makeTempWorkspace();
     const tmpDocs = path.join(tmpRepo, "docs");
-    fs.mkdirSync(tmpDocs, { recursive: true });
+    fs.mkdirSync(path.join(tmpDocs, "SDLC"), { recursive: true });
 
     fs.writeFileSync(
       path.join(tmpDocs, "target.md"),
@@ -334,6 +401,10 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     fs.writeFileSync(
       path.join(tmpDocs, "source.md"),
       "# Source Page\n\nSee [Target](target.md#valid-heading).\n"
+    );
+    fs.writeFileSync(
+      path.join(tmpDocs, "SDLC", "03_API_Integration_Specification.md"),
+      "# Excluded Baseline\n"
     );
 
     const md = await createMarkdownRenderer(tmpDocs);
@@ -362,17 +433,101 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
       assertThemeLinksExist(
         {
           nav: [{ text: "Valid", link: "/target#valid-heading" }],
-          sidebar: [{ text: "Broken", link: "/target#missing-sidebar-anchor" }],
+          sidebar: {
+            "/": [
+              {
+                text: "Section",
+                items: [
+                  { text: "Broken", link: "/target#missing-sidebar-anchor" },
+                ],
+              },
+            ],
+          },
         },
         tmpDocs
       )
     ).toThrow(/missing anchors: \/target#missing-sidebar-anchor/);
+
+    expect(() =>
+      assertThemeLinksExist(
+        {
+          nav: [],
+          sidebar: {
+            "/SDLC/": [
+              {
+                text: "Excluded",
+                items: [
+                  {
+                    text: "Spec",
+                    link: "/SDLC/03_API_Integration_Specification",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        tmpDocs
+      )
+    ).toThrow(/missing pages: \/SDLC\/03_API_Integration_Specification/);
 
     const anchors = extractMarkdownAnchors(
       "# Title\n\n## Duplicate\n\n## Duplicate\n"
     );
     expect(anchors.has("duplicate")).toBe(true);
     expect(anchors.has("duplicate-1")).toBe(true);
+  });
+
+  it("excludes Baseline, Historical, and superseded/pre-kernel ADRs from search while boosting Normative and Kernel docs", () => {
+    const catalog = buildPortalSearchCatalog(indexPath, { docsDir, repoRoot });
+
+    expect(
+      catalog.shouldIndexPage("kernel/CLINICAL_KERNEL_SPECIFICATION.md")
+    ).toBe(true);
+    expect(catalog.shouldIndexPage("ARCHITECTURE.md")).toBe(true);
+    expect(
+      catalog.shouldIndexPage(
+        "adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md"
+      )
+    ).toBe(true);
+
+    expect(
+      catalog.shouldIndexPage("SDLC/03_API_Integration_Specification.md")
+    ).toBe(false);
+    expect(
+      catalog.shouldIndexPage("SDLC/01_Product_Requirements_Document_PRD.md")
+    ).toBe(false);
+    expect(catalog.shouldIndexPage("migration/index.md")).toBe(false);
+    expect(
+      catalog.shouldIndexPage(
+        "architecture/repository-migration/MIGRATION_PLAN.md"
+      )
+    ).toBe(false);
+    expect(
+      catalog.shouldIndexPage("adr/2023-01-01-neo4j-graph-database.md")
+    ).toBe(false);
+    expect(
+      catalog.shouldIndexPage(
+        "adr/2026-07-22-gateway-authentication-propagation.md"
+      )
+    ).toBe(false);
+    expect(
+      catalog.shouldIndexPage(
+        "adr/2026-10-06-published-form-version-registry-and-schema-hash-validation.md",
+        null,
+        "# ADR-2501\n\n- **Status:** Superseded by ADR-2622\n"
+      )
+    ).toBe(false);
+
+    expect(
+      catalog.getSearchBoostMultiplier(
+        "kernel/CLINICAL_KERNEL_SPECIFICATION.md"
+      )
+    ).toBeGreaterThan(catalog.getSearchBoostMultiplier("CI.md"));
+    expect(
+      catalog.getSearchBoostMultiplier(
+        "adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md"
+      )
+    ).toBeGreaterThan(catalog.getSearchBoostMultiplier("CI.md"));
   });
 
   it("parses all 41 Mermaid diagrams across 20 portal pages cleanly via JSDOM and preserves inline code v-pre", async () => {
