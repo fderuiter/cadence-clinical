@@ -172,6 +172,72 @@ public sealed class PublicBundleValidatorServiceTests : IDisposable
         findings.Select(f => f.Category).Should().Contain("unapproved_email");
     }
 
+    [Fact]
+    public void ValidatePublicBundles_RejectsAxeCoreContaminationAcrossAppAndStagedBundles()
+    {
+        SeedCleanBundles();
+        Write("apps/web/dist/assets/axe-B12345.js", "export const audit = () => {};\n");
+        PublicBundleValidatorService.ValidatePublicBundles(_dir).Should().Be(1);
+
+        var inlineAxeFindings = PublicBundleValidatorService.ScanBundleFile(
+            "apps/web/dist/assets/vendor.js",
+            "assets/vendor.js",
+            "window.axe={};axe._audit={};axe._tree=[];",
+            isDocsBundle: false);
+        inlineAxeFindings.Select(f => f.Category).Should().Contain("bundle_contamination");
+    }
+
+    [Fact]
+    public void ValidatePublicBundles_RejectsKeycloakInStagedDemosWhileAllowingNonDemoApps()
+    {
+        SeedCleanBundles();
+        Write("apps/web/dist/assets/vendor-auth-abc123.js", "export const kc = 'KeycloakAdapter';\n");
+        PublicBundleValidatorService.ValidatePublicBundles(_dir).Should().Be(0,
+            "non-demo production builds legitimately include keycloak-js for PKCE S256 login");
+
+        Write("docs/.vitepress/dist/demo/index.html", CleanHtml());
+        Write("docs/.vitepress/dist/demo/assets/vendor-auth-abc123.js", "export const kc = 1;\n");
+        PublicBundleValidatorService.ValidatePublicBundles(_dir).Should().Be(1);
+    }
+
+    [Fact]
+    public void ValidatePublicBundles_RejectsKeycloakInSubjectPortalStagedDemoAndForbiddenPreloads()
+    {
+        SeedCleanBundles();
+        Write("docs/.vitepress/dist/subject-portal/index.html", CleanHtml());
+        Write("docs/.vitepress/dist/subject-portal/assets/keycloak-xyz987.js", "export default function Keycloak() {}\n");
+        PublicBundleValidatorService.ValidatePublicBundles(_dir).Should().Be(1);
+
+        var preloadFindings = PublicBundleValidatorService.ScanBundleFile(
+            "docs/.vitepress/dist/demo/index.html",
+            "demo/index.html",
+            $"<!doctype html><html><head>{ValidCsp}<link rel=\"modulepreload\" href=\"/cadence-clinical/demo/assets/vendor-media-123.js\"></head><body></body></html>",
+            isDocsBundle: false,
+            isDemoBundle: true);
+        preloadFindings.Select(f => f.Category).Should().Contain("bundle_preload");
+    }
+
+    [Fact]
+    public void ValidatePublicBundles_EnforcesStagedDemoColdBootAndSubjectPortalByteBudgets()
+    {
+        SeedCleanBundles();
+        Write(
+            "docs/.vitepress/dist/demo/index.html",
+            $"<!doctype html><html><head>{ValidCsp}<link rel=\"modulepreload\" href=\"/cadence-clinical/demo/assets/vendor-big.js\"></head><body><script type=\"module\" src=\"/cadence-clinical/demo/assets/index.js\"></script></body></html>\n");
+        Write("docs/.vitepress/dist/demo/assets/index.js", "console.log('boot');\n");
+        Write("docs/.vitepress/dist/demo/assets/vendor-big.js", new string('a', (int)PublicBundleValidatorService.MaxDemoColdBootRawBytes));
+
+        PublicBundleValidatorService.ValidatePublicBundles(_dir).Should().Be(1,
+            "staged /demo/ cold-boot raw bytes over 1.35 MiB must fail closed");
+
+        Directory.Delete(Path.Combine(_dir, "docs/.vitepress/dist/demo"), recursive: true);
+        Write("docs/.vitepress/dist/subject-portal/index.html", CleanHtml());
+        Write("docs/.vitepress/dist/subject-portal/assets/index.js", new string('b', (int)PublicBundleValidatorService.MaxSubjectPortalAssetsRawBytes));
+
+        PublicBundleValidatorService.ValidatePublicBundles(_dir).Should().Be(1,
+            "staged /subject-portal/assets/ volume over 920 KiB must fail closed");
+    }
+
     private void SeedCleanBundles()
     {
         Write("docs/.vitepress/dist/index.html", CleanHtml());
