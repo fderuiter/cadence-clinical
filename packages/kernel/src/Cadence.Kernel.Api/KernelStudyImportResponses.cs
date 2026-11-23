@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol;
@@ -121,6 +123,8 @@ public sealed record KernelCreateSiteRequest(
 
 /// <summary>Visible study-site association returned by <c>GET /api/v1/kernel/studies/{studyRef}/sites</c> and <c>POST /api/v1/kernel/studies/{studyRef}/sites</c>.</summary>
 /// <param name="Ref">StudySite <c>NodeRef</c> pinned to its current version.</param>
+/// <param name="StudySiteId">Study-site UUID.</param>
+/// <param name="StudySiteRef">Canonical unversioned <c>NodeRef</c> of the study site (<c>study_site:&lt;uuid&gt;</c>).</param>
 /// <param name="StudyRef">Linked study <c>NodeRef</c>.</param>
 /// <param name="SiteRef">Linked site <c>NodeRef</c> pinned to its current version.</param>
 /// <param name="SiteCode">Linked site code.</param>
@@ -130,8 +134,11 @@ public sealed record KernelCreateSiteRequest(
 /// <param name="InstitutionCode">Owning site institution code.</param>
 /// <param name="InstitutionName">Owning site institution display name.</param>
 /// <param name="Status">Study-site lifecycle status (<c>Selected</c> or <c>Active</c>).</param>
+/// <param name="EffectiveVersions">Protocol versions currently effective at this study site.</param>
 public sealed record KernelStudySiteSummaryResponse(
     string Ref,
+    Guid StudySiteId,
+    string StudySiteRef,
     string StudyRef,
     string SiteRef,
     string SiteCode,
@@ -140,11 +147,16 @@ public sealed record KernelStudySiteSummaryResponse(
     string InstitutionRef,
     string InstitutionCode,
     string InstitutionName,
-    string Status)
+    string Status,
+    IReadOnlyList<KernelEffectiveVersionResponse> EffectiveVersions)
 {
-    internal static KernelStudySiteSummaryResponse From(StudySiteDirectoryEntry entry) =>
+    internal static KernelStudySiteSummaryResponse From(
+        StudySiteDirectoryEntry entry,
+        StudySiteGovernanceSummary? governance = null) =>
         new(
             NodeRef.For(entry.StudySiteId, entry.VersionIndex).ToString(),
+            entry.StudySiteId.Value,
+            NodeRef.For(entry.StudySiteId).ToString(),
             NodeRef.For(entry.StudyId).ToString(),
             NodeRef.For(entry.SiteId, entry.SiteVersionIndex).ToString(),
             entry.SiteCode,
@@ -153,15 +165,28 @@ public sealed record KernelStudySiteSummaryResponse(
             NodeRef.For(entry.InstitutionId, entry.InstitutionVersionIndex).ToString(),
             entry.InstitutionCode,
             entry.InstitutionName,
-            entry.Status);
+            governance?.Status ?? entry.Status,
+            governance is not null
+                ? [.. governance.EffectiveVersions.Select(KernelEffectiveVersionResponse.From)]
+                : []);
 }
 
 /// <summary>Request body for <c>POST /api/v1/kernel/studies/{studyRef}/sites</c>.</summary>
 /// <param name="SiteRef">Existing site <c>NodeRef</c> to link to the study.</param>
-/// <param name="SiteCode">Existing site code to link to the study when <paramref name="SiteRef"/> is omitted.</param>
+/// <param name="SiteCode">Site code to link to the study (or register inline when <paramref name="SiteName"/> or <paramref name="Country"/> is supplied).</param>
+/// <param name="SiteName">Optional site display name when registering a new site inline alongside study-site linking.</param>
+/// <param name="Country">Optional ISO 3166-1 alpha-2 country code when registering a new site inline (defaults to <c>US</c>).</param>
+/// <param name="InstitutionRef">Optional owning site institution <c>NodeRef</c> when registering a new site inline (defaults to the study sponsor).</param>
+/// <param name="SiteId">Optional caller-assigned site UUID when registering a new site inline.</param>
+/// <param name="StudySiteId">Optional caller-assigned study-site UUID when linking to the study.</param>
 public sealed record KernelLinkSiteToStudyRequest(
     string? SiteRef = null,
-    string? SiteCode = null);
+    string? SiteCode = null,
+    string? SiteName = null,
+    string? Country = null,
+    string? InstitutionRef = null,
+    Guid? SiteId = null,
+    Guid? StudySiteId = null);
 
 /// <summary>Request body for <c>POST /api/v1/kernel/studies</c>.</summary>
 /// <param name="StudyCode">Unique study code in the tenant.</param>

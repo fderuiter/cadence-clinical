@@ -127,7 +127,7 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
       "/ctms?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
     );
     expect(byKey["workspace:data-collection"]).toBe(
-      "/ecrf?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001&enrollmentId=enr-001"
+      `/studies/CADENCE-101?stage=conduct&site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
     );
     expect(byKey["workspace:support"]).toBe(
       "/tickets?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
@@ -135,6 +135,27 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
     expect(byKey["workspace:knowledge"]).toBe(
       "/knowledge?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
     );
+
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      const demoItems = buildWorkspacePaletteItems({
+        isAuthenticated: true,
+        normalizedRoles: ["cra"],
+        activeStudyCode: "CADENCE-101",
+        activeSiteId: "SITE-101",
+        activeSubjectCode: "017-0001",
+        activeParticipantRef: PARTICIPANT_NODE_REF,
+        activeEnrollmentId: "enr-001",
+      });
+      const demoByKey = Object.fromEntries(
+        demoItems.map((item) => [item.key, item.target.routePath])
+      );
+      expect(demoByKey["workspace:data-collection"]).toBe(
+        "/ecrf?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001&enrollmentId=enr-001"
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
 
     expect(
       buildStudiesWorkspacePath({
