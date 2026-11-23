@@ -368,9 +368,15 @@ public static class QualityGates
                     return RunProcess(ctx.RepoRoot, "dotnet", [.. whitespaceArgs]) == 0;
                 }
 
+                var groups = csFiles.GroupBy(f => FindNearestCsproj(ctx.RepoRoot, f), StringComparer.Ordinal).ToList();
                 if (ctx.PreCommit && reader is { HasAuthoritativeIndex: true })
                 {
-                    var overlappingUnstaged = GitIndexReader.GetOverlappingUnstagedPaths(ctx.RepoRoot, GitIndexReader.IsMsBuildInputPath);
+                    List<string> overlappingUnstaged = groups.Any(g => g.Key is null)
+                        ? GitIndexReader.GetOverlappingUnstagedPaths(ctx.RepoRoot, GitIndexReader.IsMsBuildInputPath)
+                        : GitIndexReader.GetOverlappingUnstagedProjectClosurePaths(
+                            ctx.RepoRoot,
+                            groups.Select(g => g.Key!),
+                            reader);
                     if (overlappingUnstaged.Count > 0)
                     {
                         string sample = string.Join(", ", overlappingUnstaged.Take(5));
@@ -379,8 +385,7 @@ public static class QualityGates
                     }
                 }
 
-                var groups = csFiles.GroupBy(f => FindNearestCsproj(ctx.RepoRoot, f), StringComparer.Ordinal).ToList();
-                if (groups.Count >= 3 && File.Exists(Path.Combine(ctx.RepoRoot, "Cadence.sln")))
+                if (!ctx.PreCommit && groups.Count >= 3 && File.Exists(Path.Combine(ctx.RepoRoot, "Cadence.sln")))
                 {
                     var slnArgs = new List<string> { "format", subcommand, "Cadence.sln", "--verify-no-changes", "--no-restore", "--include" };
                     slnArgs.AddRange(csFiles);

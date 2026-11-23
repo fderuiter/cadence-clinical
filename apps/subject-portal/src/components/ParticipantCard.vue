@@ -7,26 +7,6 @@
         displaySubjectId
       }}</span>
     </div>
-    <div class="info-row">
-      <span class="info-lbl">Status:</span>
-      <span id="session-auth-status" class="info-val" :class="statusClass">
-        {{ statusLabel }}
-      </span>
-    </div>
-    <div v-if="isAuthenticated || isDemo" class="info-row">
-      <span class="info-lbl">{{ isDemo ? "Demo Wallet:" : "Wallet:" }}</span>
-      <span
-        id="session-wallet-balance"
-        class="info-val"
-        :aria-busy="
-          wallet.walletLoading && wallet.walletBalance === null
-            ? 'true'
-            : undefined
-        "
-      >
-        {{ formattedSessionWalletBalance }}
-      </span>
-    </div>
     <div
       v-if="sessionStore.authError"
       id="session-auth-error"
@@ -44,18 +24,8 @@
       Your session has expired. Sign in again to continue — your local drafts
       are preserved on this device.
     </div>
-    <div class="info-row participant-session-actions">
+    <div v-if="!isSignedInOrDemo" class="info-row participant-session-actions">
       <button
-        v-if="isSignedInOrDemo"
-        id="btn-logout"
-        type="button"
-        class="btn btn-secondary participant-action-btn"
-        @click="handleLogout"
-      >
-        {{ isDemo ? "Reset Demo Session" : "Logout" }}
-      </button>
-      <button
-        v-else
         id="btn-login"
         type="button"
         class="btn btn-primary participant-action-btn"
@@ -65,12 +35,48 @@
         {{ isSessionExpired ? "Sign In to Continue" : "Sign In" }}
       </button>
     </div>
-    <SiteContactLinks
-      id="participant-site-contacts"
-      compact
-      heading="Site Support"
-      region-label="Participant card study site coordinator contacts"
-    />
+    <div
+      id="participant-secondary-details"
+      class="participant-secondary-details"
+      :class="{ 'is-mobile-expanded': mobileExpanded }"
+    >
+      <div class="info-row">
+        <span class="info-lbl">Status:</span>
+        <span id="session-auth-status" class="info-val" :class="statusClass">
+          {{ statusLabel }}
+        </span>
+      </div>
+      <div v-if="isAuthenticated || isDemo" class="info-row">
+        <span class="info-lbl">{{ isDemo ? "Demo Wallet:" : "Wallet:" }}</span>
+        <span
+          id="session-wallet-balance"
+          class="info-val"
+          :aria-busy="
+            wallet.walletLoading && wallet.walletBalance === null
+              ? 'true'
+              : undefined
+          "
+        >
+          {{ formattedSessionWalletBalance }}
+        </span>
+      </div>
+      <div v-if="isSignedInOrDemo" class="info-row participant-session-actions">
+        <button
+          id="btn-logout"
+          type="button"
+          class="btn btn-secondary participant-action-btn"
+          @click="handleLogout"
+        >
+          {{ isDemo ? "Reset Demo Session" : "Logout" }}
+        </button>
+      </div>
+      <SiteContactLinks
+        id="participant-site-contacts"
+        compact
+        heading="Site Support"
+        region-label="Participant card study site coordinator contacts"
+      />
+    </div>
     <SignOutConfirmModal
       id="portal-signout-confirm-modal"
       :open="isSignOutConfirmOpen"
@@ -103,6 +109,13 @@ import SiteContactLinks from "./SiteContactLinks.vue";
 
 const sessionStore = useSessionStore();
 const wallet = useWalletStore();
+
+defineProps({
+  mobileExpanded: {
+    type: Boolean,
+    default: false,
+  },
+});
 
 const formattedSessionWalletBalance = computed(() => {
   if (wallet.walletLoading && wallet.walletBalance === null) {

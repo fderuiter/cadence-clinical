@@ -67,40 +67,18 @@
         </div>
 
         <!-- Drag & Drop Dropzone -->
-        <div
+        <ClinicalDropzone
           class="dropzone"
-          :class="{ 'is-dragging': isDragging }"
-          role="button"
-          tabindex="0"
-          aria-label="Choose files to upload"
-          @dragover.prevent="isDragging = true"
-          @dragleave.prevent="isDragging = false"
-          @drop.prevent="handleDrop"
-          @click="triggerFileInput"
-          @keydown.enter.prevent="triggerFileInput"
-          @keydown.space.prevent="triggerFileInput"
-        >
-          <input
-            ref="fileInputRef"
-            aria-label="Files to upload"
-            type="file"
-            multiple
-            accept=".pdf,.doc,.docx,.txt"
-            style="display: none"
-            @change="handleFileSelect"
-          />
-          <div class="dropzone-content">
-            <span class="dropzone-icon">📁</span>
-            <p class="dropzone-title">
-              Drop files here or <span class="browse-link">browse</span> to
-              upload
-            </p>
-            <p class="dropzone-hint">
-              Supports PDF, DOCX, TXT • Max 50 files • 100 MB per file • 500 MB
-              per batch
-            </p>
-          </div>
-        </div>
+          multiple
+          accept=".pdf,.doc,.docx,.txt"
+          :disabled="isProcessing"
+          icon="📁"
+          prompt-text="Drop files here or browse to upload"
+          hint-text="Supports PDF, DOCX, TXT • Max 50 files • 100 MB per file • 500 MB per batch"
+          button-label="Browse files to upload"
+          input-aria-label="Files to upload"
+          @files-selected="addFilesToQueue"
+        />
 
         <!-- 21 CFR Part 11 Change Justification -->
         <div class="reason-section">
@@ -236,24 +214,32 @@
                   <td>
                     <button
                       v-if="item.report"
+                      type="button"
                       class="btn btn-secondary btn-xs btn-inspect-item"
                       style="font-size: 10px; padding: 2px 6px"
                       @click="inspectItem(item)"
                     >
-                      📋 Inspect
+                      <span aria-hidden="true">📋 </span>Inspect<span
+                        class="sr-only"
+                      >
+                        {{ item.file.name }}</span
+                      >
                     </button>
-                    <button
+                    <ClinicalIconButton
                       v-if="!isProcessing && item.status === 'PENDING'"
                       class="btn btn-danger btn-xs btn-remove-item"
                       style="
+                        min-width: 24px;
+                        min-height: 24px;
                         font-size: 10px;
                         padding: 2px 6px;
                         margin-left: 4px;
                       "
+                      :label="`Remove ${item.file.name} from upload queue`"
                       @click="removeItem(index)"
                     >
                       ✕
-                    </button>
+                    </ClinicalIconButton>
                   </td>
                 </tr>
               </tbody>
@@ -389,7 +375,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalDropzone, ClinicalIconButton, useFocusTrap } from "ui";
 import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";
 import { useToastStore } from "../../stores/toasts.js";
@@ -431,8 +417,6 @@ const canStage = computed(
 
 const drawerRef = ref(null);
 const inspectionCardRef = ref(null);
-const fileInputRef = ref(null);
-const isDragging = ref(false);
 const queue = ref([]);
 const reasonForChange = ref(
   "Site regulatory documents batch ingestion for CRA Quality Control"
@@ -450,24 +434,6 @@ const overallProgress = computed(() => {
   if (queue.value.length === 0) return 0;
   return Math.round((completedCount.value / queue.value.length) * 100);
 });
-
-function triggerFileInput() {
-  if (fileInputRef.value) {
-    fileInputRef.value.click();
-  }
-}
-
-function handleFileSelect(event) {
-  const files = Array.from(event.target.files || []);
-  addFilesToQueue(files);
-  if (event.target) event.target.value = "";
-}
-
-function handleDrop(event) {
-  isDragging.value = false;
-  const files = Array.from(event.dataTransfer?.files || []);
-  addFilesToQueue(files);
-}
 
 function addFilesToQueue(files) {
   batchError.value = "";

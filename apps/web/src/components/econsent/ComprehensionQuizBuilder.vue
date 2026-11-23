@@ -121,15 +121,15 @@
                 class="form-control option-input"
                 @input="updateTranslation(q)"
               />
-              <button
-                type="button"
+              <ClinicalIconButton
                 class="btn-remove-opt"
                 :disabled="q.options.length <= 2"
                 title="Remove Option"
+                :label="`Remove option ${optIndex + 1} for question ${qIndex + 1}`"
                 @click="removeOption(qIndex, optIndex)"
               >
                 ✕
-              </button>
+              </ClinicalIconButton>
             </div>
 
             <button
@@ -338,6 +338,7 @@
 
 <script setup>
 import { ref, reactive } from "vue";
+import { ClinicalIconButton } from "ui";
 import { useEconsentStore } from "../../stores/econsent.js";
 import QuizTemplateDrawer from "./QuizTemplateDrawer.vue";
 
