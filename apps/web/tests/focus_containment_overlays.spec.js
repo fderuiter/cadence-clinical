@@ -476,4 +476,286 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
     expect(document.body.querySelectorAll("main").length).toBe(0);
     expect(document.body.querySelectorAll('[role="dialog"]').length).toBe(2);
   });
+
+  it("traps focus in DocumentManagerView ClinicalDrawer, locks dismissal during QC review, keeps ToastHost live alerts active, and closes stacked PdfPreviewModal LIFO on Escape", async () => {
+    const DocumentManagerView = (
+      await import("../src/views/DocumentManagerView.vue")
+    ).default;
+    const { useAuthStore } = await import("../src/stores/auth.js");
+    const { useEtmfStore } = await import("../src/stores/etmf.js");
+    const { etmfService } = await import("../src/api/etmf.js");
+    const { signInAs } = await import("./helpers/signIn.js");
+
+    signInAs(useAuthStore(), ["CRA"], { username: "cra_reviewer" });
+    vi.spyOn(etmfService, "getQcQueue").mockResolvedValue([]);
+    vi.spyOn(etmfService, "getDocuments").mockResolvedValue([]);
+
+    const toastMount = document.createElement("div");
+    document.body.appendChild(toastMount);
+    const toastWrapper = trackWrapper(
+      mount(ToastHost, {
+        attachTo: toastMount,
+        global: { plugins: [pinia] },
+      })
+    );
+    const toastStore = useToastStore();
+    toastStore.push({
+      tone: "info",
+      title: "eTMF Sync Active",
+      message: "Zone 1 binder synchronized",
+      timeoutMs: 0,
+    });
+
+    const viewMount = document.createElement("div");
+    document.body.appendChild(viewMount);
+
+    const etmfStore = useEtmfStore();
+    const docRecord = {
+      id: "DOC-501",
+      study_id: "STUDY-USDM-001",
+      zone: 1,
+      section: "01.01",
+      artifact_code: "01.01.01",
+      artifact_type: "Clinical Trial Protocol",
+      filename: "protocol_v2.pdf",
+      mime_type: "application/pdf",
+      created_at: "2026-10-01T12:00:00Z",
+      created_by: "cra_reviewer",
+      version_index: 2,
+      status: "TECHNICAL_QC",
+      reason_for_change: "Amendment upload",
+    };
+    etmfStore.documentsList = [docRecord];
+
+    const wrapper = trackWrapper(
+      mount(DocumentManagerView, {
+        attachTo: viewMount,
+        props: { studyId: "STUDY-USDM-001" },
+        global: { plugins: [pinia, router] },
+      })
+    );
+    await nextTick();
+    await nextTick();
+
+    // Open Document Metadata ClinicalDrawer
+    wrapper.vm.handleInspectDocument(docRecord);
+    await nextTick();
+    await nextTick();
+
+    const drawerDialog = wrapper.find(".metadata-drawer[role='dialog']");
+    expect(drawerDialog.exists()).toBe(true);
+    expect(drawerDialog.attributes("aria-modal")).toBe("true");
+
+    // ToastHost remains non-inert and audible while ClinicalDrawer is open
+    const toastHostEl = toastWrapper.find(".toast-host").element;
+    expect(toastHostEl.hasAttribute("inert")).toBe(false);
+    expect(toastHostEl.getAttribute("aria-hidden")).toBeNull();
+    expect(toastWrapper.find('[role="alert"]').text()).toContain(
+      "eTMF Sync Active"
+    );
+
+    // Lock dismissal while reviewingQc is active
+    wrapper.vm.reviewingQc = true;
+    await nextTick();
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await nextTick();
+    expect(wrapper.vm.inspectedDoc).not.toBeNull();
+
+    wrapper.vm.reviewingQc = false;
+    await nextTick();
+
+    // Open stacked PdfPreviewModal from inside ClinicalDrawer
+    const previewBtn = wrapper.find(".btn-preview-from-drawer");
+    previewBtn.element.focus();
+    await previewBtn.trigger("click");
+    await nextTick();
+    await nextTick();
+
+    expect(wrapper.vm.selectedDoc).not.toBeNull();
+    expect(wrapper.vm.inspectedDoc).not.toBeNull();
+
+    // First Escape closes ONLY top PdfPreviewModal while ClinicalDrawer stays open
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await nextTick();
+    await nextTick();
+    expect(wrapper.vm.selectedDoc).toBeNull();
+    expect(wrapper.vm.inspectedDoc).not.toBeNull();
+
+    // Second Escape closes ClinicalDrawer
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await nextTick();
+    await nextTick();
+    expect(wrapper.vm.inspectedDoc).toBeNull();
+  });
+
+  it("traps focus, locks dismissal during submission, and restores trigger focus in ProtocolTrainingConsole modals", async () => {
+    const ProtocolTrainingConsole = (
+      await import("../src/components/clinical/ProtocolTrainingConsole.vue")
+    ).default;
+    const { trainingApi } = await import("../src/api/training.js");
+    const { useAuthStore } = await import("../src/stores/auth.js");
+    const { signInAs } = await import("./helpers/signIn.js");
+
+    signInAs(useAuthStore(), ["Data Manager", "PI", "Sponsor Admin"], {
+      username: "pi_lead_01",
+    });
+    vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([]);
+    vi.spyOn(trainingApi, "listCurricula").mockResolvedValue([
+      {
+        id: "curr-1",
+        title: "Protocol V3.0 Curriculum",
+        protocol_version: "3.0",
+        study_id: "CARDIO-2026",
+        is_active: true,
+      },
+    ]);
+    vi.spyOn(trainingApi, "getCurriculum").mockResolvedValue({
+      id: "curr-1",
+      title: "Protocol V3.0 Curriculum",
+      protocol_version: "3.0",
+      study_id: "CARDIO-2026",
+      is_active: true,
+      modules: [],
+    });
+    vi.spyOn(trainingApi, "listDelegations").mockResolvedValue([
+      {
+        id: "del-01",
+        study_id: "CARDIO-2026",
+        site_id: "SITE-101",
+        staff_user_id: "usr-01",
+        staff_name: "Marcus Vance",
+        role: "Sub-Investigator",
+        task_code: "INFORMED_CONSENT",
+        duties: "Informed Consent",
+        status: "PENDING",
+        signed_off: false,
+      },
+    ]);
+
+    const mountEl = document.createElement("div");
+    document.body.appendChild(mountEl);
+    const wrapper = trackWrapper(
+      mount(ProtocolTrainingConsole, {
+        attachTo: mountEl,
+        props: { studyId: "CARDIO-2026" },
+        global: { plugins: [pinia, router] },
+      })
+    );
+    await nextTick();
+    await nextTick();
+    await new Promise((r) => setTimeout(r, 10));
+
+    // Switch to Batch Assignments tab, select site, focus trigger button, and open Batch Modal
+    const batchTab = wrapper
+      .findAll(".tab-btn")
+      .find((b) => b.text().includes("Batch Assignments"));
+    await batchTab.trigger("click");
+    await nextTick();
+
+    await wrapper
+      .find(".batch-filter-grid input[value='SITE-101']")
+      .setValue(true);
+    await nextTick();
+
+    const batchTriggerBtn = wrapper.find(".batch-preview-bar button");
+    batchTriggerBtn.element.focus();
+    expect(document.activeElement).toBe(batchTriggerBtn.element);
+
+    await batchTriggerBtn.trigger("click");
+    await nextTick();
+    await nextTick();
+
+    const batchDialog = wrapper.find('[role="dialog"]');
+    expect(batchDialog.exists()).toBe(true);
+    expect(batchDialog.attributes("aria-modal")).toBe("true");
+
+    // Lock dismissal while submittingBatch is true
+    wrapper.vm.submittingBatch = true;
+    await nextTick();
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await nextTick();
+    expect(wrapper.vm.showBatchModal).toBe(true);
+
+    // Unlock and press Escape -> closes modal and restores focus to batchTriggerBtn
+    wrapper.vm.submittingBatch = false;
+    await nextTick();
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await nextTick();
+    await nextTick();
+    expect(wrapper.vm.showBatchModal).toBe(false);
+    expect(document.activeElement).toBe(batchTriggerBtn.element);
+
+    // Switch to Delegation Log tab and verify Bulk Delegation Sign-Off Modal
+    const delTab = wrapper
+      .findAll(".tab-btn")
+      .find((b) => b.text().includes("Delegation"));
+    await delTab.trigger("click");
+    await nextTick();
+
+    await wrapper.find("thead input[type='checkbox']").setValue(true);
+    await nextTick();
+
+    const signTriggerBtn = wrapper.find(".delegation-actions-bar button");
+    signTriggerBtn.element.focus();
+    await signTriggerBtn.trigger("click");
+    await nextTick();
+    await nextTick();
+    expect(wrapper.vm.showBulkSignModal).toBe(true);
+
+    wrapper.vm.submittingBulkSign = true;
+    await nextTick();
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await nextTick();
+    expect(wrapper.vm.showBulkSignModal).toBe(true);
+
+    wrapper.vm.submittingBulkSign = false;
+    await nextTick();
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await nextTick();
+    await nextTick();
+    expect(wrapper.vm.showBulkSignModal).toBe(false);
+    expect(document.activeElement).toBe(signTriggerBtn.element);
+  });
 });

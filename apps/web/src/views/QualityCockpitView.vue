@@ -853,318 +853,320 @@
     <!-- Modals -->
 
     <!-- Modal 1: 5-Whys & 6M Ishikawa RCA Visualizer Modal -->
-    <div v-if="isRcaModalOpen" class="modal-backdrop">
-      <div class="modal-content modal-lg">
-        <div class="modal-header">
-          <h3 class="modal-title">
-            Multi-Methodology Root Cause Analysis (RCA)
-          </h3>
-          <button class="modal-close" @click="isRcaModalOpen = false">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="rca-deviation-summary">
-            <h4>Deviation: {{ activeRcaDeviation?.title }}</h4>
-            <p>{{ activeRcaDeviation?.description }}</p>
-          </div>
-
-          <div class="rca-method-switcher">
-            <button
-              class="btn btn-sm"
-              :class="
-                rcaMethod === 'FIVE_WHYS' ? 'btn-primary' : 'btn-secondary'
-              "
-              @click="rcaMethod = 'FIVE_WHYS'"
-            >
-              5-Whys Causal Tree
-            </button>
-            <button
-              class="btn btn-sm"
-              :class="
-                rcaMethod === 'ISHIKAWA' ? 'btn-primary' : 'btn-secondary'
-              "
-              @click="rcaMethod = 'ISHIKAWA'"
-            >
-              6M Ishikawa Fishbone Diagram
-            </button>
-          </div>
-
-          <!-- 5-Whys Tree Visualizer -->
-          <div v-if="rcaMethod === 'FIVE_WHYS'" class="five-whys-container">
-            <div class="why-step">
-              <div class="why-badge">Why 1</div>
-              <input
-                v-model="rcaForm.five_whys.why_1"
-                class="form-input"
-                placeholder="Primary direct symptom / immediate cause"
-              />
-            </div>
-            <div class="why-step">
-              <div class="why-badge">Why 2</div>
-              <input
-                v-model="rcaForm.five_whys.why_2"
-                class="form-input"
-                placeholder="Second causal layer"
-              />
-            </div>
-            <div class="why-step">
-              <div class="why-badge">Why 3</div>
-              <input
-                v-model="rcaForm.five_whys.why_3"
-                class="form-input"
-                placeholder="Third causal layer"
-              />
-            </div>
-            <div class="why-step">
-              <div class="why-badge">Why 4</div>
-              <input
-                v-model="rcaForm.five_whys.why_4"
-                class="form-input"
-                placeholder="Fourth causal layer"
-              />
-            </div>
-            <div class="why-step">
-              <div class="why-badge">Why 5</div>
-              <input
-                v-model="rcaForm.five_whys.why_5"
-                class="form-input"
-                placeholder="Root system / process failure"
-              />
-            </div>
-          </div>
-
-          <!-- 6M Ishikawa Fishbone Diagram -->
-          <div v-if="rcaMethod === 'ISHIKAWA'" class="fishbone-container">
-            <div class="fishbone-grid">
-              <div class="fishbone-branch">
-                <h5>👨 Man (Personnel / Human Factor)</h5>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <textarea
-                  v-model="rcaForm.fishbone.man"
-                  class="form-textarea"
-                  placeholder="Staffing, training gaps, fatigue..."
-                />
-              </div>
-              <div class="fishbone-branch">
-                <h5>⚙️ Machine (Equipment / Systems)</h5>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <textarea
-                  v-model="rcaForm.fishbone.machine"
-                  class="form-textarea"
-                  placeholder="Hardware faults, software bugs, EDC validation..."
-                />
-              </div>
-              <div class="fishbone-branch">
-                <h5>📦 Material (Investigational Product / Supplies)</h5>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <textarea
-                  v-model="rcaForm.fishbone.material"
-                  class="form-textarea"
-                  placeholder="IP batch quality, temperature logs, lab kits..."
-                />
-              </div>
-              <div class="fishbone-branch">
-                <h5>📜 Method (SOPs / Protocol Procedures)</h5>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <textarea
-                  v-model="rcaForm.fishbone.method"
-                  class="form-textarea"
-                  placeholder="Ambiguous study protocol, outdated SOPs..."
-                />
-              </div>
-              <div class="fishbone-branch">
-                <h5>📏 Measurement (Calibration / Metrics)</h5>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <textarea
-                  v-model="rcaForm.fishbone.measurement"
-                  class="form-textarea"
-                  placeholder="Thermometer calibration, lab precision..."
-                />
-              </div>
-              <div class="fishbone-branch">
-                <h5>🌍 Milieu (Environment / Clinic Context)</h5>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <textarea
-                  v-model="rcaForm.fishbone.milieu"
-                  class="form-textarea"
-                  placeholder="Clinic layout, weather, regional transport..."
-                />
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group mt-3">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Root Cause Summary Statement:</label>
-            <input
-              v-model="rcaForm.root_cause_summary"
-              class="form-input"
-              placeholder="Synthesized root cause finding"
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="isRcaModalOpen = false">
-            Cancel
-          </button>
-          <button class="btn btn-primary" @click="saveRcaInvestigation">
-            Save RCA Findings
-          </button>
-        </div>
+    <ClinicalModal
+      v-model="isRcaModalOpen"
+      :teleport="false"
+      size="lg"
+      dialog-class="modal-content modal-lg"
+      title="Multi-Methodology Root Cause Analysis (RCA)"
+    >
+      <div class="rca-deviation-summary">
+        <h4>Deviation: {{ activeRcaDeviation?.title }}</h4>
+        <p>{{ activeRcaDeviation?.description }}</p>
       </div>
-    </div>
 
-    <!-- Modal 2: 1-Click Inspection Readiness Dossier Modal -->
-    <div v-if="isDossierModalOpen" class="modal-backdrop">
-      <div class="modal-content modal-lg">
-        <div class="modal-header">
-          <h3 class="modal-title">
-            GxP Inspection Readiness Dossier &amp; Merkle Seal
-          </h3>
-          <button class="modal-close" @click="isDossierModalOpen = false">
-            ✕
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="dossier-seal-banner">
-            <div class="seal-icon">🔒</div>
-            <div>
-              <h4>Cryptographic Merkle SHA-256 Tamper Seal</h4>
-              <code class="merkle-hash">{{
-                dossierData?.cryptographic_tamper_seal || emptySha256Seal
-              }}</code>
-              <p class="seal-desc">
-                This dossier represents a verified, immutable state snapshot
-                conforming to 21 CFR Part 11 and ICH E6(R3).
-              </p>
-            </div>
-          </div>
-
-          <div class="dossier-stats-grid mt-3">
-            <div class="dossier-stat-item">
-              <span class="dossier-stat-num">{{
-                dossierData?.summary_statistics?.total_deviations ||
-                deviations.length
-              }}</span>
-              <span class="dossier-stat-label">Deviations Logged</span>
-            </div>
-            <div class="dossier-stat-item">
-              <span class="dossier-stat-num">{{
-                dossierData?.summary_statistics?.total_capas || capas.length
-              }}</span>
-              <span class="dossier-stat-label">CAPA Records</span>
-            </div>
-            <div class="dossier-stat-item">
-              <span class="dossier-stat-num">{{
-                dossierData?.summary_statistics?.total_audits || audits.length
-              }}</span>
-              <span class="dossier-stat-label">Clinical Audits</span>
-            </div>
-            <div class="dossier-stat-item">
-              <span class="dossier-stat-num">{{
-                dossierData?.summary_statistics?.total_serious_breaches ||
-                seriousBreaches.length
-              }}</span>
-              <span class="dossier-stat-label">Serious Breaches</span>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="isDossierModalOpen = false">
-            Close
-          </button>
-          <button class="btn btn-primary" @click="downloadDossierJson">
-            Download JSON Dossier
-          </button>
-        </div>
+      <div class="rca-method-switcher">
+        <button
+          type="button"
+          class="btn btn-sm"
+          :class="rcaMethod === 'FIVE_WHYS' ? 'btn-primary' : 'btn-secondary'"
+          @click="rcaMethod = 'FIVE_WHYS'"
+        >
+          5-Whys Causal Tree
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm"
+          :class="rcaMethod === 'ISHIKAWA' ? 'btn-primary' : 'btn-secondary'"
+          @click="rcaMethod = 'ISHIKAWA'"
+        >
+          6M Ishikawa Fishbone Diagram
+        </button>
       </div>
-    </div>
 
-    <!-- Modal 3: CSR Section 9.6 Narrative Viewer -->
-    <div v-if="isCsrNarrativeModalOpen" class="modal-backdrop">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3 class="modal-title">
-            CSR Section 9.6 Quality Tolerance Limit Summary
-          </h3>
-          <button class="modal-close" @click="isCsrNarrativeModalOpen = false">
-            ✕
-          </button>
-        </div>
-        <div class="modal-body">
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-          <textarea
-            readonly
-            class="form-textarea"
-            rows="10"
-            :value="activeCsrNarrative"
+      <!-- 5-Whys Tree Visualizer -->
+      <div v-if="rcaMethod === 'FIVE_WHYS'" class="five-whys-container">
+        <div class="why-step">
+          <div class="why-badge">Why 1</div>
+          <input
+            v-model="rcaForm.five_whys.why_1"
+            class="form-input"
+            placeholder="Primary direct symptom / immediate cause"
           />
         </div>
-        <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            @click="isCsrNarrativeModalOpen = false"
-          >
-            Close
-          </button>
-          <button class="btn btn-primary" @click="copyCsrText">
-            Copy Narrative to Clipboard
-          </button>
+        <div class="why-step">
+          <div class="why-badge">Why 2</div>
+          <input
+            v-model="rcaForm.five_whys.why_2"
+            class="form-input"
+            placeholder="Second causal layer"
+          />
+        </div>
+        <div class="why-step">
+          <div class="why-badge">Why 3</div>
+          <input
+            v-model="rcaForm.five_whys.why_3"
+            class="form-input"
+            placeholder="Third causal layer"
+          />
+        </div>
+        <div class="why-step">
+          <div class="why-badge">Why 4</div>
+          <input
+            v-model="rcaForm.five_whys.why_4"
+            class="form-input"
+            placeholder="Fourth causal layer"
+          />
+        </div>
+        <div class="why-step">
+          <div class="why-badge">Why 5</div>
+          <input
+            v-model="rcaForm.five_whys.why_5"
+            class="form-input"
+            placeholder="Root system / process failure"
+          />
         </div>
       </div>
-    </div>
+
+      <!-- 6M Ishikawa Fishbone Diagram -->
+      <div v-if="rcaMethod === 'ISHIKAWA'" class="fishbone-container">
+        <div class="fishbone-grid">
+          <div class="fishbone-branch">
+            <h5>👨 Man (Personnel / Human Factor)</h5>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <textarea
+              v-model="rcaForm.fishbone.man"
+              class="form-textarea"
+              placeholder="Staffing, training gaps, fatigue..."
+            />
+          </div>
+          <div class="fishbone-branch">
+            <h5>⚙️ Machine (Equipment / Systems)</h5>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <textarea
+              v-model="rcaForm.fishbone.machine"
+              class="form-textarea"
+              placeholder="Hardware faults, software bugs, EDC validation..."
+            />
+          </div>
+          <div class="fishbone-branch">
+            <h5>📦 Material (Investigational Product / Supplies)</h5>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <textarea
+              v-model="rcaForm.fishbone.material"
+              class="form-textarea"
+              placeholder="IP batch quality, temperature logs, lab kits..."
+            />
+          </div>
+          <div class="fishbone-branch">
+            <h5>📜 Method (SOPs / Protocol Procedures)</h5>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <textarea
+              v-model="rcaForm.fishbone.method"
+              class="form-textarea"
+              placeholder="Ambiguous study protocol, outdated SOPs..."
+            />
+          </div>
+          <div class="fishbone-branch">
+            <h5>📏 Measurement (Calibration / Metrics)</h5>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <textarea
+              v-model="rcaForm.fishbone.measurement"
+              class="form-textarea"
+              placeholder="Thermometer calibration, lab precision..."
+            />
+          </div>
+          <div class="fishbone-branch">
+            <h5>🌍 Milieu (Environment / Clinic Context)</h5>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <textarea
+              v-model="rcaForm.fishbone.milieu"
+              class="form-textarea"
+              placeholder="Clinic layout, weather, regional transport..."
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group mt-3">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label">Root Cause Summary Statement:</label>
+        <input
+          v-model="rcaForm.root_cause_summary"
+          class="form-input"
+          placeholder="Synthesized root cause finding"
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="isRcaModalOpen = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          @click="saveRcaInvestigation"
+        >
+          Save RCA Findings
+        </button>
+      </template>
+    </ClinicalModal>
+
+    <!-- Modal 2: 1-Click Inspection Readiness Dossier Modal -->
+    <ClinicalModal
+      v-model="isDossierModalOpen"
+      :teleport="false"
+      size="lg"
+      dialog-class="modal-content modal-lg"
+      title="GxP Inspection Readiness Dossier & Merkle Seal"
+    >
+      <div class="dossier-seal-banner">
+        <div class="seal-icon">🔒</div>
+        <div>
+          <h4>Cryptographic Merkle SHA-256 Tamper Seal</h4>
+          <code class="merkle-hash">{{
+            dossierData?.cryptographic_tamper_seal || emptySha256Seal
+          }}</code>
+          <p class="seal-desc">
+            This dossier represents a verified, immutable state snapshot
+            conforming to 21 CFR Part 11 and ICH E6(R3).
+          </p>
+        </div>
+      </div>
+
+      <div class="dossier-stats-grid mt-3">
+        <div class="dossier-stat-item">
+          <span class="dossier-stat-num">{{
+            dossierData?.summary_statistics?.total_deviations ||
+            deviations.length
+          }}</span>
+          <span class="dossier-stat-label">Deviations Logged</span>
+        </div>
+        <div class="dossier-stat-item">
+          <span class="dossier-stat-num">{{
+            dossierData?.summary_statistics?.total_capas || capas.length
+          }}</span>
+          <span class="dossier-stat-label">CAPA Records</span>
+        </div>
+        <div class="dossier-stat-item">
+          <span class="dossier-stat-num">{{
+            dossierData?.summary_statistics?.total_audits || audits.length
+          }}</span>
+          <span class="dossier-stat-label">Clinical Audits</span>
+        </div>
+        <div class="dossier-stat-item">
+          <span class="dossier-stat-num">{{
+            dossierData?.summary_statistics?.total_serious_breaches ||
+            seriousBreaches.length
+          }}</span>
+          <span class="dossier-stat-label">Serious Breaches</span>
+        </div>
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="isDossierModalOpen = false"
+        >
+          Close
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          @click="downloadDossierJson"
+        >
+          Download JSON Dossier
+        </button>
+      </template>
+    </ClinicalModal>
+
+    <!-- Modal 3: CSR Section 9.6 Narrative Viewer -->
+    <ClinicalModal
+      v-model="isCsrNarrativeModalOpen"
+      :teleport="false"
+      dialog-class="modal-content"
+      title="CSR Section 9.6 Quality Tolerance Limit Summary"
+    >
+      <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+      <textarea
+        readonly
+        class="form-textarea"
+        rows="10"
+        :value="activeCsrNarrative"
+      />
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="isCsrNarrativeModalOpen = false"
+        >
+          Close
+        </button>
+        <button type="button" class="btn btn-primary" @click="copyCsrText">
+          Copy Narrative to Clipboard
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- Modal 4: 1-Click Promote Finding to CAPA -->
-    <div v-if="isPromoteModalOpen" class="modal-backdrop">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3 class="modal-title">1-Click Promote Audit Finding to CAPA</h3>
-          <button class="modal-close" @click="isPromoteModalOpen = false">
-            ✕
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="finding-quote">
-            <strong
-              >Finding {{ activeFindingToPromote?.finding_number }}:</strong
-            >
-            {{ activeFindingToPromote?.condition }}
-          </div>
-          <div class="form-group mt-2">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Action Plan:</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <textarea
-              v-model="promoteForm.action_plan"
-              class="form-textarea"
-              placeholder="Corrective actions to remediate finding..."
-            />
-          </div>
-          <div class="form-group mt-2">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Preventive Measures:</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <textarea
-              v-model="promoteForm.preventive_measures"
-              class="form-textarea"
-              placeholder="Systemic prevention measures..."
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="isPromoteModalOpen = false">
-            Cancel
-          </button>
-          <button class="btn btn-primary" @click="executePromoteFinding">
-            Generate Linked CAPA
-          </button>
-        </div>
+    <ClinicalModal
+      v-model="isPromoteModalOpen"
+      :teleport="false"
+      dialog-class="modal-content"
+      title="1-Click Promote Audit Finding to CAPA"
+    >
+      <div class="finding-quote">
+        <strong>Finding {{ activeFindingToPromote?.finding_number }}:</strong>
+        {{ activeFindingToPromote?.condition }}
       </div>
-    </div>
+      <div class="form-group mt-2">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label">Action Plan:</label>
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <textarea
+          v-model="promoteForm.action_plan"
+          class="form-textarea"
+          placeholder="Corrective actions to remediate finding..."
+        />
+      </div>
+      <div class="form-group mt-2">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label">Preventive Measures:</label>
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <textarea
+          v-model="promoteForm.preventive_measures"
+          class="form-textarea"
+          placeholder="Systemic prevention measures..."
+        />
+      </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="isPromoteModalOpen = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          @click="executePromoteFinding"
+        >
+          Generate Linked CAPA
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { ClinicalModal } from "ui";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import RactMatrixViewer from "@/components/quality/RactMatrixViewer.vue";

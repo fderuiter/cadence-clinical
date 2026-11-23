@@ -4,7 +4,9 @@ import { renderToString } from "vue/server-renderer";
 import {
   AuditLogViewer,
   ClinicalDataTable,
+  ClinicalDrawer,
   ClinicalFieldLayout,
+  ClinicalModal,
   EmptyState,
   MediaPlayer,
   PersonaSwitcher,
@@ -392,6 +394,106 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       );
       expect(fieldsetHtml).toContain("<fieldset");
       expect(fieldsetHtml).toContain("<legend");
+    });
+  });
+
+  describe("ClinicalModal & ClinicalDrawer", () => {
+    it("renders ClinicalModal with modelValue/open/isOpen aliases, overlayId, ARIA attributes, and locks dismissal when dismissible=false", async () => {
+      const html = await renderToString(
+        createSSRApp({
+          render: () =>
+            h(
+              ClinicalModal,
+              {
+                open: true,
+                teleport: false,
+                overlayId: "enroll-subject-modal",
+                title: "Enroll Subject",
+                showFooter: false,
+              },
+              {
+                default: () => h("p", "Enrollment payload"),
+              }
+            ),
+        })
+      );
+      expect(html).toContain('id="enroll-subject-modal"');
+      expect(html).toContain('role="dialog"');
+      expect(html).toContain('aria-modal="true"');
+      expect(html).toContain("Enroll Subject");
+      expect(html).toContain("Enrollment payload");
+      expect(html).not.toContain("modal-footer");
+
+      const emit = vi.fn();
+      const { state } = await mountSetupSSR(
+        ClinicalModal,
+        {
+          isOpen: true,
+          teleport: false,
+          dismissible: false,
+          ariaLabel: "Locked Signing Dialog",
+        },
+        emit
+      );
+      expect(state.modalOpen.value).toBe(true);
+      state.closeModal();
+      expect(emit).not.toHaveBeenCalled();
+
+      const unlockedEmit = vi.fn();
+      const { state: unlockedState } = await mountSetupSSR(
+        ClinicalModal,
+        {
+          isOpen: true,
+          teleport: false,
+          dismissible: true,
+          ariaLabel: "Unlocked Dialog",
+        },
+        unlockedEmit
+      );
+      unlockedState.closeModal();
+      expect(unlockedEmit).toHaveBeenCalledWith("update:modelValue", false);
+      expect(unlockedEmit).toHaveBeenCalledWith("update:isOpen", false);
+      expect(unlockedEmit).toHaveBeenCalledWith("update:open", false);
+      expect(unlockedEmit).toHaveBeenCalledWith("close");
+    });
+
+    it("renders ClinicalDrawer inline with accessible dialog role and locks dismissal when dismissible=false", async () => {
+      const html = await renderToString(
+        createSSRApp({
+          render: () =>
+            h(
+              ClinicalDrawer,
+              {
+                isOpen: true,
+                teleport: false,
+                overlayId: "metadata-drawer-overlay",
+                title: "Document Metadata",
+              },
+              {
+                default: () => h("div", "DIA Taxonomy"),
+              }
+            ),
+        })
+      );
+      expect(html).toContain('id="metadata-drawer-overlay"');
+      expect(html).toContain('role="dialog"');
+      expect(html).toContain('aria-modal="true"');
+      expect(html).toContain("Document Metadata");
+      expect(html).toContain("DIA Taxonomy");
+
+      const emit = vi.fn();
+      const { state } = await mountSetupSSR(
+        ClinicalDrawer,
+        {
+          isOpen: true,
+          teleport: false,
+          dismissible: false,
+          title: "QC Review Locked",
+        },
+        emit
+      );
+      state.closeDrawer();
+      expect(emit).not.toHaveBeenCalled();
     });
   });
 });

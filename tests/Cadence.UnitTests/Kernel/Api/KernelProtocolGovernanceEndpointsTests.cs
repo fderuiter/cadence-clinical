@@ -833,7 +833,8 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         public Task<TenantEntitlementSnapshot> GetEntitlementsAsync(
             TenantId tenantId,
             DateTimeOffset asOf,
-            CancellationToken cancellationToken) =>
+            CancellationToken cancellationToken,
+            DateTimeOffset? knownAt = null) =>
             Task.FromResult(new TenantEntitlementSnapshot(
                 tenantId,
                 SubscriptionId.New(),

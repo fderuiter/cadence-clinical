@@ -59,6 +59,8 @@ public static class CadenceSecurityServiceCollectionExtensions
 
         services.AddTransient<AuditorWriteGuardMiddleware>();
         services.AddTransient<ExpiredSubscriptionWriteGuardMiddleware>();
+        services.AddTransient<ProductFamilyGuardMiddleware>();
+        services.AddTransient<SubscriptionScopingGuardMiddleware>();
         // Process-local single use by default; every host with an e-signature route replaces it with the durable
         // store, and outside Development the startup check refuses one that does not (ADR-2515, #5434).
         services.TryAddSingleton<ISigTokenUseStore>(sp => new ReplayCache(sp.GetService<IClock>()));
@@ -142,7 +144,9 @@ public static class CadenceSecurityServiceCollectionExtensions
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseMiddleware<AuditorWriteGuardMiddleware>();
-        return app.UseMiddleware<ExpiredSubscriptionWriteGuardMiddleware>();
+        app.UseMiddleware<ExpiredSubscriptionWriteGuardMiddleware>();
+        app.UseMiddleware<ProductFamilyGuardMiddleware>();
+        return app.UseMiddleware<SubscriptionScopingGuardMiddleware>();
     }
 
     /// <summary>
