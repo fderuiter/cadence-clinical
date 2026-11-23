@@ -92,7 +92,7 @@ public sealed record CiStep(string Job, string Name)
     public string? CoveredBy { get; init; }
 
     /// <summary>
-    /// A program the step needs on <c>PATH</c>. Without it the step fails unless <c>--allow-skip</c> skips it with
+    /// A program the step needs on <c>PATH</c>. Without it the step fails unless <c>--allow-missing-tools</c> skips it with
     /// <see cref="ToolHint"/>.
     /// </summary>
     public string? RequiredTool { get; init; }
@@ -247,7 +247,7 @@ public static class CiPlan
             new("lint-and-static", "Run ShellCheck on shell scripts")
             {
                 RequiredTool = "shellcheck",
-                ToolHint = "install ShellCheck (CI runs 'apt-get install shellcheck')",
+                ToolHint = $"provision shellcheck {CliLinterGateService.ShellcheckVersion} into .cadence/bin via './scripts/setup_wizard.sh --minimal' (or 'pwsh scripts/setup_wizard.ps1 -Minimal', or pass --allow-missing-tools to skip)",
                 Files = CiFileSource.ShellScripts,
                 Commands = [new CiCommand("shellcheck", [])],
             },
@@ -385,7 +385,7 @@ public static class CiPlan
             new("dotnet-tests", "Fail the run when a PostgreSQL test did not execute")
             {
                 // LocalCiRunner checks DatabaseTestEvidence on DefaultResultsDir when NeedsPostgres is set (unless
-                // --allow-skip is passed), standing in for check-database-test-results.sh while also running its self-test.
+                // --allow-db-skip is passed), standing in for check-database-test-results.sh while also running its self-test.
                 NeedsPostgres = true,
                 RequiredTool = "bash",
                 ToolHint = "install bash to run the shell gate self-test; DatabaseTestEvidence already checked the TRX reports",

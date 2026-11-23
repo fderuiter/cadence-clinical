@@ -114,6 +114,33 @@ export function createWebDemoHandlers(store = webDemoStore) {
       HttpResponse.json(store.getEntitlements())
     ),
     http.post("*/api/v1/kernel/entitlements/tier", async ({ request }) => {
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      if (!idempotencyKey.trim()) {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.Idempotency.KeyRequired",
+            title: "Missing Idempotency-Key",
+            status: 400,
+            code: "K.Idempotency.KeyRequired",
+          },
+          { status: 400 }
+        );
+      }
+      const reason = readRequiredReasonHeader(request);
+      if (!reason.trim()) {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.ReasonForChange.Required",
+            title: "Missing X-Change-Reason",
+            status: 400,
+            code: "K.ReasonForChange.Required",
+          },
+          { status: 400 }
+        );
+      }
       const body = await readJsonBody(request);
       const outcome = store.upgradeSubscriptionTier(body?.tier);
       if (!outcome || outcome.error === "invalid_tier") {
@@ -143,6 +170,33 @@ export function createWebDemoHandlers(store = webDemoStore) {
       return HttpResponse.json(outcome.data);
     }),
     http.post("*/api/v1/kernel/entitlements/activate", async ({ request }) => {
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      if (!idempotencyKey.trim()) {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.Idempotency.KeyRequired",
+            title: "Missing Idempotency-Key",
+            status: 400,
+            code: "K.Idempotency.KeyRequired",
+          },
+          { status: 400 }
+        );
+      }
+      const reason = readRequiredReasonHeader(request);
+      if (!reason.trim()) {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.ReasonForChange.Required",
+            title: "Missing X-Change-Reason",
+            status: 400,
+            code: "K.ReasonForChange.Required",
+          },
+          { status: 400 }
+        );
+      }
       const body = await readJsonBody(request);
       const outcome = store.activateSubscription(body);
       if (outcome.error === "invalid_tier") {
@@ -164,15 +218,55 @@ export function createWebDemoHandlers(store = webDemoStore) {
             status: 422,
             code: "K.Commercial.ScopingInvalid",
             detail:
-              "Activating a commercial subscription requires valid study phase, duration, participating countries, site count, participant count, active study count, and a purchase order or quote confirmation.",
+              "Activating a commercial subscription requires valid study phase, duration, participating countries, site count, participant count, active study count, and a signed commercial quote token.",
             errors: outcome.errors,
           },
           { status: 422 }
         );
       }
+      if (outcome.error === "quote_invalid") {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.Commercial.QuoteInvalid",
+            title: "Commercial quote token could not be verified",
+            status: 403,
+            code: "K.Commercial.QuoteInvalid",
+            detail:
+              "Subscription activation requires a verified signed commercial quote token (qtk1.<payload>.<signature>) bound to this tenant, tier, and study scoping.",
+          },
+          { status: 403 }
+        );
+      }
       return HttpResponse.json(outcome.data);
     }),
     http.post("*/api/v1/kernel/onboarding/trial", async ({ request }) => {
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      if (!idempotencyKey.trim()) {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.Idempotency.KeyRequired",
+            title: "Missing Idempotency-Key",
+            status: 400,
+            code: "K.Idempotency.KeyRequired",
+          },
+          { status: 400 }
+        );
+      }
+      const reason = readRequiredReasonHeader(request);
+      if (!reason.trim()) {
+        return HttpResponse.json(
+          {
+            type: "https://cadence.clinical/errors/K.ReasonForChange.Required",
+            title: "Missing X-Change-Reason",
+            status: 400,
+            code: "K.ReasonForChange.Required",
+          },
+          { status: 400 }
+        );
+      }
       const body = await readJsonBody(request);
       return HttpResponse.json(store.bootstrapTrial(body));
     }),
@@ -746,6 +840,15 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const body = await readJsonBody(request);
       return HttpResponse.json(store.createSubject(body), { status: 201 });
     }),
+    http.get("*/api/v1/execution/subjects/counts", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.getSubjectCounts({
+          studyId: url.searchParams.get("study_id") || undefined,
+          siteId: url.searchParams.get("site_id") || undefined,
+        })
+      );
+    }),
     http.get("*/api/v1/execution/subjects/:subjectId", ({ params }) =>
       HttpResponse.json(
         store.getSubjectDetail(decodeURIComponent(String(params.subjectId)))
@@ -800,6 +903,10 @@ export function createWebDemoHandlers(store = webDemoStore) {
           enrollmentId: url.searchParams.get("enrollment_id"),
           studyId: url.searchParams.get("study_id"),
           status: url.searchParams.get("status"),
+          owner: url.searchParams.get("owner"),
+          origin: url.searchParams.get("origin"),
+          priority: url.searchParams.get("priority"),
+          escalated: url.searchParams.get("escalated"),
           site: url.searchParams.get("site"),
           participant: url.searchParams.get("participant"),
           valueChanged: url.searchParams.get("value_changed"),
@@ -816,7 +923,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
       async ({ params, request }) => {
         const body = await readJsonBody(request);
         return HttpResponse.json(
-          store.raiseQuery(decodeURIComponent(String(params.formId)), body),
+          store.raiseQuery(
+            decodeURIComponent(String(params.formId)),
+            body,
+            decodeReasonHeader(request)
+          ),
           { status: 201 }
         );
       }

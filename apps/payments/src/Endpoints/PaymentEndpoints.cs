@@ -1111,32 +1111,13 @@ public static class PaymentEndpoints
             return NoSignedCaller();
         }
 
-        var query = caller.InStudyScope(dbContext.ParticipantStipendRules, r => r.StudyId);
+        var query = caller.InStudyScope(dbContext.ParticipantStipendRules.AsNoTracking(), r => r.StudyId);
         if (!string.IsNullOrWhiteSpace(studyId))
         {
             query = query.Where(r => r.StudyId == studyId);
         }
 
         var rules = await query.Where(r => r.IsActive).ToListAsync();
-
-        if (rules.Count == 0 && (string.IsNullOrWhiteSpace(studyId) || studyId == "STUDY-DCT-001") && caller.ReachesStudy("STUDY-DCT-001"))
-        {
-            // Demonstration rules the service seeds itself on first read, so they carry its system identity.
-            DateTimeOffset now = SystemClock.Instance.UtcNow;
-            rules = new List<ParticipantStipendRule>
-            {
-                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V1_SCREENING", VisitName = "Screening & Consent", Amount = 75.00m, Currency = "USD", Taxable = false, AntiCoercionCap = 100.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = PaymentsCaller.SeedSystemUser, UpdatedAt = now, VersionIndex = 1 },
-                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V2_BASELINE", VisitName = "Baseline & Randomization", Amount = 100.00m, Currency = "USD", Taxable = false, AntiCoercionCap = 150.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = PaymentsCaller.SeedSystemUser, UpdatedAt = now, VersionIndex = 1 },
-                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V3_CYCLE_1", VisitName = "Treatment Cycle 1 Visit", Amount = 150.00m, Currency = "USD", Taxable = true, AntiCoercionCap = 200.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = PaymentsCaller.SeedSystemUser, UpdatedAt = now, VersionIndex = 1 },
-                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V4_CYCLE_2", VisitName = "Treatment Cycle 2 Visit", Amount = 150.00m, Currency = "USD", Taxable = true, AntiCoercionCap = 200.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = PaymentsCaller.SeedSystemUser, UpdatedAt = now, VersionIndex = 1 },
-                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V5_CYCLE_3", VisitName = "Treatment Cycle 3 Visit", Amount = 150.00m, Currency = "USD", Taxable = true, AntiCoercionCap = 200.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = false, IsActive = true, CreatedAt = now, CreatedBy = PaymentsCaller.SeedSystemUser, UpdatedAt = now, VersionIndex = 1 },
-                new() { Id = Guid.NewGuid().ToString(), StudyId = "STUDY-DCT-001", VisitCode = "V6_END_STUDY", VisitName = "End of Study Milestone", Amount = 200.00m, Currency = "USD", Taxable = true, AntiCoercionCap = 250.00m, AutoDisbursementThreshold = 250.00m, IsMilestone = true, MilestoneCode = "MILESTONE_PRIMARY", IsActive = true, CreatedAt = now, CreatedBy = PaymentsCaller.SeedSystemUser, UpdatedAt = now, VersionIndex = 1 }
-            };
-
-            dbContext.ParticipantStipendRules.AddRange(rules);
-            await dbContext.SaveChangesAsync();
-        }
-
         return Results.Ok(rules);
     }
 

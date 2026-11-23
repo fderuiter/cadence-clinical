@@ -178,7 +178,7 @@ describe("envelope format parity (known-answer vectors)", () => {
   // Captured from encryption.encrypt({"hello": "world", "count": 42}, bytes(range(32)), 1,
   // b"my_aad_data") with os.urandom patched to return bytes(range(100, 112)) as the nonce.
   const PYTHON_ENVELOPE =
-    "AAAAAWRlZmdoaWprbG1ubzM5vQkMhyK8BFZtxPgND5EurSQwqRucAMu1jjW7ZevBCA2O52kx0C05XFR1";
+    "AAAAAWRlZmdoaWprbG1ubzM5vQkMhyK8BFZtxPgND5EurSQwqRucAMu1jjW7ZevBCA2O52kx0C05XFR1"; // pragma: allowlist secret
   // Captured from encryption.derive_session_key(b"session_material_abc", b"salt_123", b"info_456").
   const PYTHON_HKDF_HEX =
     "697e50afc31edfdf1951156b913b1f542d73a5b55e00d78e2a0870ba7b1caa1e"; // pragma: allowlist secret
