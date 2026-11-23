@@ -14,11 +14,13 @@ The `ClinicalModal` and `ClinicalDrawer` primitives render accessible modal over
 | `closeOnBackdrop`                           | `Boolean`             | `true`                     | Whether clicking the backdrop dismisses an unlocked modal.                    |
 | `overlayId`                                 | `String`              | `undefined`                | Optional `id` attribute applied to the `.clinical-modal-backdrop` container.  |
 | `ariaLabel` / `ariaLabelledby`              | `String`              | `undefined`                | Explicit accessible name or heading ID override when `showHeader` is `false`. |
-| `showHeader` / `showFooter`                 | `Boolean`             | `true`                     | Toggles built-in header or footer chrome when custom slot markup is used.     |
+| `showHeader` / `showClose` / `showFooter`   | `Boolean`             | `true`                     | Toggles built-in header, header close button, or footer chrome.               |
 | `headerClass` / `bodyClass` / `footerClass` | `String`              | `''`                       | Optional custom CSS classes appended to header, body, or footer containers.   |
 | `initialFocus`                              | `String \| Object`    | `null`                     | Optional CSS selector, ref, or getter for initial focus target on open.       |
 | `restoreFocus`                              | `Boolean \| Function` | `true`                     | Restores focus to the triggering element on close.                            |
 | `teleport`                                  | `Boolean`             | `true`                     | Teleports the overlay to `document.body` when `true`.                         |
+
+On viewports with `max-height: 480px` (such as `320x256` WCAG 2.1 SC 1.4.10 reflow viewports), `ClinicalModal` switches from `.modal-body`-only scrolling to full `.clinical-modal-dialog` box scrolling while `.modal-footer` wraps action buttons across lines on narrow widths.
 
 ## ClinicalDrawer Props
 
@@ -31,10 +33,12 @@ The `ClinicalModal` and `ClinicalDrawer` primitives render accessible modal over
 | `dismissible`     | `Boolean` | `true`    | Locks `Escape`, close button, and backdrop dismissal when `false`.       |
 | `teleport`        | `Boolean` | `true`    | Teleports the drawer overlay to `document.body` when `true`.             |
 
-## Overlay Composables (`useFocusTrap`, `trapTabFocus` & `useEscapeClose`)
+## Overlay & Inline Focus Composables (`useFocusTrap`, `trapTabFocus`, `handoffFocus`, `useInlineFocusHandoff` & `useEscapeClose`)
 
 - **`useFocusTrap(targetRef, options)`**: Dynamically activates focus containment whenever conditional (`v-if`) or persistent (`isOpen`) overlays open, traps `Tab` / `Shift+Tab` inside the topmost active overlay, marks background page siblings `inert` and `aria-hidden="true"` while keeping `[data-focus-trap-exempt="true"]` live alert hosts audible and visible, skips `Escape` events with `defaultPrevented === true` when unlocked, and restores focus before unmounting.
 - **`trapTabFocus(event, container)`**: Imperative helper (paired with `getFocusableElements(container)`) for standalone non-Vue DOM dialogs such as `#portal-sign-modal`, wrapping `Tab` / `Shift+Tab` within `container` while deduplicating `KeyboardEvent` instances via a `WeakSet` across `window` and `document` listeners.
+- **`handoffFocus(targets, options)`**: Non-trapping inline focus handoff helper for `v-if` swaps, ephemeral buttons, and portal `.portal-view` transitions. Waits for `nextTick`, skips hidden (`display: none`, `visibility: hidden`), `inert`, `aria-hidden="true"`, disabled, or disconnected candidates, ensures programmatic heading/region targets carry `tabindex="-1"`, scrolls only when `scrollIfOffscreen` is enabled and off-screen, and falls back to `#canvas-workspace` or `#main-content`.
+- **`useInlineFocusHandoff(options)`**: Composable pairing trigger memory (`rememberTrigger`, `restoreTrigger`, `handoff`) with optional reactive `isOpen` tracking for inline disclosures without trapping unmodified `Tab` or marking background regions `inert`.
 - **`useEscapeClose(onClose, options)`**: Registers non-trapped inline popovers or anchored tour steps on a shared LIFO stack so pressing `Escape` dismisses only the topmost unlocked overlay.
 
 ## Usage Example

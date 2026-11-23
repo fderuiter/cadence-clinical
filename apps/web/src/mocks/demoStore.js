@@ -589,21 +589,27 @@ export function createWebDemoStore() {
     ]);
 
     const buildStudySitesForStudy = (studyRef) =>
-      DEMO_SITES.map((site, idx) => ({
-        ref:
+      DEMO_SITES.map((site, idx) => {
+        const unversionedStudySiteRef =
           studyRef === canonicalStudyEntry.ref
-            ? `${site.studySiteRef}@1`
-            : `study_site:${makeUuidFromIndex("00000400", idx + 1)}@1`,
-        study_ref: String(studyRef).split("@")[0],
-        site_ref: `site:${site.siteUuid}@1`,
-        site_code: site.code,
-        site_name: site.name,
-        country: site.country,
-        institution_ref: `organization:${site.institutionUuid}@1`,
-        institution_code: site.institutionCode,
-        institution_name: `${site.name} Institution`,
-        status: site.complianceStage === "CONDUCT" ? "Active" : "Selected",
-      }));
+            ? String(site.studySiteRef).split("@")[0]
+            : `study_site:${makeUuidFromIndex("00000400", idx + 1)}`;
+        return {
+          ref: `${unversionedStudySiteRef}@1`,
+          study_site_id: unversionedStudySiteRef.replace(/^study_site:/, ""),
+          study_site_ref: unversionedStudySiteRef,
+          study_ref: String(studyRef).split("@")[0],
+          site_ref: `site:${site.siteUuid}@1`,
+          site_code: site.code,
+          site_name: site.name,
+          country: site.country,
+          institution_ref: `organization:${site.institutionUuid}@1`,
+          institution_code: site.institutionCode,
+          institution_name: `${site.name} Institution`,
+          status: site.complianceStage === "CONDUCT" ? "Active" : "Selected",
+          effective_versions: [],
+        };
+      });
 
     state.studySites = new Map([
       [canonicalStudyCode, buildStudySitesForStudy(canonicalStudyEntry.ref)],
@@ -2143,7 +2149,7 @@ export function createWebDemoStore() {
           },
         };
       }
-      const site = state.sites.find(
+      let site = state.sites.find(
         (s) =>
           (body.site_ref &&
             s.ref.split("@")[0] === String(body.site_ref).split("@")[0]) ||
@@ -2151,6 +2157,32 @@ export function createWebDemoStore() {
             s.code.toUpperCase() ===
               String(body.site_code).trim().toUpperCase())
       );
+      if (
+        !site &&
+        !body.site_ref &&
+        body.site_code &&
+        (body.site_name || body.country || body.institution_ref)
+      ) {
+        const regIdx = nextCounter();
+        const code = String(body.site_code).trim();
+        site = {
+          ref: `site:${makeUuidFromIndex("00000310", regIdx)}@1`,
+          code,
+          name: String(body.site_name || code).trim(),
+          country: String(body.country || "US")
+            .trim()
+            .toUpperCase(),
+          institution_ref:
+            body.institution_ref ||
+            studyEntry.sponsor_ref ||
+            DEMO_ORGANIZATIONS[0].ref,
+          institution_code:
+            studyEntry.sponsor_code || DEMO_ORGANIZATIONS[0].code,
+          institution_name:
+            studyEntry.sponsor_name || DEMO_ORGANIZATIONS[0].name,
+        };
+        state.sites.push(site);
+      }
       if (!site) {
         return {
           error: {
@@ -2183,8 +2215,11 @@ export function createWebDemoStore() {
         };
       }
       const idx = nextCounter();
+      const studySiteUuid = makeUuidFromIndex("00000410", idx);
       const linked = {
-        ref: `study_site:${makeUuidFromIndex("00000410", idx)}@1`,
+        ref: `study_site:${studySiteUuid}@1`,
+        study_site_id: studySiteUuid,
+        study_site_ref: `study_site:${studySiteUuid}`,
         study_ref: String(studyEntry.ref).split("@")[0],
         site_ref: site.ref,
         site_code: site.code,
@@ -2194,6 +2229,7 @@ export function createWebDemoStore() {
         institution_code: site.institution_code,
         institution_name: site.institution_name,
         status: "Selected",
+        effective_versions: [],
       };
       const nextLinks = [...existingLinks, linked].sort((a, b) =>
         a.site_code.localeCompare(b.site_code)
@@ -3215,9 +3251,9 @@ export function createWebDemoStore() {
         site_id: found.site_id,
         active_protocol_version: found.active_protocol_version || "2.0",
         enrollment_index: found.enrollment_index ?? 0,
-        treatment_group: found.treatment_group,
+        treatment_group: found.treatment_group ?? null,
         randomization_seed: null,
-        investigational_product_id: null,
+        investigational_product_id: found.investigational_product_id ?? null,
       };
     },
 
@@ -3239,6 +3275,12 @@ export function createWebDemoStore() {
         found = state.subjects.find((s) => s.id === created.id);
       }
       found.status = nextStatus;
+      if (nextStatus === "UNBLINDED") {
+        found.treatment_group =
+          found.unblinded_treatment_group || found.treatment_group || "ACTIVE";
+        found.investigational_product_id =
+          found.investigational_product_id || "KIT-1001";
+      }
       recordActivity(
         "execution.subject.state_changed",
         "execution",

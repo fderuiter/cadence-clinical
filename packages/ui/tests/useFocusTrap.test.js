@@ -8,6 +8,8 @@ import {
   FileUploadModal,
   AiSuggestionDrawer,
   useFocusTrap,
+  useInlineFocusHandoff,
+  handoffFocus,
   useEscapeClose,
   getFocusableElements,
 } from "../index.js";
@@ -215,8 +217,10 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     globalThis.window = origWindow;
   });
 
-  it("exports useFocusTrap, useEscapeClose, getFocusableElements, ClinicalModal, and ClinicalDrawer from ui", () => {
+  it("exports useFocusTrap, useInlineFocusHandoff, handoffFocus, useEscapeClose, getFocusableElements, ClinicalModal, and ClinicalDrawer from ui", () => {
     expect(useFocusTrap).toBeTypeOf("function");
+    expect(useInlineFocusHandoff).toBeTypeOf("function");
+    expect(handoffFocus).toBeTypeOf("function");
     expect(useEscapeClose).toBeTypeOf("function");
     expect(getFocusableElements).toBeTypeOf("function");
     expect(ClinicalModal).toBeDefined();
@@ -661,5 +665,226 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     // Default non-reduced motion tokens remain intact outside the media query
     expect(tokensCss).toContain("--transition-fast: 0.15s ease");
     expect(tokensCss).toContain("--transition-normal: 0.25s ease");
+  });
+
+  it("handoffFocus resolves first visible target, skips hidden/inert/disabled candidates, and falls back to #canvas-workspace or #main-content", async () => {
+    const workspace = dom.body.appendChild(
+      new MockElement("main", { id: "canvas-workspace", tabindex: "-1" })
+    );
+    const hiddenHeading = workspace.appendChild(
+      new MockElement("h2", { id: "hidden-heading", tabindex: "-1" })
+    );
+    hiddenHeading.style.display = "none";
+
+    const inertSection = workspace.appendChild(
+      new MockElement("section", { id: "inert-section", inert: true })
+    );
+    const inertBtn = inertSection.appendChild(
+      new MockElement("button", { id: "inert-btn" })
+    );
+
+    const disabledBtn = workspace.appendChild(
+      new MockElement("button", { id: "disabled-btn", disabled: true })
+    );
+
+    const visibleHeading = workspace.appendChild(
+      new MockElement("h2", { id: "visible-heading" })
+    );
+
+    const disconnectedBtn = new MockElement("button", { id: "detached-btn" });
+
+    const resolved = await handoffFocus([
+      disconnectedBtn,
+      "#hidden-heading",
+      inertBtn,
+      disabledBtn,
+      visibleHeading,
+    ]);
+
+    expect(resolved).toBe(visibleHeading);
+    expect(dom.doc.activeElement).toBe(visibleHeading);
+    // Programmatic non-interactive headings receive tabindex="-1" (never "0")
+    expect(visibleHeading.getAttribute("tabindex")).toBe("-1");
+    expect(workspace.hasAttribute("inert")).toBe(false);
+
+    // Unmodified Tab is never trapped by inline handoffFocus
+    const tabEvt = dom.dispatchKey("Tab");
+    expect(tabEvt.defaultPrevented).toBe(false);
+
+    // When all explicit candidates are hidden, falls back to #canvas-workspace
+    visibleHeading.style.visibility = "hidden";
+    const fallbackResolved = await handoffFocus([
+      "#hidden-heading",
+      visibleHeading,
+    ]);
+    expect(fallbackResolved).toBe(workspace);
+    expect(dom.doc.activeElement).toBe(workspace);
+  });
+
+  it("useInlineFocusHandoff remembers triggers across open/close swaps and falls back when original trigger unmounts", async () => {
+    const main = dom.body.appendChild(
+      new MockElement("main", { id: "main-content", tabindex: "-1" })
+    );
+    const openBtn = main.appendChild(
+      new MockElement("button", { id: "btn-open-inline" })
+    );
+    const filterSelect = main.appendChild(
+      new MockElement("select", { id: "filter-select" })
+    );
+    const inlineInput = main.appendChild(
+      new MockElement("input", { id: "inline-reason", type: "text" })
+    );
+    inlineInput.style.display = "none";
+
+    const isOpen = ref(false);
+    let inlineHandoff;
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      inlineHandoff = useInlineFocusHandoff({
+        isOpen,
+        openTarget: "#inline-reason",
+        closeFallback: "#filter-select",
+      });
+    });
+
+    openBtn.focus();
+    expect(dom.doc.activeElement).toBe(openBtn);
+
+    // Open inline disclosure: focuses #inline-reason without trapping Tab
+    inlineInput.style.display = "";
+    isOpen.value = true;
+    await nextTick();
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(inlineInput);
+
+    const tabEvt = dom.dispatchKey("Tab");
+    expect(tabEvt.defaultPrevented).toBe(false);
+
+    // Close inline disclosure while openBtn is still visible: restores openBtn
+    inlineInput.style.display = "none";
+    isOpen.value = false;
+    await nextTick();
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(openBtn);
+
+    // Ephemeral button unmount scenario: trigger is hidden/removed before restoreTrigger runs
+    const clearChip = main.appendChild(
+      new MockElement("button", { id: "btn-clear-chip" })
+    );
+    clearChip.focus();
+    inlineHandoff.rememberTrigger();
+    clearChip.style.display = "none";
+
+    const restoredAfterUnmount =
+      await inlineHandoff.restoreTrigger("#filter-select");
+    expect(restoredAfterUnmount).toBe(filterSelect);
+    expect(dom.doc.activeElement).toBe(filterSelect);
+  });
+
+  it("falls back to fallbackFocus when previousActiveElement unmounts or becomes disabled", async () => {
+    const appShell = dom.body.appendChild(
+      new MockElement("div", { id: "app" })
+    );
+    const refreshBtn = appShell.appendChild(
+      new MockElement("button", { id: "btn-refresh-qc" })
+    );
+    const batchAcceptBtn = appShell.appendChild(
+      new MockElement("button", { id: "btn-batch-accept" })
+    );
+    const rowInspectBtn = appShell.appendChild(
+      new MockElement("button", { id: "btn-row-inspect" })
+    );
+    const modalDialog = dom.body.appendChild(
+      new MockElement("div", { id: "qc-modal", tabindex: "-1" })
+    );
+    modalDialog.appendChild(
+      new MockElement("button", { id: "btn-confirm-qc" })
+    );
+
+    const isOpen = ref(false);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(modalDialog), {
+        isOpen,
+        fallbackFocus: "#btn-refresh-qc",
+      });
+    });
+
+    // Case 1: invoking row button unmounts before close
+    rowInspectBtn.focus();
+    isOpen.value = true;
+    await nextTick();
+
+    appShell.children = appShell.children.filter((c) => c !== rowInspectBtn);
+    rowInspectBtn.parentElement = null;
+
+    isOpen.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(refreshBtn);
+
+    // Case 2: invoking batch button becomes disabled on nextTick right as modal closes
+    batchAcceptBtn.focus();
+    isOpen.value = true;
+    await nextTick();
+
+    batchAcceptBtn.disabled = true;
+    isOpen.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(refreshBtn);
+  });
+
+  it("falls back to the active parent trap on the stack when a nested modal trigger unmounts on nextTick", async () => {
+    const appShell = dom.body.appendChild(
+      new MockElement("div", { id: "app" })
+    );
+    const openDrawerBtn = appShell.appendChild(
+      new MockElement("button", { id: "btn-open-drawer" })
+    );
+    const drawerPanel = dom.body.appendChild(
+      new MockElement("aside", { id: "ticket-drawer", tabindex: "-1" })
+    );
+    const drawerCloseBtn = drawerPanel.appendChild(
+      new MockElement("button", { id: "ticket-drawer-close-btn" })
+    );
+    const signTriggerBtn = drawerPanel.appendChild(
+      new MockElement("button", { id: "btn-open-part11-sign" })
+    );
+    const signModal = dom.body.appendChild(
+      new MockElement("div", { id: "sign-modal", tabindex: "-1" })
+    );
+    signModal.appendChild(
+      new MockElement("button", { id: "btn-submit-part11" })
+    );
+
+    const isDrawerOpen = ref(false);
+    const isSignOpen = ref(false);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(drawerPanel), { isOpen: isDrawerOpen });
+      useFocusTrap(ref(signModal), { isOpen: isSignOpen });
+    });
+
+    openDrawerBtn.focus();
+    isDrawerOpen.value = true;
+    await nextTick();
+
+    signTriggerBtn.focus();
+    isSignOpen.value = true;
+    await nextTick();
+
+    // Close modal synchronously first, then unmount signTriggerBtn before nextTick completes
+    // (mirrors Vue patching parent v-if="canSignTicket" after child emit("close"))
+    isSignOpen.value = false;
+    drawerPanel.children = drawerPanel.children.filter(
+      (c) => c !== signTriggerBtn
+    );
+    signTriggerBtn.parentElement = null;
+    dom.doc.activeElement = dom.body;
+
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(drawerCloseBtn);
   });
 });

@@ -800,6 +800,7 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
         string conflictWorkflowPath = Path.Combine(RepoRoot(), ".github", "workflows", "conflict-check.yml");
         string raw = File.ReadAllText(conflictWorkflowPath);
         raw.Should().Contain("types: [opened, synchronize, reopened, edited]");
+        raw.Should().Contain("merge_group:");
         raw.Should().NotContain("pull-requests:");
         raw.Should().NotContain("head.repo");
         raw.Should().NotContain("gh pr view");
@@ -856,6 +857,17 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
         // 3. Missing PR ref / fetch error fails closed (exit non-zero)
         var (missingExit, _, _) = RunConflictScript(runnerClone, mergeTreeScript, "main", "999");
         missingExit.Should().NotBe(0);
+
+        // 4. merge_group event validates HEAD against refs/heads/<base> cleanly and fails closed on conflict
+        RunGit(runnerClone, "fetch", "origin", "+refs/pull/42/head:refs/remotes/origin/pr/42", "+refs/pull/43/head:refs/remotes/origin/pr/43");
+        RunGit(runnerClone, "checkout", "--detach", "refs/remotes/origin/pr/42");
+        var (mgCleanExit, mgCleanOut, mgCleanErr) = RunConflictScript(runnerClone, mergeTreeScript, "refs/heads/main", "", "merge_group");
+        mgCleanExit.Should().Be(0, $"clean merge_group should pass: {mgCleanOut}\n{mgCleanErr}");
+
+        RunGit(runnerClone, "checkout", "--detach", "refs/remotes/origin/pr/43");
+        var (mgConflictExit, mgConflictOut, _) = RunConflictScript(runnerClone, mergeTreeScript, "refs/heads/main", "", "merge_group");
+        mgConflictExit.Should().NotBe(0);
+        mgConflictOut.Should().Contain("::error::");
     }
 
     [Fact]
@@ -917,7 +929,8 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
         string workingDir,
         string script,
         string baseRef,
-        string prNumber)
+        string prNumber,
+        string eventName = "pull_request")
     {
         var psi = new ProcessStartInfo("bash")
         {
@@ -926,6 +939,7 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
             RedirectStandardError = true,
             UseShellExecute = false,
         };
+        psi.Environment["EVENT_NAME"] = eventName;
         psi.Environment["BASE_REF"] = baseRef;
         psi.Environment["PR_NUMBER"] = prNumber;
         psi.ArgumentList.Add("-c");

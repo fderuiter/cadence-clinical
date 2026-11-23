@@ -69,3 +69,43 @@ public class EisfDocumentRecord
     public bool IsActive { get; set; } = true;
     public bool IsDeleted { get; set; } = false;
 }
+
+public class EisfDocumentRevision
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string DocumentId { get; set; } = string.Empty;
+    public int RevisionNumber { get; set; }
+    public string SiteCode { get; set; } = string.Empty;
+    public string StudyCode { get; set; } = string.Empty;
+    public string SectionCode { get; set; } = string.Empty;
+    public string Filename { get; set; } = string.Empty;
+    public string FilePath { get; set; } = string.Empty;
+    public string Sha256Checksum { get; set; } = string.Empty;
+    public int VersionMajor { get; set; } = 1;
+    public int VersionMinor { get; set; } = 0;
+    public string Status { get; set; } = "DRAFT";
+    public DateTimeOffset? ExpirationDate { get; set; }
+    public required DateTimeOffset RecordedAt { get; set; }
+    public string RecordedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+
+    public static EisfDocumentRevision FromRecord(EisfDocumentRecord record, DateTimeOffset recordedAt, string recordedBy) =>
+        new()
+        {
+            DocumentId = record.Id,
+            RevisionNumber = record.VersionIndex,
+            SiteCode = record.SiteId,
+            StudyCode = record.StudyId,
+            SectionCode = record.SectionCode,
+            Filename = record.Filename,
+            FilePath = record.FilePath,
+            Sha256Checksum = record.Sha256Checksum,
+            VersionMajor = record.VersionMajor,
+            VersionMinor = record.VersionMinor,
+            Status = record.Status,
+            ExpirationDate = record.ExpirationDate,
+            RecordedAt = recordedAt,
+            RecordedBy = recordedBy,
+            ReasonForChange = record.ReasonForChange,
+        };
+}

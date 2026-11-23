@@ -599,6 +599,7 @@ public class ParticipantTransaction
     public decimal Amount { get; set; }
     public decimal BalanceAfter { get; set; }
     public string ReferenceId { get; set; } = string.Empty;
+    public string? IdempotencyKey { get; set; }
     public string Description { get; set; } = string.Empty;
     public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }

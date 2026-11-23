@@ -49,7 +49,9 @@ public sealed record ObservationRecord(
     string? ItemId = null,
     ObservationValueKind? ExpectedValueKind = null,
     string? ExpectedUnit = null,
-    CodeSystemVersionId? ExpectedCodeSystemVersionId = null);
+    CodeSystemVersionId? ExpectedCodeSystemVersionId = null,
+    string? ExpectedCodelist = null,
+    IReadOnlyList<CodelistOptionView>? ExpectedCodelistOptions = null);
 
 /// <summary>One revision of an observation's value.</summary>
 /// <remarks>

@@ -2,7 +2,9 @@
   <div class="document-grid-container">
     <div class="grid-header">
       <div class="header-titles">
-        <h2>Artifact Documents Registry</h2>
+        <h2 id="document-grid-heading" tabindex="-1">
+          Artifact Documents Registry
+        </h2>
         <p v-if="selectedArtifactCode" class="active-artifact-subtitle">
           Showing documents for Artifact:
           <strong>{{ selectedArtifactCode }}</strong>
@@ -11,7 +13,7 @@
           Please select an artifact from the binder tree to view documents.
         </p>
       </div>
-      <div style="display: flex; gap: 8px">
+      <div class="grid-header-actions">
         <button
           v-if="selectedDocumentIds.length > 0"
           type="button"
@@ -72,7 +74,7 @@
         role="grid"
         aria-label="Artifact Documents Registry"
         :aria-rowcount="paginatedDocuments.length"
-        aria-colcount="7"
+        aria-colcount="8"
       >
         <thead>
           <tr>
@@ -890,18 +892,20 @@ const formattedDocuments = computed(() => {
 // Reset currentPage.value = 1 when the underlying documents list changes
 watch(
   () => props.documents,
-  () => {
+  (nextDocs) => {
     currentPage.value = 1;
-    activeRowIndex.value = -1;
-    activeColIndex.value = -1;
+    const hasRows = Array.isArray(nextDocs) && nextDocs.length > 0;
+    activeRowIndex.value = hasRows ? 0 : -1;
+    activeColIndex.value = hasRows ? 0 : -1;
     isEditing.value = false;
   },
   { deep: true }
 );
 
 watch(currentPage, () => {
-  activeRowIndex.value = -1;
-  activeColIndex.value = -1;
+  const hasRows = paginatedDocuments.value.length > 0;
+  activeRowIndex.value = hasRows ? 0 : -1;
+  activeColIndex.value = hasRows ? 0 : -1;
   isEditing.value = false;
 });
 
@@ -1101,6 +1105,9 @@ async function submitUpload() {
 .document-grid-container {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   background-color: var(--semantic-color-surface);
   padding: 24px;
   border-radius: 8px;
@@ -1110,11 +1117,32 @@ async function submitUpload() {
 
 .grid-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
   margin-bottom: 24px;
   border-bottom: 1px solid var(--semantic-color-surface-header); /* deid-ignore */
   padding-bottom: 16px;
+}
+
+.header-titles {
+  min-width: 0;
+}
+
+.grid-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .document-grid-container {
+    padding: 12px;
+  }
 }
 
 .header-titles h2 {

@@ -47,6 +47,19 @@ public static class StandaloneTenantModelExtensions
         value => ParseOrEmpty(value),
         guid => guid.ToString("D"));
 
+    /// <summary>
+    /// Identifies append-only/insert-only audit, outbox, transition, and historical revision entities that are never
+    /// updated in place and therefore do not carry mutable row optimistic-concurrency tokens.
+    /// </summary>
+    public static bool IsImmutableStandaloneHistoryEntity(IReadOnlyEntityType entityType)
+    {
+        ArgumentNullException.ThrowIfNull(entityType);
+        string clrName = entityType.ClrType.Name;
+        return clrName is "AuditLogEntry" or "TransactionalOutboxMessage" or "TmfAuditLedgerSeal" or "TmfDocumentQcTransition"
+            || clrName.EndsWith("AuditLog", StringComparison.Ordinal)
+            || clrName.EndsWith("Revision", StringComparison.Ordinal);
+    }
+
     public static Guid? ResolveInMemoryTenantFilter(DbContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -158,6 +171,33 @@ public static class StandaloneTenantModelExtensions
                 ApplyGuidTenantQueryFilter(entityBuilder, entityType, context);
             }
         }
+
+        ConfigureConcurrencyToken(entityBuilder, entityType);
+    }
+
+    private static void ConfigureConcurrencyToken<TEntity>(
+        Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity> entityBuilder,
+        IMutableEntityType entityType)
+        where TEntity : class
+    {
+        foreach (IMutableProperty existing in entityType.GetProperties())
+        {
+            if (existing.IsConcurrencyToken)
+            {
+                return;
+            }
+        }
+
+        IMutableProperty? versionIndex = entityType.FindProperty(Concurrency.StandaloneConcurrencyTokenInterceptor.VersionIndexPropertyName);
+        if (versionIndex is not null && (versionIndex.ClrType == typeof(int) || versionIndex.ClrType == typeof(long)))
+        {
+            versionIndex.IsConcurrencyToken = true;
+            return;
+        }
+
+        entityBuilder.Property<long>(Concurrency.StandaloneConcurrencyTokenInterceptor.ShadowVersionPropertyName)
+            .IsConcurrencyToken()
+            .HasDefaultValue(0L);
     }
 
     private static void ApplyGuidTenantQueryFilter<TContext>(

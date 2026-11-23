@@ -3,10 +3,12 @@ name: Conflict Check
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
+  merge_group:
+    branches: [main, release/*]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request && github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -22,19 +24,29 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          ref: ${{ github.event.pull_request.base.ref }}
+          ref: ${{ github.event.pull_request.base.ref || github.ref }}
           fetch-depth: 0
 
       - name: Check mergeability with git merge-tree
         env:
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || github.event.merge_group.base_ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          git fetch --no-tags origin \
-            "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}" \
-            "+refs/pull/${PR_NUMBER}/head:refs/remotes/origin/pr/${PR_NUMBER}"
-          if ! git merge-tree --write-tree "refs/remotes/origin/${BASE_REF}" "refs/remotes/origin/pr/${PR_NUMBER}"; then
-            echo "::error::This pull request has merge conflicts with '${BASE_REF}'. Merge or rebase onto 'origin/${BASE_REF}' and resolve them."
-            exit 1
+          BASE_BRANCH="${BASE_REF#refs/heads/}"
+          if [ "${EVENT_NAME:-pull_request}" = "merge_group" ]; then
+            git fetch --no-tags origin "+refs/heads/${BASE_BRANCH}:refs/remotes/origin/${BASE_BRANCH}"
+            if ! git merge-tree --write-tree "refs/remotes/origin/${BASE_BRANCH}" HEAD; then
+              echo "::error::This merge group has merge conflicts with '${BASE_BRANCH}'. Merge or rebase onto 'origin/${BASE_BRANCH}' and resolve them."
+              exit 1
+            fi
+          else
+            git fetch --no-tags origin \
+              "+refs/heads/${BASE_BRANCH}:refs/remotes/origin/${BASE_BRANCH}" \
+              "+refs/pull/${PR_NUMBER}/head:refs/remotes/origin/pr/${PR_NUMBER}"
+            if ! git merge-tree --write-tree "refs/remotes/origin/${BASE_BRANCH}" "refs/remotes/origin/pr/${PR_NUMBER}"; then
+              echo "::error::This pull request has merge conflicts with '${BASE_BRANCH}'. Merge or rebase onto 'origin/${BASE_BRANCH}' and resolve them."
+              exit 1
+            fi
           fi

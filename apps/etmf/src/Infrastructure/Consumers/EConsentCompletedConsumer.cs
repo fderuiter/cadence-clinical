@@ -74,6 +74,8 @@ public sealed class EConsentCompletedConsumer(
         );
 
         dbContext.TmfDocuments.Add(doc);
+        dbContext.TmfDocumentRevisions.Add(
+            TmfDocumentRevision.FromDocument(doc, effectiveTimestamp, "svc:etmf-econsent-consumer"));
         await dbContext.SaveChangesAsync(context.CancellationToken);
 
         logger?.LogInformation("Successfully created eTMF document {DocumentId} for completed eConsent key {Key}.", docId, key);
