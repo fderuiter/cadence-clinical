@@ -374,6 +374,13 @@
           }})
         </h4>
         <div class="form-row">
+          <label for="signoff-visit-password">Password (Part 11)</label>
+          <input
+            id="signoff-visit-password"
+            v-model="signOffPassword"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+            placeholder="Re-enter password to sign"
+          />
           <label for="signoff-visit-reason">Endorsement rationale</label>
           <input
             id="signoff-visit-reason"
@@ -385,7 +392,7 @@
             id="btn-confirm-signoff-visit"
             type="button"
             class="btn btn-primary"
-            :disabled="!signOffReason.trim() || saving"
+            :disabled="!signOffReason.trim() || !signOffPassword || saving"
             @click="confirmSignOff"
           >
             {{ saving ? "Signing..." : "Confirm sign-off" }}
@@ -393,7 +400,7 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="activeSignOffVisit = null"
+            @click="cancelSignOff"
           >
             Cancel
           </button>
@@ -462,6 +469,7 @@
 import { computed, onMounted, ref } from "vue";
 import {
   buildStepUpVerificationPayload,
+  SEMANTIC_ACTIONS,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
 } from "ui";
 import {
@@ -569,6 +577,7 @@ const compileReason = ref("");
 const compiledLetters = ref<VisitLetterCompilationResult[]>([]);
 
 const activeSignOffVisit = ref<MonitoringVisit | null>(null);
+const signOffPassword = ref("");
 const signOffReason = ref("");
 
 const selectedLettersVisit = ref<MonitoringVisit | null>(null);
@@ -749,7 +758,7 @@ async function confirmCompileLetter() {
         password,
         totp: null,
         action: "/api/v1/ctms/letters/compile",
-        semanticAction: "ctms.letter.compile",
+        semanticAction: SEMANTIC_ACTIONS.CTMS_LETTER_COMPILE,
       });
       const verifyRes = await apiClient.post(
         "/api/v1/auth/signature-verification",
@@ -829,17 +838,48 @@ async function downloadCompiledLetter(letter: VisitLetterCompilationResult) {
 
 function prepareSignOff(visit: MonitoringVisit) {
   activeSignOffVisit.value = visit;
+  signOffPassword.value = "";
   signOffReason.value = "";
+}
+
+function cancelSignOff() {
+  signOffPassword.value = "";
+  activeSignOffVisit.value = null;
 }
 
 async function confirmSignOff() {
   const visit = activeSignOffVisit.value;
   const reason = signOffReason.value.trim();
-  if (!visit || !reason || !canSignOff.value) return;
+  const password = signOffPassword.value;
+  signOffPassword.value = "";
+  if (!visit || !reason || !password || !canSignOff.value) return;
 
   saving.value = true;
   try {
-    await ctmsApi.signOffMonitoringVisit(visit.id, reason);
+    const signerUsername =
+      authStore.identity?.username ||
+      authStore.user?.username ||
+      authStore.userId ||
+      "monitor";
+    const verificationPayload = buildStepUpVerificationPayload({
+      username: signerUsername,
+      password,
+      totp: null,
+      action: `/api/v1/ctms/monitoring-visits/${encodeURIComponent(visit.id)}/sign-off`,
+      semanticAction: SEMANTIC_ACTIONS.CTMS_MONITORING_VISIT_SIGN_OFF,
+    });
+    const verifyRes = await apiClient.post(
+      "/api/v1/auth/signature-verification",
+      verificationPayload
+    );
+    const sigToken = verifyRes?.sig_token;
+    if (!sigToken) {
+      throw new Error(
+        "Signature verification did not return a signature token."
+      );
+    }
+
+    await ctmsApi.signOffMonitoringVisit(visit.id, reason, sigToken);
     activeSignOffVisit.value = null;
     signOffReason.value = "";
     toasts.push({

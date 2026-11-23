@@ -373,8 +373,8 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
         }
 
         standaloneSignatureRoutesVerified.Should().Be(
-            10,
-            "all ten standalone ElectronicSignatureRequired clinical routes across econsent, execution, knowledge, safety, and tickets must be verified");
+            22,
+            "all twenty-two standalone ElectronicSignatureRequired clinical routes across ctms, econsent, execution, imaging, interop, knowledge, payments, safety, and tickets must be verified");
         kernelSignatureRoutesVerified.Should().Be(
             2,
             "kernel library-items/{itemRef}/approve and protocol-versions/{versionRef}/approve ElectronicSignatureRequired routes must both be verified");

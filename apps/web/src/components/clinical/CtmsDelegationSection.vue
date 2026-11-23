@@ -139,6 +139,13 @@
           }}
         </h4>
         <div class="form-row">
+          <label for="doa-signoff-password">Password (Part 11)</label>
+          <input
+            id="doa-signoff-password"
+            v-model="signOffPassword"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+            placeholder="Re-enter password to sign"
+          />
           <label for="doa-signoff-reason">Part 11 attestation</label>
           <input
             id="doa-signoff-reason"
@@ -150,7 +157,7 @@
             id="btn-confirm-doa-signoff"
             type="button"
             class="btn btn-primary"
-            :disabled="!signOffReason.trim() || saving"
+            :disabled="!signOffReason.trim() || !signOffPassword || saving"
             @click="confirmSignOff"
           >
             {{ saving ? "Signing..." : "Sign delegation" }}
@@ -158,7 +165,7 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="activeSignOffRecord = null"
+            @click="cancelSignOff"
           >
             Cancel
           </button>
@@ -255,9 +262,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import {
+  buildStepUpVerificationPayload,
+  SEMANTIC_ACTIONS,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+} from "ui";
 import { ctmsApi, type DelegationRecord, type DoaLog } from "../../api/ctmsApi";
 import { canManageDoa, canSignOffDoa } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import apiClient from "../../services/api";
 import {
   formatClinicalEnum,
   formatClinicalStatus,
@@ -309,6 +322,7 @@ const newStartDate = ref("");
 const newReason = ref("");
 
 const activeSignOffRecord = ref<DelegationRecord | null>(null);
+const signOffPassword = ref("");
 const signOffReason = ref("");
 
 const activeRevokeRecord = ref<DelegationRecord | null>(null);
@@ -374,22 +388,54 @@ async function submitDelegation() {
 
 function prepareSignOff(rec: DelegationRecord) {
   activeSignOffRecord.value = rec;
+  signOffPassword.value = "";
   signOffReason.value = "";
+}
+
+function cancelSignOff() {
+  signOffPassword.value = "";
+  activeSignOffRecord.value = null;
 }
 
 async function confirmSignOff() {
   const rec = activeSignOffRecord.value;
   const reason = signOffReason.value.trim();
-  if (!rec || !reason || !canSignOff.value) return;
+  const password = signOffPassword.value;
+  signOffPassword.value = "";
+  if (!rec || !reason || !password || !canSignOff.value) return;
 
   saving.value = true;
   try {
+    const signerUsername =
+      authStore.identity?.username ||
+      authStore.user?.username ||
+      authStore.userId ||
+      "investigator";
+    const verificationPayload = buildStepUpVerificationPayload({
+      username: signerUsername,
+      password,
+      totp: null,
+      action: "/api/v1/ctms/doa/sign-off",
+      semanticAction: SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF,
+    });
+    const verifyRes = await apiClient.post(
+      "/api/v1/auth/signature-verification",
+      verificationPayload
+    );
+    const sigToken = verifyRes?.sig_token;
+    if (!sigToken) {
+      throw new Error(
+        "Signature verification did not return a signature token."
+      );
+    }
+
     await ctmsApi.signOffDelegation(
       {
         record_id: rec.record_id,
         reason_for_change: reason,
       },
-      reason
+      reason,
+      sigToken
     );
     activeSignOffRecord.value = null;
     signOffReason.value = "";

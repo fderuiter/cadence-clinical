@@ -1775,6 +1775,25 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations
 
                     b.ToTable("audit_log_entries", (string)null);
                 });
+
+            modelBuilder.Entity("Cadence.Database.Signatures.ConsumedSignatureToken", b =>
+                {
+                    b.Property<string>("TokenId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("RetainUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TokenId");
+
+                    b.HasIndex("RetainUntil");
+
+                    b.ToTable("consumed_signature_tokens", (string)null);
+                });
 #pragma warning restore 612, 618
         }
     }

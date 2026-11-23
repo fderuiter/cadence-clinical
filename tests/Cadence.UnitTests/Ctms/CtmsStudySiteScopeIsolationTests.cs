@@ -197,14 +197,21 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
         var created = await delegateRes.Content.ReadFromJsonAsync<DelegationResponseDto>(Ct);
         created.Should().NotBeNull();
 
-        var signRes = await alphaPiShared.PostAsJsonAsync(
+        using var signReq = JsonPost(
             "/api/v1/ctms/doa/sign-off",
             new
             {
                 record_id = created!.RecordId,
                 reason_for_change = "PI sign-off for STUDY-ALPHA delegation",
-            },
-            Ct);
+            });
+        signReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                userId: "pi-alpha-shared",
+                action: DoaEndpoints.SignOffAction,
+                semanticAction: DoaEndpoints.SignOffSemanticAction,
+                roles: ["Principal Investigator"]));
+        var signRes = await alphaPiShared.SendAsync(signReq, Ct);
         signRes.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var pdfRes = await alphaPiShared.GetAsync("/api/v1/ctms/doa/sites/SITE-SHARED/export-pdf", Ct);
@@ -536,6 +543,8 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
                     .AddEntityFrameworkInMemoryDatabase()
                     .BuildServiceProvider();
 
+                services.RemoveAll<ISigTokenUseStore>();
+                services.AddSingleton<ISigTokenUseStore, ReplayCache>();
                 services.RemoveAll<DbContextOptions<CtmsDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<CtmsDbContext>>();
                 services.RemoveAll<CurrentTenantAccessor>();

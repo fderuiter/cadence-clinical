@@ -4,6 +4,7 @@ using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Signatures;
 using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +38,7 @@ public sealed class InteropDbContext(DbContextOptions<InteropDbContext> options)
     public DbSet<DatabaseLockAuthToken> DatabaseLockAuthTokens => Set<DatabaseLockAuthToken>();
     public DbSet<ExecutionRunRecord> ExecutionRunRecords => Set<ExecutionRunRecord>();
     public DbSet<BiostatExportAuditLog> BiostatExportAuditLogs => Set<BiostatExportAuditLog>();
+    public DbSet<ConsumedSignatureToken> ConsumedSignatureTokens => Set<ConsumedSignatureToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +63,7 @@ public sealed class InteropDbContext(DbContextOptions<InteropDbContext> options)
         modelBuilder.ApplyConfiguration(new DatabaseLockAuthTokenConfiguration());
         modelBuilder.ApplyConfiguration(new ExecutionRunRecordConfiguration());
         modelBuilder.ApplyConfiguration(new BiostatExportAuditLogConfiguration());
+        modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

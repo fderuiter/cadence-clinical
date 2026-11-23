@@ -13,7 +13,7 @@ Interoperability scaffold. It holds the ePRO submission, instrument, subject ass
 - `Infrastructure/Persistence/`: `InteropDbContext`, a design-time `InteropDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924145123_InitialCreate`, `20260929203013_HashDeviceTokensAtRest`,
   `20261006202718_AddSceEntities`, `20261019174341_AddEhrEndpointSigningKeyRef` (#5436: an EHR endpoint names a
-  server-side signing key reference instead of holding a private key).
+  server-side signing key reference instead of holding a private key), `20261123171215_AddConsumedSignatureTokens`.
 
 ## HTTP surface
 
@@ -53,7 +53,7 @@ bounds, `SceDockerEngineDriver` always runs approved R/Python images with `--net
 `--cap-drop=ALL`, `--security-opt=no-new-privileges` and `--` before the image name, and artifact collection skips
 symbolic links/reparse points and enforces canonical workspace containment and `max_output_bytes` before reading files.
 
-The eSource routes (`/api/v1/interop/esource/**`) need `esource_endpoint:read`/`configure` or `esource_candidate:read`/`ingest`/`reconcile`/`query` (`PermissionMatrix.Interop.cs`). Site staff ingest and reconcile; monitors and data management raise queries. Polling, ingesting and reconciling refuse a study the caller is not assigned to, lists show only the caller's studies, and signatures and audit entries name the signed caller ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
+The eSource routes (`/api/v1/interop/esource/**`) need `esource_endpoint:read`/`configure` or `esource_candidate:read`/`ingest`/`reconcile`/`query` (`PermissionMatrix.Interop.cs`). Site staff ingest and reconcile; monitors and data management raise queries. Accepting or rejecting reconciliation candidates (`/reconcile/accept`, `/reconcile/batch-accept`, `/reconcile/reject`, `/reconcile/batch-reject`) requires a single-use step-up `X-Sig-Token` bound to `interop.esource.{accept,batch_accept,reject,batch_reject}` (with `SigTokenBatchId.FromIds` on batch routes) and recorded in `interop.consumed_signature_tokens` (`AddCadenceDurableSigTokenStore<InteropDbContext>()`, [ADR-2660](../../docs/adr/2026-11-23-enforce-step-up-signature-filters-and-durable-stores.md)). Polling, ingesting and reconciling refuse a study the caller is not assigned to, lists show only the caller's studies, and signatures and audit entries name the signed caller ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
 
 Reconciliation candidates come only from source data (#5432):
 

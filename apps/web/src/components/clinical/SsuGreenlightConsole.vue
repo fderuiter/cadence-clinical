@@ -605,6 +605,19 @@
           </div>
 
           <div class="form-group">
+            <label for="batch-sig-password"
+              >Re-authentication Password (Part 11):</label
+            >
+            <input
+              id="batch-sig-password"
+              v-model="batchSigForm.password"
+              v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+              class="text-input"
+              placeholder="Enter credential to authorize batch sign-off"
+            />
+          </div>
+
+          <div class="form-group">
             <label for="batch-sig-reason"
               >Certification Statement / Change Reason:</label
             >
@@ -634,6 +647,7 @@
               !canCertify ||
               !batchSigForm.name ||
               !batchSigForm.role ||
+              !batchSigForm.password ||
               !batchSigForm.changeReason.trim() ||
               isSubmitting
             "
@@ -1029,6 +1043,18 @@
           />
         </div>
         <div class="form-group">
+          <label for="ssu-sig-password"
+            >Re-authentication Password (Part 11):</label
+          >
+          <input
+            id="ssu-sig-password"
+            v-model="sigForm.password"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+            class="text-input"
+            placeholder="Enter credential to authorize greenlight sign-off"
+          />
+        </div>
+        <div class="form-group">
           <label for="ssu-sig-reason">Change Reason:</label>
           <input
             id="ssu-sig-reason"
@@ -1052,7 +1078,10 @@
             type="button"
             class="btn btn-primary"
             :disabled="
-              !canCertify || !sigForm.changeReason.trim() || isSubmitting
+              !canCertify ||
+              !sigForm.password ||
+              !sigForm.changeReason.trim() ||
+              isSubmitting
             "
             :title="!canCertify ? GREENLIGHT_CERTIFY_ROLE_REASON : undefined"
             @click="executeGreenlightCertification"
@@ -1066,16 +1095,27 @@
 </template>
 
 <script setup>
-import { ClinicalIconButton, ClinicalModal, ClinicalTabs } from "ui";
+import {
+  ClinicalIconButton,
+  ClinicalModal,
+  ClinicalTabs,
+  SEMANTIC_ACTIONS,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+} from "ui";
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ctmsApi } from "../../api/ctmsApi";
 import { etmfService } from "../../api/etmf";
+import { soaClient } from "../../api/soaClient";
 import {
   GREENLIGHT_CERTIFY_ROLE_REASON,
   canCertifyGreenlight,
 } from "../../canvas/authority";
 import { useAuthStore } from "../../stores/auth";
 import { useToastStore } from "../../stores/toasts.js";
+import {
+  computeBatchBindingId,
+  CTMS_GREENLIGHT_BATCH_CERTIFY_ACTION,
+} from "../../utils/signatureBinding";
 
 const DOC_TYPE_TAXONOMY = {
   FDA_1572: {
@@ -1159,12 +1199,14 @@ const certifyErrorMessage = ref("");
 const sigForm = reactive({
   name: authStore.identity?.username || "Sponsor Operations",
   role: authStore.activeRole || "Clinical Data Manager",
+  password: "",
   changeReason: "All 6 startup facets verified and approved",
 });
 
 const batchSigForm = reactive({
   name: authStore.identity?.username || "Sponsor Operations",
   role: authStore.activeRole || "Clinical Data Manager",
+  password: "",
   changeReason:
     "I certify under 21 CFR Part 11 that all selected sites meet statutory greenlight requirements and authorize trial execution.",
 });
@@ -1400,6 +1442,7 @@ function toggleSiteSelection(siteIdItem, isCompliant, status) {
 
 function openBatchCertifyModal() {
   if (!canCertify.value || selectedSiteIds.value.size === 0) return;
+  batchSigForm.password = "";
   batchErrorMessage.value = null;
   showBatchCertifyModal.value = true;
 }
@@ -1466,11 +1509,23 @@ async function fetchCountryMatrix() {
 }
 
 async function executeBatchCertification() {
-  if (!canCertify.value) return;
+  const password = batchSigForm.password;
+  batchSigForm.password = "";
+  if (!canCertify.value || !password) return;
   isSubmitting.value = true;
   batchErrorMessage.value = null;
   const selectedIds = Array.from(selectedSiteIds.value);
   try {
+    const verification = await soaClient.verifySignature({
+      username:
+        authStore.identity?.username ||
+        authStore.user?.username ||
+        batchSigForm.name,
+      password,
+      action: CTMS_GREENLIGHT_BATCH_CERTIFY_ACTION,
+      semanticAction: SEMANTIC_ACTIONS.CTMS_GREENLIGHT_BATCH_CERTIFY,
+      batchId: await computeBatchBindingId(selectedIds),
+    });
     const data = await ctmsApi.batchCertifyCountrySites(
       {
         study_id: activeStudyId.value.trim(),
@@ -1478,7 +1533,8 @@ async function executeBatchCertification() {
         site_ids: selectedIds,
         meaning: batchSigForm.changeReason,
       },
-      batchSigForm.changeReason
+      batchSigForm.changeReason,
+      verification.sig_token
     );
     batchSuccessData.value = data;
     showBatchCertifyModal.value = false;
@@ -1546,20 +1602,34 @@ function onJurisdictionChange() {
 
 function openCertifyModal() {
   if (!canCertify.value) return;
+  sigForm.password = "";
   certifyErrorMessage.value = "";
   showCertifyModal.value = true;
 }
 
 async function executeGreenlightCertification() {
-  if (!canCertify.value) return;
+  const password = sigForm.password;
+  sigForm.password = "";
+  if (!canCertify.value || !password) return;
   isSubmitting.value = true;
   certifyErrorMessage.value = "";
+  const targetSiteId = activeSiteId.value.trim();
   try {
+    const verification = await soaClient.verifySignature({
+      username:
+        authStore.identity?.username ||
+        authStore.user?.username ||
+        sigForm.name,
+      password,
+      action: `/api/v1/ctms/startup/sites/${encodeURIComponent(targetSiteId)}/greenlight/certify`,
+      semanticAction: SEMANTIC_ACTIONS.CTMS_GREENLIGHT_CERTIFY,
+    });
     const certified = await ctmsApi.certifySiteGreenlight(
-      activeSiteId.value.trim(),
+      targetSiteId,
       activeStudyId.value.trim(),
       sigForm.changeReason,
-      activeCountry.value
+      activeCountry.value,
+      verification.sig_token
     );
     gateData.value = certified;
     showCertifyModal.value = false;
@@ -1603,6 +1673,8 @@ defineExpose({
   matrixSites,
   selectedSiteIds,
   gateData,
+  sigForm,
+  batchSigForm,
   evaluateGreenlight,
   fetchCountryMatrix,
   executeGreenlightCertification,

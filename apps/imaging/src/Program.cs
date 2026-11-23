@@ -3,6 +3,7 @@ using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Apps.Imaging.Infrastructure.Security;
 using Cadence.Apps.Imaging.Services;
 using Cadence.Database;
+using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+builder.Services.AddCadenceDurableSigTokenStore<ImagingDbContext>();
 // Certificates and manifests are signed, and UIDs pseudonymized, with CADENCE_IMAGING_DEID_SIGNING_KEY and
 // CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY, both required and validated at startup (#5399).
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);

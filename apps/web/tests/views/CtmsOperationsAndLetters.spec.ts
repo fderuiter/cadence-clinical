@@ -216,15 +216,61 @@ describe("CtmsMonitoringSection in live CTMS workspace: structured findings, com
     );
     expect(signOffBtn.exists()).toBe(true);
     await signOffBtn.trigger("click");
+    await wrapper.find("#signoff-visit-password").setValue("Password123!"); // pragma: allowlist secret
     await wrapper
       .find("#signoff-visit-reason")
       .setValue("Supervisory MVR review complete");
     await wrapper.find("#btn-confirm-signoff-visit").trigger("click");
     await flushPromises();
 
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/api/v1/auth/signature-verification",
+      expect.objectContaining({
+        action: "/api/v1/ctms/monitoring-visits/visit-comp-1/sign-off",
+        semantic_action: "ctms.monitoring_visit.sign_off",
+      })
+    );
     expect(ctmsApi.signOffMonitoringVisit).toHaveBeenCalledWith(
       "visit-comp-1",
-      "Supervisory MVR review complete"
+      "Supervisory MVR review complete",
+      "sig-token-letter-1"
+    );
+  });
+
+  it("compiles a draft visit letter (finalize=false) without calling step-up signature verification", async () => {
+    signInAs(useAuthStore(), ["CRA"], { username: "cra_alice" });
+
+    const wrapper = mount(CtmsView, {
+      global: { plugins: [pinia] },
+    });
+    await flushPromises();
+
+    await wrapper
+      .find('[data-testid="btn-compile-letter-visit-comp-1"]')
+      .trigger("click");
+    await wrapper.find("#compile-letter-finalize").setValue(false);
+    expect(wrapper.find("#compile-sig-password").exists()).toBe(false);
+
+    await wrapper
+      .find("#compile-letter-reason")
+      .setValue("Draft SIV follow-up preview");
+    await wrapper.find("#btn-confirm-compile-letter").trigger("click");
+    await flushPromises();
+
+    expect(apiClient.post).not.toHaveBeenCalledWith(
+      "/api/v1/auth/signature-verification",
+      expect.anything()
+    );
+    expect(ctmsApi.compileVisitLetter).toHaveBeenCalledWith(
+      "follow_up_letter",
+      expect.objectContaining({
+        visitId: "visit-comp-1",
+        finalize: false,
+      }),
+      expect.objectContaining({
+        changeReason: "Draft SIV follow-up preview",
+        sigToken: undefined,
+      })
     );
   });
 });

@@ -40,7 +40,7 @@ public sealed class SigTokenUseStoreWiringTests
     {
         await using var host = ServiceHosts.All[service](null);
         bool mapsSignedRoute = host.Endpoints.Any(e => e.Metadata.GetMetadata<ElectronicSignatureRequired>() is not null);
-        if (service is "econsent" or "knowledge" or "execution" or "tickets")
+        if (service is "econsent" or "knowledge" or "execution" or "tickets" or "ctms" or "payments" or "imaging" or "interop")
         {
             mapsSignedRoute.Should().BeTrue("{0} maps e-signature routes", service);
         }
@@ -64,6 +64,26 @@ public sealed class SigTokenUseStoreWiringTests
 
         host.Services.GetRequiredService<ISigTokenUseStore>()
             .Should().BeOfType<PostgresSigTokenUseStore<Cadence.Apps.Execution.Infrastructure.Persistence.ExecutionDbContext>>();
+    }
+
+    /// <summary>
+    /// Every standalone service with newly gated e-signature routes registers its durable PostgreSQL token-use store and
+    /// passes <see cref="SigTokenUseStoreStartupCheck"/> in <c>Production</c> mode.
+    /// </summary>
+    [Theory]
+    [InlineData("ctms", typeof(PostgresSigTokenUseStore<Cadence.Apps.Ctms.Infrastructure.Persistence.CtmsDbContext>))]
+    [InlineData("payments", typeof(PostgresSigTokenUseStore<Cadence.Apps.Payments.Infrastructure.Persistence.PaymentsDbContext>))]
+    [InlineData("imaging", typeof(PostgresSigTokenUseStore<Cadence.Apps.Imaging.Infrastructure.Persistence.ImagingDbContext>))]
+    [InlineData("interop", typeof(PostgresSigTokenUseStore<Cadence.Apps.Interop.Infrastructure.Persistence.InteropDbContext>))]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task SignedHost_InProductionMode_RegistersDurableStoreAndPassesStartupCheck(string service, Type expectedStoreType)
+    {
+        await using var host = ServiceHosts.All[service](null);
+        var store = host.Services.GetRequiredService<ISigTokenUseStore>();
+        store.Should().BeOfType(expectedStoreType);
+
+        var check = new SigTokenUseStoreStartupCheck(host.Services, store, new Environment(Environments.Production));
+        await check.StartAsync(TestContext.Current.CancellationToken);
     }
 
     /// <summary>Outside Development, a signed route over the process-local store fails startup and names the route.</summary>

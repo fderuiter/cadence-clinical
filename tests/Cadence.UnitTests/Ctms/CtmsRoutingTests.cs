@@ -174,13 +174,22 @@ public sealed class CtmsRoutingTests : IAsyncDisposable
         var compDoc = await compRes.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
         compDoc.GetProperty("status").GetString().Should().Be("COMPLETED");
 
-        // 3. Sign-off
+        // 3. Sign-off (requires bound X-Sig-Token)
         using var monitorClient = CreateClient("monitor", "manager-1");
-        using var signReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/ctms/monitoring-visits/{visitId}/sign-off")
+        string signOffPath = $"/api/v1/ctms/monitoring-visits/{visitId}/sign-off";
+        using var signReq = new HttpRequestMessage(HttpMethod.Post, signOffPath)
         {
             Content = JsonContent.Create(new { })
         };
         signReq.Headers.Add("X-Change-Reason", "Trip report endorsed");
+        signReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                userId: "manager-1",
+                action: signOffPath,
+                semanticAction: MonitoringVisitEndpoints.SignOffSemanticAction,
+                roles: ["monitor"],
+                issuedAt: new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero)));
         var signRes = await monitorClient.SendAsync(signReq, TestContext.Current.CancellationToken);
         signRes.StatusCode.Should().Be(HttpStatusCode.OK);
         var signDoc = await signRes.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);

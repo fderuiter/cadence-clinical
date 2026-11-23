@@ -76,6 +76,28 @@ public sealed class ElectronicSignatureEndpointFilter(Func<EndpointFilterInvocat
             });
 }
 
+/// <summary>
+/// Conditionally gates a mixed-mode endpoint on <see cref="ElectronicSignatureEndpointFilter"/> only when
+/// <paramref name="requiresSignature"/> evaluates to <see langword="true"/> for the current invocation
+/// (for example <c>status == UNBLINDED</c> or <c>Finalize == true</c>). Non-regulated invocations pass
+/// straight through without requiring or consuming an <c>X-Sig-Token</c>.
+/// @req:SRS-SYS-005
+/// </summary>
+public sealed class ConditionalElectronicSignatureEndpointFilter(
+    Func<EndpointFilterInvocationContext, bool> requiresSignature,
+    ElectronicSignatureEndpointFilter inner) : IEndpointFilter
+{
+    public ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(next);
+
+        return requiresSignature(context)
+            ? inner.InvokeAsync(context, next)
+            : next(context);
+    }
+}
+
 /// <summary>Endpoint metadata marking a route gated by <c>RequireElectronicSignature</c>.</summary>
 public sealed class ElectronicSignatureRequired
 {
@@ -123,6 +145,26 @@ public static class ElectronicSignatureEndpointExtensions
 
         return builder
             .AddEndpointFilter(new ElectronicSignatureEndpointFilter(resolveBinding))
+            .WithMetadata(ElectronicSignatureRequired.Instance)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+    }
+
+    /// <summary>
+    /// Conditionally gates a mixed-mode endpoint on an e-signature step-up token only when
+    /// <paramref name="requiresSignature"/> returns <see langword="true"/> for the bound invocation.
+    /// </summary>
+    public static RouteHandlerBuilder RequireElectronicSignatureWhen(
+        this RouteHandlerBuilder builder,
+        Func<EndpointFilterInvocationContext, bool> requiresSignature,
+        Func<EndpointFilterInvocationContext, SigTokenBinding?> resolveBinding)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(requiresSignature);
+        ArgumentNullException.ThrowIfNull(resolveBinding);
+
+        var inner = new ElectronicSignatureEndpointFilter(resolveBinding);
+        return builder
+            .AddEndpointFilter(new ConditionalElectronicSignatureEndpointFilter(requiresSignature, inner))
             .WithMetadata(ElectronicSignatureRequired.Instance)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
     }

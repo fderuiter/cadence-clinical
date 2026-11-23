@@ -112,6 +112,7 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
   signerRole: { type: String, default: "" },
   role: { type: String, default: "" },
   semanticAction: { type: String, default: "" },
+  batchId: { type: String, default: "" },
   onSign: { type: Function, default: null },
   reasons: { type: Array, default: null },
 };
@@ -336,7 +337,7 @@ async function confirm() {
     }
 
     // Step 1: Gateway step-up re-authentication
-    const reauthRes = await service.verifySignature({
+    const verifyArgs = {
       username: u,
       password: p,
       totp: t,
@@ -346,7 +347,9 @@ async function confirm() {
         (props.actionUrl.includes("capture-consent")
           ? "econsent.consent.capture"
           : undefined),
-    });
+      ...(props.batchId ? { batchId: props.batchId } : {}),
+    };
+    const reauthRes = await service.verifySignature(verifyArgs);
 
     const sigToken = reauthRes.sig_token;
 

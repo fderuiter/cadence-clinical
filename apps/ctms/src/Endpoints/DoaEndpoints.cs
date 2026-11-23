@@ -25,6 +25,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Apps.Ctms.Endpoints;
 
@@ -38,6 +39,8 @@ public static class DoaEndpoints
     public const string AssignPermission = "ctms_doa:assign";
     public const string RevokePermission = "ctms_doa:revoke";
     public const string SignOffPermission = "ctms_doa:sign_off";
+    public const string SignOffAction = "/api/v1/ctms/doa/sign-off";
+    public const string SignOffSemanticAction = "ctms.doa.sign_off";
 
     public static RouteGroupBuilder MapDoaEndpoints(this RouteGroupBuilder group)
     {
@@ -70,7 +73,9 @@ public static class DoaEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope();
+            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope()
+            .AddEndpointFilter(ValidateSignOffScopePreconditionsAsync)
+            .RequireElectronicSignature(SignOffSemanticAction, _ => SignOffAction);
 
         doa.MapGet("/sites/{site_id}/log", GetSiteDoaLogAsync)
             .WithName("GetSiteDoaLog")
@@ -689,16 +694,45 @@ public static class DoaEndpoints
         out IResult? problem) =>
         MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, bodyReason, out reason, out problem);
 
-    private static (string User, string Role) ResolveCaller(HttpContext httpContext, string defaultUser)
+    private static async ValueTask<object?> ValidateSignOffScopePreconditionsAsync(
+        EndpointFilterInvocationContext context,
+        EndpointFilterDelegate next)
     {
-        string user = CallerScope.UserId(httpContext) ?? (httpContext.User?.Identity?.Name is { Length: > 0 } n ? n : defaultUser);
-        string role = CallerScope.Roles(httpContext);
-        if (string.IsNullOrWhiteSpace(role))
+        var httpContext = context.HttpContext;
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
         {
-            role = "SYSTEM";
+            return missingScope;
         }
-        return (user, role);
+
+        var request = context.Arguments.OfType<DoaSignOffRequest>().FirstOrDefault();
+        string? queryStudyId = httpContext.Request.Query["study_id"].FirstOrDefault();
+        string? requestedStudyId = !string.IsNullOrWhiteSpace(request?.Study)
+            ? request.Study.Trim()
+            : queryStudyId?.Trim();
+        if (!string.IsNullOrWhiteSpace(requestedStudyId)
+            && CtmsScopeGuard.RequireStudy(httpContext, requestedStudyId) is { } requestedStudyDenied)
+        {
+            return requestedStudyDenied;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request?.RecordId)
+            && httpContext.RequestServices.GetService<CtmsDbContext>() is { } db)
+        {
+            string trimmedRecordId = request.RecordId.Trim();
+            var delegation = await db.CtmsDelegations.AsNoTracking()
+                .FirstOrDefaultAsync(d => d.Id == trimmedRecordId, httpContext.RequestAborted);
+            if (delegation is not null
+                && CtmsScopeGuard.RequireStudyAndSite(httpContext, delegation.StudyId, delegation.SiteId) is { } scopeDenied)
+            {
+                return scopeDenied;
+            }
+        }
+
+        return await next(context);
     }
+
+    private static (string User, string Role) ResolveCaller(HttpContext httpContext, string defaultUser) =>
+        MonitoringVisitEndpoints.ResolveCaller(httpContext, defaultUser);
 
     private static List<string> ParseTaskCodes(string taskCodesJson)
     {

@@ -482,6 +482,10 @@
           </ClinicalIconButton>
         </div>
         <div class="modal-body">
+          <div v-if="signoffError" class="modal-warning-box" role="alert">
+            <strong>Sign-off Failed:</strong> {{ signoffError }}
+          </div>
+
           <div class="modal-warning-box">
             <strong>Legal Manifestation:</strong> Executing this signature
             legally binds the final oncologic response determination and commits
@@ -536,10 +540,14 @@
           <button
             type="button"
             class="btn-confirm-sign"
-            :disabled="!chairPassword"
+            :disabled="!chairPassword || isSubmittingSignoff"
             @click="executeChairSignoff"
           >
-            Sign &amp; Lock Binding Determination
+            {{
+              isSubmittingSignoff
+                ? "Verifying & Signing..."
+                : "Sign & Lock Binding Determination"
+            }}
           </button>
         </div>
       </div>
@@ -632,8 +640,14 @@
 <script setup>
 import { ref, computed } from "vue";
 import { ClinicalIconButton, useFocusTrap } from "ui";
+import { imagingApi } from "../../api/imagingApi";
+import { useAuthStore } from "../../stores/auth";
 
 const props = defineProps({
+  sessionId: {
+    type: String,
+    default: "",
+  },
   subjectId: {
     type: String,
     default: "SUBJ-ONC-777",
@@ -709,9 +723,13 @@ const signoffModalRef = ref(null);
 const edcModalRef = ref(null);
 const sdtmModalRef = ref(null);
 const chairPassword = ref("");
+const signoffError = ref("");
+const isSubmittingSignoff = ref(false);
+const authStore = useAuthStore();
 
 function closeSignoffModal() {
   chairPassword.value = "";
+  signoffError.value = "";
   isSignoffModalOpen.value = false;
 }
 
@@ -913,10 +931,66 @@ function retractReaderRead() {
   }
 }
 
-function executeChairSignoff() {
+async function executeChairSignoff() {
+  const password = chairPassword.value;
+  chairPassword.value = "";
+  if (!password) return;
+
+  signoffError.value = "";
+  const activeSessionId = props.sessionId?.trim();
+  if (activeSessionId) {
+    isSubmittingSignoff.value = true;
+    try {
+      const username =
+        authStore.identity?.username ||
+        authStore.user?.username ||
+        "chair_dr_smith";
+      const consensusSource =
+        selectedBindingReader.value === "READER_1"
+          ? {
+              response: reader1Assessment.value.overall_response || "PR",
+              sldMm: reader1Assessment.value.sum_longest_diameters_mm ?? 24.0,
+            }
+          : selectedBindingReader.value === "READER_2"
+            ? {
+                response: reader2Assessment.value.overall_response || "PD",
+                sldMm: reader2Assessment.value.sum_longest_diameters_mm ?? 42.0,
+              }
+            : { response: "PR", sldMm: 22.0 };
+      const rationale = adjudicationRationale.value.trim();
+      const response = await imagingApi.verifyAndChairAdjudicateSession({
+        sessionId: activeSessionId,
+        username,
+        password,
+        payload: {
+          finalConsensusResponse: consensusSource.response,
+          finalConsensusSldMm: consensusSource.sldMm,
+          bindingReader: selectedBindingReader.value,
+          adjudicationRationale: rationale,
+          signatureMeaning: "BLINDED_IRC_ADJUDICATION_SIGN_OFF",
+        },
+        changeReason: rationale,
+      });
+      workflowStatus.value = "ADJUDICATED";
+      isSignoffModalOpen.value = false;
+      emit("adjudicationCompleted", {
+        bindingReader: response?.bindingReader || selectedBindingReader.value,
+        rationale:
+          response?.adjudicationRationale || adjudicationRationale.value,
+        status: response?.workflowStatus || "ADJUDICATED",
+        session: response,
+      });
+    } catch (err) {
+      signoffError.value =
+        err?.message || "Committee chair step-up sign-off failed.";
+    } finally {
+      isSubmittingSignoff.value = false;
+    }
+    return;
+  }
+
   workflowStatus.value = "ADJUDICATED";
   isSignoffModalOpen.value = false;
-  chairPassword.value = "";
   emit("adjudicationCompleted", {
     bindingReader: selectedBindingReader.value,
     rationale: adjudicationRationale.value,

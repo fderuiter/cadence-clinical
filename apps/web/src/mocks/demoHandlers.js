@@ -105,6 +105,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
         sig_token: `demo_sig_tok_${Date.now()}`,
         action: body.action,
         semantic_action: body.semantic_action,
+        ...(body.batch_id ? { batch_id: body.batch_id } : {}),
         expires_in: 300,
       });
     }),

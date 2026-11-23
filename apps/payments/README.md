@@ -18,7 +18,7 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
   - `PayableLedger` is integrated with `ClinicalVisitCompletedConsumer` to calculate investigator fee line items, split payee allocations, and holdback retention reserves upon signed visit milestone completion via the transactional outbox.
 - `Infrastructure/Consumers/`: `ClinicalVisitCompletedConsumer` listens for `ClinicalVisitCompleted` domain events and writes `Payable`, `PayableAllocation`, `HoldbackReserve`, and `PaymentAuditLog` entities.
 - `Infrastructure/Persistence/`: `PaymentsDbContext`, a design-time `PaymentsDbContextFactory`, and `Configurations/` (Fluent API mappings).
-- `Infrastructure/Persistence/Migrations/`: `20260924145423_InitialCreate`, `20260925183437_ConvertPaymentPropertiesToDecimal`, `20260929203006_StoreProcessorReferencesInsteadOfPaymentSecrets`, `20261001161305_AddParticipantCompensationTables`, `20261006193258_AddDisbursementReferenceToExpenseClaims`, `20261121012903_AddPaymentStatusCheckConstraints`, `20261121053614_EnforceTenantRowLevelSecurity`, `20261121150826_AddSelfServiceIdempotencyKeys`.
+- `Infrastructure/Persistence/Migrations/`: `20260924145423_InitialCreate`, `20260925183437_ConvertPaymentPropertiesToDecimal`, `20260929203006_StoreProcessorReferencesInsteadOfPaymentSecrets`, `20261001161305_AddParticipantCompensationTables`, `20261006193258_AddDisbursementReferenceToExpenseClaims`, `20261121012903_AddPaymentStatusCheckConstraints`, `20261121053614_EnforceTenantRowLevelSecurity`, `20261121150826_AddSelfServiceIdempotencyKeys`, `20261123171142_AddConsumedSignatureTokens`.
 
 ## HTTP surface
 
@@ -68,8 +68,8 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
 - **Service callers.** `POST /participant/events/visit-verified` is called by the site coordinator who verified the visit
   (or an EDC integration account holding the `crc` role). `POST /invoices/{id}/erp-export` is called by a finance officer
   or an ERP integration account holding `finance_officer`. Both record that account as the actor.
-- **Separation of duties.** Approval and remittance signing share the finance role, so the handler refuses (`409`) a
-  remittance signature from the user who approved the invoice. Compiling with `auto_approve` also needs
+- **Separation of duties and step-up verification.** Approval and remittance signing share the finance role, so the handler refuses (`409`) a
+  remittance signature from the user who approved the invoice. `POST /invoices/{id}/remittance-advice/sign` also requires a single-use step-up `X-Sig-Token` bound to `payments.remittance.sign`, recorded in `payments.consumed_signature_tokens` (`AddCadenceDurableSigTokenStore<PaymentsDbContext>()`, [ADR-2660](../../docs/adr/2026-11-23-enforce-step-up-signature-filters-and-durable-stores.md)). Compiling with `auto_approve` also needs
   `payments_invoice:approve`.
 - **Identity in records.** Handlers take the actor from the signed principal (`PaymentsCaller`): the `sub` claim as the
   user id and the signed role claims (canonical names, so "Grants Manager" is recorded as `finance_officer`) as

@@ -12,6 +12,7 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
@@ -35,6 +36,22 @@ public static class StartupGreenlightEndpoints
 {
     public const string CertifyPermission = "ctms_greenlight:certify";
     public const string ReadPermission = "ctms_greenlight:read";
+    public const string CertifySemanticAction = "ctms.greenlight.certify";
+    public const string BatchCertifyAction = "/api/v1/ctms/startup/matrix/batch-certify";
+    public const string BatchCertifySemanticAction = "ctms.greenlight.batch_certify";
+
+    public static string CertifyAction(string siteId) => $"/api/v1/ctms/startup/sites/{siteId}/greenlight/certify";
+
+    private static string CertifyActionFor(HttpContext httpContext) =>
+        CertifyAction(httpContext.Request.RouteValues["siteId"]?.ToString()?.Trim() ?? string.Empty);
+
+    private static SigTokenBinding? BatchCertifyBinding(EndpointFilterInvocationContext context)
+    {
+        var request = context.Arguments.OfType<BatchCertifyRequestDto>().FirstOrDefault();
+        return SigTokenBatchId.FromIds(request?.SiteIds) is { } batchId
+            ? new SigTokenBinding(BatchCertifyAction, BatchCertifySemanticAction, batchId)
+            : null;
+    }
 
     public static RouteGroupBuilder MapStartupGreenlightEndpoints(this RouteGroupBuilder group)
     {
@@ -53,6 +70,7 @@ public static class StartupGreenlightEndpoints
             .WithName("CertifySiteGreenlight")
             .RequirePermission(CertifyPermission)
             .RequireSiteScope("siteId")
+            .RequireElectronicSignature(CertifySemanticAction, CertifyActionFor)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Certifies greenlight activation for a single trial site, issuing an HMAC-SHA256 token.")
             .Produces<SiteGreenlightGateResponseDto>(StatusCodes.Status200OK)
@@ -70,6 +88,7 @@ public static class StartupGreenlightEndpoints
         startup.MapPost("/matrix/batch-certify", BatchCertifyCountrySitesAsync)
             .WithName("BatchCertifyCountrySites")
             .RequirePermission(CertifyPermission).RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature(BatchCertifyBinding)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Batch-certifies all selected 100% compliant sites in a target country with a single e-signature.")
             .Produces<BatchCertifyResponseDto>(StatusCodes.Status200OK)

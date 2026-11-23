@@ -363,9 +363,9 @@ describe("Debounce flush/cancel and shared sign-out guard/modal", () => {
 describe("Shared Part 11 step-up verification & credential helpers (signing.js)", () => {
   it("validates step-up action paths and semantic_action v3 grammar", () => {
     expect(STEP_UP_ACTION_MAX_LENGTH).toBe(512);
-    expect(
-      SEMANTIC_ACTION_PATTERN.test(SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF)
-    ).toBe(true);
+    for (const value of Object.values(SEMANTIC_ACTIONS)) {
+      expect(SEMANTIC_ACTION_PATTERN.test(value)).toBe(true);
+    }
 
     expect(isValidStepUpAction("/api/v1/ctms/doa/sign-off")).toBe(true);
     expect(isValidStepUpAction("/api/v2/ctms/doa/sign-off")).toBe(false);

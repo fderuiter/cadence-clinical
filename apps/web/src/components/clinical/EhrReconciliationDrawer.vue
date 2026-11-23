@@ -448,6 +448,170 @@
         </div>
       </div>
 
+      <!-- MODAL 0A: Accept & Commit Step-Up Signature Dialog -->
+      <div
+        v-if="showAcceptModal"
+        class="modal-backdrop"
+        role="presentation"
+        @click.self="closeAcceptModal"
+      >
+        <div
+          ref="acceptModalRef"
+          class="modal-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="accept-modal-title"
+          tabindex="-1"
+        >
+          <div class="modal-header">
+            <h3 id="accept-modal-title">
+              Sign &amp; Commit EHR Candidate Data
+            </h3>
+            <button
+              type="button"
+              class="btn-close"
+              aria-label="Close accept dialog"
+              @click="closeAcceptModal"
+            >
+              &times;
+            </button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-instruction">
+              21 CFR Part 11 electronic signature verification is required
+              before committing hospital EHR source values into the eCRF.
+            </p>
+            <div class="field-summary">
+              <strong>Field:</strong> {{ activeItem?.target_variable }} ({{
+                activeItem?.cdash_test
+              }})<br />
+              <strong>Candidate Value:</strong>
+              {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit }}
+            </div>
+            <div class="form-group">
+              <label for="accept-sig-password" class="form-label"
+                >Account Password (21 CFR Part 11 Step-Up): *</label
+              >
+              <input
+                id="accept-sig-password"
+                v-model="acceptPasswordInput"
+                type="password"
+                autocomplete="current-password"
+                class="password-input"
+                placeholder="Re-enter password to sign eCRF commit"
+              />
+            </div>
+            <p
+              v-if="stepUpError"
+              id="esource-accept-sig-error"
+              role="alert"
+              class="sig-error-banner"
+            >
+              {{ stepUpError }}
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="closeAcceptModal"
+            >
+              Cancel
+            </button>
+            <button
+              id="btn-confirm-accept"
+              type="button"
+              class="btn btn-success btn-submit-accept"
+              :disabled="!acceptPasswordInput.trim() || isSubmitting"
+              @click="submitAccept"
+            >
+              Confirm &amp; Sign Commit
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL 0B: Batch Accept Step-Up Signature Dialog -->
+      <div
+        v-if="showBatchAcceptModal"
+        class="modal-backdrop"
+        role="presentation"
+        @click.self="closeBatchAcceptModal"
+      >
+        <div
+          ref="batchAcceptModalRef"
+          class="modal-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="batch-accept-modal-title"
+          tabindex="-1"
+        >
+          <div class="modal-header">
+            <h3 id="batch-accept-modal-title">
+              Batch Sign &amp; Commit EHR Candidate Data
+            </h3>
+            <button
+              type="button"
+              class="btn-close"
+              aria-label="Close batch accept dialog"
+              @click="closeBatchAcceptModal"
+            >
+              &times;
+            </button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-instruction">
+              21 CFR Part 11 electronic signature verification is required
+              before committing {{ selectedCandidateIds.length }} selected
+              candidate EHR record(s) into the study eCRF.
+            </p>
+            <div class="field-summary">
+              <strong>Selected Records:</strong>
+              {{ selectedCandidateIds.length }} pending candidate record(s)
+            </div>
+            <div class="form-group">
+              <label for="batch-accept-sig-password" class="form-label"
+                >Account Password (21 CFR Part 11 Step-Up): *</label
+              >
+              <input
+                id="batch-accept-sig-password"
+                v-model="batchAcceptPasswordInput"
+                type="password"
+                autocomplete="current-password"
+                class="password-input"
+                placeholder="Re-enter password to sign batch commit"
+              />
+            </div>
+            <p
+              v-if="stepUpError"
+              id="esource-batch-accept-sig-error"
+              role="alert"
+              class="sig-error-banner"
+            >
+              {{ stepUpError }}
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="closeBatchAcceptModal"
+            >
+              Cancel
+            </button>
+            <button
+              id="btn-confirm-batch-accept"
+              type="button"
+              class="btn btn-success btn-submit-batch-accept"
+              :disabled="!batchAcceptPasswordInput.trim() || isSubmitting"
+              @click="submitBatchAccept"
+            >
+              Confirm Batch Commit ({{ selectedCandidateIds.length }})
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- MODAL 1: Reject with Reason Dialog -->
       <div
         v-if="showRejectModal"
@@ -498,6 +662,27 @@
                 placeholder="e.g., Outside protocol visit window, duplicate entry, clinical value verified inconsistent with chart notes..."
               />
             </div>
+            <div class="form-group">
+              <label for="reject-sig-password" class="form-label"
+                >Account Password (21 CFR Part 11 Step-Up): *</label
+              >
+              <input
+                id="reject-sig-password"
+                v-model="rejectPasswordInput"
+                type="password"
+                autocomplete="current-password"
+                class="password-input"
+                placeholder="Re-enter password to sign rejection"
+              />
+            </div>
+            <p
+              v-if="stepUpError"
+              id="esource-reject-sig-error"
+              role="alert"
+              class="sig-error-banner"
+            >
+              {{ stepUpError }}
+            </p>
           </div>
           <div class="modal-footer">
             <button
@@ -508,9 +693,14 @@
               Cancel
             </button>
             <button
+              id="btn-confirm-reject"
               type="button"
-              class="btn btn-danger"
-              :disabled="!rejectReasonInput.trim() || isSubmitting"
+              class="btn btn-danger btn-submit-reject"
+              :disabled="
+                !rejectReasonInput.trim() ||
+                !rejectPasswordInput.trim() ||
+                isSubmitting
+              "
               @click="submitReject"
             >
               Confirm Rejection
@@ -718,6 +908,27 @@
                 placeholder="e.g., Outside visit window, duplicate observations, inconsistent with chart notes..."
               />
             </div>
+            <div class="form-group">
+              <label for="batch-reject-sig-password" class="form-label"
+                >Account Password (21 CFR Part 11 Step-Up): *</label
+              >
+              <input
+                id="batch-reject-sig-password"
+                v-model="batchRejectPasswordInput"
+                type="password"
+                autocomplete="current-password"
+                class="password-input"
+                placeholder="Re-enter password to sign batch rejection"
+              />
+            </div>
+            <p
+              v-if="stepUpError"
+              id="esource-batch-reject-sig-error"
+              role="alert"
+              class="sig-error-banner"
+            >
+              {{ stepUpError }}
+            </p>
           </div>
           <div class="modal-footer">
             <button
@@ -728,9 +939,14 @@
               Cancel
             </button>
             <button
+              id="btn-confirm-batch-reject"
               type="button"
               class="btn btn-danger btn-submit-batch-reject"
-              :disabled="!batchRejectReasonInput.trim() || isSubmitting"
+              :disabled="
+                !batchRejectReasonInput.trim() ||
+                !batchRejectPasswordInput.trim() ||
+                isSubmitting
+              "
               @click="submitBatchReject"
             >
               Confirm Batch Rejection ({{ selectedCandidateIds.length }})
@@ -743,9 +959,13 @@
 </template>
 
 <script setup lang="ts">
+import { getActivePinia } from "pinia";
 import { computed, onMounted, ref, watch } from "vue";
-import { EmptyState, useFocusTrap } from "ui";
+import { EmptyState, SEMANTIC_ACTIONS, useFocusTrap } from "ui";
 import { interopService } from "../../api/interop";
+import { soaClient } from "../../api/soaClient";
+import { useAuthStore } from "../../stores/auth";
+import { computeBatchBindingId } from "../../utils/signatureBinding";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 
 export interface EhrCandidate {
@@ -821,17 +1041,36 @@ function resetFilters() {
 
 const activeItem = ref<EhrCandidate | null>(null);
 const drawerRef = ref<HTMLElement | null>(null);
+const acceptModalRef = ref<HTMLElement | null>(null);
+const batchAcceptModalRef = ref<HTMLElement | null>(null);
 const rejectModalRef = ref<HTMLElement | null>(null);
 const batchRejectModalRef = ref<HTMLElement | null>(null);
 const queryModalRef = ref<HTMLElement | null>(null);
 const provenanceModalRef = ref<HTMLElement | null>(null);
+const showAcceptModal = ref(false);
+const acceptPasswordInput = ref("");
+const showBatchAcceptModal = ref(false);
+const batchAcceptPasswordInput = ref("");
 const showRejectModal = ref(false);
 const rejectReasonInput = ref("");
+const rejectPasswordInput = ref("");
 const showBatchRejectModal = ref(false);
 const batchRejectReasonInput = ref("");
+const batchRejectPasswordInput = ref("");
 const showQueryModal = ref(false);
 const queryExplanationInput = ref("");
 const showProvenanceModal = ref(false);
+const stepUpError = ref("");
+
+function resolveSignerUsername(): string {
+  if (getActivePinia()) {
+    const authStore = useAuthStore();
+    if (authStore.user?.username) {
+      return authStore.user.username;
+    }
+  }
+  return "crc_coordinator";
+}
 
 useFocusTrap(
   drawerRef,
@@ -840,6 +1079,14 @@ useFocusTrap(
     onEscape: () => closeDrawer(),
   }
 );
+
+useFocusTrap(acceptModalRef, showAcceptModal, {
+  onEscape: () => closeAcceptModal(),
+});
+
+useFocusTrap(batchAcceptModalRef, showBatchAcceptModal, {
+  onEscape: () => closeBatchAcceptModal(),
+});
 
 useFocusTrap(rejectModalRef, showRejectModal, {
   onEscape: () => closeRejectModal(),
@@ -897,16 +1144,48 @@ function clearSelection() {
   selectedCandidateIds.value = [];
 }
 
-async function handleBatchAccept() {
+function handleBatchAccept() {
   if (selectedCandidateIds.value.length === 0) return;
+  batchAcceptPasswordInput.value = "";
+  stepUpError.value = "";
+  showBatchAcceptModal.value = true;
+}
+
+function closeBatchAcceptModal() {
+  showBatchAcceptModal.value = false;
+  batchAcceptPasswordInput.value = "";
+  stepUpError.value = "";
+}
+
+async function submitBatchAccept() {
+  const password = batchAcceptPasswordInput.value.trim();
+  batchAcceptPasswordInput.value = "";
+  if (selectedCandidateIds.value.length === 0 || !password) return;
   isSubmitting.value = true;
+  stepUpError.value = "";
   try {
+    const batchIds = [...selectedCandidateIds.value];
+    const batchId = await computeBatchBindingId(batchIds);
+    const sigResp = (await soaClient.verifySignature({
+      username: resolveSignerUsername(),
+      password,
+      action: "/api/v1/interop/esource/reconcile/batch-accept",
+      semanticAction: SEMANTIC_ACTIONS.INTEROP_ESOURCE_BATCH_ACCEPT,
+      batchId,
+    })) as { sig_token?: string; token?: string };
+    const sigToken = sigResp?.sig_token || sigResp?.token || "";
+    if (!sigToken) {
+      throw new Error("Step-up signature verification did not return a token.");
+    }
     const payload = {
-      candidate_ids: selectedCandidateIds.value,
+      candidate_ids: batchIds,
       commit_reason: "CRC batch accepted high-confidence candidate data",
       change_reason: "CRC eSource Batch Reconciliation Accept & Commit",
     };
-    const resp = await interopService.batchAcceptEhrCandidates(payload);
+    const resp = await interopService.batchAcceptEhrCandidates(payload, {
+      sigToken,
+      changeReason: payload.change_reason,
+    });
     if (resp.success && resp.candidates) {
       resp.candidates.forEach((updated: EhrCandidate) => {
         const idx = candidates.value.findIndex((c) => c.id === updated.id);
@@ -917,7 +1196,10 @@ async function handleBatchAccept() {
       emit("batch-commit", resp.candidates);
       clearSelection();
     }
-  } catch (err) {
+    closeBatchAcceptModal();
+  } catch (err: any) {
+    stepUpError.value =
+      err?.message || "Failed to verify signature or batch accept candidates.";
     console.error("Failed to batch accept candidates:", err);
   } finally {
     isSubmitting.value = false;
@@ -927,28 +1209,52 @@ async function handleBatchAccept() {
 function openBatchRejectModal() {
   if (selectedCandidateIds.value.length === 0) return;
   batchRejectReasonInput.value = "";
+  batchRejectPasswordInput.value = "";
+  stepUpError.value = "";
   showBatchRejectModal.value = true;
 }
 
 function closeBatchRejectModal() {
   showBatchRejectModal.value = false;
   batchRejectReasonInput.value = "";
+  batchRejectPasswordInput.value = "";
+  stepUpError.value = "";
 }
 
 async function submitBatchReject() {
+  const password = batchRejectPasswordInput.value.trim();
+  batchRejectPasswordInput.value = "";
   if (
     selectedCandidateIds.value.length === 0 ||
-    !batchRejectReasonInput.value.trim()
+    !batchRejectReasonInput.value.trim() ||
+    !password
   )
     return;
   isSubmitting.value = true;
+  stepUpError.value = "";
   try {
+    const batchIds = [...selectedCandidateIds.value];
+    const batchId = await computeBatchBindingId(batchIds);
+    const sigResp = (await soaClient.verifySignature({
+      username: resolveSignerUsername(),
+      password,
+      action: "/api/v1/interop/esource/reconcile/batch-reject",
+      semanticAction: SEMANTIC_ACTIONS.INTEROP_ESOURCE_BATCH_REJECT,
+      batchId,
+    })) as { sig_token?: string; token?: string };
+    const sigToken = sigResp?.sig_token || sigResp?.token || "";
+    if (!sigToken) {
+      throw new Error("Step-up signature verification did not return a token.");
+    }
     const payload = {
-      candidate_ids: selectedCandidateIds.value,
+      candidate_ids: batchIds,
       rejection_reason: batchRejectReasonInput.value.trim(),
       change_reason: "CRC eSource Batch Reconciliation Reject",
     };
-    const resp = await interopService.batchRejectEhrCandidates(payload);
+    const resp = await interopService.batchRejectEhrCandidates(payload, {
+      sigToken,
+      changeReason: payload.change_reason,
+    });
     if (resp.success && resp.candidates) {
       resp.candidates.forEach((updated: EhrCandidate) => {
         const idx = candidates.value.findIndex((c) => c.id === updated.id);
@@ -960,7 +1266,9 @@ async function submitBatchReject() {
       clearSelection();
     }
     closeBatchRejectModal();
-  } catch (err) {
+  } catch (err: any) {
+    stepUpError.value =
+      err?.message || "Failed to verify signature or batch reject candidates.";
     console.error("Failed to batch reject candidates:", err);
   } finally {
     isSubmitting.value = false;
@@ -1056,24 +1364,58 @@ function closeDrawer() {
   emit("close");
 }
 
-async function promptAccept(item: EhrCandidate) {
+function promptAccept(item: EhrCandidate) {
+  activeItem.value = item;
+  acceptPasswordInput.value = "";
+  stepUpError.value = "";
+  showAcceptModal.value = true;
+}
+
+function closeAcceptModal() {
+  showAcceptModal.value = false;
+  activeItem.value = null;
+  acceptPasswordInput.value = "";
+  stepUpError.value = "";
+}
+
+async function submitAccept() {
+  const password = acceptPasswordInput.value.trim();
+  acceptPasswordInput.value = "";
+  if (!activeItem.value || !password) return;
   isSubmitting.value = true;
+  stepUpError.value = "";
   try {
+    const targetId = activeItem.value.id;
+    const sigResp = (await soaClient.verifySignature({
+      username: resolveSignerUsername(),
+      password,
+      action: "/api/v1/interop/esource/reconcile/accept",
+      semanticAction: SEMANTIC_ACTIONS.INTEROP_ESOURCE_ACCEPT,
+    })) as { sig_token?: string; token?: string };
+    const sigToken = sigResp?.sig_token || sigResp?.token || "";
+    if (!sigToken) {
+      throw new Error("Step-up signature verification did not return a token.");
+    }
     const payload = {
-      candidate_id: item.id,
+      candidate_id: targetId,
       commit_reason: "CRC accepted candidate data from hospital EHR",
       change_reason: "CRC eSource Reconciliation Accept & Commit",
     };
-    const resp = await interopService.acceptEhrCandidate(payload);
+    const resp = await interopService.acceptEhrCandidate(payload, {
+      sigToken,
+      changeReason: payload.change_reason,
+    });
     if (resp.success && resp.candidate) {
-      // Update local state
-      const idx = candidates.value.findIndex((c) => c.id === item.id);
+      const idx = candidates.value.findIndex((c) => c.id === targetId);
       if (idx !== -1) {
         candidates.value[idx] = resp.candidate;
       }
       emit("commit", resp.candidate);
     }
-  } catch (err) {
+    closeAcceptModal();
+  } catch (err: any) {
+    stepUpError.value =
+      err?.message || "Failed to verify signature or accept candidate.";
     console.error("Failed to accept candidate:", err);
   } finally {
     isSubmitting.value = false;
@@ -1083,6 +1425,8 @@ async function promptAccept(item: EhrCandidate) {
 function openRejectModal(item: EhrCandidate) {
   activeItem.value = item;
   rejectReasonInput.value = "";
+  rejectPasswordInput.value = "";
+  stepUpError.value = "";
   showRejectModal.value = true;
 }
 
@@ -1090,29 +1434,48 @@ function closeRejectModal() {
   showRejectModal.value = false;
   activeItem.value = null;
   rejectReasonInput.value = "";
+  rejectPasswordInput.value = "";
+  stepUpError.value = "";
 }
 
 async function submitReject() {
-  if (!activeItem.value || !rejectReasonInput.value.trim()) return;
+  const password = rejectPasswordInput.value.trim();
+  rejectPasswordInput.value = "";
+  if (!activeItem.value || !rejectReasonInput.value.trim() || !password) return;
   isSubmitting.value = true;
+  stepUpError.value = "";
   try {
+    const targetId = activeItem.value.id;
+    const sigResp = (await soaClient.verifySignature({
+      username: resolveSignerUsername(),
+      password,
+      action: "/api/v1/interop/esource/reconcile/reject",
+      semanticAction: SEMANTIC_ACTIONS.INTEROP_ESOURCE_REJECT,
+    })) as { sig_token?: string; token?: string };
+    const sigToken = sigResp?.sig_token || sigResp?.token || "";
+    if (!sigToken) {
+      throw new Error("Step-up signature verification did not return a token.");
+    }
     const payload = {
-      candidate_id: activeItem.value.id,
+      candidate_id: targetId,
       rejection_reason: rejectReasonInput.value.trim(),
       change_reason: "CRC eSource Reconciliation Reject",
     };
-    const resp = await interopService.rejectEhrCandidate(payload);
+    const resp = await interopService.rejectEhrCandidate(payload, {
+      sigToken,
+      changeReason: payload.change_reason,
+    });
     if (resp.success && resp.candidate) {
-      const idx = candidates.value.findIndex(
-        (c) => c.id === activeItem.value?.id
-      );
+      const idx = candidates.value.findIndex((c) => c.id === targetId);
       if (idx !== -1) {
         candidates.value[idx] = resp.candidate;
       }
       emit("reject", resp.candidate);
     }
     closeRejectModal();
-  } catch (err) {
+  } catch (err: any) {
+    stepUpError.value =
+      err?.message || "Failed to verify signature or reject candidate.";
     console.error("Failed to reject candidate:", err);
   } finally {
     isSubmitting.value = false;
@@ -2019,6 +2382,31 @@ function formatResolutionAction(act?: string): string {
   border-radius: 4px;
   font-family: inherit;
   resize: vertical;
+  box-sizing: border-box;
+}
+
+.password-input {
+  width: 100%;
+  min-height: var(--semantic-control-target-min, 44px);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 4px;
+  font-family: inherit;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  box-sizing: border-box;
+}
+
+.sig-error-banner {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-error-border-soft);
+  background-color: var(--semantic-color-error-bg-soft);
+  color: var(--semantic-color-error);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .modal-footer {

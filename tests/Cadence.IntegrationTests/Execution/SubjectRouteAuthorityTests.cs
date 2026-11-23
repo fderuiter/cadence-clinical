@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Randomization;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
@@ -173,7 +174,24 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
         var unblinder = Caller($"unblinder-{role}", role);
         using var client = factory.CreateSignedClient(unblinder);
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+        string statePath = SubjectEndpoints.UnblindAction(subject);
+        var unauthenticatedState = await client.PatchAsJsonAsync(statePath, new { status = "UNBLINDED" }, Ct);
+        unauthenticatedState.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await unauthenticatedState.Content.ReadAsStringAsync(Ct)).Should().Contain("REAUTHENTICATION_REQUIRED");
+        (await ReadSubjectAsync(subject)).IsUnblinded.Should().BeFalse();
+
+        using var signedReq = new HttpRequestMessage(HttpMethod.Patch, statePath)
+        {
+            Content = JsonContent.Create(new { status = "UNBLINDED" }),
+        };
+        signedReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                userId: unblinder.UserId,
+                action: statePath,
+                semanticAction: SubjectEndpoints.UnblindSemanticAction,
+                roles: [role]));
+        var state = await client.SendAsync(signedReq, Ct);
 
         state.StatusCode.Should().Be(HttpStatusCode.OK, await state.Content.ReadAsStringAsync(Ct));
         var stored = await ReadSubjectAsync(subject);

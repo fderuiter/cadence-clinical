@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import EhrReconciliationDrawer from "../../src/components/clinical/EhrReconciliationDrawer.vue";
 import { interopService } from "../../src/api/interop";
+import { soaClient } from "../../src/api/soaClient";
+import { computeBatchBindingId } from "../../src/utils/signatureBinding";
 
 vi.mock("../../src/api/interop", () => ({
   interopService: {
@@ -11,6 +13,12 @@ vi.mock("../../src/api/interop", () => ({
     rejectEhrCandidate: vi.fn(),
     batchRejectEhrCandidates: vi.fn(),
     raiseEhrClinicalQuery: vi.fn(),
+  },
+}));
+
+vi.mock("../../src/api/soaClient", () => ({
+  soaClient: {
+    verifySignature: vi.fn(),
   },
 }));
 
@@ -111,6 +119,9 @@ describe("EhrReconciliationDrawer.vue", () => {
       candidates: getMockCandidates() as any,
       total_count: 3,
     });
+    vi.mocked(soaClient.verifySignature).mockResolvedValue({
+      sig_token: "sig-esource-001",
+    } as any);
   });
 
   const mountDrawer = () =>
@@ -177,11 +188,33 @@ describe("EhrReconciliationDrawer.vue", () => {
     await acceptButtons[0].trigger("click");
     await wrapper.vm.$nextTick();
 
-    expect(interopService.acceptEhrCandidate).toHaveBeenCalledWith({
-      candidate_id: "cand-1",
-      commit_reason: "CRC accepted candidate data from hospital EHR",
-      change_reason: "CRC eSource Reconciliation Accept & Commit",
-    });
+    const confirmBtn = wrapper.find("#btn-confirm-accept");
+    expect((confirmBtn.element as HTMLButtonElement).disabled).toBe(true);
+
+    await wrapper.find("#accept-sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper.vm.$nextTick();
+    expect((confirmBtn.element as HTMLButtonElement).disabled).toBe(false);
+
+    await confirmBtn.trigger("click");
+    await flushPromises();
+
+    expect(soaClient.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "/api/v1/interop/esource/reconcile/accept",
+        semanticAction: "interop.esource.accept",
+      })
+    );
+    expect(interopService.acceptEhrCandidate).toHaveBeenCalledWith(
+      {
+        candidate_id: "cand-1",
+        commit_reason: "CRC accepted candidate data from hospital EHR",
+        change_reason: "CRC eSource Reconciliation Accept & Commit",
+      },
+      {
+        sigToken: "sig-esource-001",
+        changeReason: "CRC eSource Reconciliation Accept & Commit",
+      }
+    );
   });
 
   it("opens reject modal and enforces justification input before submitting rejection", async () => {
@@ -207,22 +240,38 @@ describe("EhrReconciliationDrawer.vue", () => {
 
     expect(wrapper.text()).toContain("Reject EHR Candidate Data");
 
-    const submitBtn = wrapper.find(".btn-danger");
+    const submitBtn = wrapper.find("#btn-confirm-reject");
     expect((submitBtn.element as HTMLButtonElement).disabled).toBe(true);
 
     const textarea = wrapper.find("#reject-reason");
     await textarea.setValue("Lab sample taken out of protocol visit window");
     await wrapper.vm.$nextTick();
+    expect((submitBtn.element as HTMLButtonElement).disabled).toBe(true);
+
+    await wrapper.find("#reject-sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper.vm.$nextTick();
 
     expect((submitBtn.element as HTMLButtonElement).disabled).toBe(false);
     await submitBtn.trigger("click");
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
-    expect(interopService.rejectEhrCandidate).toHaveBeenCalledWith({
-      candidate_id: "cand-1",
-      rejection_reason: "Lab sample taken out of protocol visit window",
-      change_reason: "CRC eSource Reconciliation Reject",
-    });
+    expect(soaClient.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "/api/v1/interop/esource/reconcile/reject",
+        semanticAction: "interop.esource.reject",
+      })
+    );
+    expect(interopService.rejectEhrCandidate).toHaveBeenCalledWith(
+      {
+        candidate_id: "cand-1",
+        rejection_reason: "Lab sample taken out of protocol visit window",
+        change_reason: "CRC eSource Reconciliation Reject",
+      },
+      {
+        sigToken: "sig-esource-001",
+        changeReason: "CRC eSource Reconciliation Reject",
+      }
+    );
   });
 
   it("opens query modal and submits clinical discrepancy query", async () => {
@@ -317,11 +366,34 @@ describe("EhrReconciliationDrawer.vue", () => {
     await batchAcceptBtn.trigger("click");
     await wrapper.vm.$nextTick();
 
-    expect(interopService.batchAcceptEhrCandidates).toHaveBeenCalledWith({
-      candidate_ids: ["cand-1", "cand-2", "cand-3"],
-      commit_reason: "CRC batch accepted high-confidence candidate data",
-      change_reason: "CRC eSource Batch Reconciliation Accept & Commit",
-    });
+    await wrapper.find("#batch-accept-sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper.vm.$nextTick();
+    await wrapper.find("#btn-confirm-batch-accept").trigger("click");
+    await flushPromises();
+
+    const expectedBatchId = await computeBatchBindingId([
+      "cand-1",
+      "cand-2",
+      "cand-3",
+    ]);
+    expect(soaClient.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "/api/v1/interop/esource/reconcile/batch-accept",
+        semanticAction: "interop.esource.batch_accept",
+        batchId: expectedBatchId,
+      })
+    );
+    expect(interopService.batchAcceptEhrCandidates).toHaveBeenCalledWith(
+      {
+        candidate_ids: ["cand-1", "cand-2", "cand-3"],
+        commit_reason: "CRC batch accepted high-confidence candidate data",
+        change_reason: "CRC eSource Batch Reconciliation Accept & Commit",
+      },
+      {
+        sigToken: "sig-esource-001",
+        changeReason: "CRC eSource Batch Reconciliation Accept & Commit",
+      }
+    );
   });
 
   it("opens batch reject modal and calls batchRejectEhrCandidates with mandatory rationale", async () => {
@@ -360,16 +432,31 @@ describe("EhrReconciliationDrawer.vue", () => {
 
     const textarea = wrapper.find("#batch-reject-reason");
     await textarea.setValue("Out of visit window observations");
+    await wrapper.find("#batch-reject-sig-password").setValue("Password123!"); // pragma: allowlist secret
     await wrapper.vm.$nextTick();
 
     const submitBtn = wrapper.find(".btn-submit-batch-reject");
     await submitBtn.trigger("click");
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
-    expect(interopService.batchRejectEhrCandidates).toHaveBeenCalledWith({
-      candidate_ids: ["cand-1", "cand-2"],
-      rejection_reason: "Out of visit window observations",
-      change_reason: "CRC eSource Batch Reconciliation Reject",
-    });
+    const expectedBatchId = await computeBatchBindingId(["cand-1", "cand-2"]);
+    expect(soaClient.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "/api/v1/interop/esource/reconcile/batch-reject",
+        semanticAction: "interop.esource.batch_reject",
+        batchId: expectedBatchId,
+      })
+    );
+    expect(interopService.batchRejectEhrCandidates).toHaveBeenCalledWith(
+      {
+        candidate_ids: ["cand-1", "cand-2"],
+        rejection_reason: "Out of visit window observations",
+        change_reason: "CRC eSource Batch Reconciliation Reject",
+      },
+      {
+        sigToken: "sig-esource-001",
+        changeReason: "CRC eSource Batch Reconciliation Reject",
+      }
+    );
   });
 });

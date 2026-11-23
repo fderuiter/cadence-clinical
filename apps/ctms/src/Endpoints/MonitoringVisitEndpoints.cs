@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Apps.Ctms.Endpoints;
 
@@ -34,8 +35,14 @@ public static class MonitoringVisitEndpoints
     public const string CreatePermission = "ctms_monitoring_visit:create";
     public const string UpdatePermission = "ctms_monitoring_visit:update";
     public const string SignOffPermission = "ctms_monitoring_visit:sign_off";
+    public const string SignOffSemanticAction = "ctms.monitoring_visit.sign_off";
     public const string ReadLetterPermission = "ctms_monitoring_letter:read";
     public const string ReadLetterTypePermission = "ctms_monitoring_letter:read_type";
+
+    public static string SignOffAction(string visitId) => $"/api/v1/ctms/monitoring-visits/{visitId}/sign-off";
+
+    private static string SignOffActionFor(HttpContext httpContext) =>
+        SignOffAction(httpContext.Request.RouteValues["visit_id"]?.ToString()?.Trim() ?? string.Empty);
 
     public static RouteGroupBuilder MapMonitoringVisitEndpoints(this RouteGroupBuilder group)
     {
@@ -70,7 +77,9 @@ public static class MonitoringVisitEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope();
+            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope()
+            .AddEndpointFilter(ValidateSignOffScopePreconditionsAsync)
+            .RequireElectronicSignature(SignOffSemanticAction, SignOffActionFor);
 
         group.MapGet("/monitoring-visits/{visit_id}/letters", GetMonitoringVisitLettersAsync)
             .WithName("GetMonitoringVisitLetters")
@@ -527,9 +536,54 @@ public static class MonitoringVisitEndpoints
         return false;
     }
 
-    private static (string User, string Role) ResolveCaller(HttpContext httpContext, string defaultUser)
+    private static async ValueTask<object?> ValidateSignOffScopePreconditionsAsync(
+        EndpointFilterInvocationContext context,
+        EndpointFilterDelegate next)
     {
-        string user = CallerScope.UserId(httpContext) ?? (httpContext.User?.Identity?.Name is { Length: > 0 } n ? n : defaultUser);
+        var httpContext = context.HttpContext;
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
+        {
+            return missingScope;
+        }
+
+        string? visitId = httpContext.Request.RouteValues["visit_id"]?.ToString()?.Trim();
+        if (!string.IsNullOrEmpty(visitId)
+            && httpContext.RequestServices.GetService<CtmsDbContext>() is { } db)
+        {
+            var visit = await db.CtmsMonitoringVisits.AsNoTracking()
+                .FirstOrDefaultAsync(v => v.Id == visitId, httpContext.RequestAborted);
+            if (visit is not null
+                && CtmsScopeGuard.RequireStudyAndSite(httpContext, visit.StudyId, visit.SiteId) is { } scopeDenied)
+            {
+                return scopeDenied;
+            }
+        }
+
+        return await next(context);
+    }
+
+    internal static (string User, string Role) ResolveCaller(HttpContext httpContext, string defaultUser)
+    {
+        string? verifiedSub = httpContext.VerifiedSigToken()?.Subject;
+        string? identityName = httpContext.User?.Identity?.Name;
+        string user;
+        if (!string.IsNullOrEmpty(verifiedSub))
+        {
+            user = verifiedSub;
+        }
+        else if (CallerScope.UserId(httpContext) is { } scopedUser)
+        {
+            user = scopedUser;
+        }
+        else if (!string.IsNullOrEmpty(identityName))
+        {
+            user = identityName;
+        }
+        else
+        {
+            user = defaultUser;
+        }
+
         string role = CallerScope.Roles(httpContext);
         if (string.IsNullOrWhiteSpace(role))
         {

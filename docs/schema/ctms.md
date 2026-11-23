@@ -28,6 +28,20 @@ Indexes:
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
 - `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
+## ctms.consumed_signature_tokens
+
+Entity: `ConsumedSignatureToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `TokenId` | `character varying(128)` | no |  | PK |
+| `ConsumedAt` | `timestamp with time zone` | no |  |  |
+| `RetainUntil` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
+
 ## ctms.ctms_audit_logs
 
 Entity: `CtmsAuditLog`

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -9,11 +10,13 @@ using System.Threading.Tasks;
 using Cadence.Apps.Imaging.Domain;
 using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,8 +45,8 @@ public record ChairAdjudicateImagingRequest(
     double FinalConsensusSldMm,
     string BindingReader,
     string AdjudicationRationale,
-    string SignerName,
-    string SignatureMeaning);
+    string? SignerName = null,
+    string SignatureMeaning = "CEC Chair Adjudication Consensus Sign-Off");
 
 public record AdjudicationSessionResponse(
     string SessionId,
@@ -62,6 +65,14 @@ public record AdjudicationSessionResponse(
 
 public static class ImagingAdjudicationEndpoints
 {
+    public const string ChairAdjudicateSemanticAction = "imaging.adjudication.chair_adjudicate";
+
+    public static string ChairAdjudicateAction(string sessionId) =>
+        $"/api/v1/imaging/adjudications/{sessionId}/chair-adjudicate";
+
+    private static string ChairAdjudicateActionFor(HttpContext httpContext) =>
+        ChairAdjudicateAction(httpContext.Request.RouteValues["sessionId"]?.ToString()?.Trim() ?? string.Empty);
+
     public static IEndpointRouteBuilder MapImagingAdjudicationEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/v1/imaging/adjudications")
@@ -84,6 +95,7 @@ public static class ImagingAdjudicationEndpoints
         group.MapPost("/{sessionId}/chair-adjudicate", ChairAdjudicateSessionAsync)
             .WithName("ChairAdjudicateImagingSession")
             .RequirePermission("imaging_adjudication:adjudicate").RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature(ChairAdjudicateSemanticAction, ChairAdjudicateActionFor)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<AdjudicationSessionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -223,6 +235,7 @@ public static class ImagingAdjudicationEndpoints
         ChairAdjudicateImagingRequest request,
         ImagingDbContext dbContext,
         HttpContext httpContext,
+        [FromServices] IClock clock,
         CancellationToken cancellationToken)
     {
         var session = await dbContext.ImagingAdjudicationSessions
@@ -239,15 +252,21 @@ public static class ImagingAdjudicationEndpoints
             return OutsideStudy();
         }
 
-        // The chair who signs is the signed caller, never a name in the request body (ADR-2516).
-        string signerId = Caller(httpContext);
+        // The chair who signs is derived from the verified X-Sig-Token claims (sub + username), never request.SignerName.
+        var verifiedToken = httpContext.VerifiedSigToken();
+        string signerId = verifiedToken?.Subject is { Length: > 0 } verifiedSub
+            ? verifiedSub
+            : Caller(httpContext);
+        string signerName = verifiedToken?.Claims.FirstOrDefault(c => c.Type == SigTokenClaims.Username)?.Value is { Length: > 0 } verifiedUsername
+            ? verifiedUsername
+            : signerId;
 
         if (session.WorkflowStatus is "FINALIZED_BY_CHAIR" or "FINALIZED_CONCORDANT")
         {
             return TypedResults.Conflict(new { code = "SESSION_ALREADY_FINALIZED", message = $"Adjudication session '{sessionId}' is already finalized in status '{session.WorkflowStatus}'." });
         }
 
-        DateTimeOffset now = SystemClock.Instance.UtcNow;
+        DateTimeOffset now = clock.UtcNow;
 
         string payloadToHash = $"{session.Id}|{request.FinalConsensusResponse}|{request.FinalConsensusSldMm}|{request.BindingReader}|{request.AdjudicationRationale}";
         string payloadHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(payloadToHash)));
@@ -255,7 +274,7 @@ public static class ImagingAdjudicationEndpoints
         var signatureManifest = new
         {
             SignerId = signerId,
-            SignerName = request.SignerName,
+            SignerName = signerName,
             SignerRole = "CEC_CHAIR",
             SigningReason = request.SignatureMeaning,
             SignedAt = now.ToString("o"),
@@ -263,7 +282,7 @@ public static class ImagingAdjudicationEndpoints
         };
 
         session.AdjudicatorId = signerId;
-        session.AdjudicatorName = request.SignerName;
+        session.AdjudicatorName = signerName;
         session.WorkflowStatus = "FINALIZED_BY_CHAIR";
         session.FinalConsensusResponse = request.FinalConsensusResponse;
         session.FinalConsensusSldMm = request.FinalConsensusSldMm;

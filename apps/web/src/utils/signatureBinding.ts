@@ -9,6 +9,14 @@ export const DELEGATION_SIGN_OFF_ACTION =
 export const DELEGATION_SIGN_OFF_SEMANTIC_ACTION =
   "knowledge.delegation.sign_off";
 
+/** Canonical batch step-up bindings for CTMS startup greenlight and Interop eSource reconciliation. */
+export const CTMS_GREENLIGHT_BATCH_CERTIFY_ACTION =
+  "/api/v1/ctms/startup/matrix/batch-certify";
+export const INTEROP_ESOURCE_BATCH_ACCEPT_ACTION =
+  "/api/v1/interop/esource/reconcile/batch-accept";
+export const INTEROP_ESOURCE_BATCH_REJECT_ACTION =
+  "/api/v1/interop/esource/reconcile/batch-reject";
+
 /** Ordinal (UTF-16 code unit) order, the same as the service's `StringComparer.Ordinal`. */
 function ordinalSort(values: string[]): string[] {
   return [...values].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
@@ -24,11 +32,21 @@ async function sha256Hex(text: string): Promise<string> {
     .join("");
 }
 
+/**
+ * Deterministic `batch_id` matching `SigTokenBatchId.FromIds` in `packages/security`:
+ * trims each ID, discards blanks, sorts in `StringComparer.Ordinal` order, joins with `","`, and returns lowercase SHA-256 hex.
+ */
+export function computeBatchBindingId(ids: readonly string[]): Promise<string> {
+  return sha256Hex(
+    ordinalSort(
+      ids.map((id) => String(id).trim()).filter((id) => id.length > 0)
+    ).join(",")
+  );
+}
+
 /** `sha256(sortedIds joined with ",")` for the delegation-log sign-off. */
 export function delegationBatchBindingId(
   delegationIds: string[]
 ): Promise<string> {
-  return sha256Hex(
-    ordinalSort(delegationIds.map((id) => String(id).trim())).join(",")
-  );
+  return computeBatchBindingId(delegationIds);
 }

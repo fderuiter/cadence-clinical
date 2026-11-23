@@ -135,16 +135,20 @@ export async function changeParticipantStateMutation(
   store: StudyCanvasMutationStore,
   participant: SubjectSummary,
   state: string,
-  reason: string
+  reason: string,
+  sigToken?: string
 ): Promise<boolean> {
   const toasts = useToastStore();
   const label = participantStateLabel(state);
   try {
-    const updated = await executionApi.changeSubjectState(
-      participant.id,
-      state,
-      reason
-    );
+    const updated = sigToken
+      ? await executionApi.changeSubjectState(
+          participant.id,
+          state,
+          reason,
+          sigToken
+        )
+      : await executionApi.changeSubjectState(participant.id, state, reason);
     const changed = { ...participant, status: updated.status };
     store.rememberParticipants([changed]);
     const index = store.participants.findIndex((p) => p.id === participant.id);

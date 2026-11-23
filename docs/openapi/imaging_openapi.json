@@ -436,6 +436,16 @@
           "required": true
         },
         "responses": {
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          },
           "403": {
             "description": "Forbidden",
             "content": {
@@ -889,9 +899,7 @@
           "finalConsensusResponse",
           "finalConsensusSldMm",
           "bindingReader",
-          "adjudicationRationale",
-          "signerName",
-          "signatureMeaning"
+          "adjudicationRationale"
         ],
         "type": "object",
         "properties": {
@@ -913,10 +921,14 @@
             "type": "string"
           },
           "signerName": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "signatureMeaning": {
-            "type": "string"
+            "type": "string",
+            "default": "CEC Chair Adjudication Consensus Sign-Off"
           }
         }
       },

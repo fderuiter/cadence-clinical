@@ -11,7 +11,7 @@ Medical imaging service. It de-identifies DICOM uploads (single instances and ba
 - `Domain/`: EF Core entity classes (imaging study, series and instance envelopes, de-identification certificates, annotations, tumour response assessments, adjudication sessions, audit log).
   Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `ImagingDbContext`, a design-time `ImagingDbContextFactory`, and `Configurations/` (Fluent API mappings).
-- `Infrastructure/Persistence/Migrations/`: `20260924145016_InitialCreate`.
+- `Infrastructure/Persistence/Migrations/`: `20260924145016_InitialCreate`, `20261123171157_AddConsumedSignatureTokens`.
 - `Infrastructure/Security/DeidentificationKeys.cs`: `AddImagingDeidentification`, which registers the one `DicomDeidentifier` built from the configured keys.
 - `Services/DicomIngestionService.cs`: DICOM ingestion through `DicomDeidentifier` ([packages/deid](../../packages/deid/README.md)).
 
@@ -27,7 +27,7 @@ Medical imaging service. It de-identifies DICOM uploads (single instances and ba
 
 `Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route not marked anonymous requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
-Uploads need `imaging_study:upload` and a `studyId` the caller is assigned to; reads need `imaging_study:read` and answer `404` outside the caller's studies. Adjudication needs `imaging_adjudication:submit`, `read` or `adjudicate` (the medical monitor chairs). The certificate operator and the chair's signature are the signed caller; the `X-Operator-Identity` header and a body `SignerId` are no longer accepted (`PermissionMatrix.Imaging.cs`) ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
+Uploads need `imaging_study:upload` and a `studyId` the caller is assigned to; reads need `imaging_study:read` and answer `404` outside the caller's studies. Adjudication needs `imaging_adjudication:submit`, `read` or `adjudicate` (the medical monitor chairs). `POST /api/v1/imaging/adjudications/{sessionId}/chair-adjudicate` also requires a single-use step-up `X-Sig-Token` bound to `imaging.adjudication.chair_adjudicate` backed by `imaging.consumed_signature_tokens` (`AddCadenceDurableSigTokenStore<ImagingDbContext>()`, [ADR-2660](../../docs/adr/2026-11-23-enforce-step-up-signature-filters-and-durable-stores.md)). The certificate operator and the chair's signature (`sub` and `username`) come strictly from the verified token and signed caller; the `X-Operator-Identity` header and request-body `SignerId`/`SignerName` values are ignored (`PermissionMatrix.Imaging.cs`) ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
 
 ## De-identification keys
 

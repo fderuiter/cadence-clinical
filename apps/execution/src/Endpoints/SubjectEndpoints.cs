@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cadence.Apps.Execution.Endpoints;
@@ -43,6 +44,57 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// </summary>
 public static partial class SubjectEndpoints
 {
+    public const string UnblindSemanticAction = "execution.subject.unblind";
+
+    public static string UnblindAction(string subjectId) => $"/api/v1/execution/subjects/{subjectId}/state";
+
+    private static bool IsUnblindingTransition(EndpointFilterInvocationContext context)
+    {
+        var request = context.Arguments.OfType<SubjectStateUpdateRequest>().FirstOrDefault();
+        return SubjectStateCodec.TryParse(request?.Target, out var parsed) && parsed == SubjectState.Unblinded;
+    }
+
+    private static SigTokenBinding? ResolveUnblindingSignatureBinding(EndpointFilterInvocationContext context)
+    {
+        string? subjectId = context.HttpContext.Request.RouteValues["subjectId"]?.ToString()?.Trim();
+        return string.IsNullOrEmpty(subjectId)
+            ? null
+            : new SigTokenBinding(UnblindAction(subjectId), UnblindSemanticAction);
+    }
+
+    private static async ValueTask<object?> ValidateUnblindingPreconditionsAsync(
+        EndpointFilterInvocationContext context,
+        EndpointFilterDelegate next)
+    {
+        if (!IsUnblindingTransition(context))
+        {
+            return await next(context).ConfigureAwait(false);
+        }
+
+        var http = context.HttpContext;
+        var request = context.Arguments.OfType<SubjectStateUpdateRequest>().FirstOrDefault();
+        if (SubjectAuthority.AuthorizeStateChange(http.User.ToAuthenticatedCaller(), request?.Target) is { } forbidden)
+        {
+            return forbidden.ToProblemResult();
+        }
+
+        string? subjectId = http.Request.RouteValues["subjectId"]?.ToString()?.Trim();
+        if (!string.IsNullOrEmpty(subjectId)
+            && http.RequestServices.GetService<ISubjectApplicationService>() is { } svc
+            && await GuardSubjectScopeAsync(subjectId, http, svc, http.RequestAborted).ConfigureAwait(false) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        string? changeReason = ChangeReasonHeader.Read(http.Request);
+        if (changeReason is null || changeReason.Trim().Length < SubjectAuthority.MinimumUnblindingReasonLength)
+        {
+            return SubjectErrors.UnblindingReasonTooShort(SubjectAuthority.MinimumUnblindingReasonLength).ToProblemResult();
+        }
+
+        return await next(context).ConfigureAwait(false);
+    }
+
     [LoggerMessage(
         EventId = 3001,
         Level = LogLevel.Information,
@@ -147,7 +199,9 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
             .AddEndpointFilter<ValidationFilter<SubjectStateUpdateRequest>>()
-            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+            .AddEndpointFilter<ChangeReasonHeaderFilter>()
+            .AddEndpointFilter(ValidateUnblindingPreconditionsAsync)
+            .RequireElectronicSignatureWhen(IsUnblindingTransition, ResolveUnblindingSignatureBinding);
 
         group.MapPatch("/{subjectId}/site", AssignSubjectSiteAsync)
             .WithName("AssignSubjectSite")

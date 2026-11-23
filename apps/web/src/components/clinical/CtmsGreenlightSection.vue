@@ -102,6 +102,13 @@
         "
         class="certify-box"
       >
+        <label for="greenlight-certify-password">Password (Part 11)</label>
+        <input
+          id="greenlight-certify-password"
+          v-model="certifyPassword"
+          v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+          placeholder="Re-enter password to certify"
+        />
         <label for="greenlight-certify-reason"
           >Part 11 certification rationale</label
         >
@@ -115,7 +122,7 @@
           id="btn-certify-site-greenlight"
           type="button"
           class="btn btn-primary"
-          :disabled="!certifyReason.trim() || certifying"
+          :disabled="!certifyReason.trim() || !certifyPassword || certifying"
           @click="certifySingleSite"
         >
           {{ certifying ? "Certifying..." : `Certify ${singleGate.site_id}` }}
@@ -208,6 +215,13 @@
           v-if="canCertify && selectedMatrixSites.length"
           class="certify-box"
         >
+          <label for="batch-certify-password">Password (Part 11)</label>
+          <input
+            id="batch-certify-password"
+            v-model="batchPassword"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+            placeholder="Re-enter password to batch certify"
+          />
           <label for="batch-certify-reason"
             >Batch certification rationale ({{
               selectedMatrixSites.length
@@ -224,7 +238,7 @@
             id="btn-batch-certify-greenlight"
             type="button"
             class="btn btn-primary"
-            :disabled="!batchReason.trim() || certifying"
+            :disabled="!batchReason.trim() || !batchPassword || certifying"
             @click="certifyBatch"
           >
             {{
@@ -241,10 +255,20 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import {
+  buildStepUpVerificationPayload,
+  SEMANTIC_ACTIONS,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+} from "ui";
 import { ctmsApi, type SiteGreenlightGate } from "../../api/ctmsApi";
 import { canCertifyGreenlight } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import apiClient from "../../services/api";
 import { formatClinicalStatus } from "../../utils/clinicalLabels";
+import {
+  computeBatchBindingId,
+  CTMS_GREENLIGHT_BATCH_CERTIFY_ACTION,
+} from "../../utils/signatureBinding";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
@@ -285,7 +309,9 @@ const countryCode = ref("US");
 const singleGate = ref<SiteGreenlightGate | null>(null);
 const countryMatrix = ref<SiteGreenlightGate[]>([]);
 const selectedMatrixSites = ref<string[]>([]);
+const certifyPassword = ref("");
 const certifyReason = ref("");
+const batchPassword = ref("");
 const batchReason = ref("");
 const certifying = ref(false);
 
@@ -329,16 +355,47 @@ async function loadReadiness() {
 }
 
 async function certifySingleSite() {
-  if (!singleGate.value || !certifyReason.value.trim() || !canCertify.value) {
+  const password = certifyPassword.value;
+  certifyPassword.value = "";
+  if (
+    !singleGate.value ||
+    !certifyReason.value.trim() ||
+    !password ||
+    !canCertify.value
+  ) {
     return;
   }
   certifying.value = true;
   try {
+    const signerUsername =
+      authStore.identity?.username ||
+      authStore.user?.username ||
+      authStore.userId ||
+      "sponsor_dm";
+    const verificationPayload = buildStepUpVerificationPayload({
+      username: signerUsername,
+      password,
+      totp: null,
+      action: `/api/v1/ctms/startup/sites/${encodeURIComponent(singleGate.value.site_id)}/greenlight/certify`,
+      semanticAction: SEMANTIC_ACTIONS.CTMS_GREENLIGHT_CERTIFY,
+    });
+    const verifyRes = await apiClient.post(
+      "/api/v1/auth/signature-verification",
+      verificationPayload
+    );
+    const sigToken = verifyRes?.sig_token;
+    if (!sigToken) {
+      throw new Error(
+        "Signature verification did not return a signature token."
+      );
+    }
+
     const updated = await ctmsApi.certifySiteGreenlight(
       singleGate.value.site_id,
       singleGate.value.study_id,
       certifyReason.value.trim(),
-      singleGate.value.country_code
+      singleGate.value.country_code,
+      sigToken
     );
     singleGate.value = updated;
     certifyReason.value = "";
@@ -357,23 +414,52 @@ async function certifySingleSite() {
 
 async function certifyBatch() {
   const study = studyInput.value.trim();
+  const password = batchPassword.value;
+  batchPassword.value = "";
   if (
     !study ||
     !selectedMatrixSites.value.length ||
     !batchReason.value.trim() ||
+    !password ||
     !canCertify.value
   ) {
     return;
   }
   certifying.value = true;
   try {
+    const siteIds = [...selectedMatrixSites.value];
+    const signerUsername =
+      authStore.identity?.username ||
+      authStore.user?.username ||
+      authStore.userId ||
+      "sponsor_dm";
+    const verificationPayload = buildStepUpVerificationPayload({
+      username: signerUsername,
+      password,
+      totp: null,
+      action: CTMS_GREENLIGHT_BATCH_CERTIFY_ACTION,
+      semanticAction: SEMANTIC_ACTIONS.CTMS_GREENLIGHT_BATCH_CERTIFY,
+      batchId: await computeBatchBindingId(siteIds),
+    });
+    const verifyRes = await apiClient.post(
+      "/api/v1/auth/signature-verification",
+      verificationPayload
+    );
+    const sigToken = verifyRes?.sig_token;
+    if (!sigToken) {
+      throw new Error(
+        "Signature verification did not return a signature token."
+      );
+    }
+
     const res = await ctmsApi.batchCertifyCountrySites(
       {
         study_id: study,
         country_code: countryCode.value,
-        site_ids: selectedMatrixSites.value,
+        site_ids: siteIds,
       },
-      batchReason.value.trim()
+      batchReason.value.trim(),
+      sigToken
     );
     batchReason.value = "";
     selectedMatrixSites.value = [];

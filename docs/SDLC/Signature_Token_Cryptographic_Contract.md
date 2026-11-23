@@ -55,9 +55,21 @@ The client then repeats the signature-gated request with the `X-Sig-Token` heade
 
 Signature-gated endpoints today:
 
-| Endpoint                                                                                  | `semantic_action`        | `action`                               |
-| :---------------------------------------------------------------------------------------- | :----------------------- | :------------------------------------- |
-| `POST /api/v1/execution/forms/{id}/approve` (and the legacy `/api/v1/forms/{id}/approve`) | `execution.form.approve` | `/api/v1/execution/forms/{id}/approve` |
+| Endpoint                                                                                  | `semantic_action`                       | `action`                                                     |
+| :---------------------------------------------------------------------------------------- | :-------------------------------------- | :----------------------------------------------------------- |
+| `POST /api/v1/execution/forms/{id}/approve` (and the legacy `/api/v1/forms/{id}/approve`) | `execution.form.approve`                | `/api/v1/execution/forms/{id}/approve`                       |
+| `PATCH /api/v1/execution/subjects/{subjectId}/state` (when `target` is `UNBLINDED`)       | `execution.subject.unblind`             | `/api/v1/execution/subjects/{subjectId}/state`               |
+| `POST /api/v1/ctms/doa/sign-off`                                                          | `ctms.doa.sign_off`                     | `/api/v1/ctms/doa/sign-off`                                  |
+| `POST /api/v1/ctms/monitoring-visits/{visit_id}/sign-off`                                 | `ctms.monitoring_visit.sign_off`        | `/api/v1/ctms/monitoring-visits/{visit_id}/sign-off`         |
+| `POST /api/v1/ctms/letters/compile` (when `Finalize` is `true`)                           | `ctms.letter.compile`                   | `/api/v1/ctms/letters/compile`                               |
+| `POST /api/v1/ctms/startup/sites/{siteId}/greenlight/certify`                             | `ctms.greenlight.certify`               | `/api/v1/ctms/startup/sites/{siteId}/greenlight/certify`     |
+| `POST /api/v1/ctms/startup/matrix/batch-certify`                                          | `ctms.greenlight.batch_certify`         | `/api/v1/ctms/startup/matrix/batch-certify`                  |
+| `POST /api/v1/payments/invoices/{id}/remittance-advice/sign`                              | `payments.remittance.sign`              | `/api/v1/payments/invoices/{id}/remittance-advice/sign`      |
+| `POST /api/v1/imaging/adjudications/{sessionId}/chair-adjudicate`                         | `imaging.adjudication.chair_adjudicate` | `/api/v1/imaging/adjudications/{sessionId}/chair-adjudicate` |
+| `POST /api/v1/interop/esource/reconcile/accept`                                           | `interop.esource.accept`                | `/api/v1/interop/esource/reconcile/accept`                   |
+| `POST /api/v1/interop/esource/reconcile/batch-accept`                                     | `interop.esource.batch_accept`          | `/api/v1/interop/esource/reconcile/batch-accept`             |
+| `POST /api/v1/interop/esource/reconcile/reject`                                           | `interop.esource.reject`                | `/api/v1/interop/esource/reconcile/reject`                   |
+| `POST /api/v1/interop/esource/reconcile/batch-reject`                                     | `interop.esource.batch_reject`          | `/api/v1/interop/esource/reconcile/batch-reject`             |
 
 ---
 
@@ -65,7 +77,7 @@ Signature-gated endpoints today:
 
 Downstream microservices (via `GatewayAuthMiddleware` or specific verification components) MUST enforce the following validation pipeline upon receiving a signature-gated mutation.
 
-This verification is centralized in `SigTokenVerifier.VerifyAndConsumeAsync(token, userId, SigTokenBinding, secret)` in `packages/security` (`Cadence.Security.Authentication`). Endpoints apply it with `RequireElectronicSignature(semanticAction, resolveAction)`, or `RequireElectronicSignature(resolveBinding)` when the binding (for example a `batch_id`) comes from the request body. The filter runs before the handler and answers `401` on any failure, so no write happens; the handler reads the verified token with `HttpContext.VerifiedSigToken()`. Services add any domain-specific rules on top (such as local action gating in eConsent):
+This verification is centralized in `SigTokenVerifier.VerifyAndConsumeAsync(token, userId, SigTokenBinding, secret)` in `packages/security` (`Cadence.Security.Authentication`). Endpoints apply it with `RequireElectronicSignature(semanticAction, resolveAction)`, `RequireElectronicSignature(resolveBinding)` when the binding (for example a `batch_id` computed via `SigTokenBatchId.FromIds(...)`) comes from the request body, or `RequireElectronicSignatureWhen(resolveBindingIfRequired)` on mixed-mode endpoints where only regulated transitions require step-up verification (such as `UNBLINDED` subject state changes or `Finalize: true` letter compilation). The filter runs before the handler and answers `401` on any failure, so no write happens; the handler reads the verified token with `HttpContext.VerifiedSigToken()`. Services add any domain-specific rules on top (such as local action gating in eConsent):
 
 1. **Header Presence:** Extract `X-Sig-Token` from the HTTP request headers. If absent, reject with `401 Unauthorized` and payload:
    ```json
@@ -83,7 +95,7 @@ This verification is centralized in `SigTokenVerifier.VerifyAndConsumeAsync(toke
    - Extract the unique `jti` claim.
    - Only after every other check passes, record it with `ISigTokenUseStore.TryRecordFirstUseAsync(jti, exp + 5s)`. A second use, including a concurrent one, is rejected.
    - The record is kept until `exp + 5s`, the end of the acceptance window, never only until `exp`; otherwise the token could be replayed in the skew after expiry.
-   - Single use reaches exactly as far as the store is shared. Every service with an e-signature route (Execution, eConsent, Knowledge) uses `PostgresSigTokenUseStore<TContext>` (`consumed_signature_tokens` in its own schema, primary key on the token id), which holds across instances and restarts. Outside `Development` a host that maps a signed route over the process-local `ReplayCache` refuses to start (#5434, ADR-2515).
+   - Single use reaches exactly as far as the store is shared. Every service with an e-signature route (Execution, eConsent, Knowledge, Safety, Tickets, CTMS, Payments, Imaging, and Interop) uses `PostgresSigTokenUseStore<TContext>` (`consumed_signature_tokens` in its own schema, primary key on the token id), which holds across instances and restarts. Outside `Development` a host that maps a signed route over the process-local `ReplayCache` refuses to start (#5434, ADR-2515, [ADR-2660](../adr/2026-11-23-enforce-step-up-signature-filters-and-durable-stores.md)).
 
 ---
 
@@ -136,7 +148,7 @@ The Execution service records the `jti` in `execution.consumed_signature_tokens`
 
 ### 6.4.1 Delegation-log sign-off
 
-`/api/v1/training/delegations/bulk-signoff` (knowledge) follows the same contract with the semantic action `knowledge.delegation.sign_off` and `batch_id` = lower-case hex SHA-256 of the trimmed delegation ids, sorted ordinally and joined with `,`. The route also requires the `delegation_log:sign` permission (principal investigator, authorized ER physician, lead investigator). The signer is the verified caller, an unknown id fails the request with `404`, and the seal is an HMAC keyed with `GATEWAY_SECRET`.
+`/api/v1/training/delegations/bulk-signoff` (knowledge), `/api/v1/ctms/startup/matrix/batch-certify` (CTMS, `ctms.greenlight.batch_certify`), and `/api/v1/interop/esource/reconcile/batch-accept` / `batch-reject` (Interop, `interop.esource.batch_accept` and `interop.esource.batch_reject`) follow the same contract with `batch_id` = lower-case hex SHA-256 (`SigTokenBatchId.FromIds` / `computeBatchTargetHash`) of the trimmed target ids, sorted ordinally and joined with `,`. Delegation sign-off also requires the `delegation_log:sign` permission (principal investigator, authorized ER physician, lead investigator). The signer is the verified caller, an unknown id fails the request with `404` (or `400` on missing greenlight gates), and seals are HMACs keyed with `GATEWAY_SECRET`.
 
 ### 6.5 Individual Record Manifestation & Version Binding
 

@@ -135,13 +135,20 @@ export const executionRtsmApi = {
   changeSubjectState(
     subjectId: string,
     state: string,
-    reason: string
+    reason: string,
+    sigToken?: string
   ): Promise<Subject> {
+    const headers: Record<string, string> = {
+      "X-Change-Reason": encodeChangeReason(reason),
+    };
+    if (sigToken) {
+      headers["X-Sig-Token"] = sigToken;
+    }
     return unwrapResponse(
       client.PATCH("/api/v1/execution/subjects/{subjectId}/state", {
         params: { path: { subjectId } },
         body: { status: state, state: null },
-        headers: { "X-Change-Reason": encodeChangeReason(reason) },
+        headers,
       })
     );
   },

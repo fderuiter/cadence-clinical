@@ -721,6 +721,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
       /** @description Forbidden */
       403: {
         headers: {
@@ -930,6 +939,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };
@@ -1242,6 +1260,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
       /** @description Forbidden */
       403: {
         headers: {
@@ -1329,6 +1356,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };
@@ -1488,6 +1524,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };

@@ -13,6 +13,7 @@ using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Infrastructure.Security;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
@@ -33,6 +34,31 @@ namespace Cadence.Apps.Interop.Endpoints;
 /// </summary>
 public static class EsourceEndpoints
 {
+    public const string AcceptAction = "/api/v1/interop/esource/reconcile/accept";
+    public const string AcceptSemanticAction = "interop.esource.accept";
+    public const string BatchAcceptAction = "/api/v1/interop/esource/reconcile/batch-accept";
+    public const string BatchAcceptSemanticAction = "interop.esource.batch_accept";
+    public const string RejectAction = "/api/v1/interop/esource/reconcile/reject";
+    public const string RejectSemanticAction = "interop.esource.reject";
+    public const string BatchRejectAction = "/api/v1/interop/esource/reconcile/batch-reject";
+    public const string BatchRejectSemanticAction = "interop.esource.batch_reject";
+
+    private static SigTokenBinding? BatchAcceptBinding(EndpointFilterInvocationContext context)
+    {
+        var request = context.Arguments.OfType<EhrReconcileBatchAcceptRequest>().FirstOrDefault();
+        return SigTokenBatchId.FromIds(request?.CandidateIds) is { } batchId
+            ? new SigTokenBinding(BatchAcceptAction, BatchAcceptSemanticAction, batchId)
+            : null;
+    }
+
+    private static SigTokenBinding? BatchRejectBinding(EndpointFilterInvocationContext context)
+    {
+        var request = context.Arguments.OfType<EhrReconcileBatchRejectRequest>().FirstOrDefault();
+        return SigTokenBatchId.FromIds(request?.CandidateIds) is { } batchId
+            ? new SigTokenBinding(BatchRejectAction, BatchRejectSemanticAction, batchId)
+            : null;
+    }
+
     public static IEndpointRouteBuilder MapEsourceEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/interop/esource")
@@ -104,6 +130,7 @@ public static class EsourceEndpoints
         group.MapPost("/reconcile/accept", AcceptCandidateAsync)
             .WithName("AcceptCandidate")
             .RequirePermission("esource_candidate:reconcile").RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature(AcceptSemanticAction, _ => AcceptAction)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -112,6 +139,7 @@ public static class EsourceEndpoints
         group.MapPost("/reconcile/batch-accept", BatchAcceptCandidatesAsync)
             .WithName("BatchAcceptCandidates")
             .RequirePermission("esource_candidate:reconcile").RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature(BatchAcceptBinding)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileBatchActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -120,6 +148,7 @@ public static class EsourceEndpoints
         group.MapPost("/reconcile/reject", RejectCandidateAsync)
             .WithName("RejectCandidate")
             .RequirePermission("esource_candidate:reconcile").RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature(RejectSemanticAction, _ => RejectAction)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -128,6 +157,7 @@ public static class EsourceEndpoints
         group.MapPost("/reconcile/batch-reject", BatchRejectCandidatesAsync)
             .WithName("BatchRejectCandidates")
             .RequirePermission("esource_candidate:reconcile").RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature(BatchRejectBinding)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileBatchActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)

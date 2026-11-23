@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -11,6 +12,7 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 using Cadence.Templating;
@@ -33,6 +35,33 @@ public static class LetterTemplateEndpoints
 {
     /// <summary>The permission that rendering a visit letter requires.</summary>
     public const string RenderPermission = "ctms_monitoring_visit:create";
+    public const string CompileAction = "/api/v1/ctms/letters/compile";
+    public const string CompileSemanticAction = "ctms.letter.compile";
+
+    private static bool IsFinalizedCompilation(EndpointFilterInvocationContext context) =>
+        context.Arguments.OfType<SiteVisitLetterModel>().FirstOrDefault()?.Finalize is true;
+
+    private static async ValueTask<object?> ValidateCompileScopePreconditionsAsync(
+        EndpointFilterInvocationContext context,
+        EndpointFilterDelegate next)
+    {
+        if (!IsFinalizedCompilation(context))
+        {
+            return await next(context);
+        }
+
+        var httpContext = context.HttpContext;
+        var request = context.Arguments.OfType<SiteVisitLetterModel>().FirstOrDefault();
+        if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
+            && !string.IsNullOrWhiteSpace(request?.StudyId)
+            && !string.IsNullOrWhiteSpace(request.SiteId)
+            && CtmsScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        return await next(context);
+    }
 
     /// <summary>The letters CTMS can render, keyed by the value callers pass as <c>templateName</c>.</summary>
     public static TemplateCatalog Catalog { get; } = new(
@@ -60,7 +89,9 @@ public static class LetterTemplateEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(RenderPermission).RequireCallerStudyAndSiteScope();
+            .RequirePermission(RenderPermission).RequireCallerStudyAndSiteScope()
+            .AddEndpointFilter(ValidateCompileScopePreconditionsAsync)
+            .RequireElectronicSignatureWhen(IsFinalizedCompilation, _ => new SigTokenBinding(CompileAction, CompileSemanticAction));
 
         group.MapGet("/letters/{letterId}/pdf", GetLetterPdfAsync)
             .WithName("GetSiteVisitLetterPdf")
@@ -174,16 +205,25 @@ public static class LetterTemplateEndpoints
             visitId = "VISIT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
         }
 
-        var user = httpContext.User?.Identity?.Name ?? request.CraId;
+        // Signer attribution on finalized letters comes exclusively from verified X-Sig-Token or gateway-authenticated
+        // claims, never from request.SignerName in the HTTP body (21 CFR Part 11 §11.50 / ADR-2515).
+        var (user, verifiedSignerName) = ResolveVerifiedLetterSigner(httpContext, request.CraId);
         var now = clock.UtcNow;
 
-        var normalizedRequest = request with { StudyId = trimmedStudyId, SiteId = trimmedSiteId, VisitId = visitId };
+        var normalizedRequest = request with
+        {
+            StudyId = trimmedStudyId,
+            SiteId = trimmedSiteId,
+            VisitId = visitId,
+            SignerName = request.Finalize ? verifiedSignerName : null,
+        };
         var pdfResult = await GxpPdfCompiler.CompileLetterPdfAsync(
             templateName,
             normalizedRequest,
             renderer,
             Catalog,
-            clock);
+            clock,
+            verifiedSignerName: request.Finalize ? verifiedSignerName : null);
 
         var letterId = "LTR-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
         var objectKey = $"letters/{trimmedStudyId}/{trimmedSiteId}/{letterId}.pdf";
@@ -330,13 +370,15 @@ public static class LetterTemplateEndpoints
             return scopeDenied;
         }
 
+        string? storedSignerName = TryReadManifestSigner(letter.SignatureManifestation) ?? letter.CreatedBy;
         var model = new SiteVisitLetterModel(
             CraId: letter.CreatedBy,
             CreatedAt: letter.CreatedAt.ToString("yyyy-MM-dd"),
             StudyId: resolvedStudyId ?? "STUDY",
             SiteId: resolvedSiteId ?? "SITE",
             VisitId: letter.VisitId,
-            Finalize: letter.IsSigned
+            Finalize: letter.IsSigned,
+            SignerName: letter.IsSigned ? storedSignerName : null
         );
 
         var pdfResult = await GxpPdfCompiler.CompileLetterPdfAsync(
@@ -344,7 +386,8 @@ public static class LetterTemplateEndpoints
             model,
             renderer,
             Catalog,
-            clock);
+            clock,
+            verifiedSignerName: letter.IsSigned ? storedSignerName : null);
 
         return TypedResults.Bytes(pdfResult.PdfBytes, "application/pdf", $"{letter.LetterType}_{letterId}.pdf");
     }
@@ -376,6 +419,63 @@ public static class LetterTemplateEndpoints
             ["signing_purpose"] = signingPurpose,
             ["integrity_hash"] = integrityHash
         };
+    }
+
+    private static (string SignerId, string SignerName) ResolveVerifiedLetterSigner(HttpContext httpContext, string fallbackCraId)
+    {
+        var verifiedToken = httpContext.VerifiedSigToken();
+        string signerId = FirstNonWhiteSpace(
+            verifiedToken?.Subject,
+            CallerScope.UserId(httpContext),
+            httpContext.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+            httpContext.User?.Identity?.Name) ?? fallbackCraId;
+
+        string? tokenUsername = verifiedToken?.Claims.FirstOrDefault(c => c.Type == SigTokenClaims.Username)?.Value;
+        string signerName = FirstNonWhiteSpace(
+            tokenUsername,
+            httpContext.User?.FindFirst("preferred_username")?.Value,
+            httpContext.User?.Identity?.Name) ?? signerId;
+
+        return (signerId, signerName);
+    }
+
+    private static string? FirstNonWhiteSpace(params string?[] candidates)
+    {
+        foreach (string? candidate in candidates)
+        {
+            if (!string.IsNullOrWhiteSpace(candidate))
+            {
+                return candidate.Trim();
+            }
+        }
+
+        return null;
+    }
+
+    private static string? TryReadManifestSigner(string? manifestationJson)
+    {
+        if (string.IsNullOrWhiteSpace(manifestationJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(manifestationJson);
+            if (doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("signer", out var signerProp)
+                && signerProp.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(signerProp.GetString()))
+            {
+                return signerProp.GetString()!.Trim();
+            }
+        }
+        catch (JsonException)
+        {
+            // Ignore malformed legacy manifestation strings and fall back to CreatedBy.
+        }
+
+        return null;
     }
 
     private static ProblemHttpResult UnknownTemplate(TemplateCatalog catalog) =>
@@ -428,11 +528,14 @@ public static class GxpPdfCompiler
         SiteVisitLetterModel request,
         ITemplateRenderer renderer,
         TemplateCatalog catalog,
-        IClock clock)
+        IClock clock,
+        string? verifiedSignerName = null)
     {
         var now = clock.UtcNow;
         var visitId = request.VisitId ?? ("VISIT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant());
-        var signerName = request.SignerName ?? request.CraId;
+        var signerName = !string.IsNullOrWhiteSpace(verifiedSignerName)
+            ? verifiedSignerName.Trim()
+            : (request.SignerName ?? request.CraId);
         var signingPurpose = request.SigningPurpose ?? "21 CFR Part 11 Electronic Signature / Visit Letter Approval";
         var signingTimestamp = now.ToString("o");
 

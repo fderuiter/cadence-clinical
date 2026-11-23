@@ -264,7 +264,8 @@ export interface components {
       finalConsensusSldMm: number | string;
       bindingReader: string;
       adjudicationRationale: string;
-      signerName: string;
+      signerName?: null | string;
+      /** @default CEC Chair Adjudication Consensus Sign-Off */
       signatureMeaning: string;
     };
     Imaging_DeidentificationCertificate: {
@@ -799,6 +800,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Imaging_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };

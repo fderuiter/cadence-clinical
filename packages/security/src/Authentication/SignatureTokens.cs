@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 
 using Cadence.Security.Rbac;
 
@@ -47,6 +49,42 @@ public sealed record SigTokenGrant(
 /// What a signature-gated endpoint expects a token to be bound to.
 /// </summary>
 public sealed record SigTokenBinding(string Action, string SemanticAction, string? BatchId = null);
+
+/// <summary>
+/// Computes the deterministic <c>batch_id</c> claim for batch signature endpoints:
+/// the lower-case hex SHA-256 digest of trimmed target identifiers sorted with
+/// <see cref="StringComparer.Ordinal"/> and joined with <c>","</c>.
+/// </summary>
+public static class SigTokenBatchId
+{
+    public static string? FromIds(IEnumerable<string?>? ids)
+    {
+        if (ids is null)
+        {
+            return null;
+        }
+
+        var trimmed = new List<string>();
+        foreach (string? id in ids)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return null;
+            }
+
+            trimmed.Add(id.Trim());
+        }
+
+        if (trimmed.Count == 0)
+        {
+            return null;
+        }
+
+        trimmed.Sort(StringComparer.Ordinal);
+        string canonical = string.Join(",", trimmed);
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
+    }
+}
 
 /// <summary>
 /// Issues e-signature step-up tokens. Only the gateway calls this, and only after the signer has re-entered

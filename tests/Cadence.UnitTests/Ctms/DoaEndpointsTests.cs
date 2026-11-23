@@ -576,9 +576,24 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             "/api/v1/ctms/doa/sign-off", signOffPayload, TestContext.Current.CancellationToken);
         signOffResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-        // 3. Authorized investigator CAN reach sign-off endpoint (returns 404 for non-existent record rather than 403 Forbidden)
-        var piSignOffResponse = await piClient.PostAsJsonAsync(
+        // 3. Authorized investigator without X-Sig-Token gets 401 REAUTHENTICATION_REQUIRED; with X-Sig-Token reaches handler (404 for missing record)
+        var unauthenticatedSignOff = await piClient.PostAsJsonAsync(
             "/api/v1/ctms/doa/sign-off", signOffPayload, TestContext.Current.CancellationToken);
+        unauthenticatedSignOff.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        using var signedPiReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ctms/doa/sign-off")
+        {
+            Content = JsonContent.Create(signOffPayload),
+        };
+        signedPiReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                userId: "pi-1",
+                action: DoaEndpoints.SignOffAction,
+                semanticAction: DoaEndpoints.SignOffSemanticAction,
+                roles: [RoleNormalization.ROLE_INVESTIGATOR],
+                issuedAt: _clock.UtcNow));
+        var piSignOffResponse = await piClient.SendAsync(signedPiReq, TestContext.Current.CancellationToken);
         piSignOffResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         // 4. Investigator assigned only to SITE-999 is blocked at route scope middleware on GET /sites/{site_id}/log,

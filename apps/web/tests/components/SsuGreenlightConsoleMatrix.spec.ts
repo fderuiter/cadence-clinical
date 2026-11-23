@@ -6,9 +6,11 @@ import {
   ctmsApi,
   type SiteGreenlightGateResponse,
 } from "../../src/api/ctmsApi";
+import { soaClient } from "../../src/api/soaClient";
 import SsuGreenlightConsole from "../../src/components/clinical/SsuGreenlightConsole.vue";
 import { useAuthStore } from "../../src/stores/auth";
 import { useToastStore } from "../../src/stores/toasts";
+import { computeBatchBindingId } from "../../src/utils/signatureBinding";
 import { signInAs } from "../helpers/signIn.js";
 
 const SAMPLE_MATRIX: SiteGreenlightGateResponse[] = [
@@ -66,6 +68,9 @@ describe("SsuGreenlightConsole Country-Level Multi-Site Activation Matrix", () =
     vi.spyOn(ctmsApi, "getCountryMatrix").mockResolvedValue(
       structuredClone(SAMPLE_MATRIX)
     );
+    vi.spyOn(soaClient, "verifySignature").mockResolvedValue({
+      sig_token: "sig-batch-greenlight-001",
+    } as any);
     vi.spyOn(ctmsApi, "batchCertifyCountrySites").mockResolvedValue({
       success: true,
       study_id: "PROTOCOL-2026-01",
@@ -159,11 +164,31 @@ describe("SsuGreenlightConsole Country-Level Multi-Site Activation Matrix", () =
     await wrapper.find(".btn-batch-certify").trigger("click");
     await nextTick();
 
+    await wrapper.find("#batch-sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await nextTick();
+
     await wrapper.find(".btn-submit-batch-certify").trigger("click");
     await flushPromises();
     await nextTick();
 
+    const expectedBatchId = await computeBatchBindingId(["SITE-101"]);
+    expect(soaClient.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "/api/v1/ctms/startup/matrix/batch-certify",
+        semanticAction: "ctms.greenlight.batch_certify",
+        batchId: expectedBatchId,
+      })
+    );
     expect(ctmsApi.batchCertifyCountrySites).toHaveBeenCalledTimes(1);
+    expect(ctmsApi.batchCertifyCountrySites).toHaveBeenCalledWith(
+      expect.objectContaining({
+        study_id: "PROTOCOL-2026-01",
+        country_code: "US",
+        site_ids: ["SITE-101"],
+      }),
+      expect.any(String),
+      "sig-batch-greenlight-001"
+    );
     expect(wrapper.find(".matrix-table").text()).toContain(
       "Greenlight Certified"
     );

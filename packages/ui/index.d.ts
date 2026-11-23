@@ -707,7 +707,18 @@ export function deriveKeyFromPIN(
 export const SEMANTIC_ACTION_PATTERN: RegExp;
 export const STEP_UP_ACTION_MAX_LENGTH: number;
 export const SEMANTIC_ACTIONS: Readonly<{
+  EXECUTION_SUBJECT_UNBLIND: "execution.subject.unblind";
   CTMS_DOA_SIGN_OFF: "ctms.doa.sign_off";
+  CTMS_MONITORING_VISIT_SIGN_OFF: "ctms.monitoring_visit.sign_off";
+  CTMS_LETTER_COMPILE: "ctms.letter.compile";
+  CTMS_GREENLIGHT_CERTIFY: "ctms.greenlight.certify";
+  CTMS_GREENLIGHT_BATCH_CERTIFY: "ctms.greenlight.batch_certify";
+  PAYMENTS_REMITTANCE_SIGN: "payments.remittance.sign";
+  IMAGING_CHAIR_ADJUDICATE: "imaging.adjudication.chair_adjudicate";
+  INTEROP_ESOURCE_ACCEPT: "interop.esource.accept";
+  INTEROP_ESOURCE_BATCH_ACCEPT: "interop.esource.batch_accept";
+  INTEROP_ESOURCE_REJECT: "interop.esource.reject";
+  INTEROP_ESOURCE_BATCH_REJECT: "interop.esource.batch_reject";
   ECONSENT_CAPTURE: "econsent.consent.capture";
   ECONSENT_RECONSENT_SIGN: "econsent.reconsent.sign";
   CEC_CHAIR_ADJUDICATE: "execution.cec.chair_adjudicate";

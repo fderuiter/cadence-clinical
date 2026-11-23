@@ -29,6 +29,7 @@ export interface SignatureVerificationPayload {
   totp?: string | null;
   action: string;
   semanticAction?: string;
+  batchId?: string | null;
 }
 
 export interface DocumentSignOffPayload {
@@ -517,6 +518,7 @@ export const etmfService = {
       totp = null,
       action,
       semanticAction,
+      batchId = null,
     }: SignatureVerificationPayload,
     options: Record<string, unknown> = {}
   ) {
@@ -526,6 +528,37 @@ export const etmfService = {
         semantic = SEMANTIC_ACTIONS.ECONSENT_CAPTURE;
       } else if (action.includes("doa/sign-off")) {
         semantic = SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF;
+      } else if (
+        action.includes("monitoring-visits/") &&
+        action.endsWith("/sign-off")
+      ) {
+        semantic = SEMANTIC_ACTIONS.CTMS_MONITORING_VISIT_SIGN_OFF;
+      } else if (action.includes("letters/compile")) {
+        semantic = SEMANTIC_ACTIONS.CTMS_LETTER_COMPILE;
+      } else if (action.includes("startup/matrix/batch-certify")) {
+        semantic = SEMANTIC_ACTIONS.CTMS_GREENLIGHT_BATCH_CERTIFY;
+      } else if (action.includes("greenlight/certify")) {
+        semantic = SEMANTIC_ACTIONS.CTMS_GREENLIGHT_CERTIFY;
+      } else if (action.includes("remittance-advice/sign")) {
+        semantic = SEMANTIC_ACTIONS.PAYMENTS_REMITTANCE_SIGN;
+      } else if (
+        action.includes("/imaging/adjudications/") &&
+        action.endsWith("/chair-adjudicate")
+      ) {
+        semantic = SEMANTIC_ACTIONS.IMAGING_CHAIR_ADJUDICATE;
+      } else if (action.includes("esource/reconcile/batch-accept")) {
+        semantic = SEMANTIC_ACTIONS.INTEROP_ESOURCE_BATCH_ACCEPT;
+      } else if (action.includes("esource/reconcile/accept")) {
+        semantic = SEMANTIC_ACTIONS.INTEROP_ESOURCE_ACCEPT;
+      } else if (action.includes("esource/reconcile/batch-reject")) {
+        semantic = SEMANTIC_ACTIONS.INTEROP_ESOURCE_BATCH_REJECT;
+      } else if (action.includes("esource/reconcile/reject")) {
+        semantic = SEMANTIC_ACTIONS.INTEROP_ESOURCE_REJECT;
+      } else if (
+        action.includes("/execution/subjects/") &&
+        action.endsWith("/state")
+      ) {
+        semantic = SEMANTIC_ACTIONS.EXECUTION_SUBJECT_UNBLIND;
       } else if (action.includes("sign-off")) {
         semantic = SEMANTIC_ACTIONS.ETMF_DOCUMENT_SIGN_OFF;
       } else if (action.includes("chair-adjudicate")) {
@@ -543,6 +576,7 @@ export const etmfService = {
       totp,
       action,
       semanticAction: semantic,
+      batchId,
     });
 
     return unwrapResponse(

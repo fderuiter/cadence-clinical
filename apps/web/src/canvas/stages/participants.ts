@@ -66,6 +66,7 @@ export function canRandomizeParticipant(code: string): boolean {
 export const APPROVE_RANDOMIZATION_SCHEME_SEMANTIC_ACTION =
   "execution.form.approve";
 export const RANDOMIZE_SUBJECT_SEMANTIC_ACTION = "execution.subject.randomize";
+export const UNBLIND_SUBJECT_SEMANTIC_ACTION = "execution.subject.unblind";
 
 export function approveRandomizationSchemeAction(schemeId: string): string {
   return `/api/v1/execution/randomization/schemes/${encodeURIComponent(schemeId.trim().toLowerCase())}/approve`;
@@ -73,6 +74,10 @@ export function approveRandomizationSchemeAction(schemeId: string): string {
 
 export function randomizeSubjectAction(subjectId: string): string {
   return `/api/v1/execution/subjects/${encodeURIComponent(subjectId.trim())}/randomize`;
+}
+
+export function unblindSubjectAction(subjectId: string): string {
+  return `/api/v1/execution/subjects/${encodeURIComponent(subjectId.trim())}/state`;
 }
 
 /** The state changes the canvas offers from a state, in lifecycle order, and whether unblinding was left out. */

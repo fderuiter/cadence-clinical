@@ -1,5 +1,26 @@
+import { encodeChangeReason } from "./changeReason";
 import { openApiClient, unwrapResponse } from "./client";
 import type { paths } from "./types";
+
+export interface InteropSignedOptions extends Record<string, unknown> {
+  sigToken?: string;
+  changeReason?: string;
+  headers?: Record<string, string>;
+}
+
+function withSignedHeaders(
+  options: InteropSignedOptions = {}
+): Record<string, unknown> {
+  const { sigToken, changeReason, headers: extraHeaders, ...rest } = options;
+  const headers: Record<string, string> = { ...(extraHeaders ?? {}) };
+  if (changeReason) {
+    headers["X-Change-Reason"] = encodeChangeReason(changeReason);
+  }
+  if (sigToken) {
+    headers["X-Sig-Token"] = sigToken;
+  }
+  return Object.keys(headers).length > 0 ? { ...rest, headers } : rest;
+}
 
 export interface CandidateListParams {
   studyId?: string;
@@ -128,44 +149,38 @@ export const interopService = {
     );
   },
 
-  acceptEhrCandidate(body: unknown, options: Record<string, unknown> = {}) {
+  acceptEhrCandidate(body: unknown, options: InteropSignedOptions = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/interop/esource/reconcile/accept", {
         body: body as paths["/api/v1/interop/esource/reconcile/accept"]["post"]["requestBody"]["content"]["application/json"],
-        ...options,
+        ...withSignedHeaders(options),
       })
     );
   },
 
-  batchAcceptEhrCandidates(
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  batchAcceptEhrCandidates(body: unknown, options: InteropSignedOptions = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/interop/esource/reconcile/batch-accept", {
         body: body as paths["/api/v1/interop/esource/reconcile/batch-accept"]["post"]["requestBody"]["content"]["application/json"],
-        ...options,
+        ...withSignedHeaders(options),
       })
     );
   },
 
-  rejectEhrCandidate(body: unknown, options: Record<string, unknown> = {}) {
+  rejectEhrCandidate(body: unknown, options: InteropSignedOptions = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/interop/esource/reconcile/reject", {
         body: body as paths["/api/v1/interop/esource/reconcile/reject"]["post"]["requestBody"]["content"]["application/json"],
-        ...options,
+        ...withSignedHeaders(options),
       })
     );
   },
 
-  batchRejectEhrCandidates(
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
+  batchRejectEhrCandidates(body: unknown, options: InteropSignedOptions = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/interop/esource/reconcile/batch-reject", {
         body: body as paths["/api/v1/interop/esource/reconcile/batch-reject"]["post"]["requestBody"]["content"]["application/json"],
-        ...options,
+        ...withSignedHeaders(options),
       })
     );
   },

@@ -3673,8 +3673,11 @@ function promptSignature(
   signatureSemanticAction =
     options.semanticAction ||
     (signatureActionPath.includes("letters/compile")
-      ? "ctms.letter.compile"
-      : SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF);
+      ? SEMANTIC_ACTIONS.CTMS_LETTER_COMPILE
+      : signatureActionPath.includes("monitoring-visits/") &&
+          signatureActionPath.endsWith("/sign-off")
+        ? SEMANTIC_ACTIONS.CTMS_MONITORING_VISIT_SIGN_OFF
+        : SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF);
   signatureCallback = callback;
   showSignatureModal.value = true;
 }
@@ -3927,16 +3930,20 @@ async function confirmCompleteVisit() {
 // Supervisory Sign-off on Completed Visit (Monitor / Sponsor DM / Sysadmin)
 function signOffVisit(visit) {
   if (!canSignOffVisits.value) return;
-  promptJustification(
-    "Supervisory Sign-off on Visit",
-    "Enter the review endorsement statement for signing off this completed visit...",
-    async (reason) => {
+  promptSignature(
+    async (sigToken, reason) => {
       try {
-        await ctmsApi.signOffMonitoringVisit(visit.id, reason);
+        await ctmsApi.signOffMonitoringVisit(visit.id, reason, sigToken);
         await loadOperationsData();
       } catch (err) {
         useToastStore().apiError("Failed to sign off monitoring visit", err);
       }
+    },
+    {
+      action: `/api/v1/ctms/monitoring-visits/${encodeURIComponent(visit.id)}/sign-off`,
+      semanticAction: SEMANTIC_ACTIONS.CTMS_MONITORING_VISIT_SIGN_OFF,
+      defaultSigningReason: "APPROVAL",
+      initialReason: "",
     }
   );
 }
@@ -4043,7 +4050,7 @@ async function confirmCompileLetter() {
       },
       {
         action: "/api/v1/ctms/letters/compile",
-        semanticAction: "ctms.letter.compile",
+        semanticAction: SEMANTIC_ACTIONS.CTMS_LETTER_COMPILE,
         defaultSigningReason: "APPROVAL",
         initialReason: reason,
       }

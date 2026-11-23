@@ -490,6 +490,9 @@ describe("Clinical Canvas RTSM workflows", () => {
       investigational_product_id:
         participants[0].status === "UNBLINDED" ? "KIT-1001" : null,
     }));
+    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+      sig_token: "sig-unblind-pi-001",
+    });
     vi.mocked(executionApi.changeSubjectState).mockImplementation(
       async (_id, nextState) => {
         participants[0].status = nextState;
@@ -523,10 +526,24 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-emergency-unblind").trigger("click");
     await flushPromises();
 
+    await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper
+      .find("#sig-reason")
+      .setValue("Emergency clinical safety unblinding authorized");
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: `/api/v1/execution/subjects/${SUBJECT_UUID}/state`,
+        semanticAction: "execution.subject.unblind",
+      })
+    );
     expect(executionApi.changeSubjectState).toHaveBeenCalledWith(
       SUBJECT_UUID,
       "UNBLINDED",
-      justification
+      justification,
+      "sig-unblind-pi-001"
     );
     expect(wrapper.find("#inspector-state").text()).toBe("Unblinded");
     expect(wrapper.find("#inspector-assigned-kit").text()).toBe("KIT-1001");
@@ -555,6 +572,9 @@ describe("Clinical Canvas RTSM workflows", () => {
       investigational_product_id:
         participants[0].status === "UNBLINDED" ? "KIT-2002" : null,
     }));
+    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+      sig_token: "sig-unblind-er-002",
+    });
     vi.mocked(executionApi.changeSubjectState).mockImplementation(
       async (_id, nextState) => {
         participants[0].status = nextState;
@@ -578,10 +598,24 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-emergency-unblind").trigger("click");
     await flushPromises();
 
+    await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper
+      .find("#sig-reason")
+      .setValue("Emergency clinical safety unblinding authorized");
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: `/api/v1/execution/subjects/${SUBJECT_UUID}/state`,
+        semanticAction: "execution.subject.unblind",
+      })
+    );
     expect(executionApi.changeSubjectState).toHaveBeenCalledWith(
       SUBJECT_UUID,
       "UNBLINDED",
-      justification
+      justification,
+      "sig-unblind-er-002"
     );
     expect(wrapper.find("#inspector-state").text()).toBe("Unblinded");
     expect(wrapper.find("#inspector-assigned-kit").text()).toBe("KIT-2002");
