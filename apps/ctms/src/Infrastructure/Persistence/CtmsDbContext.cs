@@ -24,6 +24,7 @@ public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbC
     public DbSet<CtmsCraAllocation> CtmsCraAllocations => Set<CtmsCraAllocation>();
     public DbSet<CtmsDefeatedMonitoringVisit> CtmsDefeatedMonitoringVisits => Set<CtmsDefeatedMonitoringVisit>();
     public DbSet<CtmsDelegation> CtmsDelegations => Set<CtmsDelegation>();
+    public DbSet<CtmsDelegationPeriod> CtmsDelegationPeriods => Set<CtmsDelegationPeriod>();
     public DbSet<CtmsGeneratedLetter> CtmsGeneratedLetters => Set<CtmsGeneratedLetter>();
     public DbSet<CtmsInvestigatorGrant> CtmsInvestigatorGrants => Set<CtmsInvestigatorGrant>();
     public DbSet<CtmsMonitoringVisitFinding> CtmsMonitoringVisitFindings => Set<CtmsMonitoringVisitFinding>();
@@ -34,6 +35,7 @@ public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbC
     public DbSet<CtmsBudgetLineItem> CtmsBudgetLineItems => Set<CtmsBudgetLineItem>();
     public DbSet<CtmsPaymentMilestone> CtmsPaymentMilestones => Set<CtmsPaymentMilestone>();
     public DbSet<DoaDelegationRecord> DoaDelegationRecords => Set<DoaDelegationRecord>();
+    public DbSet<DoaDelegationPeriod> DoaDelegationPeriods => Set<DoaDelegationPeriod>();
     public DbSet<CtmsInvestigatorPayable> CtmsInvestigatorPayables => Set<CtmsInvestigatorPayable>();
     public DbSet<CtmsSiteGreenlightGate> CtmsSiteGreenlightGates => Set<CtmsSiteGreenlightGate>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
@@ -48,6 +50,7 @@ public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbC
         modelBuilder.ApplyConfiguration(new CtmsCraAllocationConfiguration());
         modelBuilder.ApplyConfiguration(new CtmsDefeatedMonitoringVisitConfiguration());
         modelBuilder.ApplyConfiguration(new CtmsDelegationConfiguration());
+        modelBuilder.ApplyConfiguration(new CtmsDelegationPeriodConfiguration(this));
         modelBuilder.ApplyConfiguration(new CtmsGeneratedLetterConfiguration());
         modelBuilder.ApplyConfiguration(new CtmsInvestigatorGrantConfiguration());
         modelBuilder.ApplyConfiguration(new CtmsMonitoringVisitFindingConfiguration());
@@ -58,6 +61,7 @@ public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbC
         modelBuilder.ApplyConfiguration(new CtmsBudgetLineItemConfiguration());
         modelBuilder.ApplyConfiguration(new CtmsPaymentMilestoneConfiguration());
         modelBuilder.ApplyConfiguration(new DoaDelegationRecordConfiguration());
+        modelBuilder.ApplyConfiguration(new DoaDelegationPeriodConfiguration(this));
         modelBuilder.ApplyConfiguration(new CtmsInvestigatorPayableConfiguration());
         modelBuilder.ApplyConfiguration(new CtmsSiteGreenlightGateConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());

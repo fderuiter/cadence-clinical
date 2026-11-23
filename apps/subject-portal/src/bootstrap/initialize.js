@@ -36,6 +36,11 @@ import {
   resetWalletHydrationAttempt,
 } from "../features/wallet.js";
 import { isScreenAvailable } from "../router/availability.js";
+import {
+  getPortalRouter,
+  isPortalRouterMounted,
+  resolveDefaultPortalRoute,
+} from "../router/index.js";
 import { state } from "../stores/state.js";
 import { getAssignmentsFromDB, getInstrumentsFromDB } from "../sync-queue.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
@@ -82,7 +87,39 @@ export async function initializeApp() {
   // Graceful OIDC Keycloak setup
   await signIn();
 
-  if (
+  // Reconcile initial route once session credentials are known
+  if (isPortalRouterMounted()) {
+    const portalRouter = getPortalRouter();
+    await portalRouter.isReady();
+    const activeRoute = portalRouter.currentRoute.value;
+    if (activeRoute.name === "unavailable") {
+      const requestedScreen = activeRoute.query?.screen
+        ? String(activeRoute.query.screen)
+        : "";
+      if (requestedScreen && isScreenAvailable(requestedScreen)) {
+        state.unavailableScreen = null;
+        await portalRouter.replace({ name: requestedScreen });
+      } else if (!requestedScreen) {
+        const defaultRoute = resolveDefaultPortalRoute();
+        if (defaultRoute.name !== "unavailable") {
+          state.unavailableScreen = null;
+          await portalRouter.replace(defaultRoute);
+        }
+      }
+    } else if (activeRoute.name && !isScreenAvailable(activeRoute.name)) {
+      if (activeRoute.path === "/" && activeRoute.name === "tasks") {
+        state.unavailableScreen = null;
+        await portalRouter.replace(resolveDefaultPortalRoute());
+      } else {
+        const blocked = String(activeRoute.name);
+        state.unavailableScreen = blocked;
+        await portalRouter.replace({
+          name: "unavailable",
+          query: { screen: blocked },
+        });
+      }
+    }
+  } else if (
     !isDemoModeActive() &&
     isScreenAvailable("wallet") &&
     (state.currentView === "view-tasks" ||
@@ -118,9 +155,12 @@ export async function initializeApp() {
     const userId = state.session.userId;
     if (isScreenAvailable("tasks")) {
       await loadAssignedTasks(userId);
-      await loadAssignedInstruments(userId);
     } else {
       state.assignments = [];
+    }
+    if (isScreenAvailable("tasks") || isScreenAvailable("questionnaire")) {
+      await loadAssignedInstruments(userId);
+    } else {
       state.instruments = {};
     }
     if (isScreenAvailable("compliance")) {
@@ -181,7 +221,7 @@ export async function initializeApp() {
   renderCompliance();
   renderInbox();
 
-  // Check for pending active re-consent only when consent workflow is enabled
+  // Check for pending active re-consent only when the consent screen is available and signed in or in demo mode
   if (
     isScreenAvailable("consent") &&
     (isAuthenticatedSession() || isDemoModeActive())

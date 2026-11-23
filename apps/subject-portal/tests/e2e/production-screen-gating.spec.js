@@ -130,12 +130,12 @@ test.describe("Production Build Screen Gating & Zero-404 Guarantee", () => {
       path: testInfo.outputPath("subject-portal-gated-wallet.png"),
     });
 
-    // Direct navigation to unbacked /consent shows UnavailableView with Return to Participant Wallet
+    // Direct navigation to unbacked /consent shows UnavailableView with Go to My Wallet
     await page.goto("consent");
     await completeInitialPinSetupIfOpen(page);
     await expect(page.locator("#view-unavailable")).toBeVisible();
     await expect(page.locator("#btn-unavailable-return-tasks")).toContainText(
-      "Return to Participant Wallet"
+      "Go to My Wallet"
     );
     await page.click("#btn-unavailable-return-tasks");
     await expect(page.locator("#view-wallet")).toBeVisible();

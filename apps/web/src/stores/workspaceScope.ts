@@ -10,6 +10,11 @@ import {
 } from "../auth/sessionCoordinator.js";
 import { shouldUseDemoDefaults, useClinicalScopeStore } from "./clinicalScope";
 import { useStudyCanvasStore } from "./studyCanvas";
+import {
+  clearActiveStudyScope,
+  getSyncedStudyScope,
+  syncActiveStudyScope,
+} from "./studyScopeBridge";
 
 function cleanScopeString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -44,6 +49,8 @@ export function syncWorkspaceScope(options: SyncWorkspaceScopeOptions): {
         _s?: Map<
           string,
           {
+            currentStudyId?: string;
+            currentSiteId?: string;
             selectedStudyId?: string;
             selectedSiteId?: string;
             activeStudyId?: string;
@@ -59,7 +66,8 @@ export function syncWorkspaceScope(options: SyncWorkspaceScopeOptions): {
 
   const prevStudy =
     cleanScopeString(scopeStore.activeStudyId) ||
-    cleanScopeString(canvasStore.studyCode);
+    cleanScopeString(canvasStore.studyCode) ||
+    cleanScopeString(getSyncedStudyScope(pinia));
 
   const hasExplicitStudy = options.studyId !== undefined;
   const hasExplicitSite = options.siteId !== undefined;
@@ -85,8 +93,14 @@ export function syncWorkspaceScope(options: SyncWorkspaceScopeOptions): {
     if (canvasStore.studyCode !== nextStudy) {
       canvasStore.openStudy(nextStudy);
     }
+    if (nextStudy) {
+      syncActiveStudyScope(nextStudy, pinia);
+    } else {
+      clearActiveStudyScope();
+    }
   } else if (nextStudy && canvasStore.studyCode !== nextStudy) {
     canvasStore.openStudy(nextStudy);
+    syncActiveStudyScope(nextStudy, pinia);
   }
 
   if (hasExplicitSite || studyChanged) {
@@ -98,10 +112,10 @@ export function syncWorkspaceScope(options: SyncWorkspaceScopeOptions): {
 
   if (etmfInstance) {
     if (hasExplicitStudy || nextStudy) {
-      etmfInstance.selectedStudyId = nextStudy;
+      etmfInstance.currentStudyId = nextStudy;
     }
     if (hasExplicitSite || studyChanged) {
-      etmfInstance.selectedSiteId = nextSite;
+      etmfInstance.currentSiteId = nextSite;
     }
   }
 
@@ -172,8 +186,11 @@ export function resolveHydratedWorkspaceScope(
     : canvasStudy
       ? cleanScopeString(scopeStore.activeStudyId)
       : "";
+  const bridgedStudy = !demoDefaults
+    ? cleanScopeString(getSyncedStudyScope(pinia))
+    : "";
 
-  const studyId = explicitStudy || canvasStudy || clinicalStudy;
+  const studyId = explicitStudy || canvasStudy || clinicalStudy || bridgedStudy;
 
   const explicitSite =
     cleanScopeString(props?.siteId) ||
@@ -211,6 +228,8 @@ export function clearSynchronizedWorkspaceScope(): void {
   if (!pinia) return;
   const demoDefaults = shouldUseDemoDefaults(pinia);
 
+  clearActiveStudyScope();
+
   if ("clinicalScope" in pinia.state.value) {
     const scopeStore = useClinicalScopeStore(pinia);
     scopeStore.$reset();
@@ -228,8 +247,8 @@ export function clearSynchronizedWorkspaceScope(): void {
 
   const etmfInstance = pinia._s?.get("etmf");
   if (etmfInstance) {
-    etmfInstance.selectedStudyId = "";
-    etmfInstance.selectedSiteId = "";
+    etmfInstance.currentStudyId = "";
+    etmfInstance.currentSiteId = "";
   }
 }
 

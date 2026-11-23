@@ -11,7 +11,7 @@
     tabindex="0"
   >
     <div class="view-header">
-      <h2>My Compliance Overview</h2>
+      <h2 id="compliance-view-heading" tabindex="-1">My Compliance Overview</h2>
       <p>
         Track your scheduled survey progress and overall trial participation
         history.
@@ -102,7 +102,6 @@
 
 <script setup>
 import { computed } from "vue";
-
 import { isScreenAvailable } from "../router/availability.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
@@ -110,6 +109,7 @@ import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
 const session = useSessionStore();
+
 const hasComplianceTab = computed(() => {
   void session.session?.isDemoMode;
   void session.session?.token;
@@ -118,3 +118,9 @@ const hasComplianceTab = computed(() => {
   return isDemoModeActive() || isScreenAvailable("compliance");
 });
 </script>
+
+<style scoped>
+.history-card {
+  min-width: 0;
+}
+</style>

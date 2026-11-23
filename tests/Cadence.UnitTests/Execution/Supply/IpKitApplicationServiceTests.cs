@@ -117,4 +117,59 @@ public sealed class IpKitApplicationServiceTests : IAsyncLifetime
         Assert.False(validateMismatch.IsLotMatch);
         Assert.False(validateMismatch.IsValid);
     }
+
+    [Fact]
+    [GxPRequirement("PRD-SUB-003")]
+    public async Task SeedSiteInventoryAsync_NormalizesStatusToActiveAtSite_AndEncryptsTreatmentArmForAssignment()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new IpKitApplicationService(_dbContext, _clock, Protector);
+
+        var seeded = await service.SeedSiteInventoryAsync("STUDY-101", "SITE-01", new List<IpKitSeedItem>
+        {
+            new("KIT-ARM-A", "LOT-101", _clock.UtcNow.AddMonths(12), Status: "AVAILABLE", TreatmentArm: "ZEBRA-ARM"),
+            new("KIT-UNLABELLED", "LOT-101", _clock.UtcNow.AddMonths(12), Status: "AVAILABLE", TreatmentArm: null),
+        }, ct);
+
+        Assert.All(seeded, item => Assert.Equal("ACTIVE_AT_SITE", item.Status));
+
+        var allBeforeReseed = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+            _dbContext.IpKitInventoryItems, ct);
+        var assignableBeforeReseed = allBeforeReseed
+            .Where(i =>
+                i.StudyId == "STUDY-101"
+                && i.SiteId == "SITE-01"
+                && i.Status == Cadence.Apps.Execution.Domain.Supply.IpKitInventoryItem.ActiveAtSiteStatus
+                && i.AssignedRandomizationId is null
+                && i.TreatmentArmCiphertext is not null
+                && i.ExpirationDate > _clock.UtcNow)
+            .ToList();
+        Assert.Single(assignableBeforeReseed);
+        Assert.Equal("KIT-ARM-A", assignableBeforeReseed[0].KitNumber);
+        Assert.NotNull(assignableBeforeReseed[0].TreatmentArmCiphertext);
+        Assert.DoesNotContain("ZEBRA-ARM", assignableBeforeReseed[0].TreatmentArmCiphertext!);
+        Assert.Equal(
+            "ZEBRA-ARM",
+            Protector.Reveal(
+                assignableBeforeReseed[0].TreatmentArmCiphertext!,
+                Cadence.Apps.Execution.Domain.Supply.IpKitInventoryItem.ArmPurpose("STUDY-101", "KIT-ARM-A")));
+
+        await service.SeedSiteInventoryAsync("STUDY-101", "SITE-01", new List<IpKitSeedItem>
+        {
+            new("KIT-UNLABELLED", "LOT-101", _clock.UtcNow.AddMonths(12), Status: "ACTIVE_AT_SITE", TreatmentArm: "OKAPI-ARM"),
+        }, ct);
+
+        var allAfterReseed = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+            _dbContext.IpKitInventoryItems, ct);
+        var assignableAfterReseed = allAfterReseed
+            .Where(i =>
+                i.StudyId == "STUDY-101"
+                && i.SiteId == "SITE-01"
+                && i.Status == Cadence.Apps.Execution.Domain.Supply.IpKitInventoryItem.ActiveAtSiteStatus
+                && i.AssignedRandomizationId is null
+                && i.TreatmentArmCiphertext is not null
+                && i.ExpirationDate > _clock.UtcNow)
+            .ToList();
+        Assert.Equal(2, assignableAfterReseed.Count);
+    }
 }

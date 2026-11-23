@@ -3,6 +3,7 @@ import * as VueRouter from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { syncActiveStudyScope } from "../stores/studyScopeBridge";
 import { useToastStore } from "../stores/toasts.js";
 import { syncWorkspaceScope } from "../stores/workspaceScope";
 import {
@@ -79,6 +80,11 @@ export function useScopedWorkspaceSection(
   );
 
   function syncActiveScope(study?: string, site?: string) {
+    if (study) {
+      clinicalStore.activeStudyId = study;
+      syncActiveStudyScope(study);
+    }
+    if (site) clinicalStore.activeSiteId = site;
     syncWorkspaceScope({
       ...(study ? { studyId: study } : {}),
       ...(site !== undefined && (site || study) ? { siteId: site } : {}),

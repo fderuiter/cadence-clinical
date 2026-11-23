@@ -8,7 +8,9 @@
           <span class="badge badge-regulatory">ICH GCP E6(R2) §4</span>
           <span class="badge badge-standard">DIA TMF Zone 5 (05.02.04)</span>
         </div>
-        <h2 class="view-title">Study Training &amp; Qualification Hub</h2>
+        <h2 id="study-training-title" class="view-title" tabindex="-1">
+          Study Training &amp; Qualification Hub
+        </h2>
         <p class="view-subtitle">
           Protocol curricula, role- and site-scoped batch curriculum assignment,
           and 21 CFR Part 11 Principal Investigator delegation sign-off.
@@ -19,24 +21,22 @@
           <label for="training-study-filter">Study:</label>
           <input
             id="training-study-filter"
-            v-model="studyFilter"
+            v-model="standaloneStudyFilter"
             type="text"
-            class="protocol-filter-input"
-            autocomplete="off"
-            placeholder="All studies"
-            @change="applyScopeFilters"
+            class="protocol-filter-input font-mono"
+            placeholder="All studies (e.g. CADENCE-101)"
+            @change="applyStandaloneScope"
+          />
+          <label for="training-site-filter">Site:</label>
+          <input
+            id="training-site-filter"
+            v-model="standaloneSiteFilter"
+            type="text"
+            class="protocol-filter-input font-mono"
+            placeholder="All sites (e.g. SITE-101)"
+            @change="applyStandaloneScope"
           />
         </template>
-        <label for="training-site-filter">Site:</label>
-        <input
-          id="training-site-filter"
-          v-model="siteFilter"
-          type="text"
-          class="protocol-filter-input"
-          autocomplete="off"
-          placeholder="All sites"
-          @change="applyScopeFilters"
-        />
         <label for="training-protocol-filter">Protocol Version:</label>
         <input
           id="training-protocol-filter"
@@ -44,7 +44,7 @@
           type="text"
           class="protocol-filter-input"
           placeholder="All versions (e.g. 2.0)"
-          @change="loadMetrics"
+          @change="applyStandaloneScope"
         />
       </div>
     </div>
@@ -107,9 +107,15 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import * as VueRouter from "vue-router";
 import ProtocolTrainingConsole from "../components/clinical/ProtocolTrainingConsole.vue";
 import { trainingApi } from "../api/training";
+import {
+  readRouteScopeQuery,
+  replaceRouteQueryParams,
+  resolveRouteAndRouter,
+} from "../composables/useRouteScopeSync";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
+import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useToastStore } from "../stores/toasts.js";
 import {
   resolveHydratedWorkspaceScope,
@@ -131,51 +137,80 @@ const props = defineProps({
   },
 });
 
-let route = null;
-let router = null;
-try {
-  route =
-    typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
-  router =
-    "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
-      ? VueRouter.useRouter()
-      : null;
-} catch {
-  route = null;
-  router = null;
-}
-
+const { route, router } = resolveRouteAndRouter();
+const scopeStore = useClinicalScopeStore();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
+const initialRouteScope = readRouteScopeQuery(route);
 const hydratedScope = resolveHydratedWorkspaceScope(route, {
   studyId: props.studyId,
   siteId: props.siteId,
 });
-if (hydratedScope.studyId || hydratedScope.siteId) {
-  syncWorkspaceScope({
-    ...(hydratedScope.studyId ? { studyId: hydratedScope.studyId } : {}),
-    ...(hydratedScope.siteId || hydratedScope.studyId
-      ? { siteId: hydratedScope.siteId }
-      : {}),
-    router,
-    route,
-    syncRouteQuery: !props.studyId,
-  });
-}
 
 const activeCurriculaCount = ref(0);
 const completedQualificationsCount = ref(0);
 const pendingGatedCount = ref(0);
 const loadError = ref("");
-const studyFilter = ref(hydratedScope.studyId);
-const siteFilter = ref(hydratedScope.siteId);
+const standaloneStudyFilter = ref(
+  props.studyId ||
+    initialRouteScope.studyId ||
+    (!props.studyId && route
+      ? hydratedScope.studyId ||
+        activeStudyCode.value ||
+        scopeStore.activeStudyId
+      : "")
+);
+const standaloneSiteFilter = ref(
+  props.siteId ||
+    initialRouteScope.siteId ||
+    (!props.studyId && route
+      ? hydratedScope.siteId || scopeStore.activeSiteId
+      : "")
+);
 const protocolVersionFilter = ref(
   props.protocolVersion || String(route?.query?.protocolVersion || "")
 );
 
+if (!props.studyId && route?.query) {
+  if (initialRouteScope.studyId) {
+    setActiveStudyCode(initialRouteScope.studyId);
+    scopeStore.activeStudyId = initialRouteScope.studyId;
+  } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+    scopeStore.activeStudyId = activeStudyCode.value;
+  }
+  if (initialRouteScope.siteId) {
+    scopeStore.activeSiteId = initialRouteScope.siteId;
+  }
+  if (initialRouteScope.subjectId) {
+    scopeStore.activeSubjectId = initialRouteScope.subjectId;
+  }
+}
+
 const effectiveStudyId = computed(
-  () => props.studyId.trim() || studyFilter.value.trim()
+  () =>
+    props.studyId.trim() ||
+    standaloneStudyFilter.value.trim() ||
+    String(route?.query?.studyId || "").trim() ||
+    activeStudyCode.value
 );
 const effectiveSiteId = computed(
-  () => props.siteId.trim() || siteFilter.value.trim()
+  () =>
+    props.siteId.trim() ||
+    standaloneSiteFilter.value.trim() ||
+    String(route?.query?.siteId || route?.query?.site || "").trim()
+);
+
+watch(
+  () => [props.studyId, route?.query?.studyId],
+  ([propStudy, queryStudy]) => {
+    const incoming =
+      (typeof propStudy === "string" && propStudy.trim()) ||
+      (typeof queryStudy === "string" && queryStudy.trim()) ||
+      "";
+    if (incoming) {
+      setActiveStudyCode(incoming);
+    }
+  },
+  { immediate: true }
 );
 const effectiveProtocolVersion = computed(
   () =>
@@ -184,55 +219,32 @@ const effectiveProtocolVersion = computed(
     String(route?.query?.protocolVersion || "")
 );
 
-function applyScopeFilters() {
-  const nextStudy = props.studyId.trim() || studyFilter.value.trim();
-  const nextSite = siteFilter.value.trim();
+function syncStandaloneRouteScope() {
+  if (props.studyId) return;
+  const nextStudy = standaloneStudyFilter.value.trim();
+  const nextSite = standaloneSiteFilter.value.trim();
+  const nextProtocol = protocolVersionFilter.value.trim();
+  if (nextStudy) {
+    setActiveStudyCode(nextStudy);
+  }
   const synced = syncWorkspaceScope({
     studyId: nextStudy,
     siteId: nextSite,
-    router,
-    route,
-    syncRouteQuery: !props.studyId,
   });
-  studyFilter.value = synced.studyId;
-  siteFilter.value = synced.siteId;
+  standaloneStudyFilter.value = synced.studyId;
+  standaloneSiteFilter.value = synced.siteId;
+  void replaceRouteQueryParams(router, route, {
+    studyId: synced.studyId || null,
+    siteId: synced.siteId || null,
+    subjectId: scopeStore.activeSubjectId || null,
+    protocolVersion: nextProtocol || null,
+  });
 }
 
-watch(
-  [
-    () => props.studyId,
-    () => props.siteId,
-    () => route?.query?.studyId,
-    () => route?.query?.siteId,
-    () => route?.query?.site,
-  ],
-  ([propStudy, propSite, queryStudy, querySiteId, querySite]) => {
-    const nextStudy =
-      (propStudy || "").trim() ||
-      (typeof queryStudy === "string" ? queryStudy.trim() : "");
-    const nextSite =
-      (propSite || "").trim() ||
-      (typeof querySiteId === "string" && querySiteId.trim()
-        ? querySiteId.trim()
-        : typeof querySite === "string"
-          ? querySite.trim()
-          : "");
-    if (nextStudy && nextStudy !== studyFilter.value) {
-      studyFilter.value = nextStudy;
-    }
-    if (nextSite !== siteFilter.value && (nextSite || propSite !== undefined)) {
-      if (nextSite || propStudy) {
-        siteFilter.value = nextSite;
-      }
-    }
-    if (nextStudy || nextSite) {
-      syncWorkspaceScope({
-        ...(nextStudy ? { studyId: nextStudy } : {}),
-        ...(nextSite || nextStudy ? { siteId: nextSite } : {}),
-      });
-    }
-  }
-);
+function applyStandaloneScope() {
+  syncStandaloneRouteScope();
+  void loadMetrics();
+}
 
 async function loadMetrics() {
   loadError.value = "";
@@ -277,6 +289,40 @@ async function loadMetrics() {
   }
 }
 
+watch(
+  () => [
+    route?.query?.studyId,
+    route?.query?.siteId,
+    route?.query?.site,
+    route?.query?.subjectId,
+    route?.query?.participant,
+    route?.query?.protocolVersion,
+  ],
+  () => {
+    if (props.studyId || !route?.query) return;
+    const nextScope = readRouteScopeQuery(route);
+    const resolvedStudy = nextScope.studyId || activeStudyCode.value;
+    if (nextScope.studyId) {
+      setActiveStudyCode(nextScope.studyId);
+    }
+    standaloneStudyFilter.value = resolvedStudy;
+    standaloneSiteFilter.value = nextScope.siteId;
+    syncWorkspaceScope({
+      ...(resolvedStudy ? { studyId: resolvedStudy } : {}),
+      ...(nextScope.siteId || resolvedStudy
+        ? { siteId: nextScope.siteId }
+        : {}),
+    });
+    scopeStore.activeSubjectId = nextScope.subjectId;
+    const nextPv =
+      typeof route.query.protocolVersion === "string"
+        ? route.query.protocolVersion
+        : "";
+    if (nextPv !== protocolVersionFilter.value) {
+      protocolVersionFilter.value = nextPv;
+    }
+  }
+);
 watch([effectiveStudyId, effectiveSiteId, effectiveProtocolVersion], () => {
   loadMetrics();
 });
@@ -298,6 +344,34 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.protocol-filter-group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--semantic-color-text-dark);
+}
+
+.protocol-filter-input {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 6px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  box-sizing: border-box;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
 }
 
 .header-badge-row {

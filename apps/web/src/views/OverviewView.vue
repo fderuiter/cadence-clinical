@@ -240,21 +240,26 @@ import { useRoute, useRouter } from "vue-router";
 import {
   buildDataCollectionPath,
   buildScopedRoutePath,
+  buildStudiesWorkspacePath,
   resolveActiveWorkspaceScope,
+  resolveSiteReadinessPath,
 } from "../canvas/palette";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import "../stores/workspaceScope";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
+import { isDemoBuild } from "../utils/demoMode";
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const onboardingStore = useOnboardingStore();
 const canvasStore = useStudyCanvasStore();
+const { activeStudyCode } = useActiveStudyScope();
 
 const workspaceScope = computed(() =>
   resolveActiveWorkspaceScope(route, canvasStore)
@@ -288,31 +293,47 @@ const effectiveRoles = computed(() => {
   return preset ? [...preset.requires] : ["sponsor_admin"];
 });
 
-function buildStudiesScopedPath(studyCode, siteId) {
-  const code = (studyCode || "").trim();
-  const site = (siteId || "").trim();
-  if (!code) return "/studies";
-  const base = `/studies/${encodeURIComponent(code)}`;
-  return site ? `${base}?site=${encodeURIComponent(site)}` : base;
-}
-
 function resolveAuthorizedRoute(routeSpec) {
   if (!routeSpec) return null;
   if (typeof routeSpec === "string" && routeSpec.includes("?")) {
     return routeSpec;
   }
   const scope = workspaceScope.value;
+  const studyCode = scope.studyCode || activeStudyCode.value;
+  const siteId = scope.siteId;
   if (
     routeSpec === "study" ||
     routeSpec === "/studies" ||
     (typeof routeSpec === "string" && routeSpec.startsWith("/studies/"))
   ) {
-    return isScreenAvailable("study")
-      ? buildStudiesScopedPath(scope.studyCode, scope.siteId)
-      : null;
+    if (!isScreenAvailable("study")) return null;
+    return buildStudiesWorkspacePath({
+      studyCode,
+      siteId,
+      subjectCode: scope.subjectCode,
+      participantRef: scope.participantRef,
+    });
   }
   if (routeSpec === "ecrf" || routeSpec === "/ecrf") {
-    return isScreenAvailable("ecrf") &&
+    if (isDemoBuild()) {
+      return isScreenAvailable("ecrf") &&
+        hasRequiredRole(effectiveRoles.value, [
+          "site_investigator",
+          "crc",
+          "data_manager",
+          "sponsor_admin",
+          "cra",
+          "monitor",
+        ])
+        ? buildDataCollectionPath({
+            studyCode,
+            siteId: scope.explicitSiteId || siteId,
+            subjectCode: scope.subjectCode,
+            enrollmentId: scope.enrollmentId,
+          })
+        : null;
+    }
+    return isScreenAvailable("study") &&
       hasRequiredRole(effectiveRoles.value, [
         "site_investigator",
         "crc",
@@ -321,44 +342,34 @@ function resolveAuthorizedRoute(routeSpec) {
         "cra",
         "monitor",
       ])
-      ? buildDataCollectionPath({
-          studyCode: scope.studyCode,
-          siteId: scope.explicitSiteId || scope.siteId,
-          subjectCode: scope.subjectCode,
-          enrollmentId: scope.enrollmentId,
-        })
+      ? studyCode
+        ? buildDataCollectionPath({
+            studyCode,
+            siteId: scope.explicitSiteId || siteId,
+            participantRef: scope.participantRef,
+            subjectCode: scope.subjectCode,
+            enrollmentId: scope.enrollmentId,
+          })
+        : "/studies"
       : null;
   }
-  if (
-    routeSpec === "site-readiness" ||
-    routeSpec === "ctms" ||
-    routeSpec === "/ctms"
-  ) {
-    if (
-      isScreenAvailable("ctms") &&
+  if (routeSpec === "site-readiness") {
+    return resolveSiteReadinessPath(effectiveRoles.value, {
+      studyCode,
+      siteId,
+      subjectCode: scope.subjectCode,
+    });
+  }
+  if (routeSpec === "ctms" || routeSpec === "/ctms") {
+    return isScreenAvailable("ctms") &&
       hasRequiredRole(effectiveRoles.value, [
         "cra",
         "monitor",
         "data_manager",
         "sponsor_admin",
       ])
-    ) {
-      return buildScopedRoutePath("/ctms", {
-        studyCode: scope.studyCode,
-        siteId: scope.siteId,
-      });
-    }
-    if (
-      routeSpec === "site-readiness" &&
-      isScreenAvailable("ssu") &&
-      hasRequiredRole(effectiveRoles.value, ["site_investigator", "crc"])
-    ) {
-      return buildScopedRoutePath("/ssu", {
-        studyCode: scope.studyCode,
-        siteId: scope.siteId,
-      });
-    }
-    return null;
+      ? buildScopedRoutePath("/ctms", { studyCode, siteId })
+      : null;
   }
   if (routeSpec === "ssu" || routeSpec === "/ssu") {
     return isScreenAvailable("ssu") &&
@@ -370,10 +381,27 @@ function resolveAuthorizedRoute(routeSpec) {
         "site_investigator",
         "crc",
       ])
-      ? buildScopedRoutePath("/ssu", {
-          studyCode: scope.studyCode,
-          siteId: scope.siteId,
-        })
+      ? buildScopedRoutePath("/ssu", { studyCode, siteId })
+      : null;
+  }
+  if (routeSpec === "etmf" || routeSpec === "/etmf") {
+    return isScreenAvailable("etmf") &&
+      hasRequiredRole(effectiveRoles.value, [
+        "cra",
+        "monitor",
+        "data_manager",
+        "site_investigator",
+        "crc",
+        "auditor",
+        "tmf_auditor",
+        "sponsor_admin",
+      ])
+      ? buildScopedRoutePath("/etmf", { studyCode, siteId })
+      : null;
+  }
+  if (routeSpec === "training" || routeSpec === "/training") {
+    return isScreenAvailable("training")
+      ? buildScopedRoutePath("/training", { studyCode, siteId })
       : null;
   }
   return null;
@@ -771,11 +799,14 @@ function startGuidedTour() {
 }
 
 .pref-toggle-checkbox {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   margin-top: 2px;
   cursor: pointer;
   accent-color: var(--semantic-color-accent-inverse);
+  flex-shrink: 0;
 }
 
 .toggle-text {
@@ -994,11 +1025,14 @@ function startGuidedTour() {
 }
 
 .task-checkbox {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   margin-top: 2px;
   cursor: pointer;
   accent-color: var(--semantic-color-success);
+  flex-shrink: 0;
 }
 
 .task-content {

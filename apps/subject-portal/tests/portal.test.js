@@ -685,29 +685,27 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       // Initialize application under non-demo, online authenticated context
       await portal.initializeApp();
 
-      // Verify zero requests were sent to unmounted /interop/* or /econsent/* routes
-      const requestedUrls = globalThis.fetch.mock.calls.map(([url]) =>
-        String(url)
-      );
-      expect(
-        requestedUrls.filter(
-          (url) => url.includes("/interop/") || url.includes("/econsent/")
-        )
-      ).toEqual([]);
+      // Startup skips unbacked interop/econsent fetches outside demo mode, opens wallet, and loads zero mocks
       expect(portal.state.currentView).toBe("view-wallet");
-
-      // Verify mocks were NOT loaded
       expect(portal.state.assignments).toEqual([]);
       expect(portal.state.notifications).toEqual([]);
+      const startupUrls = globalThis.fetch.mock.calls.map((c) => String(c[0]));
+      expect(
+        startupUrls.filter(
+          (url) =>
+            url.includes("/api/v1/interop/") ||
+            url.includes("/api/v1/econsent/")
+        )
+      ).toEqual([]);
 
-      // Direct loader calls still surface error state instead of falling back silently to mocks
+      // Direct invocations of loadAssignedTasks and loadNotifications still surface error UI instead of mocks
       const { loadAssignedTasks, renderTasks } =
         await import("../src/features/tasks.js");
       const { loadNotifications, renderInbox } =
         await import("../src/features/inbox.js");
-      await loadAssignedTasks("subject_live_001");
-      await loadNotifications("subject_live_001");
+      await loadAssignedTasks(portal.state.session.userId);
       renderTasks();
+      await loadNotifications(portal.state.session.userId);
       renderInbox();
 
       const tasksList = document.getElementById("tasks-list-container");

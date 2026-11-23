@@ -37,6 +37,8 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
       json: () => Promise.resolve([]),
     });
     document.body.innerHTML = `<div id="app"></div>`;
+    state.session.isDemoMode = true;
+    state.session.isOfflineMode = true;
     state.currentView = "view-tasks";
     state.isSyncDrawerOpen = false;
     state.signatureModalOpen = false;
@@ -342,22 +344,26 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     state.activeQuestionnaire = null;
   });
 
-  it("drives participant portal tabs from a single state source across unauthenticated, wallet-only signed-in, and 6-tab demo modes", async () => {
+  it("drives participant portal tabs from a single state source across authenticated production mode, unauthenticated mode, and 6-tab demo mode", async () => {
     expect(tabs).toHaveLength(6);
 
-    // 1a. Unauthenticated non-demo mode hides all 6 tabs and uses role="region" + aria-label with zero dangling aria-labelledby
+    // 1. Authenticated non-demo mode renders only My Wallet and wraps keyboard navigation cleanly
+    state.session.userId = "subject_001";
+    state.session.token = "jwt_valid_subject_token"; // pragma: allowlist secret
+    state.session.isOfflineMode = false;
     state.session.isDemoMode = false;
-    state.session.token = null;
-    state.session.userId = null;
+    showView("view-wallet");
     await settle();
-    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(0);
+    state.pinSetup.isOpen = false;
+    await settle();
+    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(1);
 
+    // Gated views without rendered tabs must use role="region" + aria-label with zero dangling aria-labelledby
     for (const [viewId, expectedLabel] of [
       ["view-tasks", "My Daily Questionnaires"],
       ["view-compliance", "My Compliance Overview"],
       ["view-inbox", "My Notification Inbox"],
       ["view-consent", "My Informed Consent Review"],
-      ["view-wallet", "Participant Financial Wallet"],
       ["view-lay-summaries", "Plain-Language Clinical Trial Results"],
     ]) {
       const panel = document.getElementById(viewId);
@@ -376,22 +382,37 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
       }
     }
 
-    // 1b. Signed-in non-demo mode renders only the live Wallet tab while keeping the 5 unbacked tabs hidden
-    state.session.token = "jwt_portal_test"; // pragma: allowlist secret
-    state.session.userId = "subject_001";
-    state.session.isOfflineMode = false;
-    showView("view-wallet");
-    await settle();
-
-    const signedInTabs = document.querySelectorAll('.nav-tabs [role="tab"]');
-    expect(signedInTabs).toHaveLength(1);
-    expect(signedInTabs[0].id).toBe("btn-tab-btn-wallet");
+    const walletTab = document.getElementById("btn-tab-btn-wallet");
+    expect(walletTab).not.toBeNull();
+    expect(walletTab.getAttribute("aria-selected")).toBe("true");
+    expect(walletTab.getAttribute("tabindex")).toBe("0");
     const walletPanelLive = document.getElementById("view-wallet");
     expect(walletPanelLive.getAttribute("role")).toBe("tabpanel");
     expect(walletPanelLive.getAttribute("aria-labelledby")).toBe(
       "btn-tab-btn-wallet"
     );
+    walletTab.focus();
+    walletTab.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "End",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await settle();
+    expect(state.currentView).toBe("view-wallet");
+    expect(document.activeElement).toBe(walletTab);
 
+    // Unauthenticated non-demo mode hides all tabs and switches wallet to role="region" without dangling aria-labelledby
+    state.session.token = null;
+    await settle();
+    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(0);
+    const walletPanelGated = document.getElementById("view-wallet");
+    expect(walletPanelGated.getAttribute("role")).toBe("region");
+    expect(walletPanelGated.getAttribute("aria-label")).toBe(
+      "Participant Financial Wallet"
+    );
+    expect(walletPanelGated.hasAttribute("aria-labelledby")).toBe(false);
     for (const labelledEl of document.querySelectorAll("[aria-labelledby]")) {
       const refIds = labelledEl
         .getAttribute("aria-labelledby")

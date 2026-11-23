@@ -288,7 +288,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             ProbePostgres = () => new CiPostgresStatus(true, "ok"),
             FindFiles = (_, _) => [],
             DeleteDirectory = _ => { },
-            FindSkippedDatabaseTests = _ => [],
+            FindSkippedDatabaseTests = (_, _) => [],
         };
 
         var passResult = LocalCiRunner.Run([onlyStepJob], options, env).Single();
@@ -358,19 +358,6 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         FrontendQualityGateService.CheckPrettier(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
         FrontendQualityGateService.CheckEslint(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
-    }
-
-    [Fact]
-    public void VulnerabilityAuditor_BuildPipAuditCandidates_ChecksCadenceVenvBeforeLegacyVenv()
-    {
-        string binSubdir = OperatingSystem.IsWindows() ? "Scripts" : "bin";
-        string exeName = OperatingSystem.IsWindows() ? "pip-audit.exe" : "pip-audit";
-        string cadenceVenvExe = Write(Path.Combine(".cadence", "venv", binSubdir, exeName), "");
-        string legacyVenvExe = Write(Path.Combine(".venv", binSubdir, exeName), "");
-
-        var candidates = VulnerabilityAuditorService.BuildPipAuditCandidates(_tempDir);
-
-        candidates.Select(c => c.FileName).Take(2).Should().Equal(cadenceVenvExe, legacyVenvExe);
     }
 
     [Fact]
@@ -1150,7 +1137,6 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string venvBin = Path.Combine(wizardRepo, ".cadence", "venv", "bin");
         Directory.CreateDirectory(venvBin);
         WriteExecutable(Path.Combine(venvBin, "detect-secrets-hook"), "#!/bin/sh\necho '1.5.0'\n");
-        WriteExecutable(Path.Combine(venvBin, "pip-audit"), "#!/bin/sh\necho 'pip-audit 2.10.1'\n");
 
         string wizardHome = Path.Combine(_tempDir, "wizard-home");
         Directory.CreateDirectory(wizardHome);
@@ -1457,24 +1443,130 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     [Fact]
     public void PreCommitOpenApiService_ClassifiesBackendContractAndEfCoreSchemaPaths()
     {
-        var none = PreCommitOpenApiService.AnalyzeBackendContractChanges(["apps/web/src/App.vue", "docs/cli.md"]);
+        string realRepoRoot = PreCommitOpenApiService.FindRepoRoot();
+
+        var none = PreCommitOpenApiService.AnalyzeBackendContractChanges(["apps/web/src/App.vue", "docs/cli.md"], realRepoRoot);
         none.ShouldExport.Should().BeFalse();
         none.HasCsharpFiles.Should().BeFalse();
 
-        var serviceOnly = PreCommitOpenApiService.AnalyzeBackendContractChanges(["apps/execution/src/Endpoints/FormEndpoints.cs"]);
+        var serviceOnly = PreCommitOpenApiService.AnalyzeBackendContractChanges(["apps/execution/src/Endpoints/FormEndpoints.cs"], realRepoRoot);
         serviceOnly.ShouldExport.Should().BeTrue();
         serviceOnly.TargetServices.Should().Equal("execution");
         serviceOnly.HasCsharpFiles.Should().BeTrue();
 
-        var shared = PreCommitOpenApiService.AnalyzeBackendContractChanges(["packages/contracts/src/StudyDto.cs"]);
-        shared.ShouldExport.Should().BeTrue();
-        shared.TargetServices.Should().BeNull("shared contract changes export all backend services");
-        shared.HasCsharpFiles.Should().BeTrue();
+        var kernelDomain = PreCommitOpenApiService.AnalyzeBackendContractChanges(
+            ["packages/kernel/src/Cadence.Kernel.Domain/Entities/Study.cs"],
+            realRepoRoot);
+        kernelDomain.ShouldExport.Should().BeTrue();
+        kernelDomain.TargetServices.Should().Equal("kernel");
+        kernelDomain.HasCsharpFiles.Should().BeTrue();
+
+        var executionModule = PreCommitOpenApiService.AnalyzeBackendContractChanges(
+            ["apps/execution/module/ExecutionModule.cs"],
+            realRepoRoot);
+        executionModule.ShouldExport.Should().BeTrue();
+        executionModule.TargetServices.Should().Equal("execution_forms");
+        executionModule.HasCsharpFiles.Should().BeTrue();
+
+        var sharedContracts = PreCommitOpenApiService.AnalyzeBackendContractChanges(["packages/contracts/src/StudyDto.cs"], realRepoRoot);
+        sharedContracts.ShouldExport.Should().BeTrue();
+        sharedContracts.TargetServices.Should().Equal("ctms", "econsent", "etmf", "execution", "notifications", "payments");
+        sharedContracts.HasCsharpFiles.Should().BeTrue();
+
+        var nonExporterProjects = PreCommitOpenApiService.AnalyzeBackendContractChanges(
+            ["packages/testing/src/FakeClock.cs", "apps/gateway/src/Program.cs"],
+            realRepoRoot);
+        nonExporterProjects.ShouldExport.Should().BeFalse("neither packages/testing nor apps/gateway is referenced by an OpenAPI-exporting host");
+        nonExporterProjects.TargetServices.Should().BeNull();
+        nonExporterProjects.HasCsharpFiles.Should().BeTrue();
+
+        foreach (string globalBuildFile in new[]
+        {
+            "Cadence.sln",
+            "global.json",
+            "Directory.Build.props",
+            "Directory.Build.targets",
+            "Directory.Packages.props",
+        })
+        {
+            var globalChange = PreCommitOpenApiService.AnalyzeBackendContractChanges([globalBuildFile], realRepoRoot);
+            globalChange.ShouldExport.Should().BeTrue($"{globalBuildFile} can alter all backend OpenAPI contracts");
+            globalChange.TargetServices.Should().BeNull($"{globalBuildFile} triggers an unscoped all-service export");
+            globalChange.HasCsharpFiles.Should().BeTrue();
+        }
 
         PreCommitOpenApiService.AffectsEfCoreSchema("apps/web/src/models/FormModel.ts").Should().BeFalse();
         PreCommitOpenApiService.AffectsEfCoreSchema("docs/schema/index.md").Should().BeFalse();
         PreCommitOpenApiService.AffectsEfCoreSchema("apps/econsent/src/Domain/ConsentEntity.cs").Should().BeTrue();
         PreCommitOpenApiService.AffectsEfCoreSchema("packages/kernel/src/Cadence.Kernel.Persistence/Migrations/20260101_Init.cs").Should().BeTrue();
+    }
+
+    [Fact]
+    public void ApiClientValidatorService_ScopesPreCommitRunsToOpenApiFrontendAndCanvasContractInputs()
+    {
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "README.md").Should().BeFalse();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/kernel/src/Cadence.Kernel.Domain/Study.cs").Should().BeFalse();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/testing/src/FakeClock.cs").Should().BeFalse();
+
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "docs/openapi/ctms_openapi.json").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "apps/web/src/App.vue").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "apps/subject-portal/src/main.ts").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/ui/src/index.ts").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "scripts/generate-api-types.js").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "scripts/generate-canvas-contracts.js").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/kernel/src/Cadence.Kernel.Abstractions/References/NodeKinds.cs").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/security/src/Rbac/PermissionMatrix.cs").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "pnpm-lock.yaml").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "package.json").Should().BeTrue();
+
+        // Fixture _tempDir has no apps/web/tsconfig.json: irrelevant pre-commit paths skip cleanly (0),
+        // whereas relevant paths or unscoped runs fail closed (1).
+        ApiClientValidatorService.ValidateApiClients(_tempDir, targetFiles: ["README.md"], preCommit: true).Should().Be(0);
+        ApiClientValidatorService.ValidateApiClients(_tempDir, targetFiles: ["docs/openapi/ctms_openapi.json"], preCommit: true).Should().Be(1);
+        ApiClientValidatorService.ValidateApiClients(_tempDir).Should().Be(1);
+    }
+
+    [Fact]
+    public void ReadmeOnlyPreCommit_SkipsPackageAuditsTypecheckAndOpenApiExporterOffline()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        Write("README.md", "# Cadence Clinical\n");
+        Write("docs/SDLC/vulnerability_exclusions_ledger.json", "[]\n");
+        Directory.CreateDirectory(Path.Combine(_tempDir, "docs", "openapi"));
+        ApiDocsGeneratorService.GenerateApiDocs(repoRoot: _tempDir).Should().Be(0);
+
+        string sentinelBin = Path.Combine(_tempDir, "sentinel-bin");
+        string invocationsLog = Path.Combine(_tempDir, "forbidden-tools.log");
+        Directory.CreateDirectory(sentinelBin);
+
+        foreach (string tool in new[] { "dotnet", "pnpm", "pip-audit", "tsc" })
+        {
+            string scriptPath = Path.Combine(sentinelBin, tool);
+            File.WriteAllText(scriptPath, $"#!/bin/sh\necho {tool} >> \"{invocationsLog}\"\nexit 99\n");
+            File.SetUnixFileMode(scriptPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+
+        string originalPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        try
+        {
+            Environment.SetEnvironmentVariable("PATH", $"{sentinelBin}:/usr/bin:/bin");
+
+            var context = new GateContext(_tempDir, ["README.md"], PreCommit: true);
+            QualityGates.Find("vulnerabilities")!.Run(context).Should().BeTrue();
+            QualityGates.Find("api-clients")!.Run(context).Should().BeTrue();
+            QualityGates.Find("openapi")!.Run(context).Should().BeTrue();
+
+            File.Exists(invocationsLog).Should().BeFalse(
+                "staging only README.md must complete vulnerabilities, api-clients, and openapi offline without invoking dotnet, pnpm, pip-audit, or tsc");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", originalPath);
+        }
     }
 
     private (int ExitCode, string Stderr) RunHook(

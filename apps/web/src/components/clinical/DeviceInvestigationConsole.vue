@@ -2456,12 +2456,10 @@ onMounted(() => {
   font-size: 0.82rem;
 }
 
-.text-input:focus,
-.select-input:focus,
-.textarea-input:focus {
-  outline: none;
+.text-input:focus-visible,
+.select-input:focus-visible,
+.textarea-input:focus-visible {
   border-color: var(--semantic-color-primary);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
 }
 
 .checkbox-label {
@@ -2688,8 +2686,8 @@ onMounted(() => {
 }
 
 .badge-class {
-  background: var(--semantic-color-ai-bg);
-  color: var(--semantic-color-ai-dark);
+  background: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
 }
 
 .badge-defic {

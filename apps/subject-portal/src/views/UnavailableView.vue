@@ -6,7 +6,6 @@
     :hidden="ui.currentView !== 'view-unavailable'"
     :inert="ui.currentView !== 'view-unavailable' || undefined"
     aria-labelledby="unavailable-view-heading"
-    tabindex="0"
   >
     <div
       class="card unavailable-card"
@@ -19,26 +18,30 @@
     >
       <h2
         id="unavailable-view-heading"
+        tabindex="-1"
         style="margin-top: 0; margin-bottom: 12px"
       >
         {{ heading }}
       </h2>
       <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px">
-        {{ bodyMessage }}
+        {{ descriptionText }}
       </p>
-      <button
+      <a
         v-if="canReturnToTasks || canReturnToWallet"
         id="btn-unavailable-return-tasks"
-        type="button"
+        :href="availableAction.href"
         class="btn btn-primary"
-        @click="returnToAvailableScreen"
+        style="
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 48px;
+          text-decoration: none;
+        "
+        @click.prevent="navigateToAvailable"
       >
-        {{
-          canReturnToTasks
-            ? "Return to My Tasks"
-            : "Return to Participant Wallet"
-        }}
-      </button>
+        {{ availableAction.label }}
+      </a>
       <button
         v-else
         id="btn-unavailable-signin"
@@ -58,6 +61,7 @@ import { computed } from "vue";
 import { login } from "../features/auth.js";
 import { showView } from "../features/navigation.js";
 import { isScreenAvailable, screenTitle } from "../router/availability.js";
+import { ROUTER_BASE } from "../router/index.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
 
@@ -80,6 +84,10 @@ const canReturnToWallet = computed(() => {
   return !canReturnToTasks.value && isScreenAvailable("wallet");
 });
 
+const normalizedBase = computed(() =>
+  (ROUTER_BASE || "/subject-portal/").replace(/\/+$/, "")
+);
+
 const heading = computed(() => {
   const screen = ui.unavailableScreen;
   if (screen) {
@@ -91,7 +99,29 @@ const heading = computed(() => {
   return "This workflow isn't available yet";
 });
 
-const bodyMessage = computed(() => {
+const availableAction = computed(() => {
+  if (canReturnToTasks.value) {
+    return {
+      viewId: "view-tasks",
+      href: `${normalizedBase.value}/`,
+      label: "Return to My Tasks",
+    };
+  }
+  if (canReturnToWallet.value) {
+    return {
+      viewId: "view-wallet",
+      href: `${normalizedBase.value}/wallet`,
+      label: "Go to My Wallet",
+    };
+  }
+  return {
+    viewId: "view-unavailable",
+    href: `${normalizedBase.value}/unavailable`,
+    label: "View Availability Notice",
+  };
+});
+
+const descriptionText = computed(() => {
   if (
     !ui.unavailableScreen &&
     !canReturnToTasks.value &&
@@ -103,14 +133,14 @@ const bodyMessage = computed(() => {
     return "This section is not open for your study right now. Nothing was changed or submitted. You can return to your tasks or contact your study coordinator if you have questions.";
   }
   if (canReturnToWallet.value) {
-    return "This section is not open for your study right now. Nothing was changed or submitted. You can return to your participant wallet or contact your study coordinator if you have questions.";
+    return "This section is not open for your study right now. Nothing was changed or submitted. You can open My Wallet or contact your study coordinator if you have questions.";
   }
-  return "This section is not open for your study right now. Nothing was changed or submitted. Sign in to access your participant wallet or contact your study coordinator if you have questions.";
+  return "This section is not open for your study right now. Nothing was changed or submitted. Sign in to access available participant services or contact your study coordinator if you have questions.";
 });
 
-function returnToAvailableScreen() {
+function navigateToAvailable() {
   ui.unavailableScreen = null;
-  showView(canReturnToTasks.value ? "view-tasks" : "view-wallet");
+  showView(availableAction.value.viewId);
 }
 
 function handleSignIn() {

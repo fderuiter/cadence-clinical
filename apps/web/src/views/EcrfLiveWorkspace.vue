@@ -17,17 +17,9 @@
     >
       <div style="font-size: 0.9rem">
         {{ $t("ecrf.activeRole") }}
-        <span
-          class="badge"
-          style="
-            background-color: var(--accent);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-          "
-          >{{ activeUserRole.toUpperCase() }}</span
-        >
+        <span class="clinical-badge clinical-badge--signed badge">{{
+          activeUserRole.toUpperCase()
+        }}</span>
       </div>
     </div>
 
@@ -193,6 +185,7 @@ import StudySubjectsBar from "../components/clinical/StudySubjectsBar.vue";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   resolveHydratedWorkspaceScope,
   syncWorkspaceScope,
@@ -202,8 +195,12 @@ import {
   canManageQueries,
   canVerifySource,
 } from "../canvas/authority";
+import { buildCanvasLocationFromEcrfQuery } from "../canvas/ecrfRedirect";
 import { findKernelEnrollmentRef } from "../canvas/kernelStudy";
 import { collectionInstanceRef, observationNodeRef } from "../canvas/nodeRef";
+
+const { useRoute } = VueRouter;
+const useRouter = "useRouter" in VueRouter ? VueRouter.useRouter : undefined;
 
 const props = defineProps({
   loadedFormId: { type: String, default: null },
@@ -215,12 +212,9 @@ const emit = defineEmits(["dirty-change", "form-loaded", "closed"]);
 const scopeStore = useClinicalScopeStore();
 const authStore = useAuthStore();
 const canvasStore = useStudyCanvasStore();
-const route =
-  typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
-const router =
-  "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
-    ? VueRouter.useRouter()
-    : null;
+const route = typeof useRoute === "function" ? useRoute() : null;
+const router = typeof useRouter === "function" ? useRouter() : null;
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const instance = getCurrentInstance();
 const routerLinkComponent =
   instance?.appContext.components.RouterLink ||
@@ -233,10 +227,14 @@ function routeQuery(name) {
 }
 
 const routeStudyId = ref(routeQuery("studyId") ?? "");
-const routeSubjectId = ref(routeQuery("subjectId") ?? "");
+const routeSubjectId = ref(
+  routeQuery("subjectId") ?? routeQuery("participant") ?? ""
+);
 const routeEnrollmentId = ref(routeQuery("enrollmentId") ?? "");
 
-const selectedSubjectId = ref(routeSubjectId.value || "");
+const selectedSubjectId = ref(
+  routeSubjectId.value || scopeStore.activeSubjectId || ""
+);
 const resolvedEnrollmentId = ref(routeEnrollmentId.value);
 const enrollmentStatusMessage = ref("");
 const selectionChangedFromInitial = ref(false);
@@ -401,6 +399,15 @@ const manageParticipantsHref = computed(() => {
   return `${basePrefix}studies`;
 });
 
+function currentCanvasRedirectQuery() {
+  return {
+    ...(route?.query || {}),
+    studyId: scopeStore.activeStudyId.trim() || routeQuery("studyId") || "",
+    subjectId: selectedSubjectId.value.trim() || routeQuery("subjectId") || "",
+    siteId: selectedSubject.value?.siteId || routeQuery("siteId") || "",
+  };
+}
+
 function selectListedSubject() {
   if (!scopeStore.subjects.some((s) => s.id === selectedSubjectId.value)) {
     selectedSubjectId.value = scopeStore.subjects[0]?.id ?? "";
@@ -408,6 +415,16 @@ function selectListedSubject() {
 }
 
 async function resolveSelectedEnrollment() {
+  if (
+    typeof router?.hasRoute === "function" &&
+    router.hasRoute("study") &&
+    typeof router?.replace === "function"
+  ) {
+    void router.replace(
+      buildCanvasLocationFromEcrfQuery(currentCanvasRedirectQuery())
+    );
+    return;
+  }
   const studyCode = scopeStore.activeStudyId.trim();
   const subjectCode = selectedSubjectId.value.trim();
 
@@ -485,7 +502,13 @@ watch(
     selectedSubjectId,
     () => selectedSubject.value?.siteId ?? "",
   ],
-  ([nextStudy, nextSubject], [prevStudy, prevSubject]) => {
+  ([nextStudy, nextSubject, nextSubjectSite], [prevStudy, prevSubject]) => {
+    if (nextSubject !== scopeStore.activeSubjectId) {
+      scopeStore.activeSubjectId = nextSubject;
+    }
+    if (nextSubjectSite && nextSubjectSite !== scopeStore.activeSiteId) {
+      scopeStore.activeSiteId = nextSubjectSite;
+    }
     if (
       prevStudy !== undefined &&
       (nextStudy !== prevStudy || nextSubject !== prevSubject)
@@ -504,8 +527,8 @@ watch(
 watch(
   [
     () => routeQuery("studyId") ?? "",
-    () => routeQuery("siteId") ?? "",
-    () => routeQuery("subjectId") ?? "",
+    () => routeQuery("siteId") ?? routeQuery("site") ?? "",
+    () => routeQuery("subjectId") ?? routeQuery("participant") ?? "",
     () => routeQuery("enrollmentId") ?? "",
   ],
   async (
@@ -525,42 +548,72 @@ watch(
     routeEnrollmentId.value = nextEnrollment;
     selectionChangedFromInitial.value = false;
 
+    scopeStore.activeSiteId = nextSite;
     const studyChanged = Boolean(
       nextStudy && nextStudy !== scopeStore.activeStudyId
     );
-    if (nextStudy || nextSite) {
+    if (nextStudy) {
+      setActiveStudyCode(nextStudy);
+      scopeStore.activeStudyId = nextStudy;
       syncWorkspaceScope({
-        ...(nextStudy ? { studyId: nextStudy } : {}),
-        ...(nextSite || studyChanged ? { siteId: nextSite } : {}),
+        studyId: nextStudy,
+        siteId: nextSite,
+      });
+    } else if (prevStudy && !activeStudyCode.value) {
+      scopeStore.activeStudyId = "";
+    } else if (nextSite) {
+      syncWorkspaceScope({
+        siteId: nextSite,
       });
     }
-    if (nextSubject) {
-      scopeStore.activeSubjectId = nextSubject;
-      selectedSubjectId.value = nextSubject;
-    }
-    if (studyChanged) {
+    scopeStore.activeSubjectId = nextSubject;
+    selectedSubjectId.value = nextSubject;
+    if (studyChanged && nextStudy) {
       await scopeStore.loadSubjects(nextStudy);
     }
-    selectListedSubject();
+    if (nextSubject || studyChanged) {
+      selectListedSubject();
+    }
     await resolveSelectedEnrollment();
   }
 );
 
 onMounted(async () => {
-  const hydrated = resolveHydratedWorkspaceScope(route);
-  if (hydrated.studyId || hydrated.siteId) {
+  const incomingStudy = routeQuery("studyId")?.trim() ?? "";
+  const incomingSite = routeQuery("siteId") ?? routeQuery("site") ?? "";
+  const incomingSubject =
+    routeQuery("subjectId") ?? routeQuery("participant") ?? "";
+
+  if (incomingStudy || incomingSite) {
+    if (incomingStudy) {
+      setActiveStudyCode(incomingStudy);
+      scopeStore.activeStudyId = incomingStudy;
+    }
+    if (incomingSite) {
+      scopeStore.activeSiteId = incomingSite;
+    }
     syncWorkspaceScope({
-      ...(hydrated.studyId ? { studyId: hydrated.studyId } : {}),
-      ...(hydrated.siteId ? { siteId: hydrated.siteId } : {}),
-      router,
-      route,
-      syncRouteQuery: true,
+      ...(incomingStudy ? { studyId: incomingStudy } : {}),
+      ...(incomingSite ? { siteId: incomingSite } : {}),
     });
+  } else {
+    const hydrated = resolveHydratedWorkspaceScope(route);
+    if (hydrated.studyId || hydrated.siteId) {
+      syncWorkspaceScope({
+        ...(hydrated.studyId ? { studyId: hydrated.studyId } : {}),
+        ...(hydrated.siteId ? { siteId: hydrated.siteId } : {}),
+        router,
+        route,
+        syncRouteQuery: true,
+      });
+    } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+      scopeStore.activeStudyId = activeStudyCode.value;
+    }
   }
-  if (route?.query?.subjectId) {
-    const sId = String(route.query.subjectId);
-    scopeStore.activeSubjectId = sId;
-    selectedSubjectId.value = sId;
+
+  if (incomingSubject) {
+    scopeStore.activeSubjectId = incomingSubject;
+    selectedSubjectId.value = incomingSubject;
   }
   if (scopeStore.activeStudyId) {
     await scopeStore.loadSubjects(scopeStore.activeStudyId);

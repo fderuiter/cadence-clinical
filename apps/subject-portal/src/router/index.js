@@ -14,7 +14,7 @@ import { showView } from "../features/navigation.js";
 import { state } from "../stores/state.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import UnavailableView from "../views/UnavailableView.vue";
-import { defaultPortalRouteName, isScreenAvailable } from "./availability.js";
+import { isScreenAvailable } from "./availability.js";
 import { routeForView, viewRoutes } from "./routes.js";
 
 // Vite serves and builds the portal under this base (vite.config.js).
@@ -49,7 +49,52 @@ function findRouteForView(viewId) {
   return routeForView(viewId);
 }
 
+export function resolveDefaultPortalRoute() {
+  if (isScreenAvailable("tasks")) {
+    return { name: "tasks" };
+  }
+  if (isScreenAvailable("wallet")) {
+    return { name: "wallet" };
+  }
+  return { name: "unavailable" };
+}
+
 let router = null;
+let portalMounted = false;
+
+export function isPortalRouterMounted() {
+  return portalMounted;
+}
+
+export function setPortalRouterMounted(mounted) {
+  portalMounted = Boolean(mounted);
+  if (
+    portalMounted &&
+    router &&
+    memoryHistory &&
+    router.currentRoute.value !== START_LOCATION
+  ) {
+    const targetRoute = findRouteForView(state.currentView);
+    if (targetRoute && isScreenAvailable(targetRoute.name)) {
+      if (router.currentRoute.value.name !== targetRoute.name) {
+        state.unavailableScreen = null;
+        router.replace({ name: targetRoute.name }).catch(console.warn);
+      }
+    } else if (!targetRoute || targetRoute.name === "tasks") {
+      const fallback = resolveDefaultPortalRoute();
+      state.unavailableScreen = null;
+      router.replace(fallback).catch(console.warn);
+    } else {
+      state.unavailableScreen = String(targetRoute.name);
+      router
+        .replace({
+          name: "unavailable",
+          query: { screen: String(targetRoute.name) },
+        })
+        .catch(console.warn);
+    }
+  }
+}
 
 // The router singleton, created on first mount and shared by later mounts.
 export function getPortalRouter() {
@@ -60,54 +105,33 @@ export function getPortalRouter() {
     routes: [
       ...viewRoutes,
       unavailableRoute,
-      {
-        path: "/:pathMatch(.*)*",
-        redirect: () => ({ name: defaultPortalRouteName() }),
-      },
+      { path: "/:pathMatch(.*)*", redirect: () => resolveDefaultPortalRoute() },
     ],
   });
 
   router.beforeEach((to, from) => {
-    if (from === START_LOCATION && memoryHistory) {
+    if (from === START_LOCATION && memoryHistory && to.path === "/") {
       const initialRoute = findRouteForView(state.currentView);
       if (initialRoute && isScreenAvailable(initialRoute.name)) {
         return to.name === initialRoute.name
           ? undefined
           : { name: initialRoute.name };
       }
-      if (initialRoute && !isScreenAvailable(initialRoute.name)) {
-        if (initialRoute.name === "tasks") {
-          const fallbackName = defaultPortalRouteName();
-          if (fallbackName !== "unavailable") {
-            state.unavailableScreen = null;
-            return to.name === fallbackName
-              ? undefined
-              : { name: fallbackName };
-          }
-          if (to.name && to.name !== "tasks" && to.name !== "unavailable") {
-            state.unavailableScreen = String(to.name);
-            return {
-              name: "unavailable",
-              query: { screen: String(to.name) },
-            };
-          }
-          state.unavailableScreen = null;
-          return to.name === "unavailable"
-            ? undefined
-            : { name: "unavailable" };
-        }
-        state.unavailableScreen = String(initialRoute.name);
-        return {
-          name: "unavailable",
-          query: { screen: String(initialRoute.name) },
-        };
+      if (!initialRoute || initialRoute.name === "tasks") {
+        state.unavailableScreen = null;
+        const fallback = resolveDefaultPortalRoute();
+        return to.name === fallback.name ? undefined : fallback;
       }
+      state.unavailableScreen = String(initialRoute.name);
+      return {
+        name: "unavailable",
+        query: { screen: String(initialRoute.name) },
+      };
     }
 
-    if (to.name === "tasks" && !isScreenAvailable("tasks")) {
-      const fallbackName = defaultPortalRouteName();
+    if (to.path === "/" && to.name === "tasks" && !isScreenAvailable("tasks")) {
       state.unavailableScreen = null;
-      return { name: fallbackName };
+      return resolveDefaultPortalRoute();
     }
 
     if (to.name && !isScreenAvailable(to.name)) {
@@ -118,7 +142,7 @@ export function getPortalRouter() {
     if (to.name === "unavailable") {
       state.unavailableScreen = to.query?.screen
         ? String(to.query.screen)
-        : state.unavailableScreen || null;
+        : null;
       return;
     }
 
@@ -127,7 +151,7 @@ export function getPortalRouter() {
     }
 
     if (to.meta.requiresActiveQuestionnaire && !state.activeQuestionnaire) {
-      return { name: defaultPortalRouteName() };
+      return resolveDefaultPortalRoute();
     }
   });
 
@@ -137,10 +161,52 @@ export function getPortalRouter() {
     }
   });
 
-  // Synchronous, so the push supersedes any navigation still in flight.
+  watch(
+    () => isScreenAvailable("wallet"),
+    (walletAvailable) => {
+      if (!portalMounted) return;
+      const current = router.currentRoute.value;
+      if (walletAvailable && current.name === "unavailable") {
+        const requested = current.query?.screen
+          ? String(current.query.screen)
+          : "";
+        if (!requested || requested === "wallet") {
+          state.unavailableScreen = null;
+          router.replace({ name: "wallet" }).catch(console.warn);
+        }
+      } else if (!walletAvailable && current.name === "wallet") {
+        state.unavailableScreen = "wallet";
+        router
+          .replace({ name: "unavailable", query: { screen: "wallet" } })
+          .catch(console.warn);
+      }
+    }
+  );
+
+  // Synchronous, so the push supersedes any navigation still in flight
+  // (including rapid A -> B -> A transitions before B commits currentRoute).
+  let pushSeq = 0;
+  let activePushSeq = 0;
+  let pendingRouteName = null;
+
+  function syncPushRoute(targetLocation, targetName) {
+    const seq = ++pushSeq;
+    activePushSeq = seq;
+    pendingRouteName = targetName;
+    router
+      .push(targetLocation)
+      .catch(console.warn)
+      .finally(() => {
+        if (activePushSeq === seq) {
+          pendingRouteName = null;
+        }
+      });
+  }
+
   watch(
     () => state.currentView,
     (viewId) => {
+      if (!portalMounted) return;
       const route = findRouteForView(viewId);
       if (!route) return;
 
@@ -156,27 +222,33 @@ export function getPortalRouter() {
         return;
       }
 
+      const effectiveCurrentName =
+        pendingRouteName ?? router.currentRoute.value.name;
+
       if (route.name === "unavailable") {
-        const targetQuery = state.unavailableScreen
-          ? { screen: state.unavailableScreen }
-          : undefined;
+        const currentQueryScreen = router.currentRoute.value.query?.screen
+          ? String(router.currentRoute.value.query.screen)
+          : null;
         if (
-          router.currentRoute.value.name !== "unavailable" ||
-          (router.currentRoute.value.query?.screen || null) !==
-            (state.unavailableScreen || null)
+          effectiveCurrentName !== "unavailable" ||
+          (pendingRouteName === null &&
+            currentQueryScreen !== (state.unavailableScreen || null))
         ) {
-          router
-            .push({
+          syncPushRoute(
+            {
               name: "unavailable",
-              query: targetQuery,
-            })
-            .catch(console.warn);
+              query: state.unavailableScreen
+                ? { screen: state.unavailableScreen }
+                : undefined,
+            },
+            "unavailable"
+          );
         }
         return;
       }
 
-      if (router.currentRoute.value.name !== route.name) {
-        router.push({ name: route.name }).catch(console.warn);
+      if (effectiveCurrentName !== route.name) {
+        syncPushRoute({ name: route.name }, route.name);
       }
     },
     { flush: "sync" }

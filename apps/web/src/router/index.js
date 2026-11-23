@@ -1,3 +1,4 @@
+import { getActivePinia } from "pinia";
 import {
   createRouter,
   createWebHashHistory,
@@ -7,8 +8,6 @@ import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
 import { resolveActiveWorkspaceScope } from "../canvas/palette";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding.js";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
-import "../stores/workspaceScope";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
@@ -31,7 +30,7 @@ export function hasRequiredRole(userRoles, requiredRoles) {
 function landingRouteFor(roles) {
   if (roles.includes("sponsor_designer")) return "mdr";
   if (roles.includes("site_investigator") || roles.includes("crc")) {
-    return "ecrf";
+    return isDemoBuild() ? "ecrf" : "study";
   }
   if (roles.includes("cra") || roles.includes("monitor")) return "ctms";
   if (roles.includes("data_manager")) return "rules";
@@ -41,12 +40,16 @@ function landingRouteFor(roles) {
   return "mdr";
 }
 
-const PRIMARY_FALLBACK_SCREENS = new Set(["ecrf", "ctms", "ssu"]);
+function primaryFallbackScreens() {
+  return isDemoBuild()
+    ? new Set(["ecrf", "ctms", "ssu"])
+    : new Set(["study", "ctms", "ssu"]);
+}
 
 function redirectToCanvasSection(stage, section) {
   return (to) => {
-    const canvasStore = useStudyCanvasStore();
-    const scope = resolveActiveWorkspaceScope(to, canvasStore);
+    const canvasState = getActivePinia()?.state.value?.studyCanvas;
+    const scope = resolveActiveWorkspaceScope(to, canvasState);
     const rawCode =
       (typeof to.query?.studyCode === "string" && to.query.studyCode.trim()) ||
       (typeof to.query?.studyId === "string" && to.query.studyId.trim()) ||
@@ -58,9 +61,17 @@ function redirectToCanvasSection(stage, section) {
       scope.siteId ||
       "";
     const nextQuery = { ...to.query, stage, section };
+    if (
+      !nextQuery.participant &&
+      typeof nextQuery.subjectId === "string" &&
+      nextQuery.subjectId.trim()
+    ) {
+      nextQuery.participant = nextQuery.subjectId.trim();
+    }
     delete nextQuery.studyCode;
     delete nextQuery.studyId;
     delete nextQuery.siteId;
+    delete nextQuery.subjectId;
     if (rawSite) {
       nextQuery.site = rawSite;
     }
@@ -94,9 +105,10 @@ const routes = [
       // The preferred screen has no .NET backend yet: land on the first
       // role-authorized primary workflow screen that does, or open the study
       // workspace so every authenticated persona lands on a live screen.
+      const fallbackScreens = primaryFallbackScreens();
       const fallback = routes.find(
         (route) =>
-          PRIMARY_FALLBACK_SCREENS.has(route.name) &&
+          fallbackScreens.has(route.name) &&
           AVAILABLE_SCREENS.has(route.name) &&
           (!route.meta?.requiresRole?.length ||
             hasRequiredRole(roles, route.meta.requiresRole))
@@ -230,6 +242,14 @@ const routes = [
     path: "/ecrf",
     name: "ecrf",
     component: () => import("../views/EcrfView.vue"),
+    beforeEnter: async (to) => {
+      if (!isDemoBuild()) {
+        const { buildCanvasLocationFromEcrfQuery } =
+          await import("../canvas/ecrfRedirect");
+        return buildCanvasLocationFromEcrfQuery(to.query);
+      }
+      return true;
+    },
     meta: {
       requiresAuth: true,
       requiresRole: [

@@ -157,170 +157,15 @@
     </div>
 
     <!-- Reactive Tabs Header -->
-    <div
+    <ClinicalTabs
       v-if="!sectionMode"
-      class="tabs-container"
-      style="
-        display: flex;
-        gap: 16px;
-        margin-bottom: 24px;
-        border-bottom: 2px solid var(--semantic-color-border);
-        padding-bottom: 8px;
-      "
-    >
-      <button
-        id="tab-operations"
-        class="tab-btn clinical-tab"
-        :class="{ active: activeTab === 'operations' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'operations'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
-        @click="activeTab = 'operations'"
-      >
-        Core Operations
-      </button>
-      <button
-        id="tab-monitoring"
-        class="tab-btn clinical-tab"
-        :class="{ active: activeTab === 'monitoring' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'monitoring'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
-        @click="activeTab = 'monitoring'"
-      >
-        CRA Monitoring &amp; SDV
-      </button>
-      <button
-        id="tab-delegation"
-        class="tab-btn clinical-tab"
-        :class="{ active: activeTab === 'delegation' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'delegation'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
-        @click="activeTab = 'delegation'"
-      >
-        Delegation Matrix
-      </button>
-      <button
-        v-if="demoBuild"
-        id="tab-financials"
-        class="tab-btn clinical-tab"
-        :class="{ active: activeTab === 'financials' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'financials'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
-        @click="activeTab = 'financials'"
-      >
-        Financials &amp; Contracts
-      </button>
-      <button
-        id="tab-startup"
-        class="tab-btn clinical-tab"
-        :class="{ active: activeTab === 'startup' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'startup'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
-        @click="activeTab = 'startup'"
-      >
-        Study Startup &amp; Greenlight
-      </button>
-      <button
-        v-if="demoBuild"
-        id="tab-rtsm"
-        class="tab-btn clinical-tab"
-        :class="{ active: activeTab === 'rtsm' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'rtsm'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
-        @click="activeTab = 'rtsm'"
-      >
-        💊 RTSM &amp; Dose Escalation
-      </button>
-    </div>
+      v-model="activeTab"
+      :tabs="demoWorkspaceTabs"
+      aria-label="CTMS operational workspaces"
+      id-prefix="ctms-demo"
+      list-class="tabs-container"
+      tab-class="tab-btn"
+    />
 
     <!-- Active Filter/Scope Info -->
     <div
@@ -415,26 +260,36 @@
         >
         <span
           v-else-if="complianceLoadError"
-          class="badge"
-          style="
-            background-color: var(--semantic-color-warning-dark);
-            color: var(--semantic-color-text-on-solid);
-          "
+          class="clinical-badge clinical-badge--warning"
           :title="complianceLoadError"
         >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+            />
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+          </svg>
           STATUS UNAVAILABLE
         </span>
         <span
           v-else
-          class="badge"
-          :class="{ gxp: complianceStatus.is_complete }"
-          :style="
+          class="clinical-badge"
+          :class="
             complianceStatus.is_complete
-              ? {}
-              : {
-                  backgroundColor: 'var(--semantic-color-error)',
-                  color: 'var(--semantic-color-surface)',
-                }
+              ? 'clinical-badge--verified'
+              : 'clinical-badge--error'
           "
           :title="
             complianceStatus.is_complete
@@ -443,6 +298,39 @@
                 (complianceStatus.missing_documents || []).join(', ')
           "
         >
+          <svg
+            v-if="complianceStatus.is_complete"
+            xmlns="http://www.w3.org/2000/svg"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+          <svg
+            v-else
+            xmlns="http://www.w3.org/2000/svg"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="m15 9-6 6" />
+            <path d="m9 9 6 6" />
+          </svg>
           {{ complianceStatus.is_complete ? "COMPLIANT" : "NON-COMPLIANT" }}
         </span>
       </div>
@@ -455,6 +343,9 @@
         sectionMode === 'monitoring' ||
         (!sectionMode && activeTab === 'operations')
       "
+      :id="!sectionMode ? 'ctms-demo-panel-operations' : undefined"
+      :role="!sectionMode ? 'tabpanel' : undefined"
+      :aria-labelledby="!sectionMode ? 'tab-operations' : undefined"
     >
       <div
         v-if="operationsLoadError"
@@ -492,8 +383,12 @@
                   </td>
                   <td>
                     <span
-                      class="badge"
-                      :class="{ gxp: m.status === 'ACHIEVED' }"
+                      class="clinical-badge badge"
+                      :class="
+                        m.status === 'ACHIEVED'
+                          ? 'clinical-badge--verified gxp'
+                          : 'clinical-badge--draft'
+                      "
                       >{{ m.status }}</span
                     >
                   </td>
@@ -593,8 +488,14 @@
                   <td>{{ v.cra_id || "N/A" }}</td>
                   <td>
                     <span
-                      class="badge"
-                      :class="{ gxp: v.status === 'SIGNED_OFF' }"
+                      class="clinical-badge badge"
+                      :class="
+                        v.status === 'SIGNED_OFF'
+                          ? 'clinical-badge--signed gxp'
+                          : v.status === 'COMPLETED'
+                            ? 'clinical-badge--verified'
+                            : 'clinical-badge--draft'
+                      "
                       >{{ v.status }}</span
                     >
                   </td>
@@ -755,9 +656,15 @@
               </td>
               <td>{{ letter.letterType }}</td>
               <td>
-                <span class="badge" :class="{ gxp: letter.isSigned }">{{
-                  letter.status
-                }}</span>
+                <span
+                  class="clinical-badge"
+                  :class="
+                    letter.isSigned
+                      ? 'clinical-badge--signed'
+                      : 'clinical-badge--draft'
+                  "
+                  >{{ letter.status }}</span
+                >
               </td>
               <td>
                 <code style="font-size: 11px">{{ letter.pdfSha256Hash }}</code>
@@ -892,7 +799,12 @@
     </div>
 
     <!-- Tab 2: CRA Monitoring & SDV Console -->
-    <div v-if="!sectionMode && activeTab === 'monitoring'">
+    <div
+      v-if="!sectionMode && activeTab === 'monitoring'"
+      id="ctms-demo-panel-monitoring"
+      role="tabpanel"
+      aria-labelledby="tab-monitoring"
+    >
       <CraVerificationConsole
         :standalone="true"
         :study-id="studyId"
@@ -901,7 +813,12 @@
     </div>
 
     <!-- Tab 3: Delegation Matrix -->
-    <div v-if="!sectionMode && activeTab === 'delegation'">
+    <div
+      v-if="!sectionMode && activeTab === 'delegation'"
+      id="ctms-demo-panel-delegation"
+      role="tabpanel"
+      aria-labelledby="tab-delegation"
+    >
       <div class="card">
         <div
           class="card-title"
@@ -993,22 +910,24 @@
                     <span
                       v-for="(cert, idx) in getStaffCertificates(d)"
                       :key="idx"
-                      class="badge"
-                      style="
-                        background-color: var(--semantic-color-success-bg-soft);
-                        color: var(--semantic-color-success-dark);
-                        border: 1px solid
-                          var(--semantic-color-success-border-soft);
-                        font-size: 10px;
-                        font-weight: 600;
-                        padding: 2px 6px;
-                        border-radius: 4px;
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 4px;
-                      "
+                      class="clinical-badge clinical-badge--verified"
                     >
-                      <span>✓</span> {{ cert }}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="m9 12 2 2 4-4" />
+                      </svg>
+                      {{ cert }}
                     </span>
                   </div>
                 </td>
@@ -1017,14 +936,8 @@
                     <span
                       v-for="task in d.task_codes"
                       :key="task"
-                      class="badge"
-                      style="
-                        background-color: var(--semantic-color-surface-header);
-                        color: var(--semantic-color-text-body);
-                        border: 1px solid var(--semantic-color-border-control);
-                        font-size: 10px;
-                        font-family: monospace;
-                      "
+                      class="clinical-badge clinical-badge--draft"
+                      style="font-family: var(--font-mono)"
                     >
                       {{ task }}
                     </span>
@@ -1033,14 +946,26 @@
                 <td>{{ d.start_date }}</td>
                 <td>{{ d.end_date || "—" }}</td>
                 <td>
-                  <span class="badge" :class="{ gxp: d.is_active }">{{
-                    d.is_active ? "ACTIVE" : "INACTIVE"
-                  }}</span>
+                  <span
+                    class="clinical-badge"
+                    :class="
+                      d.is_active
+                        ? 'clinical-badge--verified'
+                        : 'clinical-badge--draft'
+                    "
+                    >{{ d.is_active ? "ACTIVE" : "INACTIVE" }}</span
+                  >
                 </td>
                 <td>
-                  <span class="badge" :class="{ gxp: d.signed_off }">{{
-                    d.signed_off ? "YES" : "PENDING PI"
-                  }}</span>
+                  <span
+                    class="clinical-badge"
+                    :class="
+                      d.signed_off
+                        ? 'clinical-badge--signed'
+                        : 'clinical-badge--warning'
+                    "
+                    >{{ d.signed_off ? "YES" : "PENDING PI" }}</span
+                  >
                 </td>
                 <td style="display: flex; gap: 6px">
                   <button
@@ -1126,14 +1051,9 @@
                 <td>{{ audit.user_id }}</td>
                 <td>{{ audit.user_role }}</td>
                 <td>
-                  <span
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-surface-header);
-                      color: var(--semantic-color-text-body);
-                    "
-                    >{{ audit.action }}</span
-                  >
+                  <span class="clinical-badge clinical-badge--draft">{{
+                    audit.action
+                  }}</span>
                 </td>
                 <td style="font-size: 12px">
                   {{ audit.details }}
@@ -1158,7 +1078,12 @@
     </div>
 
     <!-- Tab 4: Financials & Fee Matrix Engine -->
-    <div v-if="demoBuild && !sectionMode && activeTab === 'financials'">
+    <div
+      v-if="demoBuild && !sectionMode && activeTab === 'financials'"
+      id="ctms-demo-panel-financials"
+      role="tabpanel"
+      aria-labelledby="tab-financials"
+    >
       <!-- Grant Contract Header & Multi-Tier Template Selector -->
       <div class="card" style="margin-bottom: 20px">
         <div
@@ -1408,11 +1333,7 @@
                 <td>
                   <span
                     v-if="grid.activity_id"
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-primary-light);
-                      color: var(--semantic-color-primary);
-                    "
+                    class="clinical-badge clinical-badge--frozen"
                   >
                     {{ grid.activity_id }}
                   </span>
@@ -1425,11 +1346,7 @@
                 <td>
                   <span
                     v-if="grid.form_id"
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-success-bg-soft);
-                      color: var(--semantic-color-success-dark);
-                    "
+                    class="clinical-badge clinical-badge--verified"
                   >
                     {{ grid.form_id }}
                   </span>
@@ -1451,28 +1368,17 @@
                 <td>${{ (grid.patient_stipend || 0).toFixed(2) }}</td>
                 <td>${{ (grid.travel_reimbursement || 0).toFixed(2) }}</td>
                 <td>
-                  <span
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-surface-header);
-                      color: var(--semantic-color-text-secondary);
-                    "
+                  <span class="clinical-badge clinical-badge--draft"
                     >v{{ grid.version_index }}</span
                   >
                 </td>
                 <td>
                   <span
-                    class="badge"
-                    :style="
+                    class="clinical-badge"
+                    :class="
                       grid.is_active
-                        ? {
-                            background: 'var(--semantic-color-success-bg)',
-                            color: 'var(--semantic-color-success-dark)',
-                          }
-                        : {
-                            background: 'var(--semantic-color-error-bg)',
-                            color: 'var(--semantic-color-error-text-dark)',
-                          }
+                        ? 'clinical-badge--verified'
+                        : 'clinical-badge--error'
                     "
                   >
                     {{ grid.is_active ? "ACTIVE" : "HISTORICAL" }}
@@ -1724,17 +1630,11 @@
                 <tr v-for="adj in budgetAdjustments" :key="adj.id">
                   <td>
                     <span
-                      class="badge"
-                      :style="
+                      class="clinical-badge"
+                      :class="
                         adj.amount >= 0
-                          ? {
-                              background: 'var(--semantic-color-success-bg)',
-                              color: 'var(--semantic-color-success-dark)',
-                            }
-                          : {
-                              background: 'var(--semantic-color-error-bg)',
-                              color: 'var(--semantic-color-error-text-dark)',
-                            }
+                          ? 'clinical-badge--verified'
+                          : 'clinical-badge--error'
                       "
                     >
                       {{ adj.adjustment_type }}
@@ -1756,18 +1656,11 @@
                   </td>
                   <td>
                     <span
-                      class="badge"
-                      :style="
+                      class="clinical-badge"
+                      :class="
                         adj.status === 'APPROVED'
-                          ? {
-                              background: 'var(--semantic-color-success-bg)',
-                              color: 'var(--semantic-color-success-dark)',
-                            }
-                          : {
-                              background:
-                                'var(--semantic-color-warning-bg-badge)',
-                              color: 'var(--semantic-color-warning-dark)',
-                            }
+                          ? 'clinical-badge--verified'
+                          : 'clinical-badge--warning'
                       "
                     >
                       {{ adj.status }}
@@ -1854,14 +1747,8 @@
                   ${{ Number(amend.revised_budget).toLocaleString() }}
                 </td>
                 <td>
-                  <span
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-primary-light);
-                      color: var(--semantic-color-primary);
-                    "
-                  >
-                    v{{ amend.previous_version_index }} ➔ v{{
+                  <span class="clinical-badge clinical-badge--frozen">
+                    v{{ amend.previous_version_index }} to v{{
                       amend.new_version_index
                     }}
                   </span>
@@ -1871,13 +1758,7 @@
                 </td>
                 <td>{{ amend.approved_by || amend.created_by }}</td>
                 <td>
-                  <span
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-success-bg);
-                      color: var(--semantic-color-success-dark);
-                    "
-                  >
+                  <span class="clinical-badge clinical-badge--verified">
                     {{ amend.status }}
                   </span>
                 </td>
@@ -2609,9 +2490,8 @@
         <input id="del-start-date" v-model="delStartDate" type="date" />
       </div>
 
-      <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label>Delegated Duty Task Codes</label>
+      <fieldset class="form-group form-fieldset">
+        <legend class="form-legend">Delegated Duty Task Codes</legend>
         <div
           style="
             display: flex;
@@ -2641,7 +2521,7 @@
             >)
           </label>
         </div>
-      </div>
+      </fieldset>
 
       <div class="form-group">
         <label for="del-reason"
@@ -2851,7 +2731,7 @@
               class="btn btn-cancel btn-sm"
               @click="removeVisitFinding(idx)"
             >
-              Remove
+              Remove<span class="sr-only"> finding {{ idx + 1 }}</span>
             </button>
           </div>
         </div>
@@ -3013,6 +2893,9 @@
     <!-- Startup & Greenlight Tab Content -->
     <div
       v-if="!sectionMode && activeTab === 'startup'"
+      id="ctms-demo-panel-startup"
+      role="tabpanel"
+      aria-labelledby="tab-startup"
       style="margin-top: 20px"
     >
       <SsuGreenlightConsole :study-id="studyId" :site-id="siteId" />
@@ -3021,6 +2904,9 @@
     <!-- RTSM & Dose Escalation Tab Content -->
     <div
       v-if="demoBuild && !sectionMode && activeTab === 'rtsm'"
+      id="ctms-demo-panel-rtsm"
+      role="tabpanel"
+      aria-labelledby="tab-rtsm"
       style="margin-top: 20px; display: flex; flex-direction: column; gap: 24px"
     >
       <div
@@ -3081,11 +2967,13 @@ import * as VueRouter from "vue-router";
 import {
   buildStepUpVerificationPayload,
   ClinicalModal,
+  ClinicalTabs,
   SEMANTIC_ACTIONS,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
 } from "ui";
 import { useClinicalStore } from "../../stores/clinical";
 import { useAuthStore } from "../../stores/auth";
+import { useActiveStudyScope } from "../../composables/useActiveStudyScope";
 import { syncWorkspaceScope } from "../../stores/workspaceScope";
 import CraVerificationConsole from "../../components/persona/CraVerificationConsole.vue";
 import SsuGreenlightConsole from "../../components/clinical/SsuGreenlightConsole.vue";
@@ -3129,7 +3017,54 @@ const router =
     ? VueRouter.useRouter()
     : null;
 const demoBuild = isDemoBuild();
+
+const demoWorkspaceTabs = computed(() => {
+  const tabs = [
+    {
+      id: "operations",
+      label: "Core Operations",
+      buttonId: "tab-operations",
+      panelId: "ctms-demo-panel-operations",
+    },
+    {
+      id: "monitoring",
+      label: "CRA Monitoring & SDV",
+      buttonId: "tab-monitoring",
+      panelId: "ctms-demo-panel-monitoring",
+    },
+    {
+      id: "delegation",
+      label: "Delegation Matrix",
+      buttonId: "tab-delegation",
+      panelId: "ctms-demo-panel-delegation",
+    },
+  ];
+  if (demoBuild) {
+    tabs.push({
+      id: "financials",
+      label: "Financials & Contracts",
+      buttonId: "tab-financials",
+      panelId: "ctms-demo-panel-financials",
+    });
+  }
+  tabs.push({
+    id: "startup",
+    label: "Study Startup & Greenlight",
+    buttonId: "tab-startup",
+    panelId: "ctms-demo-panel-startup",
+  });
+  if (demoBuild) {
+    tabs.push({
+      id: "rtsm",
+      label: "RTSM & Dose Escalation",
+      buttonId: "tab-rtsm",
+      panelId: "ctms-demo-panel-rtsm",
+    });
+  }
+  return tabs;
+});
 const isIpKitReconciliationDrawerOpen = ref(false);
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
 const initialQueryStudy =
   typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
@@ -3143,6 +3078,7 @@ const initialQuerySite =
 // Scope comes from props or the route; apply before the first render so child panels see it.
 if (route && route.query) {
   if (initialQueryStudy) {
+    setActiveStudyCode(initialQueryStudy);
     store.activeStudyId = initialQueryStudy;
   }
   if (initialQuerySite) {
@@ -3160,7 +3096,11 @@ const initialResolvedSite =
   props.initialSiteId || initialQuerySite || store.activeSiteId || "";
 
 const localStudyId = ref(
-  props.studyCode || initialQueryStudy || store.activeStudyId || ""
+  props.studyCode ||
+    initialQueryStudy ||
+    activeStudyCode.value ||
+    store.activeStudyId ||
+    ""
 );
 const localSiteId = ref(initialResolvedSite);
 const sitePickerChoice = ref(
@@ -3181,6 +3121,7 @@ watch(
     const trimmedStudy = typeof nextStudy === "string" ? nextStudy.trim() : "";
     if (trimmedStudy) {
       localStudyId.value = trimmedStudy;
+      setActiveStudyCode(trimmedStudy);
       store.activeStudyId = trimmedStudy;
     }
     const trimmedSite =
@@ -3214,7 +3155,11 @@ function syncScopeToStore() {
   const nextStudy = !props.studyCode ? localStudyId.value.trim() : undefined;
   const nextSite = localSiteId.value.trim();
   if (!props.studyCode) {
-    store.activeStudyId = nextStudy;
+    const trimmedStudy = localStudyId.value.trim();
+    store.activeStudyId = trimmedStudy;
+    if (trimmedStudy) {
+      setActiveStudyCode(trimmedStudy);
+    }
   }
   store.activeSiteId = nextSite;
   syncWorkspaceScope({
@@ -3225,6 +3170,12 @@ function syncScopeToStore() {
     syncRouteQuery: !props.studyCode && !props.sectionMode,
   });
 }
+
+watch(activeStudyCode, (next) => {
+  if (!props.studyCode && next && next !== localStudyId.value) {
+    localStudyId.value = next;
+  }
+});
 
 watch(
   () => store.activeStudyId,
@@ -3261,6 +3212,7 @@ const studyId = computed(() => {
   const candidate =
     props.studyCode.trim() ||
     localStudyId.value.trim() ||
+    activeStudyCode.value.trim() ||
     (store.activeStudyId || "").trim();
   if (candidate) return candidate;
   return demoBuild ? "STUDY-USDM-001" : "";
@@ -3283,6 +3235,19 @@ const activeTab = ref(
     ? "startup"
     : "operations"
 );
+
+watch([() => route?.path, () => route?.query?.tab], ([nextPath, nextTab]) => {
+  if (nextPath === "/ssu" || nextTab === "startup") {
+    activeTab.value = "startup";
+  } else if (
+    typeof nextTab === "string" &&
+    demoWorkspaceTabs.value.some((t) => t.id === nextTab)
+  ) {
+    activeTab.value = nextTab;
+  } else if (nextPath === "/ctms" && activeTab.value === "startup") {
+    activeTab.value = "operations";
+  }
+});
 
 // Core Operations state
 const milestones = ref([]);
@@ -4712,6 +4677,7 @@ textarea {
 .btn-secondary {
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text);
 }
 
 .btn-primary {
@@ -4722,6 +4688,46 @@ textarea {
 
 .tab-btn:hover {
   background: var(--semantic-color-surface-header);
+}
+
+.tabs-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--semantic-color-border);
+  padding-bottom: 8px;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--semantic-color-text-secondary);
+  border-bottom: 3px solid transparent;
+}
+
+.tab-btn.active {
+  border-bottom-color: var(--semantic-color-primary-dark);
+  color: var(--semantic-color-primary-dark);
+}
+
+.form-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0 0 12px 0;
+  min-width: 0;
+}
+
+.form-legend {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--semantic-color-text-body);
+  margin-bottom: 4px;
 }
 
 .doa-load-error {

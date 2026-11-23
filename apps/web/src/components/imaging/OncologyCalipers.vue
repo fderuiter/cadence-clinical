@@ -630,13 +630,15 @@ function getTimepointClass(tp) {
 
 .field-input,
 .field-select {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 6px 8px;
   font-size: 0.8rem;
-  outline: none;
+  box-sizing: border-box;
 }
 
 .section-header-row {
@@ -646,12 +648,20 @@ function getTimepointClass(tp) {
 }
 
 .btn-clear-all {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 2px 6px;
+  border-radius: 4px;
   background: none;
   border: none;
   color: var(--semantic-color-error);
   font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .empty-state {
@@ -711,7 +721,7 @@ function getTimepointClass(tp) {
 .tp-c4d1,
 .tp-followup {
   background-color: rgba(168, 85, 247, 0.15);
-  color: var(--semantic-color-ai);
+  color: var(--semantic-color-purple-inverse-text);
   border: 1px solid rgba(168, 85, 247, 0.3);
 }
 
@@ -738,11 +748,19 @@ function getTimepointClass(tp) {
 }
 
 .btn-delete-annot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 2px 6px;
+  border-radius: 4px;
   background: none;
   border: none;
   color: var(--semantic-color-text-inverse-muted);
   cursor: pointer;
   font-weight: bold;
+  box-sizing: border-box;
 }
 
 .btn-delete-annot:hover {
@@ -887,11 +905,18 @@ function getTimepointClass(tp) {
 }
 
 .btn-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  border-radius: 4px;
   background: none;
   border: none;
   color: var(--semantic-color-text-inverse-muted);
   font-size: 1.1rem;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .modal-disclaimer {
@@ -950,13 +975,16 @@ function getTimepointClass(tp) {
 }
 
 .diameter-input {
-  width: 52px;
+  width: 56px;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
-  padding: 2px 4px;
+  padding: 2px 6px;
   font-size: 0.75rem;
+  box-sizing: border-box;
 }
 
 .action-btn-group {
@@ -966,6 +994,11 @@ function getTimepointClass(tp) {
 }
 
 .btn-convert-manual {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background-color: rgba(251, 191, 36, 0.15);
   color: var(--semantic-color-warning);
   border: 1px solid rgba(251, 191, 36, 0.3);
@@ -974,6 +1007,7 @@ function getTimepointClass(tp) {
   padding: 2px 6px;
   border-radius: 4px;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .btn-convert-manual:hover {

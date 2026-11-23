@@ -761,13 +761,11 @@ function formatRelativeTime(isoString) {
   border-radius: var(--radius-sm, 6px);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  outline: none;
 }
 
-.filter-select:focus,
-.filter-date:focus {
+.filter-select:focus-visible,
+.filter-date:focus-visible {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .reset-filters-btn {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mount, flushPromises } from "@vue/test-utils";
+import { mount, flushPromises, DOMWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
@@ -461,6 +461,126 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
     );
     expect(wrapper.find("#kernel-act").exists()).toBe(false);
   });
+
+  it("enforces single-stop roving tabindex across #canvas-inspector role=toolbar and opens/focuses #kernel-explain on Cmd/Ctrl+E", async () => {
+    await router.push(
+      `/studies/CAD-101?stage=conduct&section=participants&node=${REF}`
+    );
+    await router.isReady();
+    wrapper = mount(StudyCanvasView, {
+      attachTo: document.body,
+      global: { plugins: [pinia, router] },
+    });
+    await flushPromises();
+
+    const buttons = () =>
+      wrapper.findAll('#canvas-inspector [role="toolbar"] button');
+    expect(
+      buttons().filter((btn) => btn.attributes("tabindex") === "0")
+    ).toHaveLength(1);
+    expect(wrapper.find("#verb-details").attributes("tabindex")).toBe("0");
+
+    const detailsEl = wrapper.find("#verb-details").element;
+    detailsEl.focus();
+    detailsEl.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "End", bubbles: true })
+    );
+    await flushPromises();
+    const lastId = buttons()[buttons().length - 1].attributes("id");
+    expect(document.activeElement?.id).toBe(lastId);
+
+    document.activeElement.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Home", bubbles: true })
+    );
+    await flushPromises();
+    expect(document.activeElement?.id).toBe("verb-details");
+
+    // Collapse inspector manually, then press Cmd+E -> expands #canvas-inspector, activates Explain, focuses #kernel-explain
+    await wrapper.find("#btn-toggle-inspector").trigger("click");
+    expect(wrapper.find("#canvas-inspector").attributes("data-collapsed")).toBe(
+      "true"
+    );
+
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "e",
+        metaKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await flushPromises();
+
+    expect(wrapper.find("#canvas-inspector").attributes("data-collapsed")).toBe(
+      "false"
+    );
+    expect(wrapper.find("#verb-explain").attributes("aria-pressed")).toBe(
+      "true"
+    );
+    expect(document.activeElement?.id).toBe("kernel-explain");
+  });
+
+  it("renders CanvasErrorAlert with working Retry and Explain controls on KernelActPanel and KernelLineagePanel failures", async () => {
+    vi.mocked(kernelApi.getCommands)
+      .mockRejectedValueOnce(new ApiError("Act service timeout", 504))
+      .mockResolvedValueOnce([
+        permitted("participant.freeze", "participant.freeze"),
+      ]);
+    vi.mocked(kernelApi.trace).mockRejectedValueOnce(
+      new ApiError("Trace service timeout", 504)
+    );
+
+    await router.push(
+      `/studies/CAD-101?stage=conduct&section=participants&node=${REF}`
+    );
+    await router.isReady();
+    wrapper = mount(StudyCanvasView, {
+      attachTo: document.body,
+      global: { plugins: [pinia, router] },
+    });
+    await flushPromises();
+
+    // KernelActPanel error -> Retry recovers; Explain switches to #kernel-explain
+    await wrapper.find("#verb-act").trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#kernel-act-status").text()).toContain(
+      "Available actions couldn't be loaded right now."
+    );
+    await wrapper
+      .find('#kernel-act-status [data-testid="canvas-error-retry"]')
+      .trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#kernel-act-list").exists()).toBe(true);
+
+    // KernelLineagePanel error -> Explain switches to #kernel-explain; going back to Trace and clicking Retry recovers
+    await wrapper.find("#verb-trace").trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#kernel-trace [role=alert]").exists()).toBe(true);
+    await wrapper
+      .find('#kernel-trace [data-testid="canvas-error-explain"]')
+      .trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#kernel-explain").exists()).toBe(true);
+
+    vi.mocked(kernelApi.trace)
+      .mockRejectedValueOnce(new ApiError("Trace retryable failure", 503))
+      .mockResolvedValueOnce({
+        nodes: [],
+        edges: [],
+        depth: 1,
+        truncated: false,
+      });
+    await wrapper.find("#verb-trace").trigger("click");
+    await flushPromises();
+    await wrapper
+      .find('#kernel-trace [data-testid="canvas-error-retry"]')
+      .trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#kernel-trace [role=alert]").exists()).toBe(false);
+    expect(wrapper.find("#kernel-trace").text()).toContain(
+      "No upstream source records"
+    );
+  });
 });
 
 describe("⌘K palette kernel search (ADR-2484)", () => {
@@ -476,6 +596,8 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
     vi.useRealTimers();
   });
 
+  const body = new DOMWrapper(document.body);
+
   function mountPalette() {
     wrapper = mount(CanvasPalette, {
       props: { studyCode: "CAD-101", participants: [] },
@@ -484,7 +606,7 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
   }
 
   async function type(text) {
-    await wrapper.find("#canvas-palette-input").setValue(text);
+    await body.find("#canvas-palette-input").setValue(text);
     await vi.advanceTimersByTimeAsync(300);
     await flushPromises();
   }
@@ -511,7 +633,7 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
       kinds: ["study"],
       limit: 5,
     });
-    const options = wrapper.findAll("#canvas-palette-list [role=option]");
+    const options = body.findAll("#canvas-palette-list [role=option]");
     const study = options.find((o) => o.text().includes("Oncology 401"));
     expect(study.text()).toContain("ONC-401");
     await study.trigger("click");
@@ -534,7 +656,7 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
 
     await type("ONC-401");
 
-    const labels = wrapper
+    const labels = body
       .findAll("#canvas-palette-list [role=option]")
       .map((o) => o.find(".palette-group").text());
     expect(labels.filter((g) => g === "Open study")).toHaveLength(0);
@@ -545,9 +667,9 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
     vi.mocked(kernelApi.search).mockResolvedValue([]);
     mountPalette();
 
-    await wrapper.find("#canvas-palette-input").setValue("o");
-    await wrapper.find("#canvas-palette-input").setValue("on");
-    await wrapper.find("#canvas-palette-input").setValue("onc");
+    await body.find("#canvas-palette-input").setValue("o");
+    await body.find("#canvas-palette-input").setValue("on");
+    await body.find("#canvas-palette-input").setValue("onc");
     await vi.advanceTimersByTimeAsync(300);
     await flushPromises();
     await type("x");
@@ -564,10 +686,10 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
 
     await type("onc-401");
 
-    expect(wrapper.find("#canvas-palette-kernel-note").text()).toBe(
+    expect(body.find("#canvas-palette-kernel-note").text()).toBe(
       "Studies can't be searched right now: Your sign-in's tenant is not an active kernel tenant."
     );
-    const groups = wrapper
+    const groups = body
       .findAll("#canvas-palette-list [role=option]")
       .map((o) => o.find(".palette-group").text());
     expect(groups).toContain("Open study");

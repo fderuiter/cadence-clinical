@@ -141,7 +141,9 @@ describe("workspaceScope cross-view synchronization", () => {
 
     expect(
       resolveAuthorizedTaskRoute({ route: "/ecrf" }, ["data_manager"])
-    ).toBe("/ecrf?studyId=CADENCE-DM-301&siteId=SITE-301");
+    ).toBe(
+      "/studies/CADENCE-DM-301?stage=conduct&site=SITE-301&section=participants"
+    );
     expect(
       resolveAuthorizedTaskRoute({ route: "/studies" }, ["data_manager"])
     ).toBe("/studies/CADENCE-DM-301?site=SITE-301");

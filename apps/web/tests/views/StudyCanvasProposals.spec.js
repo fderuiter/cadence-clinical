@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mount, flushPromises } from "@vue/test-utils";
+import { mount, flushPromises, DOMWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
@@ -7,6 +7,7 @@ import { kernelApi } from "../../src/api/kernelApi";
 import { ApiError } from "../../src/api/client";
 import { useAuthStore } from "../../src/stores/auth";
 import { reloadAiAssistance } from "../../src/ai/aiAssistance";
+import { clearNodeResolutionCache } from "../../src/canvas/nodeResolver";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
 vi.mock("../../src/api/executionApi", () => ({
@@ -89,6 +90,7 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
 
   beforeEach(() => {
     localStorage.clear();
+    clearNodeResolutionCache();
     reloadAiAssistance();
     pinia = createPinia();
     setActivePinia(pinia);
@@ -443,13 +445,14 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
     });
 
     it("turns a sentence in the palette into a question for Assist on the selection", async () => {
+      const body = new DOMWrapper(document.body);
       await selectParticipant();
 
       await wrapper.find("#btn-open-palette").trigger("click");
-      await wrapper
+      await body
         .find("#canvas-palette-input")
         .setValue("which visits are out of window");
-      const options = wrapper.findAll("#canvas-palette-list [role=option]");
+      const options = body.findAll("#canvas-palette-list [role=option]");
       const ask = options.find((o) => o.text().includes("Ask AI"));
       expect(ask?.text()).toContain("Nothing changes until a person decides");
       await ask.trigger("click");
@@ -465,17 +468,19 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
     });
 
     it("offers no Ask for fewer than three words", async () => {
+      const body = new DOMWrapper(document.body);
       await open();
 
       await wrapper.find("#btn-open-palette").trigger("click");
-      await wrapper.find("#canvas-palette-input").setValue("conduct");
+      await body.find("#canvas-palette-input").setValue("conduct");
 
-      expect(wrapper.text()).not.toContain("Ask AI");
+      expect(body.find("#canvas-palette").text()).not.toContain("Ask AI");
     });
   });
 
   describe("with AI assistance off", () => {
     it("hides Assist and Ask, keeps Needs attention and review, and remembers the choice", async () => {
+      const body = new DOMWrapper(document.body);
       await selectAndTurnOff();
 
       expect(
@@ -486,10 +491,10 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       expect(wrapper.find("#ai-assist").exists()).toBe(false);
 
       await wrapper.find("#btn-open-palette").trigger("click");
-      await wrapper
+      await body
         .find("#canvas-palette-input")
         .setValue("which visits are out of window");
-      expect(wrapper.text()).not.toContain("Ask AI");
+      expect(body.find("#canvas-palette").text()).not.toContain("Ask AI");
 
       await router.push("/studies/CAD-101");
       await flushPromises();
@@ -511,5 +516,36 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       await wrapper.find("#btn-ai-assistance").trigger("click");
       await flushPromises();
     }
+  });
+
+  it("expands #canvas-inspector on ?proposal=proposal:<id> without ?node=, seeds proposal summary, and renders all toolbar verbs", async () => {
+    vi.mocked(kernelApi.getProposal).mockResolvedValue(proposal());
+    vi.mocked(kernelApi.getNode).mockRejectedValue(
+      new ApiError("Proposal node projection pending", 404)
+    );
+
+    await router.push(`/studies/CAD-101?proposal=${PROPOSAL}`);
+    await router.isReady();
+    wrapper = mount(StudyCanvasView, { global: { plugins: [pinia, router] } });
+    await flushPromises();
+
+    const inspector = wrapper.find("#canvas-inspector");
+    expect(inspector.attributes("data-collapsed")).toBe("false");
+    expect(wrapper.find("#canvas-inspector-ref").text()).toContain(PROPOSAL);
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe(
+      "Query the out-of-range systolic pressure at visit 3"
+    );
+    const verbIds = wrapper
+      .findAll('#canvas-inspector [role="toolbar"] button')
+      .map((btn) => btn.attributes("id"));
+    expect(verbIds).toEqual([
+      "verb-details",
+      "verb-trace",
+      "verb-impact",
+      "verb-explain",
+      "verb-simulate",
+      "verb-act",
+      "verb-assist",
+    ]);
   });
 });

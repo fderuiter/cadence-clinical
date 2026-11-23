@@ -164,7 +164,7 @@
 <script setup>
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ClinicalDrawer, useEscapeClose } from "ui";
+import { ClinicalDrawer } from "ui";
 import { resolveActiveWorkspaceScope } from "../canvas/palette";
 import {
   resolveAuthorizedTaskRoute,
@@ -185,10 +185,6 @@ try {
   // Router may be absent in isolated tests.
 }
 const router = useRouter();
-
-useEscapeClose(() => onboardingStore.closeDrawer(), {
-  isOpen: () => onboardingStore.isDrawerOpen,
-});
 
 const effectiveRoles = computed(() => {
   if (authStore.rawRoles?.length > 0) {
@@ -439,10 +435,13 @@ function startGuidedTour() {
 }
 
 .task-checkbox {
-  width: 16px;
-  height: 16px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   accent-color: var(--semantic-color-interactive-primary);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .task-title {
@@ -522,5 +521,18 @@ function startGuidedTour() {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :deep(.drawer-panel) {
+    animation: none;
+  }
+
+  .btn-close,
+  .progress-bar-fill,
+  .task-card,
+  .btn-navigate-task {
+    transition: none;
+  }
 }
 </style>

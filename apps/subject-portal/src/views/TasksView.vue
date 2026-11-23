@@ -5,13 +5,13 @@
     :class="{ active: ui.currentView === 'view-tasks' }"
     :hidden="ui.currentView !== 'view-tasks'"
     :inert="ui.currentView !== 'view-tasks' || undefined"
-    :role="hasTasksTab ? 'tabpanel' : 'region'"
-    :aria-labelledby="hasTasksTab ? 'btn-tab-btn-tasks' : undefined"
-    :aria-label="hasTasksTab ? undefined : 'My Daily Questionnaires'"
+    :role="isTasksTabAvailable ? 'tabpanel' : 'region'"
+    :aria-labelledby="isTasksTabAvailable ? 'btn-tab-btn-tasks' : undefined"
+    :aria-label="isTasksTabAvailable ? undefined : 'My Daily Questionnaires'"
     tabindex="0"
   >
     <div class="view-header">
-      <h2>My Daily Questionnaires</h2>
+      <h2 id="tasks-view-heading" tabindex="-1">My Daily Questionnaires</h2>
       <p>
         Please complete your scheduled questionnaires on time to help us ensure
         high data quality.
@@ -122,7 +122,6 @@
 
 <script setup>
 import { computed } from "vue";
-
 import { isScreenAvailable } from "../router/availability.js";
 import { useSessionStore } from "../stores/session.js";
 import { useTasksStore } from "../stores/tasks.js";
@@ -130,9 +129,9 @@ import { useUiStore } from "../stores/ui.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
-const tasksStore = useTasksStore();
 const session = useSessionStore();
-const hasTasksTab = computed(() => {
+const tasksStore = useTasksStore();
+const isTasksTabAvailable = computed(() => {
   void session.session?.isDemoMode;
   void session.session?.token;
   void session.session?.userId;

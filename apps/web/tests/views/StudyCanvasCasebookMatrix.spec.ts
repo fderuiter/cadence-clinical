@@ -538,20 +538,8 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
     expect(unschedSection.text()).toContain("Adverse Event");
     expect(unschedSection.text()).toContain("Frozen");
 
-    const recordHandoff = wrapper.find("#record-handoff-standalone");
-    expect(recordHandoff.exists()).toBe(true);
-    expect(recordHandoff.attributes("href")).toContain("/ecrf?");
-    expect(recordHandoff.attributes("href")).toContain("studyId=CADENCE-101");
-    expect(recordHandoff.attributes("href")).toContain("siteId=SITE-101");
-    expect(recordHandoff.attributes("href")).toContain("subjectId=SUBJ-101");
-    expect(recordHandoff.attributes("href")).toContain(
-      `enrollmentId=${ENROLLMENT_ID}`
-    );
-    const inspectorHandoff = wrapper.find("#inspector-handoff-standalone");
-    expect(inspectorHandoff.exists()).toBe(true);
-    expect(inspectorHandoff.attributes("href")).toContain(
-      `enrollmentId=${ENROLLMENT_ID}`
-    );
+    expect(wrapper.find("#record-handoff-standalone").exists()).toBe(false);
+    expect(wrapper.find("#inspector-handoff-standalone").exists()).toBe(false);
 
     await expect(wrapper.element).toBeAccessible();
     wrapper.unmount();
@@ -574,6 +562,14 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
     expect(wrapper.find("#canvas-navigator").exists()).toBe(true);
     expect(wrapper.find("#canvas-inspector").exists()).toBe(true);
     expect(wrapper.find("#zoom-form").text()).toBe("Forms · cs.adverse_event");
+    // #casebook-matrix stays visible above EcrfFormPanel when ?form=new is open
+    expect(wrapper.find("#casebook-matrix").exists()).toBe(true);
+    const specSelect = wrapper.find("#ecrf-collection-spec");
+    expect(specSelect.exists()).toBe(true);
+    expect(specSelect.element.tagName).toBe("SELECT");
+    expect((specSelect.element as HTMLSelectElement).value).toBe(
+      "cs.adverse_event"
+    );
     const visitSelect = wrapper.find("#ecrf-planned-activity");
     expect(visitSelect.exists()).toBe(true);
     expect(visitSelect.element.tagName).toBe("SELECT");
@@ -590,17 +586,7 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
     await flushPromises();
 
     expect(wrapper.find("#zoom-form").text()).toBe("Vital Signs · pa.baseline");
-    const workspaceHandoff = wrapper.find("#workspace-handoff-standalone");
-    expect(workspaceHandoff.exists()).toBe(true);
-    expect(workspaceHandoff.attributes("href")).toContain(
-      `formId=${FORM_REPEAT_1_ID}`
-    );
-    expect(workspaceHandoff.attributes("href")).toContain(
-      "collectionSpecId=cs.vitals"
-    );
-    expect(workspaceHandoff.attributes("href")).toContain(
-      "plannedActivityId=pa.baseline"
-    );
+    expect(wrapper.find("#workspace-handoff-standalone").exists()).toBe(false);
 
     await expect(wrapper.element).toBeAccessible();
 
@@ -786,5 +772,110 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
 
     await expect(standaloneWrapper.element).toBeAccessible();
     standaloneWrapper.unmount();
+  });
+
+  it("redirects non-demo /ecrf requests to Clinical Canvas Conduct and renders #casebook-matrix", async () => {
+    const { buildCanvasLocationFromEcrfQuery } =
+      await import("../../src/canvas/ecrfRedirect");
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.rawRoles = ["crc"];
+
+    mockKernelProtocolAndStudy();
+    vi.spyOn(kernelApi, "listProposals").mockResolvedValue([]);
+    vi.spyOn(executionApi, "getSubjectDetail").mockResolvedValue(
+      PARTICIPANT as never
+    );
+    vi.spyOn(executionApi, "listSubjects").mockResolvedValue({
+      items: [PARTICIPANT],
+      total: 1,
+      limit: 50,
+      offset: 0,
+    } as never);
+    vi.spyOn(ecrfFormsApi, "listForEnrollment").mockResolvedValue([
+      makeFormSummary(),
+    ] as never);
+    vi.spyOn(ecrfQueriesApi, "listForEnrollment").mockResolvedValue([]);
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: StudyCanvasView,
+          meta: { layout: "canvas" },
+        },
+        {
+          path: "/ecrf",
+          name: "ecrf",
+          component: { template: "<div id='legacy-ecrf' />" },
+          beforeEnter: (to) => buildCanvasLocationFromEcrfQuery(to.query),
+        },
+      ],
+    });
+
+    await router.push("/ecrf?studyId=CADENCE-101&subjectId=SUBJ-101");
+    await router.isReady();
+
+    expect(router.currentRoute.value.path).toBe("/studies/CADENCE-101");
+    expect(router.currentRoute.value.query).toMatchObject({
+      stage: "conduct",
+      subject: "SUBJ-101",
+    });
+
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [pinia, router] }, attachTo: document.body }
+    );
+    await flushPromises();
+    await flushPromises();
+
+    expect(router.currentRoute.value.path).toBe("/studies/CADENCE-101");
+    expect(router.currentRoute.value.query).toMatchObject({
+      stage: "conduct",
+      participant: `participant:${PARTICIPANT_ID}`,
+    });
+    expect(wrapper.find("#legacy-ecrf").exists()).toBe(false);
+    expect(wrapper.find("#casebook-matrix").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("preserves standalone form handoff links in static demo builds (VITE_DEMO_MODE=true)", async () => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      const { wrapper, router } = await mountParticipantCasebook();
+      const recordHandoff = wrapper.find("#record-handoff-standalone");
+      expect(recordHandoff.exists()).toBe(true);
+      expect(recordHandoff.attributes("href")).toContain("/ecrf?");
+      expect(recordHandoff.attributes("href")).toContain("studyId=CADENCE-101");
+      expect(recordHandoff.attributes("href")).toContain("subjectId=SUBJ-101");
+      expect(recordHandoff.attributes("href")).toContain(
+        `enrollmentId=${ENROLLMENT_ID}`
+      );
+      expect(wrapper.find("#inspector-handoff-standalone").exists()).toBe(true);
+
+      await router.push({
+        name: "study",
+        params: { studyCode: "CADENCE-101" },
+        query: {
+          stage: "conduct",
+          participant: `participant:${PARTICIPANT_ID}`,
+          form: `collection_instance:${FORM_REPEAT_1_ID}`,
+        },
+      });
+      await flushPromises();
+
+      const workspaceHandoff = wrapper.find("#workspace-handoff-standalone");
+      expect(workspaceHandoff.exists()).toBe(true);
+      expect(workspaceHandoff.attributes("href")).toContain(
+        `formId=${FORM_REPEAT_1_ID}`
+      );
+      wrapper.unmount();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

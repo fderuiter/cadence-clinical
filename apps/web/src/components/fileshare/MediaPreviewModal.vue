@@ -1098,6 +1098,28 @@ function getStatusClass(status) {
 </script>
 
 <style scoped>
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-card {
+  background: var(--semantic-color-surface);
+  border-radius: 12px;
+  border: 1px solid var(--semantic-color-border);
+  box-shadow: var(--semantic-shadow-xl);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .media-preview-modal {
   max-width: 1100px !important;
   width: 95% !important;
@@ -1394,6 +1416,8 @@ function getStatusClass(status) {
 }
 
 .quality-select {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
@@ -1401,11 +1425,11 @@ function getStatusClass(status) {
   padding: 2px 6px;
   font-size: 0.75rem;
   font-weight: 500;
-  outline: none;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
-.quality-select:focus {
+.quality-select:focus-visible {
   border-color: var(--primary);
 }
 

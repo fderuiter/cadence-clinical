@@ -5,11 +5,20 @@ type Schemas = components["schemas"];
 /** A kernel observation's typed value (ADR-2623): a quantity, code, text, boolean, date/time, or a missing value. */
 export type KernelObservationValue = Schemas["Kernel_ObservationValue"];
 
+/** One permissible option from an item's governed codelist (Kernel_CodelistOptionView). */
+export interface CodelistOption {
+  code: string;
+  display?: string | null;
+  submission_value?: string | null;
+}
+
 /** Expected collection item metadata from the protocol's CollectionSpec when correcting a missing/unasked value. */
 export interface ExpectedItemSpec {
   valueKind?: string | null;
   unit?: string | null;
   codeSystemVersionId?: string | null;
+  codelist?: string | null;
+  codelistOptions?: ReadonlyArray<CodelistOption> | null;
 }
 
 const NULL_FLAVOR_TEXT: Record<string, string> = {
@@ -99,6 +108,14 @@ export function parseCorrection(
               "A coded value needs its code system from the protocol and cannot be entered without one.",
           };
         }
+        const codelistProblem = validateCodelistCode(
+          typed,
+          expectedSpec.codelistOptions,
+          expectedSpec.codelist
+        );
+        if (codelistProblem) {
+          return { ok: false, message: codelistProblem };
+        }
         return {
           ok: true,
           value: {
@@ -139,15 +156,25 @@ export function parseCorrection(
         },
       };
     }
-    case "coded":
+    case "coded": {
+      const codelistProblem = validateCodelistCode(
+        typed,
+        expectedSpec?.codelistOptions,
+        expectedSpec?.codelist
+      );
+      if (codelistProblem) {
+        return { ok: false, message: codelistProblem };
+      }
       return {
         ok: true,
         value: {
           type: "coded",
-          code_system_version_id: current.code_system_version_id,
+          code_system_version_id:
+            expectedSpec?.codeSystemVersionId ?? current.code_system_version_id,
           code: typed,
         },
       };
+    }
     case "boolean": {
       const answer = typed.toLowerCase();
       if (["yes", "true"].includes(answer))
@@ -161,6 +188,19 @@ export function parseCorrection(
     default:
       return { ok: true, value: { type: "text", value: typed } };
   }
+}
+
+function validateCodelistCode(
+  code: string,
+  options?: ReadonlyArray<CodelistOption> | null,
+  codelist?: string | null
+): string | null {
+  if (!options || options.length === 0) return null;
+  if (options.some((option) => option.code === code)) return null;
+  const allowed = options.map((option) => option.code).join(", ");
+  return codelist
+    ? `Select a valid code from codelist ${codelist} (${allowed}).`
+    : `Select a valid code (${allowed}).`;
 }
 
 /** Whether two typed values say the same thing (1.50 and 1.5 mm[Hg] are the same quantity). */
@@ -206,6 +246,8 @@ export interface FormEntryItem {
   value_kind: string | null;
   unit: string | null;
   code_system_version_id?: string | null;
+  codelist?: string | null;
+  codelist_options?: ReadonlyArray<CodelistOption> | null;
   value: KernelObservationValue | null;
 }
 
@@ -234,18 +276,30 @@ export function parseFormEntry(
     case "coded": {
       const codeSystemVersionId =
         item.code_system_version_id ??
-        (item.value?.type === "coded"
-          ? item.value.code_system_version_id
+        (item.value?.type === "coded" &&
+        item.value.code_system_version_id != null
+          ? String(item.value.code_system_version_id)
           : null);
+      const itemSpec: ExpectedItemSpec = {
+        valueKind: item.value_kind,
+        unit: item.unit,
+        codeSystemVersionId,
+        codelist: item.codelist ?? null,
+        codelistOptions: item.codelist_options ?? null,
+      };
       if (codeSystemVersionId) {
-        return parseCorrection(text, {
-          type: "coded",
-          code_system_version_id: codeSystemVersionId,
-          code: "",
-        });
+        return parseCorrection(
+          text,
+          {
+            type: "coded",
+            code_system_version_id: codeSystemVersionId,
+            code: "",
+          },
+          itemSpec
+        );
       }
       if (item.value && item.value.type !== "missing") {
-        return parseCorrection(text, item.value);
+        return parseCorrection(text, item.value, itemSpec);
       }
       return text.trim().length === 0
         ? { ok: false, message: "Enter a value." }
@@ -266,7 +320,13 @@ export function parseFormEntry(
         if (item.value.type === "quantity" && !item.value.unit && item.unit) {
           return parseCorrection(text, { ...item.value, unit: item.unit });
         }
-        return parseCorrection(text, item.value);
+        return parseCorrection(text, item.value, {
+          valueKind: item.value_kind,
+          unit: item.unit,
+          codeSystemVersionId: item.code_system_version_id ?? null,
+          codelist: item.codelist ?? null,
+          codelistOptions: item.codelist_options ?? null,
+        });
       }
       return parseCorrection(text, { type: "text", value: "" });
   }

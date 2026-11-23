@@ -1379,9 +1379,9 @@ onMounted(() => {
 }
 
 .badge-regulatory {
-  background: var(--semantic-color-ai-bg);
+  background: var(--semantic-color-purple-bg);
   color: var(--semantic-color-purple-text);
-  border: 1px solid var(--semantic-color-ai-border);
+  border: 1px solid var(--semantic-color-purple-border);
 }
 
 .badge-gxp {
@@ -2124,8 +2124,7 @@ onMounted(() => {
   color: var(--semantic-color-text);
 }
 
-.form-control:focus {
-  outline: none;
+.form-control:focus-visible {
   border-color: var(--semantic-color-primary);
 }
 

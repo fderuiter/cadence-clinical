@@ -28,8 +28,13 @@
 <script setup>
 // Modal dialogs in the demo workspace use ClinicalModal from packages/ui.
 import { computed, defineAsyncComponent, ref, watch } from "vue";
-import * as VueRouter from "vue-router";
 import CtmsLiveWorkspace from "./CtmsLiveWorkspace.vue";
+import {
+  readRouteScopeQuery,
+  replaceRouteQueryParams,
+  resolveRouteAndRouter,
+} from "../composables/useRouteScopeSync";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import {
   resolveHydratedWorkspaceScope,
@@ -48,64 +53,114 @@ const props = defineProps({
 });
 
 const scopeStore = useClinicalScopeStore();
-const route =
-  typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
-const router =
-  "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
-    ? VueRouter.useRouter()
-    : null;
+const { route, router } = resolveRouteAndRouter();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const demoBuild = isDemoBuild();
+const isStandaloneRoute = computed(
+  () => !props.sectionMode && !props.studyCode
+);
 
 const demoWorkspaceRef = ref(null);
 const liveWorkspaceRef = ref(null);
 
-// Apply incoming route/prop or hydrated workspace scope synchronously before child panels render.
+const initialRouteScope = readRouteScopeQuery(route);
 const hydratedScope = resolveHydratedWorkspaceScope(route, {
   studyId: props.studyCode,
   siteId: props.initialSiteId,
 });
-if (hydratedScope.studyId || hydratedScope.siteId) {
+
+// Apply incoming route/prop scope synchronously before child panels render.
+if (props.studyCode.trim()) {
+  const fixedStudy = props.studyCode.trim();
+  setActiveStudyCode(fixedStudy);
+  scopeStore.activeStudyId = fixedStudy;
+} else if (initialRouteScope.studyId) {
+  setActiveStudyCode(initialRouteScope.studyId);
+  scopeStore.activeStudyId = initialRouteScope.studyId;
+} else if (
+  !scopeStore.activeStudyId &&
+  (hydratedScope.studyId || activeStudyCode.value)
+) {
+  scopeStore.activeStudyId = hydratedScope.studyId || activeStudyCode.value;
+}
+if (props.initialSiteId.trim()) {
+  scopeStore.activeSiteId = props.initialSiteId.trim();
+} else if (
+  !initialRouteScope.siteId &&
+  hydratedScope.siteId &&
+  !scopeStore.activeSiteId
+) {
+  scopeStore.activeSiteId = hydratedScope.siteId;
+}
+if (scopeStore.activeStudyId || scopeStore.activeSiteId) {
   syncWorkspaceScope({
-    ...(hydratedScope.studyId ? { studyId: hydratedScope.studyId } : {}),
-    ...(hydratedScope.siteId || hydratedScope.studyId
-      ? { siteId: hydratedScope.siteId }
+    ...(scopeStore.activeStudyId ? { studyId: scopeStore.activeStudyId } : {}),
+    ...(scopeStore.activeSiteId || scopeStore.activeStudyId
+      ? { siteId: scopeStore.activeSiteId }
       : {}),
-    router,
-    route,
-    syncRouteQuery: !demoBuild && !props.sectionMode && !props.studyCode.trim(),
   });
 }
 if (route && route.query) {
-  if (typeof route.query.subjectId === "string" && route.query.subjectId) {
-    scopeStore.activeSubjectId = route.query.subjectId;
+  const hasExplicitRouteScope = Boolean(
+    initialRouteScope.studyId ||
+    initialRouteScope.siteId ||
+    initialRouteScope.subjectId
+  );
+  if (isStandaloneRoute.value && hasExplicitRouteScope) {
+    scopeStore.activeSiteId = initialRouteScope.siteId;
+    scopeStore.activeSubjectId = initialRouteScope.subjectId;
+  } else {
+    if (initialRouteScope.siteId) {
+      scopeStore.activeSiteId = initialRouteScope.siteId;
+    }
+    if (initialRouteScope.subjectId) {
+      scopeStore.activeSubjectId = initialRouteScope.subjectId;
+    }
   }
-  if (typeof route.query.visitId === "string" && route.query.visitId) {
-    scopeStore.activeVisitId = route.query.visitId;
+  if (initialRouteScope.visitId) {
+    scopeStore.activeVisitId = initialRouteScope.visitId;
   }
 }
 
 watch(
-  [
-    () => route?.query?.studyId,
-    () => route?.query?.siteId,
-    () => route?.query?.site,
+  () => [
+    route?.query?.studyId,
+    route?.query?.siteId,
+    route?.query?.site,
+    route?.query?.subjectId,
+    route?.query?.participant,
   ],
-  ([nextStudy, nextSiteId, nextSite]) => {
-    const trimmedStudy = typeof nextStudy === "string" ? nextStudy.trim() : "";
-    const trimmedSite =
-      typeof nextSiteId === "string" && nextSiteId.trim()
-        ? nextSiteId.trim()
-        : typeof nextSite === "string"
-          ? nextSite.trim()
-          : "";
-    if (trimmedStudy || trimmedSite) {
+  () => {
+    if (!route?.query) return;
+    const nextScope = readRouteScopeQuery(route);
+    if (nextScope.studyId) {
+      setActiveStudyCode(nextScope.studyId);
+    }
+    if (isStandaloneRoute.value) {
+      const resolvedStudy = nextScope.studyId || activeStudyCode.value;
+      scopeStore.activeStudyId = resolvedStudy;
+      scopeStore.activeSiteId = nextScope.siteId;
+      scopeStore.activeSubjectId = nextScope.subjectId;
       syncWorkspaceScope({
-        ...(trimmedStudy ? { studyId: trimmedStudy } : {}),
-        ...(trimmedSite || trimmedStudy ? { siteId: trimmedSite } : {}),
+        ...(resolvedStudy ? { studyId: resolvedStudy } : {}),
+        siteId: nextScope.siteId,
       });
+      return;
+    }
+    if (nextScope.studyId) {
+      scopeStore.activeStudyId = nextScope.studyId;
+    }
+    if (nextScope.siteId) {
+      scopeStore.activeSiteId = nextScope.siteId;
     }
   }
 );
+
+watch(activeStudyCode, (next) => {
+  if (!props.studyCode.trim() && next && next !== scopeStore.activeStudyId) {
+    scopeStore.activeStudyId = next;
+  }
+});
 
 const activeTab = computed({
   get: () =>
@@ -120,6 +175,25 @@ const activeTab = computed({
     }
   },
 });
+
+watch(
+  [
+    () => scopeStore.activeStudyId,
+    () => scopeStore.activeSiteId,
+    () => scopeStore.activeSubjectId,
+  ],
+  ([nextStudy, nextSite, nextSubject]) => {
+    if (nextStudy) {
+      setActiveStudyCode(nextStudy);
+    }
+    if (!isStandaloneRoute.value) return;
+    void replaceRouteQueryParams(router, route, {
+      studyId: nextStudy || null,
+      siteId: nextSite || null,
+      subjectId: nextSubject || null,
+    });
+  }
+);
 
 const effectiveDelegatedStaff = computed(
   () => demoWorkspaceRef.value?.effectiveDelegatedStaff ?? []

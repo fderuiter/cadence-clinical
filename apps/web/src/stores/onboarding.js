@@ -68,7 +68,7 @@ function normalizeTaskRouteName(task) {
   return rawRoute.startsWith("/") ? rawRoute.slice(1) : rawRoute;
 }
 
-function readOnboardingWorkspaceScope(explicitScope) {
+function readOnboardingWorkspaceScope(explicitScope, explicitPinia) {
   if (explicitScope && typeof explicitScope === "object") {
     return {
       studyCode: String(explicitScope.studyCode || "").trim(),
@@ -80,7 +80,7 @@ function readOnboardingWorkspaceScope(explicitScope) {
       enrollmentId: String(explicitScope.enrollmentId || "").trim(),
     };
   }
-  const piniaState = getActivePinia()?.state?.value;
+  const piniaState = (explicitPinia || getActivePinia())?.state?.value;
   if (!piniaState) {
     return {
       studyCode: "",
@@ -131,11 +131,16 @@ function appendStudySiteQuery(basePath, studyCode, siteId, extra = {}) {
   return qs ? `${basePath}?${qs}` : basePath;
 }
 
-export function resolveAuthorizedTaskRoute(task, userRoles, explicitScope) {
+export function resolveAuthorizedTaskRoute(
+  task,
+  userRoles,
+  explicitScope,
+  explicitPinia
+) {
   if (!task) return null;
   const routeName = normalizeTaskRouteName(task);
   if (!routeName || NON_ONBOARDING_ROUTES.has(routeName)) return null;
-  const scope = readOnboardingWorkspaceScope(explicitScope);
+  const scope = readOnboardingWorkspaceScope(explicitScope, explicitPinia);
 
   if (routeName === "study") {
     if (!isScreenAvailable("study")) return null;
@@ -149,18 +154,32 @@ export function resolveAuthorizedTaskRoute(task, userRoles, explicitScope) {
     return isScreenAvailable("overview") ? "/overview" : null;
   }
   if (routeName === "ecrf") {
-    return isScreenAvailable("ecrf") &&
-      hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
-      ? appendStudySiteQuery(
-          "/ecrf",
-          scope.studyCode,
-          scope.explicitSiteId || scope.siteId,
-          {
+    const targetSite = scope.explicitSiteId || scope.siteId;
+    if (isDemoBuild()) {
+      return isScreenAvailable("ecrf") &&
+        hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
+        ? appendStudySiteQuery("/ecrf", scope.studyCode, targetSite, {
             subjectId: scope.subjectCode,
             enrollmentId: scope.enrollmentId,
-          }
-        )
-      : null;
+          })
+        : null;
+    }
+    if (
+      !isScreenAvailable("study") ||
+      !hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
+    ) {
+      return null;
+    }
+    if (!scope.studyCode) return "/studies";
+    const params = new URLSearchParams();
+    params.set("stage", "conduct");
+    if (targetSite) params.set("site", targetSite);
+    if (scope.subjectCode) {
+      params.set("subject", scope.subjectCode);
+    } else {
+      params.set("section", "participants");
+    }
+    return `/studies/${encodeURIComponent(scope.studyCode)}?${params.toString()}`;
   }
   if (routeName === "site-readiness") {
     if (
@@ -958,9 +977,15 @@ export const useOnboardingStore = defineStore("onboarding", {
   getters: {
     visibleTasks(state) {
       const roles = effectiveRolesForStore(state.currentPersona);
+      const storePinia = this?._p;
       return (state.tasks || [])
         .map((task) => {
-          const resolvedRoute = resolveAuthorizedTaskRoute(task, roles);
+          const resolvedRoute = resolveAuthorizedTaskRoute(
+            task,
+            roles,
+            undefined,
+            storePinia
+          );
           return resolvedRoute ? { ...task, route: resolvedRoute } : null;
         })
         .filter(Boolean);
