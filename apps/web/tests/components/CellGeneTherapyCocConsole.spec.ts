@@ -17,7 +17,8 @@ describe("CellGeneTherapyCocConsole.vue - Domain Formatting Specification", () =
 
   it("displays human readable labels for facility codes when ledger data is loaded", async () => {
     const wrapper = mount(CellGeneTherapyCocConsole);
-    wrapper.vm.cocData = {
+    const vm = wrapper.vm as Record<string, any>;
+    vm.cocData = {
       id: "coc-1",
       study_id: "STUDY-801",
       subject_id: "SUBJ-001",
@@ -42,7 +43,8 @@ describe("CellGeneTherapyCocConsole.vue - Domain Formatting Specification", () =
 
   it("opens transit milestone modal without errors when clicking '+ Log Transit Milestone'", async () => {
     const wrapper = mount(CellGeneTherapyCocConsole);
-    wrapper.vm.cocData = {
+    const vm = wrapper.vm as Record<string, any>;
+    vm.cocData = {
       id: "coc-1",
       study_id: "STUDY-CGT-801",
       subject_id: "SUBJ-101-0042",
@@ -80,7 +82,8 @@ describe("CellGeneTherapyCocConsole.vue - Domain Formatting Specification", () =
 
   it("parses valid telemetry file and displays excursion preview drawer with minimum temp and sample count", async () => {
     const wrapper = mount(CellGeneTherapyCocConsole);
-    wrapper.vm.openMilestoneModal();
+    const vm = wrapper.vm as Record<string, any>;
+    vm.openMilestoneModal();
     await wrapper.vm.$nextTick();
 
     const sampleCsv = `
@@ -93,7 +96,7 @@ Timestamp,Temperature (°C)
     const file = new File([sampleCsv], "Sensitech_Transit_Log.csv", {
       type: "text/csv",
     });
-    await wrapper.vm.handleFileUpload(file);
+    await vm.handleFileUpload(file);
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".excursion-drawer").exists()).toBe(true);
@@ -105,7 +108,8 @@ Timestamp,Temperature (°C)
 
   it("highlights temperature readings warmer than -70.0°C as EXCURSION in preview drawer", async () => {
     const wrapper = mount(CellGeneTherapyCocConsole);
-    wrapper.vm.openMilestoneModal();
+    const vm = wrapper.vm as Record<string, any>;
+    vm.openMilestoneModal();
     await wrapper.vm.$nextTick();
 
     const sampleCsv = `
@@ -119,7 +123,7 @@ Date Time,Temp (°C)
     const file = new File([sampleCsv], "TempTale_Excursion.csv", {
       type: "text/csv",
     });
-    await wrapper.vm.handleFileUpload(file);
+    await vm.handleFileUpload(file);
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".excursion-drawer").exists()).toBe(true);
@@ -131,7 +135,8 @@ Date Time,Temp (°C)
 
   it("displays error message in modal when invalid file format uploads", async () => {
     const wrapper = mount(CellGeneTherapyCocConsole);
-    wrapper.vm.openMilestoneModal();
+    const vm = wrapper.vm as Record<string, any>;
+    vm.openMilestoneModal();
     await wrapper.vm.$nextTick();
 
     const invalidFile = new File(
@@ -139,7 +144,7 @@ Date Time,Temp (°C)
       "corrupted.txt",
       { type: "text/plain" }
     );
-    await wrapper.vm.handleFileUpload(invalidFile);
+    await vm.handleFileUpload(invalidFile);
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".excursion-drawer").exists()).toBe(false);
@@ -158,7 +163,8 @@ Date Time,Temp (°C)
     } as Response);
 
     const wrapper = mount(CellGeneTherapyCocConsole);
-    wrapper.vm.cocData = {
+    const vm = wrapper.vm as Record<string, any>;
+    vm.cocData = {
       id: "coc-123",
       study_id: "STUDY-CGT-801",
       subject_id: "SUBJ-101-0042",
@@ -179,7 +185,7 @@ Date Time,Temp (°C)
       reconciled_at: null,
     };
 
-    wrapper.vm.openMilestoneModal();
+    vm.openMilestoneModal();
     await wrapper.vm.$nextTick();
 
     const sampleCsv = `
@@ -187,9 +193,9 @@ Timestamp,Temperature (°C)
 2026-10-12T10:00:00Z,-195.0
     `.trim();
     const file = new File([sampleCsv], "Sensitech.csv", { type: "text/csv" });
-    await wrapper.vm.handleFileUpload(file);
+    await vm.handleFileUpload(file);
 
-    await wrapper.vm.submitMilestone();
+    await vm.submitMilestone();
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "/api/v1/execution/rtsm/cgt/milestone",

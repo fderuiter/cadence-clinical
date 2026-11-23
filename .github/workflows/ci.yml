@@ -86,6 +86,7 @@ jobs:
           pnpm exec prettier --check --ignore-path .prettierignore "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}"
           pnpm -r lint
           pnpm exec eslint --max-warnings 0 .
+          pnpm -r typecheck
 
       - name: Run Hadolint on Dockerfiles
         run: |
@@ -236,7 +237,7 @@ jobs:
           else
             SCOPE_ARGS=()
           fi
-          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle --exclude architecture-tests --exclude unit-tests "${SCOPE_ARGS[@]}"
+          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude typecheck --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle --exclude architecture-tests --exclude unit-tests "${SCOPE_ARGS[@]}"
 
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build

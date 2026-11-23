@@ -2,16 +2,12 @@ import { encodeChangeReason } from "./changeReason";
 import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./types";
 import {
+  applyDemoIdentityHeaders,
   getBearerToken,
   notifySubscriptionExpiredIfNeeded,
   refreshBearerTokenOnUnauthorized,
 } from "./authorization.js";
-
-declare global {
-  interface ImportMeta {
-    readonly env: Record<string, string | boolean | undefined>;
-  }
-}
+import { isDemoBuild } from "../utils/demoMode";
 
 export function getBaseUrl(): string {
   const env = import.meta.env as
@@ -68,6 +64,9 @@ export function getAuthMiddleware(): Middleware {
         if (token) {
           request.headers.set("Authorization", `Bearer ${token}`);
         }
+      }
+      if (isDemoBuild()) {
+        applyDemoIdentityHeaders(request.headers);
       }
 
       // openapi-fetch copies custom init keys (like `changeReason`) onto the Request object; the
