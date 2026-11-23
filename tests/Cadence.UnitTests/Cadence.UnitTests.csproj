@@ -50,12 +50,9 @@
     <ProjectReference Include="..\..\packages\compliance\src\Cadence.Compliance.csproj" />
     <ProjectReference Include="..\..\packages\deid\src\Cadence.Deid.csproj" />
     <ProjectReference Include="..\..\packages\ddf\src\Cadence.Ddf.csproj" />
-    <ProjectReference Include="..\..\packages\hexagonal\src\Cadence.Hexagonal.csproj" />
-    <ProjectReference Include="..\..\packages\sentinels\src\Cadence.Sentinels.csproj" />
     <ProjectReference Include="..\..\packages\storage\src\Cadence.Storage.csproj" />
     <ProjectReference Include="..\..\packages\tooling_core\src\Cadence.ToolingCore.csproj" />
     <ProjectReference Include="..\..\packages\cli\src\Cadence.Cli.csproj" />
-    <ProjectReference Include="..\..\packages\core-models\src\Cadence.CoreModels.csproj" />
   </ItemGroup>
 
   <ItemGroup>
