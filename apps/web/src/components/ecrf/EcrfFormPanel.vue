@@ -35,6 +35,130 @@
         @reload-stale="reloadAfterSdvStale"
       />
 
+      <div
+        v-if="formState.draftRestored"
+        class="ecrf-draft-banner ecrf-draft-banner--restored"
+        data-testid="ecrf-draft-restored-banner"
+        role="status"
+      >
+        <div class="ecrf-draft-banner-body">
+          <strong>Unsaved browser draft restored</strong>
+          <span>
+            Restored unsaved draft
+            {{
+              formState.restoredDraftItemIds.length === 1
+                ? `value for ${formState.restoredDraftItemIds[0]}`
+                : `values for ${formState.restoredDraftItemIds.join(", ")}`
+            }}
+            over committed server entries. Compare against committed values or
+            save when ready.
+          </span>
+        </div>
+        <div class="ecrf-draft-banner-actions">
+          <button
+            id="ecrf-draft-compare-toggle"
+            type="button"
+            class="btn btn-secondary"
+            :aria-pressed="formState.comparingBaseline"
+            @click="formState.toggleBaselineComparison()"
+          >
+            {{
+              formState.comparingBaseline
+                ? "Hide committed values"
+                : "Compare committed values"
+            }}
+          </button>
+          <button
+            id="ecrf-draft-discard"
+            type="button"
+            class="btn btn-secondary"
+            @click="formState.discardDraft()"
+          >
+            Discard draft
+          </button>
+        </div>
+      </div>
+
+      <div
+        v-if="formState.staleDraftItems.length > 0"
+        class="ecrf-draft-banner ecrf-draft-banner--stale"
+        data-testid="ecrf-draft-stale-banner"
+        role="alert"
+      >
+        <div class="ecrf-draft-banner-body">
+          <strong>Stale draft entries skipped</strong>
+          <span>
+            Skipped saved draft
+            {{ formState.staleDraftItems.length === 1 ? "entry" : "entries" }}
+            because committed server revisions advanced:
+          </span>
+          <ul class="ecrf-draft-banner-list">
+            <li
+              v-for="skipped in formState.staleDraftItems"
+              :key="skipped.item_id"
+            >
+              <strong>{{ skipped.item_id }}:</strong> draft
+              {{ skipped.draft_display }} (saved at rev
+              {{ skipped.draft_revision
+              }}<template v-if="skipped.current_revision !== null"
+                >, server now at rev {{ skipped.current_revision }}</template
+              >)
+            </li>
+          </ul>
+        </div>
+        <div class="ecrf-draft-banner-actions">
+          <button
+            id="ecrf-draft-stale-dismiss"
+            type="button"
+            class="btn btn-secondary"
+            @click="formState.dismissStaleDraftNotice()"
+          >
+            Dismiss notice
+          </button>
+        </div>
+      </div>
+
+      <div
+        v-if="formState.lockedDraftItems.length > 0"
+        class="ecrf-draft-banner ecrf-draft-banner--locked"
+        data-testid="ecrf-draft-locked-banner"
+        role="status"
+      >
+        <div class="ecrf-draft-banner-body">
+          <strong
+            >Unapplied browser draft ({{
+              formState.lockSummaryLabel
+            }}
+            form)</strong
+          >
+          <span>
+            This form is read-only, so your saved browser draft was not applied
+            to the record. Unapplied draft values are preserved below until you
+            clear them:
+          </span>
+          <ul class="ecrf-draft-banner-list">
+            <li
+              v-for="unapplied in formState.lockedDraftItems"
+              :key="unapplied.item_id"
+            >
+              <strong>{{ unapplied.item_id }}:</strong> draft
+              {{ unapplied.draft_display }} (committed:
+              {{ unapplied.committed_display }})
+            </li>
+          </ul>
+        </div>
+        <div class="ecrf-draft-banner-actions">
+          <button
+            id="ecrf-draft-locked-clear"
+            type="button"
+            class="btn btn-secondary"
+            @click="formState.clearLockedDraft()"
+          >
+            Clear saved draft
+          </button>
+        </div>
+      </div>
+
       <EcrfItemTable
         :form-state="formState"
         :sdv="sdv"
@@ -397,5 +521,58 @@ onUnmounted(() => {
 .ecrf-form-panel :deep(button:not(.sr-only):not(.visually-hidden)) {
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
+}
+.ecrf-draft-banner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--semantic-color-text);
+}
+.ecrf-draft-banner--restored {
+  background-color: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  border-left: 4px solid var(--semantic-color-interactive-primary);
+}
+.ecrf-draft-banner--stale {
+  background-color: var(--semantic-color-edited-row-bg);
+  border: 1px solid var(--semantic-color-edited-row-border);
+  border-left: 4px solid var(--semantic-color-edited-row-border);
+}
+.ecrf-draft-banner--locked {
+  background-color: var(--semantic-color-surface-subtle);
+  border: 1px solid var(--semantic-color-border-control);
+  border-left: 4px solid var(--semantic-color-edited-row-border);
+}
+.ecrf-draft-banner-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+.ecrf-draft-banner-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.ecrf-draft-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ecrf-draft-banner-actions .btn-secondary {
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  border: 1px solid var(--semantic-color-border-control);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm, 6px);
+  font-weight: 600;
+  cursor: pointer;
 }
 </style>

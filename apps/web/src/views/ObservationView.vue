@@ -244,7 +244,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
+import {
+  computed,
+  getCurrentInstance,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+} from "vue";
 import type { RouteLocationRaw, Router } from "vue-router";
 import ScopeLockControls, {
   type CoveringScopeLockItem,
@@ -279,6 +286,7 @@ import {
 } from "../canvas/kernelLocks";
 import { syncActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useKernelStudyRef } from "../composables/useKernelStudyRef";
+import { useUnsavedNavigationGuard } from "../composables/useUnsavedNavigationGuard";
 import { useAuthStore } from "../stores/auth";
 
 /**
@@ -298,6 +306,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "loaded", observation: KernelObservation): void;
+  (e: "dirty-change", dirty: boolean): void;
 }>();
 
 const authStore = useAuthStore();
@@ -509,6 +518,47 @@ const canSave = computed(
     !sameObservationValue(parsed.value.value, observation.value?.value)
 );
 
+const isDirty = computed(() => {
+  const current = observation.value?.value;
+  if (!current || locked.value || !canCorrect.value) return false;
+  if (newValue.value.trim().length === 0) return false;
+  if (parsed.value?.ok) {
+    return !sameObservationValue(parsed.value.value, current);
+  }
+  return true;
+});
+
+watch(isDirty, (dirty) => {
+  emit("dirty-change", dirty);
+});
+
+onUnmounted(() => {
+  if (isDirty.value) {
+    emit("dirty-change", false);
+  }
+});
+
+useUnsavedNavigationGuard({
+  isDirty,
+  guardNavigation: () => !props.embedded,
+  guardSignOut: true,
+  dialogCopy: {
+    title: "Unsaved Observation Changes",
+    message:
+      "You have an unsaved observation correction. Leave without saving?",
+    confirmLabel: "Leave Without Saving",
+    cancelLabel: "Stay on Observation",
+  },
+  shouldPromptOnUpdate: (to, from) =>
+    String(to.params.observationRef ?? "") !==
+    String(from.params.observationRef ?? ""),
+  onConfirmedDiscard: () => {
+    newValue.value = "";
+  },
+});
+
+defineExpose({ dirty: isDirty });
+
 function askReason() {
   if (canSave.value && !saving.value) reasonOpen.value = true;
 }
@@ -666,7 +716,13 @@ watch(
 );
 
 onMounted(load);
-watch(() => props.observationRef, load);
+watch(
+  () => props.observationRef,
+  () => {
+    newValue.value = "";
+    void load();
+  }
+);
 </script>
 
 <style scoped>

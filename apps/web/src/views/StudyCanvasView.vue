@@ -212,6 +212,7 @@
             :observation-ref="openObservationRef"
             :return-to="observationReturnLocation"
             :return-label="observationReturnLabel"
+            @dirty-change="observationWorkspaceDirty = $event"
             @loaded="onObservationLoaded"
           />
 
@@ -942,8 +943,6 @@ import {
   watch,
 } from "vue";
 import {
-  onBeforeRouteLeave,
-  onBeforeRouteUpdate,
   useRoute,
   useRouter,
   type LocationQueryRaw,
@@ -996,9 +995,9 @@ import {
   type PaletteTarget,
 } from "../canvas/palette";
 import { SignOutConfirmModal, handoffFocus, useSignOutGuard } from "ui";
-import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
+import { useUnsavedNavigationGuard } from "../composables/useUnsavedNavigationGuard";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -1521,6 +1520,7 @@ const queryChangedFilter = computed(() => {
 
 const loadedForm = ref<EcrfForm | null>(null);
 const formWorkspaceDirty = ref(false);
+const observationWorkspaceDirty = ref(false);
 const loadedObservation = ref<KernelObservation | null>(null);
 const resolvedLineage = ref<{ siteCode: string; subjectCode: string } | null>(
   null
@@ -2398,6 +2398,7 @@ watch(
       return;
     }
     formWorkspaceDirty.value = false;
+    observationWorkspaceDirty.value = false;
     loadedForm.value = null;
     loadedObservation.value = null;
     resolvedLineage.value = null;
@@ -2525,6 +2526,7 @@ watch(openObservationRef, (refText) => {
   resolvedParticipantId.value = "";
   lineageRequest++;
   if (!refText) {
+    observationWorkspaceDirty.value = false;
     loadedObservation.value = null;
   }
 });
@@ -2626,6 +2628,8 @@ watch(
 
 const UNSAVED_FORM_CONFIRM_MESSAGE =
   "You have unsaved eCRF draft changes. Are you sure you want to leave?";
+const UNSAVED_OBSERVATION_CONFIRM_MESSAGE =
+  "You have an unsaved observation correction. Leave without saving?";
 
 function leavesActiveForm(to: RouteLocationNormalized): boolean {
   const nextStudyCode = single(to.params.studyCode).trim();
@@ -2652,53 +2656,51 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
   return Boolean(currentFormId && nextFormId !== currentFormId);
 }
 
-function shouldSuppressUnsavedGuard(): boolean {
-  return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+function leavesActiveObservation(to: RouteLocationNormalized): boolean {
+  if (!openObservationRef.value) return false;
+  const nextStudyCode = single(to.params.studyCode).trim();
+  if (!nextStudyCode || nextStudyCode !== studyCode.value) return true;
+  if (parseNodeRef(to.query.proposal)?.kind === "proposal") return true;
+  return observationNodeRef(to.query.observation) !== openObservationRef.value;
 }
 
-function handleBeforeUnload(event: BeforeUnloadEvent) {
-  if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
-    event.preventDefault();
-    event.returnValue = "";
-    return "";
-  }
-}
-
-async function confirmDiscardUnsavedForm(): Promise<boolean> {
-  return Boolean(
-    await confirmDialog({
-      title: "Unsaved Form Changes",
-      message: UNSAVED_FORM_CONFIRM_MESSAGE,
-      confirmLabel: "Leave Without Saving",
-      cancelLabel: "Stay on Form",
-      variant: "warning",
-    })
-  );
-}
-
-if (typeof onBeforeRouteLeave === "function") {
-  onBeforeRouteLeave(() => {
-    if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
-      return confirmDiscardUnsavedForm().then((confirmed) =>
-        confirmed ? undefined : false
-      );
+useUnsavedNavigationGuard({
+  isDirty: () => formWorkspaceDirty.value || observationWorkspaceDirty.value,
+  guardSignOut: false,
+  dialogCopy: (to, from) => {
+    const sameStudyRoute = Boolean(to.name && to.name === from.name);
+    const leavingObs =
+      observationWorkspaceDirty.value &&
+      (!sameStudyRoute || leavesActiveObservation(to));
+    if (leavingObs) {
+      return {
+        title: "Unsaved Observation Changes",
+        message: UNSAVED_OBSERVATION_CONFIRM_MESSAGE,
+        confirmLabel: "Leave Without Saving",
+        cancelLabel: "Stay on Observation",
+      };
     }
-  });
-}
-
-if (typeof onBeforeRouteUpdate === "function") {
-  onBeforeRouteUpdate((to) => {
-    if (
-      formWorkspaceDirty.value &&
-      !shouldSuppressUnsavedGuard() &&
-      leavesActiveForm(to)
-    ) {
-      return confirmDiscardUnsavedForm().then((confirmed) =>
-        confirmed ? undefined : false
-      );
+    const leavingForm =
+      formWorkspaceDirty.value && (!sameStudyRoute || leavesActiveForm(to));
+    if (leavingForm) {
+      return {
+        title: "Unsaved Form Changes",
+        message: UNSAVED_FORM_CONFIRM_MESSAGE,
+        confirmLabel: "Leave Without Saving",
+        cancelLabel: "Stay on Form",
+      };
     }
-  });
-}
+    return null;
+  },
+  shouldPromptOnUpdate: (to) =>
+    (observationWorkspaceDirty.value && leavesActiveObservation(to)) ||
+    (formWorkspaceDirty.value && leavesActiveForm(to)),
+  onConfirmedDiscard: () => {
+    if (observationWorkspaceDirty.value) {
+      observationWorkspaceDirty.value = false;
+    }
+  },
+});
 
 function onGlobalKeydown(event: KeyboardEvent) {
   if (inAppShell) return;
@@ -3075,7 +3077,6 @@ onMounted(() => {
     }
     return Boolean(inspectorRef.value?.openExplain?.(options));
   });
-  window.addEventListener("beforeunload", handleBeforeUnload);
   document.addEventListener("click", onWorkspaceInteractionCapture, true);
   document.addEventListener("keydown", onWorkspaceInteractionCapture, true);
   if (!inAppShell) {
@@ -3094,7 +3095,6 @@ onUnmounted(() => {
   stopReturnFocusObserver();
   unregisterCanvasExplain?.();
   unregisterCanvasExplain = null;
-  window.removeEventListener("beforeunload", handleBeforeUnload);
   document.removeEventListener("click", onWorkspaceInteractionCapture, true);
   document.removeEventListener("keydown", onWorkspaceInteractionCapture, true);
   document.removeEventListener("keydown", onGlobalKeydown);

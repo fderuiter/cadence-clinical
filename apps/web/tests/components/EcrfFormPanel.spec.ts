@@ -1393,7 +1393,7 @@ describe("EcrfFormPanel: account-scoped browser drafts", () => {
     expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
   });
 
-  it("discards draft items whose server revision advanced or when the form is locked", async () => {
+  it("surfaces skipped stale draft items when server revisions advance and preserves unapplied drafts on locked forms until cleared", async () => {
     signInUser("crc-1", "tenant-1");
     const draftKey = scopedKey(
       { tenantId: "tenant-1", userId: "crc-1" },
@@ -1444,6 +1444,12 @@ describe("EcrfFormPanel: account-scoped browser drafts", () => {
     expect(
       (wrapper.find("#ecrf-item-DIABP").element as HTMLInputElement).value
     ).toBe("84");
+    const staleBanner = wrapper.find('[data-testid="ecrf-draft-stale-banner"]');
+    expect(staleBanner.exists()).toBe(true);
+    expect(staleBanner.attributes("role")).toBe("alert");
+    expect(staleBanner.text()).toContain("SYSBP");
+    expect(staleBanner.text()).toContain("rev 3");
+    expect(staleBanner.text()).toContain("rev 4");
     expect(JSON.parse(localStorage.getItem(draftKey)!)).toEqual({
       form_id: FORM_ID,
       items: {
@@ -1451,7 +1457,12 @@ describe("EcrfFormPanel: account-scoped browser drafts", () => {
       },
     });
 
-    // When the loaded form has a lock, any saved draft is discarded and removed.
+    await wrapper.find("#ecrf-draft-stale-dismiss").trigger("click");
+    expect(
+      wrapper.find('[data-testid="ecrf-draft-stale-banner"]').exists()
+    ).toBe(false);
+
+    // When the loaded form has a lock, unapplied draft values stay read-only in a banner until explicitly cleared.
     wrapper.unmount();
     vi.mocked(ecrfFormsApi.getForm).mockResolvedValueOnce(
       form({
@@ -1473,6 +1484,22 @@ describe("EcrfFormPanel: account-scoped browser drafts", () => {
     expect(
       (wrapper.find("#ecrf-item-DIABP").element as HTMLInputElement).value
     ).toBe("");
+    const lockedBanner = wrapper.find(
+      '[data-testid="ecrf-draft-locked-banner"]'
+    );
+    expect(lockedBanner.exists()).toBe(true);
+    expect(lockedBanner.attributes("role")).toBe("status");
+    expect(lockedBanner.text()).toContain("Frozen");
+    expect(lockedBanner.text()).toContain("DIABP");
+    expect(lockedBanner.text()).toContain("84 mm[Hg]");
+    expect(localStorage.getItem(draftKey)).not.toBeNull();
+
+    await wrapper.find("#ecrf-draft-locked-clear").trigger("click");
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="ecrf-draft-locked-banner"]').exists()
+    ).toBe(false);
     expect(localStorage.getItem(draftKey)).toBeNull();
   });
 
@@ -2601,5 +2628,112 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
     } finally {
       getNodeSpy.mockRestore();
     }
+  });
+
+  it("renders a status recovery banner with inline baseline comparison, draft discard, Unsaved badges beside Verified metadata, and axe compliance", async () => {
+    signInUser("crc-1", "tenant-1");
+    const draftKey = scopedKey(
+      { tenantId: "tenant-1", userId: "crc-1" },
+      "ecrf_form_draft",
+      FORM_ID
+    )!;
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        form_id: FORM_ID,
+        items: {
+          SYSBP: { text: "138", missing: "", revision: 3 },
+          DIABP: { text: "86", missing: "", revision: 0 },
+        },
+      })
+    );
+
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+      form({
+        assertions: [
+          {
+            assertion_id: "sdv-1",
+            kind: "Verified",
+            target: `observation:${OBS_ID}`,
+            revision: 3,
+            text: null,
+            asserted_by: "cra1",
+            asserted_at: "2027-03-20T00:00:00Z",
+            reason: "Checked chart",
+            retracted_at: null,
+          },
+        ],
+      }) as never
+    );
+
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID, canVerifySource: true },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    // Recovery banner is visible with role="status".
+    const banner = wrapper.find('[data-testid="ecrf-draft-restored-banner"]');
+    expect(banner.exists()).toBe(true);
+    expect(banner.attributes("role")).toBe("status");
+    expect(banner.text()).toContain("SYSBP");
+    expect(banner.text()).toContain("DIABP");
+
+    // Edited rows carry .ecrf-item-edited and a visible Unsaved badge beside Verified metadata.
+    expect(wrapper.find("#ecrf-row-SYSBP").classes()).toContain(
+      "ecrf-item-edited"
+    );
+    expect(wrapper.find("#ecrf-row-DIABP").classes()).toContain(
+      "ecrf-item-edited"
+    );
+    expect(wrapper.find("#ecrf-row-COMMENT").classes()).not.toContain(
+      "ecrf-item-edited"
+    );
+    const sysUnsaved = wrapper.find('[data-testid="ecrf-unsaved-badge-SYSBP"]');
+    const sysSdv = wrapper.find('[data-testid="ecrf-sdv-status-SYSBP"]');
+    expect(sysUnsaved.exists()).toBe(true);
+    expect(sysUnsaved.text()).toBe("Unsaved");
+    expect(sysSdv.text()).toContain("Verified (rev 3)");
+    expect(
+      wrapper.find('[data-testid="ecrf-unsaved-badge-COMMENT"]').exists()
+    ).toBe(false);
+
+    // Baseline comparison is initially hidden, then revealed inline when toggled.
+    const compareBtn = wrapper.find("#ecrf-draft-compare-toggle");
+    expect(compareBtn.attributes("aria-pressed")).toBe("false");
+    expect(
+      wrapper.find('[data-testid="ecrf-committed-baseline-SYSBP"]').exists()
+    ).toBe(false);
+
+    await compareBtn.trigger("click");
+    await flushPromises();
+    expect(compareBtn.attributes("aria-pressed")).toBe("true");
+    expect(
+      wrapper.find('[data-testid="ecrf-committed-baseline-SYSBP"]').text()
+    ).toContain("Committed: 120 mm[Hg]");
+    expect(
+      wrapper.find('[data-testid="ecrf-committed-baseline-DIABP"]').text()
+    ).toContain("Committed: No recorded value");
+
+    await expect(wrapper.element).toBeAccessible();
+
+    // Discard draft reverts inputs to committed server values, removes storage key, and hides Unsaved badges & banner.
+    await wrapper.find("#ecrf-draft-discard").trigger("click");
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="ecrf-draft-restored-banner"]').exists()
+    ).toBe(false);
+    expect(
+      (wrapper.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
+    ).toBe("120");
+    expect(
+      (wrapper.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("");
+    expect(
+      wrapper.find('[data-testid="ecrf-unsaved-badge-SYSBP"]').exists()
+    ).toBe(false);
+    expect(localStorage.getItem(draftKey)).toBeNull();
+    expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
   });
 });
