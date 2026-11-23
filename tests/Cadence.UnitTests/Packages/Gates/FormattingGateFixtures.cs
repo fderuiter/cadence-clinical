@@ -24,5 +24,6 @@ internal static class FormattingGateFixtures
             return ws.Context();
         },
         ["prettier"] = () => ws.Context(),
+        ["typecheck"] = () => ws.Context(),
     };
 }

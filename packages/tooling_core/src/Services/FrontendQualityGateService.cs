@@ -10,7 +10,7 @@ using Cadence.Topology;
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
-/// Fail-closed Prettier and ESLint quality gates for <c>cadence check</c> and <c>cadence check --pre-commit</c>.
+/// Fail-closed Prettier, ESLint, and TypeScript/Vue SFC typecheck quality gates for <c>cadence check</c> and <c>cadence check --pre-commit</c>.
 /// </summary>
 public static class FrontendQualityGateService
 {
@@ -24,6 +24,11 @@ public static class FrontendQualityGateService
     private static readonly HashSet<string> EslintExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue",
+    };
+
+    private static readonly HashSet<string> TypecheckExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".json", ".yaml", ".yml",
     };
 
     public static int CheckPrettier(
@@ -252,6 +257,56 @@ public static class FrontendQualityGateService
             RunProcess(repoRoot, pnpm, BuildEslintArgs(["."])) != 0)
         {
             Console.WriteLine("[ERROR] Workspace ESLint check ('pnpm -r lint && pnpm exec eslint --max-warnings 0 .') failed.");
+            return 1;
+        }
+
+        return 0;
+    }
+
+    public static int CheckTypecheck(
+        string? repoRoot = null,
+        string[]? targetFiles = null,
+        bool preCommit = false,
+        GitIndexReader? indexReader = null)
+    {
+        if (targetFiles is { Length: 0 })
+        {
+            return 0;
+        }
+
+        repoRoot ??= FindRepoRoot();
+
+        if (preCommit || targetFiles is not null)
+        {
+            var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
+            using (ownedReader)
+            {
+                var rawFiles = preCommit && targetFiles is null
+                    ? PreCommitOpenApiService.GetStagedFiles(repoRoot)
+                    : (IReadOnlyList<string>)targetFiles!;
+
+                var matching = SelectExistingFiles(repoRoot, rawFiles, TypecheckExtensions, reader);
+                if (matching.Count == 0)
+                {
+                    return 0;
+                }
+            }
+        }
+
+        string? pnpm = ResolveUsablePnpm(repoRoot);
+        if (pnpm is null)
+        {
+            return 1;
+        }
+
+        if (!EnsureNodeModules(repoRoot))
+        {
+            return 1;
+        }
+
+        if (RunProcess(repoRoot, pnpm, ["-r", "typecheck"]) != 0)
+        {
+            Console.WriteLine("[ERROR] Workspace TypeScript and Vue SFC typecheck ('pnpm -r typecheck') failed.");
             return 1;
         }
 

@@ -41,6 +41,14 @@ internal static class FormattingGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "lints staged JS, TS and Vue blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
         },
+        new("typecheck", ["validate-typecheck"],
+            "Workspace TypeScript and Vue SFC typecheck (`pnpm -r typecheck` via `vue-tsc` and `tsc`)",
+            ctx => FrontendQualityGateService.CheckTypecheck(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "runs `pnpm -r typecheck` when staged JS, TS, Vue, JSON or YAML files are present; fails closed when `pnpm` or `node_modules` is missing",
+        },
         new("actionlint", ["validate-workflows"],
             "GitHub Actions workflow and composite-action static analysis via `actionlint` from `.cadence/bin` or `PATH` (fails closed when missing)",
             ctx => CliLinterGateService.RunActionlint(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)

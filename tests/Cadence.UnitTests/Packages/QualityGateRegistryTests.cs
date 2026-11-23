@@ -28,7 +28,8 @@ public sealed class QualityGateRegistryTests : IDisposable
     {
         ["prettier"] = "runs `pnpm exec prettier` against workspace node_modules; the fixture has no node_modules",
         ["eslint"] = "runs `pnpm exec eslint` against workspace node_modules; the fixture has no node_modules",
-        ["api-clients"] = "runs `pnpm --filter web` and `tsc` over the real web workspace; the fixture has no apps/web/tsconfig.json",
+        ["typecheck"] = "runs `pnpm -r typecheck` against workspace node_modules; the fixture has no node_modules",
+        ["api-clients"] = "runs `pnpm --filter web` and `pnpm -r typecheck` over the real web workspace; the fixture has no apps/web/tsconfig.json",
         ["schema-doc"] = "builds Cadence.SchemaDocExporter and every module's EF Core model; the fixture has no exporter project " +
                          "(the rendering is covered by SchemaDocumentationTests)",
     };
