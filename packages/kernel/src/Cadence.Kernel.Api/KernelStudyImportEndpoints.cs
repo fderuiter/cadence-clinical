@@ -90,15 +90,8 @@ public static class KernelStudyImportEndpoints
             .ProducesKernelErrors(
             [
                 .. KernelErrors.CommandPipeline,
-                KernelErrors.AlreadyExists,
-                IdentityErrors.CodeRequired,
-                IdentityErrors.NameRequired,
-                IdentityErrors.TenantUnknown,
-                StudyErrors.CodeRequired,
-                StudyErrors.NameRequired,
-                StudyErrors.CountryInvalid,
-                StudyErrors.InstitutionUnknown,
-                StudyErrors.SiteCodeTaken,
+                .. RaisesKernelErrorsAttribute.Of(typeof(RegisterOrganization))!,
+                .. RaisesKernelErrorsAttribute.Of(typeof(RegisterSite))!,
             ]);
 
         group.MapPost("/studies", CreateStudyAsync)
@@ -112,17 +105,9 @@ public static class KernelStudyImportEndpoints
             .ProducesKernelErrors(
             [
                 .. KernelErrors.CommandPipeline,
-                KernelErrors.AlreadyExists,
-                IdentityErrors.CodeRequired,
-                IdentityErrors.NameRequired,
-                IdentityErrors.TenantUnknown,
-                StudyErrors.CodeRequired,
-                StudyErrors.TitleRequired,
-                StudyErrors.SponsorUnknown,
-                StudyErrors.StudyCodeTaken,
-                StudyErrors.StudyUnknown,
-                StudyErrors.SiteUnknown,
-                StudyErrors.AlreadyLinked,
+                .. RaisesKernelErrorsAttribute.Of(typeof(RegisterOrganization))!,
+                .. RaisesKernelErrorsAttribute.Of(typeof(RegisterStudy))!,
+                .. RaisesKernelErrorsAttribute.Of(typeof(LinkSiteToStudy))!,
             ]);
 
         group.MapGet("/studies/{studyRef}/sites", ListStudySitesAsync)
@@ -143,15 +128,8 @@ public static class KernelStudyImportEndpoints
             .ProducesKernelErrors(
             [
                 .. KernelErrors.CommandPipeline,
-                KernelErrors.AlreadyExists,
-                StudyErrors.CodeRequired,
-                StudyErrors.NameRequired,
-                StudyErrors.CountryInvalid,
-                StudyErrors.InstitutionUnknown,
-                StudyErrors.SiteCodeTaken,
-                StudyErrors.StudyUnknown,
-                StudyErrors.SiteUnknown,
-                StudyErrors.AlreadyLinked,
+                .. RaisesKernelErrorsAttribute.Of(typeof(RegisterSite))!,
+                .. RaisesKernelErrorsAttribute.Of(typeof(LinkSiteToStudy))!,
             ]);
 
         group.MapGet("/protocol-templates", ListProtocolTemplates)
@@ -179,15 +157,9 @@ public static class KernelStudyImportEndpoints
             .ProducesKernelErrors(
             [
                 .. KernelErrors.CommandPipeline,
-                KernelErrors.AlreadyExists,
-                KernelErrors.NotFound,
-                ProtocolErrors.StudyUnknown,
-                ProtocolErrors.FirstVersionExists,
-                ProtocolErrors.InvalidTransition,
-                ProtocolErrors.ContentRequired,
-                ProtocolErrors.ContentInvalid,
-                ProtocolErrors.AmendmentInvalid,
-                ProtocolErrors.AmendmentNotAllowed,
+                .. RaisesKernelErrorsAttribute.Of(typeof(CreateProtocolDraft))!,
+                .. RaisesKernelErrorsAttribute.Of(typeof(ReviseProtocolDraft))!,
+                .. RaisesKernelErrorsAttribute.Of(typeof(ForkProtocolVersion))!,
                 StandardsErrors.LibraryItemInvalid,
                 StandardsErrors.StandardVersionUnknown,
             ]);
@@ -1681,7 +1653,12 @@ public static class KernelStudyImportEndpoints
 
             case DraftMutationKind.ForkAndReviseApproved:
                 {
-                    var impacted = design.CollectionSpecs.Select(s => s.Id).DefaultIfEmpty("protocol_design").ToList();
+                    var impacted = design.CollectionSpecs
+                        .Select(s => s.Id)
+                        .Concat(design.PlannedActivities.Select(a => a.Id))
+                        .Distinct(StringComparer.Ordinal)
+                        .DefaultIfEmpty("protocol_design")
+                        .ToList();
                     var amendment = new ProtocolAmendment(
                         Intent: plan.AmendmentIntent ?? "Protocol design import",
                         Rationale: reason,

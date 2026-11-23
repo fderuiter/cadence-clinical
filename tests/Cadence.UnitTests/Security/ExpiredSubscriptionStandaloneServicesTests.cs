@@ -376,8 +376,8 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
             10,
             "all ten standalone ElectronicSignatureRequired clinical routes across econsent, execution, knowledge, safety, and tickets must be verified");
         kernelSignatureRoutesVerified.Should().Be(
-            2,
-            "kernel library-items/{itemRef}/approve and protocol-versions/{versionRef}/approve ElectronicSignatureRequired routes must both be verified");
+            3,
+            "kernel library-items/{itemRef}/approve, protocol-versions/{versionRef}/approve, and protocol-versions/{versionRef}/withdraw ElectronicSignatureRequired routes must all be verified");
         closeoutSignatureRoutesFound.Should().Be(
             3,
             "only the three closeout signature routes (form closeout signature + lock apply + lock release) carry AllowExpiredTenantWriteMetadata");

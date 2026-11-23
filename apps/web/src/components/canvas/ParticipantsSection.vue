@@ -85,7 +85,12 @@
       v-if="canManageParticipants && adding"
       :default-site-id="defaultAddSiteId"
       :site-options="authorizedSiteOptions"
-      :restrict-to-options="hasExplicitSiteScope"
+      :restrict-to-options="
+        hasExplicitSiteScope || activeKernelSites.length > 0
+      "
+      :has-inactive-study-sites="
+        kernelSites.length > 0 && authorizedSiteOptions.length === 0
+      "
       @added="onAdded"
       @close="closeAddParticipant"
     />
@@ -284,11 +289,23 @@ const hasExplicitSiteScope = computed(
   () => (authStore.assignedSiteIds?.length ?? 0) > 0
 );
 
+const activeKernelSites = computed<StudySiteOption[]>(() =>
+  kernelSites.value.filter((site) => !site.status || site.status === "Active")
+);
+
 const authorizedSiteOptions = computed<StudySiteOption[]>(() => {
+  if (kernelSites.value.length > 0 && activeKernelSites.value.length === 0) {
+    return [];
+  }
+  const inactiveCodesLower = new Set(
+    kernelSites.value
+      .filter((site) => site.status && site.status !== "Active")
+      .map((site) => site.code.toLowerCase())
+  );
   const allowedCodes = authorizedParticipantSiteCodes(
     authStore,
-    kernelSites.value.map((s) => s.code)
-  );
+    activeKernelSites.value.map((s) => s.code)
+  ).filter((code) => !inactiveCodesLower.has(code.toLowerCase()));
   const byKnown = new Map(siteOptions.value.map((s) => [s.code, s]));
   return allowedCodes.map((code) => byKnown.get(code) ?? { code, label: code });
 });
@@ -297,12 +314,17 @@ const defaultAddSiteId = computed(() => {
   const active = props.siteId.trim();
   if (active) {
     if (
-      !hasExplicitSiteScope.value ||
-      authorizedSiteOptions.value.some(
-        (s) => s.code.toLowerCase() === active.toLowerCase()
-      )
+      !hasExplicitSiteScope.value &&
+      activeKernelSites.value.length === 0 &&
+      kernelSites.value.length === 0
     ) {
       return active;
+    }
+    const matched = authorizedSiteOptions.value.find(
+      (s) => s.code.toLowerCase() === active.toLowerCase()
+    );
+    if (matched) {
+      return matched.code;
     }
   }
   if (authorizedSiteOptions.value.length === 1) {

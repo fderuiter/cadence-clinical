@@ -198,10 +198,25 @@ describe("Clinical Canvas: adding participants and changing their state", () => 
       "No participants in CAD-101 yet."
     );
 
-    await fillAddForm({ code: "017-0001", reason: "First participant" });
+    await wrapper.find("#btn-add-participant").trigger("click");
+    await wrapper.find("#add-participant-code").setValue("017-0001");
+    await wrapper.find("#add-participant-reason").setValue("First participant");
+    await flushPromises();
+    // Site is required before submission so enrollment sync never creates siteless subjects.
+    expect(wrapper.find("#btn-confirm-add-participant").element.disabled).toBe(
+      true
+    );
+    await wrapper.find("#add-participant-site").setValue("017");
+    await flushPromises();
+    expect(wrapper.find("#btn-confirm-add-participant").element.disabled).toBe(
+      false
+    );
+    await wrapper.find("#add-participant-form").trigger("submit");
+    await router.isReady();
+    await flushPromises();
 
     expect(executionApi.addSubject).toHaveBeenCalledWith(
-      expect.objectContaining({ siteId: "" })
+      expect.objectContaining({ siteId: "017" })
     );
     expect(wrapper.find("#participant-017-0001").exists()).toBe(true);
     expect(router.currentRoute.value.query.node).toBe(`participant:${IDS[0]}`);
@@ -213,7 +228,7 @@ describe("Clinical Canvas: adding participants and changing their state", () => 
     );
     await open("/studies/CAD-101?stage=conduct&section=participants");
 
-    await fillAddForm({ code: "017-0001", reason: "Duplicate" });
+    await fillAddForm({ code: "017-0001", site: "017", reason: "Duplicate" });
 
     expect(wrapper.find("#add-participant-form").exists()).toBe(true);
     expect(router.currentRoute.value.query.node).toBeUndefined();

@@ -352,6 +352,8 @@ public sealed record KernelImportedRulePackSummaryResponse(
 /// <param name="Forms">Forms and their ordered items.</param>
 /// <param name="ImportNotes">Readable import notes recorded during ODM/USDM import.</param>
 /// <param name="ImportedRulePack">Drafted rule-pack library item when the imported ODM file contained range checks or conditions.</param>
+/// <param name="EpochCount">Total number of scheduled study epochs in the protocol design.</param>
+/// <param name="PlannedActivityCount">Total number of scheduled planned activities/visits in the protocol design.</param>
 public sealed record KernelProtocolDraftSummaryResponse(
     KernelProtocolVersionResponse Version,
     string Title,
@@ -359,7 +361,9 @@ public sealed record KernelProtocolDraftSummaryResponse(
     int ItemCount,
     IReadOnlyList<KernelProtocolFormSummaryResponse> Forms,
     IReadOnlyList<KernelProtocolImportNoteResponse> ImportNotes,
-    KernelImportedRulePackSummaryResponse? ImportedRulePack = null)
+    KernelImportedRulePackSummaryResponse? ImportedRulePack = null,
+    int EpochCount = 0,
+    int PlannedActivityCount = 0)
 {
     internal static KernelProtocolDraftSummaryResponse From(
         ProtocolVersionSummary version,
@@ -381,6 +385,8 @@ public sealed record KernelProtocolDraftSummaryResponse(
             forms.Sum(f => f.ItemCount),
             forms,
             notes,
-            importedRulePack);
+            importedRulePack,
+            design?.Epochs.Count ?? 0,
+            design?.PlannedActivities.Count ?? 0);
     }
 }

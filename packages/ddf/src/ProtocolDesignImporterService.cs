@@ -85,8 +85,10 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         var problems = new List<string>();
         var notes = new List<ProtocolImportNote>();
         var importedSpecs = new List<CollectionSpec>();
+        var importedEpochs = new List<Epoch>();
+        var importedActivities = new List<PlannedActivity>();
         var importedRules = new List<Rule>();
-        var batchUsedIds = NonCollectionElementIds(request.BaseDesign);
+        var batchUsedIds = ReservedBaseElementIds(request.BaseDesign);
         string? firstTemplateTitle = null;
         string? firstStudyOid = null;
 
@@ -110,6 +112,16 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             }
 
             importedSpecs.AddRange(odm.CollectionSpecs);
+            if (odm.Epochs is { Count: > 0 })
+            {
+                importedEpochs.AddRange(odm.Epochs);
+            }
+
+            if (odm.PlannedActivities is { Count: > 0 })
+            {
+                importedActivities.AddRange(odm.PlannedActivities);
+            }
+
             if (odm.Rules is { Count: > 0 })
             {
                 importedRules.AddRange(odm.Rules);
@@ -127,7 +139,9 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             notes,
             request.FallbackTitle ?? firstTemplateTitle ?? "Protocol Draft",
             importedRules,
-            firstStudyOid);
+            firstStudyOid,
+            importedEpochs,
+            importedActivities);
     }
 
     private static async Task<ProtocolDesignImportResult> ImportOdmPayloadAsync(
@@ -135,7 +149,7 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         ProtocolConceptResolver resolveConcept,
         CancellationToken cancellationToken)
     {
-        var reservedIds = NonCollectionElementIds(request.BaseDesign);
+        var reservedIds = ReservedBaseElementIds(request.BaseDesign);
         var odm = await OdmDesignImporter.ImportAsync(request.RawBytes!, resolveConcept, reservedIds, cancellationToken).ConfigureAwait(false);
         if (odm.PayloadTooLarge)
         {
@@ -148,7 +162,15 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         }
 
         var fallbackTitle = FirstNonBlank(request.BaseDesign?.Title, odm.Title, request.FallbackTitle, "Imported ODM Protocol")!;
-        return FinalizeMergedFormsDesign(request.BaseDesign, odm.CollectionSpecs, odm.Notes, fallbackTitle, odm.Rules, odm.StudyOid);
+        return FinalizeMergedFormsDesign(
+            request.BaseDesign,
+            odm.CollectionSpecs,
+            odm.Notes,
+            fallbackTitle,
+            odm.Rules,
+            odm.StudyOid,
+            odm.Epochs,
+            odm.PlannedActivities);
     }
 
     private static async Task<ProtocolDesignImportResult> ImportUsdmPayloadAsync(
@@ -241,11 +263,16 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         IReadOnlyList<ProtocolImportNote> incomingNotes,
         string fallbackTitle,
         IReadOnlyList<Rule>? incomingRules = null,
-        string? studyOid = null)
+        string? studyOid = null,
+        IReadOnlyList<Epoch>? incomingEpochs = null,
+        IReadOnlyList<PlannedActivity>? incomingActivities = null)
     {
         var mergedSpecs = new List<CollectionSpec>();
-        var usedIds = NonCollectionElementIds(baseDesign);
+        var usedIds = ReservedBaseElementIds(baseDesign);
         var idRenameMap = new Dictionary<string, string>(StringComparer.Ordinal);
+        var epochRenameMap = new Dictionary<string, string>(StringComparer.Ordinal);
+        var incomingEpochList = incomingEpochs ?? [];
+        var incomingActivityList = incomingActivities ?? [];
 
         if (baseDesign is not null)
         {
@@ -268,6 +295,38 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             }
         }
 
+        var mergedEpochs = new List<Epoch>();
+        if (baseDesign is not null)
+        {
+            var incomingEpochKeys = incomingEpochList.Select(e => (e.Id, e.Name)).ToHashSet();
+            foreach (var existingEpoch in baseDesign.Epochs)
+            {
+                if (incomingEpochKeys.Contains((existingEpoch.Id, existingEpoch.Name)))
+                {
+                    continue;
+                }
+
+                usedIds.Add(existingEpoch.Id);
+                mergedEpochs.Add(existingEpoch);
+            }
+        }
+
+        var mergedActivities = new List<PlannedActivity>();
+        if (baseDesign is not null)
+        {
+            var incomingActivityKeys = incomingActivityList.Select(a => (a.Id, a.Name)).ToHashSet();
+            foreach (var existingActivity in baseDesign.PlannedActivities)
+            {
+                if (incomingActivityKeys.Contains((existingActivity.Id, existingActivity.Name)))
+                {
+                    continue;
+                }
+
+                usedIds.Add(existingActivity.Id);
+                mergedActivities.Add(existingActivity);
+            }
+        }
+
         foreach (var spec in incomingSpecs)
         {
             var specId = OdmDesignImporter.AllocateUniqueElementId(spec.Id, "Form", usedIds);
@@ -283,11 +342,44 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             mergedSpecs.Add(spec with { Id = specId, Items = adjustedItems });
         }
 
+        foreach (var epoch in incomingEpochList)
+        {
+            var existingByName = mergedEpochs.FirstOrDefault(e => string.Equals(e.Name, epoch.Name, StringComparison.OrdinalIgnoreCase));
+            if (existingByName is not null)
+            {
+                epochRenameMap[epoch.Id] = existingByName.Id;
+                continue;
+            }
+
+            var epochId = OdmDesignImporter.AllocateUniqueElementId(epoch.Id, "Epoch", usedIds);
+            epochRenameMap[epoch.Id] = epochId;
+            var nextOrder = mergedEpochs.Count == 0 ? epoch.Order : Math.Max(epoch.Order, mergedEpochs.Max(e => e.Order) + 1);
+            mergedEpochs.Add(epoch with { Id = epochId, Order = nextOrder });
+        }
+
+        foreach (var activity in incomingActivityList)
+        {
+            var actId = OdmDesignImporter.AllocateUniqueElementId(activity.Id, "Visit", usedIds);
+            var mappedEpochId = epochRenameMap.GetValueOrDefault(activity.EpochId, activity.EpochId);
+            var mappedSpecIds = activity.CollectionSpecIds
+                .Select(cid => idRenameMap.GetValueOrDefault(cid, cid))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            mergedActivities.Add(activity with
+            {
+                Id = actId,
+                EpochId = mappedEpochId,
+                CollectionSpecIds = mappedSpecIds,
+            });
+        }
+
         var mergedNotes = DeduplicateNotes((baseDesign?.ImportNotes ?? []).Concat(incomingNotes));
         var title = FirstNonBlank(baseDesign?.Title, fallbackTitle, "Protocol Draft")!;
         var candidateDesign = (baseDesign ?? new ProtocolDesign()) with
         {
             Title = title,
+            Epochs = mergedEpochs,
+            PlannedActivities = mergedActivities,
             CollectionSpecs = mergedSpecs,
             ImportNotes = mergedNotes.Count > 0 ? mergedNotes : null,
         };
@@ -367,7 +459,7 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         return $"{slug}-edit-checks";
     }
 
-    private static HashSet<string> NonCollectionElementIds(ProtocolDesign? design)
+    private static HashSet<string> ReservedBaseElementIds(ProtocolDesign? design)
     {
         var ids = new HashSet<string>(StringComparer.Ordinal);
         if (design is null)
@@ -375,7 +467,11 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             return ids;
         }
 
-        foreach (var entry in design.Elements().Where(e => e.Kind is not (ProtocolElementKind.CollectionSpec or ProtocolElementKind.CollectionItem)))
+        foreach (var entry in design.Elements().Where(e => e.Kind is not (
+            ProtocolElementKind.CollectionSpec
+            or ProtocolElementKind.CollectionItem
+            or ProtocolElementKind.Epoch
+            or ProtocolElementKind.PlannedActivity)))
         {
             ids.Add(entry.Id);
         }

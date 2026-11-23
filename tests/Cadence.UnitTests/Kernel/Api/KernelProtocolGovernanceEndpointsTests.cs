@@ -92,6 +92,8 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
                 "protocol.submit_for_review",
                 "protocol.return_to_draft",
                 "protocol.approve",
+                "protocol.withdraw",
+                "simulation.run",
                 "artifact.register",
                 "artifact.add_version",
                 "effectivity.declare",
@@ -263,6 +265,151 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             BuildPost(approvePath, "gov-approve-replay", "Replay consumed token", validSigToken, new { meaning = "Approved" }),
             ct);
         replayRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task WithdrawProtocolVersion_EnforcesStepUpSigToken_Authorization_ContentHashBinding_AndRecordsWithdrawnAttestation()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var versionId = _store.SeedDraftProtocolVersion(ProtocolDesignSamples.Minimal);
+        var versionRef = NodeRef.For(versionId).ToString();
+        var withdrawPath = $"/api/v1/kernel/protocol-versions/{versionRef}/withdraw";
+
+        using var designer = CreateClient(DesignerIdentity);
+        using var crc = CreateClient(CoordinatorIdentity);
+
+        // Freeze Draft -> InReview so ContentHash is sealed.
+        string frozenHash;
+        using (var submitRes = await designer.SendAsync(
+            BuildPost($"/api/v1/kernel/protocol-versions/{versionRef}/submit-for-review", "wd-submit-1", "Freeze draft v1 for review", null),
+            ct))
+        {
+            submitRes.StatusCode.Should().Be(HttpStatusCode.OK);
+            frozenHash = JsonDocument.Parse(await submitRes.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("content_hash").GetString()!;
+        }
+
+        // Missing or wrong-semantic-action X-Sig-Token fails closed with 401.
+        using (var missingTokenRes = await designer.SendAsync(
+            BuildPost(withdrawPath, "wd-no-sig", "Withdraw protocol v1", sigToken: null, new { meaning = "Withdrawn" }),
+            ct))
+        {
+            missingTokenRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        var wrongSemanticToken = TestSecurityContext.CreateSigToken(
+            DesignerIdentity.UserId,
+            withdrawPath,
+            KernelProtocolGovernanceEndpoints.ApproveProtocolVersionSemanticAction,
+            issuedAt: _clock.UtcNow);
+        using (var wrongSemanticRes = await designer.SendAsync(
+            BuildPost(withdrawPath, "wd-wrong-sem", "Withdraw protocol v1", wrongSemanticToken, new { meaning = "Withdrawn" }),
+            ct))
+        {
+            wrongSemanticRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        // Coordinator lacks protocol.withdraw -> 403 and zero orphan Attestations.
+        var crcToken = TestSecurityContext.CreateSigToken(
+            CoordinatorIdentity.UserId,
+            withdrawPath,
+            KernelProtocolGovernanceEndpoints.WithdrawProtocolVersionSemanticAction,
+            issuedAt: _clock.UtcNow);
+        using (var forbidden = await crc.SendAsync(
+            BuildPost(withdrawPath, "wd-crc-denied", "Attempt unauthorized withdrawal", crcToken, new { meaning = "Withdrawn" }),
+            ct))
+        {
+            forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            (await forbidden.Content.ReadAsStringAsync(ct)).Should().Contain(KernelErrors.AuthorizationDenied.Code);
+        }
+
+        _store.ReadAll<Attestation>().Should().BeEmpty();
+
+        // Stale ExpectedContentHash fails with 409 K.Trust.TargetContentChanged before writing Attestation.
+        var mismatchToken = TestSecurityContext.CreateSigToken(
+            DesignerIdentity.UserId,
+            withdrawPath,
+            KernelProtocolGovernanceEndpoints.WithdrawProtocolVersionSemanticAction,
+            issuedAt: _clock.UtcNow);
+        using (var mismatchRes = await designer.SendAsync(
+            BuildPost(withdrawPath, "wd-hash-mismatch", "Withdraw with stale hash", mismatchToken, new
+            {
+                meaning = "Withdrawn",
+                expected_content_hash = ApprovalHash,
+            }),
+            ct))
+        {
+            mismatchRes.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await mismatchRes.Content.ReadAsStringAsync(ct)).Should().Contain(TrustErrors.TargetContentChanged.Code);
+        }
+
+        _store.ReadAll<Attestation>().Should().BeEmpty();
+
+        // Valid single-use X-Sig-Token records Attestation(Withdrawn, frozenHash) and withdraws protocol version.
+        var validToken = TestSecurityContext.CreateSigToken(
+            DesignerIdentity.UserId,
+            withdrawPath,
+            KernelProtocolGovernanceEndpoints.WithdrawProtocolVersionSemanticAction,
+            issuedAt: _clock.UtcNow);
+        using (var withdrawRes = await designer.SendAsync(
+            BuildPost(withdrawPath, "wd-ok", "Withdraw superseded protocol v1", validToken, new
+            {
+                meaning = "Withdrawn",
+                expected_content_hash = frozenHash,
+            }),
+            ct))
+        {
+            withdrawRes.StatusCode.Should().Be(HttpStatusCode.OK, await withdrawRes.Content.ReadAsStringAsync(ct));
+            var body = JsonDocument.Parse(await withdrawRes.Content.ReadAsStringAsync(ct)).RootElement;
+            body.GetProperty("status").GetString().Should().Be("Withdrawn");
+            body.GetProperty("withdrawal_reason").GetString().Should().Be("Withdraw superseded protocol v1");
+        }
+
+        var attestation = _store.ReadAll<Attestation>().Should().ContainSingle().Subject;
+        attestation.Meaning.Should().Be(AttestationMeaning.Withdrawn);
+        attestation.Target.Kind.Should().Be(AttestationTarget.ProtocolVersionKind);
+        attestation.Target.Id.Should().Be(versionId.Value);
+        attestation.Target.ContentHash.Should().Be(frozenHash);
+
+        // Replaying the consumed single-use token is rejected with 401.
+        using var replay = await designer.SendAsync(
+            BuildPost(withdrawPath, "wd-replay", "Replay withdraw token", validToken, new { meaning = "Withdrawn" }),
+            ct);
+        replay.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task CanI_SupportsTenantResourceLiteral_AndSimulationRunCapability()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var versionId = _store.SeedDraftProtocolVersion(ProtocolDesignSamples.Minimal);
+        var versionRef = NodeRef.For(versionId).ToString();
+
+        var factory = CreateFactory();
+        using var designer = factory.CreateSignedClient(DesignerIdentity);
+        using var crc = factory.CreateSignedClient(CoordinatorIdentity);
+
+        var designerTenantCanI = await designer.GetFromJsonAsync<JsonElement>(
+            "/api/v1/kernel/authorization/can-i?capability=study.register&resource=tenant",
+            ct);
+        designerTenantCanI.GetProperty("permitted").GetBoolean().Should().BeTrue();
+
+        var crcTenantCanI = await crc.GetFromJsonAsync<JsonElement>(
+            "/api/v1/kernel/authorization/can-i?capability=study.register&resource=tenant",
+            ct);
+        crcTenantCanI.GetProperty("permitted").GetBoolean().Should().BeFalse();
+        crcTenantCanI.GetProperty("explanation").GetProperty("conditions").GetArrayLength().Should().BeGreaterThan(0);
+
+        var designerSimCanI = await designer.GetFromJsonAsync<JsonElement>(
+            $"/api/v1/kernel/authorization/can-i?capability=simulation.run&resource={Uri.EscapeDataString(versionRef)}",
+            ct);
+        designerSimCanI.GetProperty("permitted").GetBoolean().Should().BeTrue();
+        designerSimCanI.GetProperty("verb_class").GetString().Should().Be("Read");
+
+        var crcSimCanI = await crc.GetFromJsonAsync<JsonElement>(
+            $"/api/v1/kernel/authorization/can-i?capability=simulation.run&resource={Uri.EscapeDataString(versionRef)}",
+            ct);
+        crcSimCanI.GetProperty("permitted").GetBoolean().Should().BeFalse();
+        crcSimCanI.GetProperty("explanation").GetProperty("conditions").GetArrayLength().Should().BeGreaterThan(0);
     }
 
     [Fact]

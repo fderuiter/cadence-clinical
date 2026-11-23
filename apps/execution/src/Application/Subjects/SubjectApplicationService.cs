@@ -92,6 +92,12 @@ public sealed class SubjectApplicationService(
 
         var subjectCode = new SubjectCode(request.SubjectId);
         var studyCode = new StudyCode(request.StudyId);
+        if (kernelEnrollmentSynchronizer is not null && string.IsNullOrWhiteSpace(request.SiteId))
+        {
+            return Result<SubjectResponse>.Failure(
+                DomainError.Validation("SITE_ID_REQUIRED", "site_id is required."));
+        }
+
         SiteCode? siteCode = request.SiteId is not null ? new SiteCode(request.SiteId) : null;
         var subjectId = SubjectId.New();
 

@@ -312,6 +312,127 @@ public sealed class OdmDesignImporterTests
         result.Problems.Should().Contain(p => p.Contains(expectedSubstring, StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task OdmWithProtocolStudyEventRefStudyEventDefAndFormRef_CompilesEpochsPlannedActivitiesTimingWindowsAndScheduleOfActivities()
+    {
+        const string odm = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3"
+                 xmlns:mdsol="http://www.mdsol.com/ns/odm/metadata"
+                 FileOID="ODM.SCHEDULE.1"
+                 FileType="Snapshot"
+                 ODMVersion="1.3.2"
+                 CreationDateTime="2026-02-01T00:00:00Z">
+              <Study OID="S.SCHED.101">
+                <GlobalVariables>
+                  <StudyName>Scheduled Oncology Trial</StudyName>
+                  <StudyDescription>Schedule import verification</StudyDescription>
+                  <ProtocolName>SOT-101</ProtocolName>
+                </GlobalVariables>
+                <MetaDataVersion OID="MDV.SCHED.1" Name="v1">
+                  <Protocol>
+                    <StudyEventRef StudyEventOID="SE.WEEK4" OrderNumber="2" Mandatory="Yes"/>
+                    <StudyEventRef StudyEventOID="SE.SCREEN" OrderNumber="1" Mandatory="Yes"/>
+                  </Protocol>
+                  <StudyEventDef OID="SE.SCREEN" Name="Screening Visit" Repeating="No" Type="Scheduled" Category="Screening">
+                    <Alias Context="timing" Name="Day -7 -3/+2"/>
+                    <FormRef FormOID="F.DM" OrderNumber="1" Mandatory="Yes"/>
+                  </StudyEventDef>
+                  <StudyEventDef OID="SE.WEEK4" Name="Week 4 Visit" Repeating="No" Type="Scheduled" Category="Treatment"
+                                 mdsol:PlannedDay="28" mdsol:WindowBefore="2" mdsol:WindowAfter="4">
+                    <FormRef FormOID="F.VS" OrderNumber="2" Mandatory="Yes"/>
+                    <FormRef FormOID="F.DM" OrderNumber="1" Mandatory="No"/>
+                  </StudyEventDef>
+                  <FormDef OID="F.DM" Name="Demographics" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.DM" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <FormDef OID="F.VS" Name="Vital Signs" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.VS" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <ItemGroupDef OID="IG.DM" Name="Demographics Group" Repeating="No">
+                    <ItemRef ItemOID="IT.AGE" OrderNumber="1" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemGroupDef OID="IG.VS" Name="Vitals Group" Repeating="No">
+                    <ItemRef ItemOID="IT.SYSBP" OrderNumber="1" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemDef OID="IT.AGE" Name="AGE" DataType="integer">
+                    <Question><TranslatedText>Age (years)</TranslatedText></Question>
+                  </ItemDef>
+                  <ItemDef OID="IT.SYSBP" Name="SYSBP" DataType="integer">
+                    <Question><TranslatedText>Systolic Blood Pressure</TranslatedText></Question>
+                  </ItemDef>
+                </MetaDataVersion>
+              </Study>
+            </ODM>
+            """;
+
+        var service = new ProtocolDesignImporterService();
+        var result = await service.ImportAsync(
+            new ProtocolDesignImportRequest(RawBytes: Encoding.UTF8.GetBytes(odm), FileName: "scheduled-study.xml"),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue(string.Join("; ", result.Problems));
+        var design = result.Design!;
+        design.Epochs.Select(e => e.Name).Should().Equal("Screening", "Treatment");
+        design.PlannedActivities.Select(a => a.Name).Should().Equal("Screening Visit", "Week 4 Visit");
+        design.PlannedActivities[0].Timing.Should().Be(new ActivityTiming(-7, 3, 2));
+        design.PlannedActivities[1].Timing.Should().Be(new ActivityTiming(28, 2, 4));
+        design.PlannedActivities[1].CollectionSpecIds.Should().HaveCount(2);
+
+        var soa = ScheduleOfActivities.Compile(design);
+        soa.Epochs.Should().HaveCount(2);
+        soa.Columns.Should().HaveCount(2);
+        soa.Rows.Should().HaveCount(2);
+
+        // No missing-Protocol or missing-timing warning when both <Protocol><StudyEventRef> and timings are present.
+        result.Notes.Should().NotContain(n => n.Message.Contains("omitted <Protocol>/<StudyEventRef>", StringComparison.Ordinal));
+        result.Notes.Should().NotContain(n => n.Message.Contains("timing window", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task OdmOmittingProtocolEventRefsOrTimingWindows_EmitsActionableProtocolImportNotes()
+    {
+        const string odmWithoutProtocolOrTiming = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.WARN.1" FileType="Snapshot" ODMVersion="1.3.2" CreationDateTime="2026-02-01T00:00:00Z">
+              <Study OID="S.WARN.1">
+                <GlobalVariables>
+                  <StudyName>Warning Check Study</StudyName>
+                  <StudyDescription>Missing Protocol and timing</StudyDescription>
+                  <ProtocolName>WCS-1</ProtocolName>
+                </GlobalVariables>
+                <MetaDataVersion OID="MDV.WARN.1" Name="v1">
+                  <StudyEventDef OID="SE.V1" Name="Baseline" Repeating="No" Type="Scheduled">
+                    <FormRef FormOID="F.VS" OrderNumber="1" Mandatory="Yes"/>
+                  </StudyEventDef>
+                  <FormDef OID="F.VS" Name="Vital Signs" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.VS" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <ItemGroupDef OID="IG.VS" Name="Vitals" Repeating="No">
+                    <ItemRef ItemOID="IT.HR" OrderNumber="1" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemDef OID="IT.HR" Name="HR" DataType="integer">
+                    <Question><TranslatedText>Heart Rate</TranslatedText></Question>
+                  </ItemDef>
+                </MetaDataVersion>
+              </Study>
+            </ODM>
+            """;
+
+        var service = new ProtocolDesignImporterService();
+        var result = await service.ImportAsync(
+            new ProtocolDesignImportRequest(RawBytes: Encoding.UTF8.GetBytes(odmWithoutProtocolOrTiming), FileName: "warn-study.xml"),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue(string.Join("; ", result.Problems));
+        result.Design!.Epochs.Should().ContainSingle();
+        result.Design.PlannedActivities.Should().ContainSingle().Which.Name.Should().Be("Baseline");
+        result.Notes.Should().Contain(n => n.Source == "ODM/Protocol" && n.Message.Contains("omitted <Protocol>/<StudyEventRef>", StringComparison.Ordinal));
+        result.Notes.Should().Contain(n => n.Source == "SE.V1" && n.Message.Contains("timing window", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static List<ExpectedForm> ReadExpectedOdmForms(byte[] xmlBytes)
     {
         using var ms = new MemoryStream(xmlBytes, writable: false);

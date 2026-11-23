@@ -29,6 +29,8 @@ namespace Cadence.Ddf;
 /// <param name="PayloadTooLarge">True when the XML payload exceeded <see cref="IProtocolDesignImporter.MaxPayloadBytes"/>.</param>
 /// <param name="Rules">Compiled collection-stage edit-check rules extracted from ODM <c>RangeCheck</c> and <c>ConditionDef</c> elements.</param>
 /// <param name="StudyOid">OID attribute on the imported ODM <c>Study</c> element, when present.</param>
+/// <param name="Epochs">Imported study epochs derived from ODM <c>Protocol</c> and <c>StudyEventDef</c> elements.</param>
+/// <param name="PlannedActivities">Imported planned visits/activities linking ODM <c>StudyEventDef</c> schedules to <c>FormDef</c> collection specifications.</param>
 public sealed record OdmImportResult(
     string? Title,
     IReadOnlyList<CollectionSpec> CollectionSpecs,
@@ -36,7 +38,9 @@ public sealed record OdmImportResult(
     IReadOnlyList<ProtocolImportNote> Notes,
     bool PayloadTooLarge = false,
     IReadOnlyList<Rule>? Rules = null,
-    string? StudyOid = null)
+    string? StudyOid = null,
+    IReadOnlyList<Epoch>? Epochs = null,
+    IReadOnlyList<PlannedActivity>? PlannedActivities = null)
 {
     /// <summary>True when one or more forms were imported without validation problems.</summary>
     public bool IsSuccess => Problems.Count == 0 && !PayloadTooLarge && CollectionSpecs.Count > 0;
@@ -255,6 +259,7 @@ public static partial class OdmDesignImporter
         }
 
         var codeLists = ParseCodeLists(mdv);
+        var studyEventDefs = ParseByOid(mdv, "StudyEventDef", problems);
         var itemDefs = ParseByOid(mdv, "ItemDef", problems);
         var itemGroupDefs = ParseByOid(mdv, "ItemGroupDef", problems);
         var conditionDefs = ParseByOid(mdv, "ConditionDef", problems);
@@ -439,6 +444,19 @@ public static partial class OdmDesignImporter
             return new OdmImportResult(studyTitle, [], problems, DeduplicateNotes(notes), StudyOid: studyOid);
         }
 
+        var (epochs, plannedActivities) = ParseStudySchedule(
+            mdv,
+            studyEventDefs,
+            formIdByOid,
+            usedIds,
+            notes,
+            problems);
+
+        if (problems.Count > 0)
+        {
+            return new OdmImportResult(studyTitle, [], problems, DeduplicateNotes(notes), StudyOid: studyOid);
+        }
+
         var compiledRules = CompileOdmRules(
             FirstNonBlank(studyOid, studyTitle, "ODM")!,
             importedItems,
@@ -450,7 +468,455 @@ public static partial class OdmDesignImporter
 
         return problems.Count > 0
             ? new OdmImportResult(studyTitle, [], problems, DeduplicateNotes(notes), StudyOid: studyOid)
-            : new OdmImportResult(studyTitle, specs, [], DeduplicateNotes(notes), Rules: compiledRules, StudyOid: studyOid);
+            : new OdmImportResult(
+                studyTitle,
+                specs,
+                [],
+                DeduplicateNotes(notes),
+                Rules: compiledRules,
+                StudyOid: studyOid,
+                Epochs: epochs,
+                PlannedActivities: plannedActivities);
+    }
+
+    private static (IReadOnlyList<Epoch> Epochs, IReadOnlyList<PlannedActivity> PlannedActivities) ParseStudySchedule(
+        XElement mdv,
+        IReadOnlyDictionary<string, XElement> studyEventDefs,
+        IReadOnlyDictionary<string, string> formIdByOid,
+        HashSet<string> usedIds,
+        List<ProtocolImportNote> notes,
+        List<string> problems)
+    {
+        var protocolEl = Child(mdv, "Protocol");
+        var rawEventRefs = protocolEl is not null ? Children(protocolEl, "StudyEventRef").ToList() : [];
+        var scheduledEntries = new List<(XElement? EventRef, string EventOid, XElement EventDef)>();
+
+        if (protocolEl is null || rawEventRefs.Count == 0)
+        {
+            if (studyEventDefs.Count > 0)
+            {
+                notes.Add(new ProtocolImportNote(
+                    "ODM/Protocol",
+                    "ODM <MetaDataVersion> omitted <Protocol>/<StudyEventRef> event references; scheduled <StudyEventDef> visits in document order."));
+                foreach (var eventDef in Children(mdv, "StudyEventDef"))
+                {
+                    var oid = Attr(eventDef, "OID");
+                    if (!string.IsNullOrWhiteSpace(oid))
+                    {
+                        scheduledEntries.Add((null, oid, eventDef));
+                    }
+                }
+            }
+            else
+            {
+                notes.Add(new ProtocolImportNote(
+                    "ODM/Protocol",
+                    "ODM <MetaDataVersion> omitted <Protocol>/<StudyEventRef> event references; imported eCRF forms without scheduled visits."));
+                return ([], []);
+            }
+        }
+        else
+        {
+            var orderedEventRefs = OrderRefs(rawEventRefs, "Protocol", "StudyEventRef", problems);
+            var referencedEventOids = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var eventRef in orderedEventRefs)
+            {
+                var eventOid = Attr(eventRef, "StudyEventOID");
+                if (string.IsNullOrWhiteSpace(eventOid))
+                {
+                    problems.Add("ODM <Protocol> has a <StudyEventRef> without a StudyEventOID attribute.");
+                    continue;
+                }
+
+                ValidateYesNoAttribute(eventRef, "Mandatory", $"Protocol StudyEventRef '{eventOid}'", problems);
+                if (!studyEventDefs.TryGetValue(eventOid, out var eventDef))
+                {
+                    problems.Add($"ODM <Protocol> references StudyEventOID '{eventOid}', which does not exist in <MetaDataVersion>.");
+                    continue;
+                }
+
+                referencedEventOids.Add(eventOid);
+                scheduledEntries.Add((eventRef, eventOid, eventDef));
+            }
+
+            foreach (var eventDef in Children(mdv, "StudyEventDef"))
+            {
+                var oid = Attr(eventDef, "OID");
+                if (!string.IsNullOrWhiteSpace(oid) && !referencedEventOids.Contains(oid))
+                {
+                    var unrefName = FirstNonBlank(Attr(eventDef, "Name"), TranslatedText(Child(eventDef, "Description")), oid)!;
+                    notes.Add(new ProtocolImportNote(
+                        oid,
+                        $"ODM <StudyEventDef> '{unrefName}' ({oid}) is not referenced by <Protocol>/<StudyEventRef> and was omitted from the schedule."));
+                }
+            }
+        }
+
+        if (problems.Count > 0 || scheduledEntries.Count == 0)
+        {
+            return ([], []);
+        }
+
+        var epochs = new List<Epoch>();
+        var epochByKey = new Dictionary<string, Epoch>(StringComparer.OrdinalIgnoreCase);
+        var activities = new List<PlannedActivity>(scheduledEntries.Count);
+
+        foreach (var (eventRef, eventOid, eventDef) in scheduledEntries)
+        {
+            var eventName = FirstNonBlank(
+                Attr(eventDef, "Name"),
+                TranslatedText(Child(eventDef, "Description")),
+                eventOid)!;
+            var eventType = Attr(eventDef, "Type");
+            var isUnscheduled = string.Equals(eventType, "Unscheduled", StringComparison.OrdinalIgnoreCase);
+
+            if (string.Equals(Attr(eventDef, "Repeating"), "Yes", StringComparison.OrdinalIgnoreCase))
+            {
+                notes.Add(new ProtocolImportNote(
+                    eventOid,
+                    $"StudyEventDef '{eventName}' declares Repeating='Yes'; represented as a scheduled planned activity."));
+            }
+
+            var epochName = ResolveEpochName(eventRef, eventDef, isUnscheduled);
+            if (!epochByKey.TryGetValue(epochName, out var epoch))
+            {
+                var epochCandidate = $"Epoch_{epochName}";
+                var epochId = AllocateUniqueElementId(epochCandidate, "Epoch", usedIds);
+                epoch = new Epoch(epochId, epochName, epochs.Count + 1);
+                epochs.Add(epoch);
+                epochByKey[epochName] = epoch;
+            }
+
+            var orderedFormRefs = OrderRefs(Children(eventDef, "FormRef"), eventOid, "FormRef", problems);
+            var collectionSpecIds = new List<string>();
+            if (orderedFormRefs.Count == 0)
+            {
+                notes.Add(new ProtocolImportNote(
+                    eventOid,
+                    $"StudyEventDef '{eventName}' ({eventOid}) contains no <FormRef> elements; scheduled visit collects no forms."));
+            }
+
+            foreach (var formRef in orderedFormRefs)
+            {
+                var formOid = Attr(formRef, "FormOID");
+                if (string.IsNullOrWhiteSpace(formOid))
+                {
+                    problems.Add($"StudyEventDef '{eventOid}' has a <FormRef> without a FormOID attribute.");
+                    continue;
+                }
+
+                ValidateYesNoAttribute(formRef, "Mandatory", $"StudyEventDef '{eventOid}' FormRef '{formOid}'", problems);
+                if (!formIdByOid.TryGetValue(formOid, out var specId))
+                {
+                    problems.Add($"StudyEventDef '{eventOid}' references FormOID '{formOid}', which does not exist in <MetaDataVersion>.");
+                    continue;
+                }
+
+                if (!collectionSpecIds.Contains(specId, StringComparer.Ordinal))
+                {
+                    collectionSpecIds.Add(specId);
+                }
+            }
+
+            var timing = ExtractEventTiming(eventRef, eventDef, eventOid, eventName, isUnscheduled, notes);
+            var activityId = AllocateUniqueElementId(eventOid, "Visit", usedIds);
+            activities.Add(new PlannedActivity(
+                activityId,
+                eventName,
+                epoch.Id,
+                [ActivityLocation.Site],
+                collectionSpecIds,
+                timing));
+        }
+
+        return (epochs, activities);
+    }
+
+    private static string ResolveEpochName(XElement? eventRef, XElement eventDef, bool isUnscheduled)
+    {
+        var explicitCategory = FirstNonBlank(
+            Attr(eventDef, "Category"),
+            FindAliasValue(eventRef, "epoch", "studyepoch", "phase"),
+            FindAliasValue(eventDef, "epoch", "studyepoch", "phase"));
+        if (!string.IsNullOrWhiteSpace(explicitCategory))
+        {
+            return explicitCategory;
+        }
+
+        return isUnscheduled ? "Unscheduled" : "Study Schedule";
+    }
+
+    private static ActivityTiming? ExtractEventTiming(
+        XElement? eventRef,
+        XElement eventDef,
+        string eventOid,
+        string eventName,
+        bool isUnscheduled,
+        List<ProtocolImportNote> notes)
+    {
+        var rawDay = FirstNonBlank(
+            FindAttributeAnyNamespace(eventRef, "StudyDay", "TargetDay", "PlannedDay", "Day"),
+            FindAttributeAnyNamespace(eventDef, "StudyDay", "TargetDay", "PlannedDay", "Day"),
+            FindAliasValue(eventRef, "studyday", "targetday", "plannedday", "day"),
+            FindAliasValue(eventDef, "studyday", "targetday", "plannedday", "day"));
+
+        var rawBefore = FirstNonBlank(
+            FindAttributeAnyNamespace(eventRef, "WindowBefore", "WindowLower", "StudyEventWindowBefore", "MinWindow"),
+            FindAttributeAnyNamespace(eventDef, "WindowBefore", "WindowLower", "StudyEventWindowBefore", "MinWindow"),
+            FindAliasValue(eventRef, "windowbefore", "windowlower", "studyeventwindowbefore", "minwindow"),
+            FindAliasValue(eventDef, "windowbefore", "windowlower", "studyeventwindowbefore", "minwindow"));
+
+        var rawAfter = FirstNonBlank(
+            FindAttributeAnyNamespace(eventRef, "WindowAfter", "WindowUpper", "StudyEventWindowAfter", "MaxWindow"),
+            FindAttributeAnyNamespace(eventDef, "WindowAfter", "WindowUpper", "StudyEventWindowAfter", "MaxWindow"),
+            FindAliasValue(eventRef, "windowafter", "windowupper", "studyeventwindowafter", "maxwindow"),
+            FindAliasValue(eventDef, "windowafter", "windowupper", "studyeventwindowafter", "maxwindow"));
+
+        var rawCombinedWindow = FirstNonBlank(
+            FindAttributeAnyNamespace(eventRef, "VisitWindow", "Window"),
+            FindAttributeAnyNamespace(eventDef, "VisitWindow", "Window"),
+            FindAliasValue(eventRef, "visitwindow", "window"),
+            FindAliasValue(eventDef, "visitwindow", "window"));
+
+        int? studyDay = TryParseSignedInt(rawDay);
+        bool hasExplicitWindow = false;
+        int windowBefore = 0;
+        int windowAfter = 0;
+
+        if (studyDay is null)
+        {
+            var rawCompositeTiming = FirstNonBlank(
+                FindAliasValue(eventRef, "timing", "schedule"),
+                FindAliasValue(eventDef, "timing", "schedule"));
+            if (TryParseCompositeTiming(rawCompositeTiming, out var compDay, out var compBefore, out var compAfter, out var compHasWindow))
+            {
+                studyDay = compDay;
+                windowBefore = compBefore;
+                windowAfter = compAfter;
+                hasExplicitWindow = compHasWindow;
+            }
+        }
+
+        if (TryParseNonNegativeWindow(rawBefore, out var parsedBefore))
+        {
+            windowBefore = parsedBefore;
+            hasExplicitWindow = true;
+        }
+
+        if (TryParseNonNegativeWindow(rawAfter, out var parsedAfter))
+        {
+            windowAfter = parsedAfter;
+            hasExplicitWindow = true;
+        }
+
+        if (!hasExplicitWindow && TryParseCombinedWindow(rawCombinedWindow, out var combBefore, out var combAfter))
+        {
+            windowBefore = combBefore;
+            windowAfter = combAfter;
+            hasExplicitWindow = true;
+        }
+
+        if (studyDay is null)
+        {
+            if (isUnscheduled)
+            {
+                notes.Add(new ProtocolImportNote(
+                    eventOid,
+                    $"StudyEventDef '{eventName}' ({eventOid}) is Type='Unscheduled' and omits timing windows; imported as an event-driven visit."));
+            }
+            else
+            {
+                notes.Add(new ProtocolImportNote(
+                    eventOid,
+                    $"StudyEventDef '{eventName}' ({eventOid}) omitted timing window metadata; imported visit without fixed study-day timing windows."));
+            }
+
+            return null;
+        }
+
+        if (!hasExplicitWindow)
+        {
+            notes.Add(new ProtocolImportNote(
+                eventOid,
+                $"StudyEventDef '{eventName}' ({eventOid}) omitted timing windows around Study Day {studyDay.Value}; defaulted visit window to 0 days."));
+        }
+
+        return new ActivityTiming(studyDay.Value, windowBefore, windowAfter);
+    }
+
+    private static string? FindAliasValue(XElement? container, params string[] normalizedContexts)
+    {
+        if (container is null)
+        {
+            return null;
+        }
+
+        foreach (var alias in Children(container, "Alias"))
+        {
+            var ctx = NormalizeAliasContext(Attr(alias, "Context"))
+                .Replace("_", string.Empty, StringComparison.Ordinal)
+                .Replace("-", string.Empty, StringComparison.Ordinal)
+                .Replace(" ", string.Empty, StringComparison.Ordinal);
+            var name = Attr(alias, "Name");
+            if (!string.IsNullOrWhiteSpace(name)
+                && normalizedContexts.Any(expected => string.Equals(ctx, expected, StringComparison.OrdinalIgnoreCase)))
+            {
+                return name.Trim();
+            }
+        }
+
+        return null;
+    }
+
+    private static string? FindAttributeAnyNamespace(XElement? element, params string[] localNames)
+    {
+        if (element is null)
+        {
+            return null;
+        }
+
+        foreach (var attr in element.Attributes())
+        {
+            if (attr.IsNamespaceDeclaration)
+            {
+                continue;
+            }
+
+            if (localNames.Any(expected => string.Equals(attr.Name.LocalName, expected, StringComparison.OrdinalIgnoreCase))
+                && !string.IsNullOrWhiteSpace(attr.Value))
+            {
+                return attr.Value.Trim();
+            }
+        }
+
+        return null;
+    }
+
+    private static int? TryParseSignedInt(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var trimmed = raw.Trim();
+        if (trimmed.StartsWith("Day", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = trimmed[3..].Trim();
+        }
+
+        return int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : null;
+    }
+
+    private static bool TryParseNonNegativeWindow(string? raw, out int days)
+    {
+        days = 0;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return false;
+        }
+
+        var cleaned = raw.Trim().TrimStart('+', '-', '±');
+        if (cleaned.EndsWith("days", StringComparison.OrdinalIgnoreCase))
+        {
+            cleaned = cleaned[..^4].Trim();
+        }
+        else if (cleaned.EndsWith("day", StringComparison.OrdinalIgnoreCase) || cleaned.EndsWith("d", StringComparison.OrdinalIgnoreCase))
+        {
+            cleaned = cleaned.TrimEnd('d', 'D', 'a', 'A', 'y', 'Y').Trim();
+        }
+
+        if (int.TryParse(cleaned, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) && parsed >= 0)
+        {
+            days = parsed;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParseCombinedWindow(string? raw, out int before, out int after)
+    {
+        before = 0;
+        after = 0;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return false;
+        }
+
+        var trimmed = raw.Trim();
+        if (trimmed.StartsWith('±') || trimmed.StartsWith("+/-", StringComparison.Ordinal))
+        {
+            var symmetric = trimmed.StartsWith('±') ? trimmed[1..] : trimmed[3..];
+            if (TryParseNonNegativeWindow(symmetric, out var symDays))
+            {
+                before = symDays;
+                after = symDays;
+                return true;
+            }
+        }
+
+        var parts = trimmed.Split(["..", "/", ","], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 2
+            && TryParseNonNegativeWindow(parts[0], out var b)
+            && TryParseNonNegativeWindow(parts[1], out var a))
+        {
+            before = b;
+            after = a;
+            return true;
+        }
+
+        if (TryParseNonNegativeWindow(trimmed, out var single))
+        {
+            before = single;
+            after = single;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParseCompositeTiming(
+        string? raw,
+        out int day,
+        out int before,
+        out int after,
+        out bool hasWindow)
+    {
+        day = 0;
+        before = 0;
+        after = 0;
+        hasWindow = false;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return false;
+        }
+
+        var trimmed = raw.Trim();
+        if (trimmed.StartsWith("Day", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = trimmed[3..].Trim();
+        }
+
+        var tokens = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (tokens.Length == 0 || !int.TryParse(tokens[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out day))
+        {
+            return false;
+        }
+
+        if (tokens.Length >= 2)
+        {
+            var rest = string.Join(' ', tokens[1..]);
+            if (TryParseCombinedWindow(rest, out before, out after))
+            {
+                hasWindow = true;
+            }
+        }
+
+        return true;
     }
 
     private static async Task<CollectionItem?> BuildItemAsync(

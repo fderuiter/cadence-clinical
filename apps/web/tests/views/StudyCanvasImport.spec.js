@@ -41,6 +41,7 @@ vi.mock("../../src/api/kernelApi", async (importOriginal) => {
       listProtocolTemplates: vi.fn(async () => []),
       getProtocolDesignSummary: vi.fn(),
       importProtocolDraft: vi.fn(),
+      canI: vi.fn(),
     },
   };
 });
@@ -512,5 +513,108 @@ describe("Clinical Canvas study directory, study creation, and ODM/USDM protocol
       node: draftVersion.ref,
     });
     expect(alertSpy).not.toHaveBeenCalled();
+  });
+
+  it("probes study.register on tenant via kernelApi.canI and disables #create-study-form with inline KernelExplanation when denied", async () => {
+    vi.mocked(kernelApi.canI).mockResolvedValueOnce({
+      capability: "study.register",
+      verb_class: "Execute",
+      resource: "tenant",
+      permitted: false,
+      reason: "Your account cannot register new studies in this workspace.",
+      explanation: {
+        subject: "tenant",
+        claim: "Caller holds no active grant with study.register on tenant.",
+        producer: "kernel.authorization",
+        steps: [],
+        conditions: [
+          {
+            code: "grant.active",
+            description: "Request Sponsor Admin grant on tenant",
+            met: false,
+            evidence: [],
+          },
+        ],
+        next_actions: [],
+      },
+    });
+
+    await open("/studies");
+
+    expect(kernelApi.canI).toHaveBeenCalledWith("study.register", "tenant");
+    const denied = wrapper.find("#create-study-denied");
+    expect(denied.exists()).toBe(true);
+    expect(denied.text()).toContain(
+      "Your account cannot register new studies in this workspace."
+    );
+    expect(wrapper.find("#create-study-code").attributes()).toHaveProperty(
+      "disabled"
+    );
+    expect(wrapper.find("#btn-create-study").attributes()).toHaveProperty(
+      "disabled"
+    );
+
+    await wrapper.find("#btn-explain-create-study").trigger("click");
+    await flushPromises();
+    expect(denied.text()).toContain(
+      "Caller holds no active grant with study.register on tenant."
+    );
+    expect(denied.text()).toContain("Request Sponsor Admin grant on tenant");
+  });
+
+  it("displays imported epoch and visit counts and hands off to Draft governance review", async () => {
+    const draftVersion = {
+      ref: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000c8@1",
+      study: DEMO_STUDY.ref,
+      number: 1,
+      parent_version: null,
+      status: "Draft",
+      content_hash: null,
+      amendment_intent: null,
+      approval_attestation: null,
+      withdrawal_reason: null,
+      mask: null,
+    };
+    const draftSummary = {
+      version: draftVersion,
+      title: "CADENCE-101 Scheduled ODM Draft",
+      form_count: 2,
+      item_count: 6,
+      epoch_count: 2,
+      planned_activity_count: 3,
+      forms: [],
+      import_notes: [
+        {
+          source: "SE.DAY7",
+          message:
+            "StudyEventDef 'SE.DAY7' omits timing windows; visit windows defaulted to 0 days.",
+        },
+      ],
+    };
+    vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([draftVersion]);
+    vi.mocked(kernelApi.getProtocolVersion).mockResolvedValue(draftVersion);
+    vi.mocked(kernelApi.getProtocolDesignSummary).mockResolvedValue(
+      draftSummary
+    );
+
+    await open("/studies/CADENCE-101?stage=design&section=protocol-versions");
+
+    expect(wrapper.find("#protocol-import-summary-counts").text()).toContain(
+      "2 epochs"
+    );
+    expect(wrapper.find("#protocol-import-summary-counts").text()).toContain(
+      "3 visits"
+    );
+    expect(wrapper.find("#protocol-import-notes").text()).toContain(
+      "StudyEventDef 'SE.DAY7' omits timing windows"
+    );
+
+    const governBtn = wrapper.find("#protocol-import-govern-draft");
+    expect(governBtn.exists()).toBe(true);
+    expect(governBtn.text()).toContain("Review & submit Version 1");
+    await governBtn.trigger("click");
+    await router.isReady();
+    await flushPromises();
+    expect(router.currentRoute.value.query.node).toBe(draftVersion.ref);
   });
 });

@@ -12,6 +12,15 @@ namespace Cadence.Kernel.Commands;
 /// per scope.
 /// </summary>
 [KernelCapability("effectivity.declare", VerbClass.Execute, Resource = nameof(ProtocolVersionId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(EffectivityErrors),
+    nameof(EffectivityErrors.ScopeInvalid),
+    nameof(EffectivityErrors.ProtocolVersionUnknown),
+    nameof(EffectivityErrors.ProtocolVersionWithdrawn),
+    nameof(EffectivityErrors.StudySiteNotInStudy),
+    nameof(EffectivityErrors.AlreadyDeclared),
+    nameof(EffectivityErrors.TransitionTimeInvalid))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record DeclareEffectivity(
     TenantId TenantId,
@@ -29,6 +38,14 @@ public sealed record DeclareEffectivity(
 /// be approved.
 /// </summary>
 [KernelCapability("effectivity.change_status", VerbClass.Approve, Resource = nameof(EffectivityId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.ConcurrencyConflict))]
+[RaisesKernelErrors(
+    typeof(EffectivityErrors),
+    nameof(EffectivityErrors.ProtocolVersionNotApproved),
+    nameof(EffectivityErrors.InvalidTransition),
+    nameof(EffectivityErrors.TransitionTimeInvalid),
+    nameof(EffectivityErrors.EvidenceRequired),
+    nameof(EffectivityErrors.EvidenceInvalid))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ChangeEffectivityStatus(
     TenantId TenantId,
@@ -43,6 +60,11 @@ public sealed record ChangeEffectivityStatus(
 /// Activates a study site (spec §7.1). It needs at least one protocol version in force at the site now (K-TIME-4).
 /// </summary>
 [KernelCapability("study_site.activate", VerbClass.Approve, Resource = nameof(StudySiteId))]
+[RaisesKernelErrors(
+    typeof(EffectivityErrors),
+    nameof(EffectivityErrors.StudySiteUnknown),
+    nameof(EffectivityErrors.StudySiteAlreadyActive),
+    nameof(EffectivityErrors.NoEffectiveVersion))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ActivateStudySite(
     TenantId TenantId,

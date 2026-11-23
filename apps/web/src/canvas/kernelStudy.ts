@@ -393,6 +393,7 @@ export function getCachedEnrollmentStudySiteRef(
 export interface StudySiteOption {
   code: string;
   label: string;
+  status?: string;
 }
 
 /**
@@ -444,9 +445,11 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
                     ? `${name} (${country})`
                     : name
                   : country || "";
+              const status = item.status?.trim();
               byCode.set(code, {
                 code,
                 label: detail ? `${code} — ${detail}` : code,
+                ...(status ? { status } : {}),
               });
             }
             const options = Array.from(byCode.values()).sort((a, b) =>
@@ -475,8 +478,13 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
         const code = child.node.code?.trim();
         if (!code || byCode.has(code)) continue;
         const title = child.node.title?.trim();
+        const status = child.node.status?.trim();
         const label = title && title !== code ? `${code} — ${title}` : code;
-        byCode.set(code, { code, label });
+        byCode.set(code, {
+          code,
+          label,
+          ...(status ? { status } : {}),
+        });
       }
       const options = Array.from(byCode.values()).sort((a, b) =>
         a.code.localeCompare(b.code)
@@ -645,8 +653,8 @@ function buildScheduleEpochs(
 }
 
 /**
- * Structured form and visit choices from the study's active (or latest visible) protocol version's Schedule of
- * Activities (ADR-2475), or null when the kernel has no visible protocol version or schedule for the study.
+ * Structured form and visit choices from the study's Approved governing protocol version's Schedule of
+ * Activities (ADR-2475), or null when the study has no visible Approved protocol version or schedule.
  */
 export function findStudyScheduleOptions(
   studyCode: string
@@ -679,9 +687,9 @@ export function findStudyScheduleOptions(
       const studyRef = await findKernelStudyRef(trimmed);
       if (!studyRef) return null;
       const versions = await kernelApi.listProtocolVersions(studyRef);
-      const chosen =
-        versions.find((v) => v.ref && !v.mask && v.status === "Approved") ??
-        versions.find((v) => v.ref && !v.mask);
+      const chosen = versions.find(
+        (v) => v.ref && !v.mask && v.status === "Approved"
+      );
       if (!chosen?.ref) return null;
       const soa = await kernelApi.getScheduleOfActivities(chosen.ref);
       const rawColumns = Array.isArray(soa.columns) ? soa.columns : [];

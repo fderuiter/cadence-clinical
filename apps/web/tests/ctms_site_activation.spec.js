@@ -15,8 +15,10 @@ vi.mock("../src/api/kernelApi", () => ({
   kernelApi: {
     search: vi.fn().mockResolvedValue([]),
     getChildren: vi.fn().mockResolvedValue([]),
+    listProtocolVersions: vi.fn().mockResolvedValue([]),
     canI: vi.fn(),
   },
+  isMasked: (obj) => Boolean(obj?.mask),
   describeKernelError: (err) => err?.message ?? String(err),
 }));
 
@@ -25,6 +27,11 @@ vi.mock("../src/api/kernelGovernanceApi", () => ({
     listStudySites: vi.fn(async () => []),
     linkStudySite: vi.fn(),
     activateStudySite: vi.fn(),
+    listStudyArtifacts: vi.fn(async () => []),
+    registerStudyArtifact: vi.fn(),
+    listStudyEffectivities: vi.fn(async () => []),
+    declareProtocolEffectivity: vi.fn(),
+    changeEffectivityStatus: vi.fn(),
   },
 }));
 
@@ -117,11 +124,20 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     vi.mocked(kernelApi.search).mockResolvedValue([]);
     vi.mocked(kernelApi.getChildren).mockReset();
     vi.mocked(kernelApi.getChildren).mockResolvedValue([]);
+    vi.mocked(kernelApi.listProtocolVersions).mockReset();
+    vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([]);
     vi.mocked(kernelApi.canI).mockReset();
     vi.mocked(kernelGovernanceApi.listStudySites).mockReset();
     vi.mocked(kernelGovernanceApi.listStudySites).mockResolvedValue([]);
     vi.mocked(kernelGovernanceApi.linkStudySite).mockReset();
     vi.mocked(kernelGovernanceApi.activateStudySite).mockReset();
+    vi.mocked(kernelGovernanceApi.listStudyArtifacts).mockReset();
+    vi.mocked(kernelGovernanceApi.listStudyArtifacts).mockResolvedValue([]);
+    vi.mocked(kernelGovernanceApi.registerStudyArtifact).mockReset();
+    vi.mocked(kernelGovernanceApi.listStudyEffectivities).mockReset();
+    vi.mocked(kernelGovernanceApi.listStudyEffectivities).mockResolvedValue([]);
+    vi.mocked(kernelGovernanceApi.declareProtocolEffectivity).mockReset();
+    vi.mocked(kernelGovernanceApi.changeEffectivityStatus).mockReset();
     vi.mocked(ctmsApi.listSiteMilestones).mockReset();
     vi.mocked(ctmsApi.listSiteMilestones).mockResolvedValue([]);
     vi.mocked(ctmsApi.listMonitoringVisits).mockReset();
@@ -767,5 +783,175 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     expect(executionApi.listRandomizationSchemes).toHaveBeenCalledWith(
       "CADENCE-101"
     );
+  });
+
+  it("registers approval evidence, declares and transitions protocol effectivity to Effective, and unlocks kernel site activation in Start", async () => {
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.rawRoles = ["Sponsor Admin"];
+    routeQuery.value = { studyId: "CAD-101", siteId: "SITE-7" };
+
+    const STUDY_REF = "study:0192f3c4-5e6a-7b8c-9d0e-000000000010@1";
+    const STUDY_SITE_REF = "study_site:0192f3c4-5e6a-7b8c-9d0e-000000000020@1";
+    const V1_REF = "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000b1@3";
+    const ART_VER_REF = "artifact_version:0192f3c4-5e6a-7b8c-9d0e-0000000000c1";
+    const EFF_REF = "effectivity:0192f3c4-5e6a-7b8c-9d0e-0000000000d1";
+    const IRB_SHA =
+      "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    const artifacts = [];
+    let siteState = {
+      study_site_ref: STUDY_SITE_REF,
+      study_ref: STUDY_REF,
+      site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-000000000021@1",
+      site_code: "SITE-7",
+      site_name: "Metro Heart Institute",
+      country: "US",
+      status: "Selected",
+      effective_versions: [],
+    };
+
+    vi.mocked(executionApi.getSiteComplianceStatus).mockResolvedValue(status());
+    vi.mocked(kernelApi.search).mockResolvedValue([
+      {
+        ref: STUDY_REF,
+        kind: "study",
+        code: "CAD-101",
+        title: "Cadence 101",
+        exact_code: true,
+      },
+    ]);
+    vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([
+      {
+        ref: V1_REF,
+        study: STUDY_REF,
+        number: 1,
+        status: "Approved",
+        content_hash: "sha256:aa",
+        mask: null,
+      },
+    ]);
+    vi.mocked(kernelGovernanceApi.listStudySites).mockImplementation(
+      async () => [siteState]
+    );
+    vi.mocked(kernelGovernanceApi.listStudyArtifacts).mockImplementation(
+      async () => [...artifacts]
+    );
+    vi.mocked(kernelGovernanceApi.registerStudyArtifact).mockImplementation(
+      async (payload) => {
+        const created = {
+          artifact_ref: "artifact:0192f3c4-5e6a-7b8c-9d0e-0000000000c0",
+          artifact_version_ref: ART_VER_REF,
+          kind: payload.kind,
+          title: payload.title,
+          version_number: 1,
+          content_hash: payload.contentHash,
+        };
+        artifacts.push(created);
+        return created;
+      }
+    );
+    vi.mocked(kernelGovernanceApi.declareProtocolEffectivity).mockResolvedValue(
+      {
+        effectivity_ref: EFF_REF,
+        effectivity_id: "0192f3c4-5e6a-7b8c-9d0e-0000000000d1",
+        study_ref: STUDY_REF,
+        protocol_version_ref: V1_REF,
+        protocol_version_number: 1,
+        scope_level: "StudySite",
+        status: "Pending",
+      }
+    );
+    vi.mocked(kernelGovernanceApi.changeEffectivityStatus).mockImplementation(
+      async () => {
+        siteState = {
+          ...siteState,
+          effective_versions: [
+            {
+              protocol_version_ref: V1_REF,
+              number: 1,
+              effectivity_ref: EFF_REF,
+              scope_level: "StudySite",
+            },
+          ],
+        };
+        return {
+          effectivity_ref: EFF_REF,
+          status: "Effective",
+        };
+      }
+    );
+    vi.mocked(kernelGovernanceApi.activateStudySite).mockImplementation(
+      async () => {
+        siteState = { ...siteState, status: "Active" };
+        return siteState;
+      }
+    );
+
+    const wrapper = await mountView();
+
+    // Initially no protocol is effective for SITE-7, so kernel site activation is disabled and Start effectivity controls show
+    expect(wrapper.find("#kernel-start-effectivity-controls").exists()).toBe(
+      true
+    );
+    expect(
+      wrapper.find("#btn-activate-kernel-site").attributes()
+    ).toHaveProperty("disabled");
+
+    // 1. Register IRB artifact directly from Start
+    await wrapper.find("#start-artifact-title").setValue("Site 7 IRB Letter");
+    await wrapper.find("#start-artifact-hash").setValue(IRB_SHA);
+    await wrapper
+      .find("#start-artifact-reason")
+      .setValue("Register local IRB approval for SITE-7");
+    await wrapper.find("#btn-start-register-artifact").trigger("click");
+    await flushPromises();
+
+    expect(kernelGovernanceApi.registerStudyArtifact).toHaveBeenCalledWith(
+      expect.objectContaining({
+        studyRef: STUDY_REF,
+        kind: "EthicsApproval",
+        title: "Site 7 IRB Letter",
+        contentHash: IRB_SHA,
+      })
+    );
+
+    // 2. Declare & mark protocol v1 Effective for StudySite
+    await wrapper.find("#start-effectivity-scope").setValue("StudySite");
+    await wrapper
+      .find("#start-effectivity-reason")
+      .setValue("Make protocol v1 effective at SITE-7");
+    await wrapper.find("#btn-start-make-effective").trigger("click");
+    await flushPromises();
+
+    expect(kernelGovernanceApi.declareProtocolEffectivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        versionRef: V1_REF,
+        scopeLevel: "StudySite",
+        studySiteRef: STUDY_SITE_REF,
+      })
+    );
+    expect(kernelGovernanceApi.changeEffectivityStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        effectivityRef: EFF_REF,
+        status: "Effective",
+        evidenceRefs: [ART_VER_REF],
+      })
+    );
+
+    // 3. Activate kernel site now that an Effective protocol governs SITE-7
+    await wrapper
+      .find("#kernel-site-activate-reason")
+      .setValue("Activate SITE-7 for participant screening");
+    await wrapper.find("#btn-activate-kernel-site").trigger("click");
+    await flushPromises();
+
+    expect(kernelGovernanceApi.activateStudySite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        studySiteRef: STUDY_SITE_REF,
+        reason: "Activate SITE-7 for participant screening",
+      })
+    );
+    expect(wrapper.find("#kernel-site-active-banner").exists()).toBe(true);
   });
 });

@@ -19,13 +19,18 @@
       autocomplete="off"
       required
     />
-    <label for="add-participant-site">
-      {{
-        restrictToOptions && siteOptions.length > 0 ? "Site" : "Site (optional)"
-      }}
-    </label>
+    <label for="add-participant-site">Site</label>
+    <template v-if="hasInactiveStudySites && siteOptions.length === 0">
+      <select id="add-participant-site" disabled required>
+        <option value="">No active study sites available</option>
+      </select>
+      <p id="add-participant-no-active-sites" class="hint" role="status">
+        Activate a linked study site in Start before adding participants in
+        screening.
+      </p>
+    </template>
     <select
-      v-if="restrictToOptions && siteOptions.length > 0"
+      v-else-if="siteOptions.length > 0"
       id="add-participant-site"
       v-model="siteId"
       required
@@ -38,25 +43,16 @@
         {{ option.label }}
       </option>
     </select>
-    <template v-else>
-      <input
-        id="add-participant-site"
-        v-model="siteId"
-        type="text"
-        maxlength="255"
-        autocomplete="off"
-        :list="siteOptions.length > 0 ? 'add-participant-site-list' : undefined"
-      />
-      <datalist v-if="siteOptions.length > 0" id="add-participant-site-list">
-        <option
-          v-for="option in siteOptions"
-          :key="option.code"
-          :value="option.code"
-        >
-          {{ option.label }}
-        </option>
-      </datalist>
-    </template>
+    <input
+      v-else
+      id="add-participant-site"
+      v-model="siteId"
+      type="text"
+      maxlength="255"
+      autocomplete="off"
+      placeholder="e.g. SITE-101"
+      required
+    />
     <label for="add-participant-reason">Reason</label>
     <textarea
       id="add-participant-reason"
@@ -70,7 +66,13 @@
         id="btn-confirm-add-participant"
         type="submit"
         class="btn btn-primary"
-        :disabled="busy || !subjectCode.trim() || !reason.trim()"
+        :disabled="
+          busy ||
+          (hasInactiveStudySites && siteOptions.length === 0) ||
+          !subjectCode.trim() ||
+          !siteId.trim() ||
+          !reason.trim()
+        "
       >
         Add participant
       </button>
@@ -103,10 +105,12 @@ const props = withDefaults(
     defaultSiteId: string;
     siteOptions?: ReadonlyArray<StudySiteOption>;
     restrictToOptions?: boolean;
+    hasInactiveStudySites?: boolean;
   }>(),
   {
     siteOptions: () => [],
     restrictToOptions: false,
+    hasInactiveStudySites: false,
   }
 );
 const emit = defineEmits<{
@@ -118,9 +122,7 @@ const canvas = useStudyCanvasStore();
 const subjectCode = ref("");
 const siteId = ref(
   props.defaultSiteId ||
-    (props.restrictToOptions && props.siteOptions.length > 0
-      ? props.siteOptions[0].code
-      : "")
+    (props.siteOptions.length > 0 ? props.siteOptions[0].code : "")
 );
 const reason = ref("");
 const busy = ref(false);
@@ -133,30 +135,42 @@ watch(
   () =>
     [props.defaultSiteId, props.restrictToOptions, props.siteOptions] as const,
   ([nextDefault, restricted, options]) => {
-    if (!siteId.value && nextDefault) {
+    if (options.length > 0) {
+      if (!siteId.value) {
+        siteId.value = nextDefault || options[0].code;
+      } else if (
+        restricted &&
+        !options.some(
+          (o) => o.code.toLowerCase() === siteId.value.toLowerCase()
+        )
+      ) {
+        const matchedDefault = options.find(
+          (o) => o.code.toLowerCase() === nextDefault.toLowerCase()
+        );
+        siteId.value = matchedDefault?.code ?? options[0].code;
+      }
+    } else if (!siteId.value && nextDefault) {
       siteId.value = nextDefault;
-    } else if (
-      restricted &&
-      options.length > 0 &&
-      !options.some((o) => o.code === siteId.value)
-    ) {
-      siteId.value = nextDefault || options[0].code;
     }
   }
 );
 
 async function submit() {
   const code = subjectCode.value.trim();
+  const site = siteId.value.trim();
   const why = reason.value.trim();
-  if (!code || !why || busy.value) return;
+  if (
+    !code ||
+    !site ||
+    !why ||
+    busy.value ||
+    (props.hasInactiveStudySites && props.siteOptions.length === 0)
+  ) {
+    return;
+  }
   busy.value = true;
   try {
-    const result = await addParticipantMutation(
-      canvas,
-      code,
-      siteId.value.trim(),
-      why
-    );
+    const result = await addParticipantMutation(canvas, code, site, why);
     // When adding fails nothing was created: keep the form so the user can correct it.
     if (result.added) emit("added", result.participant);
   } finally {
@@ -193,6 +207,7 @@ async function submit() {
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
+  font-size: 1rem;
 }
 
 .buttons {

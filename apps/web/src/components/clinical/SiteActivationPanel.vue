@@ -317,9 +317,215 @@
         </p>
 
         <div
-          v-if="matchedKernelSite.status !== 'Active' && canManageKernelSites"
-          class="activate"
+          v-if="
+            matchedKernelSite.status !== 'Active' &&
+            !matchedKernelSite.effective_versions?.length
+          "
+          id="kernel-start-effectivity-controls"
+          class="kernel-effectivity-box"
         >
+          <template
+            v-if="approvedProtocolVersions.length > 0 && canManageKernelSites"
+          >
+            <h5 class="kernel-subheading">
+              Make approved protocol effective for
+              {{ matchedKernelSite.site_code || siteCode.trim() }} (K-TIME-5)
+            </h5>
+            <div
+              v-if="approvalEvidenceArtifacts.length === 0"
+              class="kernel-link-controls"
+            >
+              <div class="kernel-link-grid">
+                <div class="kernel-field">
+                  <label for="start-artifact-kind"
+                    >Approval evidence kind</label
+                  >
+                  <select
+                    id="start-artifact-kind"
+                    v-model="startArtifactKind"
+                    class="kernel-input"
+                    :disabled="kernelBusy"
+                  >
+                    <option value="EthicsApproval">EthicsApproval</option>
+                    <option value="RegulatoryApproval">
+                      RegulatoryApproval
+                    </option>
+                    <option value="CtaAcknowledgement">
+                      CtaAcknowledgement
+                    </option>
+                  </select>
+                </div>
+                <div class="kernel-field">
+                  <label for="start-artifact-title">Document title</label>
+                  <input
+                    id="start-artifact-title"
+                    v-model="startArtifactTitle"
+                    type="text"
+                    class="kernel-input"
+                    placeholder="e.g. Site IRB Approval Letter v1"
+                    :disabled="kernelBusy"
+                  />
+                </div>
+                <div class="kernel-field">
+                  <label for="start-artifact-hash">Content SHA-256</label>
+                  <input
+                    id="start-artifact-hash"
+                    v-model="startArtifactHash"
+                    type="text"
+                    class="kernel-input"
+                    placeholder="sha256:<64 hex characters>"
+                    :disabled="kernelBusy"
+                  />
+                </div>
+                <div class="kernel-field">
+                  <label for="start-artifact-reason"
+                    >Reason for registration</label
+                  >
+                  <input
+                    id="start-artifact-reason"
+                    v-model="startArtifactReason"
+                    type="text"
+                    class="kernel-input"
+                    placeholder="e.g. Record IRB approval for site go-live"
+                    :disabled="kernelBusy"
+                  />
+                </div>
+              </div>
+              <button
+                id="btn-start-register-artifact"
+                type="button"
+                class="btn btn-secondary"
+                :disabled="
+                  kernelBusy ||
+                  !startArtifactTitle.trim() ||
+                  !startArtifactHash.trim() ||
+                  !startArtifactReason.trim()
+                "
+                @click="registerStartArtifact"
+              >
+                Register approval artifact
+              </button>
+            </div>
+            <div v-else class="kernel-link-controls">
+              <div class="kernel-link-grid">
+                <div class="kernel-field">
+                  <label for="start-effectivity-version"
+                    >Approved protocol</label
+                  >
+                  <select
+                    id="start-effectivity-version"
+                    v-model="selectedStartVersionRef"
+                    class="kernel-input"
+                    :disabled="kernelBusy"
+                  >
+                    <option
+                      v-for="ver in approvedProtocolVersions"
+                      :key="ver.ref"
+                      :value="ver.ref"
+                    >
+                      Version {{ ver.number }} ({{ ver.status }})
+                    </option>
+                  </select>
+                </div>
+                <div class="kernel-field">
+                  <label for="start-effectivity-scope">Effectivity scope</label>
+                  <select
+                    id="start-effectivity-scope"
+                    v-model="startEffectivityScope"
+                    class="kernel-input"
+                    :disabled="kernelBusy"
+                  >
+                    <option value="Study">Whole study (Study)</option>
+                    <option value="StudySite">
+                      Site
+                      {{ matchedKernelSite.site_code || siteCode.trim() }}
+                      (StudySite)
+                    </option>
+                  </select>
+                </div>
+                <div class="kernel-field">
+                  <label for="start-effectivity-evidence"
+                    >Approval evidence</label
+                  >
+                  <select
+                    id="start-effectivity-evidence"
+                    v-model="selectedStartEvidenceRef"
+                    class="kernel-input"
+                    :disabled="kernelBusy"
+                  >
+                    <option
+                      v-for="art in approvalEvidenceArtifacts"
+                      :key="art.artifact_version_ref"
+                      :value="art.artifact_version_ref"
+                    >
+                      {{ art.title }} ({{ art.kind }})
+                    </option>
+                  </select>
+                </div>
+                <div class="kernel-field">
+                  <label for="start-effectivity-reason"
+                    >Reason for effectivity</label
+                  >
+                  <input
+                    id="start-effectivity-reason"
+                    v-model="startEffectivityReason"
+                    type="text"
+                    class="kernel-input"
+                    placeholder="e.g. Declare and activate protocol v1 with IRB approval"
+                    :disabled="kernelBusy"
+                  />
+                </div>
+              </div>
+              <button
+                id="btn-start-make-effective"
+                type="button"
+                class="btn btn-secondary"
+                :disabled="
+                  kernelBusy ||
+                  !selectedStartVersionRef ||
+                  !selectedStartEvidenceRef ||
+                  !startEffectivityReason.trim()
+                "
+                @click="makeStartProtocolEffective"
+              >
+                Declare &amp; mark protocol Effective
+              </button>
+            </div>
+          </template>
+          <p
+            v-else-if="approvedProtocolVersions.length === 0 && props.studyCode"
+            class="status"
+          >
+            Approve a protocol version in
+            <router-link
+              id="link-start-to-protocol-versions"
+              :to="{
+                name: 'study',
+                params: { studyCode: props.studyCode },
+                query: { stage: 'design', section: 'protocol-versions' },
+              }"
+            >
+              Design: Protocol versions
+            </router-link>
+            before declaring site effectivity.
+          </p>
+        </div>
+
+        <div v-if="matchedKernelSite.status !== 'Active'" class="activate">
+          <p
+            v-if="
+              kernelSiteActivateCanI.decision.value &&
+              !isKernelSiteActivatePermitted
+            "
+            id="kernel-site-activate-denied"
+            class="status"
+            role="status"
+          >
+            {{
+              kernelSiteActivateCanI.decision.value.reason ||
+              "Your account is not permitted to activate this kernel study site."
+            }}
+          </p>
           <label for="kernel-site-activate-reason">
             Reason for kernel site activation
           </label>
@@ -330,25 +536,48 @@
             class="kernel-input"
             maxlength="500"
             placeholder="e.g. Activate study site in kernel with effective protocol v1"
-            :disabled="kernelBusy"
+            :disabled="kernelBusy || !isKernelSiteActivatePermitted"
           />
-          <button
-            id="btn-activate-kernel-site"
-            type="button"
-            class="btn btn-primary"
-            :disabled="
-              kernelBusy ||
-              !kernelSiteReason.trim() ||
-              !matchedKernelSite.effective_versions?.length
+          <div class="activate-actions">
+            <button
+              id="btn-activate-kernel-site"
+              type="button"
+              class="btn btn-primary"
+              :disabled="
+                kernelBusy ||
+                !isKernelSiteActivatePermitted ||
+                !kernelSiteReason.trim() ||
+                !matchedKernelSite.effective_versions?.length
+              "
+              @click="activateKernelSite"
+            >
+              {{
+                kernelBusy
+                  ? "Activating kernel site…"
+                  : `Activate kernel site ${matchedKernelSite.site_code || siteCode.trim()}`
+              }}
+            </button>
+            <button
+              v-if="
+                kernelSiteActivateCanI.decision.value?.explanation &&
+                !isKernelSiteActivatePermitted
+              "
+              id="btn-explain-kernel-site-activate"
+              type="button"
+              class="btn btn-secondary"
+              :aria-expanded="showKernelActivateExplain ? 'true' : 'false'"
+              @click="showKernelActivateExplain = !showKernelActivateExplain"
+            >
+              {{ showKernelActivateExplain ? "Hide explanation" : "Explain" }}
+            </button>
+          </div>
+          <KernelExplanation
+            v-if="
+              showKernelActivateExplain &&
+              kernelSiteActivateCanI.decision.value?.explanation
             "
-            @click="activateKernelSite"
-          >
-            {{
-              kernelBusy
-                ? "Activating kernel site…"
-                : `Activate kernel site ${matchedKernelSite.site_code || siteCode.trim()}`
-            }}
-          </button>
+            :explanation="kernelSiteActivateCanI.decision.value.explanation"
+          />
         </div>
       </template>
 
@@ -425,17 +654,21 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
-import { describeKernelError } from "../../api/kernelApi";
+import { describeKernelError, isMasked, kernelApi } from "../../api/kernelApi";
 import { kernelGovernanceApi } from "../../api/kernelGovernanceApi";
 import {
   SITE_ACTIVATION_ROLE_REASON,
   canActivateSite,
   canManageKernelStudySites,
 } from "../../canvas/authority";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import {
+  clearKernelStudyCache,
+  findKernelStudyRef,
+} from "../../canvas/kernelStudy";
 import { useKernelCanI } from "../../composables/useKernelCanI";
 import { useAuthStore } from "../../stores/auth";
 import { useClinicalStore } from "../../stores/clinical";
+import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import { syncActiveStudyScope } from "../../stores/studyScopeBridge";
 import { useToastStore } from "../../stores/toasts.js";
 import {
@@ -462,6 +695,7 @@ const props = defineProps({
 
 const authStore = useAuthStore();
 const store = useClinicalStore();
+const canvasStore = useStudyCanvasStore();
 const toasts = useToastStore();
 
 const assignedStudies = computed(() => authStore.assignedStudies || []);
@@ -541,12 +775,48 @@ const unmetConditions = computed(() => {
 
 const kernelStudyRef = ref("");
 const kernelSites = ref([]);
+const kernelProtocolVersions = ref([]);
+const kernelArtifacts = ref([]);
+const kernelEffectivities = ref([]);
 const kernelBusy = ref(false);
 const kernelSiteReason = ref("");
 const kernelSiteName = ref("");
 const kernelSiteCountry = ref("US");
 const kernelSiteFeedback = ref("");
 const kernelSiteError = ref("");
+const showKernelActivateExplain = ref(false);
+const kernelSiteActivateCanI = useKernelCanI();
+
+const startArtifactKind = ref("EthicsApproval");
+const startArtifactTitle = ref("");
+const startArtifactHash = ref("");
+const startArtifactReason = ref("");
+const selectedStartVersionRef = ref("");
+const startEffectivityScope = ref("Study");
+const selectedStartEvidenceRef = ref("");
+const startEffectivityReason = ref("");
+
+const APPROVAL_EVIDENCE_KINDS = new Set([
+  "EthicsApproval",
+  "RegulatoryApproval",
+  "CtaAcknowledgement",
+]);
+
+const approvedProtocolVersions = computed(() =>
+  kernelProtocolVersions.value.filter(
+    (v) => v?.ref && !isMasked(v) && v.status === "Approved"
+  )
+);
+
+const approvalEvidenceArtifacts = computed(() =>
+  kernelArtifacts.value.filter((a) => APPROVAL_EVIDENCE_KINDS.has(a.kind))
+);
+
+const isKernelSiteActivatePermitted = computed(() =>
+  kernelSiteActivateCanI.decision.value
+    ? Boolean(kernelSiteActivateCanI.decision.value.permitted)
+    : canManageKernelSites.value
+);
 
 const matchedKernelSite = computed(() => {
   const target = siteCode.value?.trim().toLowerCase();
@@ -557,6 +827,18 @@ const matchedKernelSite = computed(() => {
     ) || null
   );
 });
+
+watch(
+  () => matchedKernelSite.value?.study_site_ref || "",
+  (studySiteRef) => {
+    kernelSiteActivateCanI.reset();
+    showKernelActivateExplain.value = false;
+    if (studySiteRef && matchedKernelSite.value?.status !== "Active") {
+      void kernelSiteActivateCanI.probe("study_site.activate", studySiteRef);
+    }
+  },
+  { immediate: true }
+);
 
 function nextKernelIdempotencyKey() {
   if (typeof globalThis.crypto?.randomUUID === "function") {
@@ -570,6 +852,9 @@ async function refreshKernelSites(study) {
   if (!code || typeof kernelGovernanceApi?.listStudySites !== "function") {
     kernelStudyRef.value = "";
     kernelSites.value = [];
+    kernelProtocolVersions.value = [];
+    kernelArtifacts.value = [];
+    kernelEffectivities.value = [];
     return;
   }
   try {
@@ -577,11 +862,50 @@ async function refreshKernelSites(study) {
     if (!resolvedRef) {
       kernelStudyRef.value = "";
       kernelSites.value = [];
+      kernelProtocolVersions.value = [];
+      kernelArtifacts.value = [];
+      kernelEffectivities.value = [];
       return;
     }
     kernelStudyRef.value = resolvedRef;
-    const listed = await kernelGovernanceApi.listStudySites(resolvedRef);
-    kernelSites.value = Array.isArray(listed) ? listed : [];
+    const [listedSites, listedVersions, listedArtifacts, listedEffectivities] =
+      await Promise.all([
+        kernelGovernanceApi.listStudySites(resolvedRef),
+        typeof kernelApi?.listProtocolVersions === "function"
+          ? kernelApi.listProtocolVersions(resolvedRef).catch(() => [])
+          : Promise.resolve([]),
+        typeof kernelGovernanceApi?.listStudyArtifacts === "function"
+          ? kernelGovernanceApi.listStudyArtifacts(resolvedRef).catch(() => [])
+          : Promise.resolve([]),
+        typeof kernelGovernanceApi?.listStudyEffectivities === "function"
+          ? kernelGovernanceApi
+              .listStudyEffectivities(resolvedRef)
+              .catch(() => [])
+          : Promise.resolve([]),
+      ]);
+    kernelSites.value = Array.isArray(listedSites) ? listedSites : [];
+    kernelProtocolVersions.value = Array.isArray(listedVersions)
+      ? listedVersions
+      : [];
+    kernelArtifacts.value = Array.isArray(listedArtifacts)
+      ? listedArtifacts
+      : [];
+    kernelEffectivities.value = Array.isArray(listedEffectivities)
+      ? listedEffectivities
+      : [];
+    if (
+      !selectedStartVersionRef.value &&
+      approvedProtocolVersions.value.length > 0
+    ) {
+      selectedStartVersionRef.value = approvedProtocolVersions.value[0].ref;
+    }
+    if (
+      !selectedStartEvidenceRef.value &&
+      approvalEvidenceArtifacts.value.length > 0
+    ) {
+      selectedStartEvidenceRef.value =
+        approvalEvidenceArtifacts.value[0].artifact_version_ref;
+    }
     for (const s of kernelSites.value) {
       if (s.site_code && !discoveredSites.value.includes(s.site_code)) {
         discoveredSites.value = [...discoveredSites.value, s.site_code];
@@ -589,6 +913,106 @@ async function refreshKernelSites(study) {
     }
   } catch {
     // Optional kernel study-site discovery should never block Execution eTMF checks.
+  }
+}
+
+async function registerStartArtifact() {
+  if (
+    !kernelStudyRef.value ||
+    !startArtifactTitle.value.trim() ||
+    !startArtifactHash.value.trim() ||
+    !startArtifactReason.value.trim() ||
+    kernelBusy.value ||
+    typeof kernelGovernanceApi?.registerStudyArtifact !== "function"
+  ) {
+    return;
+  }
+  kernelBusy.value = true;
+  kernelSiteError.value = "";
+  kernelSiteFeedback.value = "";
+  try {
+    const key = nextKernelIdempotencyKey();
+    const created = await kernelGovernanceApi.registerStudyArtifact({
+      studyRef: kernelStudyRef.value,
+      kind: startArtifactKind.value,
+      title: startArtifactTitle.value.trim(),
+      contentHash: startArtifactHash.value.trim(),
+      reason: startArtifactReason.value.trim(),
+      idempotencyKey: key,
+    });
+    startArtifactTitle.value = "";
+    startArtifactHash.value = "";
+    startArtifactReason.value = "";
+    selectedStartEvidenceRef.value = created.artifact_version_ref;
+    await refreshKernelSites(studyCode.value);
+    kernelSiteFeedback.value = `Registered ${created.kind} evidence "${created.title}".`;
+  } catch (err) {
+    kernelSiteError.value = describeKernelError(err);
+  } finally {
+    kernelBusy.value = false;
+  }
+}
+
+async function makeStartProtocolEffective() {
+  const versionRef = selectedStartVersionRef.value;
+  const evidenceRef = selectedStartEvidenceRef.value;
+  const why = startEffectivityReason.value.trim();
+  if (
+    !kernelStudyRef.value ||
+    !versionRef ||
+    !evidenceRef ||
+    !why ||
+    kernelBusy.value ||
+    typeof kernelGovernanceApi?.declareProtocolEffectivity !== "function" ||
+    typeof kernelGovernanceApi?.changeEffectivityStatus !== "function"
+  ) {
+    return;
+  }
+  kernelBusy.value = true;
+  kernelSiteError.value = "";
+  kernelSiteFeedback.value = "";
+  try {
+    const scopeLevel = startEffectivityScope.value;
+    const targetSiteRef =
+      scopeLevel === "StudySite"
+        ? matchedKernelSite.value?.study_site_ref || null
+        : null;
+    let effectivity = kernelEffectivities.value.find(
+      (eff) =>
+        eff.status !== "Effective" &&
+        eff.status !== "Withdrawn" &&
+        eff.scope_level === scopeLevel &&
+        (scopeLevel !== "StudySite" || eff.study_site_ref === targetSiteRef)
+    );
+    if (!effectivity) {
+      effectivity = await kernelGovernanceApi.declareProtocolEffectivity({
+        versionRef,
+        scopeLevel,
+        studySiteRef: targetSiteRef,
+        reason: why,
+        idempotencyKey: nextKernelIdempotencyKey(),
+      });
+    }
+    const updated = await kernelGovernanceApi.changeEffectivityStatus({
+      effectivityRef: effectivity.effectivity_ref,
+      status: "Effective",
+      evidenceRefs: [evidenceRef],
+      reason: why,
+      idempotencyKey: nextKernelIdempotencyKey(),
+    });
+    startEffectivityReason.value = "";
+    clearKernelStudyCache();
+    await refreshKernelSites(studyCode.value);
+    if (studyCode.value?.trim()) {
+      void canvasStore.loadScheduleOptions(studyCode.value.trim(), {
+        force: true,
+      });
+    }
+    kernelSiteFeedback.value = `Protocol effectivity is now ${updated.status}; kernel study site can be activated.`;
+  } catch (err) {
+    kernelSiteError.value = describeKernelError(err);
+  } finally {
+    kernelBusy.value = false;
   }
 }
 
@@ -617,6 +1041,7 @@ async function linkSiteInKernel() {
       idempotencyKey: nextKernelIdempotencyKey(),
     });
     kernelSiteReason.value = "";
+    clearKernelStudyCache();
     await refreshKernelSites(studyCode.value);
     kernelSiteFeedback.value = `Linked site ${linked.site_code || site} to study (${linked.status}).`;
   } catch (err) {
@@ -633,6 +1058,7 @@ async function activateKernelSite() {
     !target?.study_site_ref ||
     !why ||
     kernelBusy.value ||
+    !isKernelSiteActivatePermitted.value ||
     typeof kernelGovernanceApi?.activateStudySite !== "function"
   ) {
     return;
@@ -647,7 +1073,13 @@ async function activateKernelSite() {
       idempotencyKey: nextKernelIdempotencyKey(),
     });
     kernelSiteReason.value = "";
+    clearKernelStudyCache();
     await refreshKernelSites(studyCode.value);
+    if (studyCode.value?.trim()) {
+      void canvasStore.loadScheduleOptions(studyCode.value.trim(), {
+        force: true,
+      });
+    }
     kernelSiteFeedback.value = `Activated kernel study site ${activated.site_code || siteCode.value.trim()}.`;
   } catch (err) {
     kernelSiteError.value = describeKernelError(err);
@@ -891,6 +1323,7 @@ defineExpose({ checkStatus, loadStudySites });
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--semantic-color-surface);
+  font-size: 1rem;
 }
 
 .assigned-scope {
@@ -938,6 +1371,7 @@ defineExpose({ checkStatus, loadStudySites });
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
+  font-size: 1rem;
 }
 
 .activate button {
@@ -1085,11 +1519,27 @@ defineExpose({ checkStatus, loadStudySites });
   font-weight: 600;
 }
 
+.kernel-effectivity-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--semantic-color-surface-muted);
+}
+
+.kernel-subheading {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
 .kernel-input {
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--semantic-color-surface);
+  font-size: 1rem;
 }
 
 .kernel-banner {

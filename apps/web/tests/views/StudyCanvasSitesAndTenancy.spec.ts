@@ -632,4 +632,90 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
 
     wrapper.unmount();
   });
+
+  it("blocks participant screening with Start activation guidance when linked study sites are Selected (inactive)", async () => {
+    const auth = useAuthStore();
+    auth.setAuth({
+      authenticated: true,
+      token: "founder-token-2",
+      idToken: "founder-id-token-2",
+      tokenParsed: {
+        sub: "4e999999-2222-4444-8888-222222222222",
+        preferred_username: "pi@meridian.example",
+        email: "pi@meridian.example", // deid-ignore
+        tenant_id: "TRIAL-4E9999992222",
+        site_id: ["SITE-SELECTED-1"],
+        study_ids: ["CADENCE-202"],
+        realm_access: {
+          roles: ["Site Investigator"],
+        },
+        exp: 1999999999,
+      },
+    });
+    auth.switchPersona("site_crc");
+
+    vi.spyOn(kernelApi, "listProposals").mockResolvedValue([]);
+    vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([]);
+    vi.spyOn(kernelApi, "listProtocolVersions").mockResolvedValue([]);
+    vi.spyOn(kernelApi, "listStudySites").mockResolvedValue([
+      {
+        ref: "study_site:01960000-0000-7000-8000-000000000601",
+        id: "01960000-0000-7000-8000-000000000601",
+        study_ref: "study:01960000-0000-7000-8000-000000000600",
+        study_code: "CADENCE-202",
+        site_ref: "site:01960000-0000-7000-8000-000000000611",
+        site_code: "SITE-SELECTED-1",
+        site_name: "Selected Unactivated Clinic",
+        country: "US",
+        institution_ref: "organization:01960000-0000-7000-8000-000000000621",
+        institution_code: "INST-SEL-1",
+        institution_name: "Meridian Clinic",
+        status: "Selected",
+      },
+    ]);
+    vi.spyOn(executionApi, "listSubjects").mockResolvedValue({
+      items: [],
+      total: 0,
+      limit: 50,
+      offset: 0,
+    });
+    vi.spyOn(executionApi, "getSubjectCounts").mockResolvedValue({
+      total: 0,
+      counts: {},
+    });
+    const addSubjectSpy = vi.spyOn(executionApi, "addSubject");
+
+    await router.push(
+      "/studies/CADENCE-202?stage=conduct&section=participants"
+    );
+    await router.isReady();
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [pinia, router] }, attachTo: document.body }
+    );
+    await flushPromises();
+
+    await wrapper.find("#btn-add-participant").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find("#add-participant-no-active-sites").exists()).toBe(
+      true
+    );
+    expect(wrapper.find("#add-participant-no-active-sites").text()).toContain(
+      "Activate a linked study site in Start"
+    );
+    expect(
+      wrapper.find("#btn-confirm-add-participant").attributes()
+    ).toHaveProperty("disabled");
+
+    await wrapper.find("#add-participant-code").setValue("SUBJ-202-001");
+    await wrapper
+      .find("#add-participant-reason")
+      .setValue("Attempt screening before site activation");
+    await wrapper.find("#add-participant-form").trigger("submit");
+    await flushPromises();
+
+    expect(addSubjectSpy).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
 });

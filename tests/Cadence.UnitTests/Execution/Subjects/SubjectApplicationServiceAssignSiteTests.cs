@@ -58,6 +58,21 @@ public sealed class SubjectApplicationServiceAssignSiteTests
                 AuditContext,
                 clock: Clock,
                 kernelEnrollmentSynchronizer: Synchronizer);
+
+        public async Task<ClinicalSubject> SeedLegacySitelessSubjectAsync(string subjectCode, string studyCode, CancellationToken ct)
+        {
+            int nextIndex = await Subjects.EnrollNextIndexAsync(new StudyCode(studyCode), ct).ConfigureAwait(false);
+            var subject = ClinicalSubject.Create(
+                new SubjectCode(subjectCode),
+                new StudyCode(studyCode),
+                siteCode: null,
+                enrollmentIndex: nextIndex,
+                encryptedDemographics: null,
+                stratFactors: null);
+            await Subjects.AddAsync(subject, ct).ConfigureAwait(false);
+            await Subjects.SaveChangesAsync(ct).ConfigureAwait(false);
+            return subject;
+        }
     }
 
     [Fact]
@@ -66,19 +81,16 @@ public sealed class SubjectApplicationServiceAssignSiteTests
         var ct = TestContext.Current.CancellationToken;
         var harness = new Harness();
 
-        var created = await harness.Service.CreateAsync(
-            new SubjectCreateRequest("SUBJ-201", "CADENCE-101", SiteId: null, Demographics: null),
-            ct);
-        created.IsSuccess.Should().BeTrue();
-        created.Value!.SiteId.Should().BeNull();
-        harness.Synchronizer.Calls.Should().BeEmpty("siteless creation cannot screen a kernel enrollment yet");
+        var created = await harness.SeedLegacySitelessSubjectAsync("SUBJ-201", "CADENCE-101", ct);
+        created.SiteCode.Should().BeNull();
+        harness.Synchronizer.Calls.Should().BeEmpty("legacy siteless subject has not been synchronized yet");
         harness.AuditLog.Calls.Clear();
 
         harness.Clock.Advance(TimeSpan.FromMinutes(5));
         const string reason = "Assign screening site SITE-101 after central eligibility triage";
 
         var assigned = await harness.Service.AssignSiteAsync(
-            created.Value.Id.ToString(),
+            created.Id.ToString(),
             new SubjectSiteAssignmentRequest("SITE-101"),
             reason,
             ct);
@@ -92,7 +104,7 @@ public sealed class SubjectApplicationServiceAssignSiteTests
         persisted.ReasonForChange.Should().Be(reason);
 
         harness.Synchronizer.Calls.Should().ContainSingle().Which.Should().Match<(Guid ParticipantId, string StudyCode, string SiteCode, string SubjectCode, DateTimeOffset ScreenedAt, string ChangeReason)>(call =>
-            call.ParticipantId == created.Value.Id.Value
+            call.ParticipantId == created.Id.Value
             && call.StudyCode == "CADENCE-101"
             && call.SiteCode == "SITE-101"
             && call.SubjectCode == "SUBJ-201"
@@ -102,7 +114,7 @@ public sealed class SubjectApplicationServiceAssignSiteTests
         harness.AuditLog.Calls.Should().ContainSingle();
         var audit = harness.AuditLog.Calls[0];
         audit.EntityName.Should().Be(nameof(ClinicalSubject));
-        audit.RecordId.Should().Be(created.Value.Id.ToString());
+        audit.RecordId.Should().Be(created.Id.ToString());
         audit.Action.Should().Be("ASSIGN_SITE");
         audit.ChangeReason.Should().Be(reason);
         audit.OldValues.Should().ContainKey("site_id").WhoseValue.Should().BeNull();
@@ -166,17 +178,14 @@ public sealed class SubjectApplicationServiceAssignSiteTests
         var ct = TestContext.Current.CancellationToken;
         var harness = new Harness();
 
-        var created = await harness.Service.CreateAsync(
-            new SubjectCreateRequest("SUBJ-204", "CADENCE-101", SiteId: null, Demographics: null),
-            ct);
-        created.IsSuccess.Should().BeTrue();
+        var created = await harness.SeedLegacySitelessSubjectAsync("SUBJ-204", "CADENCE-101", ct);
         harness.AuditLog.Calls.Clear();
 
         harness.Synchronizer.NextResult = Result<Guid>.Failure(
             DomainError.Conflict("K.Enrollment.SiteNotActive", "Study site SITE-102 is not active."));
 
         var failed = await harness.Service.AssignSiteAsync(
-            created.Value!.Id.ToString(),
+            created.Id.ToString(),
             new SubjectSiteAssignmentRequest("SITE-102"),
             "Assign inactive site",
             ct);
@@ -200,18 +209,35 @@ public sealed class SubjectApplicationServiceAssignSiteTests
         missingSubject.IsFailure.Should().BeTrue();
         missingSubject.Error!.ToProblemResult().StatusCode.Should().Be(404);
 
-        var created = await harness.Service.CreateAsync(
-            new SubjectCreateRequest("SUBJ-205", "CADENCE-101", SiteId: null, Demographics: null),
-            ct);
-        created.IsSuccess.Should().BeTrue();
+        var created = await harness.SeedLegacySitelessSubjectAsync("SUBJ-205", "CADENCE-101", ct);
 
         var blankSite = await harness.Service.AssignSiteAsync(
-            created.Value!.Id.ToString(),
+            created.Id.ToString(),
             new SubjectSiteAssignmentRequest("   "),
             "Assign blank site",
             ct);
         blankSite.IsFailure.Should().BeTrue();
         blankSite.Error!.Code.Should().Be("SITE_ID_REQUIRED");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateAsync_WhenKernelEnrollmentSynchronizerConfigured_RequiresActiveSiteId(string? missingSiteId)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var harness = new Harness();
+
+        var created = await harness.Service.CreateAsync(
+            new SubjectCreateRequest("SUBJ-206", "CADENCE-101", SiteId: missingSiteId, Demographics: null),
+            ct);
+
+        created.IsFailure.Should().BeTrue();
+        created.Error!.Code.Should().Be("SITE_ID_REQUIRED");
+        created.Error.ToProblemResult().StatusCode.Should().Be(400);
+        (await harness.Subjects.GetByCodeAsync("SUBJ-206", ct)).Should().BeNull();
+        harness.Synchronizer.Calls.Should().BeEmpty();
     }
 
     private sealed class RecordingKernelEnrollmentSynchronizer : IKernelEnrollmentSynchronizer

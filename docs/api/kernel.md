@@ -42,6 +42,7 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `POST` | `/api/v1/kernel/protocol-versions/{versionRef}/return-to-draft` | KernelReturnProtocolVersionToDraft | Returns an InReview protocol version to Draft, clearing its content hash so it can be revised (protocol.return_to_draft). |
 | `GET` | `/api/v1/kernel/protocol-versions/{versionRef}/schedule-of-activities` | KernelGetScheduleOfActivities | A protocol version's Schedule of Activities, compiled from its design. |
 | `POST` | `/api/v1/kernel/protocol-versions/{versionRef}/submit-for-review` | KernelSubmitProtocolVersionForReview | Freezes a draft protocol version's content, computes its content hash, and moves it to InReview (protocol.submit_for_review). |
+| `POST` | `/api/v1/kernel/protocol-versions/{versionRef}/withdraw` | KernelWithdrawProtocolVersion | Records a 21 CFR Part 11 Withdrawn attestation bound to the frozen protocol content hash and withdraws the protocol version (protocol.withdraw). |
 | `POST` | `/api/v1/kernel/protocols/matrix-gap-check` | KernelMatrixGapCheck | Performs immediate real-time matrix gap check on a candidate protocol design graph. |
 | `GET` | `/api/v1/kernel/search` | KernelSearch | Finds kernel objects in the caller's tenant by code or title. |
 | `POST` | `/api/v1/kernel/simulation/simulate` | KernelSimulateProtocol | Evaluates a candidate USDM protocol version in memory without database changes. |

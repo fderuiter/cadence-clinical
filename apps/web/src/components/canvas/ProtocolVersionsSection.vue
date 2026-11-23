@@ -103,18 +103,47 @@
             </template>
           </p>
         </div>
+        <router-link
+          v-if="
+            studyCode &&
+            (activeVersion.status === 'Approved' || hasEffectiveProtocol)
+          "
+          id="btn-open-start-site-activation"
+          class="btn btn-secondary"
+          :to="{
+            name: 'study',
+            params: { studyCode },
+            query: { stage: 'start', section: 'site-activation' },
+          }"
+        >
+          Start site activation
+        </router-link>
       </div>
 
       <div
         v-if="
-          canGovern &&
-          (activeVersion.status === 'Draft' ||
-            activeVersion.status === 'InReview')
+          activeVersion.status === 'Draft' ||
+          activeVersion.status === 'InReview' ||
+          activeVersion.status === 'Approved'
         "
         id="protocol-lifecycle-controls"
         class="gov-controls"
       >
-        <div class="gov-field">
+        <p
+          v-if="deniedGovernanceDecision?.reason"
+          id="protocol-governance-denied"
+          class="gov-denied-note"
+          role="status"
+        >
+          {{ deniedGovernanceDecision.reason }}
+        </p>
+        <div
+          v-if="
+            activeVersion.status === 'Draft' ||
+            activeVersion.status === 'InReview'
+          "
+          class="gov-field"
+        >
           <label for="protocol-governance-reason" class="gov-label">
             Reason for change (required for review or return to draft)
           </label>
@@ -125,7 +154,12 @@
             class="gov-input"
             maxlength="500"
             placeholder="e.g. Freeze protocol design v1 for sponsor clinical and QA review"
-            :disabled="governanceBusy"
+            :disabled="
+              governanceBusy ||
+              (activeVersion.status === 'Draft'
+                ? !isSubmitForReviewPermitted
+                : !isReturnToDraftPermitted)
+            "
           />
         </div>
 
@@ -135,7 +169,11 @@
             id="btn-submit-protocol-review"
             type="button"
             class="btn btn-primary"
-            :disabled="governanceBusy || !lifecycleReason.trim()"
+            :disabled="
+              governanceBusy ||
+              !lifecycleReason.trim() ||
+              !isSubmitForReviewPermitted
+            "
             @click="submitForReview"
           >
             {{ governanceBusy ? "Submitting…" : "Submit for review" }}
@@ -146,7 +184,7 @@
               id="btn-approve-protocol-version"
               type="button"
               class="btn btn-primary"
-              :disabled="governanceBusy"
+              :disabled="governanceBusy || !isApprovePermitted"
               @click="openApprovalSignature(activeVersion)"
             >
               Sign &amp; approve protocol (Part 11)
@@ -155,12 +193,51 @@
               id="btn-return-protocol-draft"
               type="button"
               class="btn btn-secondary"
-              :disabled="governanceBusy || !lifecycleReason.trim()"
+              :disabled="
+                governanceBusy ||
+                !lifecycleReason.trim() ||
+                !isReturnToDraftPermitted
+              "
               @click="returnToDraft"
             >
               Return to draft
             </button>
           </template>
+
+          <button
+            v-if="
+              activeVersion.status === 'InReview' ||
+              activeVersion.status === 'Approved'
+            "
+            id="btn-withdraw-protocol-version"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="governanceBusy || !isWithdrawPermitted"
+            @click="openWithdrawSignature(activeVersion)"
+          >
+            Sign &amp; withdraw protocol (Part 11)
+          </button>
+
+          <button
+            v-if="deniedGovernanceDecision"
+            id="btn-explain-protocol-governance"
+            type="button"
+            class="btn btn-secondary"
+            :aria-expanded="showGovernanceExplain ? 'true' : 'false'"
+            @click="showGovernanceExplain = !showGovernanceExplain"
+          >
+            {{ showGovernanceExplain ? "Hide explanation" : "Explain" }}
+          </button>
+        </div>
+
+        <div
+          v-if="showGovernanceExplain && deniedGovernanceDecision?.explanation"
+          id="protocol-governance-explanation"
+          class="gov-explanation-box"
+        >
+          <KernelExplanation
+            :explanation="deniedGovernanceDecision.explanation"
+          />
         </div>
       </div>
     </section>
@@ -576,7 +653,11 @@
       :study-ref="studyNodeRef"
       :study-code="studyCode"
       :selected-version-ref="activeSummaryVersionRef"
+      :disabled="importDisabled"
+      :disabled-reason="importDisabledReason"
+      :explanation="importCanI.decision.value?.explanation ?? null"
       @imported="onDraftImported"
+      @govern="onGovernVersion"
     />
 
     <SignatureCaptureModal
@@ -592,11 +673,26 @@
       @cancel="approvingVersion = null"
       @success="approvingVersion = null"
     />
+
+    <SignatureCaptureModal
+      v-if="withdrawingVersion && withdrawingVersion.ref"
+      :is-open="Boolean(withdrawingVersion)"
+      :username="signerUsername"
+      :signer-name="signerFullName"
+      signer-role="Sponsor Designer"
+      :reasons="PROTOCOL_WITHDRAW_REASONS"
+      :action-url="resolveWithdrawActionUrl(withdrawingVersion.ref)"
+      :semantic-action="withdrawSemanticAction"
+      :on-sign="withdrawProtocolWithToken"
+      @cancel="withdrawingVersion = null"
+      @success="withdrawingVersion = null"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
+import { handoffFocus } from "ui";
 import {
   describeKernelError,
   isMasked,
@@ -613,12 +709,15 @@ import {
   type KernelStudySite,
 } from "../../api/kernelGovernanceApi";
 import { canGovernProtocols } from "../../canvas/authority";
+import { clearKernelStudyCache } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
+import { useKernelCanI } from "../../composables/useKernelCanI";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useAuthStore } from "../../stores/auth";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
+import KernelExplanation from "./KernelExplanation.vue";
 import ProtocolImportPanel from "./ProtocolImportPanel.vue";
 import SupportDetails from "./SupportDetails.vue";
 
@@ -641,6 +740,12 @@ const PROTOCOL_APPROVE_REASONS = [
   "CLINICAL_QC",
 ];
 
+const PROTOCOL_WITHDRAW_REASONS = [
+  "Withdraw superseded or erroneous protocol version",
+  "PROTOCOL_WITHDRAWAL",
+  "CLINICAL_QC",
+];
+
 const authStore = useAuthStore();
 const canvasStore = useStudyCanvasStore();
 
@@ -654,6 +759,38 @@ const governanceActionMessage = ref("");
 const governanceErrorMessage = ref("");
 const lifecycleReason = ref("");
 const approvingVersion = ref<KernelProtocolVersion | null>(null);
+const withdrawingVersion = ref<KernelProtocolVersion | null>(null);
+const showGovernanceExplain = ref(false);
+
+const importCanI = useKernelCanI();
+const submitCanI = useKernelCanI();
+const returnCanI = useKernelCanI();
+const approveCanI = useKernelCanI();
+const withdrawCanI = useKernelCanI();
+const artifactCanI = useKernelCanI();
+const declareEffectivityCanI = useKernelCanI();
+const changeEffectivityCanI = useKernelCanI();
+
+const withdrawSemanticAction =
+  (
+    kernelGovernanceApi as {
+      PROTOCOL_WITHDRAW_SEMANTIC_ACTION?: string;
+    }
+  ).PROTOCOL_WITHDRAW_SEMANTIC_ACTION ?? "kernel.protocol_version.withdraw";
+
+function resolveWithdrawActionUrl(versionRef: string): string {
+  const helper = (
+    kernelGovernanceApi as {
+      protocolVersionWithdrawAction?: (ref: string) => string;
+    }
+  ).protocolVersionWithdrawAction;
+  if (typeof helper === "function") {
+    return helper(versionRef);
+  }
+  const at = versionRef.indexOf("@");
+  const clean = at < 0 ? versionRef : versionRef.slice(0, at);
+  return `/api/v1/kernel/protocol-versions/${clean}/withdraw`;
+}
 
 function seedVersions(listed: KernelProtocolVersion[]) {
   versions.value = listed;
@@ -764,12 +901,165 @@ const activeVersion = computed<KernelProtocolVersion | null>(() => {
   );
 });
 
+const latestNonWithdrawnVersion = computed<KernelProtocolVersion | null>(
+  () =>
+    versions.value.find(
+      (v) => v.ref && !isMasked(v) && v.status !== "Withdrawn"
+    ) ?? null
+);
+
+const isLatestVersionInReview = computed(
+  () =>
+    latestNonWithdrawnVersion.value?.status === "InReview" ||
+    activeVersion.value?.status === "InReview"
+);
+
+const isImportPermittedByKernel = computed(() =>
+  importCanI.decision.value
+    ? Boolean(importCanI.decision.value.permitted)
+    : true
+);
+
+const importDisabled = computed(
+  () => isLatestVersionInReview.value || !isImportPermittedByKernel.value
+);
+
+const importDisabledReason = computed(() => {
+  if (isLatestVersionInReview.value) {
+    const num =
+      activeVersion.value?.status === "InReview"
+        ? activeVersion.value.number
+        : latestNonWithdrawnVersion.value?.number;
+    return `Version ${num ?? ""} is frozen in review (InReview). Return it to Draft or approve it before importing protocol changes.`.replace(
+      /\s+/g,
+      " "
+    );
+  }
+  if (!isImportPermittedByKernel.value) {
+    return (
+      importCanI.decision.value?.reason ||
+      "Your account does not hold authorization to import protocol drafts in this study."
+    );
+  }
+  return "";
+});
+
+const isSubmitForReviewPermitted = computed(() =>
+  submitCanI.decision.value
+    ? Boolean(submitCanI.decision.value.permitted)
+    : canGovern.value
+);
+const isReturnToDraftPermitted = computed(() =>
+  returnCanI.decision.value
+    ? Boolean(returnCanI.decision.value.permitted)
+    : canGovern.value
+);
+const isApprovePermitted = computed(() =>
+  approveCanI.decision.value
+    ? Boolean(approveCanI.decision.value.permitted)
+    : canGovern.value
+);
+const isWithdrawPermitted = computed(() =>
+  withdrawCanI.decision.value
+    ? Boolean(withdrawCanI.decision.value.permitted)
+    : canGovern.value
+);
+const isArtifactPermitted = computed(() =>
+  artifactCanI.decision.value
+    ? Boolean(artifactCanI.decision.value.permitted)
+    : canGovern.value
+);
+const isDeclareEffectivityPermitted = computed(() =>
+  declareEffectivityCanI.decision.value
+    ? Boolean(declareEffectivityCanI.decision.value.permitted)
+    : canGovern.value
+);
+const isChangeEffectivityPermitted = computed(() =>
+  changeEffectivityCanI.decision.value
+    ? Boolean(changeEffectivityCanI.decision.value.permitted)
+    : canGovern.value
+);
+
+const hasEffectiveProtocol = computed(() =>
+  effectivities.value.some((eff) => eff.status === "Effective")
+);
+
+const deniedGovernanceDecision = computed(() => {
+  for (const probeState of [
+    submitCanI,
+    approveCanI,
+    returnCanI,
+    withdrawCanI,
+  ]) {
+    if (probeState.decision.value && !probeState.decision.value.permitted) {
+      return probeState.decision.value;
+    }
+  }
+  return null;
+});
+
+watch(
+  () =>
+    [
+      studyNodeRef.value,
+      latestNonWithdrawnVersion.value?.ref ?? "",
+      latestNonWithdrawnVersion.value?.status ?? "",
+    ] as const,
+  ([study, latestRef, latestStatus]) => {
+    importCanI.reset();
+    artifactCanI.reset();
+    changeEffectivityCanI.reset();
+    if (!study) return;
+    void artifactCanI.probe("artifact.register", study);
+    void changeEffectivityCanI.probe("effectivity.change_status", study);
+    if (latestStatus === "Draft" && latestRef) {
+      void importCanI.probe("protocol.revise_draft", latestRef);
+    } else if (latestStatus === "Approved" && latestRef) {
+      void importCanI.probe("protocol.amend", latestRef);
+    } else if (latestStatus !== "InReview") {
+      void importCanI.probe("protocol.draft", study);
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () =>
+    [
+      activeVersion.value?.ref ?? "",
+      activeVersion.value?.status ?? "",
+    ] as const,
+  ([verRef, status]) => {
+    submitCanI.reset();
+    returnCanI.reset();
+    approveCanI.reset();
+    withdrawCanI.reset();
+    declareEffectivityCanI.reset();
+    showGovernanceExplain.value = false;
+    if (!verRef) return;
+    if (status !== "Withdrawn") {
+      void declareEffectivityCanI.probe("effectivity.declare", verRef);
+    }
+    if (status === "Draft") {
+      void submitCanI.probe("protocol.submit_for_review", verRef);
+    } else if (status === "InReview") {
+      void approveCanI.probe("protocol.approve", verRef);
+      void returnCanI.probe("protocol.return_to_draft", verRef);
+      void withdrawCanI.probe("protocol.withdraw", verRef);
+    } else if (status === "Approved") {
+      void withdrawCanI.probe("protocol.withdraw", verRef);
+    }
+  },
+  { immediate: true }
+);
+
 const approvalArtifacts = computed(() =>
   artifacts.value.filter((a) => APPROVAL_EVIDENCE_KINDS.has(a.kind))
 );
 
 const canSubmitArtifact = computed(
   () =>
+    isArtifactPermitted.value &&
     Boolean(studyNodeRef.value) &&
     Boolean(artifactForm.title.trim()) &&
     Boolean(artifactForm.contentHash.trim()) &&
@@ -777,6 +1067,7 @@ const canSubmitArtifact = computed(
 );
 
 const canDeclareEffectivity = computed(() => {
+  if (!isDeclareEffectivityPermitted.value) return false;
   if (!activeVersion.value?.ref || !declareForm.reason.trim()) return false;
   if (activeVersion.value.status === "Withdrawn") return false;
   if (declareForm.scopeLevel === "Country") {
@@ -869,6 +1160,7 @@ function toggleEvidence(effectivityRef: string, artifactVersionRef: string) {
 }
 
 function canTransitionEffectivity(eff: KernelEffectivity): boolean {
+  if (!isChangeEffectivityPermitted.value) return false;
   const target = targetStatusByRef[eff.effectivity_ref] || "Effective";
   const why = (transitionReasonByRef[eff.effectivity_ref] ?? "").trim();
   if (!why) return false;
@@ -1014,6 +1306,11 @@ function openApprovalSignature(version: KernelProtocolVersion) {
   approvingVersion.value = version;
 }
 
+function openWithdrawSignature(version: KernelProtocolVersion) {
+  governanceErrorMessage.value = "";
+  withdrawingVersion.value = version;
+}
+
 async function approveProtocolWithToken(sigToken: string, reason: string) {
   const target = approvingVersion.value;
   if (!target?.ref) return;
@@ -1029,10 +1326,42 @@ async function approveProtocolWithToken(sigToken: string, reason: string) {
       reason,
       idempotencyKey: nextIdempotencyKey(),
     });
+    clearKernelStudyCache();
     await refreshVersions();
+    if (props.studyCode) {
+      void canvasStore.loadScheduleOptions(props.studyCode, { force: true });
+    }
     emit("select", approved);
     governanceActionMessage.value = `Signed and approved Version ${approved.number} under 21 CFR Part 11.`;
     return approved;
+  } finally {
+    governanceBusy.value = false;
+  }
+}
+
+async function withdrawProtocolWithToken(sigToken: string, reason: string) {
+  const target = withdrawingVersion.value;
+  if (!target?.ref) return;
+  governanceBusy.value = true;
+  governanceErrorMessage.value = "";
+  governanceActionMessage.value = "";
+  try {
+    const withdrawn = await kernelGovernanceApi.withdrawProtocolVersion({
+      versionRef: target.ref,
+      meaning: "Withdrawn",
+      expectedContentHash: target.content_hash,
+      sigToken,
+      reason,
+      idempotencyKey: nextIdempotencyKey(),
+    });
+    clearKernelStudyCache();
+    await refreshVersions();
+    if (props.studyCode) {
+      void canvasStore.loadScheduleOptions(props.studyCode, { force: true });
+    }
+    emit("select", withdrawn);
+    governanceActionMessage.value = `Signed and withdrew Version ${withdrawn.number} under 21 CFR Part 11.`;
+    return withdrawn;
   } finally {
     governanceBusy.value = false;
   }
@@ -1163,6 +1492,7 @@ async function transitionEffectivity(eff: KernelEffectivity) {
       idempotencyKey: nextIdempotencyKey(),
     });
     transitionReasonByRef[eff.effectivity_ref] = "";
+    clearKernelStudyCache();
     if (studyNodeRef.value) {
       await refreshGovernanceLists(studyNodeRef.value);
     }
@@ -1194,6 +1524,16 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
     });
     emit("select", summary.version);
   }
+}
+function onGovernVersion(version: KernelProtocolVersion) {
+  if (version?.ref) {
+    emit("select", version);
+  }
+  void handoffFocus([
+    "#protocol-governance-reason",
+    "#btn-submit-protocol-review",
+    "#protocol-governance-heading",
+  ]);
 }
 </script>
 
@@ -1283,9 +1623,30 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   background: var(--semantic-color-surface);
 }
 
+.gov-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
 .gov-card-header h3 {
   margin: 0 0 4px;
   font-size: 0.95rem;
+}
+
+.gov-denied-note {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-warning-border, var(--border));
+  background: var(
+    --semantic-color-warning-bg-soft,
+    var(--semantic-color-surface-muted)
+  );
+  color: var(--semantic-color-warning-dark, var(--semantic-color-text));
+  font-size: 0.86rem;
 }
 
 .gov-subtitle {
@@ -1324,13 +1685,20 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   border: 1px solid var(--border);
   border-radius: 4px;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 1rem;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
 }
 
+.gov-explanation-box {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--semantic-color-surface-muted);
+}
+
 .gov-file-input {
-  font-size: 0.84rem;
+  font-size: 1rem;
 }
 
 .gov-actions {

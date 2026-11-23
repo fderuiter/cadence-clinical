@@ -225,14 +225,22 @@ public static class KernelReadEndpoints
         KernelCommandCatalog catalog,
         CancellationToken cancellationToken)
     {
-        if (!NodeRef.TryParse(resource, out var node))
+        NodeRef node;
+        if (string.Equals(resource.Trim(), NodeKinds.Tenant, StringComparison.OrdinalIgnoreCase))
+        {
+            node = NodeRef.For(KernelRequestTenant.Get(context));
+        }
+        else if (NodeRef.TryParse(resource, out var parsedNode))
+        {
+            node = parsedNode;
+        }
+        else
         {
             return KernelProblems.InvalidNodeRef(resource);
         }
 
-        // The verb class comes from the command that declares the capability, never from the caller.
-        if (catalog.Entries.Select(e => e.Capability).FirstOrDefault(c => string.Equals(c.Token, capability, StringComparison.Ordinal))
-            is not { } declared)
+        // The verb class comes from the declared capability, never from the caller.
+        if (catalog.FindCapability(capability) is not { } declared)
         {
             return KernelProblems.BadRequest("Unknown capability", $"No kernel command declares the capability '{capability}'.");
         }

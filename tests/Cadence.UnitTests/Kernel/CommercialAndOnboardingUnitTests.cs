@@ -453,6 +453,8 @@ public sealed class CommercialAndOnboardingUnitTests
 
         definedRoles.Should().ContainKey("SPONSOR_ADMIN");
         definedRoles["SPONSOR_ADMIN"].Should().Contain([
+            "simulation.run",
+            "protocol.withdraw",
             "artifact.register",
             "artifact.add_version",
             "effectivity.declare",
@@ -462,9 +464,11 @@ public sealed class CommercialAndOnboardingUnitTests
 
         definedRoles.Should().ContainKey("SPONSOR_DESIGNER");
         definedRoles["SPONSOR_DESIGNER"].Should().Contain([
+            "simulation.run",
             "protocol.submit_for_review",
             "protocol.return_to_draft",
             "protocol.approve",
+            "protocol.withdraw",
             "artifact.register",
             "artifact.add_version",
             "effectivity.declare",
@@ -472,14 +476,18 @@ public sealed class CommercialAndOnboardingUnitTests
             "attestation.sign",
         ]);
 
+        keycloak.AssignedRealmRoles.Should().Contain(["Sponsor Admin", "Sponsor Designer", "Site Investigator"]);
+
         var issuedGrants = sender.Commands.OfType<IssueGrant>().ToList();
         issuedGrants.Should().ContainSingle(g => g.Grantee == Actor.ServiceAccount("execution-forms"));
 
         var demoDesigner = Cadence.Kernel.Host.DevelopmentDemoData.Roles.Single(r => r.Code == "DEMO_DESIGNER");
         demoDesigner.Capabilities.Should().Contain([
+            "simulation.run",
             "protocol.submit_for_review",
             "protocol.return_to_draft",
             "protocol.approve",
+            "protocol.withdraw",
             "artifact.register",
             "artifact.add_version",
             "effectivity.declare",
@@ -556,14 +564,19 @@ public sealed class CommercialAndOnboardingUnitTests
 
     private sealed class NoOpKeycloakClient : IKeycloakOnboardingClient
     {
+        public IReadOnlyList<string> AssignedRealmRoles { get; private set; } = [];
+
         public Task AssignTrialWorkspaceAsync(
             string subjectId,
             string tenantCode,
             IReadOnlyList<string> realmRoles,
             IReadOnlyList<string> siteCodes,
             IReadOnlyList<string> studyCodes,
-            CancellationToken cancellationToken) =>
-            Task.CompletedTask;
+            CancellationToken cancellationToken)
+        {
+            AssignedRealmRoles = realmRoles;
+            return Task.CompletedTask;
+        }
 
         public Task GrantStudyScopeAsync(
             Actor caller,

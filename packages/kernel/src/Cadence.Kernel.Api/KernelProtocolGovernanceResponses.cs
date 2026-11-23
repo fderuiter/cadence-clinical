@@ -17,6 +17,15 @@ public sealed record KernelApproveProtocolVersionRequest(
     string? ExpectedContentHash = null,
     Guid? AttestationId = null);
 
+/// <summary>Request body for <c>POST /api/v1/kernel/protocol-versions/{versionRef}/withdraw</c>.</summary>
+/// <param name="Meaning">Attestation meaning (defaults to <c>Withdrawn</c>).</param>
+/// <param name="ExpectedContentHash">Optional frozen protocol content hash expected by the signer (21 CFR 11.70).</param>
+/// <param name="AttestationId">Optional caller-assigned attestation UUID; derived deterministically when omitted.</param>
+public sealed record KernelWithdrawProtocolVersionRequest(
+    string? Meaning = null,
+    string? ExpectedContentHash = null,
+    Guid? AttestationId = null);
+
 /// <summary>Request body for <c>POST /api/v1/kernel/studies/{studyRef}/artifacts</c>.</summary>
 /// <param name="Kind">Artifact kind, such as <c>EthicsApproval</c>, <c>RegulatoryApproval</c>, or <c>CtaAcknowledgement</c>.</param>
 /// <param name="Title">Human-readable document title (at most 500 characters).</param>

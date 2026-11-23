@@ -725,6 +725,34 @@
           {{ createStudyError }}
         </div>
 
+        <div
+          v-if="!isCreateStudyPermitted"
+          id="create-study-denied"
+          class="create-study-denied"
+          role="status"
+        >
+          <div class="create-study-denied-row">
+            <span>{{ createStudyDeniedReason }}</span>
+            <button
+              v-if="createStudyCanI.decision.value?.explanation"
+              id="btn-explain-create-study"
+              type="button"
+              class="btn btn-secondary"
+              :aria-expanded="showCreateStudyExplain ? 'true' : 'false'"
+              @click="showCreateStudyExplain = !showCreateStudyExplain"
+            >
+              {{ showCreateStudyExplain ? "Hide explanation" : "Explain" }}
+            </button>
+          </div>
+          <KernelExplanation
+            v-if="
+              showCreateStudyExplain &&
+              createStudyCanI.decision.value?.explanation
+            "
+            :explanation="createStudyCanI.decision.value.explanation"
+          />
+        </div>
+
         <form
           id="create-study-form"
           class="create-study-form"
@@ -740,7 +768,7 @@
                 autocomplete="off"
                 maxlength="64"
                 placeholder="e.g. CADENCE-101"
-                :disabled="creatingStudy"
+                :disabled="creatingStudy || !isCreateStudyPermitted"
               />
             </div>
 
@@ -749,7 +777,7 @@
               <select
                 id="create-study-phase"
                 v-model="newStudyPhase"
-                :disabled="creatingStudy"
+                :disabled="creatingStudy || !isCreateStudyPermitted"
               >
                 <option value="Phase 1">Phase 1</option>
                 <option value="Phase 1/2">Phase 1/2</option>
@@ -770,7 +798,7 @@
                 autocomplete="off"
                 maxlength="500"
                 placeholder="e.g. Multicenter Cardiovascular Outcomes Study"
-                :disabled="creatingStudy"
+                :disabled="creatingStudy || !isCreateStudyPermitted"
               />
             </div>
 
@@ -779,7 +807,7 @@
               <select
                 id="create-study-sponsor"
                 v-model="selectedSponsorChoice"
-                :disabled="creatingStudy"
+                :disabled="creatingStudy || !isCreateStudyPermitted"
               >
                 <option
                   v-for="org in sponsorOrganizations"
@@ -804,7 +832,7 @@
                   autocomplete="off"
                   maxlength="200"
                   placeholder="e.g. Cadence Pharma"
-                  :disabled="creatingStudy"
+                  :disabled="creatingStudy || !isCreateStudyPermitted"
                 />
               </div>
               <div class="create-field">
@@ -818,7 +846,7 @@
                   autocomplete="off"
                   maxlength="64"
                   placeholder="e.g. CADENCE-PHARMA"
-                  :disabled="creatingStudy"
+                  :disabled="creatingStudy || !isCreateStudyPermitted"
                 />
               </div>
             </template>
@@ -834,7 +862,7 @@
                 type="file"
                 accept=".xml,.json,application/xml,text/xml,application/json"
                 class="sr-only"
-                :disabled="creatingStudy"
+                :disabled="creatingStudy || !isCreateStudyPermitted"
                 @change="onCreateStudyFileSelected"
               />
               <div class="create-file-row">
@@ -842,7 +870,7 @@
                   id="create-study-choose-file"
                   type="button"
                   class="btn btn-secondary"
-                  :disabled="creatingStudy"
+                  :disabled="creatingStudy || !isCreateStudyPermitted"
                   @click="openCreateStudyFilePicker"
                 >
                   Choose ODM XML or USDM JSON file
@@ -852,7 +880,7 @@
                   id="create-study-clear-file"
                   type="button"
                   class="btn btn-secondary"
-                  :disabled="creatingStudy"
+                  :disabled="creatingStudy || !isCreateStudyPermitted"
                   @click="onClearCreateStudyFileClick"
                 >
                   Remove file
@@ -875,7 +903,7 @@
                 id="create-study-link-sandbox-site"
                 v-model="linkSandboxSiteOnCreate"
                 type="checkbox"
-                :disabled="creatingStudy"
+                :disabled="creatingStudy || !isCreateStudyPermitted"
               />
               <label for="create-study-link-sandbox-site">
                 Link default workspace site
@@ -896,7 +924,7 @@
                 autocomplete="off"
                 maxlength="500"
                 placeholder="e.g. Register new clinical study protocol workspace"
-                :disabled="creatingStudy"
+                :disabled="creatingStudy || !isCreateStudyPermitted"
               />
             </div>
           </div>
@@ -999,12 +1027,14 @@ import { SignOutConfirmModal, handoffFocus, useSignOutGuard } from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
+import { useKernelCanI } from "../composables/useKernelCanI";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
 import CanvasPalette from "../components/canvas/CanvasPalette.vue";
+import KernelExplanation from "../components/canvas/KernelExplanation.vue";
 import ExportsSection from "../components/canvas/ExportsSection.vue";
 import LocksSection from "../components/canvas/LocksSection.vue";
 import ValidationSection from "../components/canvas/ValidationSection.vue";
@@ -1137,7 +1167,21 @@ const creatingStudyStep = ref<"study" | "import">("study");
 const createStudyError = ref("");
 const createStudySuccess = ref("");
 const lastCreatedStudyCode = ref("");
+const showCreateStudyExplain = ref(false);
+const createStudyCanI = useKernelCanI();
 const MAX_CREATE_IMPORT_BYTES = 10 * 1024 * 1024;
+
+const isCreateStudyPermitted = computed(() =>
+  createStudyCanI.decision.value
+    ? Boolean(createStudyCanI.decision.value.permitted)
+    : true
+);
+
+const createStudyDeniedReason = computed(
+  () =>
+    createStudyCanI.decision.value?.reason ||
+    "Your account does not hold study.register authority in this tenant."
+);
 
 const createStudyButtonLabel = computed(() => {
   if (creatingStudy.value) {
@@ -1159,7 +1203,7 @@ const studyDirectoryStatus = computed(() => {
 });
 
 const canCreateStudy = computed(() => {
-  if (creatingStudy.value) return false;
+  if (creatingStudy.value || !isCreateStudyPermitted.value) return false;
   if (!newStudyCode.value.trim() || !newStudyTitle.value.trim()) return false;
   if (!newStudyPhase.value.trim() || !newStudyReason.value.trim()) return false;
   if (selectedSponsorChoice.value === "__new__") {
@@ -1199,6 +1243,7 @@ watch(newStudyReason, () => {
 });
 
 function openCreateStudyFilePicker() {
+  if (!isCreateStudyPermitted.value) return;
   createStudyError.value = "";
   createStudyFileInputRef.value?.click();
 }
@@ -1315,7 +1360,12 @@ function openStudyDesign(code: string) {
 }
 
 async function submitCreateStudy() {
-  if (typeof kernelApi.createStudy !== "function") return;
+  if (
+    typeof kernelApi.createStudy !== "function" ||
+    !isCreateStudyPermitted.value
+  ) {
+    return;
+  }
   createStudyError.value = "";
   createStudySuccess.value = "";
 
@@ -2405,8 +2455,14 @@ watch(
     lineageRequest++;
     canvas.openStudy(code);
     if (code) {
+      createStudyCanI.reset();
+      showCreateStudyExplain.value = false;
       setActiveStudyCode(code);
     } else {
+      showCreateStudyExplain.value = false;
+      if (hasCreateStudyService.value) {
+        void createStudyCanI.probe("study.register", "tenant");
+      }
       loadStudyDirectory();
     }
   },
@@ -2416,6 +2472,10 @@ watch(
 watch(callerAuthKey, (next, prev) => {
   if (prev !== undefined && next !== prev) {
     canvas.clearParticipantAllocationCache();
+    if (!studyCode.value && hasCreateStudyService.value) {
+      showCreateStudyExplain.value = false;
+      void createStudyCanI.probe("study.register", "tenant");
+    }
   }
 });
 
@@ -3416,6 +3476,7 @@ onUnmounted(() => {
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
+  font-size: 1rem;
 }
 
 .directory-section {
@@ -3539,6 +3600,29 @@ onUnmounted(() => {
   color: var(--semantic-color-error-text-dark);
 }
 
+.create-study-denied {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-warning-border, var(--border));
+  background: var(
+    --semantic-color-warning-bg-soft,
+    var(--semantic-color-surface-muted)
+  );
+  color: var(--semantic-color-warning-dark, var(--semantic-color-text));
+  font-size: 0.88rem;
+}
+
+.create-study-denied-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
 .create-study-form {
   display: flex;
   flex-direction: column;
@@ -3575,7 +3659,7 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 1rem;
   width: 100%;
   box-sizing: border-box;
 }

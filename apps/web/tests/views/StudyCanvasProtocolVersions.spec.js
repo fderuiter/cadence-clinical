@@ -38,6 +38,8 @@ vi.mock("../../src/api/kernelApi", () => ({
     dependents: vi.fn(),
     amendmentImpact: vi.fn(),
     simulate: vi.fn(),
+    canI: vi.fn(),
+    importProtocolDraft: vi.fn(),
     listProtocolTemplates: vi.fn(async () => []),
     getProtocolDesignSummary: vi.fn(async () => null),
   },
@@ -50,6 +52,7 @@ vi.mock("../../src/api/kernelGovernanceApi", () => ({
     submitProtocolVersionForReview: vi.fn(),
     returnProtocolVersionToDraft: vi.fn(),
     approveProtocolVersion: vi.fn(),
+    withdrawProtocolVersion: vi.fn(),
     listStudyArtifacts: vi.fn(async () => []),
     registerStudyArtifact: vi.fn(),
     listStudyEffectivities: vi.fn(async () => []),
@@ -58,9 +61,14 @@ vi.mock("../../src/api/kernelGovernanceApi", () => ({
     listStudySites: vi.fn(async () => []),
   },
   PROTOCOL_APPROVE_SEMANTIC_ACTION: "kernel.protocol_version.approve",
+  PROTOCOL_WITHDRAW_SEMANTIC_ACTION: "kernel.protocol_version.withdraw",
   protocolVersionApproveAction: (versionRef) => {
     const clean = String(versionRef ?? "").split("@")[0];
     return `/api/v1/kernel/protocol-versions/${clean}/approve`;
+  },
+  protocolVersionWithdrawAction: (versionRef) => {
+    const clean = String(versionRef ?? "").split("@")[0];
+    return `/api/v1/kernel/protocol-versions/${clean}/withdraw`;
   },
 }));
 
@@ -759,5 +767,296 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
       })
     );
     expect(loadScheduleSpy).toHaveBeenCalledWith("CAD-101", { force: true });
+  });
+
+  it("withdraws an Approved protocol version via 21 CFR Part 11 step-up signature bound to frozen ContentHash and refreshes schedule options", async () => {
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.user = { username: "sponsor.qa", fullName: "Dr. Priya Nair" };
+    auth.rawRoles = ["Sponsor Admin"];
+
+    const FROZEN_HASH =
+      "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
+    let currentV1 = {
+      ...FIRST,
+      status: "Approved",
+      content_hash: FROZEN_HASH,
+    };
+
+    vi.mocked(kernelApi.listProtocolVersions).mockImplementation(async () => [
+      currentV1,
+    ]);
+    vi.mocked(kernelApi.getProtocolVersion).mockImplementation(
+      async () => currentV1
+    );
+    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+      sig_token: "withdraw-sig-token-60s",
+    });
+    vi.mocked(kernelGovernanceApi.withdrawProtocolVersion).mockImplementation(
+      async ({ reason }) => {
+        currentV1 = {
+          ...currentV1,
+          status: "Withdrawn",
+          withdrawal_reason: reason,
+        };
+        return currentV1;
+      }
+    );
+
+    const canvasStore = useStudyCanvasStore();
+    const loadScheduleSpy = vi
+      .spyOn(canvasStore, "loadScheduleOptions")
+      .mockResolvedValue(null);
+
+    await open(`/studies/CAD-101?section=protocol-versions&node=${V1}`);
+
+    expect(wrapper.find("#btn-open-start-site-activation").exists()).toBe(true);
+    expect(wrapper.find("#btn-withdraw-protocol-version").exists()).toBe(true);
+
+    await wrapper.find("#btn-withdraw-protocol-version").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find("#signature-capture-modal").exists()).toBe(true);
+    await wrapper.find("#sig-password").setValue("ClinicalPass!123");
+    await wrapper
+      .find("#sig-reason")
+      .setValue("Withdraw superseded or erroneous protocol version");
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        username: "sponsor.qa",
+        action: `/api/v1/kernel/protocol-versions/protocol_version:${V1_ID}/withdraw`,
+        semanticAction: "kernel.protocol_version.withdraw",
+      })
+    );
+    expect(kernelGovernanceApi.withdrawProtocolVersion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        versionRef: V1,
+        sigToken: "withdraw-sig-token-60s",
+        expectedContentHash: FROZEN_HASH,
+        reason: "Withdraw superseded or erroneous protocol version",
+      })
+    );
+    expect(loadScheduleSpy).toHaveBeenCalledWith("CAD-101", { force: true });
+  });
+
+  it("freezes protocol draft import while InReview and renders KernelExplanation when canI denies draft import", async () => {
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.rawRoles = ["Sponsor Designer"];
+
+    const inReviewV2 = {
+      ...AMENDMENT,
+      status: "InReview",
+      content_hash: "sha256:112233",
+    };
+    vi.mocked(kernelApi.listProtocolVersions).mockResolvedValueOnce([
+      inReviewV2,
+      FIRST,
+    ]);
+    vi.mocked(kernelApi.getProtocolVersion).mockResolvedValue(inReviewV2);
+
+    await open(`/studies/CAD-101?section=protocol-versions&node=${V2}`);
+
+    const freezeNotice = wrapper.find("#protocol-import-disabled-notice");
+    expect(freezeNotice.exists()).toBe(true);
+    expect(freezeNotice.text()).toContain("InReview");
+    expect(
+      wrapper.find("#protocol-import-choose-file").attributes()
+    ).toHaveProperty("disabled");
+
+    wrapper.unmount();
+
+    // Now test canI denial on Draft version
+    vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([
+      AMENDMENT,
+      FIRST,
+    ]);
+    vi.mocked(kernelApi.getProtocolVersion).mockResolvedValue(AMENDMENT);
+    vi.mocked(kernelApi.canI).mockImplementation(
+      async (capability, resource) => ({
+        capability,
+        verb_class: "Execute",
+        resource,
+        permitted: capability !== "protocol.revise_draft",
+        reason:
+          capability === "protocol.revise_draft"
+            ? "Missing protocol.revise_draft grant on Version 2."
+            : null,
+        explanation:
+          capability === "protocol.revise_draft"
+            ? {
+                subject: `protocol_version:${V2_ID}`,
+                claim: "Actor lacks an active grant for protocol.revise_draft.",
+                producer: "kernel.authorization",
+                steps: [],
+                conditions: [
+                  {
+                    code: "grant.active",
+                    description:
+                      "Hold an active Sponsor Designer grant covering this study",
+                    met: false,
+                    evidence: [STUDY],
+                  },
+                ],
+                next_actions: [],
+              }
+            : null,
+      })
+    );
+
+    await open(`/studies/CAD-101?section=protocol-versions&node=${V2}`);
+
+    const deniedNotice = wrapper.find("#protocol-import-disabled-notice");
+    expect(deniedNotice.exists()).toBe(true);
+    expect(deniedNotice.text()).toContain(
+      "Missing protocol.revise_draft grant on Version 2."
+    );
+    await wrapper.find("#protocol-import-explain-btn").trigger("click");
+    await flushPromises();
+    expect(deniedNotice.text()).toContain(
+      "Actor lacks an active grant for protocol.revise_draft."
+    );
+  });
+
+  it("gates Simulate with simulation.run canI and renders structural_diff, schedule_changes, dependents, and masked sections without false clean reassurance (K-SIM-4, PX-20)", async () => {
+    // 1. Denied simulation.run -> #kernel-simulate-denied + KernelExplanation
+    vi.mocked(kernelApi.canI).mockImplementation(
+      async (capability, resource) => ({
+        capability,
+        verb_class: "Inspect",
+        resource,
+        permitted: capability !== "simulation.run",
+        reason:
+          capability === "simulation.run"
+            ? "Simulation requires simulation.run authorization."
+            : null,
+        explanation:
+          capability === "simulation.run"
+            ? {
+                subject: `protocol_version:${V2_ID}`,
+                claim: "Dry-run denied for simulation.run.",
+                producer: "kernel.authorization",
+                steps: [],
+                conditions: [
+                  {
+                    code: "grant.active",
+                    description: "Obtain simulation.run capability",
+                    met: false,
+                    evidence: [],
+                  },
+                ],
+                next_actions: [],
+              }
+            : null,
+      })
+    );
+
+    await open(`/studies/CAD-101?section=protocol-versions&node=${V2}`);
+
+    expect(kernelApi.canI).toHaveBeenCalledWith("simulation.run", STUDY);
+    expect(wrapper.find("#verb-simulate").attributes("aria-disabled")).toBe(
+      "true"
+    );
+    const simDenied = wrapper.find("#kernel-simulate-denied");
+    expect(simDenied.exists()).toBe(true);
+    expect(simDenied.text()).toContain(
+      "Simulation requires simulation.run authorization."
+    );
+    expect(simDenied.text()).toContain("Dry-run denied for simulation.run.");
+
+    wrapper.unmount();
+
+    // 2. Permitted simulation.run with masked section and zero schedule_changes -> never shows #kernel-simulate-schedule-clean (K-SIM-4)
+    vi.mocked(kernelApi.canI).mockResolvedValue({
+      capability: "simulation.run",
+      verb_class: "Inspect",
+      resource: `protocol_version:${V2_ID}`,
+      permitted: true,
+      reason: null,
+      explanation: null,
+    });
+    vi.mocked(kernelApi.simulate).mockResolvedValueOnce({
+      version: V2,
+      parent_version: V1,
+      structural_diff: [
+        {
+          element_id: "VIS_PK_DAY7",
+          instance_type: "PlannedActivity",
+          change: "Added",
+          properties: ["/studyDay"],
+        },
+      ],
+      schedule_changes: [],
+      dependents: {
+        start: V1,
+        depth: 4,
+        total: 2,
+        truncated: false,
+        groups: [
+          {
+            kind: "enrollment",
+            count: 2,
+            objects: [
+              {
+                handle: "n1",
+                kind: "enrollment",
+                ref: "enrollment:0192f3c4-5e6a-7b8c-9d0e-0000000000f1@1",
+                mask: null,
+              },
+              {
+                handle: "masked:1",
+                kind: "enrollment",
+                ref: null,
+                mask: "NotPermitted",
+              },
+            ],
+          },
+        ],
+      },
+      masked: [{ part: "schedule_changes", reason: "NotPermitted" }],
+      matrix_gaps: [
+        {
+          kind: "MissingWindow",
+          severity: "Warning",
+          description: "Visit VIS_PK_DAY7 omits visit window bounds.",
+          json_pointer_path: "/plannedActivities/1",
+          recommendation: "Add WindowBefore and WindowAfter days.",
+        },
+      ],
+      input_hash: "sha256:1111",
+      result_hash: "sha256:2222",
+    });
+
+    await open(`/studies/CAD-101?section=protocol-versions&node=${V2}`);
+
+    await wrapper.find("#verb-simulate").trigger("click");
+    await flushPromises();
+
+    expect(kernelApi.simulate).toHaveBeenCalledWith({
+      storedVersionRef: V2,
+    });
+    expect(wrapper.find("#kernel-simulate-masked").exists()).toBe(true);
+    expect(wrapper.find("#kernel-simulate-masked").text()).toContain(
+      "schedule_changes"
+    );
+    // K-SIM-4 / PX-20: masked results must NEVER claim a clean schedule
+    expect(wrapper.find("#kernel-simulate-schedule-clean").exists()).toBe(
+      false
+    );
+    expect(wrapper.find("#kernel-simulate-structural-diff").text()).toContain(
+      "VIS_PK_DAY7"
+    );
+    expect(wrapper.find("#kernel-simulate-dependents").text()).toContain(
+      "2 dependent records"
+    );
+    expect(wrapper.find("#kernel-simulate-gaps").text()).toContain(
+      "Visit VIS_PK_DAY7 omits visit window bounds."
+    );
+    expect(wrapper.find("#kernel-simulate-hashes").text()).toContain(
+      "sha256:1111"
+    );
   });
 });

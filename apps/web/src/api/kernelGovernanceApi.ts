@@ -22,6 +22,17 @@ export function protocolVersionApproveAction(versionRef: string): string {
   return `/api/v1/kernel/protocol-versions/${clean}/approve`;
 }
 
+/** Gateway step-up semantic action for `POST /api/v1/kernel/protocol-versions/{versionRef}/withdraw`. */
+export const PROTOCOL_WITHDRAW_SEMANTIC_ACTION =
+  "kernel.protocol_version.withdraw";
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/protocol-versions/{versionRef}/withdraw`. */
+export function protocolVersionWithdrawAction(versionRef: string): string {
+  const at = versionRef.indexOf("@");
+  const clean = at < 0 ? versionRef : versionRef.slice(0, at);
+  return `/api/v1/kernel/protocol-versions/${clean}/withdraw`;
+}
+
 export interface KernelProtocolLifecycleRequest {
   versionRef: string;
   reason: string;
@@ -31,6 +42,16 @@ export interface KernelProtocolLifecycleRequest {
 export interface KernelApproveProtocolVersionInput {
   versionRef: string;
   meaning?: KernelLockMeaning;
+  expectedContentHash?: string | null;
+  attestationId?: string | null;
+  sigToken: string;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelWithdrawProtocolVersionInput {
+  versionRef: string;
+  meaning?: KernelLockMeaning | "Withdrawn";
   expectedContentHash?: string | null;
   attestationId?: string | null;
   sigToken: string;
@@ -105,6 +126,11 @@ function unversioned(nodeRef: string): string {
  * the `index.html` cold-boot bundle.
  */
 export const kernelGovernanceApi = {
+  PROTOCOL_APPROVE_SEMANTIC_ACTION,
+  protocolVersionApproveAction,
+  PROTOCOL_WITHDRAW_SEMANTIC_ACTION,
+  protocolVersionWithdrawAction,
+
   /** Submits a Draft protocol version for review, freezing its design and computing its content hash. */
   submitProtocolVersionForReview({
     versionRef,
@@ -157,6 +183,35 @@ export const kernelGovernanceApi = {
   }: KernelApproveProtocolVersionInput): Promise<KernelProtocolVersion> {
     return unwrapResponse(
       client.POST("/api/v1/kernel/protocol-versions/{versionRef}/approve", {
+        params: { path: { versionRef: unversioned(versionRef) } },
+        body: {
+          meaning,
+          ...(expectedContentHash
+            ? { expected_content_hash: expectedContentHash }
+            : {}),
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Withdraws an InReview or Approved protocol version with a 21 CFR Part 11 step-up signature bound to its frozen content hash. */
+  withdrawProtocolVersion({
+    versionRef,
+    meaning = "Withdrawn",
+    expectedContentHash,
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: KernelWithdrawProtocolVersionInput): Promise<KernelProtocolVersion> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/protocol-versions/{versionRef}/withdraw", {
         params: { path: { versionRef: unversioned(versionRef) } },
         body: {
           meaning,

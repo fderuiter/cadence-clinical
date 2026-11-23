@@ -40,7 +40,11 @@ public static class KernelProtocolGovernanceEndpoints
     /// <summary>The semantic action a protocol-version approval step-up token must carry (21 CFR Part 11).</summary>
     public const string ApproveProtocolVersionSemanticAction = "kernel.protocol_version.approve";
 
+    /// <summary>The semantic action a protocol-version withdrawal step-up token must carry (21 CFR Part 11).</summary>
+    public const string WithdrawProtocolVersionSemanticAction = "kernel.protocol_version.withdraw";
+
     private static readonly Capability ApproveProtocolVersionCapability = new("protocol.approve", VerbClass.Approve);
+    private static readonly Capability WithdrawProtocolVersionCapability = new("protocol.withdraw", VerbClass.Approve);
 
     /// <summary>The canonical concrete action path for approving a protocol version reference.</summary>
     public static string ApproveProtocolVersionAction(string versionRef)
@@ -49,6 +53,15 @@ public static class KernelProtocolGovernanceEndpoints
             ? NodeRef.For(versionId).ToString()
             : versionRef;
         return $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/protocol-versions/{canonical}/approve";
+    }
+
+    /// <summary>The canonical concrete action path for withdrawing a protocol version reference.</summary>
+    public static string WithdrawProtocolVersionAction(string versionRef)
+    {
+        var canonical = TryParseProtocolVersion(versionRef, out var versionId)
+            ? NodeRef.For(versionId).ToString()
+            : versionRef;
+        return $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/protocol-versions/{canonical}/withdraw";
     }
 
     /// <summary>Maps protocol governance, evidence artifact, effectivity, and study-site activation routes.</summary>
@@ -61,23 +74,13 @@ public static class KernelProtocolGovernanceEndpoints
             .WithName("KernelSubmitProtocolVersionForReview")
             .WithSummary("Freezes a draft protocol version's content, computes its content hash, and moves it to InReview (protocol.submit_for_review).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesKernelErrors([
-                .. KernelErrors.CommandPipeline,
-                KernelErrors.NotFound,
-                ProtocolErrors.InvalidTransition,
-                ProtocolErrors.ContentRequired,
-                ProtocolErrors.ContentInvalid,
-            ]);
+            .ProducesKernelCommand<SubmitProtocolVersionForReview>();
 
         group.MapPost("/protocol-versions/{versionRef}/return-to-draft", ReturnProtocolVersionToDraftAsync)
             .WithName("KernelReturnProtocolVersionToDraft")
             .WithSummary("Returns an InReview protocol version to Draft, clearing its content hash so it can be revised (protocol.return_to_draft).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesKernelErrors([
-                .. KernelErrors.CommandPipeline,
-                KernelErrors.NotFound,
-                ProtocolErrors.InvalidTransition,
-            ]);
+            .ProducesKernelCommand<ReturnProtocolVersionToDraft>();
 
         group.MapPost("/protocol-versions/{versionRef}/approve", ApproveProtocolVersionAsync)
             .WithName("KernelApproveProtocolVersion")
@@ -87,14 +90,27 @@ public static class KernelProtocolGovernanceEndpoints
             .ProducesKernelErrors([
                 .. KernelErrors.CommandPipeline,
                 .. RaisesKernelErrorsAttribute.Of(typeof(Attest))!,
-                KernelErrors.AlreadyExists,
-                KernelErrors.NotFound,
-                ProtocolErrors.InvalidTransition,
-                ProtocolErrors.AttestationRejected,
+                .. RaisesKernelErrorsAttribute.Of(typeof(ApproveProtocolVersion))!,
+                TrustErrors.TargetContentChanged,
             ])
             .RequireElectronicSignature(
                 ApproveProtocolVersionSemanticAction,
                 ctx => ApproveProtocolVersionAction(ctx.Request.RouteValues["versionRef"]?.ToString() ?? string.Empty));
+
+        group.MapPost("/protocol-versions/{versionRef}/withdraw", WithdrawProtocolVersionAsync)
+            .WithName("KernelWithdrawProtocolVersion")
+            .WithSummary("Records a 21 CFR Part 11 Withdrawn attestation bound to the frozen protocol content hash and withdraws the protocol version (protocol.withdraw).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesKernelErrors([
+                .. KernelErrors.CommandPipeline,
+                .. RaisesKernelErrorsAttribute.Of(typeof(Attest))!,
+                .. RaisesKernelErrorsAttribute.Of(typeof(WithdrawProtocolVersion))!,
+                TrustErrors.TargetContentChanged,
+            ])
+            .RequireElectronicSignature(
+                WithdrawProtocolVersionSemanticAction,
+                ctx => WithdrawProtocolVersionAction(ctx.Request.RouteValues["versionRef"]?.ToString() ?? string.Empty));
 
         group.MapGet("/studies/{studyRef}/artifacts", ListStudyArtifactsAsync)
             .WithName("KernelListStudyArtifacts")
@@ -108,14 +124,7 @@ public static class KernelProtocolGovernanceEndpoints
             .WithSummary("Registers an immutable study evidence artifact version such as an ethics approval, regulatory approval, or CTA acknowledgement (artifact.register).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesKernelErrors([
-                .. KernelErrors.CommandPipeline,
-                KernelErrors.AlreadyExists,
-                EvidenceErrors.ContentInvalid,
-                EvidenceErrors.TitleInvalid,
-                EvidenceErrors.KindInvalid,
-                EvidenceErrors.StudyUnknown,
-            ]);
+            .ProducesKernelCommand<RegisterArtifact>();
 
         group.MapGet("/studies/{studyRef}/effectivities", ListStudyEffectivitiesAsync)
             .WithName("KernelListStudyEffectivities")
@@ -128,41 +137,19 @@ public static class KernelProtocolGovernanceEndpoints
             .WithName("KernelDeclareEffectivity")
             .WithSummary("Declares a Pending protocol-version effectivity for the whole study, a country, or one study site (effectivity.declare).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesKernelErrors([
-                .. KernelErrors.CommandPipeline,
-                KernelErrors.AlreadyExists,
-                EffectivityErrors.ScopeInvalid,
-                EffectivityErrors.ProtocolVersionUnknown,
-                EffectivityErrors.ProtocolVersionWithdrawn,
-                EffectivityErrors.StudySiteNotInStudy,
-                EffectivityErrors.AlreadyDeclared,
-                EffectivityErrors.TransitionTimeInvalid,
-            ]);
+            .ProducesKernelCommand<DeclareEffectivity>();
 
         group.MapPost("/effectivities/{effectivityRef}/status", ChangeEffectivityStatusAsync)
             .WithName("KernelChangeEffectivityStatus")
             .WithSummary("Transitions an effectivity's status in valid time with supporting approval artifact evidence (effectivity.change_status, K-TIME-5).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesKernelErrors([
-                .. KernelErrors.CommandPipeline,
-                KernelErrors.NotFound,
-                EffectivityErrors.ProtocolVersionNotApproved,
-                EffectivityErrors.InvalidTransition,
-                EffectivityErrors.TransitionTimeInvalid,
-                EffectivityErrors.EvidenceRequired,
-                EffectivityErrors.EvidenceInvalid,
-            ]);
+            .ProducesKernelCommand<ChangeEffectivityStatus>();
 
         group.MapPost("/study-sites/{studySiteRef}/activate", ActivateStudySiteAsync)
             .WithName("KernelActivateStudySite")
             .WithSummary("Activates a kernel study site once at least one protocol version is effective there (study_site.activate, K-TIME-4).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesKernelErrors([
-                .. KernelErrors.CommandPipeline,
-                EffectivityErrors.StudySiteUnknown,
-                EffectivityErrors.StudySiteAlreadyActive,
-                EffectivityErrors.NoEffectiveVersion,
-            ]);
+            .ProducesKernelCommand<ActivateStudySite>();
 
         return kernel;
     }
@@ -339,6 +326,116 @@ public static class KernelProtocolGovernanceEndpoints
 
         var updated = await versions.GetAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok(ToProtocolVersionResponse(updated, approveResult.Value!));
+    }
+
+    internal static async Task<Results<Ok<KernelProtocolVersionResponse>, ProblemHttpResult>> WithdrawProtocolVersionAsync(
+        string versionRef,
+        KernelWithdrawProtocolVersionRequest? request,
+        HttpContext context,
+        IProtocolVersionReader versions,
+        IKernelCommandSender sender,
+        IAuthorizationProbe probe,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken)
+    {
+        if (context.VerifiedSigToken() is not { } sigToken)
+        {
+            return TypedResults.Problem(
+                title: "Electronic signature required",
+                detail: "Supply a fresh, single-use X-Sig-Token step-up header bound to this protocol version withdrawal.",
+                statusCode: StatusCodes.Status401Unauthorized);
+        }
+
+        if (!TryParseProtocolVersion(versionRef, out var versionId))
+        {
+            return KernelProblems.BadRequest("Invalid NodeRef", $"'{versionRef}' is not a protocol_version NodeRef (protocol_version:<uuid>).");
+        }
+
+        var (idempotencyKey, reason, headerProblem) = ReadMutationHeaders(context, changeReason);
+        if (headerProblem is not null)
+        {
+            return headerProblem;
+        }
+
+        if (request?.Meaning is { Length: > 0 } rawMeaning
+            && (!Enum.TryParse<AttestationMeaning>(rawMeaning, ignoreCase: true, out var parsedMeaning)
+                || parsedMeaning != AttestationMeaning.Withdrawn))
+        {
+            return KernelErrorEndpoints.Problem(
+                ProtocolErrors.AttestationRejected.WithMessage("Protocol withdrawal requires an attestation with meaning Withdrawn."));
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        if (context.RequestServices.GetService<ITenantEntitlementReader>() is { } entitlementReader)
+        {
+            var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
+            var entitlements = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+            if (entitlements.IsReadOnly)
+            {
+                return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
+            }
+
+            if (!entitlements.ProductFamilies.Contains(ProductFamily.Blueprint))
+            {
+                return KernelErrorEndpoints.Problem(CommercialErrors.ProductFamilyNotEntitled);
+            }
+        }
+
+        var existing = await versions.GetAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
+        if (existing is null)
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.NotFound);
+        }
+
+        var attestationId = request?.AttestationId is { } given && given != Guid.Empty
+            ? AttestationId.FromGuid(given)
+            : AttestationId.FromGuid(DeriveGuid(tenant, "withdraw-protocol-version-attest", idempotencyKey));
+
+        var canWithdraw = await probe.CanIAsync(tenant, WithdrawProtocolVersionCapability, NodeRef.For(versionId), cancellationToken).ConfigureAwait(false);
+        if (canWithdraw.Permitted)
+        {
+            if (existing.Status is not (ProtocolVersionStatus.InReview or ProtocolVersionStatus.Approved)
+                || string.IsNullOrWhiteSpace(existing.ContentHash))
+            {
+                return KernelErrorEndpoints.Problem(ProtocolErrors.InvalidTransition);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request?.ExpectedContentHash))
+            {
+                var normalizedExpected = NormalizeSha256(request.ExpectedContentHash);
+                if (!string.Equals(normalizedExpected, existing.ContentHash, StringComparison.Ordinal))
+                {
+                    return KernelErrorEndpoints.Problem(TrustErrors.TargetContentChanged);
+                }
+            }
+
+            var attestResult = await sender.SendAsync(
+                new Attest(
+                    tenant,
+                    attestationId,
+                    AttestationMeaning.Withdrawn,
+                    new AttestationTarget(AttestationTarget.ProtocolVersionKind, versionId.Value, existing.ContentHash),
+                    new DateTimeOffset(sigToken.IssuedAt, TimeSpan.Zero),
+                    KernelLockEndpoints.StepUpMethod,
+                    $"{idempotencyKey}:attest",
+                    reason),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!attestResult.IsSuccess && attestResult.Error?.Code != KernelErrors.AlreadyExists.Code)
+            {
+                return KernelErrorEndpoints.Problem(attestResult.Error!);
+            }
+        }
+
+        var withdrawResult = await sender.SendAsync(
+            new WithdrawProtocolVersion(tenant, versionId, attestationId, idempotencyKey, reason),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!withdrawResult.IsSuccess)
+        {
+            return KernelErrorEndpoints.Problem(withdrawResult.Error!);
+        }
+
+        var updated = await versions.GetAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(ToProtocolVersionResponse(updated, withdrawResult.Value!));
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelArtifactResponse>>, ProblemHttpResult>> ListStudyArtifactsAsync(

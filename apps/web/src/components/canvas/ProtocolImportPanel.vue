@@ -18,6 +18,31 @@
       </div>
 
       <div
+        v-if="disabled && disabledReason"
+        :id="`${idPrefix}-disabled-notice`"
+        class="banner banner-disabled"
+        role="status"
+      >
+        <div class="disabled-notice-row">
+          <span>{{ disabledReason }}</span>
+          <button
+            v-if="explanation"
+            :id="`${idPrefix}-explain-btn`"
+            type="button"
+            class="btn btn-secondary"
+            :aria-expanded="showExplain ? 'true' : 'false'"
+            @click="showExplain = !showExplain"
+          >
+            {{ showExplain ? "Hide explanation" : "Explain" }}
+          </button>
+        </div>
+        <KernelExplanation
+          v-if="showExplain && explanation"
+          :explanation="explanation"
+        />
+      </div>
+
+      <div
         v-if="importing"
         :id="`${idPrefix}-progress`"
         class="banner banner-progress"
@@ -61,7 +86,7 @@
             :id="`${idPrefix}-choose-file`"
             type="button"
             class="btn btn-secondary"
-            :disabled="importing"
+            :disabled="importing || disabled"
             @click="openFilePicker"
           >
             Choose ODM XML or USDM JSON file
@@ -71,7 +96,7 @@
             :id="`${idPrefix}-clear-file`"
             type="button"
             class="btn btn-link"
-            :disabled="importing"
+            :disabled="importing || disabled"
             @click="onClearFileClick"
           >
             Clear file
@@ -106,6 +131,7 @@
             type="search"
             class="text-input template-search"
             placeholder="Filter by form name or domain, e.g. Vital Signs or DM"
+            :disabled="importing || disabled"
           />
         </div>
         <div
@@ -125,7 +151,7 @@
               v-model="selectedTemplateIds"
               type="checkbox"
               :value="tpl.id"
-              :disabled="importing"
+              :disabled="importing || disabled"
             />
             <span class="template-domain">{{ tpl.category }}</span>
             <span class="template-title">{{ tpl.form_name }}</span>
@@ -145,7 +171,7 @@
             class="text-input"
             maxlength="500"
             placeholder="e.g. Import initial CDISC protocol draft for review"
-            :disabled="importing"
+            :disabled="importing || disabled"
           />
         </div>
         <div class="field-group checkbox-group">
@@ -154,7 +180,7 @@
               :id="`${idPrefix}-replace`"
               v-model="replaceForms"
               type="checkbox"
-              :disabled="importing"
+              :disabled="importing || disabled"
             />
             <span>Replace existing draft forms instead of merging</span>
           </label>
@@ -202,18 +228,70 @@
             {{ draftSummary.title }}
           </h3>
         </div>
-        <span :id="`${idPrefix}-summary-counts`" class="summary-counts">
+        <span :id="`${idPrefix}-summary-counts`" class="summary-counts numeric">
           {{ draftSummary.form_count }}
           {{ draftSummary.form_count === 1 ? "form" : "forms" }} ·
           {{ draftSummary.item_count }}
           {{ draftSummary.item_count === 1 ? "item" : "items" }}
+          <template
+            v-if="
+              Number(draftSummary.epoch_count ?? 0) > 0 ||
+              Number(draftSummary.planned_activity_count ?? 0) > 0
+            "
+          >
+            · {{ draftSummary.epoch_count ?? 0 }}
+            {{
+              Number(draftSummary.epoch_count ?? 0) === 1 ? "epoch" : "epochs"
+            }}
+            · {{ draftSummary.planned_activity_count ?? 0 }}
+            {{
+              Number(draftSummary.planned_activity_count ?? 0) === 1
+                ? "visit"
+                : "visits"
+            }}
+          </template>
         </span>
       </div>
 
-      <p v-if="draftSummary.version.status === 'Draft'" class="governance-note">
-        Draft status: formal review and electronic approval are required before
-        any site can be activated on this protocol version.
-      </p>
+      <div
+        v-if="draftSummary.version.status === 'Draft'"
+        :id="`${idPrefix}-draft-governance`"
+        class="governance-handoff"
+      >
+        <p class="governance-note">
+          Draft status: formal review and electronic approval are required
+          before any site can be activated on this protocol version.
+        </p>
+        <button
+          :id="`${idPrefix}-govern-draft`"
+          type="button"
+          class="btn btn-secondary"
+          @click="emit('govern', draftSummary.version)"
+        >
+          Review &amp; submit Version {{ draftSummary.version.number }}
+        </button>
+      </div>
+      <div
+        v-else-if="draftSummary.version.status === 'Approved' && studyCode"
+        :id="`${idPrefix}-approved-governance`"
+        class="governance-handoff"
+      >
+        <p class="governance-note">
+          Approved status: declare protocol effectivity with approval evidence
+          and activate study sites in Start.
+        </p>
+        <router-link
+          :id="`${idPrefix}-open-startup`"
+          class="btn btn-secondary"
+          :to="{
+            name: 'study',
+            params: { studyCode },
+            query: { stage: 'start', section: 'site-activation' },
+          }"
+        >
+          Open Start site activation
+        </router-link>
+      </div>
 
       <div
         v-if="draftSummary.imported_rule_pack"
@@ -317,11 +395,13 @@ import { handoffFocus } from "ui";
 import {
   describeKernelError,
   kernelApi,
+  type KernelExplanation as KernelExplanationModel,
   type KernelProtocolDraftSummary,
   type KernelProtocolTemplate,
 } from "../../api/kernelApi";
 import { formatClinicalStatus } from "../../utils/clinicalLabels";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
+import KernelExplanation from "./KernelExplanation.vue";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -331,15 +411,22 @@ const props = withDefaults(
     studyCode: string;
     selectedVersionRef?: string;
     idPrefix?: string;
+    disabled?: boolean;
+    disabledReason?: string;
+    explanation?: KernelExplanationModel | null;
   }>(),
   {
     selectedVersionRef: "",
     idPrefix: "protocol-import",
+    disabled: false,
+    disabledReason: "",
+    explanation: null,
   }
 );
 
 const emit = defineEmits<{
   imported: [summary: KernelProtocolDraftSummary];
+  govern: [version: KernelProtocolDraftSummary["version"]];
 }>();
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
@@ -354,6 +441,7 @@ const pendingIdempotencyKey = ref("");
 const importing = ref(false);
 const successMessage = ref("");
 const errorMessage = ref("");
+const showExplain = ref(false);
 
 const draftSummary = ref<KernelProtocolDraftSummary | null>(null);
 const summaryLoading = ref(false);
@@ -381,6 +469,7 @@ const filteredTemplates = computed(() => {
 
 const canSubmit = computed(
   () =>
+    !props.disabled &&
     !importing.value &&
     Boolean(props.studyRef || props.studyCode) &&
     changeReason.value.trim().length > 0 &&
@@ -482,6 +571,9 @@ watch(
 );
 
 async function submitImport() {
+  if (props.disabled) {
+    return;
+  }
   if (typeof kernelApi.importProtocolDraft !== "function") {
     errorMessage.value = "Protocol import service is unavailable.";
     return;
@@ -523,7 +615,13 @@ async function submitImport() {
         : "";
     const formCountNum = Number(summary.form_count);
     const itemCountNum = Number(summary.item_count);
-    successMessage.value = `Imported Draft version ${summary.version.number} (${formCountNum} ${formCountNum === 1 ? "form" : "forms"}, ${itemCountNum} ${itemCountNum === 1 ? "item" : "items"})${notesSuffix}.`;
+    const epochCountNum = Number(summary.epoch_count ?? 0);
+    const visitCountNum = Number(summary.planned_activity_count ?? 0);
+    const scheduleSuffix =
+      epochCountNum > 0 || visitCountNum > 0
+        ? `, ${epochCountNum} ${epochCountNum === 1 ? "epoch" : "epochs"}, ${visitCountNum} ${visitCountNum === 1 ? "visit" : "visits"}`
+        : "";
+    successMessage.value = `Imported Draft version ${summary.version.number} (${formCountNum} ${formCountNum === 1 ? "form" : "forms"}, ${itemCountNum} ${itemCountNum === 1 ? "item" : "items"}${scheduleSuffix})${notesSuffix}.`;
 
     clearSelectedFile();
     selectedTemplateIds.value = [];
@@ -604,6 +702,27 @@ defineExpose({
   color: var(--semantic-color-error-text-dark);
 }
 
+.banner-disabled {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
+  color: var(--semantic-color-text);
+}
+
+.disabled-notice-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
+
 .file-chooser-box {
   display: flex;
   flex-direction: column;
@@ -674,7 +793,7 @@ defineExpose({
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 1rem;
   width: 100%;
   box-sizing: border-box;
 }
@@ -786,6 +905,14 @@ defineExpose({
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--neutral-dark);
+}
+
+.governance-handoff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .governance-note {

@@ -7,6 +7,7 @@ using System.Reflection;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Simulation;
 
 namespace Cadence.Kernel.Application.Authorization;
 
@@ -42,11 +43,19 @@ public sealed class KernelCommandCatalog
     /// <summary>The catalogue of the kernel's own commands (<c>Cadence.Kernel.Abstractions</c>).</summary>
     public static KernelCommandCatalog Kernel { get; } = new([typeof(ICommand).Assembly]);
 
+    /// <summary>Capabilities declared by kernel read or evaluation engines outside the command pipeline (ADR-2480 §4.3).</summary>
+    public static IReadOnlyList<Capability> NonCommandCapabilities { get; } = [SimulationCapabilities.Run];
+
     /// <summary>Every declared command, ordered by name.</summary>
     public IReadOnlyList<Entry> Entries { get; }
 
     /// <summary>The declaration for <paramref name="commandType"/>, or null when it declares no capability.</summary>
     public Entry? Find(Type commandType) => _byType.GetValueOrDefault(commandType);
+
+    /// <summary>Finds a declared capability by token across commands and kernel non-command capabilities.</summary>
+    public Capability? FindCapability(string token) =>
+        Entries.Select(e => e.Capability).FirstOrDefault(c => string.Equals(c.Token, token, StringComparison.Ordinal))
+        ?? NonCommandCapabilities.FirstOrDefault(c => string.Equals(c.Token, token, StringComparison.Ordinal));
 
     /// <summary>The commands offered on objects of <paramref name="kind"/>, ordered by name.</summary>
     public IReadOnlyList<Entry> ForKind(string kind) => [.. Entries.Where(e => e.InCatalogue && e.ResourceKind == kind)];

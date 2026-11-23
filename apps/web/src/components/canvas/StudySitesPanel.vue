@@ -63,6 +63,22 @@
           </div>
         </div>
         <div class="linked-site-actions">
+          <router-link
+            v-if="site.status !== 'Active'"
+            :id="`btn-site-activation-${site.site_code}`"
+            class="btn btn-primary"
+            :to="{
+              name: 'study',
+              params: { studyCode },
+              query: {
+                stage: 'start',
+                section: 'site-activation',
+                site: site.site_code,
+              },
+            }"
+          >
+            Activate site
+          </router-link>
           <button
             :id="`btn-site-participants-${site.site_code}`"
             type="button"

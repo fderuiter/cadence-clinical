@@ -7,6 +7,7 @@ import {
   clearKernelStudyCache,
   findKernelEnrollmentRef,
   findKernelStudyRef,
+  findStudyScheduleOptions,
   findStudySites,
   resetKernelStudySession,
 } from "../../src/canvas/kernelStudy";
@@ -22,6 +23,9 @@ vi.mock("../../src/api/kernelApi", () => ({
     search: vi.fn(),
     getChildren: vi.fn(),
     lookupEnrollment: vi.fn(),
+    listStudySites: vi.fn(),
+    listProtocolVersions: vi.fn(),
+    getScheduleOfActivities: vi.fn(),
   },
 }));
 
@@ -607,5 +611,180 @@ describe("kernelStudy session cache", () => {
     );
     await expect(findKernelStudyRef("CAD-101")).resolves.toBe(STUDY_REF);
     expect(kernelApi.search).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("findStudyScheduleOptions and findStudySites status resolution", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    clearKernelStudyCache();
+    vi.mocked(kernelApi.search).mockReset();
+    vi.mocked(kernelApi.getChildren).mockReset();
+    vi.mocked(kernelApi.listStudySites).mockReset();
+    vi.mocked(kernelApi.listProtocolVersions).mockReset();
+    vi.mocked(kernelApi.getScheduleOfActivities).mockReset();
+    vi.mocked(kernelApi.search).mockResolvedValue([
+      {
+        ref: STUDY_REF,
+        kind: "study",
+        title: "Study",
+        code: "CAD-101",
+        detail: null,
+        exact_code: true,
+        rank: 1,
+      },
+    ]);
+  });
+
+  it("returns null when only Draft, InReview, or Withdrawn protocol versions exist and selects only Approved versions", async () => {
+    vi.mocked(kernelApi.listProtocolVersions)
+      .mockResolvedValueOnce([
+        {
+          ref: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000b2@1",
+          study: STUDY_REF,
+          number: 2,
+          parent_version: null,
+          status: "Draft",
+          content_hash: null,
+          amendment_intent: null,
+          approval_attestation: null,
+          withdrawal_reason: null,
+          mask: null,
+        },
+        {
+          ref: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000b1@2",
+          study: STUDY_REF,
+          number: 1,
+          parent_version: null,
+          status: "InReview",
+          content_hash: "sha256:aa",
+          amendment_intent: null,
+          approval_attestation: null,
+          withdrawal_reason: null,
+          mask: null,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          ref: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000b2@1",
+          study: STUDY_REF,
+          number: 2,
+          parent_version:
+            "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000b1",
+          status: "Draft",
+          content_hash: null,
+          amendment_intent: "Add visit",
+          approval_attestation: null,
+          withdrawal_reason: null,
+          mask: null,
+        },
+        {
+          ref: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000b1@3",
+          study: STUDY_REF,
+          number: 1,
+          parent_version: null,
+          status: "Approved",
+          content_hash: "sha256:aa",
+          amendment_intent: null,
+          approval_attestation:
+            "attestation:0192f3c4-5e6a-7b8c-9d0e-0000000000e1",
+          withdrawal_reason: null,
+          mask: null,
+        },
+      ]);
+    vi.mocked(kernelApi.getScheduleOfActivities).mockResolvedValueOnce({
+      version: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000b1@3",
+      title: "CAD-101 v1",
+      matrix_hash: "sha256:bb",
+      epochs: [
+        {
+          epoch_id: "EP_SCREEN",
+          name: "Screening",
+          order: 1,
+          first_column: 0,
+          column_count: 1,
+        },
+      ],
+      columns: [
+        {
+          activity_id: "VIS_SCREEN",
+          name: "Screening Visit",
+          epoch_id: "EP_SCREEN",
+          study_day: 1,
+          window_before: 0,
+          window_after: 3,
+          locations: ["Clinic"],
+        },
+      ],
+      rows: [
+        {
+          collection_spec_id: "F_DM",
+          name: "Demographics",
+          item_ids: ["AGE", "SEX"],
+          columns: [0],
+        },
+      ],
+      footnotes: [],
+    });
+
+    await expect(findStudyScheduleOptions("CAD-101")).resolves.toBeNull();
+    expect(kernelApi.getScheduleOfActivities).not.toHaveBeenCalled();
+
+    const approvedSchedule = await findStudyScheduleOptions("CAD-101");
+    expect(kernelApi.getScheduleOfActivities).toHaveBeenCalledWith(
+      "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000b1@3"
+    );
+    expect(approvedSchedule).toMatchObject({
+      versionRef: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000b1@3",
+      collectionSpecs: [
+        {
+          id: "F_DM",
+          name: "Demographics",
+          plannedActivityIds: ["VIS_SCREEN"],
+        },
+      ],
+    });
+  });
+
+  it("preserves StudySite status from listStudySites for active-site screening checks", async () => {
+    vi.mocked(kernelApi.listStudySites).mockResolvedValueOnce([
+      {
+        ref: SITE_B,
+        study_ref: STUDY_REF,
+        site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-00000000c102@1",
+        site_code: "SITE-102",
+        site_name: "Utrecht Cardiac Center",
+        country: "NL",
+        institution_ref: "organization:0192f3c4-5e6a-7b8c-9d0e-00000000c202@1",
+        institution_code: "UMCU",
+        institution_name: "UMC Utrecht",
+        status: "Selected",
+      },
+      {
+        ref: SITE_A,
+        study_ref: STUDY_REF,
+        site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-00000000c101@1",
+        site_code: "SITE-101",
+        site_name: "Boston Heart Institute",
+        country: "US",
+        institution_ref: "organization:0192f3c4-5e6a-7b8c-9d0e-00000000c201@1",
+        institution_code: "BHI",
+        institution_name: "Boston Heart Institute",
+        status: "Active",
+      },
+    ]);
+
+    await expect(findStudySites("CAD-101")).resolves.toEqual([
+      {
+        code: "SITE-101",
+        label: "SITE-101 — Boston Heart Institute (US)",
+        status: "Active",
+      },
+      {
+        code: "SITE-102",
+        label: "SITE-102 — Utrecht Cardiac Center (NL)",
+        status: "Selected",
+      },
+    ]);
   });
 });

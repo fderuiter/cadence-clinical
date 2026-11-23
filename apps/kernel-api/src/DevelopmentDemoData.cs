@@ -95,6 +95,7 @@ internal static partial class DevelopmentDemoData
         "concept.define",
         "protocol.draft",
         "protocol.submit_for_review",
+        "simulation.run",
         "artifact.register",
         "effectivity.declare",
         "effectivity.change_status",
