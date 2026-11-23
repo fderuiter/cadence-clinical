@@ -15,6 +15,8 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Identity;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Knowledge;
+using Cadence.Kernel.Events;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence.IdentityVault;
@@ -58,7 +60,7 @@ internal sealed class KernelUnitOfWorkFactory(
     internal Action<CommitStage>? FaultInjector { get; set; }
 
     public IKernelCommandTransaction Begin(CommandExecution execution) =>
-        new KernelCommandTransaction(contextFactory.Create(execution.Command.TenantId), execution, FaultInjector, _moduleStores);
+        KernelCommandTransaction.Start(contextFactory.Create(execution.Command.TenantId), execution, FaultInjector, _moduleStores);
 }
 
 /// <summary>
@@ -76,14 +78,18 @@ internal sealed class KernelCommandTransaction(
     IReadOnlyList<IModuleCommandStore>? moduleStores = null) : IKernelCommandTransaction, IKernelUnitOfWork, IIdentityVaultStaging
 {
     private const string DecisionDeniedEvent = "DecisionDenied";
+    private static readonly AsyncLocal<KernelCommandTransaction?> Ambient = new();
 
-    private readonly List<(object Event, DateTimeOffset? OccurredValid)> _events = [];
+    private readonly List<(object Event, DateTimeOffset? OccurredValid, NodeRef? Subject)> _events = [];
     private readonly List<(NodeRef Input, LineageEdgeKind Kind, DateTimeOffset? ValidFrom)> _inputs = [];
     private readonly Dictionary<NodeRef, bool> _parts = [];
     private readonly List<(NodeRef From, NodeRef To, LineageEdgeKind Kind)> _partEdges = [];
     private readonly List<IIdentityVaultWrite> _vaultWrites = [];
     private readonly List<(IModuleCommandStore Store, ModuleDbContext Context)> _modules = [];
     private readonly HashSet<(Type Type, string Key)> _claimed = [];
+    private readonly List<(Type Type, string Key, bool Added)> _claimLog = [];
+    private KernelCommandTransaction? _previousAmbient;
+    private int _preCommitReadState;
     private CollectionInstanceId? _collection;
     private long? _lockKey;
     private bool _scopeLocked;
@@ -92,9 +98,49 @@ internal sealed class KernelCommandTransaction(
     private AuthorizationDecision? _permit;
     private NodeRef? _proposal;
 
+    internal static KernelCommandTransaction? Current => Ambient.Value;
+
     public IKernelUnitOfWork Work => this;
 
     private ICommand Command => execution.Command;
+
+    internal static KernelCommandTransaction Start(
+        KernelDbContext db,
+        CommandExecution execution,
+        Action<CommitStage>? faultInjector,
+        IReadOnlyList<IModuleCommandStore>? moduleStores = null)
+    {
+        var tx = new KernelCommandTransaction(db, execution, faultInjector, moduleStores)
+        {
+            _previousAmbient = Ambient.Value,
+        };
+        Ambient.Value = tx;
+        return tx;
+    }
+
+    internal async ValueTask<KernelTenantReadLease?> TryAcquireSharedReadLeaseAsync(
+        TenantId tenant,
+        CancellationToken cancellationToken)
+    {
+        if (Command.TenantId != tenant || Interlocked.CompareExchange(ref _preCommitReadState, 1, 0) != 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            await HoldConnectionAsync(cancellationToken).ConfigureAwait(false);
+            return new KernelTenantReadLease(
+                db,
+                onRelease: () => Interlocked.CompareExchange(ref _preCommitReadState, 0, 1),
+                ownsContext: false);
+        }
+        catch
+        {
+            Interlocked.CompareExchange(ref _preCommitReadState, 0, 1);
+            throw;
+        }
+    }
 
     public async Task<TAggregate?> FindAsync<TAggregate>(object id, CancellationToken cancellationToken)
         where TAggregate : AggregateRootBase
@@ -216,15 +262,33 @@ internal sealed class KernelCommandTransaction(
     public void Add(AggregateRootBase aggregate)
     {
         ArgumentNullException.ThrowIfNull(aggregate);
-        var entry = StoreFor(aggregate.GetType()).Add(aggregate);
-        Claim(aggregate.GetType(), KeyText(entry));
+        var store = StoreFor(aggregate.GetType());
+        var autoDetect = store.ChangeTracker.AutoDetectChangesEnabled;
+        store.ChangeTracker.AutoDetectChangesEnabled = false;
+        try
+        {
+            var entry = store.Add(aggregate);
+            Claim(aggregate.GetType(), KeyText(entry), added: true);
+        }
+        finally
+        {
+            store.ChangeTracker.AutoDetectChangesEnabled = autoDetect;
+        }
     }
 
     public void Raise(object domainEvent, DateTimeOffset? occurredValid = null)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
         _ = EventAttribute(domainEvent.GetType());
-        _events.Add((domainEvent, occurredValid));
+        _events.Add((domainEvent, occurredValid, null));
+    }
+
+    public void Raise(object domainEvent, NodeRef subject, DateTimeOffset? occurredValid = null)
+    {
+        ArgumentNullException.ThrowIfNull(domainEvent);
+        ArgumentNullException.ThrowIfNull(subject);
+        _ = EventAttribute(domainEvent.GetType());
+        _events.Add((domainEvent, occurredValid, subject));
     }
 
     public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null)
@@ -310,14 +374,20 @@ internal sealed class KernelCommandTransaction(
         _proposal = proposal;
     }
 
-    public Task<IdempotentOutcome?> FindPriorOutcomeAsync(CancellationToken cancellationToken) =>
-        db.IdempotencyRecords.AsNoTracking()
+    public async Task<IdempotentOutcome?> FindPriorOutcomeAsync(CancellationToken cancellationToken)
+    {
+        await HoldConnectionAsync(cancellationToken).ConfigureAwait(false);
+        return await db.IdempotencyRecords.AsNoTracking()
             .Where(r => r.TenantId == Command.TenantId && r.IdempotencyKey == Command.IdempotencyKey)
             .Select(r => new IdempotentOutcome(r.RequestHash, r.ResultJson))
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 
     public async Task<CommitOutcome> CommitAsync(string resultJson, CancellationToken cancellationToken)
     {
+        Volatile.Write(ref _preCommitReadState, 2);
+        await HoldConnectionAsync(cancellationToken).ConfigureAwait(false);
         using var writes = db.PermitPipelineWrites();
 #pragma warning disable RS0030 // Kernel contexts register no retrying execution strategy (KernelDatabase.UseKernelNpgsql; KernelExecutionStrategyTests), so EF permits this transaction and the commit pipeline keeps its own conflict handling.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
@@ -330,56 +400,76 @@ internal sealed class KernelCommandTransaction(
         ChangedAggregate? aggregate = null;
         try
         {
-            var changed = StampAggregates();
-            aggregate = changed.FirstOrDefault();
-            Fault(CommitStage.StateStamped);
-
-            AddProvenance("Committed", aggregate, _permit);
-            Fault(CommitStage.ProvenanceStaged);
-
-            if (changed.Count == 0)
+            db.ChangeTracker.DetectChanges();
+            foreach (var (_, context) in _modules)
             {
-                StageLineage(null);
+                context.ChangeTracker.DetectChanges();
             }
 
-            foreach (var written in changed)
+            var autoDetect = db.ChangeTracker.AutoDetectChangesEnabled;
+            db.ChangeTracker.AutoDetectChangesEnabled = false;
+            try
             {
-                StageLineage(written, withParts: ReferenceEquals(written, aggregate));
+                var changed = StampAggregates();
+                aggregate = changed.FirstOrDefault();
+                Fault(CommitStage.StateStamped);
+
+                AddProvenance("Committed", aggregate, _permit);
+                Fault(CommitStage.ProvenanceStaged);
+
+                if (changed.Count == 0)
+                {
+                    StageLineage(null);
+                }
+
+                foreach (var written in changed)
+                {
+                    StageLineage(written, withParts: ReferenceEquals(written, aggregate));
+                }
+
+                Fault(CommitStage.LineageStaged);
+
+                foreach (var (domainEvent, occurredValid, explicitSubject) in _events)
+                {
+                    var attribute = EventAttribute(domainEvent.GetType());
+                    var eventSubject = explicitSubject
+                        ?? (domainEvent is ConceptDefined conceptDefined
+                            ? NodeRef.For(conceptDefined.Concept.ConceptId, conceptDefined.Concept.Version)
+                            : aggregate?.Subject);
+                    AddEvent(attribute.Type, attribute.SchemaVersion, JsonSerializer.SerializeToElement(domainEvent, domainEvent.GetType(), KernelCommandPipelineJson.Options), occurredValid, eventSubject);
+                }
+
+                Fault(CommitStage.EventsStaged);
+
+                if (changed.Count == 0)
+                {
+                    await AppendAuditBatchAsync([("NoChange", null, null)], cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    await AppendAuditBatchAsync(
+                        [.. changed.Select(written => (written.Action, (ChangedAggregate?)written, (string?)null))],
+                        cancellationToken).ConfigureAwait(false);
+                }
+
+                Fault(CommitStage.AuditAppended);
+
+                db.IdempotencyRecords.Add(new IdempotencyRecord
+                {
+                    TenantId = Command.TenantId,
+                    IdempotencyKey = Command.IdempotencyKey,
+                    CommandType = execution.CommandType,
+                    RequestHash = execution.RequestHash,
+                    ResultJson = resultJson,
+                    ActivityId = execution.ActivityId,
+                    RecordedAt = execution.RecordedAt,
+                });
+                Fault(CommitStage.IdempotencyStaged);
             }
-
-            Fault(CommitStage.LineageStaged);
-
-            foreach (var (domainEvent, occurredValid) in _events)
+            finally
             {
-                var attribute = EventAttribute(domainEvent.GetType());
-                AddEvent(attribute.Type, attribute.SchemaVersion, JsonSerializer.SerializeToElement(domainEvent, domainEvent.GetType(), KernelCommandPipelineJson.Options), occurredValid, aggregate?.Subject);
+                db.ChangeTracker.AutoDetectChangesEnabled = autoDetect;
             }
-
-            Fault(CommitStage.EventsStaged);
-
-            if (changed.Count == 0)
-            {
-                await AppendAuditAsync("NoChange", null, cancellationToken).ConfigureAwait(false);
-            }
-
-            foreach (var written in changed)
-            {
-                await AppendAuditAsync(written.Action, written, cancellationToken).ConfigureAwait(false);
-            }
-
-            Fault(CommitStage.AuditAppended);
-
-            db.IdempotencyRecords.Add(new IdempotencyRecord
-            {
-                TenantId = Command.TenantId,
-                IdempotencyKey = Command.IdempotencyKey,
-                CommandType = execution.CommandType,
-                RequestHash = execution.RequestHash,
-                ResultJson = resultJson,
-                ActivityId = execution.ActivityId,
-                RecordedAt = execution.RecordedAt,
-            });
-            Fault(CommitStage.IdempotencyStaged);
 
             // The module's rows first: a stale version writes no row and fails the command before any kernel row.
             foreach (var (_, context) in _modules)
@@ -442,6 +532,8 @@ internal sealed class KernelCommandTransaction(
     public async Task RecordDenialAsync(AuthorizationDecision denial, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(denial);
+        Volatile.Write(ref _preCommitReadState, 2);
+        await HoldConnectionAsync(cancellationToken).ConfigureAwait(false);
         using var writes = db.PermitPipelineWrites();
 #pragma warning disable RS0030 // Kernel contexts register no retrying execution strategy (KernelDatabase.UseKernelNpgsql; KernelExecutionStrategyTests), so EF permits this transaction and the commit pipeline keeps its own conflict handling.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
@@ -467,6 +559,7 @@ internal sealed class KernelCommandTransaction(
     public async Task RecordRefusalAsync(KernelError refusal, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(refusal);
+        Volatile.Write(ref _preCommitReadState, 2);
 
         // Nothing the handler read or staged is written: the refusal is the only row besides its provenance.
         db.ChangeTracker.Clear();
@@ -476,6 +569,7 @@ internal sealed class KernelCommandTransaction(
         _partEdges.Clear();
         _vaultWrites.Clear();
 
+        await HoldConnectionAsync(cancellationToken).ConfigureAwait(false);
         using var writes = db.PermitPipelineWrites();
 #pragma warning disable RS0030 // Kernel contexts register no retrying execution strategy (KernelDatabase.UseKernelNpgsql; KernelExecutionStrategyTests), so EF permits this transaction and the commit pipeline keeps its own conflict handling.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
@@ -501,6 +595,12 @@ internal sealed class KernelCommandTransaction(
 
     public async ValueTask DisposeAsync()
     {
+        Volatile.Write(ref _preCommitReadState, 2);
+        if (ReferenceEquals(Ambient.Value, this))
+        {
+            Ambient.Value = _previousAmbient;
+        }
+
         try
         {
             if (_lockKey is { } key)
@@ -546,16 +646,11 @@ internal sealed class KernelCommandTransaction(
         }
     }
 
-    /// <summary>The context that maps <paramref name="aggregateType"/>, with the connection held for a module's.</summary>
+    /// <summary>The context that maps <paramref name="aggregateType"/>, keeping this command's connection open.</summary>
     private async Task<DbContext> StoreForAsync(Type aggregateType, CancellationToken cancellationToken)
     {
-        var store = StoreFor(aggregateType);
-        if (!ReferenceEquals(store, db))
-        {
-            await HoldConnectionAsync(cancellationToken).ConfigureAwait(false);
-        }
-
-        return store;
+        await HoldConnectionAsync(cancellationToken).ConfigureAwait(false);
+        return StoreFor(aggregateType);
     }
 
     /// <summary>
@@ -617,7 +712,7 @@ internal sealed class KernelCommandTransaction(
         return BinaryPrimitives.ReadInt64BigEndian(digest);
     }
 
-    private void Claim(Type type, string key)
+    private void Claim(Type type, string key, bool added = false)
     {
         if (_collection is { } instance)
         {
@@ -629,6 +724,7 @@ internal sealed class KernelCommandTransaction(
             }
 
             _claimed.Add((type, key));
+            _claimLog.Add((type, key, added));
             return;
         }
 
@@ -638,23 +734,38 @@ internal sealed class KernelCommandTransaction(
             && !_claimed.Any(c => c.Type == type && c.Key != key))
         {
             _claimed.Add((type, key));
+            _claimLog.Add((type, key, added));
             return;
         }
 
-        if (_claimed.Count > 0 && !_claimed.Contains((type, key)))
+        if (added
+            && type == typeof(Concept)
+            && _claimLog.All(c => c.Added && c.Type == typeof(Concept))
+            && !_claimed.Contains((type, key)))
         {
-            var claimed = _claimed.First();
+            _claimed.Add((type, key));
+            _claimLog.Add((type, key, true));
+            return;
+        }
+
+        if (_claimed.Count > 0 && (!_claimed.Contains((type, key)) || _claimLog.Count > 1))
+        {
+            var claimed = _claimLog[0];
             throw new InvalidOperationException(
                 $"K-TX-1: {execution.CommandType} already changes {claimed.Type.Name} {claimed.Key}; it cannot also change {type.Name} {key}. Use an event-driven saga.");
         }
 
-        _claimed.Add((type, key));
+        if (_claimed.Add((type, key)))
+        {
+            _claimLog.Add((type, key, added));
+        }
     }
 
     /// <summary>
     /// Stamps GxP audit fields on the changed aggregates and captures their change sets, the primary one first: the one
-    /// changed aggregate (K-TX-1), a form instance followed by the observations a form save changed (ADR-2622), or a
-    /// scope-locked lock/release assertion paired with its inline electronic signature (ADR-2621).
+    /// changed aggregate (K-TX-1), a form instance followed by the observations a form save changed (ADR-2622), a
+    /// scope-locked lock/release assertion paired with its inline electronic signature (ADR-2621), or a homogeneous batch
+    /// of newly defined concepts.
     /// </summary>
     private List<ChangedAggregate> StampAggregates()
     {
@@ -665,10 +776,42 @@ internal sealed class KernelCommandTransaction(
             .ToList();
         if (changed.Count > 1)
         {
-            changed = _scopeLocked ? OrderSignedLockAssertion(changed) : OrderFormSave(changed);
+            if (_scopeLocked)
+            {
+                changed = OrderSignedLockAssertion(changed);
+            }
+            else if (_collection is not null)
+            {
+                changed = OrderFormSave(changed);
+            }
+            else
+            {
+                changed = OrderConceptBatchCreation(changed);
+            }
         }
 
         return [.. changed.Select(c => Stamp(c.Entry, c.Module))];
+    }
+
+    /// <summary>
+    /// Orders a homogeneous batch of newly added <see cref="Concept"/> aggregates in the deterministic order the handler
+    /// staged them; rejects mixed aggregate types or non-added concept mutations under K-TX-1.
+    /// </summary>
+    private List<(EntityEntry<AggregateRootBase> Entry, string? Module)> OrderConceptBatchCreation(
+        List<(EntityEntry<AggregateRootBase> Entry, string? Module)> changed)
+    {
+        if (changed.Any(c => c.Module is not null || c.Entry.State != EntityState.Added || c.Entry.Entity is not Concept))
+        {
+            throw new InvalidOperationException($"K-TX-1: {execution.CommandType} changed {changed.Count} aggregates.");
+        }
+
+        var orderByKey = new Dictionary<string, int>(_claimLog.Count, StringComparer.Ordinal);
+        for (int i = 0; i < _claimLog.Count; i++)
+        {
+            orderByKey.TryAdd(_claimLog[i].Key, i);
+        }
+
+        return [.. changed.OrderBy(c => orderByKey.GetValueOrDefault(KeyText(c.Entry), int.MaxValue))];
     }
 
     /// <summary>
@@ -739,6 +882,7 @@ internal sealed class KernelCommandTransaction(
             case EntityState.Modified:
                 aggregate.ReasonForChange = Command.ReasonForChange;
                 aggregate.VersionIndex++;
+                entry.DetectChanges();
                 action = "Updated";
                 changes = Serialize(new SortedDictionary<string, object?>(StringComparer.Ordinal)
                 {
@@ -978,10 +1122,19 @@ internal sealed class KernelCommandTransaction(
     }
 
     /// <summary>
-    /// Appends one link to the tenant's chain. The head row is created if missing and locked <c>FOR UPDATE</c>, so
-    /// concurrent commands for one tenant serialise here and the chain never forks.
+    /// Appends one link to the tenant's chain, delegating to <see cref="AppendAuditBatchAsync"/>.
     /// </summary>
-    private async Task AppendAuditAsync(string action, ChangedAggregate? aggregate, CancellationToken cancellationToken, string? changes = null)
+    private Task AppendAuditAsync(string action, ChangedAggregate? aggregate, CancellationToken cancellationToken, string? changes = null) =>
+        AppendAuditBatchAsync([(action, aggregate, changes)], cancellationToken);
+
+    /// <summary>
+    /// Locks <c>kernel.audit_chain_heads</c> <c>FOR UPDATE</c> once per commit and appends one sequentially hashed
+    /// <see cref="AuditEntryRecord"/> per item, so concurrent commands for one tenant serialise at the chain head
+    /// without repeating head locks across multi-aggregate writes.
+    /// </summary>
+    private async Task AppendAuditBatchAsync(
+        IReadOnlyList<(string Action, ChangedAggregate? Aggregate, string? Changes)> entries,
+        CancellationToken cancellationToken)
     {
         var tenant = Command.TenantId.Value;
         await db.Database.ExecuteSqlAsync(
@@ -991,27 +1144,30 @@ internal sealed class KernelCommandTransaction(
             .FromSql($"SELECT * FROM kernel.audit_chain_heads WHERE tenant_id = {tenant} FOR UPDATE")
             .SingleAsync(cancellationToken).ConfigureAwait(false);
 
-        var link = new AuditEntryRecord
+        foreach (var (action, aggregate, changes) in entries)
         {
-            Id = Guid.CreateVersion7(),
-            TenantId = Command.TenantId,
-            Sequence = head.LastSequence + 1,
-            RecordedAt = execution.RecordedAt,
-            ActorId = execution.Actor.Id,
-            Action = action,
-            AggregateType = aggregate?.Type,
-            AggregateId = aggregate?.Id,
-            AggregateVersion = aggregate?.Version,
-            ReasonForChange = Command.ReasonForChange,
-            ActivityId = execution.ActivityId,
-            Changes = changes ?? aggregate?.Changes ?? "{}",
-            PredecessorHash = head.LastHash,
-        };
-        link.Hash = KernelAuditHash.Compute(link);
+            var link = new AuditEntryRecord
+            {
+                Id = Guid.CreateVersion7(),
+                TenantId = Command.TenantId,
+                Sequence = head.LastSequence + 1,
+                RecordedAt = execution.RecordedAt,
+                ActorId = execution.Actor.Id,
+                Action = action,
+                AggregateType = aggregate?.Type,
+                AggregateId = aggregate?.Id,
+                AggregateVersion = aggregate?.Version,
+                ReasonForChange = Command.ReasonForChange,
+                ActivityId = execution.ActivityId,
+                Changes = changes ?? aggregate?.Changes ?? "{}",
+                PredecessorHash = head.LastHash,
+            };
+            link.Hash = KernelAuditHash.Compute(link);
 
-        db.AuditEntries.Add(link);
-        head.LastSequence = link.Sequence;
-        head.LastHash = link.Hash;
+            db.AuditEntries.Add(link);
+            head.LastSequence = link.Sequence;
+            head.LastHash = link.Hash;
+        }
     }
 
     private void Fault(CommitStage stage) => faultInjector?.Invoke(stage);

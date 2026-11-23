@@ -1,4 +1,5 @@
 using System;
+using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,7 +9,8 @@ using Cadence.Kernel.Persistence.IdentityVault;
 using Cadence.Kernel.Persistence.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+
+using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 
 namespace Cadence.Kernel.Persistence;
 
@@ -58,6 +60,21 @@ public static class KernelDatabase
 
     internal const string MigrationsHistoryTable = "__ef_migrations_history";
 
+    /// <summary>
+    /// Upper bound on modification commands per EF Core Npgsql wire batch, allowing bounded bulk kernel commands
+    /// (such as <c>DefineConcepts</c> and <c>RecordCollectedValues</c>) to flush multi-row inserts in a handful of
+    /// roundtrips while staying well below PostgreSQL's 65,535-parameter limit.
+    /// </summary>
+    internal const int DefaultMaxBatchSize = 4096;
+
     internal static void UseKernelNpgsql(DbContextOptionsBuilder options, string connectionString) =>
-        options.UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable(MigrationsHistoryTable, KernelDbContext.Schema));
+        options.UseNpgsql(connectionString, ConfigureNpgsql);
+
+    internal static void UseKernelNpgsql(DbContextOptionsBuilder options, DbDataSource dataSource) =>
+        options.UseNpgsql(dataSource, ConfigureNpgsql);
+
+    private static void ConfigureNpgsql(NpgsqlDbContextOptionsBuilder npgsql) =>
+        npgsql
+            .MigrationsHistoryTable(MigrationsHistoryTable, KernelDbContext.Schema)
+            .MaxBatchSize(DefaultMaxBatchSize);
 }

@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -100,6 +103,101 @@ internal sealed class DefineConceptHandler : ICommandHandler<DefineConcept, Conc
         context.Work.Add(concept);
         context.Work.Raise(new ConceptDefined(command.TenantId, concept.Current, concept.Origin, concept.ExternalCode, concept.Kind, concept.PreferredLabel));
         return CommandResult<ConceptRef>.Success(concept.Current);
+    }
+}
+
+/// <summary>
+/// Handles <see cref="DefineConcepts"/>: validates and defines a homogeneous batch of concepts in one transaction,
+/// emitting one <see cref="ConceptDefined"/> event (with per-concept subject) and one audit-chain link per concept.
+/// </summary>
+internal sealed class DefineConceptsHandler : ICommandHandler<DefineConcepts, IReadOnlyList<ConceptRef>>
+{
+    public async Task<CommandResult<IReadOnlyList<ConceptRef>>> HandleAsync(
+        DefineConcepts command,
+        ICommandContext context,
+        CancellationToken cancellationToken)
+    {
+        if (command.Concepts is not { Count: > 0 })
+        {
+            return KnowledgeErrors.ConceptBatchEmpty;
+        }
+
+        var staged = new List<Concept>(command.Concepts.Count);
+        var seenIds = new HashSet<ConceptId>();
+        var seenBcCodes = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var item in command.Concepts)
+        {
+            var defined = Concept.Define(
+                item.ConceptId,
+                command.TenantId,
+                item.Origin,
+                item.ExternalCode,
+                item.Kind,
+                item.PreferredLabel,
+                item.Definition,
+                context.RecordedAt);
+            if (!defined.IsSuccess)
+            {
+                return defined.Error!;
+            }
+
+            var concept = defined.Value!;
+            if (!seenIds.Add(concept.Id))
+            {
+                return KernelErrors.AlreadyExists;
+            }
+
+            if (concept.Origin == ConceptOrigin.CdiscBiomedicalConcept
+                && concept.ExternalCode is not null
+                && !seenBcCodes.Add(concept.ExternalCode))
+            {
+                return KernelErrors.AlreadyExists;
+            }
+
+            staged.Add(concept);
+        }
+
+        if (!await context.Work.ExistsAsync<Tenant>(command.TenantId, cancellationToken).ConfigureAwait(false))
+        {
+            return IdentityErrors.TenantUnknown;
+        }
+
+        var idList = seenIds.ToList();
+        var existingById = await context.Work
+            .ReadAllAsync<Concept>(c => idList.Contains(c.Id), cancellationToken)
+            .ConfigureAwait(false);
+        if (existingById.Count > 0)
+        {
+            return KernelErrors.AlreadyExists;
+        }
+
+        if (seenBcCodes.Count > 0)
+        {
+            var codeList = seenBcCodes.ToList();
+            var existingByCode = await context.Work
+                .ReadAllAsync<Concept>(
+                    c => c.Origin == ConceptOrigin.CdiscBiomedicalConcept && c.ExternalCode != null && codeList.Contains(c.ExternalCode),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (existingByCode.Count > 0)
+            {
+                return KernelErrors.AlreadyExists;
+            }
+        }
+
+        var refs = new ConceptRef[staged.Count];
+        for (int i = 0; i < staged.Count; i++)
+        {
+            var concept = staged[i];
+            context.Work.Add(concept);
+            context.Work.Raise(
+                new ConceptDefined(command.TenantId, concept.Current, concept.Origin, concept.ExternalCode, concept.Kind, concept.PreferredLabel),
+                NodeRef.For(concept.Id, concept.Version));
+            refs[i] = concept.Current;
+        }
+
+        return CommandResult<IReadOnlyList<ConceptRef>>.Success(refs);
     }
 }
 
@@ -220,6 +318,7 @@ public static class KnowledgeServiceCollectionExtensions
         services.AddTransient<ICommandHandler<RegisterCodeSystem, CodeSystemId>, RegisterCodeSystemHandler>();
         services.AddTransient<ICommandHandler<ImportCodeSystemVersion, CodeSystemVersionId>, ImportCodeSystemVersionHandler>();
         services.AddTransient<ICommandHandler<DefineConcept, ConceptRef>, DefineConceptHandler>();
+        services.AddTransient<ICommandHandler<DefineConcepts, IReadOnlyList<ConceptRef>>, DefineConceptsHandler>();
         services.AddTransient<ICommandHandler<ReviseConcept, ConceptRef>, ReviseConceptHandler>();
         services.AddTransient<ICommandHandler<DeprecateConcept, ConceptRef>, DeprecateConceptHandler>();
         services.AddTransient<ICommandHandler<MapConcept, ConceptMappingId>, MapConceptHandler>();

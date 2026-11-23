@@ -182,6 +182,11 @@ public static class KernelStudyImportEndpoints
                 .. KernelErrors.CommandPipeline,
                 KernelErrors.AlreadyExists,
                 KernelErrors.NotFound,
+                IdentityErrors.TenantUnknown,
+                KnowledgeErrors.ConceptBatchEmpty,
+                KnowledgeErrors.ConceptDeprecated,
+                KnowledgeErrors.ConceptLabelRequired,
+                KnowledgeErrors.ExternalCodeMismatch,
                 ProtocolErrors.StudyUnknown,
                 ProtocolErrors.FirstVersionExists,
                 ProtocolErrors.InvalidTransition,
@@ -852,7 +857,8 @@ public static class KernelStudyImportEndpoints
 
         var tenant = KernelRequestTenant.Get(context);
         var versionId = ProtocolVersionId.FromGuid(node.Id);
-        if (await reader.GetAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is not { } version)
+        var (version, design) = await reader.GetWithDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
+        if (version is null)
         {
             return KernelProblems.NotFound(node);
         }
@@ -863,7 +869,6 @@ public static class KernelStudyImportEndpoints
             return KernelProblems.NotVisible($"You can't see this protocol version ({mask}), so its design summary is refused.");
         }
 
-        var design = await reader.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
         var labels = await ResolveConceptLabelsAsync(
             tenant,
             design,
@@ -944,61 +949,220 @@ public static class KernelStudyImportEndpoints
 
         KernelError? conceptAuthOrCommandError = null;
         var resolvedConceptsByKey = new Dictionary<string, ProtocolConceptResolution>(StringComparer.Ordinal);
+        var knownLabelsByConcept = new Dictionary<ConceptRef, string>();
 
-        async ValueTask<ProtocolConceptResolution> ResolveOrDefineConceptAsync(
-            ProtocolConceptCandidate candidate,
+        async ValueTask<IReadOnlyDictionary<string, ProtocolConceptResolution>> ResolveOrDefineConceptsAsync(
+            IReadOnlyList<ProtocolConceptCandidate> candidates,
             CancellationToken ct)
         {
-            if (resolvedConceptsByKey.TryGetValue(candidate.StableKey, out var cached))
-            {
-                return cached;
-            }
+            var batchResult = new Dictionary<string, ProtocolConceptResolution>(candidates.Count, StringComparer.Ordinal);
+            var uncached = new List<ProtocolConceptCandidate>(candidates.Count);
+            var seenKeys = new HashSet<string>(StringComparer.Ordinal);
 
-            if (!string.IsNullOrWhiteSpace(candidate.BiomedicalConceptCode))
+            foreach (var candidate in candidates)
             {
-                var foundBc = await concepts.FindBiomedicalConceptAsync(tenant, candidate.BiomedicalConceptCode, ct).ConfigureAwait(false);
-                if (foundBc is not null && foundBc.Status != ConceptStatus.Deprecated)
+                if (!seenKeys.Add(candidate.StableKey))
                 {
-                    var hit = new ProtocolConceptResolution(foundBc.Concept, UsedFallbackSponsorConcept: false);
-                    resolvedConceptsByKey[candidate.StableKey] = hit;
-                    return hit;
+                    continue;
+                }
+
+                if (resolvedConceptsByKey.TryGetValue(candidate.StableKey, out var cached))
+                {
+                    batchResult[candidate.StableKey] = cached;
+                }
+                else
+                {
+                    uncached.Add(candidate);
                 }
             }
 
-            var usedFallback = !string.IsNullOrWhiteSpace(candidate.BiomedicalConceptCode);
-            var conceptId = ConceptId.FromGuid(DeriveGuid(tenant, "import-concept", candidate.StableKey));
-            var existingConcept = await concepts.GetCurrentAsync(tenant, conceptId, ct).ConfigureAwait(false);
-            if (existingConcept is not null && existingConcept.Status != ConceptStatus.Deprecated)
+            if (uncached.Count == 0)
             {
-                var reused = new ProtocolConceptResolution(existingConcept.Concept, UsedFallbackSponsorConcept: usedFallback);
-                resolvedConceptsByKey[candidate.StableKey] = reused;
-                return reused;
+                return batchResult;
             }
 
-            var label = string.IsNullOrWhiteSpace(candidate.PreferredLabel) ? "Protocol Item" : candidate.PreferredLabel.Trim();
-            var definition = string.IsNullOrWhiteSpace(candidate.Definition) ? label : candidate.Definition.Trim();
+            var bcCodes = new List<string>(uncached.Count);
+            var sponsorIdsByKey = new Dictionary<string, ConceptId>(uncached.Count, StringComparer.Ordinal);
+            foreach (var candidate in uncached)
+            {
+                if (!string.IsNullOrWhiteSpace(candidate.BiomedicalConceptCode))
+                {
+                    bcCodes.Add(candidate.BiomedicalConceptCode.Trim());
+                }
+
+                sponsorIdsByKey[candidate.StableKey] = ConceptId.FromGuid(
+                    DeriveGuid(tenant, "import-concept", candidate.StableKey));
+            }
+
+            var lookup = await concepts.LookupBatchAsync(
+                tenant,
+                new ConceptBatchLookup
+                {
+                    BiomedicalConceptCodes = bcCodes,
+                    CurrentConcepts = [.. sponsorIdsByKey.Values],
+                },
+                ct).ConfigureAwait(false);
+
+            var missingDefinitions = new List<ConceptDefinition>();
+            var missingCandidates = new List<(ProtocolConceptCandidate Candidate, ConceptId SponsorId, string Label, bool UsedFallback)>();
+            var queuedIds = new HashSet<ConceptId>();
+
+            foreach (var candidate in uncached)
+            {
+                if (!string.IsNullOrWhiteSpace(candidate.BiomedicalConceptCode))
+                {
+                    var trimmedCode = candidate.BiomedicalConceptCode.Trim();
+                    if (lookup.BiomedicalConcepts.TryGetValue(trimmedCode, out var foundBc))
+                    {
+                        if (foundBc.Status == ConceptStatus.Deprecated)
+                        {
+                            var deprecatedErr = KnowledgeErrors.ConceptDeprecated.WithMessage(
+                                $"Biomedical Concept '{trimmedCode}' ({foundBc.Concept}) is deprecated; new protocol drafts cannot reference it.");
+                            conceptAuthOrCommandError ??= deprecatedErr;
+                            batchResult[candidate.StableKey] = new ProtocolConceptResolution(null, UsedFallbackSponsorConcept: false, ErrorMessage: deprecatedErr.Message);
+                            continue;
+                        }
+
+                        var hit = new ProtocolConceptResolution(foundBc.Concept, UsedFallbackSponsorConcept: false);
+                        resolvedConceptsByKey[candidate.StableKey] = hit;
+                        batchResult[candidate.StableKey] = hit;
+                        if (!string.IsNullOrWhiteSpace(foundBc.PreferredLabel))
+                        {
+                            knownLabelsByConcept[foundBc.Concept] = foundBc.PreferredLabel;
+                        }
+
+                        continue;
+                    }
+                }
+
+                var usedFallback = !string.IsNullOrWhiteSpace(candidate.BiomedicalConceptCode);
+                var sponsorId = sponsorIdsByKey[candidate.StableKey];
+                if (lookup.CurrentConcepts.TryGetValue(sponsorId, out var existingConcept))
+                {
+                    if (existingConcept.Status == ConceptStatus.Deprecated)
+                    {
+                        var deprecatedErr = KnowledgeErrors.ConceptDeprecated.WithMessage(
+                            $"Concept {existingConcept.Concept} is deprecated; new protocol drafts cannot reference it.");
+                        conceptAuthOrCommandError ??= deprecatedErr;
+                        batchResult[candidate.StableKey] = new ProtocolConceptResolution(null, UsedFallbackSponsorConcept: usedFallback, ErrorMessage: deprecatedErr.Message);
+                        continue;
+                    }
+
+                    var reused = new ProtocolConceptResolution(existingConcept.Concept, UsedFallbackSponsorConcept: usedFallback);
+                    resolvedConceptsByKey[candidate.StableKey] = reused;
+                    batchResult[candidate.StableKey] = reused;
+                    if (!string.IsNullOrWhiteSpace(existingConcept.PreferredLabel))
+                    {
+                        knownLabelsByConcept[existingConcept.Concept] = existingConcept.PreferredLabel;
+                    }
+
+                    continue;
+                }
+
+                var label = string.IsNullOrWhiteSpace(candidate.PreferredLabel) ? "Protocol Item" : candidate.PreferredLabel.Trim();
+                var definition = string.IsNullOrWhiteSpace(candidate.Definition) ? label : candidate.Definition.Trim();
+                missingCandidates.Add((candidate, sponsorId, label, usedFallback));
+                if (queuedIds.Add(sponsorId))
+                {
+                    missingDefinitions.Add(new ConceptDefinition(
+                        sponsorId,
+                        ConceptOrigin.Sponsor,
+                        ExternalCode: null,
+                        candidate.Kind,
+                        label,
+                        definition));
+                }
+            }
+
+            if (conceptAuthOrCommandError is not null || missingDefinitions.Count == 0)
+            {
+                return batchResult;
+            }
+
             var defined = await sender.SendAsync(
-                new DefineConcept(
+                new DefineConcepts(
                     tenant,
-                    conceptId,
-                    ConceptOrigin.Sponsor,
-                    ExternalCode: null,
-                    candidate.Kind,
-                    label,
-                    definition,
-                    $"import-concept:{conceptId}",
+                    missingDefinitions,
+                    $"{idempotencyKey}:concepts",
                     reason),
                 cancellationToken: ct).ConfigureAwait(false);
+
+            if (!defined.IsSuccess && defined.Error?.Code == KernelErrors.AlreadyExists.Code)
+            {
+                // A concurrent import in the same tenant defined one or more deterministic sponsor concepts first;
+                // re-read the batch once and define only any remaining missing concepts.
+                var refreshed = await concepts.GetCurrentManyAsync(tenant, [.. queuedIds], ct).ConfigureAwait(false);
+                if (refreshed.Values.FirstOrDefault(v => v.Status == ConceptStatus.Deprecated) is { } deprecatedView)
+                {
+                    var deprecatedErr = KnowledgeErrors.ConceptDeprecated.WithMessage(
+                        $"Concept {deprecatedView.Concept} is deprecated; new protocol drafts cannot reference it.");
+                    conceptAuthOrCommandError ??= deprecatedErr;
+                    foreach (var (candidate, _, _, usedFallback) in missingCandidates)
+                    {
+                        batchResult[candidate.StableKey] = new ProtocolConceptResolution(null, UsedFallbackSponsorConcept: usedFallback, ErrorMessage: deprecatedErr.Message);
+                    }
+
+                    return batchResult;
+                }
+
+                var stillMissing = missingDefinitions.Where(d => !refreshed.ContainsKey(d.ConceptId)).ToList();
+                var createdById = refreshed.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Concept);
+                if (stillMissing.Count > 0)
+                {
+                    var retryDefined = await sender.SendAsync(
+                        new DefineConcepts(tenant, stillMissing, $"{idempotencyKey}:concepts:retry", reason),
+                        cancellationToken: ct).ConfigureAwait(false);
+                    if (!retryDefined.IsSuccess)
+                    {
+                        conceptAuthOrCommandError ??= retryDefined.Error;
+                        foreach (var (candidate, _, _, usedFallback) in missingCandidates)
+                        {
+                            batchResult[candidate.StableKey] = new ProtocolConceptResolution(null, UsedFallbackSponsorConcept: usedFallback, ErrorMessage: retryDefined.Error?.Message);
+                        }
+
+                        return batchResult;
+                    }
+
+                    foreach (var conceptRef in retryDefined.Value!)
+                    {
+                        createdById[conceptRef.ConceptId] = conceptRef;
+                    }
+                }
+
+                foreach (var (candidate, sponsorId, label, usedFallback) in missingCandidates)
+                {
+                    var resolvedRef = createdById[sponsorId];
+                    var created = new ProtocolConceptResolution(resolvedRef, UsedFallbackSponsorConcept: usedFallback);
+                    resolvedConceptsByKey[candidate.StableKey] = created;
+                    batchResult[candidate.StableKey] = created;
+                    knownLabelsByConcept[resolvedRef] = label;
+                }
+
+                return batchResult;
+            }
 
             if (!defined.IsSuccess)
             {
                 conceptAuthOrCommandError ??= defined.Error;
-                return new ProtocolConceptResolution(null, UsedFallbackSponsorConcept: usedFallback, ErrorMessage: defined.Error?.Message);
+                foreach (var (candidate, _, _, usedFallback) in missingCandidates)
+                {
+                    batchResult[candidate.StableKey] = new ProtocolConceptResolution(null, UsedFallbackSponsorConcept: usedFallback, ErrorMessage: defined.Error?.Message);
+                }
+
+                return batchResult;
             }
 
-            var created = new ProtocolConceptResolution(defined.Value, UsedFallbackSponsorConcept: usedFallback);
-            resolvedConceptsByKey[candidate.StableKey] = created;
-            return created;
+            var definedById = defined.Value!.ToDictionary(r => r.ConceptId, r => r);
+            foreach (var (candidate, sponsorId, label, usedFallback) in missingCandidates)
+            {
+                var createdRef = definedById[sponsorId];
+                var created = new ProtocolConceptResolution(createdRef, UsedFallbackSponsorConcept: usedFallback);
+                resolvedConceptsByKey[candidate.StableKey] = created;
+                batchResult[candidate.StableKey] = created;
+                knownLabelsByConcept[createdRef] = label;
+            }
+
+            return batchResult;
         }
 
         var importOutcome = await importer.ImportAsync(
@@ -1009,7 +1173,7 @@ public static class KernelStudyImportEndpoints
                 TemplateIds: parsedPayload.TemplateIds,
                 BaseDesign: plan.BaseDesign,
                 FallbackTitle: study.Title),
-            ResolveOrDefineConceptAsync,
+            ResolveOrDefineConceptsAsync,
             cancellationToken).ConfigureAwait(false);
 
         if (importOutcome.PayloadTooLarge)
@@ -1017,7 +1181,7 @@ public static class KernelStudyImportEndpoints
             return PayloadTooLargeProblem(importOutcome.Problems.FirstOrDefault());
         }
 
-        if (conceptAuthOrCommandError is { HttpStatus: StatusCodes.Status403Forbidden })
+        if (conceptAuthOrCommandError is not null)
         {
             return KernelErrorEndpoints.Problem(conceptAuthOrCommandError);
         }
@@ -1044,17 +1208,23 @@ public static class KernelStudyImportEndpoints
         }
 
         var persistedState = persistOutcome.State!;
-        var persistedSummary = await versionReader.GetAsync(tenant, persistedState.ProtocolVersionId, cancellationToken).ConfigureAwait(false)
-            ?? new ProtocolVersionSummary(
+        var matchingExisting = existingVersions.FirstOrDefault(v => v.Id == persistedState.ProtocolVersionId);
+        var persistedSummary = matchingExisting is not null && matchingExisting.Status != ProtocolVersionStatus.Draft
+            ? matchingExisting with
+            {
+                Number = persistedState.Number,
+                ContentHash = persistedState.ContentHash,
+            }
+            : new ProtocolVersionSummary(
                 persistedState.ProtocolVersionId,
                 persistedState.StudyId,
                 persistedState.Number,
-                plan.ParentVersionId,
+                plan.ParentVersionId ?? matchingExisting?.ParentVersionId,
                 persistedState.Status,
                 persistedState.ContentHash,
-                plan.AmendmentIntent,
-                null,
-                null);
+                plan.AmendmentIntent ?? matchingExisting?.AmendmentIntent,
+                matchingExisting?.ApprovalAttestationId,
+                matchingExisting?.WithdrawalReason);
 
         KernelImportedRulePackSummaryResponse? draftedRulePack = null;
         if (importOutcome.RulePack is { } rulePack)
@@ -1080,7 +1250,12 @@ public static class KernelStudyImportEndpoints
             draftedRulePack = KernelImportedRulePackSummaryResponse.From(draftItemResult.Value!, rulePack.Title, rulePack.RuleCount);
         }
 
-        var conceptLabels = await ResolveConceptLabelsAsync(tenant, importOutcome.Design, concepts, cancellationToken).ConfigureAwait(false);
+        var conceptLabels = await ResolveConceptLabelsAsync(
+            tenant,
+            importOutcome.Design,
+            concepts,
+            cancellationToken,
+            knownLabelsByConcept).ConfigureAwait(false);
         var responseBody = KernelProtocolDraftSummaryResponse.From(persistedSummary, importOutcome.Design, conceptLabels, draftedRulePack);
 
         return plan.CreatedNewVersion
@@ -1788,7 +1963,8 @@ public static class KernelStudyImportEndpoints
         TenantId tenant,
         ProtocolDesign? design,
         IConceptRegistry? concepts,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<ConceptRef, string>? knownLabels = null)
     {
         var map = new Dictionary<ConceptRef, string>();
         if (design is null || concepts is null)
@@ -1796,19 +1972,39 @@ public static class KernelStudyImportEndpoints
             return map;
         }
 
-        var needed = design.CollectionSpecs
+        var missingRefs = new List<ConceptRef>();
+        var seen = new HashSet<ConceptRef>();
+        foreach (var conceptRef in design.CollectionSpecs
             .SelectMany(s => s.Items)
             .Where(i => string.IsNullOrWhiteSpace(i.Prompt))
-            .Select(i => i.Concept)
-            .Distinct()
-            .ToList();
-
-        foreach (var conceptRef in needed)
+            .Select(i => i.Concept))
         {
-            var resolved = await concepts.ResolveAsync(tenant, conceptRef, cancellationToken).ConfigureAwait(false);
-            if (resolved is not null && !string.IsNullOrWhiteSpace(resolved.PreferredLabel))
+            if (!seen.Add(conceptRef))
             {
-                map[conceptRef] = resolved.PreferredLabel;
+                continue;
+            }
+
+            if (knownLabels is not null && knownLabels.TryGetValue(conceptRef, out var known) && !string.IsNullOrWhiteSpace(known))
+            {
+                map[conceptRef] = known;
+            }
+            else
+            {
+                missingRefs.Add(conceptRef);
+            }
+        }
+
+        if (missingRefs.Count == 0)
+        {
+            return map;
+        }
+
+        var resolved = await concepts.ResolveManyAsync(tenant, missingRefs, cancellationToken).ConfigureAwait(false);
+        foreach (var (conceptRef, view) in resolved)
+        {
+            if (!string.IsNullOrWhiteSpace(view.PreferredLabel))
+            {
+                map[conceptRef] = view.PreferredLabel;
             }
         }
 

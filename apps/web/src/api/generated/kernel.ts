@@ -4138,7 +4138,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Protocol.StudyUnknown`, `K.Standards.StandardVersionUnknown`. */
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Identity.TenantUnknown`, `K.Protocol.StudyUnknown`, `K.Standards.StandardVersionUnknown`. */
       404: {
         headers: {
           [name: string]: unknown;
@@ -4165,7 +4165,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Protocol.AmendmentInvalid`, `K.Protocol.AmendmentNotAllowed`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`, `K.Standards.LibraryItemInvalid`. */
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Knowledge.ConceptBatchEmpty`, `K.Knowledge.ConceptDeprecated`, `K.Knowledge.ConceptLabelRequired`, `K.Knowledge.ExternalCodeMismatch`, `K.Protocol.AmendmentInvalid`, `K.Protocol.AmendmentNotAllowed`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`, `K.Standards.LibraryItemInvalid`. */
       422: {
         headers: {
           [name: string]: unknown;

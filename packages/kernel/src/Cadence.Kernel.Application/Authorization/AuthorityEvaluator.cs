@@ -144,7 +144,41 @@ public interface IAuthorityStore
             : await InspectEvidenceNodesAsync(tenant, evidenceCandidates, cancellationToken).ConfigureAwait(false);
         return (paths, evidence);
     }
+
+    /// <summary>
+    /// Loads the resource scope path, grants held by <paramref name="actor"/>, their referenced roles, and (when
+    /// <paramref name="includeQualificationRequirements"/> is true) the capability's qualification requirements, so
+    /// persistence implementations can execute all reads under a single tenant connection lease (K-ID-2).
+    /// </summary>
+    async Task<AuthorityEvaluationSlice> LoadEvaluationSliceAsync(
+        TenantId tenant,
+        Actor actor,
+        NodeRef resource,
+        string capability,
+        bool includeQualificationRequirements,
+        CancellationToken cancellationToken)
+    {
+        var path = await PathOfAsync(tenant, resource, cancellationToken).ConfigureAwait(false);
+        var held = await GrantsHeldAsync(tenant, actor, cancellationToken).ConfigureAwait(false);
+        var roleIds = held.Where(g => g.RoleId is not null).Select(g => g.RoleId!.Value).Distinct().ToList();
+        IReadOnlyDictionary<RoleId, Role> roles = roleIds.Count == 0
+            ? new Dictionary<RoleId, Role>()
+            : (await RolesAsync(tenant, roleIds, cancellationToken).ConfigureAwait(false)).ToDictionary(r => r.Id);
+        var requirements = includeQualificationRequirements
+            ? await QualificationRequirementsAsync(tenant, capability, cancellationToken).ConfigureAwait(false)
+            : [];
+        return new AuthorityEvaluationSlice(path, held, roles, requirements);
+    }
 }
+
+/// <summary>
+/// Pre-fetched inputs for evaluating one <see cref="AuthorizationRequest"/> in <see cref="AuthorityEvaluator"/>.
+/// </summary>
+public sealed record AuthorityEvaluationSlice(
+    ScopePath ResourcePath,
+    IReadOnlyList<Grant> GrantsHeld,
+    IReadOnlyDictionary<RoleId, Role> RolesById,
+    IReadOnlyList<QualificationRequirement> QualificationRequirements);
 
 /// <summary>
 /// Resolved scope path and treatment-blinding status of an <c>observation</c>, <c>validation_finding</c>,
@@ -313,16 +347,20 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
     private async ValueTask<AuthorizationDecision> EvaluateGrantsAsync(AuthorizationRequest request, bool qualified, CancellationToken cancellationToken)
     {
         var token = request.Capability.Token;
-        var path = await store.PathOfAsync(request.Tenant, request.Resource, cancellationToken).ConfigureAwait(false);
-        var held = await store.GrantsHeldAsync(request.Tenant, request.Actor, cancellationToken).ConfigureAwait(false);
-        var roles = await RoleCapabilitiesAsync(request.Tenant, held, cancellationToken).ConfigureAwait(false);
+        var slice = await store
+            .LoadEvaluationSliceAsync(request.Tenant, request.Actor, request.Resource, token, qualified, cancellationToken)
+            .ConfigureAwait(false);
+        var path = slice.ResourcePath;
+        var held = slice.GrantsHeld;
+        var roles = slice.RolesById;
 
         var carrying = held.Where(g => Carries(g, token, roles)).ToList();
         foreach (var grant in carrying.Where(g => g.Scope.Covers(path)))
         {
             if (await InEffectAsync(request, grant, cancellationToken).ConfigureAwait(false))
             {
-                return await PermitIfQualifiedAsync(request, token, grant, path, qualified, cancellationToken).ConfigureAwait(false);
+                return await PermitIfQualifiedAsync(request, token, grant, path, qualified, slice.QualificationRequirements, cancellationToken)
+                    .ConfigureAwait(false);
             }
         }
 
@@ -337,7 +375,8 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
                 var grantPath = grantPaths.GetValueOrDefault(NodeRef.For(grant.Id), ScopePath.TenantWide);
                 if (grantPath.Study == path.Study && await InEffectAsync(request, grant, cancellationToken).ConfigureAwait(false))
                 {
-                    return await PermitIfQualifiedAsync(request, token, grant, grantPath, qualified, cancellationToken).ConfigureAwait(false);
+                    return await PermitIfQualifiedAsync(request, token, grant, grantPath, qualified, slice.QualificationRequirements, cancellationToken)
+                        .ConfigureAwait(false);
                 }
             }
         }
@@ -359,12 +398,13 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
         Grant grant,
         ScopePath qualificationPath,
         bool qualified,
+        IReadOnlyList<QualificationRequirement> preloadedRequirements,
         CancellationToken cancellationToken)
     {
         EvaluatedCondition[] conditions =
         [
             EvaluatedCondition.Satisfied(GrantCondition, $"Holds {token} for {grant.Scope}", NodeRef.For(grant.Id)),
-            .. qualified ? await QualificationConditionsAsync(request, qualificationPath, cancellationToken).ConfigureAwait(false) : [],
+            .. qualified ? await QualificationConditionsAsync(request, qualificationPath, preloadedRequirements, cancellationToken).ConfigureAwait(false) : [],
         ];
         return conditions.FirstOrDefault(c => !c.Met) is { } missing
             ? AuthorizationDecision.Deny($"{request.Actor.Id} is not qualified to {token}: {missing.Description}.", conditions)
@@ -405,9 +445,12 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
     /// one lapsed, which and when (K-AUTH-6).
     /// </summary>
     private async Task<IReadOnlyList<EvaluatedCondition>> QualificationConditionsAsync(
-        AuthorizationRequest request, ScopePath path, CancellationToken cancellationToken)
+        AuthorizationRequest request,
+        ScopePath path,
+        IReadOnlyList<QualificationRequirement> allRequirements,
+        CancellationToken cancellationToken)
     {
-        var requirements = (await store.QualificationRequirementsAsync(request.Tenant, request.Capability.Token, cancellationToken).ConfigureAwait(false))
+        var requirements = allRequirements
             .Where(r => r.IsInEffect(request.At, request.KnownAt) && r.Scope.Covers(path))
             .OrderBy(r => r.Id)
             .ToList();
@@ -452,18 +495,6 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
 
     private Task<bool> InEffectAsync(AuthorizationRequest request, Grant grant, CancellationToken cancellationToken) =>
         GrantChain.InEffectAsync(store, request.Tenant, grant, request.At, request.KnownAt, cancellationToken);
-
-    private async Task<IReadOnlyDictionary<RoleId, Role>> RoleCapabilitiesAsync(TenantId tenant, IReadOnlyList<Grant> held, CancellationToken cancellationToken)
-    {
-        var ids = held.Where(g => g.RoleId is not null).Select(g => g.RoleId!.Value).Distinct().ToList();
-        if (ids.Count == 0)
-        {
-            return new Dictionary<RoleId, Role>();
-        }
-
-        var roles = await store.RolesAsync(tenant, ids, cancellationToken).ConfigureAwait(false);
-        return roles.ToDictionary(r => r.Id);
-    }
 
     private static bool Carries(Grant grant, string token, IReadOnlyDictionary<RoleId, Role> roles) =>
         string.Equals(grant.Capability, token, StringComparison.Ordinal)

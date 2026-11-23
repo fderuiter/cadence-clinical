@@ -29,7 +29,8 @@ internal sealed class KernelTenantEntitlementReader(KernelTenantDbContextFactory
             throw new ArgumentException("Entitlements are read within a tenant.", nameof(tenantId));
         }
 
-        await using var db = contexts.Create(tenantId);
+        await using var lease = await contexts.AcquireReadLeaseAsync(tenantId, cancellationToken).ConfigureAwait(false);
+        var db = lease.Db;
         var subscription = await db.Subscriptions
             .AsNoTracking()
             .SingleOrDefaultAsync(s => s.TenantId == tenantId, cancellationToken)

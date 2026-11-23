@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
@@ -66,6 +67,14 @@ public delegate ValueTask<ProtocolConceptResolution> ProtocolConceptResolver(
     ProtocolConceptCandidate candidate,
     CancellationToken cancellationToken);
 
+/// <summary>
+/// Delegate invoked by <see cref="IProtocolDesignImporter"/> after structural validation succeeds to resolve or define
+/// all deduplicated concept candidates in one batch, keyed by <see cref="ProtocolConceptCandidate.StableKey"/>.
+/// </summary>
+public delegate ValueTask<IReadOnlyDictionary<string, ProtocolConceptResolution>> ProtocolConceptBatchResolver(
+    IReadOnlyList<ProtocolConceptCandidate> candidates,
+    CancellationToken cancellationToken);
+
 /// <summary>Input specification for synchronous protocol design import.</summary>
 /// <param name="RawBytes">Uploaded file payload bytes, when importing an uploaded ODM v1.3.2 XML or USDM v4 JSON file.</param>
 /// <param name="FileName">Original file name of the uploaded document, when present.</param>
@@ -126,4 +135,36 @@ public interface IProtocolDesignImporter
         ProtocolDesignImportRequest request,
         ProtocolConceptResolver resolveConcept,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Validates document structure, extracts unique concept candidates, resolves them in one batch, and compiles the
+    /// <see cref="ProtocolDesign"/>.
+    /// </summary>
+    Task<ProtocolDesignImportResult> ImportAsync(
+        ProtocolDesignImportRequest request,
+        ProtocolConceptBatchResolver resolveConcepts,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(resolveConcepts);
+        Dictionary<string, ProtocolConceptResolution>? cached = null;
+        return ImportAsync(
+            request,
+            async (candidate, ct) =>
+            {
+                cached ??= new Dictionary<string, ProtocolConceptResolution>(StringComparer.Ordinal);
+                if (cached.TryGetValue(candidate.StableKey, out var existing))
+                {
+                    return existing;
+                }
+
+                var resolved = await resolveConcepts([candidate], ct).ConfigureAwait(false);
+                var hit = resolved.TryGetValue(candidate.StableKey, out var mapped)
+                    ? mapped
+                    : new ProtocolConceptResolution(null, ErrorMessage: $"Could not resolve concept candidate '{candidate.StableKey}'.");
+                cached[candidate.StableKey] = hit;
+                return hit;
+            },
+            cancellationToken);
+    }
 }

@@ -100,6 +100,13 @@ public interface IKernelUnitOfWork
     void Raise(object domainEvent, DateTimeOffset? occurredValid = null);
 
     /// <summary>
+    /// Raises an event attributed to a specific object version <paramref name="subject"/> when a homogeneous batch
+    /// command writes multiple aggregates in one transaction.
+    /// </summary>
+    void Raise(object domainEvent, NodeRef subject, DateTimeOffset? occurredValid = null) =>
+        Raise(domainEvent, occurredValid);
+
+    /// <summary>
     /// Declares that the aggregate this command writes, at the version the commit stamps, was produced from
     /// <paramref name="input"/> (spec §9.6). The edge <c>input → aggregate</c> is written in the command's transaction
     /// (K-LIN-2). <paramref name="input"/> must name a version. The pipeline adds the <see cref="LineageEdgeKind.Supersedes"/>

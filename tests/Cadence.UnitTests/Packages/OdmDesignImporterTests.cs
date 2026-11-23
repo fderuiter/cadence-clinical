@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -310,6 +311,184 @@ public sealed class OdmDesignImporterTests
 
         result.IsSuccess.Should().BeFalse();
         result.Problems.Should().Contain(p => p.Contains(expectedSubstring, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task BatchAndSequentialResolvers_ProduceIdenticalJsonPromptsFlagsAndNotes_AcrossAll36TemplatesAnd500Items()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var catalog = new CdiscLibraryTemplateCatalog();
+        var service = new ProtocolDesignImporterService(catalog);
+        var allIds = catalog.ListTemplates().Select(t => t.Id).ToList();
+
+        static ConceptRef DeterministicConceptRef(ProtocolConceptCandidate candidate)
+        {
+            var hash = SHA256.HashData(Encoding.UTF8.GetBytes(candidate.StableKey));
+            Span<byte> guid = stackalloc byte[16];
+            hash.AsSpan(0, 16).CopyTo(guid);
+            guid[6] = (byte)((guid[6] & 0x0F) | 0x70);
+            guid[8] = (byte)((guid[8] & 0x3F) | 0x80);
+            return new ConceptRef(ConceptId.FromGuid(new Guid(guid)), 1);
+        }
+
+        ProtocolConceptResolver sequentialResolver = (candidate, _) =>
+            ValueTask.FromResult(new ProtocolConceptResolution(
+                DeterministicConceptRef(candidate),
+                UsedFallbackSponsorConcept: !string.IsNullOrWhiteSpace(candidate.BiomedicalConceptCode)));
+
+        int batchCallCount = 0;
+        int lastBatchCandidateCount = 0;
+        ProtocolConceptBatchResolver batchResolver = (candidates, _) =>
+        {
+            batchCallCount++;
+            lastBatchCandidateCount = candidates.Count;
+            var dict = new Dictionary<string, ProtocolConceptResolution>(candidates.Count, StringComparer.Ordinal);
+            foreach (var c in candidates)
+            {
+                dict[c.StableKey] = new ProtocolConceptResolution(
+                    DeterministicConceptRef(c),
+                    UsedFallbackSponsorConcept: !string.IsNullOrWhiteSpace(c.BiomedicalConceptCode));
+            }
+
+            return ValueTask.FromResult<IReadOnlyDictionary<string, ProtocolConceptResolution>>(dict);
+        };
+
+        // 1. Combined 36 bundled CDISC templates (286 unique concepts resolved in 1 batch call).
+        var combinedRequest = new ProtocolDesignImportRequest(TemplateIds: allIds, FallbackTitle: "Combined CDISC eCRF Suite");
+        var seqCombined = await service.ImportAsync(combinedRequest, sequentialResolver, ct);
+        var batchCombined = await service.ImportAsync(combinedRequest, batchResolver, ct);
+
+        seqCombined.IsSuccess.Should().BeTrue();
+        batchCombined.IsSuccess.Should().BeTrue();
+        batchCallCount.Should().Be(1, "all 36 templates must resolve unique concept candidates in one batch call");
+        lastBatchCandidateCount.Should().Be(286);
+        ProtocolDesignDocument.Write(batchCombined.Design!).Should().Be(ProtocolDesignDocument.Write(seqCombined.Design!));
+        batchCombined.Notes.Should().Equal(seqCombined.Notes);
+
+        // 2. Synthetic 500-item ODM XML with mixed mandatory flags, reversed OrderNumbers, ExtCodeIDs, and vendor attributes.
+        var odm500 = BuildSynthetic500ItemOdmXml();
+        var odm500Request = new ProtocolDesignImportRequest(RawBytes: Encoding.UTF8.GetBytes(odm500), FileName: "casebook-500.xml");
+        batchCallCount = 0;
+        var seq500 = await service.ImportAsync(odm500Request, sequentialResolver, ct);
+        var batch500 = await service.ImportAsync(odm500Request, batchResolver, ct);
+
+        seq500.IsSuccess.Should().BeTrue();
+        batch500.IsSuccess.Should().BeTrue();
+        batchCallCount.Should().Be(1);
+        lastBatchCandidateCount.Should().Be(500);
+        ProtocolDesignDocument.Write(batch500.Design!).Should().Be(ProtocolDesignDocument.Write(seq500.Design!));
+        batch500.Notes.Should().Equal(seq500.Notes);
+    }
+
+    [Fact]
+    public async Task ValidationFailuresAcrossOdmTemplatesAndUsdm_NeverInvokeConceptResolver()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new ProtocolDesignImporterService();
+        int resolverCalls = 0;
+
+        ProtocolConceptBatchResolver countingResolver = (candidates, _) =>
+        {
+            resolverCalls++;
+            return ValueTask.FromResult<IReadOnlyDictionary<string, ProtocolConceptResolution>>(
+                new Dictionary<string, ProtocolConceptResolution>(StringComparer.Ordinal));
+        };
+
+        // Valid Form 1 followed by broken Form 2 (dangling ItemOID) must fail before concept resolution.
+        const string brokenSecondFormOdm = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="F1" FileType="Snapshot" ODMVersion="1.3.2">
+              <Study OID="S1">
+                <MetaDataVersion OID="MDV1" Name="v1">
+                  <FormDef OID="F.OK" Name="Valid Form" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.OK" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <FormDef OID="F.BAD" Name="Broken Form" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.BAD" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <ItemGroupDef OID="IG.OK" Name="OK Group" Repeating="No">
+                    <ItemRef ItemOID="IT.OK" OrderNumber="1" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemGroupDef OID="IG.BAD" Name="Bad Group" Repeating="No">
+                    <ItemRef ItemOID="IT.MISSING" OrderNumber="1" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemDef OID="IT.OK" Name="OK" DataType="text"/>
+                </MetaDataVersion>
+              </Study>
+            </ODM>
+            """;
+
+        // Valid Form followed by invalid RangeCheck Comparator must also fail before concept resolution.
+        const string brokenRangeCheckOdm = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="F2" FileType="Snapshot" ODMVersion="1.3.2">
+              <Study OID="S2">
+                <MetaDataVersion OID="MDV2" Name="v1">
+                  <FormDef OID="F.OK" Name="Valid Form" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.OK" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <ItemGroupDef OID="IG.OK" Name="OK Group" Repeating="No">
+                    <ItemRef ItemOID="IT.OK" OrderNumber="1" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemDef OID="IT.OK" Name="OK" DataType="integer">
+                    <RangeCheck Comparator="UNSUPPORTED" SoftHard="Hard">
+                      <CheckValue>10</CheckValue>
+                    </RangeCheck>
+                  </ItemDef>
+                </MetaDataVersion>
+              </Study>
+            </ODM>
+            """;
+
+        var cases = new[]
+        {
+            new ProtocolDesignImportRequest(RawBytes: Encoding.UTF8.GetBytes(brokenSecondFormOdm), FileName: "broken2.xml"),
+            new ProtocolDesignImportRequest(RawBytes: Encoding.UTF8.GetBytes(brokenRangeCheckOdm), FileName: "brokenrc.xml"),
+            new ProtocolDesignImportRequest(RawBytes: Encoding.UTF8.GetBytes("<?xml version=\"1.0\"?><!DOCTYPE ODM><ODM/>"), FileName: "dtd.xml"),
+            new ProtocolDesignImportRequest(RawBytes: Encoding.UTF8.GetBytes("{malformed json"), FileName: "bad.json"),
+            new ProtocolDesignImportRequest(RawBytes: new byte[IProtocolDesignImporter.MaxPayloadBytes + 1], FileName: "oversized.xml"),
+            new ProtocolDesignImportRequest(TemplateIds: ["DM_XML", "DOES_NOT_EXIST_TEMPLATE"]),
+        };
+
+        foreach (var req in cases)
+        {
+            var res = await service.ImportAsync(req, countingResolver, ct);
+            res.IsSuccess.Should().BeFalse();
+        }
+
+        resolverCalls.Should().Be(0, "structural, DTD, size, template, and rule compilation failures must be caught before resolving concepts");
+    }
+
+    private static string BuildSynthetic500ItemOdmXml()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("""<?xml version="1.0" encoding="UTF-8"?>""");
+        sb.AppendLine("""<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.500" FileType="Snapshot" ODMVersion="1.3.2" Originator="Cadence EDC">""");
+        sb.AppendLine("""  <Study OID="S.500"><GlobalVariables><StudyName>500 Item Study</StudyName><StudyDescription>Parity</StudyDescription><ProtocolName>P-500</ProtocolName></GlobalVariables>""");
+        sb.AppendLine("""    <MetaDataVersion OID="MDV.500" Name="v1">""");
+        sb.AppendLine("""      <FormDef OID="F.500" Name="500 Item Casebook" Repeating="Yes"><ItemGroupRef ItemGroupOID="IG.500" OrderNumber="1" Mandatory="Yes"/></FormDef>""");
+        sb.AppendLine("""      <ItemGroupDef OID="IG.500" Name="Main Group" Repeating="No">""");
+        for (int i = 500; i >= 1; i--)
+        {
+            var mandatory = i % 2 == 0 ? "Yes" : "No";
+            sb.AppendLine(CultureInfo.InvariantCulture, $"""        <ItemRef ItemOID="IT.{i:D4}" OrderNumber="{i}" Mandatory="{mandatory}"/>""");
+        }
+
+        sb.AppendLine("""      </ItemGroupDef>""");
+        for (int i = 1; i <= 500; i++)
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"""      <ItemDef OID="IT.{i:D4}" Name="FLD_{i:D4}" DataType="float">""");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"""        <Question><TranslatedText xml:lang="en">Prompt {i:D4}</TranslatedText></Question>""");
+            if (i % 3 == 0)
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"""        <Alias Context="CDASH" Name="extCodeID: C99{i:D4}"/>""");
+            }
+
+            sb.AppendLine("""      </ItemDef>""");
+        }
+
+        sb.AppendLine("""    </MetaDataVersion></Study></ODM>""");
+        return sb.ToString();
     }
 
     private static List<ExpectedForm> ReadExpectedOdmForms(byte[] xmlBytes)

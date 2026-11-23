@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
+using Cadence.Kernel;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
@@ -96,6 +97,9 @@ public static partial class OdmDesignImporter
             ["MethodDef"] = FrozenSet.Create(StringComparer.Ordinal, "OID", "Name", "Type"),
         }.ToFrozenDictionary(StringComparer.Ordinal);
 
+    internal static readonly ConceptRef PlaceholderConceptRef =
+        new(ConceptId.FromGuid(Guid.Parse("00000000-0000-7000-8000-000000000001")), 1);
+
     /// <summary>Imports an ODM v1.3.2 XML string into collection specifications and notes.</summary>
     public static Task<OdmImportResult> ImportAsync(
         string odmXml,
@@ -108,8 +112,20 @@ public static partial class OdmDesignImporter
         return ImportAsync(bytes, resolveConcept, reservedElementIds, cancellationToken);
     }
 
+    /// <summary>Imports an ODM v1.3.2 XML string into collection specifications and notes using one batch concept lookup.</summary>
+    public static Task<OdmImportResult> ImportAsync(
+        string odmXml,
+        ProtocolConceptBatchResolver resolveConcepts,
+        ISet<string>? reservedElementIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(odmXml);
+        var bytes = Encoding.UTF8.GetBytes(odmXml);
+        return ImportAsync(bytes, resolveConcepts, reservedElementIds, cancellationToken);
+    }
+
     /// <summary>Imports raw UTF-8/XML bytes in ODM v1.3.2 format into collection specifications and notes.</summary>
-    public static async Task<OdmImportResult> ImportAsync(
+    public static Task<OdmImportResult> ImportAsync(
         byte[] xmlBytes,
         ProtocolConceptResolver resolveConcept,
         ISet<string>? reservedElementIds = null,
@@ -117,20 +133,62 @@ public static partial class OdmDesignImporter
     {
         ArgumentNullException.ThrowIfNull(xmlBytes);
         ArgumentNullException.ThrowIfNull(resolveConcept);
+        return ImportAsync(xmlBytes, AdaptSingleResolver(resolveConcept), reservedElementIds, cancellationToken);
+    }
+
+    /// <summary>Imports raw UTF-8/XML bytes in ODM v1.3.2 format into collection specifications and notes using one batch concept lookup.</summary>
+    public static async Task<OdmImportResult> ImportAsync(
+        byte[] xmlBytes,
+        ProtocolConceptBatchResolver resolveConcepts,
+        ISet<string>? reservedElementIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(xmlBytes);
+        ArgumentNullException.ThrowIfNull(resolveConcepts);
+
+        var staged = StageBytes(xmlBytes, reservedElementIds);
+        if (!staged.CanResolve)
+        {
+            return staged.ToFailedResult();
+        }
+
+        var resolutions = staged.UniqueCandidates.Count == 0
+            ? new Dictionary<string, ProtocolConceptResolution>(StringComparer.Ordinal)
+            : await resolveConcepts(staged.UniqueCandidates, cancellationToken).ConfigureAwait(false);
+        return MaterializeStagedDocument(staged, resolutions);
+    }
+
+    internal static ProtocolConceptBatchResolver AdaptSingleResolver(ProtocolConceptResolver resolveConcept) =>
+        async (candidates, ct) =>
+        {
+            var resolved = new Dictionary<string, ProtocolConceptResolution>(candidates.Count, StringComparer.Ordinal);
+            foreach (var candidate in candidates)
+            {
+                if (!resolved.ContainsKey(candidate.StableKey))
+                {
+                    resolved[candidate.StableKey] = await resolveConcept(candidate, ct).ConfigureAwait(false);
+                }
+            }
+
+            return resolved;
+        };
+
+    internal static StagedOdmDocument StageBytes(byte[] xmlBytes, ISet<string>? reservedElementIds = null)
+    {
+        ArgumentNullException.ThrowIfNull(xmlBytes);
 
         if (xmlBytes.Length > IProtocolDesignImporter.MaxPayloadBytes)
         {
-            return new OdmImportResult(
+            return StagedOdmDocument.Failed(
                 null,
-                [],
                 [$"Uploaded XML payload ({xmlBytes.Length:N0} bytes) exceeds the 10 MB ({IProtocolDesignImporter.MaxPayloadBytes:N0} bytes) synchronous import limit."],
                 [],
-                PayloadTooLarge: true);
+                payloadTooLarge: true);
         }
 
         if (xmlBytes.Length == 0)
         {
-            return new OdmImportResult(null, [], ["Uploaded XML file is empty."], []);
+            return StagedOdmDocument.Failed(null, ["Uploaded XML file is empty."], []);
         }
 
         XDocument document;
@@ -151,46 +209,78 @@ public static partial class OdmDesignImporter
         }
         catch (XmlException ex) when (ex.Message.Contains("DTD", StringComparison.OrdinalIgnoreCase))
         {
-            return new OdmImportResult(
+            return StagedOdmDocument.Failed(
                 null,
-                [],
                 ["External XML entity and DTD declarations (<!DOCTYPE> / <!ENTITY>) are blocked for security."],
                 []);
         }
         catch (XmlException ex)
         {
-            return new OdmImportResult(
+            return StagedOdmDocument.Failed(
                 null,
-                [],
                 [$"Malformed ODM XML at line {ex.LineNumber}, position {ex.LinePosition}: {ex.Message}"],
                 []);
         }
 
-        return await ParseDocumentAsync(document, resolveConcept, reservedElementIds, cancellationToken).ConfigureAwait(false);
+        return StageDocument(document, reservedElementIds);
     }
 
-    private static async Task<OdmImportResult> ParseDocumentAsync(
+    internal static OdmImportResult MaterializeStagedDocument(
+        StagedOdmDocument staged,
+        IReadOnlyDictionary<string, ProtocolConceptResolution> resolutions)
+    {
+        if (!staged.CanResolve)
+        {
+            return staged.ToFailedResult();
+        }
+
+        var problems = new List<string>();
+        var specs = new List<CollectionSpec>(staged.StagedForms.Count);
+
+        foreach (var form in staged.StagedForms)
+        {
+            var items = new List<CollectionItem>(form.Items.Count);
+            foreach (var stagedItem in form.Items)
+            {
+                if (!resolutions.TryGetValue(stagedItem.Candidate.StableKey, out var resolution)
+                    || resolution.Concept is not { } conceptRef)
+                {
+                    problems.Add(resolution?.ErrorMessage ?? $"Could not resolve or define a concept for ODM item '{stagedItem.ItemOid}'.");
+                    continue;
+                }
+
+                items.Add(stagedItem.PlaceholderItem with { Concept = conceptRef });
+            }
+
+            specs.Add(new CollectionSpec(form.FormId, form.FormName, items));
+        }
+
+        var notes = staged.MaterializeNotes(resolutions);
+        return problems.Count > 0
+            ? new OdmImportResult(staged.StudyTitle, [], problems, notes, StudyOid: staged.StudyOid)
+            : new OdmImportResult(staged.StudyTitle, specs, [], notes, Rules: staged.Rules, StudyOid: staged.StudyOid);
+    }
+
+    private static StagedOdmDocument StageDocument(
         XDocument document,
-        ProtocolConceptResolver resolveConcept,
-        ISet<string>? reservedIds,
-        CancellationToken cancellationToken)
+        ISet<string>? reservedIds)
     {
         var problems = new List<string>();
-        var notes = new List<ProtocolImportNote>();
+        var preItemNotes = new List<ProtocolImportNote>();
+        var stagedNotes = new List<StagedNoteEntry>();
         var usedIds = reservedIds is not null
             ? new HashSet<string>(reservedIds, StringComparer.Ordinal)
             : new HashSet<string>(StringComparer.Ordinal);
 
         if (document.Root is not { } root)
         {
-            return new OdmImportResult(null, [], ["XML document has no root element."], []);
+            return StagedOdmDocument.Failed(null, ["XML document has no root element."], []);
         }
 
         if (!string.Equals(root.Name.LocalName, "ODM", StringComparison.Ordinal))
         {
-            return new OdmImportResult(
+            return StagedOdmDocument.Failed(
                 null,
-                [],
                 [$"Expected root <ODM> element for CDISC ODM v1.3.2 XML, found <{root.Name.LocalName}>."],
                 []);
         }
@@ -198,13 +288,12 @@ public static partial class OdmDesignImporter
         var rootNamespace = root.Name.NamespaceName;
         if (string.IsNullOrEmpty(rootNamespace))
         {
-            notes.Add(new ProtocolImportNote("ODM", $"Root <ODM> element omitted xmlns='{OdmNamespace}'; parsed using ODM v1.3.2 structure rules."));
+            preItemNotes.Add(new ProtocolImportNote("ODM", $"Root <ODM> element omitted xmlns='{OdmNamespace}'; parsed using ODM v1.3.2 structure rules."));
         }
         else if (!string.Equals(rootNamespace, OdmNamespace, StringComparison.Ordinal))
         {
-            return new OdmImportResult(
+            return StagedOdmDocument.Failed(
                 null,
-                [],
                 [$"Unsupported XML namespace '{rootNamespace}'; expected CDISC ODM v1.3 ('{OdmNamespace}')."],
                 []);
         }
@@ -212,25 +301,24 @@ public static partial class OdmDesignImporter
         var odmVersion = Attr(root, "ODMVersion");
         if (!string.IsNullOrWhiteSpace(odmVersion) && !odmVersion.StartsWith("1.3", StringComparison.Ordinal))
         {
-            return new OdmImportResult(
+            return StagedOdmDocument.Failed(
                 null,
-                [],
                 [$"Unsupported ODMVersion '{odmVersion}'; synchronous ODM import supports ODM v1.3.x (v1.3.2)."],
                 []);
         }
 
-        CollectVendorAndExtensionNotes(root, rootNamespace, notes);
+        CollectVendorAndExtensionNotes(root, rootNamespace, preItemNotes);
 
         var studies = Children(root, "Study").ToList();
         if (studies.Count == 0)
         {
-            return new OdmImportResult(null, [], ["ODM document contains no <Study> element."], notes);
+            return StagedOdmDocument.Failed(null, ["ODM document contains no <Study> element."], preItemNotes);
         }
 
         var study = studies[0];
         if (studies.Count > 1)
         {
-            notes.Add(new ProtocolImportNote("ODM/Study", $"ODM document contains {studies.Count} <Study> elements; imported the first study ('{Attr(study, "OID") ?? "Study_1"}')."));
+            preItemNotes.Add(new ProtocolImportNote("ODM/Study", $"ODM document contains {studies.Count} <Study> elements; imported the first study ('{Attr(study, "OID") ?? "Study_1"}')."));
         }
 
         var globalVars = Child(study, "GlobalVariables");
@@ -240,18 +328,18 @@ public static partial class OdmDesignImporter
             TextOf(globalVars, "StudyDescription"),
             Attr(study, "OID"));
 
-        var units = ParseMeasurementUnits(study, notes);
+        var units = ParseMeasurementUnits(study, preItemNotes);
 
         var metaVersions = Children(study, "MetaDataVersion").ToList();
         if (metaVersions.Count == 0)
         {
-            return new OdmImportResult(studyTitle, [], ["ODM <Study> contains no <MetaDataVersion> element."], notes);
+            return StagedOdmDocument.Failed(studyTitle, ["ODM <Study> contains no <MetaDataVersion> element."], preItemNotes);
         }
 
         var mdv = metaVersions[0];
         if (metaVersions.Count > 1)
         {
-            notes.Add(new ProtocolImportNote("ODM/Study/MetaDataVersion", $"ODM <Study> contains {metaVersions.Count} <MetaDataVersion> elements; imported '{Attr(mdv, "OID") ?? "MetaDataVersion_1"}'."));
+            preItemNotes.Add(new ProtocolImportNote("ODM/Study/MetaDataVersion", $"ODM <Study> contains {metaVersions.Count} <MetaDataVersion> elements; imported '{Attr(mdv, "OID") ?? "MetaDataVersion_1"}'."));
         }
 
         var codeLists = ParseCodeLists(mdv);
@@ -266,14 +354,19 @@ public static partial class OdmDesignImporter
 
         foreach (var method in Children(mdv, "MethodDef"))
         {
-            notes.Add(new ProtocolImportNote(
+            preItemNotes.Add(new ProtocolImportNote(
                 Attr(method, "OID") ?? "MethodDef",
                 $"Optional ODM <MethodDef> '{Attr(method, "Name") ?? Attr(method, "OID")}' was noted; derivation rules are authored separately."));
         }
 
         if (problems.Count > 0)
         {
-            return new OdmImportResult(studyTitle, [], problems, notes);
+            return StagedOdmDocument.Failed(studyTitle, problems, preItemNotes);
+        }
+
+        foreach (var note in preItemNotes)
+        {
+            stagedNotes.Add(StagedNoteEntry.Direct(note));
         }
 
         var studyOid = Attr(study, "OID");
@@ -320,7 +413,9 @@ public static partial class OdmDesignImporter
         }
 
         var seenFormOids = new HashSet<string>(StringComparer.Ordinal);
-        var specs = new List<CollectionSpec>(formDefs.Count);
+        var stagedForms = new List<StagedForm>(formDefs.Count);
+        var uniqueCandidates = new List<ProtocolConceptCandidate>();
+        var seenCandidateKeys = new HashSet<string>(StringComparer.Ordinal);
         var notedCodeLists = new HashSet<string>(StringComparer.Ordinal);
         var formIdByOid = new Dictionary<string, string>(StringComparer.Ordinal);
         var importedItems = new List<ImportedItemMeta>();
@@ -348,14 +443,15 @@ public static partial class OdmDesignImporter
 
             if (string.Equals(Attr(formDef, "Repeating"), "Yes", StringComparison.OrdinalIgnoreCase))
             {
-                notes.Add(new ProtocolImportNote(rawFormOid, $"Form '{formName}' declares Repeating='Yes'; multiple instances may be opened per participant visit."));
+                stagedNotes.Add(StagedNoteEntry.Direct(
+                    new ProtocolImportNote(rawFormOid, $"Form '{formName}' declares Repeating='Yes'; multiple instances may be opened per participant visit.")));
             }
 
             var formId = AllocateUniqueElementId(rawFormOid, "Form", usedIds);
             formIdByOid[rawFormOid] = formId;
             formConditionOids.TryGetValue(rawFormOid, out var formLevelConditionOid);
             var orderedGroupRefs = OrderRefs(Children(formDef, "ItemGroupRef"), rawFormOid, "ItemGroupRef", problems);
-            var items = new List<CollectionItem>();
+            var stagedItems = new List<StagedItem>();
 
             foreach (var groupRef in orderedGroupRefs)
             {
@@ -376,9 +472,9 @@ public static partial class OdmDesignImporter
 
                 if (string.Equals(Attr(igDef, "Repeating"), "Yes", StringComparison.OrdinalIgnoreCase))
                 {
-                    notes.Add(new ProtocolImportNote(
+                    stagedNotes.Add(StagedNoteEntry.Direct(new ProtocolImportNote(
                         $"{rawFormOid}/{igOid}",
-                        $"ItemGroup '{Attr(igDef, "Name") ?? igOid}' declares Repeating='Yes'; flattened items into form '{formName}' in display order."));
+                        $"ItemGroup '{Attr(igDef, "Name") ?? igOid}' declares Repeating='Yes'; flattened items into form '{formName}' in display order.")));
                 }
 
                 var orderedItemRefs = OrderRefs(Children(igDef, "ItemRef"), igOid, "ItemRef", problems);
@@ -401,7 +497,7 @@ public static partial class OdmDesignImporter
                         continue;
                     }
 
-                    var item = await BuildItemAsync(
+                    var stagedItem = BuildStagedItem(
                         formId,
                         rawFormOid,
                         itemOid,
@@ -411,49 +507,53 @@ public static partial class OdmDesignImporter
                         codeLists,
                         usedIds,
                         notedCodeLists,
-                        notes,
-                        problems,
-                        resolveConcept,
-                        cancellationToken).ConfigureAwait(false);
-                    if (item is not null)
+                        stagedNotes);
+                    if (seenCandidateKeys.Add(stagedItem.Candidate.StableKey))
                     {
-                        items.Add(item);
-                        var itemName = FirstNonBlank(Attr(itemDef, "Name"), itemOid)!;
-                        var meta = new ImportedItemMeta(formId, rawFormOid, igOid, itemOid, itemName, item, itemDef);
-                        importedItems.Add(meta);
-                        foreach (var condOid in new[] { formLevelConditionOid, groupConditionOid, itemConditionOid }
-                            .Where(c => !string.IsNullOrWhiteSpace(c))
-                            .Distinct(StringComparer.Ordinal))
-                        {
-                            conditionTargets.Add((condOid!, meta));
-                        }
+                        uniqueCandidates.Add(stagedItem.Candidate);
+                    }
+
+                    stagedItems.Add(stagedItem);
+                    var itemName = FirstNonBlank(Attr(itemDef, "Name"), itemOid)!;
+                    var meta = new ImportedItemMeta(formId, rawFormOid, igOid, itemOid, itemName, stagedItem.PlaceholderItem, itemDef);
+                    importedItems.Add(meta);
+                    foreach (var condOid in new[] { formLevelConditionOid, groupConditionOid, itemConditionOid }
+                        .Where(c => !string.IsNullOrWhiteSpace(c))
+                        .Distinct(StringComparer.Ordinal))
+                    {
+                        conditionTargets.Add((condOid!, meta));
                     }
                 }
             }
 
-            specs.Add(new CollectionSpec(formId, formName, items));
+            stagedForms.Add(new StagedForm(formId, formName, stagedItems));
         }
 
         if (problems.Count > 0)
         {
-            return new OdmImportResult(studyTitle, [], problems, DeduplicateNotes(notes), StudyOid: studyOid);
+            return new StagedOdmDocument(studyTitle, studyOid, [], [], problems, stagedNotes, null, PayloadTooLarge: false);
         }
 
+        var ruleNotes = new List<ProtocolImportNote>();
         var compiledRules = CompileOdmRules(
             FirstNonBlank(studyOid, studyTitle, "ODM")!,
             importedItems,
             formIdByOid,
             conditionDefs,
             conditionTargets,
-            notes,
+            ruleNotes,
             problems);
+        foreach (var note in ruleNotes)
+        {
+            stagedNotes.Add(StagedNoteEntry.Direct(note));
+        }
 
         return problems.Count > 0
-            ? new OdmImportResult(studyTitle, [], problems, DeduplicateNotes(notes), StudyOid: studyOid)
-            : new OdmImportResult(studyTitle, specs, [], DeduplicateNotes(notes), Rules: compiledRules, StudyOid: studyOid);
+            ? new StagedOdmDocument(studyTitle, studyOid, [], [], problems, stagedNotes, null, PayloadTooLarge: false)
+            : new StagedOdmDocument(studyTitle, studyOid, stagedForms, uniqueCandidates, [], stagedNotes, compiledRules, PayloadTooLarge: false);
     }
 
-    private static async Task<CollectionItem?> BuildItemAsync(
+    private static StagedItem BuildStagedItem(
         string formId,
         string rawFormOid,
         string itemOid,
@@ -463,10 +563,7 @@ public static partial class OdmDesignImporter
         IReadOnlyDictionary<string, ParsedCodeList> codeLists,
         HashSet<string> usedIds,
         HashSet<string> notedCodeLists,
-        List<ProtocolImportNote> notes,
-        List<string> problems,
-        ProtocolConceptResolver resolveConcept,
-        CancellationToken cancellationToken)
+        List<StagedNoteEntry> stagedNotes)
     {
         var itemName = FirstNonBlank(Attr(itemDef, "Name"), itemOid)!;
         var prompt = ExtractItemPrompt(itemDef, itemName);
@@ -485,9 +582,9 @@ public static partial class OdmDesignImporter
             }
             else
             {
-                notes.Add(new ProtocolImportNote(
+                stagedNotes.Add(StagedNoteEntry.Direct(new ProtocolImportNote(
                     $"{rawFormOid}/{itemOid}",
-                    $"Item '{itemName}' references MeasurementUnitOID '{unitRefOid}', which is not declared in <BasicDefinitions>; imported without unit constraint."));
+                    $"Item '{itemName}' references MeasurementUnitOID '{unitRefOid}', which is not declared in <BasicDefinitions>; imported without unit constraint.")));
             }
         }
 
@@ -507,34 +604,30 @@ public static partial class OdmDesignImporter
                     sample = string.Join(", ", cl.Codes.Take(5)) + moreSuffix;
                 }
 
-                notes.Add(new ProtocolImportNote(
+                stagedNotes.Add(StagedNoteEntry.Direct(new ProtocolImportNote(
                     $"{rawFormOid}/{itemOid}",
-                    $"Unmapped terminology CodeList '{codeListOid}' ({cl.Name}: {sample}) on item '{itemName}' has no pinned code-system version in the tenant; imported item without terminology binding."));
+                    $"Unmapped terminology CodeList '{codeListOid}' ({cl.Name}: {sample}) on item '{itemName}' has no pinned code-system version in the tenant; imported item without terminology binding.")));
             }
             else
             {
-                notes.Add(new ProtocolImportNote(
+                stagedNotes.Add(StagedNoteEntry.Direct(new ProtocolImportNote(
                     $"{rawFormOid}/{itemOid}",
-                    $"Unmapped terminology CodeListRef '{codeListOid}' on item '{itemName}' is not defined in <MetaDataVersion>; imported item without terminology binding."));
+                    $"Unmapped terminology CodeListRef '{codeListOid}' on item '{itemName}' is not defined in <MetaDataVersion>; imported item without terminology binding.")));
             }
         }
 
-        var valueKind = MapDataType(Attr(itemDef, "DataType"), ucumUnit, itemOid, itemName, notes);
-        var stableKey = $"odm:{itemOid}:{prompt}";
-        var resolution = await resolveConcept(
-            new ProtocolConceptCandidate(stableKey, extCode, prompt, definition, ConceptKind.DataElement),
-            cancellationToken).ConfigureAwait(false);
-        if (resolution.Concept is not { } conceptRef)
+        var dtNotes = new List<ProtocolImportNote>();
+        var valueKind = MapDataType(Attr(itemDef, "DataType"), ucumUnit, itemOid, itemName, dtNotes);
+        foreach (var dtNote in dtNotes)
         {
-            problems.Add(resolution.ErrorMessage ?? $"Could not resolve or define a concept for ODM item '{itemOid}'.");
-            return null;
+            stagedNotes.Add(StagedNoteEntry.Direct(dtNote));
         }
 
-        if (resolution.UsedFallbackSponsorConcept && !string.IsNullOrWhiteSpace(extCode))
+        var stableKey = $"odm:{itemOid}:{prompt}";
+        var candidate = new ProtocolConceptCandidate(stableKey, extCode, prompt, definition, ConceptKind.DataElement);
+        if (!string.IsNullOrWhiteSpace(extCode))
         {
-            notes.Add(new ProtocolImportNote(
-                $"{rawFormOid}/{itemOid}",
-                $"Unmapped terminology code '{extCode}' on item '{itemName}' is not registered in the tenant Concept Registry; bound to a sponsor-local concept."));
+            stagedNotes.Add(StagedNoteEntry.Fallback(stableKey, rawFormOid, itemOid, itemName, extCode));
         }
 
         var candidateId = SanitizeElementId(itemOid, "Item");
@@ -544,15 +637,16 @@ public static partial class OdmDesignImporter
         }
 
         var itemId = AllocateUniqueElementId(candidateId, "Item", usedIds);
-        return new CollectionItem(
+        var placeholderItem = new CollectionItem(
             itemId,
-            conceptRef,
+            PlaceholderConceptRef,
             Unit: ucumUnit,
             Terminology: null,
             Required: required,
             Purpose: null,
             ValueKind: valueKind,
             Prompt: prompt);
+        return new StagedItem(itemOid, candidate, placeholderItem);
     }
 
     private static ObservationValueKind? MapDataType(
@@ -1372,6 +1466,81 @@ public static partial class OdmDesignImporter
 
     private static string TruncateText(string value, int maxLength) =>
         value.Length <= maxLength ? value : string.Concat(value.AsSpan(0, maxLength - 1), "…");
+
+    internal sealed record StagedOdmDocument(
+        string? StudyTitle,
+        string? StudyOid,
+        IReadOnlyList<StagedForm> StagedForms,
+        IReadOnlyList<ProtocolConceptCandidate> UniqueCandidates,
+        IReadOnlyList<string> Problems,
+        IReadOnlyList<StagedNoteEntry> StagedNotes,
+        IReadOnlyList<Rule>? Rules,
+        bool PayloadTooLarge)
+    {
+        public bool CanResolve => !PayloadTooLarge && Problems.Count == 0 && StagedForms.Count > 0;
+
+        public static StagedOdmDocument Failed(
+            string? title,
+            IReadOnlyList<string> problems,
+            IReadOnlyList<ProtocolImportNote> notes,
+            bool payloadTooLarge = false,
+            string? studyOid = null) =>
+            new(
+                title,
+                studyOid,
+                [],
+                [],
+                problems,
+                [.. notes.Select(StagedNoteEntry.Direct)],
+                null,
+                payloadTooLarge);
+
+        public List<ProtocolImportNote> MaterializePreResolutionNotes() =>
+            DeduplicateNotes([.. StagedNotes.Where(n => n.DirectNote is not null).Select(n => n.DirectNote!)]);
+
+        public List<ProtocolImportNote> MaterializeNotes(IReadOnlyDictionary<string, ProtocolConceptResolution> resolutions)
+        {
+            var list = new List<ProtocolImportNote>(StagedNotes.Count);
+            foreach (var entry in StagedNotes)
+            {
+                if (entry.DirectNote is { } direct)
+                {
+                    list.Add(direct);
+                }
+                else if (entry.FallbackSpec is { } fb
+                         && resolutions.TryGetValue(fb.StableKey, out var res)
+                         && res.Concept is not null
+                         && res.UsedFallbackSponsorConcept)
+                {
+                    list.Add(new ProtocolImportNote(
+                        $"{fb.RawFormOid}/{fb.ItemOid}",
+                        $"Unmapped terminology code '{fb.ExtCode}' on item '{fb.ItemName}' is not registered in the tenant Concept Registry; bound to a sponsor-local concept."));
+                }
+            }
+
+            return DeduplicateNotes(list);
+        }
+
+        public List<CollectionSpec> BuildPlaceholderSpecs() =>
+            [.. StagedForms.Select(f => new CollectionSpec(f.FormId, f.FormName, [.. f.Items.Select(i => i.PlaceholderItem)]))];
+
+        public OdmImportResult ToFailedResult() =>
+            new(StudyTitle, [], Problems, MaterializePreResolutionNotes(), PayloadTooLarge: PayloadTooLarge, StudyOid: StudyOid);
+    }
+
+    internal sealed record StagedForm(string FormId, string FormName, IReadOnlyList<StagedItem> Items);
+
+    internal sealed record StagedItem(string ItemOid, ProtocolConceptCandidate Candidate, CollectionItem PlaceholderItem);
+
+    internal sealed record StagedNoteEntry(ProtocolImportNote? DirectNote, FallbackNoteSpec? FallbackSpec)
+    {
+        public static StagedNoteEntry Direct(ProtocolImportNote note) => new(note, null);
+
+        public static StagedNoteEntry Fallback(string stableKey, string rawFormOid, string itemOid, string itemName, string extCode) =>
+            new(null, new FallbackNoteSpec(stableKey, rawFormOid, itemOid, itemName, extCode));
+    }
+
+    internal sealed record FallbackNoteSpec(string StableKey, string RawFormOid, string ItemOid, string ItemName, string ExtCode);
 
     private sealed record ImportedItemMeta(
         string FormId,

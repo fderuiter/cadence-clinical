@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,12 +11,15 @@ using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Activity;
 using Cadence.Kernel.Persistence.Background;
 using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Navigation;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
@@ -464,6 +468,168 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
         var act = () => transaction.Work.FindAsync<Organization>(graph.Institution.Id, ct);
 
         (await act.Should().ThrowAsync<InvalidOperationException>()).WithMessage("K-TX-1*");
+    }
+
+    /// <summary>
+    /// Validates the K-TX-1 homogeneous Concept-creation exception end to end: <see cref="DefineConcepts"/> commits N
+    /// concepts at version 1 in one transaction with one provenance activity, N <c>ConceptDefined</c> events (each
+    /// naming its own concept subject), N linearly chained audit entries under one <c>audit_chain_heads</c> update,
+    /// clean Merkle sealing, idempotent replay under one idempotency key, and atomic rollback when any item is invalid.
+    /// </summary>
+    [Fact(DisplayName = "DefineConcepts_CommitsHomogeneousBatchAtomically_ChainsAuditAndEvents_AndSealsMerkleRoot")]
+    [KernelRule("K-TX-1")]
+    [KernelRule("K-TX-2")]
+    [KernelRule("K-TX-3")]
+    public async Task DefineConceptsCommitsHomogeneousBatchAtomicallyChainsAuditAndEventsAndSealsMerkleRoot()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = NewTenant();
+        (await fixture.Sender.SendAsync(tenant, cancellationToken: ct)).IsSuccess.Should().BeTrue();
+
+        var invalidBatch = new DefineConcepts(
+            tenant.TenantId,
+            [
+                new ConceptDefinition(ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Valid 1", "Def 1"),
+                new ConceptDefinition(ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "   ", "Blank label refuses whole batch"),
+            ],
+            $"key-invalid-{Guid.NewGuid():N}",
+            Reason);
+        var refused = await fixture.Sender.SendAsync(invalidBatch, cancellationToken: ct);
+        refused.Error.Should().Be(KnowledgeErrors.ConceptLabelRequired);
+
+        await using (var checkDb = fixture.CreateAdminContext())
+        {
+            (await checkDb.Concepts.AsNoTracking().CountAsync(c => c.TenantId == tenant.TenantId, ct)).Should().Be(0);
+        }
+
+        var definitions = Enumerable.Range(1, 5)
+            .Select(i => new ConceptDefinition(
+                ConceptId.New(),
+                i == 1 ? ConceptOrigin.CdiscBiomedicalConcept : ConceptOrigin.Sponsor,
+                i == 1 ? "C25298" : null,
+                ConceptKind.BiomedicalConcept,
+                $"Batch Concept {i}",
+                $"Definition {i}"))
+            .ToArray();
+        var defineKey = $"key-batch-{Guid.NewGuid():N}";
+        var batchCommand = new DefineConcepts(tenant.TenantId, definitions, defineKey, Reason);
+
+        var committed = await fixture.Sender.SendAsync(batchCommand, cancellationToken: ct);
+        committed.IsSuccess.Should().BeTrue(committed.Error?.Message);
+        committed.Replayed.Should().BeFalse();
+        committed.Value.Should().HaveCount(5);
+        committed.Value!.Select(r => r.ConceptId).Should().Equal(definitions.Select(d => d.ConceptId));
+        committed.Value!.Should().OnlyContain(r => r.Version == 1);
+
+        // Idempotent replay with the same key returns the same ConceptRefs without writing duplicate rows or events.
+        var replayed = await fixture.Sender.SendAsync(batchCommand, cancellationToken: ct);
+        replayed.IsSuccess.Should().BeTrue();
+        replayed.Replayed.Should().BeTrue();
+        replayed.Value.Should().Equal(committed.Value);
+
+        await using var db = fixture.CreateAdminContext();
+        var concepts = await db.Concepts.AsNoTracking().Where(c => c.TenantId == tenant.TenantId).ToListAsync(ct);
+        concepts.Should().HaveCount(5);
+        concepts.Should().OnlyContain(c => c.VersionIndex == 1 && c.CreatedBy == KernelPostgresFixture.ActorId && c.ReasonForChange == Reason);
+
+        // 1 provenance activity for ProvisionTenant + 1 provenance activity for DefineConcepts = 2 total.
+        var activities = await db.ProvenanceActivities.AsNoTracking().Where(a => a.TenantId == tenant.TenantId).ToListAsync(ct);
+        activities.Should().HaveCount(2);
+
+        var conceptEvents = await db.DomainEvents.AsNoTracking()
+            .Where(e => e.TenantId == tenant.TenantId && e.Type == "ConceptDefined")
+            .OrderBy(e => e.Recorded)
+            .ToListAsync(ct);
+        conceptEvents.Should().HaveCount(5);
+
+        var eventIds = conceptEvents.Select(e => e.EventId).ToList();
+        var outboxEnvelopes = (await db.OutboxMessages.AsNoTracking()
+                .Where(o => o.TenantId == tenant.TenantId && eventIds.Contains(o.EventId))
+                .Select(o => o.Envelope)
+                .ToListAsync(ct))
+            .Select(json => JsonSerializer.Deserialize<EventEnvelope>(json, KernelCommandPipelineJson.Options)!)
+            .ToList();
+        outboxEnvelopes.Should().HaveCount(5);
+        outboxEnvelopes.Select(e => e.Subject).Should().BeEquivalentTo(definitions.Select(d => NodeRef.For(d.ConceptId, 1)));
+
+        var lineageNodes = await db.LineageNodes.AsNoTracking()
+            .Where(n => n.TenantId == tenant.TenantId && n.Kind == NodeKinds.Concept)
+            .ToListAsync(ct);
+        lineageNodes.Should().HaveCount(5);
+        lineageNodes.Select(n => n.NodeId).Should().BeEquivalentTo(definitions.Select(d => d.ConceptId.Value));
+        lineageNodes.Should().OnlyContain(n => n.Version == 1 && !n.Derived);
+
+        var chain = await db.AuditEntries.AsNoTracking()
+            .Where(a => a.TenantId == tenant.TenantId)
+            .OrderBy(a => a.Sequence)
+            .ToListAsync(ct);
+        // Sequence 1 = ProvisionTenant, Sequences 2..6 = 5 Concept creations.
+        chain.Select(a => a.Sequence).Should().Equal(1, 2, 3, 4, 5, 6);
+        chain.Skip(1).Select(a => a.AggregateId).Should().BeEquivalentTo(definitions.Select(d => d.ConceptId.Value.ToString("D")));
+        chain.Skip(1).Should().OnlyContain(a => a.AggregateType == nameof(Concept) && a.Action == "Created" && a.AggregateVersion == 1);
+
+        var verification = await fixture.AuditChainVerifier.VerifyAsync(tenant.TenantId, ct);
+        verification.IsIntact.Should().BeTrue(verification.Problem);
+        verification.EntriesChecked.Should().Be(6);
+
+        await fixture.AuditChainSealer.SealAllAsync(ct);
+        var postSealVerification = await fixture.AuditChainVerifier.VerifyAsync(tenant.TenantId, ct);
+        postSealVerification.IsIntact.Should().BeTrue(postSealVerification.Problem);
+        (await db.AuditChainSeals.AsNoTracking().CountAsync(s => s.TenantId == tenant.TenantId, ct)).Should().BeGreaterThanOrEqualTo(1);
+    }
+
+    /// <summary>
+    /// Validates that the K-TX-1 homogeneous Concept-creation exception strictly rejects mixing <see cref="Concept"/>
+    /// creation with another aggregate type and rejects loading or mutating multiple existing <see cref="Concept"/>
+    /// aggregates in one transaction.
+    /// </summary>
+    [Fact(DisplayName = "UnitOfWork_ConceptBatchRejectsMixedAggregatesAndMultiUpdates")]
+    [KernelRule("K-TX-1")]
+    public async Task UnitOfWorkConceptBatchRejectsMixedAggregatesAndMultiUpdates()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var graph = KernelSchemaPostgresTests.NewGraph();
+        await fixture.SeedAsync(graph.Tenant, graph.Sponsor);
+
+        var c1 = Concept.Define(
+            ConceptId.New(), graph.Tenant.Id, ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Concept 1", "Def 1", fixture.Clock.UtcNow).Value!;
+        var c2 = Concept.Define(
+            ConceptId.New(), graph.Tenant.Id, ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Concept 2", "Def 2", fixture.Clock.UtcNow).Value!;
+
+        // 1. Adding two Concepts is allowed, but then loading or adding an Organization throws K-TX-1.
+        await using (var mixedTx = fixture.UnitOfWork.Begin(Execution(graph.Tenant.Id)))
+        {
+            mixedTx.Work.Add(c1);
+            mixedTx.Work.Add(c2);
+            var mixedAct = () => mixedTx.Work.FindAsync<Organization>(graph.Sponsor.Id, ct);
+            (await mixedAct.Should().ThrowAsync<InvalidOperationException>()).WithMessage("K-TX-1*");
+        }
+
+        // 2. Loading an Organization first and then adding a Concept throws K-TX-1.
+        await using (var reverseMixedTx = fixture.UnitOfWork.Begin(Execution(graph.Tenant.Id)))
+        {
+            (await reverseMixedTx.Work.FindAsync<Organization>(graph.Sponsor.Id, ct)).Should().NotBeNull();
+            var reverseAct = () => reverseMixedTx.Work.Add(c1);
+            reverseAct.Should().Throw<InvalidOperationException>().WithMessage("K-TX-1*");
+        }
+
+        // 3. Updating two existing Concepts in one transaction throws K-TX-1 (only creation at version 1 may batch).
+        var seedBatch = new DefineConcepts(
+            graph.Tenant.Id,
+            [
+                new ConceptDefinition(c1.Id, ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Concept 1", "Def 1"),
+                new ConceptDefinition(c2.Id, ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Concept 2", "Def 2"),
+            ],
+            $"seed-{Guid.NewGuid():N}",
+            Reason);
+        (await fixture.Sender.SendAsync(seedBatch, cancellationToken: ct)).IsSuccess.Should().BeTrue();
+
+        await using var multiUpdateTx = fixture.UnitOfWork.Begin(Execution(graph.Tenant.Id));
+        (await multiUpdateTx.Work.FindAsync<Concept>(c1.Id, ct)).Should().NotBeNull();
+        var secondUpdateAct = () => multiUpdateTx.Work.FindAsync<Concept>(c2.Id, ct);
+        (await secondUpdateAct.Should().ThrowAsync<InvalidOperationException>()).WithMessage("K-TX-1*");
     }
 
     /// <summary>

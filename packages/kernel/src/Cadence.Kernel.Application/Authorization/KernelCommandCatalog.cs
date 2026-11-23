@@ -27,11 +27,21 @@ public sealed class KernelCommandCatalog
             .SelectMany(a => a.GetTypes())
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(ICommand).IsAssignableFrom(t));
         var entries = new Dictionary<Type, Entry>();
+        var verbByToken = new Dictionary<string, (VerbClass Verb, string Command)>(StringComparer.Ordinal);
         foreach (var type in commandTypes)
         {
             if (type.GetCustomAttribute<KernelCapabilityAttribute>() is { } declared)
             {
-                entries[type] = Entry.From(type, declared);
+                var entry = Entry.From(type, declared);
+                if (verbByToken.TryGetValue(entry.Capability.Token, out var first)
+                    && first.Verb != entry.Capability.VerbClass)
+                {
+                    throw new InvalidOperationException(
+                        $"{entry.Command} declares '{entry.Capability.Token}' as {entry.Capability.VerbClass}, which conflicts with {first.Command} ({first.Verb}).");
+                }
+
+                verbByToken.TryAdd(entry.Capability.Token, (entry.Capability.VerbClass, entry.Command));
+                entries[type] = entry;
             }
         }
 

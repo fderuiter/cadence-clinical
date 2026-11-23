@@ -32,6 +32,24 @@ public interface IProtocolVersionReader
     /// </summary>
     Task<ProtocolDesign?> GetDesignAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
         Task.FromResult<ProtocolDesign?>(null);
+
+    /// <summary>
+    /// Reads one protocol version's summary together with its typed <see cref="ProtocolDesign"/> in a single query.
+    /// </summary>
+    async Task<(ProtocolVersionSummary? Version, ProtocolDesign? Design)> GetWithDesignAsync(
+        TenantId tenant,
+        ProtocolVersionId version,
+        CancellationToken cancellationToken)
+    {
+        var summary = await GetAsync(tenant, version, cancellationToken).ConfigureAwait(false);
+        if (summary is null)
+        {
+            return (null, null);
+        }
+
+        var design = await GetDesignAsync(tenant, version, cancellationToken).ConfigureAwait(false);
+        return (summary, design);
+    }
 }
 
 /// <summary>A protocol version without its content.</summary>

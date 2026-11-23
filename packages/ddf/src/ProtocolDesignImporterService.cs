@@ -28,17 +28,31 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         _catalog = catalog ?? new CdiscLibraryTemplateCatalog();
     }
 
+    private static readonly IReadOnlyDictionary<string, ProtocolConceptResolution> EmptyResolutions =
+        new Dictionary<string, ProtocolConceptResolution>(StringComparer.Ordinal);
+
     /// <inheritdoc />
     public IReadOnlyList<BundledProtocolTemplate> ListBundledTemplates() => _catalog.ListTemplates();
 
     /// <inheritdoc />
-    public async Task<ProtocolDesignImportResult> ImportAsync(
+    public Task<ProtocolDesignImportResult> ImportAsync(
         ProtocolDesignImportRequest request,
         ProtocolConceptResolver resolveConcept,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(resolveConcept);
+        return ImportAsync(request, OdmDesignImporter.AdaptSingleResolver(resolveConcept), cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<ProtocolDesignImportResult> ImportAsync(
+        ProtocolDesignImportRequest request,
+        ProtocolConceptBatchResolver resolveConcepts,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(resolveConcepts);
 
         var hasTemplates = request.TemplateIds is { Count: > 0 };
         var hasBytes = request.RawBytes is { Length: > 0 };
@@ -62,14 +76,14 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
 
         if (hasTemplates)
         {
-            return await ImportTemplatesAsync(request, resolveConcept, cancellationToken).ConfigureAwait(false);
+            return await ImportTemplatesAsync(request, resolveConcepts, cancellationToken).ConfigureAwait(false);
         }
 
         var detected = DetectFormat(request.RawBytes!, request.FileName, request.Format);
         return detected switch
         {
-            ProtocolImportFormat.OdmXml => await ImportOdmPayloadAsync(request, resolveConcept, cancellationToken).ConfigureAwait(false),
-            ProtocolImportFormat.UsdmJson => await ImportUsdmPayloadAsync(request, resolveConcept, cancellationToken).ConfigureAwait(false),
+            ProtocolImportFormat.OdmXml => await ImportOdmPayloadAsync(request, resolveConcepts, cancellationToken).ConfigureAwait(false),
+            ProtocolImportFormat.UsdmJson => await ImportUsdmPayloadAsync(request, resolveConcepts, cancellationToken).ConfigureAwait(false),
             _ => new ProtocolDesignImportResult(
                 null,
                 ["Unsupported file format. Synchronous protocol import accepts CDISC ODM v1.3.2 XML (.xml) or CDISC USDM v4 JSON (.json) files."],
@@ -79,13 +93,16 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
 
     private async Task<ProtocolDesignImportResult> ImportTemplatesAsync(
         ProtocolDesignImportRequest request,
-        ProtocolConceptResolver resolveConcept,
+        ProtocolConceptBatchResolver resolveConcepts,
         CancellationToken cancellationToken)
     {
         var problems = new List<string>();
-        var notes = new List<ProtocolImportNote>();
-        var importedSpecs = new List<CollectionSpec>();
-        var importedRules = new List<Rule>();
+        var preNotes = new List<ProtocolImportNote>();
+        var stagedTemplates = new List<(string RawId, OdmDesignImporter.StagedOdmDocument Staged)>();
+        var placeholderSpecs = new List<CollectionSpec>();
+        var placeholderRules = new List<Rule>();
+        var uniqueCandidates = new List<ProtocolConceptCandidate>();
+        var seenCandidateKeys = new HashSet<string>(StringComparer.Ordinal);
         var batchUsedIds = NonCollectionElementIds(request.BaseDesign);
         string? firstTemplateTitle = null;
         string? firstStudyOid = null;
@@ -99,9 +116,60 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
                 continue;
             }
 
-            var odm = await OdmDesignImporter.ImportAsync(templateBytes, resolveConcept, batchUsedIds, cancellationToken).ConfigureAwait(false);
-            firstTemplateTitle ??= odm.Title;
-            firstStudyOid ??= odm.StudyOid;
+            var staged = OdmDesignImporter.StageBytes(templateBytes, batchUsedIds);
+            firstTemplateTitle ??= staged.StudyTitle;
+            firstStudyOid ??= staged.StudyOid;
+            preNotes.AddRange(staged.MaterializePreResolutionNotes());
+            if (!staged.CanResolve)
+            {
+                problems.AddRange(staged.Problems.Select(p => $"Template '{rawId}': {p}"));
+                continue;
+            }
+
+            stagedTemplates.Add((rawId, staged));
+            placeholderSpecs.AddRange(staged.BuildPlaceholderSpecs());
+            if (staged.Rules is { Count: > 0 })
+            {
+                placeholderRules.AddRange(staged.Rules);
+            }
+
+            foreach (var candidate in staged.UniqueCandidates)
+            {
+                if (seenCandidateKeys.Add(candidate.StableKey))
+                {
+                    uniqueCandidates.Add(candidate);
+                }
+            }
+        }
+
+        if (problems.Count > 0)
+        {
+            return new ProtocolDesignImportResult(null, problems, DeduplicateNotes(preNotes));
+        }
+
+        var effectiveTitle = request.FallbackTitle ?? firstTemplateTitle ?? "Protocol Draft";
+        var preCheck = FinalizeMergedFormsDesign(
+            request.BaseDesign,
+            placeholderSpecs,
+            preNotes,
+            effectiveTitle,
+            placeholderRules,
+            firstStudyOid);
+        if (!preCheck.IsSuccess)
+        {
+            return preCheck;
+        }
+
+        var resolutions = uniqueCandidates.Count == 0
+            ? EmptyResolutions
+            : await resolveConcepts(uniqueCandidates, cancellationToken).ConfigureAwait(false);
+
+        var notes = new List<ProtocolImportNote>();
+        var importedSpecs = new List<CollectionSpec>();
+        var importedRules = new List<Rule>();
+        foreach (var (rawId, staged) in stagedTemplates)
+        {
+            var odm = OdmDesignImporter.MaterializeStagedDocument(staged, resolutions);
             notes.AddRange(odm.Notes);
             if (!odm.IsSuccess)
             {
@@ -125,35 +193,56 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             request.BaseDesign,
             importedSpecs,
             notes,
-            request.FallbackTitle ?? firstTemplateTitle ?? "Protocol Draft",
+            effectiveTitle,
             importedRules,
             firstStudyOid);
     }
 
     private static async Task<ProtocolDesignImportResult> ImportOdmPayloadAsync(
         ProtocolDesignImportRequest request,
-        ProtocolConceptResolver resolveConcept,
+        ProtocolConceptBatchResolver resolveConcepts,
         CancellationToken cancellationToken)
     {
         var reservedIds = NonCollectionElementIds(request.BaseDesign);
-        var odm = await OdmDesignImporter.ImportAsync(request.RawBytes!, resolveConcept, reservedIds, cancellationToken).ConfigureAwait(false);
-        if (odm.PayloadTooLarge)
+        var staged = OdmDesignImporter.StageBytes(request.RawBytes!, reservedIds);
+        if (staged.PayloadTooLarge)
         {
-            return new ProtocolDesignImportResult(null, odm.Problems, odm.Notes, PayloadTooLarge: true);
+            return new ProtocolDesignImportResult(null, staged.Problems, staged.MaterializePreResolutionNotes(), PayloadTooLarge: true);
         }
 
+        if (!staged.CanResolve)
+        {
+            return new ProtocolDesignImportResult(null, staged.Problems, staged.MaterializePreResolutionNotes());
+        }
+
+        var fallbackTitle = FirstNonBlank(request.BaseDesign?.Title, staged.StudyTitle, request.FallbackTitle, "Imported ODM Protocol")!;
+        var preCheck = FinalizeMergedFormsDesign(
+            request.BaseDesign,
+            staged.BuildPlaceholderSpecs(),
+            staged.MaterializePreResolutionNotes(),
+            fallbackTitle,
+            staged.Rules,
+            staged.StudyOid);
+        if (!preCheck.IsSuccess)
+        {
+            return preCheck;
+        }
+
+        var resolutions = staged.UniqueCandidates.Count == 0
+            ? EmptyResolutions
+            : await resolveConcepts(staged.UniqueCandidates, cancellationToken).ConfigureAwait(false);
+        var odm = OdmDesignImporter.MaterializeStagedDocument(staged, resolutions);
         if (!odm.IsSuccess)
         {
             return new ProtocolDesignImportResult(null, odm.Problems, odm.Notes);
         }
 
-        var fallbackTitle = FirstNonBlank(request.BaseDesign?.Title, odm.Title, request.FallbackTitle, "Imported ODM Protocol")!;
         return FinalizeMergedFormsDesign(request.BaseDesign, odm.CollectionSpecs, odm.Notes, fallbackTitle, odm.Rules, odm.StudyOid);
     }
 
     private static async Task<ProtocolDesignImportResult> ImportUsdmPayloadAsync(
         ProtocolDesignImportRequest request,
-        ProtocolConceptResolver resolveConcept,
+        ProtocolConceptBatchResolver resolveConcepts,
         CancellationToken cancellationToken)
     {
         string json;
@@ -167,34 +256,78 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         }
 
         var bcMetadata = ExtractUsdmBiomedicalConceptMetadata(json, out var vendorNotes);
-        var conceptProblems = new List<string>();
-        var unmappedConceptNotes = new List<ProtocolImportNote>();
+        var orderedCodes = new List<string>();
+        var seenCodes = new HashSet<string>(StringComparer.Ordinal);
 
-        async Task<ConceptRef?> ResolveBcAsync(string cdiscCode, CancellationToken ct)
+        Task<ConceptRef?> CollectBcAsync(string cdiscCode, CancellationToken _)
+        {
+            if (seenCodes.Add(cdiscCode))
+            {
+                orderedCodes.Add(cdiscCode);
+            }
+
+            return Task.FromResult<ConceptRef?>(OdmDesignImporter.PlaceholderConceptRef);
+        }
+
+        var dryRun = await UsdmDesignImporter.StageAsync(json, CollectBcAsync, options: null, cancellationToken).ConfigureAwait(false);
+        var dryNotes = dryRun.Notes
+            .Select(n => new ProtocolImportNote(n.Source, n.Message))
+            .Concat(vendorNotes)
+            .Distinct()
+            .ToList();
+        if (dryRun.Problems.Count > 0 || dryRun.Design is null)
+        {
+            return new ProtocolDesignImportResult(null, dryRun.Problems, dryNotes);
+        }
+
+        var promptsByBcId = ExtractUsdmPromptsByBcId(json);
+        var finalTitle = FirstNonBlank(dryRun.Design.Title, request.FallbackTitle, "Imported USDM Protocol")!;
+        var dryValidation = ProtocolDesignDocument.Read(
+            ProtocolDesignDocument.Write(EnrichUsdmDesign(dryRun.Design, promptsByBcId, finalTitle, dryNotes)));
+        if (!dryValidation.IsValid)
+        {
+            return new ProtocolDesignImportResult(null, dryValidation.Problems, dryNotes);
+        }
+
+        var candidates = new List<ProtocolConceptCandidate>(orderedCodes.Count);
+        var candidateByCode = new Dictionary<string, ProtocolConceptCandidate>(orderedCodes.Count, StringComparer.Ordinal);
+        foreach (var cdiscCode in orderedCodes)
         {
             var meta = bcMetadata.GetValueOrDefault(cdiscCode);
             var label = FirstNonBlank(meta?.Label, meta?.Name, cdiscCode)!;
             var definition = FirstNonBlank(meta?.Description, meta?.Label, meta?.Name, $"Biomedical concept {cdiscCode}")!;
-            var resolution = await resolveConcept(
-                new ProtocolConceptCandidate($"usdm:{cdiscCode}:{label}", cdiscCode, label, definition, ConceptKind.BiomedicalConcept),
-                ct).ConfigureAwait(false);
-            if (resolution.Concept is not { } resolved)
+            var candidate = new ProtocolConceptCandidate($"usdm:{cdiscCode}:{label}", cdiscCode, label, definition, ConceptKind.BiomedicalConcept);
+            candidates.Add(candidate);
+            candidateByCode[cdiscCode] = candidate;
+        }
+
+        var resolutions = candidates.Count == 0
+            ? EmptyResolutions
+            : await resolveConcepts(candidates, cancellationToken).ConfigureAwait(false);
+
+        var conceptProblems = new List<string>();
+        var unmappedConceptNotes = new List<ProtocolImportNote>();
+        Task<ConceptRef?> ResolveStagedBcAsync(string cdiscCode, CancellationToken _)
+        {
+            var candidate = candidateByCode[cdiscCode];
+            if (!resolutions.TryGetValue(candidate.StableKey, out var resolution)
+                || resolution.Concept is not { } resolved)
             {
-                conceptProblems.Add(resolution.ErrorMessage ?? $"Could not resolve or define Biomedical Concept '{cdiscCode}'.");
-                return null;
+                conceptProblems.Add(resolution?.ErrorMessage ?? $"Could not resolve or define Biomedical Concept '{cdiscCode}'.");
+                return Task.FromResult<ConceptRef?>(null);
             }
 
             if (resolution.UsedFallbackSponsorConcept)
             {
                 unmappedConceptNotes.Add(new ProtocolImportNote(
                     cdiscCode,
-                    $"Unmapped terminology code '{cdiscCode}' ({label}) is not in the tenant Concept Registry; registered as a sponsor-local concept."));
+                    $"Unmapped terminology code '{cdiscCode}' ({candidate.PreferredLabel}) is not in the tenant Concept Registry; registered as a sponsor-local concept."));
             }
 
-            return resolved;
+            return Task.FromResult<ConceptRef?>(resolved);
         }
 
-        var staged = await UsdmDesignImporter.StageAsync(json, ResolveBcAsync, options: null, cancellationToken).ConfigureAwait(false);
+        var staged = await UsdmDesignImporter.StageAsync(json, ResolveStagedBcAsync, options: null, cancellationToken).ConfigureAwait(false);
         var combinedNotes = staged.Notes
             .Select(n => new ProtocolImportNote(n.Source, n.Message))
             .Concat(unmappedConceptNotes)
@@ -207,9 +340,20 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             return new ProtocolDesignImportResult(null, [.. staged.Problems, .. conceptProblems], combinedNotes);
         }
 
-        // Enrich imported USDM items with human-readable prompts from BiomedicalConcept labels/names.
-        var promptsByBcId = ExtractUsdmPromptsByBcId(json);
-        var enrichedSpecs = staged.Design.CollectionSpecs.Select(spec =>
+        var enrichedDesign = EnrichUsdmDesign(staged.Design, promptsByBcId, finalTitle, combinedNotes);
+        var validation = ProtocolDesignDocument.Read(ProtocolDesignDocument.Write(enrichedDesign));
+        return validation.IsValid
+            ? new ProtocolDesignImportResult(validation.Design, [], combinedNotes)
+            : new ProtocolDesignImportResult(null, validation.Problems, combinedNotes);
+    }
+
+    private static ProtocolDesign EnrichUsdmDesign(
+        ProtocolDesign design,
+        IReadOnlyDictionary<string, string> promptsByBcId,
+        string finalTitle,
+        IReadOnlyList<ProtocolImportNote> notes)
+    {
+        var enrichedSpecs = design.CollectionSpecs.Select(spec =>
         {
             var enrichedItems = spec.Items.Select(item =>
             {
@@ -221,18 +365,12 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             return spec with { Items = enrichedItems };
         }).ToList();
 
-        var finalTitle = FirstNonBlank(staged.Design.Title, request.FallbackTitle, "Imported USDM Protocol")!;
-        var enrichedDesign = staged.Design with
+        return design with
         {
             Title = finalTitle,
             CollectionSpecs = enrichedSpecs,
-            ImportNotes = combinedNotes.Count > 0 ? combinedNotes : null,
+            ImportNotes = notes.Count > 0 ? notes : null,
         };
-
-        var validation = ProtocolDesignDocument.Read(ProtocolDesignDocument.Write(enrichedDesign));
-        return validation.IsValid
-            ? new ProtocolDesignImportResult(validation.Design, [], combinedNotes)
-            : new ProtocolDesignImportResult(null, validation.Problems, combinedNotes);
     }
 
     private static ProtocolDesignImportResult FinalizeMergedFormsDesign(

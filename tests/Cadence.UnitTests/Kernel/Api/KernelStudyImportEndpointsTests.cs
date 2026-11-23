@@ -26,6 +26,7 @@ using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
+using Cadence.Kernel.Standards;
 using Cadence.Kernel.Tenancy;
 using Cadence.Security.Authentication;
 using Cadence.Testing.Hosting;
@@ -449,6 +450,109 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         badRes.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
     }
 
+    [Fact]
+    public async Task ImportProtocolDraft_SkipsDefineConceptsWhenAllConceptsActive_AndRefusesDeprecatedOrUnauthorizedConceptCreationWithZeroWrites()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var authorOnlyIdentity = TestSecurityContext.Identity("protocol.author.only", "Protocol Author Without Concept Define");
+        _world.GrantRole(
+            Actor.Person(authorOnlyIdentity.UserId),
+            "PROTOCOL_AUTHOR_ONLY",
+            ["protocol.draft", "protocol.revise_draft"],
+            AuthorityScope.Tenant());
+
+        using var authorClient = CreateClient(authorOnlyIdentity);
+        using var designerClient = CreateClient(DesignerIdentity);
+
+        // 1. Caller with protocol.draft but WITHOUT concept.define is refused with 403 when items are unmapped, writing 0 Concept rows.
+        using (var unauthReq = MultipartOdmPost("/api/v1/kernel/studies/CADENCE-101/protocol-imports", SampleOdmXml, "vs.xml", "unauth-concept-1", "Import without concept.define"))
+        {
+            using var unauthRes = await authorClient.SendAsync(unauthReq, ct);
+            unauthRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            _world.Concepts.Should().BeEmpty();
+            _world.Versions.Should().BeEmpty();
+        }
+
+        // 2. Designer imports SampleOdmXml once -> defines 2 concepts in 1 atomic DefineConcepts command and 1 LookupBatchAsync call.
+        using (var seedReq = MultipartOdmPost("/api/v1/kernel/studies/CADENCE-101/protocol-imports", SampleOdmXml, "vs.xml", "seed-concepts-1", "Seed concepts via first import"))
+        {
+            using var seedRes = await designerClient.SendAsync(seedReq, ct);
+            seedRes.StatusCode.Should().Be(HttpStatusCode.Created);
+            _world.Concepts.Should().HaveCount(2);
+            _world.DefineConceptsCommandCount.Should().Be(1);
+        }
+
+        // 3. Second study: all imported items already match active concepts -> skips DefineConcepts so caller WITHOUT concept.define succeeds!
+        var secondStudyId = StudyId.New();
+        _world.Studies.Add(new StudyDirectoryEntry(secondStudyId, 1, "CADENCE-202", "Second Study", "Phase 2", _world.DemoSponsorId, 1, "CADENCE-PHARMA", "Cadence Pharma", 0));
+        int defineCountBefore = _world.DefineConceptsCommandCount;
+        int lookupCountBefore = _world.BatchLookupCount;
+
+        using (var activeReuseReq = MultipartOdmPost("/api/v1/kernel/studies/CADENCE-202/protocol-imports", SampleOdmXml, "vs.xml", "reuse-active-1", "Stage draft using active concepts"))
+        {
+            using var activeReuseRes = await authorClient.SendAsync(activeReuseReq, ct);
+            activeReuseRes.StatusCode.Should().Be(HttpStatusCode.Created, await activeReuseRes.Content.ReadAsStringAsync(ct));
+            _world.DefineConceptsCommandCount.Should().Be(defineCountBefore, "DefineConcepts must be skipped when all items match active concepts");
+            _world.BatchLookupCount.Should().Be(lookupCountBefore + 1);
+            _world.Concepts.Should().HaveCount(2);
+        }
+
+        // 4. Deprecated Biomedical Concept -> 422 K.Knowledge.ConceptDeprecated with zero new Concept rows.
+        var thirdStudyId = StudyId.New();
+        _world.Studies.Add(new StudyDirectoryEntry(thirdStudyId, 1, "CADENCE-303", "Third Study", "Phase 2", _world.DemoSponsorId, 1, "CADENCE-PHARMA", "Cadence Pharma", 0));
+        _world.Concepts.Add(new ConceptVersionView(
+            new ConceptRef(ConceptId.New(), 1),
+            ConceptOrigin.CdiscBiomedicalConcept,
+            "C25298",
+            ConceptKind.BiomedicalConcept,
+            "Deprecated Systolic BP",
+            "Deprecated BC",
+            ConceptStatus.Deprecated,
+            1,
+            ConceptMappingState.Unmapped,
+            Epoch));
+
+        int conceptsBeforeDeprecated = _world.Concepts.Count;
+        using (var deprecatedReq = MultipartOdmPost("/api/v1/kernel/studies/CADENCE-303/protocol-imports", SampleOdmXml, "vs.xml", "dep-bc-1", "Attempt import with deprecated BC"))
+        {
+            using var deprecatedRes = await designerClient.SendAsync(deprecatedReq, ct);
+            deprecatedRes.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+            var problemJson = await deprecatedRes.Content.ReadAsStringAsync(ct);
+            problemJson.Should().Contain("K.Knowledge.ConceptDeprecated");
+            _world.Concepts.Should().HaveCount(conceptsBeforeDeprecated, "deprecated concept rejection must write zero new Concept rows");
+            _world.Versions.Should().NotContain(v => v.Summary.StudyId == thirdStudyId);
+        }
+
+        // 5. GET design-summary resolves promptless items in 1 ResolveManyAsync batch call.
+        var promptlessDesign = new ProtocolDesign
+        {
+            Title = "Promptless Summary Study",
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "F_PL",
+                    "Promptless Form",
+                    [
+                        new CollectionItem("IT_1", _world.Concepts[0].Concept, Required: true, Prompt: null),
+                        new CollectionItem("IT_2", _world.Concepts[1].Concept, Required: false, Prompt: null),
+                    ]),
+            ],
+        };
+        var plVersionId = ProtocolVersionId.New();
+        _world.Versions.Add(new StoredVersion(
+            new ProtocolVersionSummary(plVersionId, thirdStudyId, 1, null, ProtocolVersionStatus.Draft, null, null, null, null),
+            ProtocolDesignDocument.Write(promptlessDesign)));
+
+        int resolveManyBefore = _world.ResolveManyCount;
+        var summary = await designerClient.GetFromJsonAsync<JsonElement>(
+            $"/api/v1/kernel/protocol-versions/{Uri.EscapeDataString(NodeRef.For(plVersionId).ToString())}/design-summary",
+            ct);
+        _world.ResolveManyCount.Should().Be(resolveManyBefore + 1);
+        summary.GetProperty("forms")[0].GetProperty("items").EnumerateArray()
+            .Select(i => i.GetProperty("prompt").GetString())
+            .Should().Equal("Systolic Blood Pressure", "Diastolic Blood Pressure");
+    }
+
     private HttpClient CreateClient(GatewayIdentity identity)
     {
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
@@ -554,6 +658,12 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         public List<StudySiteDirectoryEntry> StudySites { get; } = [];
 
         public List<ConceptVersionView> Concepts { get; } = [];
+
+        public int BatchLookupCount { get; private set; }
+
+        public int ResolveManyCount { get; private set; }
+
+        public int DefineConceptsCommandCount { get; set; }
 
         public List<StoredVersion> Versions { get; } = [];
 
@@ -723,6 +833,57 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         public Task<ConceptVersionView?> FindBiomedicalConceptAsync(TenantId tenant, string cdiscConceptCode, CancellationToken cancellationToken = default) =>
             Task.FromResult(Concepts.FirstOrDefault(c => c.Origin == ConceptOrigin.CdiscBiomedicalConcept && c.ExternalCode == cdiscConceptCode));
 
+        public Task<ConceptBatchLookupResult> LookupBatchAsync(TenantId tenant, ConceptBatchLookup lookup, CancellationToken cancellationToken = default)
+        {
+            BatchLookupCount++;
+            var pinned = new Dictionary<ConceptRef, ConceptVersionView>();
+            foreach (var r in lookup.PinnedConcepts.Distinct())
+            {
+                if (Concepts.FirstOrDefault(c => c.Concept == r) is { } found)
+                {
+                    pinned[r] = found;
+                }
+            }
+
+            var current = new Dictionary<ConceptId, ConceptVersionView>();
+            foreach (var id in lookup.CurrentConcepts.Distinct())
+            {
+                if (Concepts.FirstOrDefault(c => c.Concept.ConceptId == id) is { } found)
+                {
+                    current[id] = found;
+                }
+            }
+
+            var bcs = new Dictionary<string, ConceptVersionView>(StringComparer.Ordinal);
+            foreach (var code in lookup.BiomedicalConceptCodes.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).Distinct(StringComparer.Ordinal))
+            {
+                if (Concepts.FirstOrDefault(c => c.Origin == ConceptOrigin.CdiscBiomedicalConcept && c.ExternalCode == code) is { } found)
+                {
+                    bcs[code] = found;
+                }
+            }
+
+            return Task.FromResult(new ConceptBatchLookupResult(bcs, current, pinned));
+        }
+
+        public Task<IReadOnlyDictionary<ConceptRef, ConceptVersionView>> ResolveManyAsync(
+            TenantId tenant,
+            IReadOnlyCollection<ConceptRef> concepts,
+            CancellationToken cancellationToken = default)
+        {
+            ResolveManyCount++;
+            var dict = new Dictionary<ConceptRef, ConceptVersionView>();
+            foreach (var r in concepts.Distinct())
+            {
+                if (Concepts.FirstOrDefault(c => c.Concept == r) is { } found)
+                {
+                    dict[r] = found;
+                }
+            }
+
+            return Task.FromResult<IReadOnlyDictionary<ConceptRef, ConceptVersionView>>(dict);
+        }
+
         public Task<CodeSystemVersionView?> FindCodeSystemVersionAsync(TenantId tenant, string codeSystemUri, string version, CancellationToken cancellationToken = default) =>
             Task.FromResult<CodeSystemVersionView?>(null);
 
@@ -782,9 +943,11 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 RegisterSite regSite => ExecuteRegisterSite(regSite),
                 LinkSiteToStudy linkSite => ExecuteLinkSiteToStudy(linkSite),
                 DefineConcept defConcept => ExecuteDefineConcept(defConcept),
+                DefineConcepts defConcepts => ExecuteDefineConcepts(defConcepts),
                 CreateProtocolDraft createDraft => ExecuteCreateDraft(createDraft),
                 ReviseProtocolDraft reviseDraft => ExecuteReviseDraft(reviseDraft),
                 ForkProtocolVersion forkVersion => ExecuteForkVersion(forkVersion),
+                DraftLibraryItem draftItem => new LibraryItemVersion(draftItem.LibraryItemId, draftItem.Kind, draftItem.Key, 1, "sha256:rulepack"),
                 _ => throw new NotSupportedException($"Unhandled command {command.GetType().Name}."),
             };
 
@@ -911,6 +1074,43 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 ConceptMappingState.Unmapped,
                 Epoch));
             return conceptRef;
+        }
+
+        private object ExecuteDefineConcepts(DefineConcepts cmd)
+        {
+            world.DefineConceptsCommandCount++;
+            if (cmd.Concepts.Count == 0)
+            {
+                return KnowledgeErrors.ConceptBatchEmpty;
+            }
+
+            var created = new List<ConceptRef>(cmd.Concepts.Count);
+            foreach (var item in cmd.Concepts)
+            {
+                if (world.Concepts.Any(c => c.Concept.ConceptId == item.ConceptId))
+                {
+                    return KernelErrors.AlreadyExists;
+                }
+            }
+
+            foreach (var item in cmd.Concepts)
+            {
+                var conceptRef = new ConceptRef(item.ConceptId, 1);
+                world.Concepts.Add(new ConceptVersionView(
+                    conceptRef,
+                    item.Origin,
+                    item.ExternalCode,
+                    item.Kind,
+                    item.PreferredLabel,
+                    item.Definition,
+                    ConceptStatus.Active,
+                    1,
+                    ConceptMappingState.Unmapped,
+                    Epoch));
+                created.Add(conceptRef);
+            }
+
+            return (IReadOnlyList<ConceptRef>)created;
         }
 
         private object ExecuteCreateDraft(CreateProtocolDraft cmd)

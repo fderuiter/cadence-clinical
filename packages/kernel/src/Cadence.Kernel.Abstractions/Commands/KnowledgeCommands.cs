@@ -75,6 +75,36 @@ public sealed record DefineConcept(
     string IdempotencyKey,
     string ReasonForChange) : ICommand<ConceptRef>;
 
+/// <summary>One concept specification inside a <see cref="DefineConcepts"/> batch.</summary>
+public sealed record ConceptDefinition(
+    ConceptId ConceptId,
+    ConceptOrigin Origin,
+    string? ExternalCode,
+    ConceptKind Kind,
+    string PreferredLabel,
+    string Definition);
+
+/// <summary>
+/// Defines a homogeneous batch of concepts at version 1 in one atomic transaction (spec §5.1 K-TX-1, §6.1). Caller
+/// permission (<c>concept.define</c>) and subscription status are checked once for the batch, while each defined
+/// concept emits its own <c>ConceptDefined</c> event and audit-chain entry. Not listed separately in the interactive
+/// command catalogue because <see cref="DefineConcept"/> already represents <c>concept.define</c> on the tenant.
+/// </summary>
+[KernelCapability("concept.define", VerbClass.Execute, InCatalogue = false)]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(typeof(IdentityErrors), nameof(IdentityErrors.TenantUnknown))]
+[RaisesKernelErrors(
+    typeof(KnowledgeErrors),
+    nameof(KnowledgeErrors.ConceptBatchEmpty),
+    nameof(KnowledgeErrors.ConceptLabelRequired),
+    nameof(KnowledgeErrors.ExternalCodeMismatch))]
+public sealed record DefineConcepts(
+    TenantId TenantId,
+    IReadOnlyList<ConceptDefinition> Concepts,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<IReadOnlyList<ConceptRef>>;
+
 /// <summary>
 /// Changes a concept's label or definition as a new version. Earlier versions stay resolvable, so every fact keeps the
 /// meaning it was recorded against.
@@ -152,6 +182,9 @@ public static class KnowledgeErrors
 
     public static readonly KernelError DuplicateEntry =
         new("K.Knowledge.DuplicateEntry", 422, "The same code appears twice in one group of the code-system version.");
+
+    public static readonly KernelError ConceptBatchEmpty =
+        new("K.Knowledge.ConceptBatchEmpty", 422, "At least one concept definition is required.");
 
     public static readonly KernelError ConceptLabelRequired =
         new("K.Knowledge.ConceptLabelRequired", 422, "A concept needs a preferred label and a definition.");

@@ -770,6 +770,54 @@ internal sealed class KernelAuthorityStore(
             .ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<AuthorityEvaluationSlice> LoadEvaluationSliceAsync(
+        TenantId tenant,
+        Actor actor,
+        NodeRef resource,
+        string capability,
+        bool includeQualificationRequirements,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(resource);
+
+        await using var lease = await contexts.AcquireReadLeaseAsync(tenant, cancellationToken).ConfigureAwait(false);
+        var db = lease.Db;
+        var path = ScopePath.TenantWide;
+        var unversioned = resource.Unversioned();
+        if (PathBearingKinds.Contains(unversioned.Kind))
+        {
+            var resolved = new Dictionary<(string Kind, Guid Id), ScopePath>(1);
+            var blinded = new HashSet<NodeRef>();
+            await LoadPathsForKindAsync(db, tenant, unversioned.Kind, [unversioned.Id], resolved, blinded, cancellationToken)
+                .ConfigureAwait(false);
+            path = resolved.GetValueOrDefault((unversioned.Kind, unversioned.Id), ScopePath.TenantWide);
+        }
+
+        var held = await db.Grants.AsNoTracking()
+            .Where(g => g.TenantId == tenant && g.GranteeKind == actor.Kind && g.GranteeId == actor.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var roleIds = held.Where(g => g.RoleId is not null).Select(g => g.RoleId!.Value).Distinct().ToList();
+        var roles = roleIds.Count == 0
+            ? new Dictionary<RoleId, Role>()
+            : (await db.Roles.AsNoTracking()
+                .Where(r => r.TenantId == tenant && roleIds.Contains(r.Id))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false))
+                .ToDictionary(r => r.Id);
+
+        IReadOnlyList<QualificationRequirement> requirements = includeQualificationRequirements
+            ? await db.QualificationRequirements.AsNoTracking()
+                .Where(r => r.TenantId == tenant && r.Capability == capability)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false)
+            : [];
+
+        return new AuthorityEvaluationSlice(path, held, roles, requirements);
+    }
+
     public async Task<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>> InspectEvidenceNodesAsync(
         TenantId tenant, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken)
     {

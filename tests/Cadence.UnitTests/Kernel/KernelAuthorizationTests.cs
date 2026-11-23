@@ -67,8 +67,9 @@ public sealed class KernelAuthorizationTests
     }
 
     /// <summary>
-    /// Every kernel command declares a capability and a resource with a NodeRef kind, and no two commands share a
-    /// token, so no command can reach the pipeline undeclared.
+    /// Every kernel command declares a capability and a resource with a NodeRef kind, no two catalogue commands share
+    /// a token, and any non-catalogue batch variant agrees on verb class and resource kind, so no command can reach
+    /// the pipeline undeclared.
     /// </summary>
     [Fact(DisplayName = "Catalog_EveryKernelCommandDeclaresACapability")]
     [KernelRule("K-AUTH-7")]
@@ -80,7 +81,13 @@ public sealed class KernelAuthorizationTests
 
         commandTypes.Should().NotBeEmpty();
         commandTypes.Should().OnlyContain(t => KernelCommandCatalog.Kernel.Find(t) != null, "every kernel command declares [KernelCapability]");
-        KernelCommandCatalog.Kernel.Entries.Select(e => e.Capability.Token).Should().OnlyHaveUniqueItems();
+        KernelCommandCatalog.Kernel.Entries.Where(e => e.InCatalogue).Select(e => e.Capability.Token).Should().OnlyHaveUniqueItems();
+        foreach (var group in KernelCommandCatalog.Kernel.Entries.GroupBy(e => e.Capability.Token, StringComparer.Ordinal))
+        {
+            group.Select(e => (e.Capability.VerbClass, e.ResourceKind)).Distinct().Should().ContainSingle(
+                $"every command declaring '{group.Key}' must agree on verb class and resource kind");
+        }
+
         KernelCommandCatalog.Kernel.Entries.Should().OnlyContain(e => NodeKinds.IsRegistered(e.ResourceKind));
     }
 
@@ -91,8 +98,10 @@ public sealed class KernelAuthorizationTests
         KernelCommandCatalog.Kernel.ForKind(NodeKinds.Concept).Select(e => e.Command)
             .Should().Equal(nameof(DeprecateConcept), nameof(ReviseConcept));
         KernelCommandCatalog.Kernel.ForKind(NodeKinds.Tenant).Select(e => e.Command)
-            .Should().Contain(nameof(RegisterOrganization)).And.NotContain(nameof(ProvisionTenant));
+            .Should().Contain([nameof(RegisterOrganization), nameof(DefineConcept)])
+            .And.NotContain([nameof(ProvisionTenant), nameof(DefineConcepts)]);
         KernelCommandCatalog.Kernel.Find(typeof(ProvisionTenant))!.Capability.Should().Be(new Capability("tenant.provision", VerbClass.Execute));
+        KernelCommandCatalog.Kernel.Find(typeof(DefineConcepts))!.Capability.Should().Be(new Capability("concept.define", VerbClass.Execute));
     }
 
     /// <summary>

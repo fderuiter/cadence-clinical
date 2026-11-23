@@ -338,6 +338,7 @@ public sealed class KernelCommandPipeline(
             or RegisterCodeSystem
             or ImportCodeSystemVersion
             or DefineConcept
+            or DefineConcepts
             or ReviseConcept
             or DeprecateConcept
             or MapConcept

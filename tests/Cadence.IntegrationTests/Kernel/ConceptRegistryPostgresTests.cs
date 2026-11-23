@@ -258,6 +258,73 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
         (await db.CodeSystemVersions.AsNoTracking().CountAsync(ct)).Should().Be(0);
     }
 
+    /// <summary>
+    /// Batch lookups resolve Biomedical Concept codes, current <see cref="ConceptId"/>s, and pinned
+    /// <see cref="ConceptRef"/>s accurately in one tenant-scoped connection lease while keeping other tenants isolated (K-ID-2).
+    /// </summary>
+    [Fact(DisplayName = "BatchLookups_ResolvePinnedCurrentAndBiomedicalConcepts_UnderTenantRls")]
+    [KernelRule("K-ID-2")]
+    public async Task BatchLookupsResolvePinnedCurrentAndBiomedicalConceptsUnderTenantRls()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var owner = await NewTenantAsync(ct);
+        var other = await NewTenantAsync(ct);
+
+        var bcSys = await DefineAsync(owner, ConceptOrigin.CdiscBiomedicalConcept, "C25298", "Systolic Blood Pressure", ct);
+        var bcDia = await DefineAsync(owner, ConceptOrigin.CdiscBiomedicalConcept, "C25299", "Diastolic Blood Pressure", ct);
+        var sponsorV1 = await DefineAsync(owner, ConceptOrigin.Sponsor, null, "Initial Grip Label", ct);
+        var sponsorV2 = (await fixture.Sender.SendAsync(
+            new ReviseConcept(owner, sponsorV1.ConceptId, "Updated Grip Label", "Revised definition", Key(), Reason),
+            cancellationToken: ct)).Value;
+
+        var registry = fixture.ConceptRegistry;
+
+        // Empty batch returns empty dictionaries immediately.
+        var emptyBatch = await registry.LookupBatchAsync(owner, new ConceptBatchLookup(), ct);
+        emptyBatch.BiomedicalConcepts.Should().BeEmpty();
+        emptyBatch.CurrentConcepts.Should().BeEmpty();
+        emptyBatch.PinnedConcepts.Should().BeEmpty();
+
+        // Combined batch resolves Biomedical Concepts, current v2, and pinned v1 in one call.
+        var batch = await registry.LookupBatchAsync(
+            owner,
+            new ConceptBatchLookup
+            {
+                BiomedicalConceptCodes = ["C25298", "C25299", "C00000"],
+                CurrentConcepts = [sponsorV1.ConceptId, ConceptId.New()],
+                PinnedConcepts = [sponsorV1, sponsorV2, new ConceptRef(ConceptId.New(), 1)],
+            },
+            ct);
+
+        batch.BiomedicalConcepts.Keys.Should().BeEquivalentTo("C25298", "C25299");
+        batch.BiomedicalConcepts["C25298"].Concept.Should().Be(bcSys);
+        batch.BiomedicalConcepts["C25299"].Concept.Should().Be(bcDia);
+        batch.CurrentConcepts.Should().ContainSingle()
+            .Which.Value.Should().Match<ConceptVersionView>(v => v.Concept == sponsorV2 && v.PreferredLabel == "Updated Grip Label");
+        batch.PinnedConcepts[sponsorV1].PreferredLabel.Should().Be("Initial Grip Label");
+        batch.PinnedConcepts[sponsorV2].PreferredLabel.Should().Be("Updated Grip Label");
+
+        // Convenience batch methods match LookupBatchAsync.
+        (await registry.ResolveManyAsync(owner, [sponsorV1, sponsorV2], ct)).Should().HaveCount(2);
+        (await registry.GetCurrentManyAsync(owner, [sponsorV1.ConceptId, bcSys.ConceptId], ct)).Should().HaveCount(2);
+        (await registry.FindBiomedicalConceptsAsync(owner, ["C25298"], ct)).Should().ContainKey("C25298");
+
+        // Cross-tenant RLS isolation: another tenant sees none of owner's concepts.
+        var crossTenant = await registry.LookupBatchAsync(
+            other,
+            new ConceptBatchLookup
+            {
+                BiomedicalConceptCodes = ["C25298", "C25299"],
+                CurrentConcepts = [sponsorV1.ConceptId, bcSys.ConceptId],
+                PinnedConcepts = [sponsorV1, sponsorV2, bcSys],
+            },
+            ct);
+        crossTenant.BiomedicalConcepts.Should().BeEmpty();
+        crossTenant.CurrentConcepts.Should().BeEmpty();
+        crossTenant.PinnedConcepts.Should().BeEmpty();
+    }
+
     /// <summary>Loads the CDISC CT fixture into a tenant, for tests (here and in the pipeline tests) that need rows.</summary>
     internal static async Task<KnowledgeSeed> SeedAsync(KernelPostgresFixture fixture, CancellationToken ct)
     {

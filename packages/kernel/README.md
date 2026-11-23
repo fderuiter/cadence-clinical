@@ -103,6 +103,10 @@ and `Loinc.csv` (`LoincTableParser`); any other source can send `ImportCodeSyste
 
 Read through `IConceptRegistry` (registered by `AddKernelPersistence`): every lookup names a concept version
 (`ConceptRef`) or a code-system version; there is no "latest". Only confirmed mappings resolve a code to a concept.
+Batch reads (`LookupBatchAsync`, `ResolveManyAsync`, `GetCurrentManyAsync`, `FindBiomedicalConceptsAsync`) resolve sets
+of pinned versions, current concepts, and Biomedical Concept codes in one tenant-scoped connection lease, and
+`DefineConcepts` (`concept.define`) atomically defines homogeneous batches of new concepts at version 1 in one
+transaction while emitting a `ConceptDefined` event and hash-chained `AuditEntryRecord` per concept (K-TX-1).
 
 ## Protocol versions and attestations (ADR-2452)
 
