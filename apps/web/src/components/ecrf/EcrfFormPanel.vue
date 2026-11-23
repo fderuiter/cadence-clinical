@@ -469,7 +469,17 @@ watch(
   { immediate: true }
 );
 
+function handleDemoReset() {
+  const openId = form.value?.form_id;
+  if (!openId) return;
+  formState.clearDraft(openId);
+  void formState.load(openId);
+}
+
 onMounted(() => {
+  if (typeof window !== "undefined") {
+    window.addEventListener("cadence:demo-reset", handleDemoReset);
+  }
   if (props.formId) void formState.load(props.formId);
 });
 watch(
@@ -483,6 +493,9 @@ watch(
 defineExpose({ dirty, form });
 watch(dirty, (value) => emit("dirty-change", value));
 onUnmounted(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("cadence:demo-reset", handleDemoReset);
+  }
   if (dirty.value) emit("dirty-change", false);
 });
 </script>
@@ -493,6 +506,10 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 12px;
   margin-bottom: 20px;
+  min-width: 0;
+  max-width: 100%;
+}
+.ecrf-form-panel > * {
   min-width: 0;
   max-width: 100%;
 }

@@ -3,6 +3,7 @@ import {
   onMounted,
   onUnmounted,
   unref,
+  watch,
   type Ref,
 } from "vue";
 import type { RouteLocationNormalized, Router } from "vue-router";
@@ -58,11 +59,11 @@ export interface UseUnsavedNavigationGuardOptions {
 }
 
 /**
- * Reusable dirty-state navigation guard across standalone views and Clinical Canvas workspaces (ADR-2657).
+ * Reusable dirty-state navigation guard across standalone views and Clinical Canvas workspaces (ADR-2658).
  *
  * Prompts via the accessible ConfirmationDialogHost modal (`role="alertdialog"`, never `window.confirm`),
  * blocks accidental browser tab unloads via `beforeunload`, integrates with `useSignOutGuard`, and stands down
- * automatically during involuntary session expiry or confirmed sign-out transitions.
+ * automatically during involuntary session expiry, RBAC `/forbidden` redirects, or confirmed sign-out transitions.
  */
 export function useUnsavedNavigationGuard(
   options: UseUnsavedNavigationGuardOptions
@@ -70,14 +71,44 @@ export function useUnsavedNavigationGuard(
   const instance = getCurrentInstance();
   const activeRouter = (instance?.appContext.config.globalProperties.$router ??
     null) as Router | null;
+  let seenAuthenticated = false;
+  try {
+    const authStore = useAuthStore();
+    seenAuthenticated = Boolean(authStore.isAuthenticated);
+    watch(
+      () => authStore.isAuthenticated,
+      (authed) => {
+        if (authed) {
+          seenAuthenticated = true;
+        }
+      },
+      { flush: "sync" }
+    );
+  } catch {
+    seenAuthenticated = false;
+  }
 
   function isGuardActive(): boolean {
     return resolveFlag(options.guardNavigation, true);
   }
 
-  function shouldSuppressUnsavedGuard(): boolean {
+  function shouldSuppressUnsavedGuard(to?: RouteLocationNormalized): boolean {
+    if (
+      to &&
+      (to.name === "forbidden" ||
+        to.path === "/forbidden" ||
+        to.name === "login" ||
+        to.path === "/login")
+    ) {
+      return true;
+    }
     try {
       const authStore = useAuthStore();
+      if (authStore.isAuthenticated) {
+        seenAuthenticated = true;
+      } else if (seenAuthenticated) {
+        return true;
+      }
       return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
     } catch {
       return false;
@@ -130,7 +161,7 @@ export function useUnsavedNavigationGuard(
       if (
         !isGuardActive() ||
         !resolveFlag(options.isDirty) ||
-        shouldSuppressUnsavedGuard()
+        shouldSuppressUnsavedGuard(to)
       ) {
         return;
       }

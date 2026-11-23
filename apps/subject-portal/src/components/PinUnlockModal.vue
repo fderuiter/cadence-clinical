@@ -178,14 +178,28 @@
         </div>
       </form>
     </div>
+    <SignOutConfirmModal
+      id="pin-unlock-signout-confirm-modal"
+      :open="isSignOutConfirmOpen"
+      title="Log Out With Unsaved or Unsent Survey Entries?"
+      description="You have unsaved questionnaire drafts or locked offline survey submissions waiting to sync on this device. Logging out now will leave those entries unsent until you sign back in and unlock your PIN."
+      stay-label="Stay & Unlock PIN"
+      confirm-label="Log Out Anyway"
+      @confirm="confirmSignOut"
+      @cancel="cancelSignOut"
+    />
   </div>
 </template>
 
 <script setup>
 import { computed, ref } from "vue";
-import { useFocusTrap } from "ui";
+import { SignOutConfirmModal, useFocusTrap, useSignOutGuard } from "ui";
 
-import { logout } from "../features/auth.js";
+import {
+  hasUnsavedOrUnsyncedLocalData,
+  logout,
+  prepareSignOutGuardState,
+} from "../features/auth.js";
 import {
   MAX_PIN_UNLOCK_ATTEMPTS,
   cancelPINReset,
@@ -201,8 +215,19 @@ import SiteContactLinks from "./SiteContactLinks.vue";
 const modalRef = ref(null);
 const sessionStore = useSessionStore();
 
+const {
+  isConfirmOpen: isSignOutConfirmOpen,
+  requestSignOut,
+  confirmSignOut,
+  cancelSignOut,
+} = useSignOutGuard({
+  flushExternalDrafts: prepareSignOutGuardState,
+  hasExternalDrafts: hasUnsavedOrUnsyncedLocalData,
+  onConfirmSignOut: () => logout({ confirmed: true }),
+});
+
 useFocusTrap(modalRef, {
-  isOpen: () => sessionStore.pinUnlock.isOpen,
+  isOpen: () => sessionStore.pinUnlock.isOpen && !isSignOutConfirmOpen.value,
   escapeDeactivates: false,
   initialFocus: "#unlock-pin",
 });
@@ -236,6 +261,6 @@ const requiresIdentitySignIn = computed(() => {
 });
 
 function handleSignOut() {
-  logout();
+  return requestSignOut();
 }
 </script>

@@ -13,11 +13,15 @@ import { useConfirmStore } from "@/stores/confirm";
 const OBSERVATION = "observation:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d70";
 const ENROLLMENT = "enrollment:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d71";
 
-function mmhg(value: number) {
+type ObservationResponse = Awaited<ReturnType<typeof kernelApi.getObservation>>;
+
+function mmhg(value: number): ObservationResponse["value"] {
   return { type: "quantity", value, unit: "mm[Hg]", comparator: null };
 }
 
-function observation(overrides: Record<string, unknown> = {}) {
+function observation(
+  overrides: Partial<ObservationResponse> = {}
+): ObservationResponse {
   return {
     ref: `${OBSERVATION}@1`,
     enrollment_ref: ENROLLMENT,
@@ -398,7 +402,7 @@ describe("ObservationView (ADR-2620)", () => {
         level: "study",
         ref: null,
         label: null,
-        mask: { kind: "study", reason: "unauthorized" },
+        mask: "NotPermitted",
       },
     ]);
 
@@ -553,23 +557,31 @@ describe("ObservationView (ADR-2620)", () => {
     vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
       {
         level: "study",
-        node: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
+        ref: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
         label: "CAD-101",
         mask: null,
       },
       {
         level: "study_site",
-        node: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
+        ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
         label: "017",
         mask: null,
       },
       {
         level: "enrollment",
-        node: ENROLLMENT,
+        ref: ENROLLMENT,
         label: "017-0001",
         mask: null,
       },
     ]);
+    vi.spyOn(kernelApi, "getNode").mockResolvedValue({
+      ref: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
+      kind: "study",
+      title: "CAD-101",
+      code: "CAD-101",
+      status: "Active",
+      mask: null,
+    });
 
     const router = createRouter({
       history: createMemoryHistory(),
@@ -664,9 +676,10 @@ describe("ObservationView (ADR-2620)", () => {
       .mockResolvedValueOnce(corrected);
     vi.spyOn(kernelApi, "correctObservation").mockResolvedValue({
       ref: `${OBSERVATION}@2`,
+      enrollment_ref: ENROLLMENT,
       value: mmhg(128),
       version: 2,
-      idempotent_replay: false,
+      revision: 2,
     });
 
     const wrapper = await mountView();
@@ -724,6 +737,11 @@ describe("ObservationView (ADR-2620)", () => {
           component: { template: "<div id='ecrf-dest'>eCRF</div>" },
         },
         {
+          path: "/forbidden",
+          name: "forbidden",
+          component: { template: "<div id='forbidden-dest'>Forbidden</div>" },
+        },
+        {
           path: "/observations/:observationRef",
           name: "observation",
           component: ObservationView,
@@ -754,6 +772,8 @@ describe("ObservationView (ADR-2620)", () => {
     await flushPromises();
 
     const confirmStore = useConfirmStore();
+    const activeConfirmTitle = () =>
+      (confirmStore.activeRequest as { title?: string } | null)?.title;
     const authStore = useAuthStore();
 
     await wrapper.find("#observation-new-value").setValue("134");
@@ -782,9 +802,7 @@ describe("ObservationView (ADR-2620)", () => {
     await wrapper.find("#observation-back").trigger("click");
     await flushPromises();
     expect(confirmSpy).not.toHaveBeenCalled();
-    expect(confirmStore.activeRequest?.title).toBe(
-      "Unsaved Observation Changes"
-    );
+    expect(activeConfirmTitle()).toBe("Unsaved Observation Changes");
     const alertDialog = document.body.querySelector('[role="alertdialog"]');
     expect(alertDialog).not.toBeNull();
     await expect(alertDialog!).toBeAccessible();
@@ -803,9 +821,7 @@ describe("ObservationView (ADR-2620)", () => {
       query: { returnTo: returnUrl },
     });
     await flushPromises();
-    expect(confirmStore.activeRequest?.title).toBe(
-      "Unsaved Observation Changes"
-    );
+    expect(activeConfirmTitle()).toBe("Unsaved Observation Changes");
     confirmStore.cancelConfirm();
     await switchObsPromise.catch(() => {});
     await flushPromises();
@@ -814,9 +830,7 @@ describe("ObservationView (ADR-2620)", () => {
     // Confirming discard clears memory state and navigates without duplicate prompts.
     await wrapper.find("#observation-back").trigger("click");
     await flushPromises();
-    expect(confirmStore.activeRequest?.title).toBe(
-      "Unsaved Observation Changes"
-    );
+    expect(activeConfirmTitle()).toBe("Unsaved Observation Changes");
     confirmStore.resolveConfirm();
     await flushPromises();
     expect(router.currentRoute.value.name).toBe("ecrf");
@@ -838,6 +852,29 @@ describe("ObservationView (ADR-2620)", () => {
     await flushPromises();
     expect(confirmStore.activeRequest).toBeNull();
     expect(router.currentRoute.value.name).toBe("ecrf");
+
+    // cadence:demo-reset clears unsaved text, and RBAC /forbidden redirects suppress prompts.
+    authStore.sessionExpired = false;
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: { returnTo: returnUrl },
+    });
+    await flushPromises();
+    await wrapper.find("#observation-new-value").setValue("145");
+    expect(hasRegisteredUnsavedDrafts()).toBe(true);
+    window.dispatchEvent(new CustomEvent("cadence:demo-reset"));
+    await flushPromises();
+    expect(
+      (wrapper.find("#observation-new-value").element as HTMLInputElement).value
+    ).toBe("");
+    expect(hasRegisteredUnsavedDrafts()).toBe(false);
+
+    await wrapper.find("#observation-new-value").setValue("150");
+    await router.push("/forbidden");
+    await flushPromises();
+    expect(confirmStore.activeRequest).toBeNull();
+    expect(router.currentRoute.value.name).toBe("forbidden");
 
     wrapper.unmount();
   });
