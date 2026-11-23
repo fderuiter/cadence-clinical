@@ -459,6 +459,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) (2026-11-23)
 - [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) (2026-11-23)
 - [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) (2026-11-23)
+- [ADR-2657: Unify Cross-Study Home, Scoped Work Queues, and Shared EntityLink Navigation](2026-11-23-unify-studies-home-work-queues-and-entity-link.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 

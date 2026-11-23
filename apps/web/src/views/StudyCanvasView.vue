@@ -338,6 +338,10 @@
           </template>
 
           <template v-else-if="!stage">
+            <WorkQueuesPanel
+              :key="`work-queues-${studyCode}`"
+              :study-code="studyCode"
+            />
             <StudyPulse @drill="drillToParticipants" />
             <StudySitesPanel
               v-if="hasStudySitesService"
@@ -349,10 +353,6 @@
             />
             <NeedsAttention
               :key="`attention-${studyCode}`"
-              :study-code="studyCode"
-            />
-            <WorkQueuesPanel
-              :key="`work-queues-${studyCode}`"
               :study-code="studyCode"
             />
             <StudyActivity :key="studyCode" :study-code="studyCode" />
@@ -588,36 +588,20 @@
       id="canvas-workspace"
       class="open-study"
       :role="inAppShell ? 'region' : undefined"
-      :aria-label="inAppShell ? 'Open a study' : undefined"
+      :aria-label="
+        inAppShell
+          ? hasCrossStudyHome
+            ? 'Studies'
+            : 'Open a study'
+          : undefined
+      "
       tabindex="-1"
     >
-      <h1 id="canvas-study-title" tabindex="-1">Open a study</h1>
-      <form
-        id="open-study-form"
-        class="open-study-form"
-        @submit.prevent="openTypedStudy"
-      >
-        <label for="open-study-code">Study code</label>
-        <input
-          id="open-study-code"
-          v-model="typedStudy"
-          type="text"
-          autocomplete="off"
-          maxlength="255"
-          placeholder="e.g. CADENCE-101"
-        />
-        <button
-          id="btn-open-study"
-          type="submit"
-          class="btn btn-primary"
-          :disabled="!typedStudy.trim()"
-        >
-          Open
-        </button>
-      </form>
-      <p v-if="!hasStudyDirectoryService" class="open-study-note">
-        Enter a study code such as CADENCE-101 to open its workspace.
-      </p>
+      <h1 id="canvas-study-title" tabindex="-1">
+        {{ hasCrossStudyHome ? "Studies" : "Open a study" }}
+      </h1>
+
+      <WorkQueuesPanel v-if="hasWorkQueueService" :studies="visibleStudies" />
 
       <section
         v-if="hasStudyDirectoryService"
@@ -694,6 +678,33 @@
           </li>
         </ul>
       </section>
+
+      <form
+        id="open-study-form"
+        class="open-study-form"
+        @submit.prevent="openTypedStudy"
+      >
+        <label for="open-study-code">Study code</label>
+        <input
+          id="open-study-code"
+          v-model="typedStudy"
+          type="text"
+          autocomplete="off"
+          maxlength="255"
+          placeholder="e.g. CADENCE-101"
+        />
+        <button
+          id="btn-open-study"
+          type="submit"
+          class="btn btn-primary"
+          :disabled="!typedStudy.trim()"
+        >
+          Open
+        </button>
+      </form>
+      <p v-if="!hasStudyDirectoryService" class="open-study-note">
+        Enter a study code such as CADENCE-101 to open its workspace.
+      </p>
 
       <section
         v-if="hasCreateStudyService"
@@ -1022,6 +1033,7 @@ import {
   SignOutConfirmModal,
   handoffFocus,
   hasActiveModalFocusTrap,
+  hasRegisteredUnsavedDrafts,
   useSignOutGuard,
 } from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
@@ -1125,6 +1137,12 @@ function syncTopbarHeight() {
 
 const hasStudyDirectoryService = computed(
   () => typeof kernelApi.listStudies === "function"
+);
+const hasWorkQueueService = computed(
+  () => typeof kernelApi.listWorkQueues === "function"
+);
+const hasCrossStudyHome = computed(
+  () => hasStudyDirectoryService.value || hasWorkQueueService.value
 );
 const hasCreateStudyService = computed(
   () => typeof kernelApi.createStudy === "function"
@@ -1272,6 +1290,15 @@ async function loadStudyDirectory() {
   studyDirectoryError.value = "";
   try {
     visibleStudies.value = await kernelApi.listStudies();
+    for (const study of visibleStudies.value) {
+      if (study?.ref) {
+        seedNodeSummary(study.ref, {
+          kind: "study",
+          code: study.code,
+          title: study.title,
+        });
+      }
+    }
     if (
       !studyCode.value &&
       (route.query.section === "locks" || route.query.section === "exports") &&
@@ -1330,6 +1357,9 @@ function openStudyByCode(code: string) {
         {
           stage: stage.value?.id,
           section: section.value?.id,
+          site: siteFilter.value || undefined,
+          participant: rawParticipantQuery.value || undefined,
+          subject: single(route.query.subject).trim() || undefined,
         },
         clean
       )
@@ -2411,7 +2441,20 @@ function goToPaletteTarget(target: PaletteTarget) {
 
 function openTypedStudy() {
   const code = typedStudy.value.trim();
-  if (code) router.push(studyLocation({}, code));
+  if (code) {
+    router.push(
+      studyLocation(
+        {
+          stage: stage.value?.id,
+          section: section.value?.id,
+          site: siteFilter.value || undefined,
+          participant: rawParticipantQuery.value || undefined,
+          subject: single(route.query.subject).trim() || undefined,
+        },
+        code
+      )
+    );
+  }
 }
 
 // Switching study drops everything read for the previous one.
@@ -2688,8 +2731,12 @@ function shouldSuppressUnsavedGuard(): boolean {
   return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
 }
 
+function hasUnsavedCanvasChanges(): boolean {
+  return Boolean(formWorkspaceDirty.value || hasRegisteredUnsavedDrafts());
+}
+
 function handleBeforeUnload(event: BeforeUnloadEvent) {
-  if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+  if (hasUnsavedCanvasChanges() && !shouldSuppressUnsavedGuard()) {
     event.preventDefault();
     event.returnValue = "";
     return "";
@@ -2710,7 +2757,7 @@ async function confirmDiscardUnsavedForm(): Promise<boolean> {
 
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
-    if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+    if (hasUnsavedCanvasChanges() && !shouldSuppressUnsavedGuard()) {
       return confirmDiscardUnsavedForm().then((confirmed) =>
         confirmed ? undefined : false
       );
@@ -2721,7 +2768,7 @@ if (typeof onBeforeRouteLeave === "function") {
 if (typeof onBeforeRouteUpdate === "function") {
   onBeforeRouteUpdate((to) => {
     if (
-      formWorkspaceDirty.value &&
+      hasUnsavedCanvasChanges() &&
       !shouldSuppressUnsavedGuard() &&
       leavesActiveForm(to)
     ) {

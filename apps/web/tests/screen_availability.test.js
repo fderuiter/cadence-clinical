@@ -7,6 +7,7 @@ import { useOnboardingStore } from "../src/stores/onboarding";
 import { useNotificationsStore } from "../src/stores/notifications";
 import {
   AVAILABLE_SCREENS,
+  DEMO_AVAILABLE_SCREENS,
   isScreenAvailable,
   screenMetadata,
   screenTitle,
@@ -160,7 +161,7 @@ describe("Screen availability", () => {
     pushSpy.mockRestore();
   });
 
-  it("completes first-login routing, guided tour steps, setup checklist tasks, and overview launchers cleanly across all six personas", async () => {
+  it("completes first-login routing, guided tour steps, and setup checklist tasks cleanly across all six personas", async () => {
     const personas = [
       { key: "super_admin", roles: ["Sponsor Admin"] },
       { key: "sponsor_designer", roles: ["Sponsor Designer"] },
@@ -182,20 +183,23 @@ describe("Screen availability", () => {
       const onboardingStore = useOnboardingStore();
       onboardingStore.loadPersonaState(key);
 
-      // 1. First login lands on /overview without hitting /unavailable or /forbidden
+      // 1. First login lands on unified /studies workspace without hitting /unavailable or /forbidden
       await router.push("/");
       expect(router.currentRoute.value.path, `${key} first login`).toBe(
-        "/overview"
+        "/studies"
       );
 
       const shellWrapper = mount(AppShell, {
         global: { plugins: [router] },
-        slots: { default: OverviewView },
       });
       await flushPromises();
 
-      // 2. Launch guided tour from Overview and walk every step cleanly
-      await shellWrapper.find(".btn-start-tour").trigger("click");
+      // 2. Open OnboardingChecklistDrawer from header and launch guided tour cleanly
+      await shellWrapper
+        .find("#btn-onboarding-checklist-trigger")
+        .trigger("click");
+      await flushPromises();
+      await shellWrapper.find("#btn-drawer-start-tour").trigger("click");
       await flushPromises();
 
       expect(onboardingStore.isActive, `${key} tour active`).toBe(true);
@@ -221,7 +225,11 @@ describe("Screen availability", () => {
           `${key} step ${step + 1} authorized`
         ).not.toBe("/forbidden");
         if (key === "site_crc" && onboardingStore.currentStep === 4) {
-          expect(router.currentRoute.value.path).toBe("/ssu");
+          expect(router.currentRoute.value.path).toBe("/studies");
+          expect(router.currentRoute.value.query).toMatchObject({
+            stage: "start",
+            section: "site-activation",
+          });
         }
       }
 
@@ -233,19 +241,28 @@ describe("Screen availability", () => {
       expect(onboardingStore.visibleTasks.length).toBeGreaterThan(0);
       for (const task of onboardingStore.visibleTasks) {
         await router.push(task.route);
-        expect(router.currentRoute.value.path, `${key} task ${task.id}`).toBe(
-          task.route
-        );
+        expect(
+          router.currentRoute.value.fullPath,
+          `${key} task ${task.id}`
+        ).toBe(task.route);
       }
 
       shellWrapper.unmount();
     }
   });
 
-  it("stays on /overview without opening study or /unavailable when AVAILABLE_SCREENS excludes every target screen", async () => {
+  it("lands on /unavailable outside demo mode and stays on /overview in demo mode when AVAILABLE_SCREENS excludes every target screen", async () => {
     const saved = [...AVAILABLE_SCREENS];
+    const savedDemo = [...DEMO_AVAILABLE_SCREENS];
     AVAILABLE_SCREENS.clear();
+    DEMO_AVAILABLE_SCREENS.clear();
     try {
+      await router.push("/login");
+      signInAs(useAuthStore(), ["Auditor"]);
+      await router.push("/");
+      expect(router.currentRoute.value.path).toBe("/unavailable");
+
+      vi.stubEnv("VITE_DEMO_MODE", "true");
       for (const { key, roles } of [
         { key: "auditor", roles: ["Auditor"] },
         { key: "data_manager", roles: ["Data Manager"] },
@@ -281,7 +298,9 @@ describe("Screen availability", () => {
         wrapper.unmount();
       }
     } finally {
+      vi.unstubAllEnvs();
       saved.forEach((s) => AVAILABLE_SCREENS.add(s));
+      savedDemo.forEach((s) => DEMO_AVAILABLE_SCREENS.add(s));
     }
   });
 });

@@ -1,29 +1,27 @@
 <template>
-  <span v-if="summary.masked" class="noderef-masked">{{ summary.label }}</span>
-  <component
-    :is="linkTag"
-    v-else-if="toLocation"
-    :to="toLocation"
-    class="noderef-chip node-ref-chip"
-    :title="tooltipText"
-    @click="onSelectClick"
-  >
-    <span class="noderef-chip-label">{{ displayText }}</span>
-  </component>
-  <button
-    v-else
-    type="button"
-    class="noderef-chip node-ref-chip noderef-chip-button"
-    :title="tooltipText"
-    @click="emit('select', summary.ref)"
-  >
-    <span class="noderef-chip-label">{{ displayText }}</span>
-  </button>
+  <EntityLink
+    :node-ref="summary.ref"
+    :label="summary.masked ? '' : summary.label"
+    :kind="summary.kind"
+    :code="summary.code || ''"
+    :status="summary.status || ''"
+    :include-kind="includeKind"
+    :masked="summary.masked ? summary.maskReason || true : false"
+    :masked-label="summary.masked ? summary.label : ''"
+    :to="fullViewLocation ?? undefined"
+    :inspector-to="inspectorLocation ?? undefined"
+    :preview-mode="effectivePreviewMode"
+    :subtitle="previewSubtitle"
+    :resolve-remotely="false"
+    @select="emit('select', summary.ref)"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, getCurrentInstance, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
+import { EntityLink } from "ui";
+import { resolveEntityFullViewLocation } from "../../canvas/entityDestination";
 import { ensureNodesResolved, getNodeDisplay } from "../../canvas/nodeResolver";
 
 const props = withDefaults(
@@ -34,6 +32,8 @@ const props = withDefaults(
     to?: RouteLocationRaw | null;
     autoLink?: boolean;
     resolveRemotely?: boolean;
+    studyCode?: string | null;
+    previewMode?: "drawer" | "inspector" | "navigate" | null;
   }>(),
   {
     fallbackTitle: null,
@@ -41,6 +41,8 @@ const props = withDefaults(
     to: null,
     autoLink: true,
     resolveRemotely: true,
+    studyCode: null,
+    previewMode: null,
   }
 );
 
@@ -50,7 +52,6 @@ const emit = defineEmits<{
 
 const instance = getCurrentInstance();
 const hasRouter = Boolean(instance?.appContext.config.globalProperties.$router);
-const routerLinkComponent = instance?.appContext.components.RouterLink ?? null;
 const currentRoute = computed(
   () =>
     (
@@ -76,76 +77,62 @@ const summary = computed(() =>
   getNodeDisplay(props.nodeRef, props.fallbackTitle)
 );
 
-const displayText = computed(() => {
-  const s = summary.value;
-  if (!props.includeKind) return s.label;
-  if (s.label.toLowerCase().startsWith(s.kindLabel.toLowerCase())) {
-    return s.label;
+const activeStudyCode = computed(() => {
+  if (props.studyCode && props.studyCode.trim()) {
+    return props.studyCode.trim();
   }
-  return `${s.kindLabel}: ${s.label}`;
-});
-
-const tooltipText = computed(() => {
-  const s = summary.value;
-  return `Inspect ${s.kindLabel.toLowerCase()} (${s.label})`;
-});
-
-const toLocation = computed<RouteLocationRaw | null>(() => {
-  if (!hasRouter || !routerLinkComponent) return null;
-  if (props.to) return props.to;
-  if (props.autoLink === false) return null;
   const route = currentRoute.value;
-  const studyCode =
+  return typeof route?.params?.studyCode === "string"
+    ? route.params.studyCode.trim()
+    : "";
+});
+
+const activeSiteCode = computed(() => {
+  const route = currentRoute.value;
+  const site = route?.query?.site;
+  return typeof site === "string" ? site.trim() : "";
+});
+
+const inspectorLocation = computed<RouteLocationRaw | null>(() => {
+  if (!hasRouter || props.autoLink === false) return null;
+  const route = currentRoute.value;
+  const routeStudy =
     typeof route?.params?.studyCode === "string"
       ? route.params.studyCode.trim()
       : "";
-  if (route?.name === "study" && studyCode && summary.value.ref) {
+  if (route?.name === "study" && routeStudy && summary.value.ref) {
     return {
       name: "study",
-      params: { studyCode },
+      params: { studyCode: routeStudy },
       query: { ...(route.query ?? {}), node: summary.value.ref },
     };
   }
   return null;
 });
 
-const linkTag = computed(() => routerLinkComponent ?? "a");
+const fullViewLocation = computed<RouteLocationRaw | null>(() => {
+  if (!hasRouter) return null;
+  if (props.to) return props.to;
+  if (props.autoLink === false) return null;
+  return resolveEntityFullViewLocation(summary.value.ref, {
+    studyCode: activeStudyCode.value,
+    site: activeSiteCode.value,
+    entityCode: summary.value.code,
+  });
+});
 
-function onSelectClick() {
-  emit("select", summary.value.ref);
-}
+const effectivePreviewMode = computed<"drawer" | "inspector" | "navigate">(
+  () => {
+    if (props.previewMode) return props.previewMode;
+    if (props.to) return "navigate";
+    if (props.autoLink === false) return "inspector";
+    if (inspectorLocation.value) return "inspector";
+    return "drawer";
+  }
+);
+
+const previewSubtitle = computed(() => {
+  if (!activeStudyCode.value) return "";
+  return `Study ${activeStudyCode.value}`;
+});
 </script>
-
-<style scoped>
-.noderef-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--semantic-color-primary);
-  font-weight: 500;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  background: none;
-  border: 0;
-  padding: 0;
-  font-family: inherit;
-  font-size: inherit;
-  cursor: pointer;
-  text-align: left;
-}
-
-.noderef-chip:hover {
-  color: var(--semantic-color-primary-dark);
-}
-
-.noderef-chip:focus-visible {
-  outline: 2px solid var(--semantic-color-accent);
-  outline-offset: 2px;
-  border-radius: 3px;
-}
-
-.noderef-masked {
-  color: var(--semantic-color-text-muted);
-  font-style: italic;
-}
-</style>

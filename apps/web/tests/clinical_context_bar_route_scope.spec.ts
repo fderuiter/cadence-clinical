@@ -124,7 +124,13 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
       `/studies/CADENCE-101?site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
     );
     expect(byKey["workspace:site-readiness"]).toBe(
-      "/ctms?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
+      `/studies/CADENCE-101?stage=start&section=startup-greenlight&site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
+    );
+    expect(byKey["workspace:trial-documents"]).toBe(
+      `/studies/CADENCE-101?stage=start&section=documents&site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
+    );
+    expect(byKey["workspace:training"]).toBe(
+      `/studies/CADENCE-101?stage=start&section=training&site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
     );
     expect(byKey["workspace:data-collection"]).toBe(
       `/studies/CADENCE-101?stage=conduct&site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
@@ -152,6 +158,9 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
       );
       expect(demoByKey["workspace:data-collection"]).toBe(
         "/ecrf?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001&enrollmentId=enr-001"
+      );
+      expect(demoByKey["workspace:site-readiness"]).toBe(
+        "/ctms?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
       );
     } finally {
       vi.unstubAllEnvs();

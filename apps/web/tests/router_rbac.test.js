@@ -109,13 +109,66 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/ecrf");
     });
 
-    it("should allow CRA to access /ctms view", async () => {
+    it("should redirect CRA from /ctms to Clinical Canvas Start startup-greenlight outside demo mode while preserving /ctms in demo mode", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
       authStore.rawRoles = ["CRA"]; // maps to cra & monitor
 
+      await router.push("/ctms?studyId=CADENCE-101&siteId=SITE-101");
+      expect(router.currentRoute.value.path).toBe("/studies/CADENCE-101");
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "start",
+        section: "startup-greenlight",
+        site: "SITE-101",
+      });
+
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      await router.push("/login");
       await router.push("/ctms");
       expect(router.currentRoute.value.path).toBe("/ctms");
+    });
+
+    it("redirects non-demo /overview, /ssu, /etmf, and /training into /studies and Start stage sections while preserving scope and RBAC", async () => {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["Site Investigator"]; // crc & site_investigator
+
+      await router.push(
+        "/overview?studyId=CADENCE-101&siteId=SITE-101&subjectId=SUBJ-101-001"
+      );
+      expect(router.currentRoute.value.path).toBe("/studies/CADENCE-101");
+      expect(router.currentRoute.value.query).toMatchObject({
+        site: "SITE-101",
+        participant: "SUBJ-101-001",
+      });
+
+      await router.push("/ssu?studyCode=CADENCE-101&site=SITE-101");
+      expect(router.currentRoute.value.path).toBe("/studies/CADENCE-101");
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "start",
+        section: "site-activation",
+        site: "SITE-101",
+      });
+
+      await router.push("/etmf?studyId=CADENCE-101&siteId=SITE-101");
+      expect(router.currentRoute.value.path).toBe("/studies/CADENCE-101");
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "start",
+        section: "documents",
+        site: "SITE-101",
+      });
+
+      await router.push("/training?studyId=CADENCE-101&siteId=SITE-101");
+      expect(router.currentRoute.value.path).toBe("/studies/CADENCE-101");
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "start",
+        section: "training",
+        site: "SITE-101",
+      });
+
+      // Unauthorized CRC on /ctms still hits /forbidden before redirect
+      await router.push("/ctms");
+      expect(router.currentRoute.value.path).toBe("/forbidden");
     });
 
     it("should route Data Manager to /unavailable for /rules, which has no .NET backend yet", async () => {
@@ -202,13 +255,18 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/login");
     });
 
-    it("should redirect authenticated users to /overview hub when no explicit bypass preference exists", async () => {
+    it("should redirect authenticated users to /studies outside demo mode and /overview in demo mode when no explicit bypass preference exists", async () => {
       const authStore = useAuthStore();
       const onboardingStore = useOnboardingStore();
       authStore.isAuthenticated = true;
       authStore.rawRoles = ["Site Investigator"];
       onboardingStore.bypassOverview = false;
 
+      await router.push("/");
+      expect(router.currentRoute.value.path).toBe("/studies");
+
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      await router.push("/login");
       await router.push("/");
       expect(router.currentRoute.value.path).toBe("/overview");
     });
@@ -229,13 +287,18 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/ecrf");
     });
 
-    it("should dynamically redirect CRA to /ctms when bypass preference is set", async () => {
+    it("should redirect CRA on / to /studies outside demo mode and /ctms in demo mode when bypass preference is set", async () => {
       const authStore = useAuthStore();
       const onboardingStore = useOnboardingStore();
       authStore.isAuthenticated = true;
       authStore.rawRoles = ["CRA"];
       onboardingStore.setBypassOverview(true);
 
+      await router.push("/");
+      expect(router.currentRoute.value.path).toBe("/studies");
+
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      await router.push("/login");
       await router.push("/");
       expect(router.currentRoute.value.path).toBe("/ctms");
     });
@@ -256,11 +319,27 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/rules");
     });
 
-    it("should admit Data Manager directly to /ctms and /ssu matching ROLE_SPONSOR_DM", async () => {
+    it("should admit Data Manager directly to /ctms and /ssu (redirecting to Start sections outside demo mode) matching ROLE_SPONSOR_DM", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
       authStore.rawRoles = ["Data Manager"];
 
+      await router.push("/ctms");
+      expect(router.currentRoute.value.path).toBe("/studies");
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "start",
+        section: "startup-greenlight",
+      });
+
+      await router.push("/ssu");
+      expect(router.currentRoute.value.path).toBe("/studies");
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "start",
+        section: "site-activation",
+      });
+
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      await router.push("/login");
       await router.push("/ctms");
       expect(router.currentRoute.value.path).toBe("/ctms");
 
@@ -290,17 +369,17 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/studies");
     });
 
-    it("routes all six clinical personas from / to live authorized workspaces without hitting /unavailable or /forbidden", async () => {
+    it("routes all six clinical personas from / to unified /studies outside demo mode and role workspaces in demo mode without hitting /unavailable or /forbidden", async () => {
       const cases = [
-        { role: "Sponsor Admin", expectedBypassPath: "/studies" },
-        { role: "Study Designer", expectedBypassPath: "/studies" },
-        { role: "Data Manager", expectedBypassPath: "/studies" },
-        { role: "CRC", expectedBypassPath: "/studies" },
-        { role: "CRA", expectedBypassPath: "/ctms" },
-        { role: "Auditor", expectedBypassPath: "/studies" },
+        { role: "Sponsor Admin", expectedDemoBypassPath: "/mdr" },
+        { role: "Study Designer", expectedDemoBypassPath: "/mdr" },
+        { role: "Data Manager", expectedDemoBypassPath: "/rules" },
+        { role: "CRC", expectedDemoBypassPath: "/ecrf" },
+        { role: "CRA", expectedDemoBypassPath: "/ctms" },
+        { role: "Auditor", expectedDemoBypassPath: "/audit" },
       ];
 
-      for (const { role, expectedBypassPath } of cases) {
+      for (const { role, expectedDemoBypassPath } of cases) {
         const authStore = useAuthStore();
         const onboardingStore = useOnboardingStore();
         authStore.isAuthenticated = true;
@@ -310,15 +389,34 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
         await router.push("/login");
         await router.push("/");
         expect(router.currentRoute.value.path, `${role} default`).toBe(
-          "/overview"
+          "/studies"
         );
 
         onboardingStore.setBypassOverview(true);
         await router.push("/login");
         await router.push("/");
         expect(router.currentRoute.value.path, `${role} bypass`).toBe(
-          expectedBypassPath
+          "/studies"
         );
+
+        vi.stubEnv("VITE_DEMO_MODE", "true");
+        try {
+          onboardingStore.setBypassOverview(false);
+          await router.push("/login");
+          await router.push("/");
+          expect(router.currentRoute.value.path, `${role} demo default`).toBe(
+            "/overview"
+          );
+
+          onboardingStore.setBypassOverview(true);
+          await router.push("/login");
+          await router.push("/");
+          expect(router.currentRoute.value.path, `${role} demo bypass`).toBe(
+            expectedDemoBypassPath
+          );
+        } finally {
+          vi.unstubAllEnvs();
+        }
       }
     });
   });

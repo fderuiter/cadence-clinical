@@ -52,6 +52,31 @@ export const ClinicalContextBar: DefineComponent<
   any
 >;
 
+export const EntityLink: DefineComponent<
+  {
+    nodeRef?: string;
+    label?: string;
+    kind?: string;
+    code?: string;
+    status?: string;
+    subtitle?: string;
+    includeKind?: boolean;
+    masked?: boolean | string;
+    maskedLabel?: string;
+    to?: string | Record<string, any> | null;
+    inspectorTo?: string | Record<string, any> | null;
+    previewMode?: "drawer" | "inspector" | "navigate" | string;
+    fullViewLabel?: string;
+    srContext?: string;
+    teleport?: boolean | string;
+    resolveRemotely?: boolean;
+    resolveNode?: (nodeRef: string) => any;
+    confirmDiscardDrafts?: () => boolean | Promise<boolean>;
+  },
+  {},
+  any
+>;
+
 export const AiSuggestionDrawer: DefineComponent<
   {
     modelValue?: boolean;

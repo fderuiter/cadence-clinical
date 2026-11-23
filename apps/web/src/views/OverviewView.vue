@@ -186,50 +186,6 @@
           </button>
         </div>
       </section>
-
-      <!-- Right Column: Operational Workflow Launchers -->
-      <section
-        class="overview-section launchers-section"
-        aria-labelledby="heading-launchers"
-      >
-        <div class="section-header">
-          <h2 id="heading-launchers" class="section-title">
-            <span class="section-icon">🚀</span> Core Workflow Launchers
-          </h2>
-          <span class="subtitle-tag">One-click deep operational access</span>
-        </div>
-
-        <p class="section-intro">
-          Launch primary clinical tools and application suites in one click:
-        </p>
-
-        <div class="launchers-grid">
-          <div
-            v-for="launcher in personaLaunchers"
-            :key="launcher.id"
-            class="launcher-card"
-            :class="{ 'is-featured': launcher.featured }"
-          >
-            <div class="launcher-header">
-              <span class="launcher-icon">{{ launcher.icon }}</span>
-              <span class="launcher-badge" :class="launcher.badgeClass">{{
-                launcher.badgeText
-              }}</span>
-            </div>
-            <h3 class="launcher-title">{{ launcher.title }}</h3>
-            <p class="launcher-description">{{ launcher.description }}</p>
-            <div class="launcher-action">
-              <button
-                type="button"
-                class="btn btn-launcher-action"
-                @click="navigateToRoute(launcher.route)"
-              >
-                Launch {{ launcher.title }} ↗
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   </div>
 </template>
@@ -239,6 +195,7 @@ import { computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import {
+  buildCanvasSectionPath,
   buildDataCollectionPath,
   buildStudyScopedPath,
   resolveSiteReadinessPath,
@@ -322,48 +279,74 @@ function resolveAuthorizedRoute(routeSpec) {
     return resolveSiteReadinessPath(effectiveRoles.value, studyCode);
   }
   if (routeSpec === "ctms" || routeSpec === "/ctms") {
-    return isScreenAvailable("ctms") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "cra",
-        "monitor",
-        "data_manager",
-        "sponsor_admin",
-      ])
-      ? buildStudyScopedPath("/ctms", studyCode)
+    const allowed = hasRequiredRole(effectiveRoles.value, [
+      "cra",
+      "monitor",
+      "data_manager",
+      "sponsor_admin",
+    ]);
+    if (!allowed) return null;
+    if (isDemoBuild()) {
+      return isScreenAvailable("ctms")
+        ? buildStudyScopedPath("/ctms", studyCode)
+        : null;
+    }
+    return isScreenAvailable("study")
+      ? buildCanvasSectionPath("start", "startup-greenlight", { studyCode })
       : null;
   }
   if (routeSpec === "ssu" || routeSpec === "/ssu") {
-    return isScreenAvailable("ssu") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "cra",
-        "monitor",
-        "data_manager",
-        "sponsor_admin",
-        "site_investigator",
-        "crc",
-      ])
-      ? buildStudyScopedPath("/ssu", studyCode)
+    const allowed = hasRequiredRole(effectiveRoles.value, [
+      "cra",
+      "monitor",
+      "data_manager",
+      "sponsor_admin",
+      "site_investigator",
+      "crc",
+    ]);
+    if (!allowed) return null;
+    if (isDemoBuild()) {
+      return isScreenAvailable("ssu")
+        ? buildStudyScopedPath("/ssu", studyCode)
+        : null;
+    }
+    return isScreenAvailable("study")
+      ? buildCanvasSectionPath("start", "site-activation", { studyCode })
       : null;
   }
   if (routeSpec === "etmf" || routeSpec === "/etmf") {
-    return isScreenAvailable("etmf") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "cra",
-        "monitor",
-        "data_manager",
-        "site_investigator",
-        "crc",
-        "auditor",
-        "tmf_auditor",
-        "sponsor_admin",
-      ])
-      ? buildStudyScopedPath("/etmf", studyCode)
+    const allowed = hasRequiredRole(effectiveRoles.value, [
+      "cra",
+      "monitor",
+      "data_manager",
+      "site_investigator",
+      "crc",
+      "auditor",
+      "tmf_auditor",
+      "sponsor_admin",
+    ]);
+    if (!allowed) return null;
+    if (isDemoBuild()) {
+      return isScreenAvailable("etmf")
+        ? buildStudyScopedPath("/etmf", studyCode)
+        : null;
+    }
+    return isScreenAvailable("study")
+      ? buildCanvasSectionPath("start", "documents", { studyCode })
       : null;
   }
   if (routeSpec === "training" || routeSpec === "/training") {
-    return isScreenAvailable("training")
-      ? buildStudyScopedPath("/training", studyCode)
+    if (isDemoBuild()) {
+      return isScreenAvailable("training")
+        ? buildStudyScopedPath("/training", studyCode)
+        : null;
+    }
+    return isScreenAvailable("study")
+      ? buildCanvasSectionPath("start", "training", { studyCode })
       : null;
+  }
+  if (typeof routeSpec === "string" && routeSpec.startsWith("/studies")) {
+    return isScreenAvailable("study") ? routeSpec : null;
   }
   return null;
 }
@@ -588,49 +571,6 @@ const progressPercent = computed(() => {
   return Math.round(
     (completedCount.value / currentChecklist.value.length) * 100
   );
-});
-
-const ALL_LAUNCHERS = [
-  {
-    id: "study",
-    title: "Studies",
-    icon: "📐",
-    description:
-      "Open a study workspace to navigate lifecycle stages, participant status, protocol versions, and activity.",
-    routeSpec: "study",
-    badgeText: "Blueprint · Live",
-    badgeClass: "badge-active",
-    featured: true,
-  },
-  {
-    id: "data-collection",
-    title: "Data collection",
-    icon: "🩺",
-    description:
-      "Capture clinical visit observations, validate case report forms, and perform source data verification.",
-    routeSpec: "ecrf",
-    badgeText: "Capture · Live",
-    badgeClass: "badge-active",
-    featured: true,
-  },
-  {
-    id: "site-readiness",
-    title: "Site readiness",
-    icon: "📊",
-    description:
-      "Track site activation requirements, startup milestones, and operational site readiness.",
-    routeSpec: "site-readiness",
-    badgeText: "Orbit · Live",
-    badgeClass: "badge-active",
-    featured: true,
-  },
-];
-
-const personaLaunchers = computed(() => {
-  return ALL_LAUNCHERS.map((launcher) => {
-    const resolvedRoute = resolveAuthorizedRoute(launcher.routeSpec);
-    return resolvedRoute ? { ...launcher, route: resolvedRoute } : null;
-  }).filter(Boolean);
 });
 
 function handleBypassToggle(event) {
@@ -867,7 +807,7 @@ function startGuidedTour() {
 
 .overview-grid {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: 1fr;
   gap: 24px;
 }
 
@@ -1058,99 +998,5 @@ function startGuidedTour() {
 
 .btn-start-tour:hover {
   background: var(--semantic-color-primary-dark);
-}
-
-.launchers-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
-}
-
-.launcher-card {
-  background: var(--semantic-color-surface);
-  border: 1px solid var(--semantic-color-border);
-  border-radius: 10px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.launcher-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: var(--semantic-color-interactive-primary);
-}
-
-.launcher-card.is-featured {
-  border-color: var(--semantic-color-divider-accent);
-  background: var(--semantic-color-info-bg);
-}
-
-.launcher-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.launcher-icon {
-  font-size: 1.8rem;
-  line-height: 1;
-}
-
-.launcher-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.badge-active {
-  background: var(--semantic-color-success-bg);
-  color: var(--semantic-color-success-dark);
-}
-
-.badge-neutral {
-  background: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-secondary);
-}
-
-.launcher-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--semantic-color-text);
-  margin: 0 0 6px 0;
-}
-
-.launcher-description {
-  font-size: 0.8rem;
-  color: var(--semantic-color-text-secondary);
-  margin: 0 0 16px 0;
-  line-height: 1.4;
-  flex: 1;
-}
-
-.btn-launcher-action {
-  width: 100%;
-  padding: 8px 12px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  background: var(--semantic-color-surface);
-  color: var(--semantic-color-interactive-primary);
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.launcher-card:hover .btn-launcher-action {
-  background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
-  border-color: var(--semantic-color-interactive-primary);
 }
 </style>

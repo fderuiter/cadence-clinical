@@ -77,7 +77,10 @@ export function resolveAuthorizedTaskRoute(task, userRoles) {
     return isScreenAvailable("study") ? "/studies" : null;
   }
   if (routeName === "overview") {
-    return isScreenAvailable("overview") ? "/overview" : null;
+    if (isDemoBuild()) {
+      return isScreenAvailable("overview") ? "/overview" : null;
+    }
+    return isScreenAvailable("study") ? "/studies" : null;
   }
   if (routeName === "ecrf") {
     if (isDemoBuild()) {
@@ -92,6 +95,16 @@ export function resolveAuthorizedTaskRoute(task, userRoles) {
       : null;
   }
   if (routeName === "site-readiness") {
+    if (!isDemoBuild()) {
+      if (!isScreenAvailable("study")) return null;
+      if (hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)) {
+        return "/studies?stage=start&section=startup-greenlight";
+      }
+      if (hasRequiredRole(userRoles, SITE_READINESS_SITE_ROLES)) {
+        return "/studies?stage=start&section=site-activation";
+      }
+      return null;
+    }
     if (
       isScreenAvailable("ctms") &&
       hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
@@ -107,19 +120,28 @@ export function resolveAuthorizedTaskRoute(task, userRoles) {
     return null;
   }
   if (routeName === "ctms") {
+    if (!isDemoBuild()) {
+      return isScreenAvailable("study") &&
+        hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
+        ? "/studies?stage=start&section=startup-greenlight"
+        : null;
+    }
     return isScreenAvailable("ctms") &&
       hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
       ? "/ctms"
       : null;
   }
   if (routeName === "ssu") {
-    return isScreenAvailable("ssu") &&
-      hasRequiredRole(userRoles, [
-        ...SITE_READINESS_SPONSOR_ROLES,
-        ...SITE_READINESS_SITE_ROLES,
-      ])
-      ? "/ssu"
-      : null;
+    const allowed = hasRequiredRole(userRoles, [
+      ...SITE_READINESS_SPONSOR_ROLES,
+      ...SITE_READINESS_SITE_ROLES,
+    ]);
+    if (!isDemoBuild()) {
+      return isScreenAvailable("study") && allowed
+        ? "/studies?stage=start&section=site-activation"
+        : null;
+    }
+    return isScreenAvailable("ssu") && allowed ? "/ssu" : null;
   }
   return null;
 }

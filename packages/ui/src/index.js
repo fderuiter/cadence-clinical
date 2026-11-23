@@ -17,6 +17,7 @@ import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
 import ClinicalTabs from "./components/clinical/ClinicalTabs.vue";
 import ClinicalToastHost from "./components/clinical/ClinicalToastHost.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
+import EntityLink from "./components/clinical/EntityLink.vue";
 import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
 import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
 import EmptyState from "./components/common/EmptyState.vue";
@@ -66,6 +67,7 @@ export {
   ClinicalToastHost,
   ConfidenceBadge,
   EmptyState,
+  EntityLink,
   FileUploadModal,
   MediaPlayer,
   ModalErrorAlert,

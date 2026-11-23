@@ -290,6 +290,17 @@
               </dd>
             </template>
           </template>
+          <dt v-if="inspectorFullViewLocation">Full view</dt>
+          <dd v-if="inspectorFullViewLocation">
+            <router-link
+              id="inspector-open-full-view"
+              data-testid="inspector-open-full-view"
+              class="inspector-link"
+              :to="inspectorFullViewLocation"
+            >
+              Open full view
+            </router-link>
+          </dd>
         </dl>
 
         <template v-else-if="participant">
@@ -495,6 +506,17 @@
             Open in data entry
           </router-link>
           <router-link
+            v-if="
+              inspectorFullViewLocation && !recordLocation && !dataEntryLocation
+            "
+            id="inspector-open-full-view"
+            data-testid="inspector-open-full-view"
+            class="inspector-link"
+            :to="inspectorFullViewLocation"
+          >
+            Open full view
+          </router-link>
+          <router-link
             v-if="isDemoBuild() && handoffLocation"
             id="inspector-handoff-standalone"
             data-testid="inspector-ecrf-handoff"
@@ -610,6 +632,7 @@ import {
   type KernelSimulationResult,
 } from "../../api/kernelApi";
 import { parseNodeRef } from "../../canvas/nodeRef";
+import { resolveEntityFullViewLocation } from "../../canvas/entityDestination";
 import {
   formatCommandTitle,
   formatFieldPath,
@@ -772,6 +795,20 @@ const activeNodeRef = computed(() => {
   if (props.protocolVersion?.ref) return props.protocolVersion.ref;
   if (props.genericNode?.ref) return props.genericNode.ref;
   return genericDisplay.value?.ref ?? "";
+});
+
+const inspectorFullViewLocation = computed<RouteLocationRaw | null>(() => {
+  if (!props.studyCode || props.participant || genericDisplay.value?.masked) {
+    return null;
+  }
+  const refText = activeNodeRef.value;
+  if (!refText) return null;
+  const parsed = parseNodeRef(refText);
+  if (!parsed || parsed.kind === "study") return null;
+  return resolveEntityFullViewLocation(refText, {
+    studyCode: props.studyCode,
+    entityCode: genericDisplay.value?.code ?? null,
+  });
 });
 
 const copiedRef = ref(false);

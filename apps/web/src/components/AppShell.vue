@@ -462,6 +462,7 @@ const siteReadinessPath = computed(() =>
     studyCode: activeStudyCode.value,
     siteId: workspaceScope.value.siteId,
     subjectCode: workspaceScope.value.subjectCode,
+    participantRef: workspaceScope.value.participantRef,
   })
 );
 const supportPath = computed(() =>
@@ -500,8 +501,21 @@ const isConductCanvasRoute = computed(
   () =>
     !isDemoBuild() && isCanvasRoute.value && route?.query?.stage === "conduct"
 );
+const isStartReadinessCanvasRoute = computed(
+  () =>
+    !isDemoBuild() &&
+    Boolean(siteReadinessPath.value) &&
+    isCanvasRoute.value &&
+    route?.query?.stage === "start" &&
+    (route?.query?.section === "startup-greenlight" ||
+      route?.query?.section === "site-activation" ||
+      !route?.query?.section)
+);
 const isStudiesRoute = computed(
-  () => isCanvasRoute.value && !isConductCanvasRoute.value
+  () =>
+    isCanvasRoute.value &&
+    !isConductCanvasRoute.value &&
+    !isStartReadinessCanvasRoute.value
 );
 
 const NON_WORKFLOW_ROUTE_NAMES = new Set([
@@ -633,7 +647,8 @@ const isSiteReadinessRoute = computed(
     route?.name === "ctms" ||
     route?.name === "ssu" ||
     route?.path === "/ctms" ||
-    route?.path === "/ssu"
+    route?.path === "/ssu" ||
+    isStartReadinessCanvasRoute.value
 );
 const isSupportRoute = computed(
   () =>

@@ -124,6 +124,7 @@
         <div class="drawer-footer">
           <div class="footer-actions">
             <button
+              v-if="showOrientationHubButton"
               id="btn-open-orientation-hub"
               type="button"
               class="btn btn-sm btn-secondary"
@@ -172,10 +173,12 @@ import {
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
+import { isDemoBuild } from "../utils/demoMode";
 
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
 const router = useRouter();
+const showOrientationHubButton = computed(() => isDemoBuild());
 
 const effectiveRoles = computed(() => {
   if (authStore.rawRoles?.length > 0) {
@@ -224,8 +227,10 @@ function navigateToTask(task) {
 }
 
 function openOrientationHub() {
-  if (isScreenAvailable("overview") && canPushResolvedPath("/overview")) {
-    router.push("/overview");
+  const destination = isDemoBuild() ? "/overview" : "/studies";
+  const screenName = isDemoBuild() ? "overview" : "study";
+  if (isScreenAvailable(screenName) && canPushResolvedPath(destination)) {
+    router.push(destination);
     onboardingStore.closeDrawer();
   }
 }

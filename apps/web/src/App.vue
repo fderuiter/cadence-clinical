@@ -10,11 +10,17 @@
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent, onMounted } from "vue";
+import { computed, defineAsyncComponent, onMounted, provide } from "vue";
 import { getActivePinia } from "pinia";
 import { useRoute } from "vue-router";
+import { hasRegisteredUnsavedDrafts } from "ui";
 import AppShell from "./components/AppShell.vue";
 import ToastHost from "./components/ToastHost.vue";
+import {
+  ensureNodesResolved,
+  getNodeDisplay,
+  resolveNode,
+} from "./canvas/nodeResolver";
 import { useAuthStore } from "./stores/auth.js";
 import { useConfirmStore } from "./stores/confirm.js";
 import { isDemoBuild } from "./utils/demoMode.js";
@@ -32,6 +38,25 @@ const pinia = getActivePinia();
 const route = useRoute();
 const authStore = useAuthStore();
 const confirmStore = useConfirmStore(pinia);
+
+provide("cadenceEntityResolver", {
+  ensure: ensureNodesResolved,
+  getDisplay: getNodeDisplay,
+  resolve: resolveNode,
+});
+
+provide("cadenceConfirmUnsavedDrafts", {
+  hasUnsaved: () => hasRegisteredUnsavedDrafts(),
+  confirm: () =>
+    confirmStore.confirm({
+      title: "Unsaved Form Changes",
+      message:
+        "You have unsaved eCRF draft changes. Are you sure you want to leave?",
+      confirmLabel: "Leave Without Saving",
+      cancelLabel: "Stay on Form",
+      variant: "warning",
+    }),
+});
 
 const showContextualHelp = computed(
   () =>
