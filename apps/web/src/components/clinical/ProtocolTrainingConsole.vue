@@ -52,7 +52,7 @@
           @change="onAssignmentChange"
         >
           <option v-for="asn in assignments" :key="asn.id" :value="asn.id">
-            [{{ asn.status }}]
+            [{{ formatClinicalStatus(asn.status) }}]
             {{ asn.curriculum?.title || asn.study_id + " Protocol Training" }} —
             Site {{ asn.site_id }}
           </option>
@@ -85,7 +85,7 @@
               'status-' + (activeAssignment?.status || 'PENDING').toLowerCase()
             "
           >
-            {{ activeAssignment?.status || "PENDING" }}
+            {{ formatClinicalStatus(activeAssignment?.status || "PENDING") }}
           </span>
         </div>
         <div class="summary-chip">
@@ -159,7 +159,7 @@
                     'badge-mod-' + (mod.module_type || 'default').toLowerCase()
                   "
                 >
-                  {{ mod.module_type }}
+                  {{ formatClinicalEnum(mod.module_type) }}
                 </span>
               </div>
             </li>
@@ -171,7 +171,7 @@
             <div class="reader-header">
               <div class="reader-title-group">
                 <span class="badge badge-delta">{{
-                  currentModule.module_type
+                  formatClinicalEnum(currentModule.module_type)
                 }}</span>
                 <h3 class="reader-title">
                   {{ currentModule.title }}
@@ -283,7 +283,7 @@
                     type="checkbox"
                     :value="role"
                   />
-                  <span>{{ role }}</span>
+                  <span>{{ formatRoleLabel(role) }}</span>
                 </label>
               </div>
             </div>
@@ -335,10 +335,13 @@
           <!-- Batch Execution Result Manifest -->
           <div v-if="batchResult" class="batch-result-card">
             <div class="result-header">
-              <h4>Batch Execution Manifest</h4>
-              <span class="badge badge-gxp"
-                >Tx ID: {{ batchResult.batch_transaction_id }}</span
-              >
+              <h4>Batch Assignment Summary</h4>
+              <SupportDetails
+                v-if="batchResult.batch_transaction_id"
+                summary-label="Transaction reference"
+                :detail="`Tx ID: ${batchResult.batch_transaction_id}`"
+                :reference="batchResult.batch_transaction_id"
+              />
             </div>
             <div class="result-stats">
               <div class="stat-pill success-pill">
@@ -375,7 +378,7 @@
                   >
                     <td>{{ item.user_id }}</td>
                     <td>{{ item.site_id }}</td>
-                    <td>{{ item.user_role }}</td>
+                    <td>{{ formatRoleLabel(item.user_role) }}</td>
                     <td>
                       <span class="badge badge-warning">{{ item.reason }}</span>
                     </td>
@@ -447,13 +450,15 @@
                     >
                   </td>
                   <td>
-                    <span class="badge badge-role">{{ del.role }}</span>
+                    <span class="badge badge-role">{{
+                      formatRoleLabel(del.role)
+                    }}</span>
                   </td>
                   <td>{{ del.site_id }}</td>
                   <td>
-                    <strong>{{ del.task_code }}</strong><br /><small>{{
-                      del.duties
-                    }}</small>
+                    <strong>{{
+                      formatClinicalEnum(del.task_code)
+                    }}</strong><br /><small>{{ del.duties }}</small>
                   </td>
                   <td>
                     <span
@@ -464,13 +469,17 @@
                           : 'badge-warning'
                       "
                     >
-                      {{ del.status }}
+                      {{ formatClinicalStatus(del.status) }}
                     </span>
                   </td>
                   <td>
-                    <code v-if="del.pi_signature_hash" class="seal-hash"
-                      >{{ del.pi_signature_hash.substring(0, 12) }}...</code
-                    >
+                    <template v-if="del.pi_signature_hash">
+                      <span class="badge badge-success">Sealed</span>
+                      <SupportDetails
+                        summary-label="Digital seal"
+                        :reference="del.pi_signature_hash"
+                      />
+                    </template>
                     <span v-else class="text-muted">Unsigned</span>
                   </td>
                 </tr>
@@ -524,12 +533,14 @@
                 <strong>Bulk Delegation Sign-Off Executed Successfully</strong
                 ><br />
                 <small>
-                  Batch Tx: {{ bulkSignResult.batch_transaction_id }} | Signed
-                  Records: {{ bulkSignResult.total_signed }} | eTMF Artifact:
-                  Zone 5 ({{ bulkSignResult.etmf_artifact_id }})<br />
-                  SHA-256 Digital Seal:
-                  <code>{{ bulkSignResult.sha256_seal }}</code>
+                  Signed Records: {{ bulkSignResult.total_signed }} | eTMF
+                  Artifact: Zone 5 ({{ bulkSignResult.etmf_artifact_id }})
                 </small>
+                <SupportDetails
+                  summary-label="Signature verification details"
+                  :detail="`Batch Tx: ${bulkSignResult.batch_transaction_id}`"
+                  :reference="bulkSignResult.sha256_seal"
+                />
               </div>
             </div>
           </div>
@@ -684,12 +695,19 @@ import {
   canAssignTrainingCurriculum,
   canSignTrainingDelegations,
 } from "../../canvas/authority";
+import { useActiveStudyScope } from "../../composables/useActiveStudyScope";
 import { useAuthStore } from "../../stores/auth";
+import {
+  formatClinicalEnum,
+  formatClinicalStatus,
+  formatRoleLabel,
+} from "../../utils/clinicalLabels";
 import {
   DELEGATION_SIGN_OFF_ACTION,
   DELEGATION_SIGN_OFF_SEMANTIC_ACTION,
   delegationBatchBindingId,
 } from "../../utils/signatureBinding";
+import SupportDetails from "../canvas/SupportDetails.vue";
 
 const props = defineProps({
   studyId: {
@@ -703,6 +721,10 @@ const props = defineProps({
 });
 
 const authStore = useAuthStore();
+const { activeStudyCode } = useActiveStudyScope();
+const effectiveStudyId = computed(
+  () => (props.studyId || "").trim() || activeStudyCode.value
+);
 const canAssignCurriculum = computed(() =>
   canAssignTrainingCurriculum(authStore)
 );
@@ -733,7 +755,7 @@ async function refreshData() {
     // The signed-in identity is the only source of who is training (#5400): no invented user stands in for it.
     const userId = authStore.identity?.sub || authStore.identity?.username;
     bulkSignForm.value.signerName = authStore.identity?.username || "";
-    bulkSignForm.value.signerRole = authStore.activeRole || "";
+    bulkSignForm.value.signerRole = formatRoleLabel(authStore.activeRole || "");
     if (!userId) {
       assignments.value = [];
       curricula.value = [];
@@ -743,7 +765,7 @@ async function refreshData() {
     }
 
     const asnQuery = { user_id: userId };
-    if (props.studyId) asnQuery.study_id = props.studyId;
+    if (effectiveStudyId.value) asnQuery.study_id = effectiveStudyId.value;
 
     const asnList = await trainingApi.listAssignments(asnQuery);
     assignments.value = Array.isArray(asnList) ? asnList : [];
@@ -754,8 +776,8 @@ async function refreshData() {
 
     if (selectedAssignmentId.value) {
       await loadAssignmentDetails(selectedAssignmentId.value);
-    } else if (props.studyId) {
-      const curQuery = { study_id: props.studyId };
+    } else if (effectiveStudyId.value) {
+      const curQuery = { study_id: effectiveStudyId.value };
       if (props.protocolVersion) {
         curQuery.protocol_version = props.protocolVersion;
       }
@@ -814,7 +836,7 @@ function selectModule(index) {
 }
 
 watch(
-  () => [props.studyId, props.protocolVersion],
+  () => [effectiveStudyId.value, props.protocolVersion],
   () => {
     selectedAssignmentId.value = "";
     selectedCurriculumId.value = "";
@@ -915,7 +937,7 @@ function toggleSelectAllDelegations() {
 }
 
 async function loadDelegations() {
-  const studyId = activeCurriculum.value?.study_id || props.studyId;
+  const studyId = effectiveStudyId.value || activeCurriculum.value?.study_id;
   if (!studyId) {
     delegations.value = [];
     return;
@@ -958,7 +980,8 @@ async function handleExecuteBulkSignOff() {
     const res = await trainingApi.bulkSignOffDelegations(
       {
         delegation_ids: delegationIds,
-        study_id: activeCurriculum.value?.study_id || props.studyId || null,
+        study_id:
+          effectiveStudyId.value || activeCurriculum.value?.study_id || null,
         site_id: singleSite(delegationIds),
         signature_payload: {
           meaning:
@@ -1735,12 +1758,6 @@ async function handleExecuteBulkSignOff() {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
   font-size: 0.75rem;
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 
 .data-table th,

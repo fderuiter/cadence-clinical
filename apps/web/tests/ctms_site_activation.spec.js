@@ -13,7 +13,9 @@ import CtmsView from "../src/views/CtmsView.vue";
 
 vi.mock("../src/api/kernelApi", () => ({
   kernelApi: {
-    search: vi.fn(async () => []),
+    search: vi.fn().mockResolvedValue([]),
+    getChildren: vi.fn().mockResolvedValue([]),
+    canI: vi.fn(),
   },
   describeKernelError: (err) => err?.message ?? String(err),
 }));
@@ -113,6 +115,9 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     vi.mocked(executionApi.activateSite).mockReset();
     vi.mocked(kernelApi.search).mockReset();
     vi.mocked(kernelApi.search).mockResolvedValue([]);
+    vi.mocked(kernelApi.getChildren).mockReset();
+    vi.mocked(kernelApi.getChildren).mockResolvedValue([]);
+    vi.mocked(kernelApi.canI).mockReset();
     vi.mocked(kernelGovernanceApi.listStudySites).mockReset();
     vi.mocked(kernelGovernanceApi.listStudySites).mockResolvedValue([]);
     vi.mocked(kernelGovernanceApi.linkStudySite).mockReset();
@@ -197,7 +202,7 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     );
   });
 
-  it("hides Activate site for read-only clinical roles (CRA, CRC, Investigator, Auditor)", async () => {
+  it("keeps Activate site visible while disabled and offers inline Explain for read-only clinical roles (CRA, CRC, Investigator, Auditor)", async () => {
     routeQuery.value = { studyId: "CAD-101", siteId: "SITE-7" };
     for (const role of ["CRA", "CRC", "Site Investigator", "Auditor"]) {
       pinia = createPinia();
@@ -212,13 +217,22 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
       expect(wrapper.find("#site-compliance-status").text(), role).toContain(
         "Complete: eTMF reports every activation document"
       );
-      expect(wrapper.find("#btn-activate-site").exists(), role).toBe(false);
+      const activateBtn = wrapper.find("#btn-activate-site");
+      expect(activateBtn.exists(), role).toBe(true);
+      expect(activateBtn.attributes(), role).toHaveProperty("disabled");
       expect(
         wrapper.find("#site-activation-readonly-note").exists(),
         role
       ).toBe(true);
       expect(
         wrapper.find("#site-activation-readonly-note").text(),
+        role
+      ).toContain("site_compliance:activate");
+      const explainBtn = wrapper.find("#btn-explain-site-activation");
+      expect(explainBtn.exists(), role).toBe(true);
+      await explainBtn.trigger("click");
+      expect(
+        wrapper.find("#site-activation-explanation").text(),
         role
       ).toContain("site_compliance:activate");
       wrapper.unmount();
@@ -375,7 +389,14 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     expect(
       wrapper.findAll("#site-missing-documents li").map((li) => li.text())
     ).toEqual(["IRB approval", "Signed 1572"]);
-    expect(wrapper.find("#btn-activate-site").exists()).toBe(false);
+    expect(wrapper.find("#btn-activate-site").exists()).toBe(true);
+    expect(wrapper.find("#btn-activate-site").attributes()).toHaveProperty(
+      "disabled"
+    );
+    await wrapper.find("#btn-explain-site-activation").trigger("click");
+    expect(wrapper.find("#site-activation-explanation").text()).toContain(
+      "IRB approval, Signed 1572"
+    );
   });
 
   it("says eTMF has not confirmed a site it reported nothing for", async () => {
@@ -389,7 +410,10 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     expect(wrapper.find("#site-compliance-status").text()).toContain(
       "Not confirmed"
     );
-    expect(wrapper.find("#btn-activate-site").exists()).toBe(false);
+    expect(wrapper.find("#btn-activate-site").exists()).toBe(true);
+    expect(wrapper.find("#btn-activate-site").attributes()).toHaveProperty(
+      "disabled"
+    );
   });
 
   it("reports a failed status check instead of calling the site non-compliant", async () => {
@@ -582,6 +606,88 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
       })
     );
     expect(wrapper.find("#kernel-site-active-banner").exists()).toBe(true);
+  });
+
+  it("probes kernelApi.canI for study_site.activate and renders the kernel explanation verbatim when denied (K-EXP-1)", async () => {
+    const studyId = "0192f3c4-5e6a-7b8c-9d0e-000000000010";
+    const siteUuid = "0192f3c4-5e6a-7b8c-9d0e-000000000020";
+    routeQuery.value = { studyId: "CAD-101", siteId: "SITE-7" };
+    vi.mocked(executionApi.getSiteComplianceStatus).mockResolvedValueOnce(
+      status()
+    );
+    vi.mocked(kernelApi.search).mockResolvedValueOnce([
+      {
+        ref: `study:${studyId}@1`,
+        kind: "study",
+        code: "CAD-101",
+        title: "Cadence 101",
+        exact_code: true,
+      },
+    ]);
+    vi.mocked(kernelApi.getChildren).mockResolvedValueOnce([
+      {
+        node: {
+          ref: `study_site:${siteUuid}@1`,
+          kind: "study_site",
+          code: "SITE-7",
+          title: "Site 7",
+          status: "PENDING",
+          mask: null,
+        },
+        child_count: 0,
+      },
+    ]);
+    vi.mocked(kernelApi.canI).mockResolvedValueOnce({
+      capability: "study_site.activate",
+      verb_class: "Execute",
+      resource: `study_site:${siteUuid}`,
+      permitted: false,
+      reason: "Study-level hold blocks site activation.",
+      explanation: {
+        subject: `study_site:${siteUuid}`,
+        claim:
+          "Kernel policy denies study_site.activate while study lock is active.",
+        producer: "kernel.authorization",
+        steps: [
+          {
+            claim: "Checked active scope locks on study_site.",
+            evidence: [`study:${studyId}`],
+          },
+        ],
+        conditions: [
+          {
+            code: "scope.unlocked",
+            description: "Lift study freeze before activating new sites",
+            met: false,
+            evidence: [`study:${studyId}`],
+          },
+        ],
+        next_actions: [],
+      },
+    });
+
+    const wrapper = await mountView();
+    await flushPromises();
+
+    expect(kernelApi.canI).toHaveBeenCalledWith(
+      "study_site.activate",
+      `study_site:${siteUuid}`
+    );
+    const activateBtn = wrapper.find("#btn-activate-site");
+    expect(activateBtn.exists()).toBe(true);
+    expect(activateBtn.attributes()).toHaveProperty("disabled");
+
+    const explainBtn = wrapper.find("#btn-explain-site-activation");
+    expect(explainBtn.attributes("aria-expanded")).toBe("false");
+    await explainBtn.trigger("click");
+    expect(explainBtn.attributes("aria-expanded")).toBe("true");
+    const explanationRegion = wrapper.find("#site-activation-explanation");
+    expect(explanationRegion.text()).toContain(
+      "Kernel policy denies study_site.activate while study lock is active."
+    );
+    expect(explanationRegion.text()).toContain(
+      "Lift study freeze before activating new sites"
+    );
   });
 
   it("passes studyCode=CADENCE-101 and siteId=SITE-101 props across all six live tabs when opened from /studies/CADENCE-101?site=SITE-101", async () => {

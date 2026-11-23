@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Npgsql;
@@ -17,361 +15,363 @@ namespace Cadence.Cli.Services;
 
 public static class DatabaseResetService
 {
-    public static async Task<int> ResetDatabasesAsync(bool allowOffline = true)
-    {
-        AnsiConsole.MarkupLine("[bold cyan]Resetting local databases (PostgreSQL/SQLite) via native C#...[/]\n");
+    public const string PrimaryConnectionStringVariable = "ConnectionStrings__cadence";
+    public const string LegacyConnectionStringVariable = "POSTGRES_CONNECTION_STRING";
 
-        // 1. Safety Guard
+    private const string MigratorProject =
+        "packages/tooling_core/src/Cadence.DatabaseMigrator/Cadence.DatabaseMigrator.csproj";
+
+    private static readonly string[] ProdKeywords =
+    [
+        "production",
+        "prod",
+        "live",
+        "secure",
+        "aws",
+        "rds",
+        "azure",
+        "gcp",
+        "cloud",
+    ];
+
+    private static readonly string[] LocalHosts =
+    [
+        "localhost",
+        "127.0.0.1",
+        "::1",
+        "0.0.0.0",
+        "postgres",
+        "db",
+        "host.docker.internal",
+    ];
+
+    public static async Task<int> ResetDatabasesAsync(bool allowOffline = false)
+    {
+        AnsiConsole.MarkupLine("[bold cyan]Resetting local PostgreSQL database via native C# and EF Core migrations...[/]\n");
+
         ValidateLocalEnvironment();
 
-        string pgConnStr = GetPostgresConnectionString();
-        ValidateLocalOnly("Postgres", pgConnStr);
+        string rawConnStr = GetConfiguredPostgresConnectionString();
+        ValidateLocalOnly("Postgres", rawConnStr);
+        string pgConnStr = ParsePostgresConnectionString("Postgres", rawConnStr).ConnectionString;
 
-        bool allOk = true;
-
-        // 2. PostgreSQL Reset
         try
         {
-            AnsiConsole.MarkupLine("  1. Purging and resetting PostgreSQL database...");
+            AnsiConsole.MarkupLine("  1. Dropping non-system PostgreSQL schemas and recreating empty public schema...");
             await ResetPostgresAsync(pgConnStr);
-            AnsiConsole.MarkupLine("  [green][[OK]] PostgreSQL reset complete.[/]");
-        }
-        catch (Exception ex)
-        {
-            if (allowOffline)
-            {
-                AnsiConsole.MarkupLine($"  [yellow]WARNING: PostgreSQL reset skipped or failed: {ex.Message}[/]");
-            }
-            else
-            {
-                AnsiConsole.MarkupLine($"  [red]ERROR: PostgreSQL reset failed: {ex.Message}[/]");
-                allOk = false;
-            }
-        }
+            AnsiConsole.MarkupLine("  [green][[OK]] Non-system schemas purged and empty public schema recreated.[/]");
 
-        // 3. SQLite Reset
-        try
-        {
-            AnsiConsole.MarkupLine("\n  2. Purging local SQLite databases...");
-            ResetSQLite();
-            AnsiConsole.MarkupLine("  [green][[OK]] SQLite reset complete.[/]");
-        }
-        catch (Exception ex)
-        {
-            if (allowOffline)
+            AnsiConsole.MarkupLine("  2. Applying EF Core migrations across all PostgreSQL schemas...");
+            int migrateExitCode = RunDatabaseMigrator(pgConnStr);
+            if (migrateExitCode != 0)
             {
-                AnsiConsole.MarkupLine($"  [yellow]WARNING: SQLite reset skipped or failed: {ex.Message}[/]");
+                throw new InvalidOperationException(
+                    $"Cadence.DatabaseMigrator exited with code {migrateExitCode}.");
             }
-            else
-            {
-                AnsiConsole.MarkupLine($"  [red]ERROR: SQLite reset failed: {ex.Message}[/]");
-                allOk = false;
-            }
-        }
 
-        if (allOk)
-        {
-            AnsiConsole.MarkupLine("\n[bold green]Multi-Database Reset Complete.[/]");
+            AnsiConsole.MarkupLine("  [green][[OK]] All PostgreSQL schemas migrated.[/]");
+            AnsiConsole.MarkupLine("\n[bold green]PostgreSQL Database Reset Complete.[/]");
             return 0;
         }
+        catch (Exception ex)
+        {
+            string escapedMessage = Markup.Escape(ex.Message);
+            if (allowOffline)
+            {
+                AnsiConsole.MarkupLine($"  [yellow]WARNING: PostgreSQL reset skipped or failed: {escapedMessage}[/]");
+                return 0;
+            }
 
-        return 1;
+            AnsiConsole.MarkupLine($"  [red]ERROR: PostgreSQL reset failed: {escapedMessage}[/]");
+            return 1;
+        }
     }
 
-    public static void ValidateLocalEnvironment()
+    public static void ValidateLocalEnvironment(Func<string, string?>? getEnv = null)
     {
-        string envName = (Environment.GetEnvironmentVariable("CADENCE_ENV") ??
-                          Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
-                          Environment.GetEnvironmentVariable("ENVIRONMENT") ?? "Development").Trim();
+        string? rawEnv = getEnv is not null
+            ? getEnv("CADENCE_ENV") ?? getEnv("ASPNETCORE_ENVIRONMENT") ?? getEnv("ENVIRONMENT")
+            : Environment.GetEnvironmentVariable("CADENCE_ENV") ??
+              Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
+              Environment.GetEnvironmentVariable("ENVIRONMENT");
+
+        string envName = (rawEnv ?? "Development").Trim();
 
         if (envName.Equals("Production", StringComparison.OrdinalIgnoreCase) ||
             envName.Equals("Prod", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Safety Guardrail Violation: Database reset cannot execute in a Production environment.");
+            throw new InvalidOperationException(
+                "Safety Guardrail Violation: Database reset cannot execute in a Production environment.");
         }
     }
 
-    public static void ValidateLocalOnly(string name, string url)
+    public static void ValidateLocalOnly(string name, string connectionString)
     {
-        if (string.IsNullOrWhiteSpace(url)) return;
-
-        string lowerUrl = url.ToLowerInvariant();
-        string[] prodKeywords = ["production", "prod", "live", "secure", "aws", "rds", "azure", "gcp", "cloud"];
-
-        var detectedKeyword = prodKeywords.FirstOrDefault(kw => lowerUrl.Contains(kw));
-        if (detectedKeyword != null)
-        {
-            throw new InvalidOperationException($"Safety Guardrail Violation: Production/Non-local keyword '{detectedKeyword}' detected in connection string for {name}. Aborting.");
-        }
-
-        if (url.Contains("://"))
-        {
-            var parts = url.Split("://", 2);
-            string scheme = parts[0];
-            if (scheme.StartsWith("sqlite")) return;
-
-            string remainder = parts[1];
-            try
-            {
-                var uri = new Uri($"http://{remainder}");
-                string host = uri.Host;
-                string[] localHosts = ["localhost", "127.0.0.1", "0.0.0.0", "postgres", "db", "host.docker.internal"];
-
-                if (!localHosts.Contains(host, StringComparer.OrdinalIgnoreCase) && !host.EndsWith(".local", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException($"Safety Guardrail Violation: Database host '{host}' for {name} is non-local.");
-                }
-            }
-            catch (Exception ex) when (ex is not InvalidOperationException)
-            {
-                // URL parsing fallback check
-            }
-        }
-    }
-
-    private static string GetPostgresConnectionString()
-    {
-        string? connStr = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING");
-        if (string.IsNullOrEmpty(connStr))
-        {
-            connStr = Environment.GetEnvironmentVariable("DATABASE_URL");
-        }
-
-        if (string.IsNullOrEmpty(connStr))
+        if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new InvalidOperationException(
-                "POSTGRES_CONNECTION_STRING (or DATABASE_URL) is not set. Export it (see .env.example) before resetting databases.");
+                $"Safety Guardrail Violation: Connection string for {name} is empty.");
         }
 
-        if (connStr.StartsWith("postgresql+asyncpg://"))
+        string lower = connectionString.ToLowerInvariant();
+        string? detectedKeyword = ProdKeywords.FirstOrDefault(kw => lower.Contains(kw, StringComparison.Ordinal));
+        if (detectedKeyword is not null)
         {
-            connStr = connStr.Replace("postgresql+asyncpg://", "postgresql://");
+            throw new InvalidOperationException(
+                $"Safety Guardrail Violation: Production/Non-local keyword '{detectedKeyword}' detected in connection string for {name}. Aborting.");
         }
 
-        if (connStr.StartsWith("postgresql://"))
+        NpgsqlConnectionStringBuilder builder = ParsePostgresConnectionString(name, connectionString);
+        if (string.IsNullOrWhiteSpace(builder.Host))
+        {
+            throw new InvalidOperationException(
+                $"Safety Guardrail Violation: Connection string for {name} must specify an explicit local Host.");
+        }
+
+        foreach (string rawSegment in builder.Host.Split(','))
+        {
+            string host = ExtractHostName(name, rawSegment);
+            if (!IsLocalHost(host))
+            {
+                throw new InvalidOperationException(
+                    $"Safety Guardrail Violation: Database host '{host}' for {name} is non-local.");
+            }
+        }
+    }
+
+    public static string ResolvePostgresConnectionString(Func<string, string?>? getEnv = null)
+    {
+        string raw = GetConfiguredPostgresConnectionString(getEnv);
+        return ParsePostgresConnectionString("Postgres", raw).ConnectionString;
+    }
+
+    public static string GetConfiguredPostgresConnectionString(Func<string, string?>? getEnv = null)
+    {
+        string? configured = getEnv is not null
+            ? getEnv(PrimaryConnectionStringVariable)
+            : Environment.GetEnvironmentVariable("ConnectionStrings__cadence");
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            return configured.Trim();
+        }
+
+        configured = getEnv is not null
+            ? getEnv(LegacyConnectionStringVariable)
+            : Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING");
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            return configured.Trim();
+        }
+
+        throw new InvalidOperationException(
+            $"No PostgreSQL connection string configured. Set {PrimaryConnectionStringVariable} or {LegacyConnectionStringVariable}.");
+    }
+
+    public static NpgsqlConnectionStringBuilder ParsePostgresConnectionString(string name, string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException($"Connection string for {name} cannot be empty.");
+        }
+
+        string trimmed = connectionString.Trim();
+        if (!trimmed.Contains("://", StringComparison.Ordinal))
         {
             try
             {
-                var uri = new Uri(connStr);
-                string userInfo = uri.UserInfo;
-                string user = userInfo.Contains(':') ? userInfo.Split(':')[0] : userInfo;
-                string pass = userInfo.Contains(':') ? userInfo.Split(':')[1] : "";
-                string host = uri.Host;
-                int port = uri.Port > 0 ? uri.Port : 5432;
-                string db = uri.AbsolutePath.TrimStart('/');
-
-                return $"Host={host};Port={port};Database={db};Username={user};Password={pass}";
+                return new NpgsqlConnectionStringBuilder(trimmed);
             }
-            catch
+            catch (Exception ex)
             {
-                // Return fallback
+                throw new InvalidOperationException(
+                    $"Invalid PostgreSQL connection string for {name}: {ex.Message}",
+                    ex);
             }
         }
 
-        return connStr;
-    }
-
-    private static async Task ResetPostgresAsync(string connStr)
-    {
-        using var conn = new NpgsqlConnection(connStr);
-        await conn.OpenAsync();
-
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            DROP SCHEMA IF EXISTS public CASCADE;
-            CREATE SCHEMA public;
-            DROP SCHEMA IF EXISTS audit_schema CASCADE;
-            CREATE SCHEMA audit_schema;
-
-            CREATE OR REPLACE FUNCTION audit_schema.prevent_audit_mutation()
-            RETURNS trigger AS $$
-            BEGIN
-                RAISE EXCEPTION '21 CFR Part 11 Compliance Violation: Audit trail entries in audit_schema are strictly immutable and cannot be updated or deleted.';
-            END;
-            $$ LANGUAGE plpgsql;
-
-            CREATE TABLE IF NOT EXISTS ""__EFMigrationsHistory"" (
-                ""MigrationId"" character varying(150) NOT NULL,
-                ""ProductVersion"" character varying(32) NOT NULL,
-                CONSTRAINT ""PK___EFMigrationsHistory"" PRIMARY KEY (""MigrationId"")
-            );
-
-            CREATE TABLE IF NOT EXISTS ""AuditLogEntries"" (
-                ""Id"" uuid NOT NULL,
-                ""EntityName"" text NOT NULL,
-                ""EntityId"" text NOT NULL,
-                ""Action"" text NOT NULL,
-                ""Timestamp"" timestamp with time zone NOT NULL,
-                ""UserId"" text NOT NULL,
-                ""ReasonForChange"" text NOT NULL,
-                ""VersionIndex"" bigint NOT NULL,
-                ""ChangesJson"" text,
-                ""PredecessorHash"" text NOT NULL,
-                ""BlockHash"" text NOT NULL,
-                CONSTRAINT ""PK_AuditLogEntries"" PRIMARY KEY (""Id"")
-            );
-
-            CREATE TABLE IF NOT EXISTS ""clinical_subjects"" (
-                ""Id"" uuid NOT NULL,
-                ""SubjectCode"" character varying(255) NOT NULL,
-                ""StudyCode"" character varying(255) NOT NULL,
-                ""SiteCode"" text,
-                ""Status"" character varying(32) NOT NULL,
-                ""ActiveProtocolVersion"" text NOT NULL,
-                ""EncryptedDemographics"" text,
-                ""EnrollmentIndex"" integer NOT NULL,
-                ""IsUnblinded"" boolean NOT NULL,
-                ""UnblindedBy"" text,
-                ""UnblindedReason"" text,
-                ""UnblindedAt"" timestamp with time zone,
-                ""WithdrawalReason"" text,
-                ""WithdrawnAt"" timestamp with time zone,
-                ""RandomizationId"" uuid,
-                ""KitReference"" text,
-                ""strat_factors"" jsonb NOT NULL,
-                ""_version"" bigint NOT NULL DEFAULT 0,
-                ""CreatedAt"" timestamp with time zone NOT NULL,
-                ""CreatedBy"" text NOT NULL,
-                ""ReasonForChange"" text NOT NULL,
-                ""VersionIndex"" bigint NOT NULL,
-                CONSTRAINT ""PK_clinical_subjects"" PRIMARY KEY (""Id"")
-            );
-
-            CREATE TABLE IF NOT EXISTS ""site_compliance_caches"" (
-                ""Id"" uuid NOT NULL,
-                ""StudyCode"" character varying(255) NOT NULL,
-                ""SiteCode"" character varying(255) NOT NULL,
-                ""Milestone"" character varying(255) NOT NULL,
-                ""IsComplete"" boolean NOT NULL,
-                ""Version"" integer NOT NULL,
-                ""missing_documents"" text[] NOT NULL,
-                ""_version"" bigint NOT NULL DEFAULT 0,
-                ""CreatedAt"" timestamp with time zone NOT NULL,
-                ""CreatedBy"" text NOT NULL,
-                ""ReasonForChange"" text NOT NULL,
-                ""VersionIndex"" bigint NOT NULL,
-                CONSTRAINT ""PK_site_compliance_caches"" PRIMARY KEY (""Id"")
-            );
-
-            CREATE TABLE IF NOT EXISTS ""subject_consents"" (
-                ""Id"" uuid NOT NULL,
-                ""SubjectCode"" character varying(255) NOT NULL,
-                ""IcfSigned"" boolean NOT NULL,
-                ""IcfSignedDate"" timestamp with time zone,
-                ""RequiresReconsent"" boolean NOT NULL,
-                ""IsPaperOverride"" boolean NOT NULL,
-                ""_version"" bigint NOT NULL DEFAULT 0,
-                ""ProtocolVersion_StudyCode"" character varying(255) NOT NULL,
-                ""ProtocolVersion_VersionIndex"" integer NOT NULL,
-                ""ProtocolVersion_VersionTag"" text NOT NULL,
-                ""CreatedAt"" timestamp with time zone NOT NULL,
-                ""CreatedBy"" text NOT NULL,
-                ""ReasonForChange"" text NOT NULL,
-                ""VersionIndex"" bigint NOT NULL,
-                CONSTRAINT ""PK_subject_consents"" PRIMARY KEY (""Id"")
-            );
-
-            CREATE TABLE IF NOT EXISTS ""clinical_observations"" (
-                ""Id"" uuid NOT NULL,
-                ""ObservationId"" text NOT NULL,
-                ""SubjectCode"" character varying(255) NOT NULL,
-                ""StudyCode"" character varying(255) NOT NULL,
-                ""SiteCode"" text,
-                ""TestCode"" character varying(255) NOT NULL,
-                ""DomainCode"" character varying(255) NOT NULL,
-                ""ResultValue"" text NOT NULL,
-                ""ResultUnit"" text,
-                ""ObservationTime"" timestamp with time zone NOT NULL,
-                ""IsOutlier"" boolean NOT NULL DEFAULT false,
-                ""AdditionalPropertiesJson"" text,
-                ""_version"" bigint NOT NULL DEFAULT 0,
-                ""CreatedAt"" timestamp with time zone NOT NULL,
-                ""CreatedBy"" text NOT NULL,
-                ""ReasonForChange"" text NOT NULL,
-                ""VersionIndex"" bigint NOT NULL,
-                CONSTRAINT ""PK_clinical_observations"" PRIMARY KEY (""Id"")
-            );
-
-            CREATE TABLE IF NOT EXISTS ""form_submissions"" (
-                ""Id"" uuid NOT NULL,
-                ""SubmissionId"" text NOT NULL,
-                ""FormId"" text NOT NULL,
-                ""SubjectCode"" character varying(255) NOT NULL,
-                ""StudyCode"" character varying(255) NOT NULL,
-                ""SiteCode"" text,
-                ""Status"" character varying(32) NOT NULL,
-                ""FormDataJson"" text NOT NULL,
-                ""SignatureManifestJson"" text,
-                ""_version"" bigint NOT NULL DEFAULT 0,
-                ""CreatedAt"" timestamp with time zone NOT NULL,
-                ""CreatedBy"" text NOT NULL,
-                ""ReasonForChange"" text NOT NULL,
-                ""VersionIndex"" bigint NOT NULL,
-                CONSTRAINT ""PK_form_submissions"" PRIMARY KEY (""Id"")
-            );
-
-            CREATE TABLE IF NOT EXISTS ""clinical_queries"" (
-                ""Id"" uuid NOT NULL,
-                ""QueryId"" text NOT NULL,
-                ""SubjectCode"" character varying(255) NOT NULL,
-                ""StudyCode"" character varying(255) NOT NULL,
-                ""SiteCode"" text,
-                ""ObservationId"" text,
-                ""QueryText"" text NOT NULL,
-                ""Status"" character varying(32) NOT NULL,
-                ""ResolutionText"" text,
-                ""_version"" bigint NOT NULL DEFAULT 0,
-                ""CreatedAt"" timestamp with time zone NOT NULL,
-                ""CreatedBy"" text NOT NULL,
-                ""ReasonForChange"" text NOT NULL,
-                ""VersionIndex"" bigint NOT NULL,
-                CONSTRAINT ""PK_clinical_queries"" PRIMARY KEY (""Id"")
-            );
-
-            INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
-            VALUES
-                ('20260905174215_AddExecutionSubjectsSlice', '10.0.0'),
-                ('20260905230921_AddMassTransitOutbox', '10.0.0'),
-                ('20260910120000_AddExecutionObservationsSlice', '10.0.0')
-            ON CONFLICT (""MigrationId"") DO NOTHING;
-
-            DO $$
-            BEGIN
-                IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'AuditLogEntries') THEN
-                    DROP TRIGGER IF EXISTS trg_prevent_audit_mutation_audit_log_entries ON ""AuditLogEntries"";
-                    CREATE TRIGGER trg_prevent_audit_mutation_audit_log_entries
-                    BEFORE UPDATE OR DELETE ON ""AuditLogEntries""
-                    FOR EACH ROW EXECUTE FUNCTION audit_schema.prevent_audit_mutation();
-                END IF;
-            END $$;
-        ";
-
-        await cmd.ExecuteNonQueryAsync();
-    }
-
-    private static void ResetSQLite()
-    {
-        string repoRoot = FindRepoRoot();
-        var dbFiles = Directory.GetFiles(repoRoot, "*.db", SearchOption.AllDirectories)
-            .Concat(Directory.GetFiles(repoRoot, "*.sqlite", SearchOption.AllDirectories))
-            .Where(f => !f.Contains("node_modules") && !f.Contains("bin") && !f.Contains("obj"))
-            .ToList();
-
-        foreach (var file in dbFiles)
+        if (!trimmed.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) &&
+            !trimmed.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
         {
-            try
+            throw new InvalidOperationException(
+                $"Unsupported URI scheme in connection string for {name}; expected postgres:// or postgresql://.");
+        }
+
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) || string.IsNullOrWhiteSpace(uri.Host))
+        {
+            throw new InvalidOperationException($"Invalid PostgreSQL URI for {name}.");
+        }
+
+        try
+        {
+            var builder = new NpgsqlConnectionStringBuilder { Host = uri.Host };
+            if (!uri.IsDefaultPort && uri.Port > 0)
             {
-                if (File.Exists(file))
+                builder.Port = uri.Port;
+            }
+
+            string database = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/'));
+            if (!string.IsNullOrWhiteSpace(database))
+            {
+                builder.Database = database;
+            }
+
+            if (!string.IsNullOrEmpty(uri.UserInfo))
+            {
+                int sep = uri.UserInfo.IndexOf(':', StringComparison.Ordinal);
+                builder.Username = Uri.UnescapeDataString(sep >= 0 ? uri.UserInfo[..sep] : uri.UserInfo);
+                if (sep >= 0)
                 {
-                    File.Delete(file);
+                    builder.Password = Uri.UnescapeDataString(uri.UserInfo[(sep + 1)..]);
                 }
             }
-            catch
+
+            foreach (string pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
             {
-                // Ignore transient file lock issues
+                int eq = pair.IndexOf('=', StringComparison.Ordinal);
+                string key = Uri.UnescapeDataString(eq >= 0 ? pair[..eq] : pair).Replace('_', ' ');
+                string val = eq >= 0 ? Uri.UnescapeDataString(pair[(eq + 1)..]) : string.Empty;
+                builder[key] = val;
             }
+
+            return builder;
+        }
+        catch (Exception ex) when (ex is not InvalidOperationException)
+        {
+            throw new InvalidOperationException(
+                $"Invalid PostgreSQL URI options for {name}: {ex.Message}",
+                ex);
         }
     }
+
+    public static async Task ResetPostgresAsync(string connStr, CancellationToken cancellationToken = default)
+    {
+        await using var conn = new NpgsqlConnection(connStr);
+        await conn.OpenAsync(cancellationToken);
+
+        var schemas = new List<string>();
+        await using (var selectCmd = conn.CreateCommand())
+        {
+            selectCmd.CommandText = """
+                SELECT nspname
+                FROM pg_catalog.pg_namespace
+                WHERE nspname NOT LIKE 'pg_%'
+                  AND nspname <> 'information_schema'
+                ORDER BY nspname;
+                """;
+
+            await using var reader = await selectCmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                schemas.Add(reader.GetString(0));
+            }
+        }
+
+        var ddl = new StringBuilder();
+        foreach (string schema in schemas)
+        {
+            string quoted = "\"" + schema.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
+            ddl.Append("DROP SCHEMA IF EXISTS ").Append(quoted).Append(" CASCADE;\n");
+        }
+
+        ddl.Append("CREATE SCHEMA public;\n");
+
+        await using var dropAndCreateCmd = conn.CreateCommand();
+        dropAndCreateCmd.CommandText = ddl.ToString();
+        await dropAndCreateCmd.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    public static int RunDatabaseMigrator(string connectionString, string? repoRoot = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+        repoRoot ??= FindRepoRoot();
+
+        var psi = new ProcessStartInfo("dotnet")
+        {
+            WorkingDirectory = repoRoot,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+
+        foreach (string arg in new[] { "run", "--project", MigratorProject, "--", "--connection", connectionString })
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var process = Process.Start(psi);
+        if (process is null)
+        {
+            AnsiConsole.MarkupLine("[red]ERROR: Could not start 'dotnet run' for Cadence.DatabaseMigrator.[/]");
+            return 1;
+        }
+
+        Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+        string stdout = process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        string stderr = stderrTask.GetAwaiter().GetResult();
+
+        if (!string.IsNullOrWhiteSpace(stdout))
+        {
+            Console.WriteLine(stdout.TrimEnd());
+        }
+
+        if (process.ExitCode != 0 && !string.IsNullOrWhiteSpace(stderr))
+        {
+            Console.Error.WriteLine(stderr.TrimEnd());
+        }
+
+        return process.ExitCode;
+    }
+
+    private static string ExtractHostName(string name, string rawSegment)
+    {
+        string entry = rawSegment.Trim();
+        if (entry.Length == 0)
+        {
+            throw new InvalidOperationException(
+                $"Safety Guardrail Violation: Empty host entry in connection string for {name}.");
+        }
+
+        if (entry.StartsWith('['))
+        {
+            int closeBracket = entry.IndexOf(']', StringComparison.Ordinal);
+            if (closeBracket <= 1)
+            {
+                throw new InvalidOperationException(
+                    $"Safety Guardrail Violation: Malformed bracketed host '{entry}' for {name}.");
+            }
+
+            string trailing = entry[(closeBracket + 1)..];
+            if (trailing.Length > 0 && !trailing.StartsWith(':'))
+            {
+                throw new InvalidOperationException(
+                    $"Safety Guardrail Violation: Malformed bracketed host '{entry}' for {name}.");
+            }
+
+            return entry[1..closeBracket];
+        }
+
+        int firstColon = entry.IndexOf(':', StringComparison.Ordinal);
+        if (firstColon >= 0 && firstColon == entry.LastIndexOf(':'))
+        {
+            string hostPart = entry[..firstColon];
+            if (string.IsNullOrWhiteSpace(hostPart))
+            {
+                throw new InvalidOperationException(
+                    $"Safety Guardrail Violation: Missing host before port in '{entry}' for {name}.");
+            }
+
+            return hostPart;
+        }
+
+        return entry;
+    }
+
+    private static bool IsLocalHost(string host) =>
+        LocalHosts.Contains(host, StringComparer.OrdinalIgnoreCase) ||
+        (host.Length > ".local".Length &&
+         host.EndsWith(".local", StringComparison.OrdinalIgnoreCase) &&
+         !host.Contains('/', StringComparison.Ordinal));
 
     private static string FindRepoRoot()
     {
@@ -382,10 +382,16 @@ public static class DatabaseResetService
             {
                 return current;
             }
+
             string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
+            if (parent == current)
+            {
+                break;
+            }
+
+            current = parent ?? string.Empty;
         }
+
         return Directory.GetCurrentDirectory();
     }
 }

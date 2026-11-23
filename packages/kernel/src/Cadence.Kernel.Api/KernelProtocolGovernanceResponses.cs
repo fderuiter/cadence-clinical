@@ -174,21 +174,6 @@ public sealed record KernelEffectivityResponse(
             [.. state.Evidence.Select(id => NodeRef.For(id).ToString())]);
 }
 
-/// <summary>Request body for <c>POST /api/v1/kernel/studies/{studyRef}/sites</c>.</summary>
-/// <param name="SiteCode">Site code to register (when new) and link to the study.</param>
-/// <param name="SiteName">Display name when registering a new site (defaults to <paramref name="SiteCode"/>).</param>
-/// <param name="Country">ISO 3166-1 alpha-2 country code when registering a new site (defaults to <c>US</c>).</param>
-/// <param name="InstitutionRef">Optional institution organization NodeRef (<c>organization:&lt;uuid&gt;</c>).</param>
-/// <param name="SiteId">Optional site UUID when registering a new site.</param>
-/// <param name="StudySiteId">Optional study-site UUID when linking to the study.</param>
-public sealed record KernelLinkStudySiteRequest(
-    string? SiteCode,
-    string? SiteName = null,
-    string? Country = null,
-    string? InstitutionRef = null,
-    Guid? SiteId = null,
-    Guid? StudySiteId = null);
-
 /// <summary>One effective protocol version governing a study site.</summary>
 /// <param name="ProtocolVersionRef">Canonical NodeRef of the effective protocol version.</param>
 /// <param name="Number">1-based protocol version number within the study.</param>

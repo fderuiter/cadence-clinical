@@ -42,11 +42,57 @@ const OBSERVATION_CORRECTION_BACKEND_ROLES: ReadonlySet<string> = new Set([
 
 const MONITORING_FALLBACK_ROLES = ["cra", "data_manager"] as const;
 
-/** Add participants and change their state (`SubjectAuthority.CanManageParticipants`). */
-export function canManageParticipants(auth: RawRoleHolder): boolean {
+const PARTICIPANT_MUTATION_PERSONAS = new Set([
+  "site_crc",
+  "site_investigator",
+]);
+
+/** Whether the caller's token carries a raw coordinator/investigator role accepted by Execution. */
+export function holdsParticipantRole(auth: RawRoleHolder): boolean {
   return (auth?.rawRoles ?? []).some((role) =>
     PARTICIPANT_ROLES.has(role.trim().toLowerCase())
   );
+}
+
+/**
+ * Add participants and change their state (`SubjectAuthority.CanManageParticipants`). Sponsor lenses
+ * (`super_admin`, `sponsor_designer`, `data_manager`) stay read-only for participant records; when a
+ * workspace persona is active, switching to a site clinical lens (`site_crc` or `site_investigator`)
+ * reveals participant mutations for authorized site staff.
+ */
+export function canManageParticipants(auth: RawRoleHolder): boolean {
+  if (!holdsParticipantRole(auth)) return false;
+  if (
+    auth?.currentPersona &&
+    !PARTICIPANT_MUTATION_PERSONAS.has(auth.currentPersona)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Filters candidate site codes to those authorized by the caller's explicit `site_id` claims (`SiteAccessEvaluator`).
+ * When the caller has no explicit `site_id` restriction, returns `availableSiteCodes` unchanged.
+ */
+export function authorizedParticipantSiteCodes(
+  auth: RawRoleHolder,
+  availableSiteCodes: readonly string[]
+): string[] {
+  const assigned = (auth?.assignedSiteIds ?? auth?.siteIds ?? [])
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && s !== "*");
+  if (assigned.length === 0) {
+    return [...availableSiteCodes];
+  }
+  const assignedLower = new Set(assigned.map((s) => s.toLowerCase()));
+  if (availableSiteCodes.length === 0) {
+    return assigned;
+  }
+  const matched = availableSiteCodes.filter((code) =>
+    assignedLower.has(code.trim().toLowerCase())
+  );
+  return matched.length > 0 ? matched : assigned;
 }
 
 /** Close, reopen and cancel queries, and raise them on observations (`execution.query.raise/manage`). */
@@ -127,7 +173,7 @@ export function canVerifySource(auth: AuthorityAuth): boolean {
 export function canCorrectObservations(auth: AuthorityAuth): boolean {
   if (!auth) return false;
   if (isUnauthenticatedFallback(auth)) return true;
-  if (canManageParticipants(auth)) return true;
+  if (holdsParticipantRole(auth)) return true;
   if ((auth.rawRoles?.length ?? 0) > 0) {
     return holdsBackendRole(auth, OBSERVATION_CORRECTION_BACKEND_ROLES);
   }

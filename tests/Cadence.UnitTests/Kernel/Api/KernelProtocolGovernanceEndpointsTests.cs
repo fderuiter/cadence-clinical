@@ -725,6 +725,32 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         public Task<OrganizationDirectoryEntry?> FindOrganizationByCodeAsync(TenantId tenant, string code, CancellationToken cancellationToken = default) =>
             Task.FromResult(string.Equals(code, "CADENCE-PHARMA", StringComparison.OrdinalIgnoreCase) ? new OrganizationDirectoryEntry(SponsorId, 1, "CADENCE-PHARMA", "Cadence Pharma", OrganizationKind.Sponsor) : null);
 
+        public Task<IReadOnlyList<SiteDirectoryEntry>> ListSitesAsync(TenantId tenant, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<SiteDirectoryEntry>>([
+                .. ReadAll<Site>()
+                    .OrderBy(s => s.SiteCode, StringComparer.Ordinal)
+                    .Select(ToSiteDirectoryEntry),
+            ]);
+
+        public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Find<Site>(siteId) is { } site ? ToSiteDirectoryEntry(site) : null);
+
+        Task<SiteDirectoryEntry?> IStudyDirectory.FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken) =>
+            Task.FromResult(ReadAll<Site>().FirstOrDefault(s => string.Equals(s.SiteCode, siteCode, StringComparison.OrdinalIgnoreCase)) is { } site
+                ? ToSiteDirectoryEntry(site)
+                : null);
+
+        public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>([
+                .. ReadAll<StudySite>()
+                    .Where(ss => ss.StudyId == studyId)
+                    .Select(ToStudySiteDirectoryEntry)
+                    .OrderBy(ss => ss.SiteCode, StringComparer.Ordinal),
+            ]);
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Find<StudySite>(studySiteId) is { } ss ? ToStudySiteDirectoryEntry(ss) : null);
+
         public Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ProtocolVersionSummary>>([
                 .. ReadAll<ProtocolVersion>()
@@ -803,7 +829,16 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         }
 
         private StudyDirectoryEntry ToStudyEntry() =>
-            new(StudyId, 1, "CADENCE-101", "Cadence Cardiovascular Study", "Phase 3", SponsorId, 1, "CADENCE-PHARMA", "Cadence Pharma", ReadAll<ProtocolVersion>().Count(v => v.StudyId == StudyId));
+            new(StudyId, 1, "CADENCE-101", "Cadence Cardiovascular Study", "Phase 3", SponsorId, 1, "CADENCE-PHARMA", "Cadence Pharma", ReadAll<StudySite>().Count(s => s.StudyId == StudyId));
+
+        private static SiteDirectoryEntry ToSiteDirectoryEntry(Site site) =>
+            new(site.Id, 1, site.InstitutionId, 1, "CADENCE-PHARMA", "Cadence Pharma", site.SiteCode, site.Name, site.Country);
+
+        private StudySiteDirectoryEntry ToStudySiteDirectoryEntry(StudySite ss)
+        {
+            var site = Find<Site>(ss.SiteId)!;
+            return new StudySiteDirectoryEntry(ss.Id, 1, ss.StudyId, site.Id, 1, site.SiteCode, site.Name, site.Country, site.InstitutionId, 1, "CADENCE-PHARMA", "Cadence Pharma", ss.Status);
+        }
 
         private static ProtocolVersionSummary ToSummary(ProtocolVersion v) =>
             new(v.Id, v.StudyId, v.Number, v.ParentVersionId, v.Status, v.ContentHash, v.Amendment?.Intent, v.ApprovalAttestationId, v.WithdrawalReason);
