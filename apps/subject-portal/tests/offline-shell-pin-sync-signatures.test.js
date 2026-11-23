@@ -37,6 +37,10 @@ import {
   verifyBiometricLiveness,
 } from "../src/index.js";
 import { requestQuestionnaireSignature } from "../src/features/questionnaire.js";
+import {
+  getPortalRouter,
+  resetPortalRouterForTests,
+} from "../src/router/index.js";
 import { pinia } from "../src/stores/pinia.js";
 import {
   clearInMemoryKey,
@@ -83,6 +87,7 @@ describe("Harden Offline Shell, PIN Sync, Guarded Sign-Out, Split Signatures, Re
   );
 
   beforeEach(async () => {
+    resetPortalRouterForTests();
     window.__MOCK_TEST_ENV__ = true;
     localStorage.clear();
     sessionStorage.clear();
@@ -126,6 +131,7 @@ describe("Harden Offline Shell, PIN Sync, Guarded Sign-Out, Split Signatures, Re
     state.reconsentModalError = "";
     state.reconsentComprehensionAnswers = {};
     state.signatureModalOpen = false;
+    state.consentSigned = false;
     state.consentComprehensionPassed = false;
     state.consentPassed = false;
     state.livenessVerified = false;
@@ -826,6 +832,17 @@ describe("Harden Offline Shell, PIN Sync, Guarded Sign-Out, Split Signatures, Re
     await startQuestionnaire("assign_open_01");
     expect(state.activeQuestionnaire).toBeNull();
 
+    // Direct router navigation to /questionnaire?assignmentId=... is also redirected while pendingReconsent is active
+    state.session.isDemoMode = true;
+    const portalRouter = getPortalRouter();
+    await portalRouter.push({
+      name: "questionnaire",
+      query: { assignmentId: "assign_open_01" },
+    });
+    expect(portalRouter.currentRoute.value.name).toBe("tasks");
+    expect(state.activeQuestionnaire).toBeNull();
+    state.session.isDemoMode = false;
+
     // Re-open ReconsentModal: wrong comprehension answer blocks signing
     openReconsentModal();
     await settle();
@@ -888,9 +905,22 @@ describe("Harden Offline Shell, PIN Sync, Guarded Sign-Out, Split Signatures, Re
     state.consentPassed = true;
 
     document.body.innerHTML = `
-      <div id="liveness-status-banner" class="banner-info">Pending verification</div>
-      <button id="btn-verify-liveness" type="button">Verify Identity</button>
-      <button id="btn-trigger-consent-sign" type="button" disabled>Sign Consent Form</button>
+      <div id="consent-content-wrapper">
+        <div id="consent-template-title"></div>
+        <div id="consent-metadata-display"></div>
+        <div id="consent-clauses-container"></div>
+        <div id="consent-comprehension-card">
+          <div id="consent-questions-container"></div>
+        </div>
+        <div id="consent-liveness-card">
+          <div id="liveness-status-banner" class="banner-info">Pending verification</div>
+          <button id="btn-verify-liveness" type="button">Verify Identity</button>
+        </div>
+        <div id="consent-signature-card">
+          <p id="consent-sign-readiness-hint"></p>
+          <button id="btn-trigger-consent-sign" type="button" disabled>Sign Consent Form</button>
+        </div>
+      </div>
       <div id="portal-sign-modal" style="display:none;">
         <h3 id="portal-modal-title"></h3>
         <div id="modal-error-banner" style="display:none;"></div>
@@ -903,6 +933,14 @@ describe("Harden Offline Shell, PIN Sync, Guarded Sign-Out, Split Signatures, Re
       </div>
       <div id="portal-toast"></div>
     `;
+    state.consentContent = {
+      template_name: "Informed Consent Form",
+      study_id: "CADENCE-101",
+      protocol_version: "1.0",
+      version_index: 1,
+      language_code: "en",
+      clauses: [],
+    };
 
     const expiresAtIso = new Date(
       baseNow.getTime() + 15 * 60 * 1000
@@ -926,11 +964,15 @@ describe("Harden Offline Shell, PIN Sync, Guarded Sign-Out, Split Signatures, Re
     await verifyBiometricLiveness();
     const signBtn = document.getElementById("btn-trigger-consent-sign");
     const banner = document.getElementById("liveness-status-banner");
+    const readinessHint = document.getElementById(
+      "consent-sign-readiness-hint"
+    );
 
     expect(state.consentLivenessToken).toBe("live_tok_15m");
     expect(state.consentLivenessExpiresAt).toBe(expiresAtIso);
     expect(isConsentLivenessExpired()).toBe(false);
     expect(signBtn.disabled).toBe(false);
+    expect(readinessHint.textContent).toContain("All checks are complete");
 
     // Open signature modal right before expiry, then advance past 15 minutes
     openSignatureModal("consent");
@@ -942,6 +984,7 @@ describe("Harden Offline Shell, PIN Sync, Guarded Sign-Out, Split Signatures, Re
     expect(signBtn.disabled).toBe(true);
     expect(banner.getAttribute("role")).toBe("alert");
     expect(banner.textContent).toMatch(/expired/i);
+    expect(readinessHint.textContent).toContain("Step 2: Quick Camera Check");
 
     // Even if consentLivenessToken was still set when verifyAndSubmitSignature is invoked with an expired timestamp, capture-consent is never called
     state.consentLivenessToken = "stale_live_tok";

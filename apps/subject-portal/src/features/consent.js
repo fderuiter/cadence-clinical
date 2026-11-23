@@ -74,6 +74,7 @@ export function expireConsentLiveness(message = LIVENESS_EXPIRED_MESSAGE) {
     if (btnSign) {
       btnSign.disabled = true;
     }
+    updateConsentReadinessGuidance();
   }
 }
 
