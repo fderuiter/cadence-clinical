@@ -107,59 +107,163 @@ public static class CtmsScopeGuard
             ?? ResolveSiteFilter(httpContext, siteId, out siteFilter);
     }
 
+    public sealed record DoaSiteScopeResult(ProblemHttpResult? Error, HashSet<string> AuthorizedStudies);
+
     public static async Task<ProblemHttpResult?> RequireDoaSiteScopeAsync(
         HttpContext? httpContext,
         CtmsDbContext db,
         string? siteId,
+        CancellationToken ct,
+        string? studyId = null)
+    {
+        var result = await ResolveDoaSiteScopeAsync(httpContext, db, siteId, studyId, ct);
+        return result.Error;
+    }
+
+    public static async Task<DoaSiteScopeResult> ResolveDoaSiteScopeAsync(
+        HttpContext? httpContext,
+        CtmsDbContext db,
+        string? siteId,
+        string? studyId,
         CancellationToken ct)
     {
         if (RequireAnyScopeForLookup(httpContext) is { } missingScope)
         {
-            return missingScope;
+            return new DoaSiteScopeResult(missingScope, []);
         }
 
-        if (RequireSite(httpContext, siteId) is { } siteDenied)
+        if (!string.IsNullOrWhiteSpace(siteId) && RequireSite(httpContext, siteId) is { } siteDenied)
         {
-            return siteDenied;
+            return new DoaSiteScopeResult(siteDenied, []);
         }
 
-        if (string.IsNullOrWhiteSpace(siteId))
+        if (!string.IsNullOrWhiteSpace(studyId) && RequireStudy(httpContext, studyId) is { } studyDenied)
         {
-            return null;
+            return new DoaSiteScopeResult(studyDenied, []);
+        }
+
+        if (string.IsNullOrWhiteSpace(siteId) || !await DoaEndpoints.SiteExistsAsync(db, siteId.Trim(), ct))
+        {
+            var notFound = TypedResults.Problem(
+                title: "Site not found",
+                detail: $"Site '{siteId}' does not exist.",
+                statusCode: StatusCodes.Status404NotFound);
+            return new DoaSiteScopeResult(notFound, []);
         }
 
         string trimmedSite = siteId.Trim();
+        var knownStudies = await GetKnownStudiesForSiteAsync(db, trimmedSite, ct);
+
+        var authorizedStudies = knownStudies
+            .Where(study => CanAccessStudy(httpContext, study))
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (!string.IsNullOrWhiteSpace(studyId))
+        {
+            string trimmedStudy = studyId.Trim();
+            authorizedStudies.RemoveWhere(study => !string.Equals(study, trimmedStudy, StringComparison.Ordinal));
+        }
+
+        if (authorizedStudies.Count == 0)
+        {
+            var forbidden = Forbidden(
+                $"Caller is not authorized for the study governing site '{trimmedSite}'.",
+                "Outside your studies");
+            return new DoaSiteScopeResult(forbidden, []);
+        }
+
+        return new DoaSiteScopeResult(null, authorizedStudies);
+    }
+
+    public static async Task<HashSet<string>> GetKnownStudiesForSiteAsync(
+        CtmsDbContext db,
+        string trimmedSite,
+        CancellationToken ct)
+    {
+        var studies = new HashSet<string>(StringComparer.Ordinal);
+
         var gateStudies = await db.CtmsSiteGreenlightGates.AsNoTracking()
             .Where(g => g.SiteId == trimmedSite && g.StudyId != string.Empty)
             .Select(g => g.StudyId)
             .Distinct()
             .ToListAsync(ct);
+        AddNonEmpty(studies, gateStudies);
 
         var milestoneStudies = await db.CtmsSiteMilestones.AsNoTracking()
             .Where(m => m.SiteId == trimmedSite && m.StudyId != string.Empty)
             .Select(m => m.StudyId)
             .Distinct()
             .ToListAsync(ct);
+        AddNonEmpty(studies, milestoneStudies);
 
         var visitStudies = await db.CtmsMonitoringVisits.AsNoTracking()
             .Where(v => v.SiteId == trimmedSite && v.StudyId != string.Empty)
             .Select(v => v.StudyId)
             .Distinct()
             .ToListAsync(ct);
+        AddNonEmpty(studies, visitStudies);
 
-        var knownStudies = gateStudies
-            .Concat(milestoneStudies)
-            .Concat(visitStudies)
-            .Where(s => !string.IsNullOrWhiteSpace(s))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
+        var craStudies = await db.CtmsCraAllocations.AsNoTracking()
+            .Where(a => a.SiteId == trimmedSite && a.StudyId != string.Empty)
+            .Select(a => a.StudyId)
+            .Distinct()
+            .ToListAsync(ct);
+        AddNonEmpty(studies, craStudies);
 
-        if (knownStudies.Count > 0 && !knownStudies.Any(study => CanAccessStudy(httpContext, study)))
+        var delegationStudies = await db.CtmsDelegations.AsNoTracking()
+            .Where(d => d.SiteId == trimmedSite && d.StudyId != string.Empty)
+            .Select(d => d.StudyId)
+            .Distinct()
+            .ToListAsync(ct);
+        AddNonEmpty(studies, delegationStudies);
+
+        var queryStudies = await db.CtmsClinicalQueries.AsNoTracking()
+            .Where(q => q.SiteId == trimmedSite && q.StudyId != string.Empty)
+            .Select(q => q.StudyId)
+            .Distinct()
+            .ToListAsync(ct);
+        AddNonEmpty(studies, queryStudies);
+
+        var grantStudies = await db.CtmsInvestigatorGrants.AsNoTracking()
+            .Where(g => g.SiteId == trimmedSite && g.StudyId != string.Empty)
+            .Select(g => g.StudyId)
+            .Distinct()
+            .ToListAsync(ct);
+        AddNonEmpty(studies, grantStudies);
+
+        var recruitmentStudies = await db.CtmsRecruitmentRecords.AsNoTracking()
+            .Where(r => r.SiteId == trimmedSite && r.StudyId != string.Empty)
+            .Select(r => r.StudyId)
+            .Distinct()
+            .ToListAsync(ct);
+        AddNonEmpty(studies, recruitmentStudies);
+
+        var regulatoryStudies = await db.CtmsRegulatoryForms.AsNoTracking()
+            .Where(f => f.SiteId == trimmedSite && f.StudyId != string.Empty)
+            .Select(f => f.StudyId)
+            .Distinct()
+            .ToListAsync(ct);
+        AddNonEmpty(studies, regulatoryStudies);
+
+        var letterStudies = await db.CtmsGeneratedLetters.AsNoTracking()
+            .Where(l => l.SiteId == trimmedSite && l.StudyId != string.Empty)
+            .Select(l => l.StudyId)
+            .Distinct()
+            .ToListAsync(ct);
+        AddNonEmpty(studies, letterStudies);
+
+        return studies;
+    }
+
+    private static void AddNonEmpty(HashSet<string> target, IEnumerable<string> values)
+    {
+        foreach (string value in values)
         {
-            return Forbidden($"Caller is not authorized for the study governing site '{trimmedSite}'.", "Outside your studies");
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                target.Add(value.Trim());
+            }
         }
-
-        return null;
     }
 
     public static List<T> ApplyFilters<T>(

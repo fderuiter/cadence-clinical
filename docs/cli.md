@@ -209,16 +209,16 @@ Runs the jobs of `.github/workflows/ci.yml` on this machine, because GitHub Acti
 repository until 2027 (#5017). Each step runs the same command as in CI, in the same order, from the repository root.
 
 ```bash
-pnpm cadence ci                         # actionlint, lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests, accessibility-e2e and compliance
+pnpm cadence ci                         # actionlint, native-aot-build, lint-and-static, dotnet-quality, docs-build, security, unit-tests, dotnet-tests, accessibility-e2e and compliance
 pnpm cadence ci --job dotnet-tests      # one job (repeat --job for more)
-pnpm cadence ci --job compliance        # a job and the jobs it needs (unit-tests, dotnet-tests)
+pnpm cadence ci --job compliance        # a job and the jobs it needs (native-aot-build, unit-tests, dotnet-tests)
 pnpm cadence ci --job accessibility-e2e # the Playwright E2E and browser-to-database job alone
 pnpm cadence ci --list                  # what each step runs locally, without running it
 ```
 
 | Option            | Description                                                                                                                                                                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `actionlint`, `lint-and-static`, `dotnet-quality`, `native-aot-build`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                                           |
+| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `actionlint`, `native-aot-build`, `lint-and-static`, `dotnet-quality`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                                           |
 | `--allow-skip`    | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `bash`) is missing on `PATH` with the install hint, and accepts a run whose database tests did not execute (without PostgreSQL or with skipped TRX). |
 | `--base <ref>`    | The ref forwarded as `--base <ref>` to CLI `check` steps and `Check GxP Snapshot Policy`. Default: `origin/main`.                                                                                                                                      |
 | `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                             |
@@ -237,8 +237,8 @@ Where it differs from CI:
   except the opt-in lineage benchmark and browser correction check listed in `DatabaseTestEvidence.OptInTests` (the
   browser correction check runs with `CADENCE_TEST_BROWSER=1` in the `accessibility-e2e` job). `--allow-skip` accepts the
   skips.
-- **Checks already run once are not repeated.** `actionlint` runs `actionlint`, `lint-and-static` runs Prettier, ESLint, Hadolint, `markdown` and `api-clients`,
-  `dotnet-quality` runs `cadence check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle`,
+- **Checks already run once are not repeated.** `actionlint` runs `actionlint`, `lint-and-static` runs Prettier, ESLint, Hadolint, ShellCheck, `markdown` and `api-clients`,
+  `dotnet-quality` runs `cadence check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude shellcheck --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle`,
   `docs-build` builds the VitePress portal and co-hosted interactive demos and runs `public-bundle`,
   and `security` runs `detect-secrets` and `vulnerabilities`. Steps in `security` whose gate already ran inside
   `Run Cadence quality sentinels` (the static security audit, secrets and DEID) are reported as _covered_ when
