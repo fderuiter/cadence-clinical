@@ -14,7 +14,7 @@ using Xunit;
 using static ArchUnitNET.Fluent.ArchRuleDefinition;
 
 using ArchLoader = ArchUnitNET.Loader.ArchLoader;
-using ArchRuleExtensions = ArchUnitNET.xUnit.ArchRuleExtensions;
+using ArchRuleExtensions = ArchUnitNET.xUnitV3.ArchRuleExtensions;
 using IArchRule = ArchUnitNET.Fluent.IArchRule;
 
 namespace Cadence.ArchitectureTests.Architecture;
