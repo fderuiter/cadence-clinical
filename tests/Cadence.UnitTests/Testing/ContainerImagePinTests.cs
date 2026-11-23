@@ -211,7 +211,7 @@ public sealed partial class ContainerImagePinTests
         ReadMsBuildProperty(propsDoc, "DotNetServicingVersion").Should().Be("10.0.15");
         ReadMsBuildProperty(propsDoc, "AspireHostingVersion").Should().Be("13.6.5");
         ReadMsBuildProperty(propsDoc, "IdentityModelVersion").Should().Be("8.23.0");
-        ReadMsBuildProperty(propsDoc, "DotNetAiVersion").Should().Be("10.11.0");
+        ReadMsBuildProperty(propsDoc, "DotNetAiVersion").Should().Be("10.11.1");
 
         var appHostDoc = XDocument.Load(Path.Combine(Root, "apps", "apphost", "src", "Cadence.AppHost.csproj"));
         string? appHostSdkVersion = appHostDoc.Descendants("Sdk")

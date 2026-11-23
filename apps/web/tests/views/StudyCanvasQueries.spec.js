@@ -3,7 +3,9 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
+import { ecrfFormsApi } from "../../src/api/ecrfFormsApi";
 import { ecrfQueriesApi } from "../../src/api/ecrfQueriesApi";
+import { kernelApi } from "../../src/api/kernelApi";
 import { ApiError } from "../../src/api/client";
 import { findKernelStudyRef } from "../../src/canvas/kernelStudy";
 import { useAuthStore } from "../../src/stores/auth";
@@ -14,8 +16,24 @@ vi.mock("../../src/api/kernelApi", () => ({
     listProposals: vi.fn(async () => []),
     search: vi.fn(async () => []),
     getCommands: vi.fn(async () => []),
+    getObservation: vi.fn(),
+    getZoomPath: vi.fn(async () => []),
   },
 }));
+
+vi.mock("../../src/api/ecrfFormsApi", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    ecrfFormsApi: {
+      listForEnrollment: vi.fn(async () => []),
+      openForm: vi.fn(),
+      getForm: vi.fn(),
+      saveValues: vi.fn(),
+      signForm: vi.fn(),
+    },
+  };
+});
 
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
@@ -225,7 +243,7 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
     });
   });
 
-  it("filters the study query worklist by status, site, participant, and value_changed and syncs URL query parameters", async () => {
+  it("filters the study query worklist by status, owner, origin, priority, site, participant, and value_changed and syncs URL query parameters", async () => {
     signInWith(["cra"]);
     await open("/studies/CAD-101?stage=data&section=queries");
     vi.mocked(ecrfQueriesApi.listForStudy).mockClear();
@@ -233,6 +251,9 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       studyQuery({
         query_id: "query-2",
         status: "answered",
+        owner_role: "monitor",
+        origin: "manual",
+        priority: "high",
         value_changed: true,
         site_code: "022",
         subject_code: "022-0004",
@@ -247,6 +268,12 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       status: "answered",
     });
 
+    await wrapper.find("#study-queries-owner").setValue("monitor");
+    await flushPromises();
+    await wrapper.find("#study-queries-origin").setValue("manual");
+    await flushPromises();
+    await wrapper.find("#study-queries-priority").setValue("high");
+    await flushPromises();
     await wrapper.find("#study-queries-site").setValue("022");
     await flushPromises();
     await wrapper.find("#study-queries-participant").setValue("022-0004");
@@ -258,6 +285,9 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       stage: "data",
       section: "queries",
       status: "answered",
+      owner: "monitor",
+      origin: "manual",
+      priority: "high",
       site: "022",
       subject: "022-0004",
       changed: "true",
@@ -266,6 +296,9 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       STUDY_UUID,
       {
         status: "answered",
+        owner: "monitor",
+        origin: "manual",
+        priority: "high",
         site: "022",
         participant: "022-0004",
         valueChanged: true,
@@ -425,19 +458,23 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
     await open("/studies/CAD-101?stage=data&section=queries");
     await expect(wrapper.element).toBeAccessible();
 
-    // Select both queries for bulk action and type a bulk reason.
-    await wrapper.find("#query-bulk-action").setValue("close");
+    // Select both open manual queries for bulk cancellation (open manual queries cannot be closed directly).
+    expect(wrapper.find("#btn-close-query-1").exists()).toBe(false);
+    await wrapper.find("#query-bulk-action").setValue("cancel");
     await wrapper.find("#btn-select-eligible-queries").trigger("click");
     await wrapper
       .find("#query-bulk-reason")
-      .setValue("Source chart verified across visits");
+      .setValue("Raised on wrong visit row");
 
-    // Data managers see no Answer button; open a close draft on query-1.
+    // Data managers see no Answer or Close button on open manual queries; open a cancel draft on query-1.
     expect(wrapper.find("#btn-answer-query-1").exists()).toBe(false);
-    await wrapper.find("#btn-close-query-1").trigger("click");
+    await wrapper.find("#btn-cancel-query-1").trigger("click");
     await wrapper
       .find("#query-text-query-1")
-      .setValue("Confirmed 82 mmHg in nursing flowsheet");
+      .setValue("Duplicate of Week 4 query");
+    await wrapper
+      .find("#query-reason-query-1")
+      .setValue("Duplicate manual query");
 
     const listElementBefore = wrapper.find(".form-query-list").element;
 
@@ -457,7 +494,10 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
     expect(wrapper.find(".form-query-list").exists()).toBe(true);
     expect(wrapper.find(".form-query-list").element).toBe(listElementBefore);
     expect(wrapper.find("#query-text-query-1").element.value).toBe(
-      "Confirmed 82 mmHg in nursing flowsheet"
+      "Duplicate of Week 4 query"
+    );
+    expect(wrapper.find("#query-reason-query-1").element.value).toBe(
+      "Duplicate manual query"
     );
 
     // Refresh completes with only query-1 remaining (query-2 filtered out).
@@ -467,12 +507,204 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
     expect(wrapper.find("#study-queries-refreshing").exists()).toBe(false);
     expect(wrapper.find(".form-query-list").element).toBe(listElementBefore);
     expect(wrapper.find("#query-text-query-1").element.value).toBe(
-      "Confirmed 82 mmHg in nursing flowsheet"
+      "Duplicate of Week 4 query"
+    );
+    expect(wrapper.find("#query-reason-query-1").element.value).toBe(
+      "Duplicate manual query"
     );
     expect(wrapper.find("#select-query-query-1").element.checked).toBe(true);
     expect(wrapper.find("#select-query-query-2").exists()).toBe(false);
     expect(wrapper.find("#query-bulk-reason").element.value).toBe(
-      "Source chart verified across visits"
+      "Raised on wrong visit row"
     );
+  });
+
+  it("enforces separation of duties on answered manual queries and sends X-Change-Reason separately from closing note", async () => {
+    signInWith(["data_manager"]);
+    const auth = useAuthStore();
+    auth.user = {
+      id: "dm-self-sub",
+      username: "dm.self",
+      email: "dm.self@example.test",
+      firstName: "Self",
+      lastName: "Reviewer",
+      tenantId: "t-1",
+    };
+
+    const selfAnswered = studyQuery({
+      query_id: "query-self",
+      status: "answered",
+      origin: "manual",
+      owner_role: "monitor",
+      priority: "high",
+      escalated_at: "2027-03-29T00:00:00Z",
+      last_answered_by: "dm-self-sub",
+    });
+    const peerAnswered = studyQuery({
+      query_id: "query-peer",
+      status: "answered",
+      origin: "manual",
+      owner_role: "monitor",
+      priority: "normal",
+      last_answered_by: "crc-site-user",
+    });
+    vi.mocked(ecrfQueriesApi.listForStudy).mockResolvedValue([
+      selfAnswered,
+      peerAnswered,
+    ]);
+    vi.mocked(ecrfQueriesApi.transition).mockResolvedValue({
+      ...peerAnswered,
+      status: "closed",
+      version: 3,
+    });
+
+    await open("/studies/CAD-101?stage=data&section=queries");
+
+    expect(wrapper.find("#btn-close-query-self").exists()).toBe(false);
+    expect(
+      wrapper.find('[data-testid="query-sod-hint-query-self"]').text()
+    ).toContain("Another monitor or data manager must close");
+
+    expect(wrapper.find("#btn-close-query-peer").exists()).toBe(true);
+    await wrapper.find("#btn-close-query-peer").trigger("click");
+    await wrapper
+      .find("#query-text-query-peer")
+      .setValue("Verified against nursing flowsheet");
+    await wrapper
+      .find("#query-reason-query-peer")
+      .setValue("Monitor source review complete");
+    await wrapper.find("#btn-confirm-close-query-peer").trigger("click");
+    await flushPromises();
+
+    expect(ecrfQueriesApi.transition).toHaveBeenCalledWith(
+      "close",
+      expect.objectContaining({
+        queryId: "query-peer",
+        text: "Verified against nursing flowsheet",
+        reason: "Monitor source review complete",
+      })
+    );
+  });
+
+  it("preserves stage, section (queries or validation), form, and item across form back labels and #observation-back returns", async () => {
+    signInWith(["cra"]);
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue({
+      form_id: FORM_VS_1,
+      enrollment_id: "enrollment-1",
+      participant_id: "0192f3c4-5e6a-7b8c-9d0e-000000000001",
+      protocol_version_id: "0192f3c4-5e6a-7b8c-9d0e-00000000b001",
+      collection_spec_id: "VS",
+      collection_title: "Vital Signs",
+      planned_activity_id: "WEEK2",
+      collected_at: "2027-03-14T09:00:00Z",
+      opened_at: "2027-03-14T09:00:00Z",
+      opened_by: "crc1",
+      complete: false,
+      missing_required: [],
+      content_hash: "sha256:abc",
+      version: 1,
+      locks: [],
+      assertions: [],
+      signatures: [],
+      items: [
+        {
+          item_id: "DIABP",
+          concept: "concept:diastolic@1",
+          unit: "mm[Hg]",
+          value_kind: "Quantity",
+          required: true,
+          value: {
+            type: "quantity",
+            value: 84,
+            unit: "mm[Hg]",
+            comparator: null,
+          },
+          observation_id: OBS_1,
+          revision: 1,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:05:00Z",
+        },
+      ],
+    });
+    vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([studyQuery()]);
+    vi.mocked(kernelApi.getObservation).mockResolvedValue({
+      ref: `observation:${OBS_1}@1`,
+      enrollment_ref: "enrollment:enrollment-1",
+      concept: "concept:diastolic@1",
+      value: {
+        type: "quantity",
+        value: 84,
+        unit: "mm[Hg]",
+        comparator: null,
+      },
+      observed_at: "2027-03-14T09:00:00Z",
+      version: 1,
+      locks: [],
+      revisions: [],
+      assertions: [],
+      audit: [],
+    });
+
+    await open("/studies/CAD-101?stage=data&section=queries");
+
+    await wrapper.find("#query-open-form-query-1").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find("#canvas-form-back").text()).toBe("Back to Queries");
+    expect(wrapper.find("#ecrf-row-DIABP").attributes("data-highlighted")).toBe(
+      "true"
+    );
+
+    await wrapper.find("#ecrf-item-observation-DIABP").trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.query).toEqual({
+      stage: "data",
+      section: "queries",
+      site: "017",
+      form: `collection_instance:${FORM_VS_1}`,
+      item: "DIABP",
+      observation: `observation:${OBS_1}`,
+    });
+
+    await wrapper.find("#observation-back").trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.query).toEqual({
+      stage: "data",
+      section: "queries",
+      site: "017",
+      form: `collection_instance:${FORM_VS_1}`,
+      item: "DIABP",
+    });
+    expect(wrapper.find("#ecrf-row-DIABP").attributes("data-highlighted")).toBe(
+      "true"
+    );
+
+    // Validation worklist section also preserves stage=data&section=validation and Back to Validation label
+    await router.push(
+      `/studies/CAD-101?stage=data&section=validation&form=collection_instance:${FORM_VS_1}&item=DIABP`
+    );
+    await flushPromises();
+    expect(wrapper.find("#canvas-form-back").text()).toBe("Back to Validation");
+
+    await wrapper.find("#ecrf-item-observation-DIABP").trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.query).toEqual({
+      stage: "data",
+      section: "validation",
+      form: `collection_instance:${FORM_VS_1}`,
+      item: "DIABP",
+      observation: `observation:${OBS_1}`,
+    });
+
+    await wrapper.find("#observation-back").trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.query).toEqual({
+      stage: "data",
+      section: "validation",
+      form: `collection_instance:${FORM_VS_1}`,
+      item: "DIABP",
+    });
   });
 });

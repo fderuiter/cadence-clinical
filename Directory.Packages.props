@@ -33,7 +33,7 @@
     <PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireHostingVersion)" />
 
     <!-- Persistence & Database Drivers -->
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.4" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="$(DotNetServicingVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="$(DotNetServicingVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(DotNetServicingVersion)" />
@@ -48,8 +48,8 @@
     <PackageVersion Include="Spectre.Console" Version="0.49.1" />
     <PackageVersion Include="System.CommandLine" Version="2.0.12" />
 
-    <!-- Validation & Security -->
-    <PackageVersion Include="Fluid.Core" Version="2.40.0" />
+    <!-- Validation & Security (keep Fluid.Core on 2.41.x until FluidTemplateRenderer migrates to Fluid 3.x immutable TemplateOptionsBuilder) -->
+    <PackageVersion Include="Fluid.Core" Version="2.41.2" />
     <PackageVersion Include="FluentValidation" Version="$(FluentValidationVersion)" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="$(FluentValidationVersion)" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="$(IdentityModelVersion)" />
@@ -58,20 +58,20 @@
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="$(DotNetServicingVersion)" />
 
     <!-- Testing Infrastructure -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
     <PackageVersion Include="xunit.v3" Version="1.1.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.2" />
     <PackageVersion Include="FluentAssertions" Version="8.11.0" />
-    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.3.0" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="coverlet.collector" Version="10.1.1" />
     <PackageVersion Include="TngTech.ArchUnitNET.xUnit" Version="0.13.4" />
 
     <!-- AI model port and providers (ADR-2630; keep Microsoft.Extensions.AI.* aligned on 10.x for net10.0) -->
-    <PackageVersion Include="Anthropic" Version="13.10.0" />
+    <PackageVersion Include="Anthropic" Version="13.11.0" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="$(DotNetAiVersion)" />
-    <PackageVersion Include="Anthropic.Aws" Version="1.0.1" />
+    <PackageVersion Include="Anthropic.Aws" Version="1.0.2" />
     <PackageVersion Include="Anthropic.Bedrock" Version="1.0.4" />
     <PackageVersion Include="Anthropic.Foundry" Version="1.0.0" />
     <PackageVersion Include="Anthropic.Vertex" Version="1.0.3" />
@@ -89,7 +89,7 @@
     <!-- Stay on AWSSDK.S3 4.0.x while targeting net10.0; AWSSDK.Core >= 4.1.0 depends on System.IO.Hashing 11.0.0. -->
     <PackageVersion Include="AWSSDK.S3" Version="4.0.104.12" />
 
-    <!-- Analyzers & Code Quality -->
+    <!-- Analyzers & Code Quality (stay < 11.0.0 while targeting net10.0 SDK; ADR-2233, ADR-2527) -->
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.6.0.109712" />
     <!-- #4784 K-TIME-3: bans direct wall-clock reads (see BannedSymbols.txt); referenced solution-wide in root Directory.Build.props. -->
