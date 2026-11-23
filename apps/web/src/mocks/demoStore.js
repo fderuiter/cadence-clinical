@@ -4121,13 +4121,16 @@ export function createWebDemoStore() {
       const billingConfirmation = String(
         payload?.billing_confirmation || ""
       ).trim();
-      if (billingConfirmation.length < 3 || billingConfirmation.length > 160) {
+      if (billingConfirmation.length < 3 || billingConfirmation.length > 512) {
         errors.billing_confirmation = [
-          "A purchase order or signed quote reference (3 to 160 characters) is required to confirm billing.",
+          "A signed commercial quote token is required to confirm subscription activation.",
         ];
       }
       if (Object.keys(errors).length > 0) {
         return { error: "scoping_invalid", errors };
+      }
+      if (!billingConfirmation.startsWith("qtk1.")) {
+        return { error: "quote_invalid" };
       }
 
       state.entitlements = {

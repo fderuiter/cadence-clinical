@@ -16,6 +16,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Host.Onboarding;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Security.Authentication;
@@ -37,8 +38,9 @@ namespace Cadence.IntegrationTests.Kernel;
 
 /// <summary>
 /// End-to-end PostgreSQL verification of self-service trial workspace bootstrap, idempotency per OIDC subject,
-/// Keycloak claim writeback + refreshed gateway identity resolution under Row-Level Security, commercial vs.
-/// clinical Grant isolation, and expired-trial read/export preservation (<c>403 K.Subscription.Expired</c>).
+/// bound-caller rejection, Keycloak claim writeback + refreshed gateway identity resolution under Row-Level Security,
+/// commercial vs. clinical Grant isolation, verified cryptographic quote tokens, bitemporal subscription/entitlement
+/// history, quantitative scoping caps, and expired-trial read/export preservation (<c>403 K.Subscription.Expired</c>).
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>
@@ -57,13 +59,37 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
         string subjectTwo = Guid.CreateVersion7(clock.UtcNow.AddSeconds(1)).ToString();
 
         // 1. Before onboarding, a newly self-registered OIDC user has no tenant_id claim:
-        //    tenant-scoped kernel routes refuse with 403, while POST /api/v1/kernel/onboarding/trial is mapped outside KernelTenantFilter.
+        //    tenant-scoped kernel routes refuse with 403, while POST /api/v1/kernel/onboarding/trial requires Idempotency-Key + X-Change-Reason.
         using var unprovisionedClient = host.CreateSignedClient(new GatewayIdentity(subjectOne, [], [], TenantId: null));
         using var preCheck = await unprovisionedClient.GetAsync(new Uri("/api/v1/kernel/entitlements", UriKind.Relative), ct);
         preCheck.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-        using var onboardResponse = await unprovisionedClient.PostAsJsonAsync(
+        using (var missingIdempotencyResp = await unprovisionedClient.PostAsJsonAsync(
             "/api/v1/kernel/onboarding/trial",
+            new { organization_name = "Meridian Vascular Research", residency = "EU", tier = "Individual" },
+            ct))
+        {
+            missingIdempotencyResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            JsonDocument.Parse(await missingIdempotencyResp.Content.ReadAsStringAsync(ct)).RootElement
+                .GetProperty("code").GetString().Should().Be(KernelErrors.IdempotencyKeyRequired.Code);
+        }
+
+        using (var missingReasonReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/onboarding/trial")
+        {
+            Content = JsonContent.Create(new { organization_name = "Meridian Vascular Research", residency = "EU", tier = "Individual" }),
+        })
+        {
+            missingReasonReq.Headers.Add("Idempotency-Key", "idem-meridian-missing-reason");
+            using var missingReasonResp = await unprovisionedClient.SendAsync(missingReasonReq, ct);
+            missingReasonResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            JsonDocument.Parse(await missingReasonResp.Content.ReadAsStringAsync(ct)).RootElement
+                .GetProperty("code").GetString().Should().Be(KernelErrors.ReasonForChangeRequired.Code);
+        }
+
+        using var onboardResponse = await PostTrialBootstrapAsync(
+            unprovisionedClient,
+            "idem-meridian-bootstrap-1",
+            "Self-service trial workspace bootstrap for Meridian Vascular Research",
             new { organization_name = "Meridian Vascular Research", residency = "EU", tier = "Individual" },
             ct);
         string onboardBody = await onboardResponse.Content.ReadAsStringAsync(ct);
@@ -82,9 +108,11 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
         firstPayload.GetProperty("entitlements").GetProperty("product_families").EnumerateArray().Select(e => e.GetString())
             .Should().Equal("Blueprint", "Capture");
 
-        // 2. Repeated POST /api/v1/kernel/onboarding/trial for the same OIDC sub is strictly idempotent.
-        using var replayResponse = await unprovisionedClient.PostAsJsonAsync(
-            "/api/v1/kernel/onboarding/trial",
+        // 2. Repeated POST /api/v1/kernel/onboarding/trial for the same unbound OIDC sub is strictly idempotent.
+        using var replayResponse = await PostTrialBootstrapAsync(
+            unprovisionedClient,
+            "idem-meridian-bootstrap-replay",
+            "Retry trial workspace bootstrap before OIDC token refresh",
             new { organization_name = "Meridian Vascular Research", residency = "EU", tier = "Individual" },
             ct);
         string replayBody = await replayResponse.Content.ReadAsStringAsync(ct);
@@ -100,7 +128,7 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             && c.TenantCode == tenantCode
             && c.Roles.SequenceEqual(new[] { "Sponsor Admin", "Sponsor Designer", "Trial Coordinator" }));
 
-        // Verify PostgreSQL state: 1 tenant, 1 org, 1 pseudonymous person (zero name/email columns), 1 membership, 1 subscription.
+        // Verify PostgreSQL state: 1 tenant, 1 org, 1 pseudonymous person (zero name/email columns), 1 membership, 1 subscription, 1 period, 2 entitlements.
         var tenantId = NodeRef.Parse(tenantRef).Id;
         var personId = NodeRef.Parse(personRef).Id;
         await using (var conn = new NpgsqlConnection(fixture.AdminConnectionString))
@@ -115,6 +143,7 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             (await ScalarLongAsync(conn, "SELECT count(*) FROM kernel.people WHERE id = @pid", ("pid", personId))).Should().Be(1L);
             (await ScalarLongAsync(conn, "SELECT count(*) FROM kernel.tenant_memberships WHERE tenant_id = @tid AND person_id = @pid", ("tid", tenantId), ("pid", personId))).Should().Be(1L);
             (await ScalarLongAsync(conn, "SELECT count(*) FROM kernel.subscriptions WHERE tenant_id = @tid", ("tid", tenantId))).Should().Be(1L);
+            (await ScalarLongAsync(conn, "SELECT count(*) FROM kernel.subscription_periods WHERE tenant_id = @tid", ("tid", tenantId))).Should().Be(1L);
             (await ScalarLongAsync(conn, "SELECT count(*) FROM kernel.product_entitlements WHERE tenant_id = @tid", ("tid", tenantId))).Should().Be(2L);
 
             // Pseudonymous identity check (K-ID-4): kernel.people has no name or email columns.
@@ -133,12 +162,42 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             columns.Should().NotContain(c => c.Contains("name", StringComparison.OrdinalIgnoreCase) || c.Contains("email", StringComparison.OrdinalIgnoreCase));
         }
 
-        // 3. After token refresh, GatewayIdentity carries TenantId = tenantCode and assigned roles -> DirectoryTenantResolver + RLS admit requests!
+        // 3. After token refresh, GatewayIdentity carries TenantId = tenantCode and assigned roles ->
+        //    onboarding refuses bound callers with 403 K.Commercial.OnboardingCallerInvalid, while DirectoryTenantResolver + RLS admit tenant requests!
         using var refreshedOne = host.CreateSignedClient(
             new GatewayIdentity(subjectOne, ["Sponsor Admin", "Sponsor Designer"], ["*"], TenantId: tenantCode));
 
+        using (var boundOnboardResp = await PostTrialBootstrapAsync(
+            refreshedOne,
+            "idem-bound-caller-refused",
+            "Attempt trial bootstrap from already-bound workspace session",
+            new { organization_name = "Bound Caller Attempt", tier = "Individual" },
+            ct))
+        {
+            string boundBody = await boundOnboardResp.Content.ReadAsStringAsync(ct);
+            boundOnboardResp.StatusCode.Should().Be(HttpStatusCode.Forbidden, boundBody);
+            JsonDocument.Parse(boundBody).RootElement.GetProperty("code").GetString()
+                .Should().Be(CommercialErrors.OnboardingCallerInvalid.Code);
+        }
+
         using var entResp = await refreshedOne.GetAsync(new Uri("/api/v1/kernel/entitlements", UriKind.Relative), ct);
         entResp.StatusCode.Should().Be(HttpStatusCode.OK, await entResp.Content.ReadAsStringAsync(ct));
+
+        // Internal posture endpoint refuses regular users and admits only svc:gateway-entitlements without billing_confirmation.
+        using (var forbiddenPosture = await refreshedOne.GetAsync(new Uri("/api/v1/kernel/entitlements/posture", UriKind.Relative), ct))
+        {
+            forbiddenPosture.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        using (var gatewayProbe = host.CreateSignedClient(
+            new GatewayIdentity(CommercialOperators.GatewayPostureProbe.Id, ["service"], ["*"], TenantId: tenantCode)))
+        {
+            var postureJson = await GetJsonAsync(gatewayProbe, "/api/v1/kernel/entitlements/posture", ct);
+            postureJson.GetProperty("is_read_only").GetBoolean().Should().BeFalse();
+            postureJson.GetProperty("product_families").EnumerateArray().Select(e => e.GetString())
+                .Should().Equal("Blueprint", "Capture");
+            postureJson.GetProperty("scoping").ValueKind.Should().Be(JsonValueKind.Null);
+        }
 
         // Register a study inside Tenant 1 as the newly onboarded Sponsor Admin
         var sponsorId = NodeRef.Parse(firstPayload.GetProperty("organization_ref").GetString()!).Id;
@@ -162,8 +221,10 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
 
         // 4. Onboard a second independent OIDC user -> receives separate tenant, isolated by PostgreSQL RLS.
         using var unprovisionedTwo = host.CreateSignedClient(new GatewayIdentity(subjectTwo, [], [], TenantId: null));
-        using var onboardTwoResp = await unprovisionedTwo.PostAsJsonAsync(
-            "/api/v1/kernel/onboarding/trial",
+        using var onboardTwoResp = await PostTrialBootstrapAsync(
+            unprovisionedTwo,
+            "idem-boreal-bootstrap-1",
+            "Self-service trial workspace bootstrap for Boreal Oncology Group",
             new { organization_name = "Boreal Oncology Group", residency = "US", tier = "Select" },
             ct);
         onboardTwoResp.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -191,8 +252,10 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
         {
             string founderSub = Guid.CreateVersion7(clock.UtcNow.AddSeconds(idx * 10)).ToString();
             using var unprovisioned = host.CreateSignedClient(new GatewayIdentity(founderSub, [], [], TenantId: null));
-            using var onboardResp = await unprovisioned.PostAsJsonAsync(
-                "/api/v1/kernel/onboarding/trial",
+            using var onboardResp = await PostTrialBootstrapAsync(
+                unprovisioned,
+                $"idem-founder-bootstrap-{idx}",
+                $"Self-service trial workspace bootstrap for Founder Org {idx}",
                 new { organization_name = $"Founder Org {idx}", residency = "US", tier = "Individual" },
                 ct);
             onboardResp.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -295,11 +358,15 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
         using var host = CreateHost(clock, keycloak, environment: "Production");
 
         string founderSub = Guid.CreateVersion7(clock.UtcNow).ToString();
-        string ungrantedColleagueSub = Guid.CreateVersion7(clock.UtcNow.AddSeconds(2)).ToString();
+        var colleagueGuid = Guid.CreateVersion7(clock.UtcNow.AddSeconds(2));
+        string ungrantedColleagueSub = colleagueGuid.ToString();
+        string strangerSub = Guid.CreateVersion7(clock.UtcNow.AddSeconds(3)).ToString();
 
         using var unprovisioned = host.CreateSignedClient(new GatewayIdentity(founderSub, [], [], TenantId: null));
-        using var onboardResp = await unprovisioned.PostAsJsonAsync(
-            "/api/v1/kernel/onboarding/trial",
+        using var onboardResp = await PostTrialBootstrapAsync(
+            unprovisioned,
+            "idem-helios-bootstrap-1",
+            "Self-service trial workspace bootstrap for Helios Cardiology Partners",
             new { organization_name = "Helios Cardiology Partners", tier = "Individual" },
             ct);
         onboardResp.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -348,7 +415,7 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
                 Content = JsonContent.Create(new { tier = targetTier }),
             };
             upgradeReq.Headers.Add("Idempotency-Key", stepKey);
-            upgradeReq.Headers.Add("X-Change-Reason", $"Switch commercial tier to {targetTier}");
+            upgradeReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode($"Switch commercial tier to {targetTier}"));
             using var upgradeResp = await founderClient.SendAsync(upgradeReq, ct);
             string upgradeBody = await upgradeResp.Content.ReadAsStringAsync(ct);
             upgradeResp.StatusCode.Should().Be(HttpStatusCode.OK, upgradeBody);
@@ -359,7 +426,78 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             upgraded.GetProperty("product_families").GetArrayLength().Should().Be(expectedFamilyCount);
         }
 
-        // 1. Even in a Complete-tier tenant, a signed-in caller WITHOUT a clinical study Grant cannot see or mutate the study!
+        // 1a. A caller without TenantMembership in the workspace is refused by GET /api/v1/kernel/entitlements with 403.
+        using (var strangerClient = host.CreateSignedClient(
+            new GatewayIdentity(strangerSub, ["Auditor"], ["*"], TenantId: tenantCode)))
+        {
+            using var strangerEntResp = await strangerClient.GetAsync(new Uri("/api/v1/kernel/entitlements", UriKind.Relative), ct);
+            strangerEntResp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        // 1b. Enroll a colleague in TenantMembership with a separate CRO organization grant (no clinical Grant on sponsorId / studyId):
+        //     - ISubjectTenantBindingProbe refuses self-service trial onboarding for that foreign-bound subject even without claim headers
+        //     - GET /api/v1/kernel/entitlements succeeds, while clinical study visibility and mutations remain denied!
+        var colleaguePersonId = PersonId.FromGuid(colleagueGuid);
+        var auditOrgId = OrganizationId.New(clock.UtcNow);
+        (await SendAsPersonAsync(
+            host.Services,
+            founderSub,
+            new RegisterOrganization(
+                tenantId,
+                auditOrgId,
+                "HELIOS-AUDIT-CRO",
+                "External Audit Partners",
+                OrganizationKind.Cro,
+                "idem-colleague-audit-org",
+                "Register separate CRO organization"),
+            ct)).IsSuccess.Should().BeTrue();
+        (await SendAsPersonAsync(
+            host.Services,
+            founderSub,
+            new RegisterPerson(tenantId, colleaguePersonId, "idem-colleague-person", "Register colleague person"),
+            ct)).IsSuccess.Should().BeTrue();
+        (await SendAsPersonAsync(
+            host.Services,
+            founderSub,
+            new RegisterTenantMembership(
+                tenantId,
+                TenantMembershipId.New(clock.UtcNow),
+                colleaguePersonId,
+                "idem-colleague-membership",
+                "Enroll colleague in workspace"),
+            ct)).IsSuccess.Should().BeTrue();
+        (await SendAsPersonAsync(
+            host.Services,
+            founderSub,
+            new IssueGrant(
+                tenantId,
+                GrantId.New(clock.UtcNow),
+                Actor.Person(ungrantedColleagueSub),
+                "attestation.sign",
+                null,
+                AuthorityScope.Organization(auditOrgId),
+                clock.UtcNow,
+                null,
+                false,
+                "idem-colleague-workspace-grant",
+                "Grant CRO-scoped baseline signature without sponsor study grant"),
+            ct)).IsSuccess.Should().BeTrue();
+
+        using (var unboundWrapperForEnrolledColleague = host.CreateSignedClient(
+            new GatewayIdentity(ungrantedColleagueSub, [], [], TenantId: null)))
+        {
+            using var foreignBoundOnboard = await PostTrialBootstrapAsync(
+                unboundWrapperForEnrolledColleague,
+                "idem-foreign-bound-colleague-onboard",
+                "Attempt self-service trial bootstrap for already-enrolled workspace member",
+                new { organization_name = "Shadow Trial Attempt", tier = "Individual" },
+                ct);
+            string foreignBody = await foreignBoundOnboard.Content.ReadAsStringAsync(ct);
+            foreignBoundOnboard.StatusCode.Should().Be(HttpStatusCode.Forbidden, foreignBody);
+            JsonDocument.Parse(foreignBody).RootElement.GetProperty("code").GetString()
+                .Should().Be(CommercialErrors.OnboardingCallerInvalid.Code);
+        }
+
         using (var ungrantedClient = host.CreateSignedClient(
             new GatewayIdentity(ungrantedColleagueSub, ["Auditor"], ["*"], TenantId: tenantCode)))
         {
@@ -388,18 +526,23 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             deniedMutation.Error!.Code.Should().Be(KernelErrors.AuthorizationDenied.Code);
         }
 
-        // 2. Now expire the tenant's subscription and verify:
-        //    - New study mutations fail with 403 K.Subscription.Expired
-        //    - Regulated reads/exports (nodes, activity/audit feed, search, entitlements) succeed
-        //    - Baseline regulated capabilities (electronic signature Attest) remain active and never gated!
+        // 2. Founder Sponsor Admin holds zero unilateral subscription.expire authority; only CommercialOperators.BillingOperator can record ExpireSubscription.
         var subscriptionId = SubscriptionId.FromGuid(
             NodeRef.Parse(onboardJson.GetProperty("entitlements").GetProperty("subscription_ref").GetString()!).Id);
-        var expired = await SendAsPersonAsync(
+        var founderExpireAttempt = await SendAsPersonAsync(
             host.Services,
             founderSub,
+            new ExpireSubscription(tenantId, subscriptionId, "idem-founder-expire-denied", "Attempt unilateral founder expiry"),
+            ct);
+        founderExpireAttempt.IsSuccess.Should().BeFalse();
+        founderExpireAttempt.Error!.Code.Should().Be(KernelErrors.AuthorizationDenied.Code);
+
+        var expired = await SendAsServiceAsync(
+            host.Services,
+            CommercialOperators.BillingOperator.Id,
             new ExpireSubscription(tenantId, subscriptionId, "idem-expire-helios", "Simulate trial window expiration"),
             ct);
-        expired.IsSuccess.Should().BeTrue();
+        expired.IsSuccess.Should().BeTrue(expired.Error?.Message);
 
         var expiredEntitlements = await GetJsonAsync(founderClient, "/api/v1/kernel/entitlements", ct);
         expiredEntitlements.GetProperty("status").GetString().Should().Be("Expired");
@@ -507,9 +650,8 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             fieldErrors.TryGetProperty("billing_confirmation", out _).Should().BeTrue();
         }
 
-        // 5. Scoped activation with valid study scoping and PO/quote confirmation transitions Expired -> Active, clears read-only,
-        //    persists scoping metadata, restores study mutations, and still enforces clinical Grant boundaries!
-        using (var validActivateReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/entitlements/activate")
+        // 5a. Self-attested raw purchase order string without cryptographic quote token fails with 403 K.Commercial.QuoteInvalid.
+        using (var forgedQuoteReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/entitlements/activate")
         {
             Content = JsonContent.Create(new
             {
@@ -524,8 +666,51 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             }),
         })
         {
+            forgedQuoteReq.Headers.Add("Idempotency-Key", "idem-activate-unverified-po");
+            forgedQuoteReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Attempt self-attested PO activation"));
+            using var forgedQuoteResp = await founderClient.SendAsync(forgedQuoteReq, ct);
+            string forgedQuoteBody = await forgedQuoteResp.Content.ReadAsStringAsync(ct);
+            forgedQuoteResp.StatusCode.Should().Be(HttpStatusCode.Forbidden, forgedQuoteBody);
+            JsonDocument.Parse(forgedQuoteBody).RootElement.GetProperty("code").GetString()
+                .Should().Be(CommercialErrors.QuoteInvalid.Code);
+        }
+
+        // 5b. Scoped activation with a verified cryptographic commercial quote token transitions Expired -> Active,
+        //     clears read-only, masks billing_confirmation from callers without subscription.activate, and enforces scoping caps!
+        var contractedScoping = new SubscriptionScoping(
+            "Phase II",
+            24,
+            ["US", "DE", "NL"],
+            12,
+            240,
+            2,
+            "PO-HELIOS-2026-441");
+        string quoteToken = SubscriptionQuoteToken.Issue(
+            TestSecurityContext.GatewaySecret,
+            tenantId,
+            CommercialTier.Select,
+            contractedScoping,
+            "PO-HELIOS-2026-441",
+            clock.UtcNow,
+            clock.UtcNow.AddDays(7));
+
+        using (var validActivateReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/entitlements/activate")
+        {
+            Content = JsonContent.Create(new
+            {
+                tier = "Select",
+                study_phase = "Phase II",
+                study_duration_months = 24,
+                countries = new[] { "US", "DE", "NL" },
+                site_count = 12,
+                participant_count = 240,
+                active_study_count = 2,
+                billing_confirmation = quoteToken,
+            }),
+        })
+        {
             validActivateReq.Headers.Add("Idempotency-Key", "idem-activate-valid-scoping");
-            validActivateReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Activate Select subscription with validated study scoping"));
+            validActivateReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Activate Select subscription with verified quote token"));
             using var validActivateResp = await founderClient.SendAsync(validActivateReq, ct);
             string validActivateBody = await validActivateResp.Content.ReadAsStringAsync(ct);
             validActivateResp.StatusCode.Should().Be(HttpStatusCode.OK, validActivateBody);
@@ -540,10 +725,31 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             scopingJson.GetProperty("site_count").GetInt32().Should().Be(12);
             scopingJson.GetProperty("participant_count").GetInt32().Should().Be(240);
             scopingJson.GetProperty("active_study_count").GetInt32().Should().Be(2);
-            scopingJson.GetProperty("billing_confirmation").GetString().Should().Be("PO-HELIOS-2026-441");
+            scopingJson.GetProperty("billing_confirmation").ValueKind.Should().Be(
+                JsonValueKind.Null,
+                "callers without subscription.activate have billing_confirmation masked");
         }
 
-        // Clinical study mutation succeeds again now that the workspace is Active
+        // Billing operator sees unmasked billing_confirmation, whereas svc:gateway-entitlements posture omits billing_confirmation completely.
+        using (var billingClient = host.CreateSignedClient(
+            new GatewayIdentity(CommercialOperators.BillingOperator.Id, ["service"], ["*"], TenantId: tenantCode)))
+        {
+            var billingEnt = await GetJsonAsync(billingClient, "/api/v1/kernel/entitlements", ct);
+            billingEnt.GetProperty("scoping").GetProperty("billing_confirmation").GetString().Should().Be(quoteToken);
+        }
+
+        using (var gatewayProbe = host.CreateSignedClient(
+            new GatewayIdentity(CommercialOperators.GatewayPostureProbe.Id, ["service"], ["*"], TenantId: tenantCode)))
+        {
+            var postureJson = await GetJsonAsync(gatewayProbe, "/api/v1/kernel/entitlements/posture", ct);
+            postureJson.GetProperty("is_read_only").GetBoolean().Should().BeFalse();
+            var postureScoping = postureJson.GetProperty("scoping");
+            postureScoping.GetProperty("active_study_count").GetInt32().Should().Be(2);
+            postureScoping.TryGetProperty("billing_confirmation", out _).Should().BeFalse();
+        }
+
+        // Clinical study mutation succeeds up to contracted active_study_count = 2 (HELIOS-201 + HELIOS-203),
+        // and refuses a 3rd study (HELIOS-204) with 403 K.Commercial.ScopingCapExceeded!
         var restoredStudy = await SendAsPersonAsync(
             host.Services,
             founderSub,
@@ -558,6 +764,42 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
                 "Register study after scoped subscription activation"),
             ct);
         restoredStudy.IsSuccess.Should().BeTrue(restoredStudy.Error?.Message);
+
+        var capExceededStudy = await SendAsPersonAsync(
+            host.Services,
+            founderSub,
+            new RegisterStudy(
+                tenantId,
+                StudyId.New(clock.UtcNow),
+                sponsorId,
+                "HELIOS-204",
+                "Study Exceeding Contracted Cap",
+                "Phase II",
+                "idem-helios-cap-exceeded-204",
+                "Attempt third study above contracted active_study_count=2"),
+            ct);
+        capExceededStudy.IsSuccess.Should().BeFalse();
+        capExceededStudy.Error!.Code.Should().Be(CommercialErrors.ScopingCapExceeded.Code);
+
+        // 6. Verify bitemporal history in PostgreSQL: all 7 subscription_periods and historical product_entitlements are preserved!
+        await using var conn = new NpgsqlConnection(fixture.AdminConnectionString);
+        await conn.OpenAsync(ct);
+        (await ScalarLongAsync(
+            conn,
+            "SELECT count(*) FROM kernel.subscription_periods WHERE tenant_id = @tid",
+            ("tid", tenantId.Value))).Should().Be(7L);
+        (await ScalarLongAsync(
+            conn,
+            "SELECT count(*) FROM kernel.subscription_periods WHERE tenant_id = @tid AND upper_inf(valid_period) AND upper_inf(recorded_period)",
+            ("tid", tenantId.Value))).Should().Be(1L);
+        (await ScalarLongAsync(
+            conn,
+            "SELECT count(*) FROM kernel.subscription_periods WHERE tenant_id = @tid AND length(trim(created_by)) > 0 AND length(trim(reason_for_change)) > 0",
+            ("tid", tenantId.Value))).Should().Be(7L);
+        (await ScalarLongAsync(
+            conn,
+            "SELECT count(*) FROM kernel.product_entitlements WHERE tenant_id = @tid AND NOT upper_inf(recorded_period)",
+            ("tid", tenantId.Value))).Should().BeGreaterThan(0L, "prior Complete-tier product entitlement periods remain preserved as closed bitemporal rows");
     }
 
     private WebApplicationFactory<Cadence.Kernel.Host.Program> CreateHost(
@@ -576,6 +818,22 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
                 services.AddSingleton(keycloakClient);
             }));
 
+    private static Task<HttpResponseMessage> PostTrialBootstrapAsync(
+        HttpClient client,
+        string idempotencyKey,
+        string reasonForChange,
+        object payload,
+        CancellationToken ct)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/onboarding/trial")
+        {
+            Content = JsonContent.Create(payload),
+        };
+        req.Headers.Add("Idempotency-Key", idempotencyKey);
+        req.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode(reasonForChange));
+        return client.SendAsync(req, ct);
+    }
+
     private static async Task<CommandResult<TResult>> SendAsPersonAsync<TResult>(
         IServiceProvider rootServices,
         string subjectId,
@@ -589,6 +847,37 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             [
                 new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, subjectId),
                 new System.Security.Claims.Claim("sub", subjectId),
+            ],
+            authenticationType: "Gateway");
+        accessor.HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+        {
+            User = new System.Security.Claims.ClaimsPrincipal(identity),
+        };
+        try
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<IKernelCommandSender>();
+            return await sender.SendAsync(command, cancellationToken: ct);
+        }
+        finally
+        {
+            accessor.HttpContext = previous;
+        }
+    }
+
+    private static async Task<CommandResult<TResult>> SendAsServiceAsync<TResult>(
+        IServiceProvider rootServices,
+        string serviceAccountId,
+        ICommand<TResult> command,
+        CancellationToken ct)
+    {
+        await using var scope = rootServices.CreateAsyncScope();
+        var accessor = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
+        var previous = accessor.HttpContext;
+        var identity = new System.Security.Claims.ClaimsIdentity(
+            [
+                new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, serviceAccountId),
+                new System.Security.Claims.Claim("sub", serviceAccountId),
+                new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "service"),
             ],
             authenticationType: "Gateway");
         accessor.HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext

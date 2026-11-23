@@ -235,12 +235,13 @@ public class CadenceSecurityUnitTests
             doc.RootElement.GetProperty("status").GetInt32().Should().Be(403);
         }
 
-        // 3. Regulated eTMF export (Permission:etmf_document:export), Part 11 step-up signatures (ElectronicSignatureRequired),
-        //    and explicit commercial activation endpoints (AllowExpiredTenantWriteMetadata) are exempted.
+        // 3. Regulated eTMF export (Permission:etmf_document:export) and explicit closeout/activation endpoints
+        //    (AllowExpiredTenantWriteMetadata) are exempted, whereas general ElectronicSignatureRequired routes without
+        //    AllowExpiredTenantWriteMetadata are refused with 403 K.Subscription.Expired.
         Endpoint[] exemptedEndpoints =
         [
             new(_ => Task.CompletedTask, new EndpointMetadataCollection(new Microsoft.AspNetCore.Authorization.AuthorizeAttribute($"{PermissionPolicyProvider.PolicyPrefix}etmf_document:export")), "etmf-export"),
-            new(_ => Task.CompletedTask, new EndpointMetadataCollection(ElectronicSignatureRequired.Instance), "part11-sign"),
+            new(_ => Task.CompletedTask, new EndpointMetadataCollection(ElectronicSignatureRequired.Instance, AllowExpiredTenantWriteMetadata.Instance), "closeout-lock-sign"),
             new(_ => Task.CompletedTask, new EndpointMetadataCollection(AllowExpiredTenantWriteMetadata.Instance), "activate-subscription"),
         ];
 
@@ -260,6 +261,25 @@ public class CadenceSecurityUnitTests
 
             exemptExecuted.Should().BeTrue($"endpoint '{endpoint.DisplayName}' must remain available when a workspace trial is expired");
         }
+
+        var nonExemptSignedEndpoint = new Endpoint(
+            _ => Task.CompletedTask,
+            new EndpointMetadataCollection(ElectronicSignatureRequired.Instance),
+            "library-item-approve");
+        var blockedSignContext = new DefaultHttpContext();
+        blockedSignContext.Request.Method = HttpMethods.Post;
+        blockedSignContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = expiredPrincipal;
+        blockedSignContext.SetEndpoint(nonExemptSignedEndpoint);
+        blockedSignContext.Response.Body = new MemoryStream();
+
+        bool nonExemptExecuted = false;
+        await middleware.InvokeAsync(blockedSignContext, _ =>
+        {
+            nonExemptExecuted = true;
+            return Task.CompletedTask;
+        });
+        nonExemptExecuted.Should().BeFalse("general ElectronicSignatureRequired endpoints without AllowExpiredTenantWriteMetadata must be blocked when expired");
+        blockedSignContext.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
     }
 
     [Fact]
@@ -278,6 +298,7 @@ public class CadenceSecurityUnitTests
 
         var headers = readOnlyIdentity.ToSignedHeaders(issuedAt, secret);
         headers[GatewayHeaders.TenantReadOnly].Should().Be("true");
+        headers[GatewayHeaders.TenantProductFamilies].Should().Be("none");
 
         HmacSigner.VerifyGatewaySignature(
             userId: headers[GatewayHeaders.UserId],
@@ -287,9 +308,10 @@ public class CadenceSecurityUnitTests
             secret: secret,
             studyIds: headers[GatewayHeaders.StudyIds],
             tenantId: headers[GatewayHeaders.TenantId],
-            tenantReadOnly: true).Should().BeTrue();
+            tenantReadOnly: true,
+            tenantProductFamilies: headers[GatewayHeaders.TenantProductFamilies]).Should().BeTrue();
 
-        // Tampering or stripping X-Tenant-Read-Only (true -> false) fails HMAC verification immediately.
+        // Tampering or stripping X-Tenant-Read-Only or X-Tenant-Product-Families fails HMAC verification immediately.
         HmacSigner.VerifyGatewaySignature(
             userId: headers[GatewayHeaders.UserId],
             roles: headers[GatewayHeaders.Roles],
@@ -298,7 +320,172 @@ public class CadenceSecurityUnitTests
             secret: secret,
             studyIds: headers[GatewayHeaders.StudyIds],
             tenantId: headers[GatewayHeaders.TenantId],
-            tenantReadOnly: false).Should().BeFalse();
+            tenantReadOnly: false,
+            tenantProductFamilies: headers[GatewayHeaders.TenantProductFamilies]).Should().BeFalse();
+
+        HmacSigner.VerifyGatewaySignature(
+            userId: headers[GatewayHeaders.UserId],
+            roles: headers[GatewayHeaders.Roles],
+            timestamp: headers[GatewayHeaders.Timestamp],
+            signature: headers[GatewayHeaders.Signature],
+            secret: secret,
+            studyIds: headers[GatewayHeaders.StudyIds],
+            tenantId: headers[GatewayHeaders.TenantId],
+            tenantReadOnly: true,
+            tenantProductFamilies: "Blueprint,Capture").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ProductFamilyGuardMiddleware_EnforcesModuleEntitlements_AndAllowsBaselineRoutes()
+    {
+        var guard = new ProductFamilyGuardMiddleware();
+        var individualPrincipal = new Principal
+        {
+            UserId = "crc-01",
+            TenantId = "trial-ind-01",
+            Roles = ["crc"],
+            ProductFamilies = ["Blueprint", "Capture"],
+        };
+
+        // 1. Capture route succeeds on Individual workspace (Blueprint + Capture).
+        var captureContext = new DefaultHttpContext();
+        captureContext.Request.Path = "/api/v1/execution/subjects";
+        captureContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = individualPrincipal;
+        bool captureRan = false;
+        await guard.InvokeAsync(captureContext, _ =>
+        {
+            captureRan = true;
+            return Task.CompletedTask;
+        });
+        captureRan.Should().BeTrue();
+
+        // 2. Orbit / Vigil / Assure routes fail closed with 403 K.Commercial.ProductFamilyNotEntitled on Individual workspace.
+        foreach (string unentitledPath in new[] { "/api/v1/ctms/milestones", "/api/v1/org/tenants", "/api/v1/safety/cases", "/api/v1/quality/capas" })
+        {
+            var deniedContext = new DefaultHttpContext();
+            deniedContext.Request.Path = unentitledPath;
+            deniedContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = individualPrincipal;
+            deniedContext.Response.Body = new MemoryStream();
+            bool deniedRan = false;
+            await guard.InvokeAsync(deniedContext, _ =>
+            {
+                deniedRan = true;
+                return Task.CompletedTask;
+            });
+            deniedRan.Should().BeFalse();
+            deniedContext.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+            deniedContext.Response.Body.Position = 0;
+            using var problem = await JsonDocument.ParseAsync(deniedContext.Response.Body, cancellationToken: TestContext.Current.CancellationToken);
+            problem.RootElement.GetProperty("code").GetString().Should().Be("K.Commercial.ProductFamilyNotEntitled");
+        }
+
+        // 3. Baseline kernel/signature routes (/api/v1/kernel/entitlements, /api/v1/kernel/locks, /api/v1/kernel/studies/.../exports, /api/v1/kernel/sites GET, /api/v1/kernel/studies/.../sites GET, /api/v1/signatures) always pass regardless of module entitlements.
+        var zeroFamilyPrincipal = individualPrincipal with { ProductFamilies = [] };
+        foreach (string baselinePath in new[]
+        {
+            "/api/v1/kernel/entitlements",
+            "/api/v1/kernel/locks",
+            "/api/v1/kernel/studies/study:1/exports",
+            "/api/v1/kernel/sites",
+            "/api/v1/kernel/studies/study:1/sites",
+            "/api/v1/signatures",
+        })
+        {
+            var baselineContext = new DefaultHttpContext();
+            baselineContext.Request.Method = HttpMethods.Get;
+            baselineContext.Request.Path = baselinePath;
+            baselineContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = zeroFamilyPrincipal;
+            bool baselineRan = false;
+            await guard.InvokeAsync(baselineContext, _ =>
+            {
+                baselineRan = true;
+                return Task.CompletedTask;
+            });
+            baselineRan.Should().BeTrue($"{baselinePath} is a regulated baseline route and must never be gated behind module ProductFamily entitlements");
+        }
+
+        // 4. Site setup writes (/api/v1/kernel/sites, /api/v1/kernel/studies/.../sites) succeed with Capture or Orbit even without Blueprint, and fail closed for Vigil-only callers.
+        var captureOnlyPrincipal = individualPrincipal with { ProductFamilies = ["Capture"] };
+        var vigilOnlyPrincipal = individualPrincipal with { ProductFamilies = ["Vigil"] };
+        foreach (string siteWritePath in new[] { "/api/v1/kernel/sites", "/api/v1/kernel/studies/study:1/sites" })
+        {
+            var captureWriteCtx = new DefaultHttpContext();
+            captureWriteCtx.Request.Method = HttpMethods.Post;
+            captureWriteCtx.Request.Path = siteWritePath;
+            captureWriteCtx.Items[GatewayAuthenticationHandler.PrincipalItemKey] = captureOnlyPrincipal;
+            bool captureWriteRan = false;
+            await guard.InvokeAsync(captureWriteCtx, _ =>
+            {
+                captureWriteRan = true;
+                return Task.CompletedTask;
+            });
+            captureWriteRan.Should().BeTrue($"{siteWritePath} POST should be allowed for Capture-entitled workspaces");
+
+            var vigilWriteCtx = new DefaultHttpContext();
+            vigilWriteCtx.Request.Method = HttpMethods.Post;
+            vigilWriteCtx.Request.Path = siteWritePath;
+            vigilWriteCtx.Items[GatewayAuthenticationHandler.PrincipalItemKey] = vigilOnlyPrincipal;
+            vigilWriteCtx.Response.Body = new MemoryStream();
+            bool vigilWriteRan = false;
+            await guard.InvokeAsync(vigilWriteCtx, _ =>
+            {
+                vigilWriteRan = true;
+                return Task.CompletedTask;
+            });
+            vigilWriteRan.Should().BeFalse();
+            vigilWriteCtx.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        }
+    }
+
+    [Fact]
+    public async Task TenantScopingCaps_RoundTripsIsoAndNamedCountries_AndSubscriptionScopingGuardEnforcesCaps()
+    {
+        var isoCaps = new TenantScopingCaps("Phase II", 18, ["us", "DE", "NL"], 5, 120, 2);
+        string isoWire = isoCaps.ToHeaderValue();
+        isoWire.Should().Be("v1;phase=Phase%20II;months=18;sites=5;participants=120;studies=2;countries=DE,NL,US");
+        TenantScopingCaps.TryParseHeader(isoWire, out var parsedIso).Should().BeTrue();
+        parsedIso!.Countries.Should().Equal("DE", "NL", "US");
+        parsedIso.StudyPhase.Should().Be("Phase II");
+
+        var namedCaps = new TenantScopingCaps("Phase III", 36, ["United States", "Germany"], 12, 400, 4);
+        string namedWire = namedCaps.ToHeaderValue();
+        TenantScopingCaps.TryParseHeader(namedWire, out var parsedNamed).Should().BeTrue();
+        parsedNamed!.Countries.Should().Equal("GERMANY", "UNITED STATES");
+        parsedNamed.StudyPhase.Should().Be("Phase III");
+
+        var guard = new SubscriptionScopingGuardMiddleware();
+        var scopedPrincipal = new Principal
+        {
+            UserId = "pm-01",
+            TenantId = "scoped-tenant-01",
+            Roles = ["study_manager"],
+            ProductFamilies = Cadence.Testing.Security.TestSecurityContext.AllProductFamilies,
+            TenantScoping = isoCaps,
+        };
+
+        // Outside contracted country ("JP" not in DE,NL,US) -> 403 K.Commercial.ScopingCapExceeded
+        var deniedCtx = new DefaultHttpContext();
+        deniedCtx.Request.Method = HttpMethods.Post;
+        deniedCtx.Request.Path = "/api/v1/ctms/sites";
+        deniedCtx.Request.ContentType = "application/json";
+        byte[] payloadBytes = Encoding.UTF8.GetBytes("""{"site_code":"SITE-JP","country":"JP"}""");
+        deniedCtx.Request.Body = new MemoryStream(payloadBytes);
+        deniedCtx.Request.ContentLength = payloadBytes.Length;
+        deniedCtx.Response.Body = new MemoryStream();
+        deniedCtx.Items[GatewayAuthenticationHandler.PrincipalItemKey] = scopedPrincipal;
+
+        bool nextRan = false;
+        await guard.InvokeAsync(deniedCtx, _ =>
+        {
+            nextRan = true;
+            return Task.CompletedTask;
+        });
+
+        nextRan.Should().BeFalse();
+        deniedCtx.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        deniedCtx.Response.Body.Position = 0;
+        using var problem = await JsonDocument.ParseAsync(deniedCtx.Response.Body, cancellationToken: TestContext.Current.CancellationToken);
+        problem.RootElement.GetProperty("code").GetString().Should().Be("K.Commercial.ScopingCapExceeded");
     }
 
     [Fact]
@@ -505,7 +692,8 @@ public class CadenceSecurityUnitTests
             sponsorId: headers[GatewayHeaders.SponsorId],
             unblindedAccess: true,
             tenantId: headers[GatewayHeaders.TenantId],
-            sigToken: headers[GatewayHeaders.SigToken]).Should().BeTrue();
+            sigToken: headers[GatewayHeaders.SigToken],
+            tenantProductFamilies: headers[GatewayHeaders.TenantProductFamilies]).Should().BeTrue();
     }
 
     [Fact]

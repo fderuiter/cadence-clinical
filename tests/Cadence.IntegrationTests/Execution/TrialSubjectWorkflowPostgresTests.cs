@@ -423,10 +423,15 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
         CancellationToken ct)
     {
         using var unprovisioned = kernelHost.CreateSignedClient(new GatewayIdentity(subjectId, [], [], TenantId: null));
-        using var response = await unprovisioned.PostAsJsonAsync(
-            "/api/v1/kernel/onboarding/trial",
-            new { organization_name = organizationName, residency = "US", tier = "Individual" },
-            ct);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/onboarding/trial")
+        {
+            Content = JsonContent.Create(new { organization_name = organizationName, residency = "US", tier = "Individual" }),
+        };
+        request.Headers.TryAddWithoutValidation("Idempotency-Key", $"idem-trial-founder:{subjectId}");
+        request.Headers.TryAddWithoutValidation(
+            GatewayHeaders.ChangeReason,
+            ChangeReasonHeader.Encode($"Bootstrap self-service trial workspace for {organizationName}"));
+        using var response = await unprovisioned.SendAsync(request, ct);
         string body = await response.Content.ReadAsStringAsync(ct);
         response.StatusCode.Should().Be(HttpStatusCode.OK, body);
         using var doc = JsonDocument.Parse(body);
