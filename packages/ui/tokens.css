@@ -65,9 +65,21 @@
   --breakpoint-phone: 576px;
   --breakpoint-tablet: 768px;
   --breakpoint-desktop: 1024px;
+  --breakpoint-docked: 1280px;
+
+  /* Safe-Area & Dynamic Viewport Overlay Tokens */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --overlay-viewport-height-fallback: 100vh;
+  --overlay-viewport-height: 100dvh;
+  --overlay-sheet-max-height-fallback: 90vh;
+  --overlay-sheet-max-height: 90dvh;
 
   /* Touch Target Minimums */
   --touch-target-min: 48px;
+  --touch-target-staff-min: 44px;
 
   /* Drawer Width Tier Tokens */
   --drawer-width-sm: min(100vw, 440px);

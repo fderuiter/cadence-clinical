@@ -1,387 +1,380 @@
 <template>
-  <div
-    v-if="codingStore.browserModal.isOpen"
-    class="modal-overlay"
-    role="presentation"
-    @click.self="close"
+  <ClinicalModal
+    :is-open="codingStore.browserModal.isOpen"
+    :teleport="false"
+    :dismissible="!isSubmitting"
+    size="xl"
+    aria-labelledby="dictionary-browser-modal-title"
+    close-label="Close dictionary browser"
+    backdrop-class="modal-overlay"
+    dialog-class="modal dictionary-browser-modal"
+    body-class="modal-body-browser"
+    @close="close"
   >
-    <div
-      ref="modalRef"
-      class="modal dictionary-browser-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="dictionary-browser-modal-title"
-      tabindex="-1"
-    >
-      <!-- Modal Header -->
-      <div class="modal-header">
-        <div class="header-titles">
-          <h3 id="dictionary-browser-modal-title">
-            {{
-              selectedDictType === "MEDDRA"
-                ? "MedDRA Hierarchy Browser"
-                : "WHODrug ATC Classification Browser"
-            }}
-          </h3>
-          <span class="header-subtitle">
-            Coding target:
-            <strong>{{ targetVerbatim || "Manual Selection" }}</strong>
-            <span v-if="targetSourceField"> ({{ targetSourceField }})</span>
-          </span>
-        </div>
-        <button
-          type="button"
-          class="btn-close"
-          aria-label="Close dictionary browser"
-          @click="close"
-        >
-          ✕
-        </button>
+    <template #header>
+      <div class="header-titles">
+        <h3 id="dictionary-browser-modal-title">
+          {{
+            selectedDictType === "MEDDRA"
+              ? "MedDRA Hierarchy Browser"
+              : "WHODrug ATC Classification Browser"
+          }}
+        </h3>
+        <span class="header-subtitle">
+          Coding target:
+          <strong>{{ targetVerbatim || "Manual Selection" }}</strong>
+          <span v-if="targetSourceField"> ({{ targetSourceField }})</span>
+        </span>
       </div>
+    </template>
 
-      <!-- Modal Body -->
-      <div class="modal-body-browser">
-        <!-- Search & Filter Controls -->
-        <div class="browser-controls-grid">
-          <div class="form-group flex-2">
-            <label for="dict-search-term">Search Term / Code</label>
-            <div class="search-input-group">
-              <input
-                id="dict-search-term"
-                v-model="searchTerm"
-                type="text"
-                class="form-control"
-                placeholder="Type verbatim or code..."
-                @keyup.enter="performSearch"
-              />
-              <button
-                type="button"
-                class="btn btn-primary"
-                :disabled="!searchTerm.trim() || codingStore.isSearching"
-                @click="performSearch"
-              >
-                {{ codingStore.isSearching ? "Searching..." : "Search" }}
-              </button>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="dict-type-select">Dictionary</label>
-            <select
-              id="dict-type-select"
-              v-model="selectedDictType"
-              class="form-control"
-              @change="onDictionaryTypeChange"
-            >
-              <option value="MEDDRA">MedDRA</option>
-              <option value="WHODRUG">WHODrug</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="dict-version-select">Version</label>
-            <select
-              id="dict-version-select"
-              v-model="selectedVersion"
-              class="form-control"
-              @change="performSearch"
-            >
-              <template v-if="selectedDictType === 'MEDDRA'">
-                <option value="26.0">v26.0 (Active)</option>
-                <option value="26.1">v26.1</option>
-                <option value="27.0">v27.0 (Target)</option>
-              </template>
-              <template v-else>
-                <option value="2024-03">v2024-03 (Active)</option>
-                <option value="2024-09">v2024-09 (Target)</option>
-              </template>
-            </select>
-          </div>
-
-          <div v-if="selectedDictType === 'MEDDRA'" class="form-group">
-            <label for="dict-level-select">Target Level</label>
-            <select
-              id="dict-level-select"
-              v-model="selectedLevel"
-              class="form-control"
-              @change="performSearch"
-            >
-              <option value="LLT">LLT (Lowest Level Term)</option>
-              <option value="PT">PT (Preferred Term)</option>
-              <option value="HLT">HLT (High Level Term)</option>
-              <option value="HLGT">HLGT (High Level Group Term)</option>
-              <option value="SOC">SOC (System Organ Class)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Browser Split View: Results List (Left) & Hierarchy / ATC Tree (Right) -->
-        <div class="browser-split-layout">
-          <!-- Left Column: Search Results Matches -->
-          <div class="results-column card">
-            <div class="column-header">
-              <h4>Matches &amp; Suggestions</h4>
-              <span
-                v-if="codingStore.searchStatus"
-                class="badge"
-                :class="
-                  codingStore.searchStatus === 'AUTO-CODED'
-                    ? 'badge-success'
-                    : codingStore.searchStatus === 'SUGGESTIONS'
-                      ? 'badge-info'
-                      : 'badge-neutral'
-                "
-              >
-                {{ codingStore.searchStatus }}
-              </span>
-            </div>
-
-            <!-- Loading Spinner -->
-            <div v-if="codingStore.isSearching" class="results-loading">
-              <div class="spinner" />
-              <span>Searching terminology index...</span>
-            </div>
-
-            <!-- Empty Results -->
-            <div
-              v-else-if="codingStore.dictionarySearchResults.length === 0"
-              class="results-empty"
-            >
-              <p v-if="searchTerm">
-                No matching terms found for "<strong>{{ searchTerm }}</strong
-                >".
-              </p>
-              <p v-else>Enter a term or code above to search dictionary.</p>
-            </div>
-
-            <!-- Results List -->
-            <div v-else class="results-list">
-              <div
-                v-for="(match, idx) in codingStore.dictionarySearchResults"
-                :key="idx"
-                class="result-item-card"
-                :class="{
-                  'active-result': isMatchSelected(match, idx),
-                }"
-                role="button"
-                tabindex="0"
-                :aria-pressed="isMatchSelected(match, idx)"
-                @click="selectMatch(match, idx)"
-                @keydown.enter.prevent="selectMatch(match, idx)"
-                @keydown.space.prevent="selectMatch(match, idx)"
-              >
-                <div class="result-card-header">
-                  <div class="result-term-name">
-                    {{ getMatchTerm(match) }}
-                  </div>
-                  <span class="match-score-badge">
-                    {{ Math.round((match.score || 0) * 100) }}% match
-                  </span>
-                </div>
-                <div class="result-card-meta">
-                  <span class="code-pill">Code: {{ getMatchCode(match) }}</span>
-                  <span
-                    v-if="match.primary_soc_flag === 'Y'"
-                    class="soc-flag-pill"
-                  >
-                    Primary SOC
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Right Column: Hierarchy / Context Inspection & Confirmation -->
-          <div class="hierarchy-column card">
-            <div class="column-header">
-              <h4>Hierarchy &amp; Context Details</h4>
-            </div>
-
-            <div v-if="!activeMatch" class="hierarchy-empty-state">
-              <p>Select a match on the left to inspect its full hierarchy.</p>
-            </div>
-
-            <div v-else class="hierarchy-content">
-              <!-- Selected Concept Summary Banner -->
-              <div class="concept-summary-banner">
-                <div class="concept-title">
-                  {{ getMatchTerm(activeMatch) }}
-                </div>
-                <div class="concept-code">
-                  Code: <code>{{ getMatchCode(activeMatch) }}</code>
-                </div>
-              </div>
-
-              <!-- MedDRA 5-Level Hierarchy Path -->
-              <div
-                v-if="selectedDictType === 'MEDDRA'"
-                class="hierarchy-tree-view"
-              >
-                <h5>MedDRA 5-Level Structural Path</h5>
-                <div class="tree-nodes-list">
-                  <div class="tree-node node-soc">
-                    <div class="node-tag">SOC</div>
-                    <div class="node-info">
-                      <div class="node-name">
-                        {{ activeMatch.soc_name || "—" }}
-                      </div>
-                      <div class="node-code">
-                        Code: {{ activeMatch.soc_code || "—" }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="tree-connector">↓</div>
-
-                  <div class="tree-node node-hlgt">
-                    <div class="node-tag">HLGT</div>
-                    <div class="node-info">
-                      <div class="node-name">
-                        {{ activeMatch.hlgt_name || "—" }}
-                      </div>
-                      <div class="node-code">
-                        Code: {{ activeMatch.hlgt_code || "—" }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="tree-connector">↓</div>
-
-                  <div class="tree-node node-hlt">
-                    <div class="node-tag">HLT</div>
-                    <div class="node-info">
-                      <div class="node-name">
-                        {{ activeMatch.hlt_name || "—" }}
-                      </div>
-                      <div class="node-code">
-                        Code: {{ activeMatch.hlt_code || "—" }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="tree-connector">↓</div>
-
-                  <div class="tree-node node-pt">
-                    <div class="node-tag">PT</div>
-                    <div class="node-info">
-                      <div class="node-name">
-                        {{ activeMatch.pt_name || "—" }}
-                      </div>
-                      <div class="node-code">
-                        Code: {{ activeMatch.pt_code || "—" }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="tree-connector">↓</div>
-
-                  <div class="tree-node node-llt active-target-node">
-                    <div class="node-tag">LLT</div>
-                    <div class="node-info">
-                      <div class="node-name">
-                        {{ activeMatch.llt_name || "—" }}
-                      </div>
-                      <div class="node-code">
-                        Code: {{ activeMatch.llt_code || "—" }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- WHODrug ATC Tree & Ingredients -->
-              <div v-else class="whodrug-details-view">
-                <h5>Anatomical Therapeutic Chemical (ATC) Context</h5>
-                <div
-                  v-if="
-                    activeMatch.atc_context &&
-                    activeMatch.atc_context.length > 0
-                  "
-                  class="atc-list"
-                >
-                  <div
-                    v-for="(atc, aIdx) in activeMatch.atc_context"
-                    :key="aIdx"
-                    class="atc-card"
-                  >
-                    <div class="atc-code-pill">
-                      {{ atc.atc_code }}
-                    </div>
-                    <div class="atc-description">
-                      {{ atc.description }}
-                    </div>
-                  </div>
-                </div>
-                <div v-else class="text-muted-notice">
-                  No ATC classifications attached to this drug record.
-                </div>
-
-                <h5 style="margin-top: 16px">Active Ingredients</h5>
-                <div
-                  v-if="
-                    activeMatch.ingredients &&
-                    activeMatch.ingredients.length > 0
-                  "
-                  class="ingredient-chips"
-                >
-                  <span
-                    v-for="(ing, iIdx) in activeMatch.ingredients"
-                    :key="iIdx"
-                    class="ingredient-chip"
-                  >
-                    🧪 {{ ing.ingredient_name }} ({{ ing.ingredient_code }})
-                  </span>
-                </div>
-                <div v-else class="text-muted-notice">
-                  No specific single active ingredients indexed.
-                </div>
-              </div>
-
-              <!-- Part 11 Reason for Change GxP Input -->
-              <div class="gxp-confirmation-box">
-                <div class="form-group">
-                  <label for="override-reason"
-                    >21 CFR Part 11 Reason for Coding Assignment *</label
-                  >
-                  <input
-                    id="override-reason"
-                    v-model="gxpReason"
-                    type="text"
-                    class="form-control"
-                    placeholder="e.g. Coder manual classification after dictionary verification"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+    <!-- Search & Filter Controls -->
+    <div class="browser-controls-grid">
+      <div class="form-group flex-2">
+        <label for="dict-search-term">Search Term / Code</label>
+        <div class="search-input-group">
+          <input
+            id="dict-search-term"
+            v-model="searchTerm"
+            type="text"
+            class="form-control"
+            placeholder="Type verbatim or code..."
+            @keyup.enter="performSearch"
+          />
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="!searchTerm.trim() || codingStore.isSearching"
+            @click="performSearch"
+          >
+            {{ codingStore.isSearching ? "Searching..." : "Search" }}
+          </button>
         </div>
       </div>
 
-      <!-- Modal Footer -->
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" @click="close">
-          Cancel
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary"
-          :disabled="!activeMatch || !gxpReason.trim() || isSubmitting"
-          @click="applySelectedCode"
+      <div class="form-group">
+        <label for="dict-type-select">Dictionary</label>
+        <select
+          id="dict-type-select"
+          v-model="selectedDictType"
+          class="form-control"
+          @change="onDictionaryTypeChange"
         >
-          {{ isSubmitting ? "Applying..." : "Assign & Commit Code" }}
-        </button>
+          <option value="MEDDRA">MedDRA</option>
+          <option value="WHODRUG">WHODrug</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="dict-version-select">Version</label>
+        <select
+          id="dict-version-select"
+          v-model="selectedVersion"
+          class="form-control"
+          @change="performSearch"
+        >
+          <template v-if="selectedDictType === 'MEDDRA'">
+            <option value="26.0">v26.0 (Active)</option>
+            <option value="26.1">v26.1</option>
+            <option value="27.0">v27.0 (Target)</option>
+          </template>
+          <template v-else>
+            <option value="2024-03">v2024-03 (Active)</option>
+            <option value="2024-09">v2024-09 (Target)</option>
+          </template>
+        </select>
+      </div>
+
+      <div v-if="selectedDictType === 'MEDDRA'" class="form-group">
+        <label for="dict-level-select">Target Level</label>
+        <select
+          id="dict-level-select"
+          v-model="selectedLevel"
+          class="form-control"
+          @change="performSearch"
+        >
+          <option value="LLT">LLT (Lowest Level Term)</option>
+          <option value="PT">PT (Preferred Term)</option>
+          <option value="HLT">HLT (High Level Term)</option>
+          <option value="HLGT">HLGT (High Level Group Term)</option>
+          <option value="SOC">SOC (System Organ Class)</option>
+        </select>
       </div>
     </div>
-  </div>
+
+    <!-- Browser Split View: Results List (Left) & Hierarchy / ATC Tree (Right) -->
+    <div class="browser-split-layout">
+      <!-- Left Column: Search Results Matches -->
+      <div class="results-column card">
+        <div class="column-header">
+          <h4>Matches &amp; Suggestions</h4>
+          <span
+            v-if="codingStore.searchStatus"
+            class="badge"
+            :class="
+              codingStore.searchStatus === 'AUTO-CODED'
+                ? 'badge-success'
+                : codingStore.searchStatus === 'SUGGESTIONS'
+                  ? 'badge-info'
+                  : 'badge-neutral'
+            "
+          >
+            {{ codingStore.searchStatus }}
+          </span>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div v-if="codingStore.isSearching" class="results-loading">
+          <div class="spinner" />
+          <span>Searching terminology index...</span>
+        </div>
+
+        <!-- Empty Results -->
+        <div
+          v-else-if="codingStore.dictionarySearchResults.length === 0"
+          class="results-empty"
+        >
+          <p v-if="searchTerm">
+            No matching terms found for "<strong>{{ searchTerm }}</strong
+            >".
+          </p>
+          <p v-else>Enter a term or code above to search dictionary.</p>
+        </div>
+
+        <!-- Results List -->
+        <div v-else class="results-list">
+          <div
+            v-for="(match, idx) in codingStore.dictionarySearchResults"
+            :key="idx"
+            class="result-item-card"
+            :class="{
+              'active-result': isMatchSelected(match, idx),
+            }"
+            role="button"
+            tabindex="0"
+            :aria-pressed="isMatchSelected(match, idx)"
+            @click="selectMatch(match, idx)"
+            @keydown.enter.prevent="selectMatch(match, idx)"
+            @keydown.space.prevent="selectMatch(match, idx)"
+          >
+            <div class="result-card-header">
+              <div class="result-term-name">
+                {{ getMatchTerm(match) }}
+              </div>
+              <span class="match-score-badge">
+                {{ Math.round((match.score || 0) * 100) }}% match
+              </span>
+            </div>
+            <div class="result-card-meta">
+              <span class="code-pill">Code: {{ getMatchCode(match) }}</span>
+              <span v-if="match.primary_soc_flag === 'Y'" class="soc-flag-pill">
+                Primary SOC
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Hierarchy / Context Inspection & Confirmation -->
+      <div class="hierarchy-column card">
+        <div class="column-header">
+          <h4>Hierarchy &amp; Context Details</h4>
+        </div>
+
+        <div v-if="!activeMatch" class="hierarchy-empty-state">
+          <p>Select a match on the left to inspect its full hierarchy.</p>
+        </div>
+
+        <div v-else class="hierarchy-content">
+          <!-- Selected Concept Summary Banner -->
+          <div class="concept-summary-banner">
+            <div class="concept-title">
+              {{ getMatchTerm(activeMatch) }}
+            </div>
+            <div class="concept-code">
+              Code: <code>{{ getMatchCode(activeMatch) }}</code>
+            </div>
+          </div>
+
+          <!-- MedDRA 5-Level Hierarchy Path -->
+          <div v-if="selectedDictType === 'MEDDRA'" class="hierarchy-tree-view">
+            <h5>MedDRA 5-Level Structural Path</h5>
+            <div class="tree-nodes-list">
+              <div class="tree-node node-soc">
+                <div class="node-tag">SOC</div>
+                <div class="node-info">
+                  <div class="node-name">
+                    {{ activeMatch.soc_name || "—" }}
+                  </div>
+                  <div class="node-code">
+                    Code: {{ activeMatch.soc_code || "—" }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="tree-connector">
+                <ArrowDown :size="14" aria-hidden="true" />
+              </div>
+
+              <div class="tree-node node-hlgt">
+                <div class="node-tag">HLGT</div>
+                <div class="node-info">
+                  <div class="node-name">
+                    {{ activeMatch.hlgt_name || "—" }}
+                  </div>
+                  <div class="node-code">
+                    Code: {{ activeMatch.hlgt_code || "—" }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="tree-connector">
+                <ArrowDown :size="14" aria-hidden="true" />
+              </div>
+
+              <div class="tree-node node-hlt">
+                <div class="node-tag">HLT</div>
+                <div class="node-info">
+                  <div class="node-name">
+                    {{ activeMatch.hlt_name || "—" }}
+                  </div>
+                  <div class="node-code">
+                    Code: {{ activeMatch.hlt_code || "—" }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="tree-connector">
+                <ArrowDown :size="14" aria-hidden="true" />
+              </div>
+
+              <div class="tree-node node-pt">
+                <div class="node-tag">PT</div>
+                <div class="node-info">
+                  <div class="node-name">
+                    {{ activeMatch.pt_name || "—" }}
+                  </div>
+                  <div class="node-code">
+                    Code: {{ activeMatch.pt_code || "—" }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="tree-connector">
+                <ArrowDown :size="14" aria-hidden="true" />
+              </div>
+
+              <div class="tree-node node-llt active-target-node">
+                <div class="node-tag">LLT</div>
+                <div class="node-info">
+                  <div class="node-name">
+                    {{ activeMatch.llt_name || "—" }}
+                  </div>
+                  <div class="node-code">
+                    Code: {{ activeMatch.llt_code || "—" }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- WHODrug ATC Tree & Ingredients -->
+          <div v-else class="whodrug-details-view">
+            <h5>Anatomical Therapeutic Chemical (ATC) Context</h5>
+            <div
+              v-if="
+                activeMatch.atc_context && activeMatch.atc_context.length > 0
+              "
+              class="atc-list"
+            >
+              <div
+                v-for="(atc, aIdx) in activeMatch.atc_context"
+                :key="aIdx"
+                class="atc-card"
+              >
+                <div class="atc-code-pill">
+                  {{ atc.atc_code }}
+                </div>
+                <div class="atc-description">
+                  {{ atc.description }}
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-muted-notice">
+              No ATC classifications attached to this drug record.
+            </div>
+
+            <h5 style="margin-top: 16px">Active Ingredients</h5>
+            <div
+              v-if="
+                activeMatch.ingredients && activeMatch.ingredients.length > 0
+              "
+              class="ingredient-chips"
+            >
+              <span
+                v-for="(ing, iIdx) in activeMatch.ingredients"
+                :key="iIdx"
+                class="ingredient-chip"
+              >
+                <FlaskConical
+                  :size="14"
+                  aria-hidden="true"
+                  style="vertical-align: text-bottom; margin-right: 4px"
+                />{{ ing.ingredient_name }} ({{ ing.ingredient_code }})
+              </span>
+            </div>
+            <div v-else class="text-muted-notice">
+              No specific single active ingredients indexed.
+            </div>
+          </div>
+
+          <!-- Part 11 Reason for Change GxP Input -->
+          <div class="gxp-confirmation-box">
+            <div class="form-group">
+              <label for="override-reason"
+                >21 CFR Part 11 Reason for Coding Assignment *</label
+              >
+              <input
+                id="override-reason"
+                v-model="gxpReason"
+                type="text"
+                class="form-control"
+                placeholder="e.g. Coder manual classification after dictionary verification"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <template #footer>
+      <button
+        type="button"
+        class="btn btn-secondary"
+        :disabled="isSubmitting"
+        @click="close"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        :disabled="!activeMatch || !gxpReason.trim() || isSubmitting"
+        @click="applySelectedCode"
+      >
+        {{ isSubmitting ? "Applying..." : "Assign & Commit Code" }}
+      </button>
+    </template>
+  </ClinicalModal>
 </template>
 
 <script setup>
+import { ArrowDown, FlaskConical } from "lucide-vue-next";
 import { ref, computed, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 import { useCodingStore } from "../stores/coding";
 
 const codingStore = useCodingStore();
-const modalRef = ref(null);
 
 const searchTerm = ref("");
 const selectedDictType = ref("MEDDRA");
@@ -498,47 +491,14 @@ async function applySelectedCode() {
 }
 
 function close() {
+  if (isSubmitting.value) return;
   codingStore.closeBrowser();
 }
-
-useFocusTrap(modalRef, {
-  isOpen: () => codingStore.browserModal.isOpen,
-  onEscape: close,
-});
 </script>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(15, 23, 42, 0.65);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1050;
-}
-
-.dictionary-browser-modal {
-  background-color: white;
-  width: 95%;
+:deep(.dictionary-browser-modal) {
   max-width: 1080px;
-  max-height: 90vh;
-  border-radius: 8px;
-  box-shadow: 0 20px 35px rgba(0, 0, 0, 0.25);
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  background-color: var(--semantic-color-surface-muted);
 }
 
 .header-titles h3 {
@@ -552,21 +512,11 @@ useFocusTrap(modalRef, {
   color: var(--neutral-dark);
 }
 
-.btn-close {
-  background: transparent;
-  border: none;
-  font-size: 1.3rem;
-  cursor: pointer;
-  color: var(--neutral-dark);
-}
-
-.modal-body-browser {
+:deep(.modal-body-browser) {
   padding: 20px 24px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  flex: 1;
 }
 
 .browser-controls-grid {

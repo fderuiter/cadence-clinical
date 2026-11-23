@@ -1,91 +1,92 @@
 <template>
-  <div
-    v-if="show"
+  <ClinicalModal
     :id="idPrefix ? idPrefix + 'reason-modal' : 'reason-modal'"
-    ref="modalRef"
-    class="modal-overlay"
-    style="display: flex"
-    role="dialog"
-    aria-modal="true"
+    :is-open="show"
+    :teleport="false"
+    :title="title"
     :aria-labelledby="idPrefix + 'modal-title'"
+    :show-close-button="false"
+    :close-on-backdrop="false"
+    backdrop-class="modal-overlay"
+    dialog-class="modal"
+    @close="onCancel"
   >
-    <div class="modal">
-      <div :id="idPrefix + 'modal-title'" class="modal-header">
-        {{ title }}
-      </div>
-      <div class="modal-body">
-        <p v-if="description">
-          {{ description }}
-        </p>
+    <p v-if="description">
+      {{ description }}
+    </p>
 
-        <div class="form-group" style="margin-bottom: 12px">
-          <label :for="idPrefix + 'change-reason-select'"
-            >Select Standard Reason</label
-          >
-          <select
-            :id="idPrefix + 'change-reason-select'"
-            v-model="selectedOption"
-            @change="handleSelectChange"
-          >
-            <option v-for="opt in options" :key="opt.value" :value="opt.value">
-              {{ opt.text }}
-            </option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label :for="idPrefix + 'change-reason-text'"
-            >Custom Explanation (Optional)</label
-          >
-          <textarea
-            :id="idPrefix + 'change-reason-text'"
-            v-model="customText"
-            :placeholder="placeholder"
-            @input="clearError"
-          />
-        </div>
-
-        <!-- Accessible Validation Feedback -->
-        <div
-          v-if="validationError"
-          :id="idPrefix + 'reason-error'"
-          class="validation-error-msg"
-          style="
-            color: var(--semantic-color-error);
-            margin-top: 8px;
-            font-weight: 600;
-          "
-          role="status"
-          aria-live="polite"
-        >
-          ⚠️ {{ validationError }}
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button
-          :id="idPrefix + 'btn-cancel-change'"
-          class="btn"
-          type="button"
-          @click="onCancel"
-        >
-          {{ cancelText }}
-        </button>
-        <button
-          :id="idPrefix + 'btn-save-change'"
-          class="btn btn-primary"
-          type="button"
-          @click="onConfirm"
-        >
-          {{ confirmText }}
-        </button>
-      </div>
+    <div class="form-group" style="margin-bottom: 12px">
+      <label :for="idPrefix + 'change-reason-select'"
+        >Select Standard Reason</label
+      >
+      <select
+        :id="idPrefix + 'change-reason-select'"
+        v-model="selectedOption"
+        @change="handleSelectChange"
+      >
+        <option v-for="opt in options" :key="opt.value" :value="opt.value">
+          {{ opt.text }}
+        </option>
+      </select>
     </div>
-  </div>
+
+    <div class="form-group">
+      <label :for="idPrefix + 'change-reason-text'"
+        >Custom Explanation (Optional)</label
+      >
+      <textarea
+        :id="idPrefix + 'change-reason-text'"
+        v-model="customText"
+        :placeholder="placeholder"
+        @input="clearError"
+      />
+    </div>
+
+    <!-- Accessible Validation Feedback -->
+    <div
+      v-if="validationError"
+      :id="idPrefix + 'reason-error'"
+      class="validation-error-msg"
+      style="
+        color: var(--semantic-color-error);
+        margin-top: 8px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      "
+      role="status"
+      aria-live="polite"
+    >
+      <AlertTriangle :size="16" aria-hidden="true" />
+      <span>{{ validationError }}</span>
+    </div>
+
+    <template #footer>
+      <button
+        :id="idPrefix + 'btn-cancel-change'"
+        class="btn"
+        type="button"
+        @click="onCancel"
+      >
+        {{ cancelText }}
+      </button>
+      <button
+        :id="idPrefix + 'btn-save-change'"
+        class="btn btn-primary"
+        type="button"
+        @click="onConfirm"
+      >
+        {{ confirmText }}
+      </button>
+    </template>
+  </ClinicalModal>
 </template>
 
 <script setup>
+import { AlertTriangle } from "lucide-vue-next";
 import { ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 
 const props = defineProps({
   show: {
@@ -135,12 +136,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["confirm", "cancel"]);
-
-const modalRef = ref(null);
-useFocusTrap(modalRef, {
-  isOpen: () => props.show,
-  onEscape: () => emit("cancel"),
-});
 
 const selectedOption = ref("");
 const customText = ref("");

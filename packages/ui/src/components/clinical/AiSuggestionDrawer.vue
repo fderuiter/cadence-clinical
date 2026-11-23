@@ -1,4 +1,5 @@
 <script setup>
+import { Eye, Loader2, Pencil, Sparkles, X } from "lucide-vue-next";
 import { computed, ref, watch } from "vue";
 import ClinicalDrawer from "./ClinicalDrawer.vue";
 import ConfidenceBadge from "./ConfidenceBadge.vue";
@@ -198,7 +199,9 @@ const toggleEdit = () => {
       <header class="ai-drawer-header">
         <div class="ai-drawer-title-group">
           <div class="ai-header-badge-row">
-            <span class="ai-drawer-sparkle" aria-hidden="true">✨</span>
+            <span class="ai-drawer-sparkle" aria-hidden="true">
+              <Sparkles :size="18" :stroke-width="1.75" aria-hidden="true" />
+            </span>
             <h2 class="ai-drawer-title">
               {{ title }}
             </h2>
@@ -222,7 +225,7 @@ const toggleEdit = () => {
           aria-label="Close AI suggestion drawer"
           @click="closeDrawer"
         >
-          ✕
+          <X :size="18" :stroke-width="1.75" aria-hidden="true" />
         </button>
       </header>
     </template>
@@ -261,7 +264,14 @@ const toggleEdit = () => {
         <div class="ai-diff-header">
           <span class="ai-diff-tag ai-tag-ai">AI Proposed</span>
           <button type="button" class="ai-edit-toggle-btn" @click="toggleEdit">
-            {{ isEditing ? "👁 View Structured" : "✏️ Edit Suggestion" }}
+            <Eye
+              v-if="isEditing"
+              :size="14"
+              :stroke-width="1.75"
+              aria-hidden="true"
+            />
+            <Pencil v-else :size="14" :stroke-width="1.75" aria-hidden="true" />
+            <span>{{ isEditing ? "View Structured" : "Edit Suggestion" }}</span>
           </button>
         </div>
         <div class="ai-diff-content">
@@ -321,9 +331,13 @@ const toggleEdit = () => {
             :disabled="isApproving || isRejecting"
             @click="handleAccept"
           >
-            <span v-if="isApproving" class="ai-spinner" aria-hidden="true"
-              >⏳</span
-            >
+            <Loader2
+              v-if="isApproving"
+              :size="16"
+              :stroke-width="1.75"
+              class="ai-spinner"
+              aria-hidden="true"
+            />
             <span v-else>Accept & Apply</span>
           </button>
         </div>
@@ -333,44 +347,6 @@ const toggleEdit = () => {
 </template>
 
 <style scoped>
-:deep(.ai-drawer-backdrop) {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(2px);
-  z-index: 9999;
-  display: flex;
-  justify-content: flex-end;
-}
-
-:deep(.ai-drawer-panel) {
-  width: var(
-    --semantic-drawer-width-lg,
-    var(--drawer-width-lg, min(100vw, 640px))
-  );
-  max-width: 100vw;
-  height: 100vh;
-  background: var(--color-surface);
-  border-left: 1px solid var(--color-border);
-  box-shadow: -8px 0 24px -4px rgba(0, 0, 0, 0.12);
-  display: flex;
-  flex-direction: column;
-  outline: none;
-  animation: ai-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes ai-slide-in {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
 /* Header */
 .ai-drawer-header {
   display: flex;
@@ -389,7 +365,9 @@ const toggleEdit = () => {
 }
 
 .ai-drawer-sparkle {
-  font-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  color: var(--semantic-color-ai, var(--color-primary));
 }
 
 .ai-drawer-title {
@@ -406,12 +384,17 @@ const toggleEdit = () => {
 }
 
 .ai-drawer-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-target-staff-min, 44px);
+  min-height: var(--touch-target-staff-min, 44px);
   background: transparent;
   border: none;
   font-size: 16px;
   color: var(--color-text-muted);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px;
   border-radius: 4px;
   transition: background 0.15s;
 }
@@ -501,13 +484,16 @@ code.ai-provenance-val {
 }
 
 .ai-edit-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: transparent;
   border: none;
   font-size: 11px;
   font-weight: 500;
   color: var(--color-primary);
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 4px 6px;
   border-radius: 4px;
 }
 

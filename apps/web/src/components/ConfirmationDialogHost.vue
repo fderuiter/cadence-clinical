@@ -22,14 +22,18 @@
         <span
           v-if="store.activeRequest.variant === 'danger'"
           class="dialog-icon icon-danger"
-          >⚠️</span
         >
+          <AlertTriangle :size="22" :stroke-width="1.75" aria-hidden="true" />
+        </span>
         <span
           v-else-if="store.activeRequest.variant === 'warning'"
           class="dialog-icon icon-warning"
-          >⚡</span
         >
-        <span v-else class="dialog-icon icon-info">ℹ️</span>
+          <Zap :size="22" :stroke-width="1.75" aria-hidden="true" />
+        </span>
+        <span v-else class="dialog-icon icon-info">
+          <Info :size="22" :stroke-width="1.75" aria-hidden="true" />
+        </span>
       </div>
       <div class="confirmation-body-stack">
         <p v-if="store.activeRequest.message" class="confirmation-message">
@@ -96,6 +100,7 @@
 </template>
 
 <script setup>
+import { AlertTriangle, Info, Zap } from "lucide-vue-next";
 import { ref } from "vue";
 import { ClinicalModal } from "ui";
 import { useConfirmStore } from "../stores/confirm.js";

@@ -1120,234 +1120,216 @@
     </main>
 
     <!-- QPPV Electronic Signature Modal (21 CFR Part 11) -->
-    <div
-      v-if="isQppvModalOpen"
-      ref="qppvModalRef"
-      class="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="isQppvModalOpen"
+      :teleport="false"
+      :dismissible="!isSigning"
+      title="Executive QPPV 21 CFR Part 11 Electronic Signature"
+      close-label="Close QPPV electronic signature dialog"
+      dialog-class="modal-dialog"
+      body-class="modal-body"
+      footer-class="modal-footer"
+      @close="closeQppvModal"
     >
-      <div class="modal-dialog">
-        <div class="modal-header">
-          <h3>Executive QPPV 21 CFR Part 11 Electronic Signature</h3>
-          <ClinicalIconButton
-            class="close-btn"
-            label="Close QPPV electronic signature dialog"
-            @click="closeQppvModal"
-          >
-            &times;
-          </ClinicalIconButton>
-        </div>
-        <div class="modal-body">
-          <div class="alert-info-box">
-            <p>
-              You are applying a legally binding electronic signature approving
-              the <strong>{{ reportType }}</strong> periodic aggregate safety
-              report for <strong>{{ compoundName }} ({{ studyId }})</strong> for
-              regulatory submission.
-            </p>
-          </div>
-
-          <div class="form-group">
-            <label for="qppv-user-id">QPPV Signer Identifier:</label>
-            <input
-              id="qppv-user-id"
-              v-model="qppvUserId"
-              type="text"
-              class="text-control"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="qppv-role">Signer Role:</label>
-            <select id="qppv-role" v-model="qppvRole" class="select-control">
-              <option value="Qualified Person for Pharmacovigilance (QPPV)">
-                Qualified Person for Pharmacovigilance (QPPV)
-              </option>
-              <option value="Authorized Safety Physician">
-                Authorized Safety Physician
-              </option>
-              <option value="Sponsor Medical Monitor">
-                Sponsor Medical Monitor
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="qppv-meaning">Meaning of Electronic Signature:</label>
-            <input
-              id="qppv-meaning"
-              v-model="qppvMeaning"
-              type="text"
-              class="text-control"
-              readonly
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="qppv-secret"
-              >Re-Authentication Security Credential / PIN:</label
-            >
-            <input
-              id="qppv-secret"
-              v-model="qppvSecret"
-              type="password"
-              class="text-control"
-              placeholder="Enter signing secret / password..."
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="qppv-comments">Review Comments / Endorsement:</label>
-            <textarea
-              id="qppv-comments"
-              v-model="qppvComments"
-              rows="3"
-              class="textarea-control"
-              placeholder="Optional QPPV endorsement notes..."
-            />
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="closeQppvModal">
-            Cancel
-          </button>
-          <button
-            class="btn btn-qppv"
-            :disabled="!qppvSecret || isSigning"
-            @click="executeQppvSignoff"
-          >
-            {{
-              isSigning
-                ? "Sealing Signature..."
-                : "Confirm Electronic Signature"
-            }}
-          </button>
-        </div>
+      <div class="alert-info-box">
+        <p>
+          You are applying a legally binding electronic signature approving the
+          <strong>{{ reportType }}</strong> periodic aggregate safety report for
+          <strong>{{ compoundName }} ({{ studyId }})</strong> for regulatory
+          submission.
+        </p>
       </div>
-    </div>
+
+      <div class="form-group">
+        <label for="qppv-user-id">QPPV Signer Identifier:</label>
+        <input
+          id="qppv-user-id"
+          v-model="qppvUserId"
+          type="text"
+          class="text-control"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="qppv-role">Signer Role:</label>
+        <select id="qppv-role" v-model="qppvRole" class="select-control">
+          <option value="Qualified Person for Pharmacovigilance (QPPV)">
+            Qualified Person for Pharmacovigilance (QPPV)
+          </option>
+          <option value="Authorized Safety Physician">
+            Authorized Safety Physician
+          </option>
+          <option value="Sponsor Medical Monitor">
+            Sponsor Medical Monitor
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="qppv-meaning">Meaning of Electronic Signature:</label>
+        <input
+          id="qppv-meaning"
+          v-model="qppvMeaning"
+          type="text"
+          class="text-control"
+          readonly
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="qppv-secret"
+          >Re-Authentication Security Credential / PIN:</label
+        >
+        <input
+          id="qppv-secret"
+          v-model="qppvSecret"
+          type="password"
+          class="text-control"
+          placeholder="Enter signing secret / password..."
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="qppv-comments">Review Comments / Endorsement:</label>
+        <textarea
+          id="qppv-comments"
+          v-model="qppvComments"
+          rows="3"
+          class="textarea-control"
+          placeholder="Optional QPPV endorsement notes..."
+        />
+      </div>
+
+      <template #footer>
+        <button
+          class="btn btn-secondary"
+          :disabled="isSigning"
+          @click="closeQppvModal"
+        >
+          Cancel
+        </button>
+        <button
+          class="btn btn-qppv"
+          :disabled="!qppvSecret || isSigning"
+          @click="executeQppvSignoff"
+        >
+          {{
+            isSigning ? "Sealing Signature..." : "Confirm Electronic Signature"
+          }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- Safety Physician Electronic Signature Modal (21 CFR Part 11) -->
-    <div
-      v-if="isPhysicianSignModalOpen"
-      ref="physicianSignModalRef"
-      class="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="isPhysicianSignModalOpen"
+      :teleport="false"
+      :dismissible="!isSigningPhysician"
+      title="Safety Physician 21 CFR Part 11 Electronic Signature"
+      close-label="Close Safety Physician electronic signature dialog"
+      dialog-class="modal-dialog"
+      body-class="modal-body"
+      footer-class="modal-footer"
+      @close="closePhysicianSignModal"
     >
-      <div class="modal-dialog">
-        <div class="modal-header">
-          <h3>Safety Physician 21 CFR Part 11 Electronic Signature</h3>
-          <ClinicalIconButton
-            class="close-btn"
-            label="Close Safety Physician electronic signature dialog"
-            @click="closePhysicianSignModal"
-          >
-            &times;
-          </ClinicalIconButton>
-        </div>
-        <div class="modal-body">
-          <div class="alert-info-box">
-            <p>
-              Applying formal 21 CFR Part 11 Safety Physician medical approval
-              for Case
-              <strong>{{ selectedClockForSign?.case_id }}</strong> (Authority:
-              <strong>{{ selectedClockForSign?.authority_name }}</strong>,
-              Timeframe:
-              <strong>{{ selectedClockForSign?.timeframe_days }}d</strong>).
-            </p>
-          </div>
-
-          <div class="form-group">
-            <label for="physician-user-id">Physician Signer Identifier:</label>
-            <input
-              id="physician-user-id"
-              v-model="physicianUserId"
-              type="text"
-              class="text-control"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="physician-role">Signer Role:</label>
-            <select
-              id="physician-role"
-              v-model="physicianRole"
-              class="select-control"
-            >
-              <option value="safety_physician">Safety Physician</option>
-              <option value="sponsor_safety_physician">
-                Sponsor Safety Physician
-              </option>
-              <option value="sponsor_medical_monitor">
-                Sponsor Medical Monitor
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="physician-meaning"
-              >Meaning of Electronic Signature:</label
-            >
-            <input
-              id="physician-meaning"
-              type="text"
-              class="text-control"
-              value="Approval of Expedited ICSR Regulatory Submission and Causality Assessment"
-              readonly
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="physician-secret"
-              >Re-Authentication Security PIN / Secret:</label
-            >
-            <input
-              id="physician-secret"
-              v-model="physicianSecret"
-              type="password"
-              class="text-control"
-              placeholder="Enter re-authentication PIN..."
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="physician-reason"
-              >Mandatory Reason for Change (21 CFR § 11.10(e)):</label
-            >
-            <textarea
-              id="physician-reason"
-              v-model="physicianReason"
-              rows="2"
-              class="textarea-control"
-              placeholder="Mandatory GxP reason for approval..."
-            />
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="closePhysicianSignModal">
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="
-              !physicianSecret || !physicianReason || isSigningPhysician
-            "
-            @click="executePhysicianSignoff"
-          >
-            {{ isSigningPhysician ? "Sealing..." : "Seal Part 11 Signature" }}
-          </button>
-        </div>
+      <div class="alert-info-box">
+        <p>
+          Applying formal 21 CFR Part 11 Safety Physician medical approval for
+          Case
+          <strong>{{ selectedClockForSign?.case_id }}</strong> (Authority:
+          <strong>{{ selectedClockForSign?.authority_name }}</strong>,
+          Timeframe:
+          <strong>{{ selectedClockForSign?.timeframe_days }}d</strong>).
+        </p>
       </div>
-    </div>
+
+      <div class="form-group">
+        <label for="physician-user-id">Physician Signer Identifier:</label>
+        <input
+          id="physician-user-id"
+          v-model="physicianUserId"
+          type="text"
+          class="text-control"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="physician-role">Signer Role:</label>
+        <select
+          id="physician-role"
+          v-model="physicianRole"
+          class="select-control"
+        >
+          <option value="safety_physician">Safety Physician</option>
+          <option value="sponsor_safety_physician">
+            Sponsor Safety Physician
+          </option>
+          <option value="sponsor_medical_monitor">
+            Sponsor Medical Monitor
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="physician-meaning">Meaning of Electronic Signature:</label>
+        <input
+          id="physician-meaning"
+          type="text"
+          class="text-control"
+          value="Approval of Expedited ICSR Regulatory Submission and Causality Assessment"
+          readonly
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="physician-secret"
+          >Re-Authentication Security PIN / Secret:</label
+        >
+        <input
+          id="physician-secret"
+          v-model="physicianSecret"
+          type="password"
+          class="text-control"
+          placeholder="Enter re-authentication PIN..."
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="physician-reason"
+          >Mandatory Reason for Change (21 CFR § 11.10(e)):</label
+        >
+        <textarea
+          id="physician-reason"
+          v-model="physicianReason"
+          rows="2"
+          class="textarea-control"
+          placeholder="Mandatory GxP reason for approval..."
+        />
+      </div>
+
+      <template #footer>
+        <button
+          class="btn btn-secondary"
+          :disabled="isSigningPhysician"
+          @click="closePhysicianSignModal"
+        >
+          Cancel
+        </button>
+        <button
+          class="btn btn-primary"
+          :disabled="!physicianSecret || !physicianReason || isSigningPhysician"
+          @click="executePhysicianSignoff"
+        >
+          {{ isSigningPhysician ? "Sealing..." : "Seal Part 11 Signature" }}
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 
 import { useToastStore } from "../../stores/toasts.js";
 import { ensureOk } from "../../utils/apiErrors.js";
@@ -1395,8 +1377,6 @@ const isCalculatingExposure = ref(false);
 const isVerifyingSnapshot = ref(false);
 const isSigning = ref(false);
 const isQppvModalOpen = ref(false);
-const qppvModalRef = ref<HTMLElement | null>(null);
-const physicianSignModalRef = ref<HTMLElement | null>(null);
 
 // QPPV Signature Modal Form
 const qppvUserId = ref("qppv.officer");
@@ -2005,22 +1985,16 @@ async function runTriageSimulation() {
 }
 
 function closeQppvModal() {
+  if (isSigning.value) return;
   qppvSecret.value = "";
   isQppvModalOpen.value = false;
 }
 
 function closePhysicianSignModal() {
+  if (isSigningPhysician.value) return;
   physicianSecret.value = "";
   isPhysicianSignModalOpen.value = false;
 }
-
-useFocusTrap(qppvModalRef, isQppvModalOpen, {
-  onEscape: closeQppvModal,
-});
-
-useFocusTrap(physicianSignModalRef, isPhysicianSignModalOpen, {
-  onEscape: closePhysicianSignModal,
-});
 
 function openPhysicianSignModal(clk: any) {
   selectedClockForSign.value = clk;
@@ -2039,6 +2013,7 @@ async function executePhysicianSignoff() {
       selectedClockForSign.value.is_signed = true;
     }
     await new Promise((r) => setTimeout(r, 500));
+    physicianSecret.value = "";
     isPhysicianSignModalOpen.value = false;
     toasts.push({
       tone: "success",
@@ -2641,52 +2616,7 @@ onMounted(() => {
 }
 
 /* Modal Styles */
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(15, 23, 42, 0.65);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-dialog {
-  background: var(--semantic-color-surface);
-  border-radius: var(--radius-lg, 8px);
-  width: 100%;
-  max-width: 560px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-}
-
-.modal-header {
-  padding: 14px 18px;
-  background-color: var(--semantic-color-surface-muted);
-  border-bottom: 1px solid var(--semantic-color-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1rem;
-  color: var(--semantic-color-text);
-}
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  color: var(--semantic-color-text-secondary);
-}
-
 .modal-body {
-  padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 12px;

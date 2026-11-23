@@ -4,6 +4,7 @@
     <ClinicalDrawer
       :is-open="knowledgeStore.isOpen"
       :teleport="false"
+      desktop-mode="docked"
       id="contextual-help-drawer"
       overlay-id="contextual-help-drawer-overlay"
       overlay-class="drawer-overlay"
@@ -17,14 +18,21 @@
         <div class="drawer-header">
           <div class="header-main-row">
             <div class="header-title-group">
-              <span class="header-icon">📖</span>
+              <span class="header-icon" aria-hidden="true">
+                <BookOpen :size="20" :stroke-width="1.75" aria-hidden="true" />
+              </span>
               <div>
                 <h3 id="help-drawer-title" class="drawer-title">
                   Clinical Guidance &amp; SOPs
                 </h3>
                 <div class="context-badges">
                   <span class="context-badge route-badge" title="Active Route">
-                    📍 {{ knowledgeStore.currentRoute }}
+                    <MapPin
+                      :size="12"
+                      :stroke-width="1.75"
+                      aria-hidden="true"
+                    />
+                    <span>{{ knowledgeStore.currentRoute }}</span>
                   </span>
                   <span
                     class="context-badge persona-badge"
@@ -45,14 +53,14 @@
                 title="Toggle Search SOPs"
                 @click="toggleSearch"
               >
-                🔍
+                <Search :size="16" :stroke-width="1.75" aria-hidden="true" />
               </ClinicalIconButton>
               <ClinicalIconButton
                 class="btn-close"
                 label="Close Help Drawer"
                 @click="knowledgeStore.closeDrawer()"
               >
-                ✕
+                <X :size="18" :stroke-width="1.75" aria-hidden="true" />
               </ClinicalIconButton>
             </div>
           </div>
@@ -73,7 +81,7 @@
               label="Clear SOP search"
               @click="clearSearch"
             >
-              ✕
+              <X :size="16" :stroke-width="1.75" aria-hidden="true" />
             </ClinicalIconButton>
           </div>
         </div>
@@ -95,7 +103,9 @@
         aria-live="assertive"
       >
         <div class="error-alert-header">
-          <span class="error-alert-icon" aria-hidden="true">⚠️</span>
+          <span class="error-alert-icon" aria-hidden="true">
+            <AlertTriangle :size="18" :stroke-width="1.75" aria-hidden="true" />
+          </span>
           <h4 class="error-alert-title">
             {{
               knowledgeStore.lastFailedAction?.type === "search"
@@ -112,7 +122,8 @@
             class="btn btn-secondary btn-retry"
             @click="handleRetry"
           >
-            ↻ Retry
+            <RotateCcw :size="14" :stroke-width="1.75" aria-hidden="true" />
+            <span>Retry</span>
           </button>
         </div>
       </div>
@@ -223,7 +234,9 @@
 
           <!-- Section Anchor Callout -->
           <div v-if="knowledgeStore.activeSectionAnchor" class="anchor-callout">
-            <span class="anchor-icon">🎯</span>
+            <span class="anchor-icon" aria-hidden="true">
+              <Target :size="16" :stroke-width="1.75" aria-hidden="true" />
+            </span>
             <div class="anchor-text">
               <strong>Spotlight Section:</strong>
               <code>{{ knowledgeStore.activeSectionAnchor }}</code>
@@ -240,11 +253,23 @@
               class="btn-toggle-body"
               @click="knowledgeStore.toggleArticleBody()"
             >
-              {{
+              <ChevronUp
+                v-if="knowledgeStore.isArticleBodyExpanded"
+                :size="14"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
+              <ChevronDown
+                v-else
+                :size="14"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
+              <span>{{
                 knowledgeStore.isArticleBodyExpanded
-                  ? "▲ Collapse Body"
-                  : "▼ Expand Body"
-              }}
+                  ? "Collapse Body"
+                  : "Expand Body"
+              }}</span>
             </button>
           </div>
 
@@ -275,9 +300,12 @@
           class="related-section"
         >
           <h5 class="related-title">
-            📚 Related Clinical SOPs ({{
-              knowledgeStore.relatedArticles.length
-            }})
+            <Library :size="14" :stroke-width="1.75" aria-hidden="true" />
+            <span
+              >Related Clinical SOPs ({{
+                knowledgeStore.relatedArticles.length
+              }})</span
+            >
           </h5>
           <div class="related-list">
             <div
@@ -312,7 +340,9 @@
 
       <!-- Empty Fallback State -->
       <div v-else class="empty-state">
-        <div class="empty-icon">🔍</div>
+        <div class="empty-icon" aria-hidden="true">
+          <Search :size="28" :stroke-width="1.75" aria-hidden="true" />
+        </div>
         <h4>No Specific SOP Mapped for This Route</h4>
         <p>
           There is currently no published SOP mapped specifically to
@@ -325,14 +355,16 @@
             class="btn btn-secondary"
             @click="openSearchWithFallback"
           >
-            🔍 Search Knowledge Hub
+            <Search :size="14" :stroke-width="1.75" aria-hidden="true" />
+            <span>Search Knowledge Hub</span>
           </button>
           <button
             type="button"
             class="btn btn-secondary"
             @click="openHubRoute('/knowledge')"
           >
-            📚 Open Full SOP Hub
+            <Library :size="14" :stroke-width="1.75" aria-hidden="true" />
+            <span>Open Full SOP Hub</span>
           </button>
         </div>
       </div>
@@ -347,7 +379,9 @@
               title="Log Support Ticket pre-populated with current route context"
               @click="handleEscalate"
             >
-              <span class="btn-icon">🎫</span>
+              <span class="btn-icon" aria-hidden="true">
+                <Ticket :size="15" :stroke-width="1.75" aria-hidden="true" />
+              </span>
               Escalate to Support Ticket
             </button>
             <div class="drawer-hub-links">
@@ -357,7 +391,8 @@
                 class="btn-hub-link"
                 @click="openHubRoute('/knowledge')"
               >
-                📚 Browse SOP Hub
+                <Library :size="13" :stroke-width="1.75" aria-hidden="true" />
+                <span>Browse SOP Hub</span>
               </button>
               <span class="hub-link-sep" aria-hidden="true">·</span>
               <button
@@ -366,7 +401,8 @@
                 class="btn-hub-link"
                 @click="openHubRoute('/tickets')"
               >
-                🎫 Support Queue
+                <Ticket :size="13" :stroke-width="1.75" aria-hidden="true" />
+                <span>Support Queue</span>
               </button>
             </div>
           </div>
@@ -393,6 +429,19 @@
 </template>
 
 <script setup>
+import {
+  AlertTriangle,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Library,
+  MapPin,
+  RotateCcw,
+  Search,
+  Target,
+  Ticket,
+  X,
+} from "lucide-vue-next";
 import {
   ref,
   computed,
@@ -544,7 +593,7 @@ watch(
   }
 );
 
-// Keyboard accessibility: F1 / '?' to toggle contextual help; Escape is handled by useFocusTrap
+// Keyboard accessibility: F1 / '?' to toggle contextual help; Escape is handled by ClinicalDrawer / useEscapeClose
 function handleKeydown(e) {
   if (
     e.key === "F1" ||
@@ -575,30 +624,15 @@ onUnmounted(() => {
 
 <style scoped>
 :deep(.drawer-overlay) {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(15, 23, 42, 0.45);
-  display: flex;
-  justify-content: flex-end;
   z-index: 1050;
-  backdrop-filter: blur(2px);
 }
 
 :deep(.drawer-panel) {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   width: var(
     --semantic-drawer-width-sm,
     var(--drawer-width-sm, min(100vw, 440px))
   );
-  max-width: 100vw;
-  height: 100vh;
-  box-shadow: -6px 0 28px rgba(0, 0, 0, 0.18);
-  display: flex;
-  flex-direction: column;
-  animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: var(
     --font,
     -apple-system,
@@ -608,15 +642,6 @@ onUnmounted(() => {
     sans-serif
   );
   color: var(--primary);
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
 }
 
 .drawer-header {

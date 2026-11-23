@@ -1,13 +1,18 @@
 <template>
-  <div class="palette-backdrop" role="presentation" @click.self="emit('close')">
-    <div
-      id="canvas-palette"
-      ref="dialogRef"
-      class="palette"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Go to or open anything in this study"
-    >
+  <ClinicalModal
+    id="canvas-palette"
+    :is-open="true"
+    :teleport="false"
+    :show-header="false"
+    :show-footer="false"
+    aria-label="Go to or open anything in this study"
+    initial-focus="#canvas-palette-input"
+    backdrop-class="palette-backdrop"
+    dialog-class="palette"
+    body-class="modal-content-passthrough"
+    @close="emit('close')"
+  >
+    <div ref="paletteBodyRef" class="palette-inner">
       <input
         id="canvas-palette-input"
         v-model="query"
@@ -78,13 +83,13 @@
         inspector.
       </p>
     </div>
-  </div>
+  </ClinicalModal>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { getActivePinia } from "pinia";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
 import { executionApi, type SubjectSummary } from "../../api/executionApi";
@@ -127,11 +132,7 @@ const emit = defineEmits<{
   go: [target: PaletteTarget];
 }>();
 
-const dialogRef = ref<HTMLElement | null>(null);
-useFocusTrap(dialogRef, {
-  onEscape: () => emit("close"),
-  initialFocus: "#canvas-palette-input",
-});
+const paletteBodyRef = ref<HTMLElement | null>(null);
 
 const query = ref("");
 const active = ref(0);
@@ -379,7 +380,7 @@ function choose(item: PaletteItem) {
 
 function scrollActiveIntoView() {
   nextTick(() =>
-    dialogRef.value
+    paletteBodyRef.value
       ?.querySelector<HTMLElement>(`#canvas-palette-item-${active.value}`)
       ?.scrollIntoView?.({ block: "nearest" })
   );
@@ -406,19 +407,16 @@ function onKeydown(event: KeyboardEvent) {
 </script>
 
 <style scoped>
-.palette-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  justify-content: center;
+:deep(.palette-backdrop) {
   align-items: flex-start;
   padding: 12vh 16px 16px;
+  padding: 12dvh 16px 16px;
   background: rgb(15 23 42 / 40%);
 }
 
-.palette {
+:deep(.palette) {
   width: min(640px, 100%);
+  max-width: 640px;
   background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -426,7 +424,13 @@ function onKeydown(event: KeyboardEvent) {
   overflow: hidden;
 }
 
-.palette input {
+.palette-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.palette-inner input {
   width: 100%;
   box-sizing: border-box;
   padding: 14px 16px;
@@ -442,6 +446,7 @@ function onKeydown(event: KeyboardEvent) {
   margin: 0;
   padding: 6px;
   max-height: 50vh;
+  max-height: 50dvh;
   overflow-y: auto;
 }
 

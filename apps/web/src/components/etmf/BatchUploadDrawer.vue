@@ -1,381 +1,393 @@
 <!-- apps/web/src/components/etmf/BatchUploadDrawer.vue -->
 <template>
-  <div
-    v-if="isOpen"
-    class="batch-drawer-overlay"
-    role="presentation"
-    @click.self="handleClose"
-  >
-    <div
-      ref="drawerRef"
-      class="batch-drawer"
-      role="dialog"
-      aria-modal="true"
+  <div>
+    <ClinicalDrawer
+      :is-open="isOpen"
+      :teleport="false"
+      size="xl"
       aria-labelledby="batch-drawer-title"
-      tabindex="-1"
+      overlay-class="batch-drawer-overlay"
+      panel-class="batch-drawer"
+      body-class="drawer-body"
+      footer-class="drawer-footer"
+      @close="handleClose"
     >
-      <div class="drawer-header">
-        <div style="display: flex; align-items: center; gap: 10px">
-          <span style="font-size: 24px">📤</span>
-          <div>
-            <h3
-              id="batch-drawer-title"
-              style="margin: 0; font-size: 18px; font-weight: 700"
-            >
-              Batch Ingestion &amp; AI Auto-Classification
-            </h3>
-            <p
-              style="
-                margin: 2px 0 0 0;
-                font-size: 12px;
-                color: var(--semantic-color-text-secondary);
-              "
-            >
-              Drag and drop up to 50 regulatory documents for DIA TMF Reference
-              Model v3.2.0 classification
-            </p>
-          </div>
-        </div>
-        <button
-          class="btn btn-secondary btn-close-batch-drawer"
-          style="padding: 4px 10px; font-size: 14px; cursor: pointer"
-          aria-label="Close batch upload drawer"
-          @click="handleClose"
-        >
-          ✕
-        </button>
-      </div>
-
-      <div class="drawer-body">
-        <div
-          v-if="!canStage"
-          id="batch-stage-role-note"
-          class="alert alert-error"
-          role="note"
-          style="margin-bottom: 16px"
-        >
-          {{ ETMF_STAGE_ROLE_REASON }}
-        </div>
-
-        <!-- Error Banner -->
-        <div
-          v-if="batchError"
-          class="alert alert-error"
-          style="margin-bottom: 16px"
-        >
-          ⚠️ {{ batchError }}
-        </div>
-
-        <!-- Drag & Drop Dropzone -->
-        <ClinicalDropzone
-          class="dropzone"
-          multiple
-          accept=".pdf,.doc,.docx,.txt"
-          :disabled="isProcessing"
-          icon="📁"
-          prompt-text="Drop files here or browse to upload"
-          hint-text="Supports PDF, DOCX, TXT • Max 50 files • 100 MB per file • 500 MB per batch"
-          button-label="Browse files to upload"
-          input-aria-label="Files to upload"
-          @files-selected="addFilesToQueue"
-        />
-
-        <!-- 21 CFR Part 11 Change Justification -->
-        <div class="reason-section">
-          <label
-            for="batch-reason-input"
-            class="form-label"
-            style="font-size: 12px; font-weight: 600"
-          >
-            21 CFR Part 11 Reason for Ingestion <span class="required">*</span>
-          </label>
-          <input
-            id="batch-reason-input"
-            v-model="reasonForChange"
-            type="text"
-            class="form-control"
-            placeholder="e.g. Site 101 regulatory documents initial filing for CRA review"
-            style="font-size: 12px"
-          />
-        </div>
-
-        <!-- Progress Tracker Bar -->
-        <div v-if="isProcessing || completedCount > 0" class="progress-section">
-          <div
-            style="
-              display: flex;
-              justify-content: space-between;
-              font-size: 12px;
-              font-weight: 600;
-              margin-bottom: 4px;
-            "
-          >
-            <span>Batch Ingestion Progress</span>
-            <span
-              >{{ completedCount }} / {{ queue.length }} Files Staged ({{
-                overallProgress
-              }}%)</span
-            >
-          </div>
-          <div class="progress-bar-track">
-            <div
-              class="progress-bar-fill"
-              :style="{ width: overallProgress + '%' }"
-            />
-          </div>
-        </div>
-
-        <!-- Batch Upload Items Queue Table -->
-        <div v-if="queue.length > 0" class="queue-section">
-          <div
-            style="
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              margin-bottom: 8px;
-            "
-          >
-            <h4 style="margin: 0; font-size: 13px; font-weight: 600">
-              Upload Queue ({{ queue.length }} / 50 Files)
-            </h4>
-            <div style="display: flex; gap: 8px">
-              <button
-                v-if="!isProcessing && queue.length > 0"
-                class="btn btn-secondary btn-sm"
-                style="font-size: 11px; padding: 4px 8px"
-                @click="clearQueue"
+      <template #header>
+        <div class="drawer-header">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <Upload :size="20" :stroke-width="1.75" aria-hidden="true" />
+            <div>
+              <h3
+                id="batch-drawer-title"
+                style="margin: 0; font-size: 18px; font-weight: 700"
               >
-                Clear Queue
-              </button>
+                Batch Ingestion &amp; AI Auto-Classification
+              </h3>
+              <p
+                style="
+                  margin: 2px 0 0 0;
+                  font-size: 12px;
+                  color: var(--semantic-color-text-secondary);
+                "
+              >
+                Drag and drop up to 50 regulatory documents for DIA TMF
+                Reference Model v3.2.0 classification
+              </p>
             </div>
           </div>
+          <button
+            type="button"
+            class="btn btn-secondary btn-close-batch-drawer"
+            style="
+              min-width: var(--touch-target-staff-min, 44px);
+              min-height: var(--touch-target-staff-min, 44px);
+              padding: 4px 10px;
+              font-size: 14px;
+              cursor: pointer;
+            "
+            aria-label="Close batch upload drawer"
+            @click="handleClose"
+          >
+            <X :size="18" :stroke-width="1.75" aria-hidden="true" />
+          </button>
+        </div>
+      </template>
 
-          <div class="queue-table-wrapper">
-            <table class="queue-table">
-              <thead>
-                <tr>
-                  <th>File Name</th>
-                  <th>Size</th>
-                  <th>Status</th>
-                  <th>Predicted Classification</th>
-                  <th>Confidence</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="(item, index) in queue"
-                  :key="index"
-                  class="queue-row"
-                >
-                  <td class="filename-cell font-mono" :title="item.file.name">
-                    {{ item.file.name }}
-                  </td>
-                  <td class="size-cell">
-                    {{ formatFileSize(item.file.size) }}
-                  </td>
-                  <td>
-                    <span
-                      class="badge"
-                      :class="getStatusBadgeClass(item.status)"
-                    >
-                      {{ item.status }}
-                    </span>
-                  </td>
-                  <td>
-                    <div v-if="item.report" class="classification-preview">
-                      <span class="font-mono text-bold">{{
-                        item.report.primary_classification.artifact_code
-                      }}</span>
-                      <span class="text-muted">
-                        ({{
-                          item.report.primary_classification.artifact_type
-                        }})</span
-                      >
-                    </div>
-                    <span v-else class="text-muted">—</span>
-                  </td>
-                  <td>
-                    <span
-                      v-if="item.report"
-                      class="badge"
-                      :class="
-                        getConfidenceBadgeClass(item.report.confidence_tier)
-                      "
-                    >
-                      {{
-                        Math.round(
-                          item.report.primary_classification.confidence * 100
-                        )
-                      }}% {{ item.report.confidence_tier }}
-                    </span>
-                    <span v-else class="text-muted">—</span>
-                  </td>
-                  <td>
-                    <button
-                      v-if="item.report"
-                      type="button"
-                      class="btn btn-secondary btn-xs btn-inspect-item"
-                      style="font-size: 10px; padding: 2px 6px"
-                      @click="inspectItem(item)"
-                    >
-                      <span aria-hidden="true">📋 </span>Inspect<span
-                        class="sr-only"
-                      >
-                        {{ item.file.name }}</span
-                      >
-                    </button>
-                    <ClinicalIconButton
-                      v-if="!isProcessing && item.status === 'PENDING'"
-                      class="btn btn-danger btn-xs btn-remove-item"
-                      style="
-                        min-width: 24px;
-                        min-height: 24px;
-                        font-size: 10px;
-                        padding: 2px 6px;
-                        margin-left: 4px;
-                      "
-                      :label="`Remove ${item.file.name} from upload queue`"
-                      @click="removeItem(index)"
-                    >
-                      ✕
-                    </ClinicalIconButton>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+      <div
+        v-if="!canStage"
+        id="batch-stage-role-note"
+        class="alert alert-error"
+        role="note"
+        style="margin-bottom: 16px"
+      >
+        {{ ETMF_STAGE_ROLE_REASON }}
+      </div>
+
+      <!-- Error Banner -->
+      <div
+        v-if="batchError"
+        class="alert alert-error"
+        style="
+          margin-bottom: 16px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        "
+      >
+        <AlertTriangle :size="16" :stroke-width="1.75" aria-hidden="true" />
+        <span>{{ batchError }}</span>
+      </div>
+
+      <!-- Drag & Drop Dropzone -->
+      <ClinicalDropzone
+        class="dropzone"
+        multiple
+        accept=".pdf,.doc,.docx,.txt"
+        :disabled="isProcessing"
+        prompt-text="Drop files here or browse to upload"
+        hint-text="Supports PDF, DOCX, TXT • Max 50 files • 100 MB per file • 500 MB per batch"
+        button-label="Browse files to upload"
+        input-aria-label="Files to upload"
+        @files-selected="addFilesToQueue"
+      >
+        <template #icon>
+          <FolderOpen :size="28" :stroke-width="1.75" aria-hidden="true" />
+        </template>
+      </ClinicalDropzone>
+
+      <!-- 21 CFR Part 11 Change Justification -->
+      <div class="reason-section">
+        <label
+          for="batch-reason-input"
+          class="form-label"
+          style="font-size: 12px; font-weight: 600"
+        >
+          21 CFR Part 11 Reason for Ingestion <span class="required">*</span>
+        </label>
+        <input
+          id="batch-reason-input"
+          v-model="reasonForChange"
+          type="text"
+          class="form-control"
+          placeholder="e.g. Site 101 regulatory documents initial filing for CRA review"
+          style="font-size: 12px"
+        />
+      </div>
+
+      <!-- Progress Tracker Bar -->
+      <div v-if="isProcessing || completedCount > 0" class="progress-section">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+          "
+        >
+          <span>Batch Ingestion Progress</span>
+          <span
+            >{{ completedCount }} / {{ queue.length }} Files Staged ({{
+              overallProgress
+            }}%)</span
+          >
+        </div>
+        <div class="progress-bar-track">
+          <div
+            class="progress-bar-fill"
+            :style="{ width: overallProgress + '%' }"
+          />
         </div>
       </div>
 
-      <!-- Drawer Footer Actions -->
-      <div class="drawer-footer">
-        <button
-          class="btn btn-secondary"
-          style="padding: 8px 16px; font-size: 13px"
-          :disabled="isProcessing"
-          @click="handleClose"
-        >
-          Cancel
-        </button>
-        <button
-          v-if="isProcessing"
-          class="btn btn-warning"
-          style="padding: 8px 16px; font-size: 13px; margin-left: 8px"
-          @click="cancelProcessing"
-        >
-          Stop Batch Processing
-        </button>
-        <button
-          v-else
-          class="btn btn-primary btn-submit-batch"
-          style="padding: 8px 16px; font-size: 13px; margin-left: 8px"
-          :disabled="
-            !canStage ||
-            queue.length === 0 ||
-            !reasonForChange ||
-            reasonForChange.length < 10
-          "
-          :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
-          @click="startBatchUpload"
-        >
-          🚀 Start Batch AI Auto-Classification &amp; Staging
-        </button>
-      </div>
-    </div>
-
-    <!-- Inspection Modal Drawer for Individual Batch Item -->
-    <div
-      v-if="inspectedItem"
-      class="item-inspection-overlay"
-      role="presentation"
-      @click.self="inspectedItem = null"
-    >
-      <div
-        ref="inspectionCardRef"
-        class="item-inspection-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="item-inspection-title"
-        tabindex="-1"
-      >
+      <!-- Batch Upload Items Queue Table -->
+      <div v-if="queue.length > 0" class="queue-section">
         <div
           style="
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
           "
         >
-          <h4 id="item-inspection-title" style="margin: 0; font-size: 14px">
-            AI Classification Preview: {{ inspectedItem.file.name }}
+          <h4 style="margin: 0; font-size: 13px; font-weight: 600">
+            Upload Queue ({{ queue.length }} / 50 Files)
           </h4>
-          <button
-            type="button"
-            class="btn btn-secondary btn-xs"
-            aria-label="Close classification preview"
-            @click="inspectedItem = null"
-          >
-            ✕
-          </button>
-        </div>
-        <div v-if="inspectedItem.report" class="inspection-details">
-          <p>
-            <strong>Predicted Artifact Code:</strong>
-            <code class="font-mono">{{
-              inspectedItem.report.primary_classification.artifact_code
-            }}</code>
-          </p>
-          <p>
-            <strong>Artifact Type:</strong>
-            {{ inspectedItem.report.primary_classification.artifact_type }}
-          </p>
-          <p>
-            <strong>Zone:</strong> Zone
-            {{ inspectedItem.report.primary_classification.zone }} - Section
-            {{ inspectedItem.report.primary_classification.section }}
-          </p>
-          <p>
-            <strong>Confidence Score:</strong>
-            {{
-              Math.round(
-                inspectedItem.report.primary_classification.confidence * 100
-              )
-            }}% ({{ inspectedItem.report.confidence_tier }})
-          </p>
-          <p>
-            <strong>QC Recommendation:</strong>
-            <span class="badge status-approved">{{
-              inspectedItem.report.qc_recommendation
-            }}</span>
-          </p>
-          <div
-            style="
-              margin-top: 10px;
-              background: var(--semantic-color-surface-muted);
-              padding: 8px;
-              border-radius: 4px;
-              font-size: 11px;
-            "
-          >
-            <strong>AI Provenance Manifest:</strong>
-            <pre style="margin: 4px 0 0 0; font-family: monospace">{{
-              JSON.stringify(
-                inspectedItem.report.ai_generation_manifest,
-                null,
-                2
-              )
-            }}</pre>
+          <div style="display: flex; gap: 8px">
+            <button
+              v-if="!isProcessing && queue.length > 0"
+              type="button"
+              class="btn btn-secondary btn-sm"
+              style="font-size: 11px; padding: 4px 8px"
+              @click="clearQueue"
+            >
+              Clear Queue
+            </button>
           </div>
         </div>
+
+        <div class="queue-table-wrapper">
+          <table class="queue-table">
+            <thead>
+              <tr>
+                <th>File Name</th>
+                <th>Size</th>
+                <th>Status</th>
+                <th>Predicted Classification</th>
+                <th>Confidence</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(item, index) in queue" :key="index" class="queue-row">
+                <td class="filename-cell font-mono" :title="item.file.name">
+                  {{ item.file.name }}
+                </td>
+                <td class="size-cell">
+                  {{ formatFileSize(item.file.size) }}
+                </td>
+                <td>
+                  <span class="badge" :class="getStatusBadgeClass(item.status)">
+                    {{ item.status }}
+                  </span>
+                </td>
+                <td>
+                  <div v-if="item.report" class="classification-preview">
+                    <span class="font-mono text-bold">{{
+                      item.report.primary_classification.artifact_code
+                    }}</span>
+                    <span class="text-muted">
+                      ({{
+                        item.report.primary_classification.artifact_type
+                      }})</span
+                    >
+                  </div>
+                  <span v-else class="text-muted">—</span>
+                </td>
+                <td>
+                  <span
+                    v-if="item.report"
+                    class="badge"
+                    :class="
+                      getConfidenceBadgeClass(item.report.confidence_tier)
+                    "
+                  >
+                    {{
+                      Math.round(
+                        item.report.primary_classification.confidence * 100
+                      )
+                    }}% {{ item.report.confidence_tier }}
+                  </span>
+                  <span v-else class="text-muted">—</span>
+                </td>
+                <td>
+                  <button
+                    v-if="item.report"
+                    type="button"
+                    class="btn btn-secondary btn-xs btn-inspect-item"
+                    style="font-size: 10px; padding: 2px 6px"
+                    @click="inspectItem(item)"
+                  >
+                    <ClipboardList
+                      :size="12"
+                      :stroke-width="1.75"
+                      aria-hidden="true"
+                    />
+                    <span>Inspect</span
+                    ><span class="sr-only"> {{ item.file.name }}</span>
+                  </button>
+                  <ClinicalIconButton
+                    v-if="!isProcessing && item.status === 'PENDING'"
+                    class="btn btn-danger btn-xs btn-remove-item"
+                    style="
+                      min-width: 24px;
+                      min-height: 24px;
+                      font-size: 10px;
+                      padding: 2px 6px;
+                      margin-left: 4px;
+                    "
+                    :label="`Remove ${item.file.name} from upload queue`"
+                    @click="removeItem(index)"
+                  >
+                    <X :size="12" :stroke-width="1.75" aria-hidden="true" />
+                  </ClinicalIconButton>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      <!-- Drawer Footer Actions -->
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 8px">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            style="padding: 8px 16px; font-size: 13px"
+            :disabled="isProcessing"
+            @click="handleClose"
+          >
+            Cancel
+          </button>
+          <button
+            v-if="isProcessing"
+            type="button"
+            class="btn btn-warning"
+            style="padding: 8px 16px; font-size: 13px"
+            @click="cancelProcessing"
+          >
+            Stop Batch Processing
+          </button>
+          <button
+            v-else
+            type="button"
+            class="btn btn-primary btn-submit-batch"
+            style="
+              padding: 8px 16px;
+              font-size: 13px;
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+            "
+            :disabled="
+              !canStage ||
+              queue.length === 0 ||
+              !reasonForChange ||
+              reasonForChange.length < 10
+            "
+            :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
+            @click="startBatchUpload"
+          >
+            <Rocket :size="15" :stroke-width="1.75" aria-hidden="true" />
+            <span>Start Batch AI Auto-Classification &amp; Staging</span>
+          </button>
+        </div>
+      </template>
+    </ClinicalDrawer>
+
+    <!-- Inspection Modal for Individual Batch Item -->
+    <ClinicalModal
+      :is-open="Boolean(inspectedItem)"
+      :teleport="false"
+      size="md"
+      aria-labelledby="item-inspection-title"
+      close-label="Close classification preview"
+      backdrop-class="item-inspection-overlay"
+      dialog-class="item-inspection-card"
+      :show-footer="false"
+      @close="inspectedItem = null"
+    >
+      <template #header>
+        <h4 id="item-inspection-title" style="margin: 0; font-size: 14px">
+          AI Classification Preview: {{ inspectedItem?.file?.name }}
+        </h4>
+      </template>
+      <div v-if="inspectedItem?.report" class="inspection-details">
+        <p>
+          <strong>Predicted Artifact Code:</strong>
+          <code class="font-mono">{{
+            inspectedItem.report.primary_classification.artifact_code
+          }}</code>
+        </p>
+        <p>
+          <strong>Artifact Type:</strong>
+          {{ inspectedItem.report.primary_classification.artifact_type }}
+        </p>
+        <p>
+          <strong>Zone:</strong> Zone
+          {{ inspectedItem.report.primary_classification.zone }} - Section
+          {{ inspectedItem.report.primary_classification.section }}
+        </p>
+        <p>
+          <strong>Confidence Score:</strong>
+          {{
+            Math.round(
+              inspectedItem.report.primary_classification.confidence * 100
+            )
+          }}% ({{ inspectedItem.report.confidence_tier }})
+        </p>
+        <p>
+          <strong>QC Recommendation:</strong>
+          <span class="badge status-approved">{{
+            inspectedItem.report.qc_recommendation
+          }}</span>
+        </p>
+        <div
+          style="
+            margin-top: 10px;
+            background: var(--semantic-color-surface-muted);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 11px;
+          "
+        >
+          <strong>AI Provenance Manifest:</strong>
+          <pre style="margin: 4px 0 0 0; font-family: monospace">{{
+            JSON.stringify(inspectedItem.report.ai_generation_manifest, null, 2)
+          }}</pre>
+        </div>
+      </div>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
+import {
+  AlertTriangle,
+  ClipboardList,
+  FolderOpen,
+  Rocket,
+  Upload,
+  X,
+} from "lucide-vue-next";
 import { ref, computed } from "vue";
-import { ClinicalDropzone, ClinicalIconButton, useFocusTrap } from "ui";
+import {
+  ClinicalDrawer,
+  ClinicalDropzone,
+  ClinicalIconButton,
+  ClinicalModal,
+} from "ui";
 import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";
 import { useToastStore } from "../../stores/toasts.js";
@@ -415,8 +427,6 @@ const canStage = computed(
   () => !hasActiveAuth.value || canStageEtmfQc(authStore)
 );
 
-const drawerRef = ref(null);
-const inspectionCardRef = ref(null);
 const queue = ref([]);
 const reasonForChange = ref(
   "Site regulatory documents batch ingestion for CRA Quality Control"
@@ -676,50 +686,11 @@ function handleClose() {
   }
   emit("close");
 }
-
-useFocusTrap(drawerRef, {
-  isOpen: () => props.isOpen,
-  onEscape: handleClose,
-});
-
-useFocusTrap(inspectionCardRef, {
-  isOpen: () => Boolean(inspectedItem.value),
-  onEscape: () => {
-    inspectedItem.value = null;
-  },
-});
 </script>
 
 <style scoped>
-.batch-drawer-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 1100;
-  display: flex;
-  justify-content: flex-end;
-}
-
 .batch-drawer {
   width: min(100vw, 780px);
-  height: 100%;
-  background: var(--semantic-color-surface);
-  display: flex;
-  flex-direction: column;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
-  animation: slideIn 0.2s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
 }
 
 .drawer-header {
@@ -731,9 +702,6 @@ useFocusTrap(inspectionCardRef, {
 }
 
 .drawer-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -844,33 +812,7 @@ useFocusTrap(inspectionCardRef, {
   white-space: nowrap;
 }
 
-.drawer-footer {
-  padding: 16px 24px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: flex-end;
-  background: var(--semantic-color-surface-muted);
-}
-
-.item-inspection-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
-  z-index: 1200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .item-inspection-card {
-  width: 480px;
-  max-width: 90vw;
-  background: var(--semantic-color-surface);
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  max-width: min(90vw, 480px);
 }
 </style>

@@ -1,22 +1,20 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="share-drawer-overlay"
-    role="presentation"
-    @click.self="$emit('close')"
+  <ClinicalDrawer
+    :open="isOpen"
+    :teleport="false"
+    size="md"
+    backdrop-class="share-drawer-overlay"
+    panel-class="share-drawer"
+    aria-label="Share Management Drawer"
+    :body-padding="false"
+    @close="$emit('close')"
   >
-    <div
-      ref="drawerRef"
-      class="share-drawer"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Share Management Drawer"
-      tabindex="-1"
-    >
-      <!-- Drawer Header -->
+    <template #header>
       <div class="drawer-header">
         <div class="header-info">
-          <span class="share-header-icon">🔗</span>
+          <span class="share-header-icon" aria-hidden="true">
+            <Link2 :size="20" :stroke-width="1.75" aria-hidden="true" />
+          </span>
           <div>
             <h3 class="drawer-title">
               {{
@@ -29,397 +27,420 @@
           </div>
         </div>
         <button
+          type="button"
           class="close-drawer-btn"
           aria-label="Close share drawer"
           @click="$emit('close')"
         >
-          ✕
+          <X :size="18" :stroke-width="1.75" aria-hidden="true" />
         </button>
       </div>
+    </template>
 
-      <!-- Tab Navigation -->
+    <template #subheader>
       <div class="tab-navigation">
         <button
+          type="button"
           class="tab-btn"
           :class="{ active: activeTab === 'internal' }"
           @click="activeTab = 'internal'"
         >
-          👥 Internal Share
+          <Users :size="15" :stroke-width="1.75" aria-hidden="true" />
+          Internal Share
         </button>
         <button
           v-if="!isBulk"
+          type="button"
           class="tab-btn"
           :class="{ active: activeTab === 'guest' }"
           @click="activeTab = 'guest'"
         >
-          🌐 External Guest Link
+          <Globe :size="15" :stroke-width="1.75" aria-hidden="true" />
+          External Guest Link
         </button>
         <button
           v-if="!isBulk"
+          type="button"
           class="tab-btn"
           :class="{ active: activeTab === 'active_grants' }"
           @click="activeTab = 'active_grants'"
         >
-          🛡️ Active Grants ({{ activeGrantsList.length }})
+          <ShieldCheck :size="15" :stroke-width="1.75" aria-hidden="true" />
+          Active Grants ({{ activeGrantsList.length }})
         </button>
       </div>
+    </template>
 
-      <!-- Drawer Body -->
-      <div class="drawer-body">
-        <!-- TAB 1: Internal Share Form -->
-        <div v-if="activeTab === 'internal'" class="tab-content">
-          <form @submit.prevent="submitInternalShare">
-            <!-- User / Role Target -->
-            <div class="form-group">
-              <label for="share-user-input" class="form-label required">
-                Grant Access To (User ID or Role)
-              </label>
-              <div class="autocomplete-wrapper">
-                <input
-                  id="share-user-input"
-                  v-model="internalTarget"
-                  type="text"
-                  placeholder="e.g. cra.monitor, auditor, site_crc, data_manager..."
-                  class="form-control"
-                  required
-                  @focus="showUserSuggestions = true"
-                />
+    <!-- Drawer Body -->
+    <div class="drawer-body">
+      <!-- TAB 1: Internal Share Form -->
+      <div v-if="activeTab === 'internal'" class="tab-content">
+        <form @submit.prevent="submitInternalShare">
+          <!-- User / Role Target -->
+          <div class="form-group">
+            <label for="share-user-input" class="form-label required">
+              Grant Access To (User ID or Role)
+            </label>
+            <div class="autocomplete-wrapper">
+              <input
+                id="share-user-input"
+                v-model="internalTarget"
+                type="text"
+                placeholder="e.g. cra.monitor, auditor, site_crc, data_manager..."
+                class="form-control"
+                required
+                @focus="showUserSuggestions = true"
+              />
+              <div
+                v-if="showUserSuggestions && userSuggestions.length > 0"
+                class="suggestions-dropdown"
+              >
                 <div
-                  v-if="showUserSuggestions && userSuggestions.length > 0"
-                  class="suggestions-dropdown"
+                  v-for="sugg in userSuggestions"
+                  :key="sugg.value"
+                  class="suggestion-item"
+                  role="button"
+                  tabindex="0"
+                  @click="selectSuggestion(sugg)"
+                  @keydown.enter.prevent="selectSuggestion(sugg)"
+                  @keydown.space.prevent="selectSuggestion(sugg)"
                 >
-                  <div
-                    v-for="sugg in userSuggestions"
-                    :key="sugg.value"
-                    class="suggestion-item"
-                    role="button"
-                    tabindex="0"
-                    @click="selectSuggestion(sugg)"
-                    @keydown.enter.prevent="selectSuggestion(sugg)"
-                    @keydown.space.prevent="selectSuggestion(sugg)"
-                  >
-                    <span class="sugg-label">{{ sugg.label }}</span>
-                    <span class="sugg-type">{{ sugg.type }}</span>
-                  </div>
+                  <span class="sugg-label">{{ sugg.label }}</span>
+                  <span class="sugg-type">{{ sugg.type }}</span>
                 </div>
               </div>
             </div>
-
-            <!-- Scope Selector -->
-            <div class="form-group">
-              <label for="share-scope-select" class="form-label"
-                >Delegation Scope</label
-              >
-              <select
-                id="share-scope-select"
-                v-model="shareScope"
-                class="form-control"
-              >
-                <option value="individual">
-                  Individual (Specific User ID)
-                </option>
-                <option value="role">Role (All Users in Assigned Role)</option>
-                <option value="site">
-                  Site Scope (All Investigators at Site)
-                </option>
-                <option value="study">Study Scope (Entire Study Team)</option>
-              </select>
-            </div>
-
-            <!-- Permission Level Selector -->
-            <div class="form-group">
-              <label for="share-perm-select" class="form-label required"
-                >Permission Level</label
-              >
-              <select
-                id="share-perm-select"
-                v-model="permissionLevel"
-                class="form-control"
-                required
-              >
-                <option value="view">
-                  👁️ View (Read-Only Watermarked Preview)
-                </option>
-                <option value="comment">
-                  💬 Comment (Review & Annotation)
-                </option>
-                <option value="download">
-                  📥 Download (Direct Binary Access)
-                </option>
-                <option value="upload_revision">
-                  📤 Upload Revision (New Version Drafting)
-                </option>
-                <option value="reshare">
-                  🔁 Reshare (Sub-Delegation Authority)
-                </option>
-                <option value="approve">
-                  ✅ Approve (Sign-off & Regulatory Acceptance)
-                </option>
-                <option value="expire_revoke">
-                  🔒 Admin / Expire-Revoke (Full Delegation Authority)
-                </option>
-              </select>
-            </div>
-
-            <!-- Expiry Toggle -->
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input
-                  v-model="hasExpiry"
-                  type="checkbox"
-                  class="custom-checkbox"
-                />
-                <span>Set Time-Bounded Expiration Date</span>
-              </label>
-              <input
-                v-if="hasExpiry"
-                v-model="expiresAt"
-                type="datetime-local"
-                aria-label="Delegation expiration date and time"
-                class="form-control expiry-input"
-                required
-              />
-            </div>
-
-            <!-- Mandatory Reason for Change (21 CFR Part 11) -->
-            <div class="form-group">
-              <label for="share-reason-input" class="form-label required">
-                21 CFR Part 11 Reason for Delegation
-              </label>
-              <textarea
-                id="share-reason-input"
-                v-model="reasonForChange"
-                rows="3"
-                placeholder="Specify the regulatory or scientific justification for granting this permission (e.g. 'Site monitoring audit inspection', 'Protocol safety review delegation')."
-                class="form-control"
-                required
-              />
-            </div>
-
-            <div v-if="submitSuccessMsg" class="success-alert">
-              ✅ {{ submitSuccessMsg }}
-            </div>
-
-            <!-- Submit Button -->
-            <div class="drawer-actions">
-              <button
-                type="button"
-                class="btn btn-outline-secondary"
-                @click="$emit('close')"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="btn btn-primary btn-submit-grant"
-                :disabled="
-                  isSubmitting || !internalTarget || !reasonForChange.trim()
-                "
-              >
-                <span v-if="isSubmitting">Delegating...</span>
-                <span v-else>🔒 Grant Access</span>
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <!-- TAB 2: External Guest Link Generator -->
-        <div v-else-if="activeTab === 'guest'" class="tab-content">
-          <div class="guest-info-banner">
-            <strong>🌐 Public Protected Guest Links:</strong>
-            Generates a signed, time-limited URL for external reviewers (e.g.
-            CRO partners, external IRBs). Access is strictly read-only and
-            logged to the GxP audit ledger.
           </div>
 
-          <form v-if="!generatedGuestUrl" @submit.prevent="submitGuestLink">
-            <div class="form-group">
-              <label for="guest-expiry-select" class="form-label required"
-                >Link Expiration</label
-              >
-              <select
-                id="guest-expiry-select"
-                v-model="guestExpiryHours"
-                class="form-control"
-              >
-                <option :value="24">24 Hours (Standard Review)</option>
-                <option :value="72">3 Days (Weekend Window)</option>
-                <option :value="168">7 Days (1 Week)</option>
-                <option :value="720">30 Days (Full Regulatory Review)</option>
-              </select>
-            </div>
+          <!-- Scope Selector -->
+          <div class="form-group">
+            <label for="share-scope-select" class="form-label"
+              >Delegation Scope</label
+            >
+            <select
+              id="share-scope-select"
+              v-model="shareScope"
+              class="form-control"
+            >
+              <option value="individual">Individual (Specific User ID)</option>
+              <option value="role">Role (All Users in Assigned Role)</option>
+              <option value="site">
+                Site Scope (All Investigators at Site)
+              </option>
+              <option value="study">Study Scope (Entire Study Team)</option>
+            </select>
+          </div>
 
-            <!-- Mandatory Reason for Change -->
-            <div class="form-group">
-              <label for="guest-reason-input" class="form-label required">
-                21 CFR Part 11 Justification
-              </label>
-              <textarea
-                id="guest-reason-input"
-                v-model="guestReason"
-                rows="3"
-                placeholder="Specify the external recipient and justification (e.g. 'External IRB compliance audit review')."
-                class="form-control"
-                required
-              />
-            </div>
+          <!-- Permission Level Selector -->
+          <div class="form-group">
+            <label for="share-perm-select" class="form-label required"
+              >Permission Level</label
+            >
+            <select
+              id="share-perm-select"
+              v-model="permissionLevel"
+              class="form-control"
+              required
+            >
+              <option value="view">View (Read-Only Watermarked Preview)</option>
+              <option value="comment">Comment (Review &amp; Annotation)</option>
+              <option value="download">Download (Direct Binary Access)</option>
+              <option value="upload_revision">
+                Upload Revision (New Version Drafting)
+              </option>
+              <option value="reshare">
+                Reshare (Sub-Delegation Authority)
+              </option>
+              <option value="approve">
+                Approve (Sign-off &amp; Regulatory Acceptance)
+              </option>
+              <option value="expire_revoke">
+                Admin / Expire-Revoke (Full Delegation Authority)
+              </option>
+            </select>
+          </div>
 
-            <div class="drawer-actions">
-              <button
-                type="button"
-                class="btn btn-outline-secondary"
-                @click="$emit('close')"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="btn btn-primary btn-create-guest-link"
-                :disabled="isSubmitting || !guestReason.trim()"
-              >
-                <span v-if="isSubmitting">Generating...</span>
-                <span v-else>🔗 Generate Guest Link</span>
-              </button>
-            </div>
-          </form>
-
-          <!-- Generated Link Display Card -->
-          <div v-else class="generated-link-card">
-            <div class="link-header">
-              <span class="badge status-approved">LINK ACTIVE</span>
-              <span class="expires-text"
-                >Expires in {{ guestExpiryHours }}h</span
-              >
-            </div>
-            <div class="url-copy-box">
+          <!-- Expiry Toggle -->
+          <div class="form-group">
+            <label class="checkbox-label">
               <input
-                type="text"
-                :value="generatedGuestUrl"
-                aria-label="Generated guest share link"
-                readonly
-                class="form-control url-input"
+                v-model="hasExpiry"
+                type="checkbox"
+                class="custom-checkbox"
               />
-              <button
-                type="button"
-                class="btn btn-primary btn-copy-link"
-                @click="copyGuestUrl"
-              >
-                {{ isCopied ? "✓ Copied!" : "📋 Copy Link" }}
-              </button>
-            </div>
-            <p class="gxp-link-meta">
-              Token HMAC signed and stored in audit ledger.
-            </p>
+              <span>Set Time-Bounded Expiration Date</span>
+            </label>
+            <input
+              v-if="hasExpiry"
+              v-model="expiresAt"
+              type="datetime-local"
+              aria-label="Delegation expiration date and time"
+              class="form-control expiry-input"
+              required
+            />
+          </div>
+
+          <!-- Mandatory Reason for Change (21 CFR Part 11) -->
+          <div class="form-group">
+            <label for="share-reason-input" class="form-label required">
+              21 CFR Part 11 Reason for Delegation
+            </label>
+            <textarea
+              id="share-reason-input"
+              v-model="reasonForChange"
+              rows="3"
+              placeholder="Specify the regulatory or scientific justification for granting this permission (e.g. 'Site monitoring audit inspection', 'Protocol safety review delegation')."
+              class="form-control"
+              required
+            />
+          </div>
+
+          <div v-if="submitSuccessMsg" class="success-alert">
+            <CheckCircle2 :size="15" :stroke-width="1.75" aria-hidden="true" />
+            <span>{{ submitSuccessMsg }}</span>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="drawer-actions">
             <button
               type="button"
-              class="btn btn-sm btn-outline-secondary mt-3"
-              @click="generatedGuestUrl = ''"
+              class="btn btn-outline-secondary"
+              @click="$emit('close')"
             >
-              + Create Another Link
+              Cancel
             </button>
+            <button
+              type="submit"
+              class="btn btn-primary btn-submit-grant"
+              :disabled="
+                isSubmitting || !internalTarget || !reasonForChange.trim()
+              "
+            >
+              <span v-if="isSubmitting">Delegating...</span>
+              <span v-else class="btn-inline-icon">
+                <Lock :size="15" :stroke-width="1.75" aria-hidden="true" />
+                Grant Access
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- TAB 2: External Guest Link Generator -->
+      <div v-else-if="activeTab === 'guest'" class="tab-content">
+        <div class="guest-info-banner">
+          <strong>
+            <Globe :size="14" :stroke-width="1.75" aria-hidden="true" />
+            Public Protected Guest Links:
+          </strong>
+          Generates a signed, time-limited URL for external reviewers (e.g. CRO
+          partners, external IRBs). Access is strictly read-only and logged to
+          the GxP audit ledger.
+        </div>
+
+        <form v-if="!generatedGuestUrl" @submit.prevent="submitGuestLink">
+          <div class="form-group">
+            <label for="guest-expiry-select" class="form-label required"
+              >Link Expiration</label
+            >
+            <select
+              id="guest-expiry-select"
+              v-model="guestExpiryHours"
+              class="form-control"
+            >
+              <option :value="24">24 Hours (Standard Review)</option>
+              <option :value="72">3 Days (Weekend Window)</option>
+              <option :value="168">7 Days (1 Week)</option>
+              <option :value="720">30 Days (Full Regulatory Review)</option>
+            </select>
+          </div>
+
+          <!-- Mandatory Reason for Change -->
+          <div class="form-group">
+            <label for="guest-reason-input" class="form-label required">
+              21 CFR Part 11 Justification
+            </label>
+            <textarea
+              id="guest-reason-input"
+              v-model="guestReason"
+              rows="3"
+              placeholder="Specify the external recipient and justification (e.g. 'External IRB compliance audit review')."
+              class="form-control"
+              required
+            />
+          </div>
+
+          <div class="drawer-actions">
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              @click="$emit('close')"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary btn-create-guest-link"
+              :disabled="isSubmitting || !guestReason.trim()"
+            >
+              <span v-if="isSubmitting">Generating...</span>
+              <span v-else class="btn-inline-icon">
+                <Link2 :size="15" :stroke-width="1.75" aria-hidden="true" />
+                Generate Guest Link
+              </span>
+            </button>
+          </div>
+        </form>
+
+        <!-- Generated Link Display Card -->
+        <div v-else class="generated-link-card">
+          <div class="link-header">
+            <span class="badge status-approved">LINK ACTIVE</span>
+            <span class="expires-text">Expires in {{ guestExpiryHours }}h</span>
+          </div>
+          <div class="url-copy-box">
+            <input
+              type="text"
+              :value="generatedGuestUrl"
+              aria-label="Generated guest share link"
+              readonly
+              class="form-control url-input"
+            />
+            <button
+              type="button"
+              class="btn btn-primary btn-copy-link"
+              @click="copyGuestUrl"
+            >
+              <Check
+                v-if="isCopied"
+                :size="15"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
+              <Copy v-else :size="15" :stroke-width="1.75" aria-hidden="true" />
+              <span>{{ isCopied ? "Copied!" : "Copy Link" }}</span>
+            </button>
+          </div>
+          <p class="gxp-link-meta">
+            Token HMAC signed and stored in audit ledger.
+          </p>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary mt-3"
+            @click="generatedGuestUrl = ''"
+          >
+            + Create Another Link
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 3: Active Grants List & Revocation -->
+      <div v-else-if="activeTab === 'active_grants'" class="tab-content">
+        <div v-if="activeGrantsList.length === 0" class="empty-grants-message">
+          No active share delegations found for this document.
+        </div>
+
+        <div v-else class="grants-list-container">
+          <div
+            v-for="grant in activeGrantsList"
+            :key="grant.id"
+            class="grant-row-card"
+          >
+            <div class="grant-details">
+              <div class="grant-header-line">
+                <span class="grantee-name">{{
+                  grant.granted_to_user_id || "All Users"
+                }}</span>
+                <span class="badge status-review">{{
+                  grant.scope.toUpperCase()
+                }}</span>
+                <span class="badge status-approved">{{
+                  grant.permission_level.toUpperCase()
+                }}</span>
+              </div>
+              <div class="grant-meta-line">
+                <span
+                  >Granted By:
+                  <strong>{{ grant.granted_by_user_id }}</strong></span
+                >
+                <span v-if="grant.expires_at"
+                  >Expires: {{ formatDate(grant.expires_at) }}</span
+                >
+                <span v-else>No Expiration</span>
+              </div>
+              <div class="grant-reason-line">
+                <em>"{{ grant.reason_for_change }}"</em>
+              </div>
+            </div>
+            <div class="grant-actions">
+              <button
+                class="btn btn-sm btn-outline-danger btn-revoke-grant"
+                title="Revoke this grant"
+                @click="initiateRevoke(grant)"
+              >
+                Revoke
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- TAB 3: Active Grants List & Revocation -->
-        <div v-else-if="activeTab === 'active_grants'" class="tab-content">
-          <div
-            v-if="activeGrantsList.length === 0"
-            class="empty-grants-message"
-          >
-            No active share delegations found for this document.
-          </div>
-
-          <div v-else class="grants-list-container">
-            <div
-              v-for="grant in activeGrantsList"
-              :key="grant.id"
-              class="grant-row-card"
+        <!-- Revoke Confirmation Modal / Overlay -->
+        <div v-if="grantToRevoke" class="revoke-confirm-card">
+          <h4>Revoke Access Delegation</h4>
+          <p>
+            Are you sure you want to revoke access for
+            <strong>{{ grantToRevoke.granted_to_user_id }}</strong>?
+          </p>
+          <div class="form-group">
+            <label for="revoke-reason-input" class="form-label required"
+              >Revocation Reason (21 CFR Part 11):</label
             >
-              <div class="grant-details">
-                <div class="grant-header-line">
-                  <span class="grantee-name">{{
-                    grant.granted_to_user_id || "All Users"
-                  }}</span>
-                  <span class="badge status-review">{{
-                    grant.scope.toUpperCase()
-                  }}</span>
-                  <span class="badge status-approved">{{
-                    grant.permission_level.toUpperCase()
-                  }}</span>
-                </div>
-                <div class="grant-meta-line">
-                  <span
-                    >Granted By:
-                    <strong>{{ grant.granted_by_user_id }}</strong></span
-                  >
-                  <span v-if="grant.expires_at"
-                    >Expires: {{ formatDate(grant.expires_at) }}</span
-                  >
-                  <span v-else>No Expiration</span>
-                </div>
-                <div class="grant-reason-line">
-                  <em>"{{ grant.reason_for_change }}"</em>
-                </div>
-              </div>
-              <div class="grant-actions">
-                <button
-                  class="btn btn-sm btn-outline-danger btn-revoke-grant"
-                  title="Revoke this grant"
-                  @click="initiateRevoke(grant)"
-                >
-                  Revoke
-                </button>
-              </div>
-            </div>
+            <input
+              id="revoke-reason-input"
+              v-model="revokeReason"
+              type="text"
+              class="form-control"
+              placeholder="Reason for revoking grant..."
+              required
+            />
           </div>
-
-          <!-- Revoke Confirmation Modal / Overlay -->
-          <div v-if="grantToRevoke" class="revoke-confirm-card">
-            <h4>Revoke Access Delegation</h4>
-            <p>
-              Are you sure you want to revoke access for
-              <strong>{{ grantToRevoke.granted_to_user_id }}</strong>?
-            </p>
-            <div class="form-group">
-              <label for="revoke-reason-input" class="form-label required"
-                >Revocation Reason (21 CFR Part 11):</label
-              >
-              <input
-                id="revoke-reason-input"
-                v-model="revokeReason"
-                type="text"
-                class="form-control"
-                placeholder="Reason for revoking grant..."
-                required
-              />
-            </div>
-            <div class="drawer-actions">
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary"
-                @click="grantToRevoke = null"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                class="btn btn-sm btn-danger btn-confirm-revoke"
-                :disabled="!revokeReason.trim()"
-                @click="confirmRevoke"
-              >
-                Confirm Revocation
-              </button>
-            </div>
+          <div class="drawer-actions">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary"
+              @click="grantToRevoke = null"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-danger btn-confirm-revoke"
+              :disabled="!revokeReason.trim()"
+              @click="confirmRevoke"
+            >
+              Confirm Revocation
+            </button>
           </div>
         </div>
       </div>
     </div>
-  </div>
+  </ClinicalDrawer>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalDrawer } from "ui";
+import {
+  Check,
+  CheckCircle2,
+  Copy,
+  Globe,
+  Link2,
+  Lock,
+  ShieldCheck,
+  Users,
+  X,
+} from "lucide-vue-next";
 import { useFileshareStore } from "../../stores/fileshare";
 
 const props = defineProps({
@@ -441,12 +462,6 @@ const emit = defineEmits([
 ]);
 
 const fileshareStore = useFileshareStore();
-const drawerRef = ref(null);
-
-useFocusTrap(drawerRef, {
-  isOpen: () => props.isOpen,
-  onEscape: () => emit("close"),
-});
 
 const activeTab = ref("internal");
 const isSubmitting = ref(false);
@@ -678,7 +693,7 @@ function formatDate(dateStr) {
 
 // Click outside handler for autocomplete suggestions dropdown
 function handleDocumentClick(e) {
-  if (drawerRef.value && !e.target.closest(".autocomplete-wrapper")) {
+  if (props.isOpen && !e.target?.closest?.(".autocomplete-wrapper")) {
     showUserSuggestions.value = false;
   }
 }
@@ -693,22 +708,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.share-drawer-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  max-width: 100vw;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(2px);
-  z-index: 1000;
-  display: flex;
-  justify-content: flex-end;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
-}
-
 .share-drawer {
   width: var(
     --semantic-drawer-width-md,
@@ -716,22 +715,10 @@ onUnmounted(() => {
   );
   max-width: 100vw;
   background: var(--semantic-color-surface);
-  height: 100%;
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
-  animation: slideInRight 0.25s ease-out;
   overscroll-behavior: contain;
   touch-action: pan-y;
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
 }
 
 .drawer-header {
@@ -810,6 +797,13 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+}
+
+.btn-inline-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .tab-btn:hover {

@@ -783,200 +783,174 @@
     </main>
 
     <!-- Modal 1: Schedule Telehealth Session -->
-    <div
-      v-if="isScheduleSessionModalOpen"
-      ref="scheduleSessionModalRef"
-      class="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="isScheduleSessionModalOpen"
+      :teleport="false"
+      :show-footer="false"
+      title="Schedule WebRTC Telehealth Consultation"
+      close-label="Close schedule telehealth consultation dialog"
+      dialog-class="modal-card"
+      body-class="modal-body"
+      @close="isScheduleSessionModalOpen = false"
     >
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>Schedule WebRTC Telehealth Consultation</h3>
-          <ClinicalIconButton
-            class="btn-close"
-            label="Close schedule telehealth consultation dialog"
+      <form class="form-grid" @submit.prevent="submitScheduleSession">
+        <div class="form-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Study ID *</label>
+          <input
+            v-model="newSessionForm.study_id"
+            class="form-control"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Subject ID *</label>
+          <input
+            v-model="newSessionForm.subject_id"
+            class="form-control"
+            required
+          />
+        </div>
+        <div class="form-group span-2">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Consultation Title *</label>
+          <input v-model="newSessionForm.title" class="form-control" required />
+        </div>
+        <div class="form-group span-2">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Scheduled Start (UTC) *</label>
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <input
+            v-model="newSessionForm.scheduled_start_utc"
+            type="datetime-local"
+            class="form-control"
+            required
+          />
+        </div>
+        <div class="modal-footer span-2">
+          <button
+            type="button"
+            class="btn btn-secondary"
             @click="isScheduleSessionModalOpen = false"
           >
-            ✕
-          </ClinicalIconButton>
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Schedule Session
+          </button>
         </div>
-        <div class="modal-body">
-          <form class="form-grid" @submit.prevent="submitScheduleSession">
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Study ID *</label>
-              <input
-                v-model="newSessionForm.study_id"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Subject ID *</label>
-              <input
-                v-model="newSessionForm.subject_id"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="form-group span-2">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Consultation Title *</label>
-              <input
-                v-model="newSessionForm.title"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="form-group span-2">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Scheduled Start (UTC) *</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="newSessionForm.scheduled_start_utc"
-                type="datetime-local"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="modal-footer span-2">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                @click="isScheduleSessionModalOpen = false"
-              >
-                Cancel
-              </button>
-              <button type="submit" class="btn btn-primary">
-                Schedule Session
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+      </form>
+    </ClinicalModal>
 
     <!-- Modal 2: Dispatch DTP Shipment -->
-    <div
-      v-if="isDispatchDtpModalOpen"
-      ref="dispatchDtpModalRef"
-      class="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="isDispatchDtpModalOpen"
+      :teleport="false"
+      :show-footer="false"
+      title="Dispatch Direct-to-Patient (DTP) Drug Kit"
+      close-label="Close dispatch direct-to-patient drug kit dialog"
+      dialog-class="modal-card"
+      body-class="modal-body"
+      @close="isDispatchDtpModalOpen = false"
     >
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>Dispatch Direct-to-Patient (DTP) Drug Kit</h3>
-          <ClinicalIconButton
-            class="btn-close"
-            label="Close dispatch direct-to-patient drug kit dialog"
+      <form class="form-grid" @submit.prevent="submitDispatchDtp">
+        <div class="form-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Study ID *</label>
+          <input
+            v-model="newShipmentForm.study_id"
+            class="form-control"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Site ID *</label>
+          <input
+            v-model="newShipmentForm.site_id"
+            class="form-control"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Subject Pseudonym *</label>
+          <input
+            v-model="newShipmentForm.subject_pseudonym_id"
+            class="form-control"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Destination Address Pseudonym *</label>
+          <input
+            v-model="newShipmentForm.destination_address_pseudonym"
+            class="form-control"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Specialty Courier *</label>
+          <input
+            v-model="newShipmentForm.courier_name"
+            class="form-control"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Temperature Zone *</label>
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <select
+            v-model="newShipmentForm.temperature_zone"
+            class="form-control"
+            required
+          >
+            <option value="REFRIGERATED">REFRIGERATED (2°C to 8°C)</option>
+            <option value="CONTROLLED_AMBIENT">
+              CONTROLLED_AMBIENT (15°C to 25°C)
+            </option>
+            <option value="FROZEN">FROZEN (-25°C to -15°C)</option>
+            <option value="ULTRA_COLD">ULTRA_COLD (-80°C to -60°C)</option>
+            <option value="CRYOGENIC">CRYOGENIC (-196°C to -150°C)</option>
+          </select>
+        </div>
+        <div class="form-group span-2">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Kit Serials (Comma-separated) *</label>
+          <input
+            v-model="newShipmentForm.kit_serials_input"
+            class="form-control"
+            required
+            placeholder="KIT-LOT99-001, KIT-LOT99-002"
+          />
+        </div>
+        <div class="form-group span-2">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="form-label">Tamper-Evident RFID Seal ID *</label>
+          <input
+            v-model="newShipmentForm.tamper_seal_id"
+            class="form-control"
+            required
+          />
+        </div>
+        <div class="modal-footer span-2">
+          <button
+            type="button"
+            class="btn btn-secondary"
             @click="isDispatchDtpModalOpen = false"
           >
-            ✕
-          </ClinicalIconButton>
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-accent">
+            Dispatch Shipment
+          </button>
         </div>
-        <div class="modal-body">
-          <form class="form-grid" @submit.prevent="submitDispatchDtp">
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Study ID *</label>
-              <input
-                v-model="newShipmentForm.study_id"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Site ID *</label>
-              <input
-                v-model="newShipmentForm.site_id"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Subject Pseudonym *</label>
-              <input
-                v-model="newShipmentForm.subject_pseudonym_id"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Destination Address Pseudonym *</label>
-              <input
-                v-model="newShipmentForm.destination_address_pseudonym"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Specialty Courier *</label>
-              <input
-                v-model="newShipmentForm.courier_name"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Temperature Zone *</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select
-                v-model="newShipmentForm.temperature_zone"
-                class="form-control"
-                required
-              >
-                <option value="REFRIGERATED">REFRIGERATED (2°C to 8°C)</option>
-                <option value="CONTROLLED_AMBIENT">
-                  CONTROLLED_AMBIENT (15°C to 25°C)
-                </option>
-                <option value="FROZEN">FROZEN (-25°C to -15°C)</option>
-                <option value="ULTRA_COLD">ULTRA_COLD (-80°C to -60°C)</option>
-                <option value="CRYOGENIC">CRYOGENIC (-196°C to -150°C)</option>
-              </select>
-            </div>
-            <div class="form-group span-2">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Kit Serials (Comma-separated) *</label>
-              <input
-                v-model="newShipmentForm.kit_serials_input"
-                class="form-control"
-                required
-                placeholder="KIT-LOT99-001, KIT-LOT99-002"
-              />
-            </div>
-            <div class="form-group span-2">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Tamper-Evident RFID Seal ID *</label>
-              <input
-                v-model="newShipmentForm.tamper_seal_id"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="modal-footer span-2">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                @click="isDispatchDtpModalOpen = false"
-              >
-                Cancel
-              </button>
-              <button type="submit" class="btn btn-accent">
-                Dispatch Shipment
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+      </form>
+    </ClinicalModal>
 
     <!-- Bulk IP Kit Reconciliation Drawer -->
     <BulkIpKitReconciliationDrawer
@@ -991,7 +965,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, ClinicalModal } from "ui";
 import { interopService } from "../../api/interop";
 import { useToastStore } from "../../stores/toasts";
 import { demoNowIso, demoRandomInt } from "../../utils/demoMode.js";
@@ -1106,7 +1080,6 @@ const currentScrollPercent = ref(25);
 const currentClause = ref("procedures");
 
 const isScheduleSessionModalOpen = ref(false);
-const scheduleSessionModalRef = ref(null);
 const newSessionForm = reactive({
   study_id: "STUDY-DCT-001",
   subject_id: "SUBJ-BOSTON-101",
@@ -1115,7 +1088,6 @@ const newSessionForm = reactive({
 });
 
 const isDispatchDtpModalOpen = ref(false);
-const dispatchDtpModalRef = ref(null);
 const newShipmentForm = reactive({
   study_id: "STUDY-DCT-001",
   site_id: "SITE-101",
@@ -1126,18 +1098,6 @@ const newShipmentForm = reactive({
   kit_serials_input: "KIT-LOT99-001, KIT-LOT99-002",
   tamper_seal_id:
     "SEAL-RFID-" + demoRandomInt(100000, 999998, "telehealth-seal"),
-});
-
-useFocusTrap(scheduleSessionModalRef, isScheduleSessionModalOpen, {
-  onEscape: () => {
-    isScheduleSessionModalOpen.value = false;
-  },
-});
-
-useFocusTrap(dispatchDtpModalRef, isDispatchDtpModalOpen, {
-  onEscape: () => {
-    isDispatchDtpModalOpen.value = false;
-  },
 });
 
 async function refreshData() {
@@ -1873,52 +1833,6 @@ onMounted(() => {
   margin: 0 0 10px 0;
   font-size: 14px;
   font-weight: 700;
-}
-
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(15, 23, 42, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-.modal-card {
-  background: var(--semantic-color-surface);
-  border-radius: 8px;
-  width: 90%;
-  max-width: 580px;
-  overflow: hidden;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 16px;
-}
-
-.btn-close {
-  background: transparent;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.modal-body {
-  padding: 20px;
 }
 
 .form-grid {

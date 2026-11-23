@@ -601,6 +601,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](adr/2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) | Current | - Status: Accepted |
 | [ADR-2536: Unify 18-Module Migration Tooling, Fail-Closed Metadata Verification, and Count-Free Schema Docs](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md) | Current | - Status: Accepted |
 | [ADR-2537: Split UI Vitest Accessibility Matcher and Enforce Staged Demo Bundle Budgets](adr/2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md) | Current | - Status: Accepted |
+| [ADR-2651: Responsive dvh Overlay Primitives, UX-3 Docked Drawers, and Full Dialog Migration](adr/2026-11-23-responsive-dvh-overlay-primitives-docked-drawers-and-full-dialog-migration.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

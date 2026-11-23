@@ -1,7 +1,15 @@
 <script setup>
-import { computed, ref, useAttrs, useId, useSlots } from "vue";
+import { X } from "lucide-vue-next";
+import { Teleport, computed, h, ref, useAttrs, useId, useSlots } from "vue";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
 import { clinicalOverlayProps } from "./sharedProps.js";
+
+const OptionalTeleport = (tpProps, { slots: tpSlots }) => {
+  const children = tpSlots.default?.() || [];
+  return tpProps.enabled
+    ? h(Teleport, { to: tpProps.to }, children)
+    : (children[0] ?? null);
+};
 
 defineOptions({
   inheritAttrs: false,
@@ -12,6 +20,10 @@ const props = defineProps({
   role: {
     type: String,
     default: "dialog",
+  },
+  modal: {
+    type: Boolean,
+    default: true,
   },
   modelValue: {
     type: Boolean,
@@ -37,6 +49,10 @@ const props = defineProps({
     type: String,
     default: undefined,
   },
+  ariaDescribedby: {
+    type: String,
+    default: undefined,
+  },
   id: {
     type: String,
     default: undefined,
@@ -44,6 +60,14 @@ const props = defineProps({
   overlayId: {
     type: String,
     default: undefined,
+  },
+  closeButtonId: {
+    type: String,
+    default: undefined,
+  },
+  closeButtonClass: {
+    type: [String, Array, Object],
+    default: "",
   },
   dialogClass: {
     type: [String, Array, Object],
@@ -70,6 +94,10 @@ const props = defineProps({
     default: "Close dialog",
   },
   showHeader: {
+    type: Boolean,
+    default: true,
+  },
+  showCloseButton: {
     type: Boolean,
     default: true,
   },
@@ -121,6 +149,17 @@ const computedAriaLabel = computed(() => {
   return undefined;
 });
 
+const computedAriaDescribedby = computed(() => {
+  if (props.ariaDescribedby) return props.ariaDescribedby;
+  if (attrs["aria-describedby"]) return String(attrs["aria-describedby"]);
+  return undefined;
+});
+
+const keepMountedBackdropStyle = computed(() => {
+  if (!props.keepMounted) return undefined;
+  return { display: modalOpen.value ? "flex" : "none" };
+});
+
 const closeModal = () => {
   if (!props.dismissible) return;
   emit("update:modelValue", false);
@@ -130,12 +169,13 @@ const closeModal = () => {
 };
 
 const onBackdropClick = () => {
-  if (!props.dismissible || !props.closeOnBackdrop) return;
+  if (!props.modal || !props.dismissible || !props.closeOnBackdrop) return;
   closeModal();
 };
 
 useFocusTrap(dialogRef, {
-  isOpen: modalOpen,
+  isOpen: () => modalOpen.value && props.modal,
+  modal: () => props.modal,
   escapeDeactivates: () => props.dismissible,
   initialFocus: () => props.initialFocus,
   restoreFocus: props.restoreFocus,
@@ -144,11 +184,22 @@ useFocusTrap(dialogRef, {
 </script>
 
 <template>
-  <Teleport :to="teleportTarget" :disabled="!teleport">
+  <OptionalTeleport :enabled="Boolean(teleport)" :to="teleportTarget">
     <div
-      v-if="modalOpen"
+      v-if="keepMounted || modalOpen"
       :id="overlayId"
-      :class="['clinical-modal-backdrop', backdropClass]"
+      :class="[
+        'clinical-modal-backdrop',
+        {
+          active: modalOpen,
+          'is-closed': !modalOpen,
+          'is-non-modal': !modal,
+        },
+        modal ? backdropClass : '',
+      ]"
+      :style="keepMountedBackdropStyle"
+      :inert="!modalOpen || undefined"
+      :aria-hidden="!modalOpen ? 'true' : undefined"
       role="presentation"
       @click.self="onBackdropClick"
     >
@@ -156,11 +207,23 @@ useFocusTrap(dialogRef, {
         :id="id"
         ref="dialogRef"
         v-bind="attrs"
-        :class="['clinical-modal-dialog', `size-${size}`, dialogClass]"
+        :class="[
+          'clinical-modal-dialog',
+          `size-${size}`,
+          {
+            active: modalOpen,
+            'is-closed': !modalOpen,
+            'is-non-modal': !modal,
+          },
+          dialogClass,
+        ]"
         :role="role"
-        aria-modal="true"
+        :aria-modal="modalOpen && modal ? 'true' : undefined"
+        :aria-hidden="!modalOpen ? 'true' : undefined"
+        :inert="!modalOpen || undefined"
         :aria-labelledby="computedLabelledby"
         :aria-label="computedAriaLabel"
+        :aria-describedby="computedAriaDescribedby"
         tabindex="-1"
       >
         <div v-if="showHeader" :class="['modal-header', headerClass]">
@@ -170,21 +233,23 @@ useFocusTrap(dialogRef, {
             </h2>
           </slot>
           <button
+            v-if="showCloseButton"
+            :id="closeButtonId"
             type="button"
-            class="modal-close-btn"
+            :class="['modal-close-btn', 'btn-close', closeButtonClass]"
             :aria-label="closeLabel"
             :disabled="!dismissible"
             @click="closeModal"
           >
-            ✕
+            <X :size="18" :stroke-width="1.75" aria-hidden="true" />
           </button>
         </div>
 
         <div :class="['modal-body', bodyClass]">
-          <slot />
+          <slot :close="closeModal" :title-id="titleId" />
         </div>
 
-        <div v-if="showFooter" :class="['modal-footer', footerClass]">
+        <footer v-if="showFooter" :class="['modal-footer', footerClass]">
           <slot name="footer" :close="closeModal">
             <button
               type="button"
@@ -202,26 +267,37 @@ useFocusTrap(dialogRef, {
               Confirm
             </button>
           </slot>
-        </div>
+        </footer>
       </div>
     </div>
-  </Teleport>
+  </OptionalTeleport>
 </template>
 
 <style scoped>
 .clinical-modal-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100vw;
-  height: 100vh;
+  height: var(--overlay-viewport-height-fallback, 100vh);
+  height: var(--overlay-viewport-height, 100dvh);
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(2px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 9999;
-  padding: 16px;
+  box-sizing: border-box;
+  padding: max(16px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+    max(16px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px)))
+    max(16px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)))
+    max(16px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px)));
+}
+
+.clinical-modal-backdrop.is-non-modal {
+  background: transparent;
+  backdrop-filter: none;
+  pointer-events: none;
+  padding: 0;
 }
 
 .clinical-modal-dialog {
@@ -231,9 +307,14 @@ useFocusTrap(dialogRef, {
   border: 1px solid var(--semantic-color-border);
   display: flex;
   flex-direction: column;
-  max-height: 90vh;
+  max-height: var(--overlay-sheet-max-height-fallback, 90vh);
+  max-height: var(--overlay-sheet-max-height, 90dvh);
   width: 100%;
+  min-height: 0;
+  overflow: hidden;
   outline: none;
+  box-sizing: border-box;
+  pointer-events: auto;
 }
 
 .size-sm {
@@ -248,12 +329,17 @@ useFocusTrap(dialogRef, {
 .size-xl {
   max-width: 1100px;
 }
+.size-full {
+  max-width: min(1400px, 96vw);
+}
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  gap: 12px;
+  padding: 14px 20px;
+  flex-shrink: 0;
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   border-bottom: 1px solid var(--semantic-color-border);
@@ -267,23 +353,38 @@ useFocusTrap(dialogRef, {
 }
 
 .modal-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-target-staff-min, 44px);
+  min-height: var(--touch-target-staff-min, 44px);
   background: transparent;
   border: none;
   font-size: 18px;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px;
   border-radius: var(--radius-xs);
+  flex-shrink: 0;
 }
 
-.modal-close-btn:hover {
+.modal-close-btn:hover:not(:disabled) {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);
 }
 
+.modal-close-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 20px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   font-size: 14px;
   color: var(--semantic-color-text);
 }
@@ -291,8 +392,11 @@ useFocusTrap(dialogRef, {
 .modal-footer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 14px 20px;
+  flex-shrink: 0;
   border-top: 1px solid var(--semantic-color-border);
   background: var(--semantic-color-surface-muted);
   border-bottom-left-radius: var(--radius-md);
@@ -300,6 +404,7 @@ useFocusTrap(dialogRef, {
 }
 
 .btn {
+  min-height: var(--touch-target-staff-min, 44px);
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 500;
@@ -315,7 +420,7 @@ useFocusTrap(dialogRef, {
   color: var(--semantic-color-text);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background: var(--semantic-color-surface-header);
 }
 
@@ -325,8 +430,80 @@ useFocusTrap(dialogRef, {
   color: var(--semantic-color-surface);
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: var(--semantic-color-primary-dark);
+}
+
+/* 320px to 480px: Safe-area bottom sheet capped at 90dvh */
+@media (max-width: 480px) {
+  .clinical-modal-backdrop {
+    align-items: flex-end;
+    padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) 0 0 0;
+  }
+
+  .clinical-modal-dialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: var(--overlay-sheet-max-height-fallback, 90vh);
+    max-height: var(--overlay-sheet-max-height, 90dvh);
+    border-radius: var(--radius-xl, 16px) var(--radius-xl, 16px) 0 0;
+    border-bottom: none;
+    padding-bottom: var(
+      --safe-area-inset-bottom,
+      env(safe-area-inset-bottom, 0px)
+    );
+  }
+
+  .modal-header {
+    padding: 14px 16px;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+}
+
+.modal-body.modal-content-passthrough {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-body.modal-content-passthrough > :deep(form) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Extreme short viewports (e.g. 320x256 at 400% WCAG SC 1.4.10 zoom): allow full sheet scroll */
+@media (max-height: 360px) {
+  .clinical-modal-backdrop {
+    align-items: center;
+    padding: 8px;
+  }
+
+  .clinical-modal-dialog {
+    display: block;
+    max-height: var(--overlay-sheet-max-height-fallback, 90vh);
+    max-height: var(--overlay-sheet-max-height, 90dvh);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-body,
+  .modal-body.modal-content-passthrough,
+  .modal-body.modal-content-passthrough > :deep(form) {
+    display: block;
+    overflow-y: visible;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

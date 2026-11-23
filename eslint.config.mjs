@@ -393,55 +393,21 @@ function hasStaticOrBoundAttr(elementNode, attrName) {
   });
 }
 
-function hasClickDirective(elementNode) {
-  if (!elementNode?.startTag?.attributes) return false;
-  return elementNode.startTag.attributes.some(
-    (attr) =>
-      attr.directive &&
-      attr.key?.type === "VDirectiveKey" &&
-      attr.key.name?.name === "on" &&
-      attr.key.argument?.name === "click"
-  );
-}
-
-function isDialogVElement(node) {
-  if (!node || node.type !== "VElement") return false;
-  const role = getStaticAttrValue(node, "role");
-  if (role !== "dialog" && role !== "alertdialog") return false;
-  return hasStaticOrBoundAttr(node, "aria-modal");
-}
-
-function hasDialogDescendantOrSelf(node) {
-  if (!node || node.type !== "VElement") return false;
-  if (isDialogVElement(node)) return true;
-  for (const child of node.children || []) {
-    if (child.type === "VElement" && hasDialogDescendantOrSelf(child)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function hasDialogSibling(node) {
-  const siblings = node?.parent?.children || [];
-  return siblings.some(
-    (sib) => sib !== node && sib.type === "VElement" && isDialogVElement(sib)
-  );
-}
-
 const noRawOverlaysRule = {
   meta: {
     type: "problem",
     docs: {
       description:
-        "Disallow raw unguarded modal/drawer overlay divs and vuejs-accessibility backdrop suppressions outside packages/ui primitives.",
+        "Disallow raw modal/drawer overlay containers, raw aria-modal elements, and vuejs-accessibility backdrop suppressions outside packages/ui primitives.",
       category: "Accessibility",
     },
     messages: {
       noRawOverlay:
-        'Raw overlay container "{{className}}" is prohibited. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2545).',
+        'Raw overlay container "{{className}}" is prohibited. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2545, ADR-2651).',
+      noRawAriaModal:
+        'Raw aria-modal element "<{{tagName}}>" is prohibited outside packages/ui primitives. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2545, ADR-2651).',
       noBackdropSuppression:
-        'Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer (or use role="presentation" on focus-trapped backdrops).',
+        'Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2545, ADR-2651).',
     },
   },
   create(context) {
@@ -461,44 +427,40 @@ const noRawOverlaysRule = {
       return {};
     }
 
-    const sourceText = context.sourceCode.getText();
-    const scriptContent = Array.from(
-      sourceText.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi),
-      (m) => m[1]
-    ).join("\n");
-    const importsFocusTrap = /\buseFocusTrap\b/.test(scriptContent);
-
     const nativeOverlayElements = [];
 
     return parserServices.defineTemplateBodyVisitor(
       {
         VElement(node) {
           const rawTag = node.rawName || node.name;
-          if (!["div", "section", "aside"].includes(rawTag)) return;
+          const isCustomComponent =
+            /^[A-Z]/.test(rawTag) ||
+            rawTag.includes("-") ||
+            rawTag === "component" ||
+            rawTag === "slot" ||
+            rawTag === "template";
 
-          const overlayClass = getElementOverlayClassToken(
-            node,
-            context.sourceCode
-          );
-          if (!overlayClass) return;
+          if (["div", "section", "aside"].includes(rawTag)) {
+            const overlayClass = getElementOverlayClassToken(
+              node,
+              context.sourceCode
+            );
+            if (overlayClass) {
+              nativeOverlayElements.push(node);
+              context.report({
+                node: node.startTag,
+                messageId: "noRawOverlay",
+                data: { className: overlayClass },
+              });
+              return;
+            }
+          }
 
-          nativeOverlayElements.push(node);
-
-          const hasGuardedDialog =
-            importsFocusTrap &&
-            (hasDialogDescendantOrSelf(node) || hasDialogSibling(node));
-          const role = getStaticAttrValue(node, "role");
-          const validBackdropInteraction =
-            isDialogVElement(node) ||
-            !hasClickDirective(node) ||
-            role === "presentation" ||
-            role === "none";
-
-          if (!hasGuardedDialog || !validBackdropInteraction) {
+          if (!isCustomComponent && hasStaticOrBoundAttr(node, "aria-modal")) {
             context.report({
               node: node.startTag,
-              messageId: "noRawOverlay",
-              data: { className: overlayClass },
+              messageId: "noRawAriaModal",
+              data: { tagName: rawTag },
             });
           }
         },
@@ -954,6 +916,7 @@ export default [
       "**/coverage/**",
       "**/.claude/**",
       "scripts/**",
+      "docs/.vitepress/.temp/**",
       "docs/.vitepress/cache/**",
       "docs/.vitepress/dist/**",
       "**/mockServiceWorker.js",
@@ -1031,6 +994,17 @@ export default [
     rules: {
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
+    },
+  },
+  {
+    files: ["docs/.vitepress/*.mjs", "docs/.vitepress/*.cjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+    },
+    rules: {
+      "no-undef": "off",
+      "no-control-regex": "off",
     },
   },
   {

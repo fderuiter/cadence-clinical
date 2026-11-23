@@ -66,55 +66,58 @@
     </div>
 
     <!-- Accessible Cancel Confirmation Dialog -->
-    <div
-      v-if="ui.questionnaireCancelConfirmOpen"
-      id="questionnaire-cancel-confirm"
-      ref="cancelDialogRef"
-      class="modal-overlay"
+    <ClinicalModal
+      id="questionnaire-cancel-confirm-dialog"
+      overlay-id="questionnaire-cancel-confirm"
       role="alertdialog"
-      aria-modal="true"
+      :is-open="ui.questionnaireCancelConfirmOpen"
+      :teleport="false"
+      :show-header="false"
+      :show-footer="false"
+      initial-focus="#btn-cancel-keep-editing"
       aria-labelledby="cancel-confirm-title"
       aria-describedby="cancel-confirm-desc"
-      tabindex="-1"
+      backdrop-class="modal-overlay"
+      dialog-class="modal"
+      body-class="modal-content-passthrough"
+      @close="dismissCancelQuestionnaire"
     >
-      <div class="modal">
-        <div id="cancel-confirm-title" class="modal-header">
-          Discard Survey Draft?
-        </div>
-        <div class="modal-body">
-          <p id="cancel-confirm-desc">
-            Canceling will discard your entered answers for this survey. If you
-            want to step away and keep your progress, choose
-            <strong>Keep Editing</strong> and use
-            <strong>Back to My Tasks</strong> instead.
-          </p>
-        </div>
-        <div class="modal-footer modal-footer-wrap">
-          <button
-            id="btn-cancel-keep-editing"
-            type="button"
-            class="btn btn-secondary"
-            @click="dismissCancelQuestionnaire"
-          >
-            Keep Editing
-          </button>
-          <button
-            id="btn-cancel-confirm-discard"
-            type="button"
-            class="btn btn-primary btn-danger-solid"
-            @click="confirmCancelQuestionnaire"
-          >
-            Discard Draft &amp; Leave
-          </button>
-        </div>
+      <div id="cancel-confirm-title" class="modal-header">
+        Discard Survey Draft?
       </div>
-    </div>
+      <div class="modal-body">
+        <p id="cancel-confirm-desc">
+          Canceling will discard your entered answers for this survey. If you
+          want to step away and keep your progress, choose
+          <strong>Keep Editing</strong> and use
+          <strong>Back to My Tasks</strong> instead.
+        </p>
+      </div>
+      <div class="modal-footer modal-footer-wrap">
+        <button
+          id="btn-cancel-keep-editing"
+          type="button"
+          class="btn btn-secondary"
+          @click="dismissCancelQuestionnaire"
+        >
+          Keep Editing
+        </button>
+        <button
+          id="btn-cancel-confirm-discard"
+          type="button"
+          class="btn btn-primary btn-danger-solid"
+          @click="confirmCancelQuestionnaire"
+        >
+          Discard Draft &amp; Leave
+        </button>
+      </div>
+    </ClinicalModal>
   </section>
 </template>
 
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 
 import {
   confirmCancelQuestionnaire,
@@ -124,7 +127,6 @@ import {
 } from "../features/questionnaire.js";
 import { useUiStore } from "../stores/ui.js";
 
-const cancelDialogRef = ref(null);
 const ui = useUiStore();
 const hasTasksTab = ref(false);
 
@@ -147,12 +149,6 @@ watch(
 const questionnaireLabelledBy = computed(() =>
   hasTasksTab.value ? "btn-tab-btn-tasks" : "questionnaire-title"
 );
-
-useFocusTrap(cancelDialogRef, {
-  isOpen: () => ui.questionnaireCancelConfirmOpen,
-  onEscape: dismissCancelQuestionnaire,
-  initialFocus: "#btn-cancel-keep-editing",
-});
 
 function submitActiveQuestionnaire() {
   const submitBtn = document.getElementById("btn-submit-questionnaire");

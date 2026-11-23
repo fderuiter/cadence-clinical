@@ -4,178 +4,77 @@
     class="onboarding-tour-container"
     style="position: relative; z-index: 1000"
   >
-    <!-- Translucent backdrop only on unanchored modal steps to highlight onboarding introduction/completion without blocking interaction during edits -->
-    <div
-      v-if="isModalStep"
-      class="onboarding-backdrop"
-      role="presentation"
-      style="
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(0, 0, 0, 0.4);
-        z-index: 998;
-      "
-      @click="onboardingStore.dismissTour()"
-    />
-
-    <!-- The Popover Box -->
-    <div
-      ref="popoverRef"
-      :style="popoverStyle"
-      class="onboarding-popover-card"
-      role="dialog"
-      :aria-modal="isModalStep ? 'true' : undefined"
+    <!-- Guided tour dialog: modal on intro/completion/unanchored steps, non-modal on anchored steps -->
+    <ClinicalModal
+      :is-open="isTourOpen"
+      :modal="isModalStep"
+      :teleport="false"
+      :show-header="false"
+      :show-footer="false"
+      size="sm"
+      :style="cardInlineStyle"
       aria-labelledby="onboarding-tour-title"
-      tabindex="-1"
-      style="
-        background-color: var(--semantic-color-surface);
-        color: var(--semantic-color-text);
-        border: 2px solid var(--semantic-color-interactive-primary);
-        border-radius: 12px;
-        box-shadow:
-          0 10px 25px -5px rgba(0, 0, 0, 0.15),
-          0 8px 10px -6px rgba(0, 0, 0, 0.15);
-        padding: 20px;
-        width: 320px;
-        font-family: var(--semantic-font-family);
-      "
+      backdrop-class="onboarding-backdrop"
+      dialog-class="onboarding-popover-card"
+      @close="onboardingStore.dismissTour()"
     >
-      <!-- Arrow pointing up (only on anchored steps with valid target selector) -->
       <div
         v-if="hasTargetElement && currentStepConfig?.targetSelector"
         class="popover-arrow"
-        style="
-          position: absolute;
-          top: -10px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 0;
-          height: 0;
-          border-left: 10px solid transparent;
-          border-right: 10px solid transparent;
-          border-bottom: 10px solid var(--semantic-color-interactive-primary);
-        "
+        :style="arrowInlineStyle"
       />
 
-      <!-- Popover Header -->
-      <div
-        style="
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 12px;
-        "
-      >
+      <div class="tour-header" :style="headerInlineStyle">
         <h4
           id="onboarding-tour-title"
-          style="
-            font-weight: 700;
-            color: var(--semantic-color-interactive-primary);
-            margin: 0;
-            font-size: 1.05rem;
-          "
+          class="tour-title"
+          :style="titleInlineStyle"
         >
           {{ stepTitle }}
         </h4>
-        <span
-          style="
-            font-size: 0.75rem;
-            color: var(--semantic-color-text-secondary);
-            font-weight: 600;
-          "
-        >
+        <span class="tour-step-count" :style="stepCountInlineStyle">
           Step {{ currentStep }} of {{ totalSteps }}
         </span>
       </div>
 
-      <!-- Popover Body Content -->
-      <div
-        style="
-          font-size: 0.85rem;
-          line-height: 1.4;
-          color: var(--semantic-color-text-body);
-          margin-bottom: 16px;
-        "
-      >
+      <div class="tour-body" :style="bodyInlineStyle">
         <div
           v-if="dynamicPrompt"
-          style="
-            background-color: var(--semantic-color-success-bg-soft);
-            border-left: 3px solid var(--semantic-color-success);
-            color: var(--semantic-color-text-body);
-            padding: 8px 10px;
-            margin-bottom: 10px;
-            border-radius: 0 4px 4px 0;
-            font-style: italic;
-            font-weight: 500;
-          "
+          class="tour-prompt"
+          :style="promptInlineStyle"
         >
           {{ dynamicPrompt }}
         </div>
         <p>{{ stepDescription }}</p>
       </div>
 
-      <!-- Popover Action Buttons -->
-      <div
-        style="
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 8px;
-        "
-      >
-        <!-- Left buttons -->
+      <div class="tour-actions" :style="actionsInlineStyle">
         <div>
           <button
             v-if="currentStep === 1"
+            type="button"
             class="btn btn-secondary btn-tour-dismiss"
-            style="
-              padding: 6px 12px;
-              font-size: 0.75rem;
-              border: 1px solid var(--semantic-color-border-control);
-              border-radius: 6px;
-              cursor: pointer;
-              background: var(--semantic-color-surface);
-              color: var(--semantic-color-text);
-            "
+            :style="secondaryBtnStyle"
             @click="onboardingStore.dismissTour()"
           >
             Dismiss
           </button>
           <button
             v-else
+            type="button"
             class="btn btn-secondary btn-tour-back"
-            style="
-              padding: 6px 12px;
-              font-size: 0.75rem;
-              border: 1px solid var(--semantic-color-border-control);
-              border-radius: 6px;
-              cursor: pointer;
-              background: var(--semantic-color-surface);
-              color: var(--semantic-color-text);
-            "
+            :style="secondaryBtnStyle"
             @click="handlePrev"
           >
             Back
           </button>
         </div>
 
-        <!-- Right/Middle buttons -->
-        <div style="display: flex; gap: 6px; align-items: center">
+        <div class="tour-actions-right" :style="actionsRightInlineStyle">
           <button
+            type="button"
             class="btn btn-tour-disable"
-            style="
-              padding: 6px 8px;
-              font-size: 0.7rem;
-              color: var(--semantic-color-text-secondary);
-              background: none;
-              border: none;
-              cursor: pointer;
-              text-decoration: underline;
-            "
+            :style="disableBtnStyle"
             @click="onboardingStore.disableTour()"
           >
             Don't show again
@@ -183,48 +82,32 @@
 
           <button
             v-if="currentStep < totalSteps"
+            type="button"
             class="btn btn-primary btn-tour-next"
-            style="
-              padding: 6px 14px;
-              font-size: 0.75rem;
-              background-color: var(--semantic-color-interactive-primary);
-              color: var(--semantic-color-surface);
-              border: none;
-              border-radius: 6px;
-              cursor: pointer;
-              font-weight: 600;
-            "
+            :style="nextBtnStyle"
             @click="handleNext"
           >
             Next
           </button>
           <button
             v-else
+            type="button"
             class="btn btn-success btn-tour-complete"
-            style="
-              padding: 6px 14px;
-              font-size: 0.75rem;
-              background-color: var(--semantic-color-success);
-              color: var(--semantic-color-surface);
-              border: none;
-              border-radius: 6px;
-              cursor: pointer;
-              font-weight: 600;
-            "
+            :style="completeBtnStyle"
             @click="handleComplete"
           >
             Complete
           </button>
         </div>
       </div>
-    </div>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { useFocusTrap, useEscapeClose } from "ui";
+import { ClinicalModal, useEscapeClose } from "ui";
 import {
   isTourRouteAuthorized,
   useOnboardingStore,
@@ -330,7 +213,6 @@ const stepTargetDescription = computed(
 );
 
 const hasTargetElement = ref(false);
-const popoverRef = ref(null);
 
 const isTourOpen = computed(() =>
   Boolean(onboardingStore.isActive && !onboardingStore.disabled)
@@ -342,11 +224,6 @@ const isModalStep = computed(
       currentStep.value === totalSteps.value ||
       !hasTargetElement.value)
 );
-
-useFocusTrap(popoverRef, {
-  isOpen: isModalStep,
-  onEscape: () => onboardingStore.dismissTour(),
-});
 
 useEscapeClose(() => onboardingStore.dismissTour(), {
   isOpen: () => isTourOpen.value && !isModalStep.value,
@@ -593,6 +470,138 @@ onMounted(async () => {
     );
   }
 });
+
+const cardBaseStyle = {
+  backgroundColor: "var(--semantic-color-surface)",
+  color: "var(--semantic-color-text)",
+  border: "2px solid var(--semantic-color-interactive-primary)",
+  borderRadius: "12px",
+  boxShadow:
+    "0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.15)",
+  width: "min(320px, 100%)",
+  maxWidth: "320px",
+  overflow: "visible",
+  fontFamily: "var(--semantic-font-family)",
+  boxSizing: "border-box",
+};
+
+const cardInlineStyle = computed(() => ({
+  ...cardBaseStyle,
+  ...popoverStyle.value,
+}));
+
+const arrowInlineStyle = {
+  position: "absolute",
+  top: "-10px",
+  left: "50%",
+  transform: "translateX(-50%)",
+  width: "0",
+  height: "0",
+  borderLeft: "10px solid transparent",
+  borderRight: "10px solid transparent",
+  borderBottom: "10px solid var(--semantic-color-interactive-primary)",
+};
+
+const headerInlineStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: "8px",
+  marginBottom: "12px",
+};
+
+const titleInlineStyle = {
+  fontWeight: "700",
+  color: "var(--semantic-color-interactive-primary)",
+  margin: "0",
+  fontSize: "1.05rem",
+};
+
+const stepCountInlineStyle = {
+  fontSize: "0.75rem",
+  color: "var(--semantic-color-text-secondary)",
+  fontWeight: "600",
+  fontVariantNumeric: "tabular-nums",
+  whiteSpace: "nowrap",
+};
+
+const bodyInlineStyle = {
+  fontSize: "0.85rem",
+  lineHeight: "1.4",
+  color: "var(--semantic-color-text-body)",
+  marginBottom: "16px",
+};
+
+const promptInlineStyle = {
+  backgroundColor: "var(--semantic-color-success-bg-soft)",
+  borderLeft: "3px solid var(--semantic-color-success)",
+  color: "var(--semantic-color-text-body)",
+  padding: "8px 10px",
+  marginBottom: "10px",
+  borderRadius: "0 4px 4px 0",
+  fontStyle: "italic",
+  fontWeight: "500",
+};
+
+const actionsInlineStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: "8px",
+};
+
+const actionsRightInlineStyle = {
+  display: "flex",
+  gap: "6px",
+  alignItems: "center",
+};
+
+const secondaryBtnStyle = {
+  minHeight: "var(--touch-target-staff-min, 44px)",
+  padding: "6px 12px",
+  fontSize: "0.75rem",
+  border: "1px solid var(--semantic-color-border-control)",
+  borderRadius: "6px",
+  cursor: "pointer",
+  background: "var(--semantic-color-surface)",
+  color: "var(--semantic-color-text)",
+};
+
+const disableBtnStyle = {
+  minHeight: "var(--touch-target-staff-min, 44px)",
+  padding: "6px 8px",
+  fontSize: "0.7rem",
+  color: "var(--semantic-color-text-secondary)",
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  textDecoration: "underline",
+};
+
+const nextBtnStyle = {
+  minHeight: "var(--touch-target-staff-min, 44px)",
+  padding: "6px 14px",
+  fontSize: "0.75rem",
+  backgroundColor: "var(--semantic-color-interactive-primary)",
+  color: "var(--semantic-color-surface)",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+  fontWeight: "600",
+};
+
+const completeBtnStyle = {
+  minHeight: "var(--touch-target-staff-min, 44px)",
+  padding: "6px 14px",
+  fontSize: "0.75rem",
+  backgroundColor: "var(--semantic-color-success)",
+  color: "var(--semantic-color-surface)",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+  fontWeight: "600",
+};
 
 onUnmounted(() => {
   isDisposed = true;

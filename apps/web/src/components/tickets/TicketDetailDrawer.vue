@@ -1,19 +1,14 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="drawer-backdrop"
-    role="presentation"
-    @click.self="close"
+  <ClinicalDrawer
+    :open="isOpen"
+    :teleport="false"
+    size="lg"
+    backdrop-class="drawer-backdrop"
+    panel-class="drawer-panel"
+    aria-labelledby="drawer-ticket-title"
+    @close="close"
   >
-    <div
-      ref="drawerRef"
-      class="drawer-panel"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="drawer-ticket-title"
-      tabindex="-1"
-    >
-      <!-- Drawer Header -->
+    <template #header>
       <div class="drawer-header">
         <div class="drawer-header-meta">
           <span class="ref-badge">{{
@@ -38,7 +33,8 @@
             {{ formatStatus(ticket.status) }}
           </span>
           <span v-if="ticket.signature_token" class="badge badge-signed">
-            ✍️ Part 11 Signed
+            <PenTool :size="12" :stroke-width="1.75" aria-hidden="true" />
+            Part 11 Signed
           </span>
         </div>
 
@@ -52,7 +48,13 @@
           :class="slaBannerClass"
         >
           <div class="sla-banner-left">
-            <span class="sla-icon">{{ slaIcon }}</span>
+            <component
+              :is="slaIconComponent"
+              class="sla-icon"
+              :size="15"
+              :stroke-width="1.75"
+              aria-hidden="true"
+            />
             <span class="sla-text">{{ slaStatusText }}</span>
           </div>
           <div class="sla-progress-track">
@@ -70,51 +72,61 @@
           aria-label="Close"
           @click="close"
         >
-          ✕
+          <X :size="18" :stroke-width="1.75" aria-hidden="true" />
         </button>
       </div>
+    </template>
 
+    <template #subheader>
       <!-- Action Bar -->
       <div class="drawer-actions">
         <div v-if="isSigned" class="signed-lock-notice">
-          🔒 Locked under 21 CFR Part 11 — Ticket record and notes are
-          immutable.
+          <Lock :size="14" :stroke-width="1.75" aria-hidden="true" />
+          Locked under 21 CFR Part 11 — Ticket record and notes are immutable.
         </div>
         <div v-else-if="canMutateTicket" class="action-btn-group">
           <button
             v-if="ticket.status === 'OPEN'"
+            type="button"
             class="btn btn-sm btn-primary"
             :disabled="actionLoading"
             @click="transitionTicket('IN_PROGRESS')"
           >
-            ▶ Start Work
+            <Play :size="14" :stroke-width="1.75" aria-hidden="true" />
+            Start Work
           </button>
           <button
             v-if="ticket.status === 'IN_PROGRESS'"
+            type="button"
             class="btn btn-sm btn-warning"
             :disabled="actionLoading"
             @click="transitionTicket('WAITING_ON_SITE')"
           >
-            ⏸ Pause (Wait Site)
+            <Pause :size="14" :stroke-width="1.75" aria-hidden="true" />
+            Pause (Wait Site)
           </button>
           <button
             v-if="ticket.status === 'IN_PROGRESS'"
+            type="button"
             class="btn btn-sm btn-warning"
             :disabled="actionLoading"
             @click="transitionTicket('WAITING_ON_SPONSOR')"
           >
-            ⏸ Pause (Wait Sponsor)
+            <Pause :size="14" :stroke-width="1.75" aria-hidden="true" />
+            Pause (Wait Sponsor)
           </button>
           <button
             v-if="
               ticket.status === 'WAITING_ON_SITE' ||
               ticket.status === 'WAITING_ON_SPONSOR'
             "
+            type="button"
             class="btn btn-sm btn-primary"
             :disabled="actionLoading"
             @click="transitionTicket('IN_PROGRESS')"
           >
-            ▶ Resume Work
+            <Play :size="14" :stroke-width="1.75" aria-hidden="true" />
+            Resume Work
           </button>
           <button
             v-if="
@@ -123,19 +135,23 @@
               ticket.status === 'WAITING_ON_SPONSOR'
             "
             id="btn-open-resolve"
+            type="button"
             class="btn btn-sm btn-success"
             :disabled="actionLoading"
             @click="openResolveModal"
           >
-            ✓ Resolve Issue
+            <Check :size="14" :stroke-width="1.75" aria-hidden="true" />
+            Resolve Issue
           </button>
           <button
             v-if="ticket.status === 'RESOLVED'"
+            type="button"
             class="btn btn-sm btn-secondary"
             :disabled="actionLoading"
             @click="transitionTicket('CLOSED')"
           >
-            🔒 Final Close
+            <Lock :size="14" :stroke-width="1.75" aria-hidden="true" />
+            Final Close
           </button>
           <input
             v-if="ticket.status !== 'CLOSED'"
@@ -148,17 +164,19 @@
           />
         </div>
         <div v-else class="signed-lock-notice">
-          👁️ Read-only view — Status transitions require operational staff
-          access.
+          <Eye :size="14" :stroke-width="1.75" aria-hidden="true" />
+          Read-only view — Status transitions require operational staff access.
         </div>
 
         <button
           v-if="canSignTicket"
           id="btn-open-part11-sign"
+          type="button"
           class="btn btn-sm btn-sign"
           @click="isSignModalOpen = true"
         >
-          ✍️ Part 11 eSign
+          <PenTool :size="14" :stroke-width="1.75" aria-hidden="true" />
+          Part 11 eSign
         </button>
       </div>
 
@@ -237,7 +255,8 @@
             "
             @click="submitResolution"
           >
-            ✓ Confirm Resolution
+            <Check :size="14" :stroke-width="1.75" aria-hidden="true" />
+            Confirm Resolution
           </button>
         </div>
       </div>
@@ -245,548 +264,605 @@
       <!-- Drawer Tabs -->
       <div class="drawer-tabs">
         <button
+          type="button"
           class="tab-item"
           :class="{ active: activeTab === 'overview' }"
           @click="activeTab = 'overview'"
         >
-          📋 Overview &amp; Context
+          <ClipboardList :size="15" :stroke-width="1.75" aria-hidden="true" />
+          Overview &amp; Context
         </button>
         <button
+          type="button"
           class="tab-item"
           :class="{ active: activeTab === 'discussion' }"
           @click="activeTab = 'discussion'"
         >
-          💬 Discussion ({{ visibleComments.length }})
+          <MessageSquare :size="15" :stroke-width="1.75" aria-hidden="true" />
+          Discussion ({{ visibleComments.length }})
         </button>
         <button
           v-if="demoBuild"
+          type="button"
           class="tab-item"
           :class="{ active: activeTab === 'attachments' }"
           @click="activeTab = 'attachments'"
         >
-          📎 Evidence ({{ attachments.length }})
+          <Paperclip :size="15" :stroke-width="1.75" aria-hidden="true" />
+          Evidence ({{ attachments.length }})
         </button>
         <button
+          type="button"
           class="tab-item"
           :class="{ active: activeTab === 'signatures' }"
           @click="activeTab = 'signatures'"
         >
-          ✍️ eSignatures
+          <PenTool :size="15" :stroke-width="1.75" aria-hidden="true" />
+          eSignatures
         </button>
         <button
+          type="button"
           class="tab-item"
           :class="{ active: activeTab === 'audit' }"
           @click="activeTab = 'audit'"
         >
-          🔒 Audit Trail
+          <Lock :size="15" :stroke-width="1.75" aria-hidden="true" />
+          Audit Trail
         </button>
       </div>
+    </template>
 
-      <!-- Drawer Content -->
-      <div class="drawer-body">
-        <!-- TAB 1: OVERVIEW -->
-        <div v-if="activeTab === 'overview'" class="tab-pane">
-          <div class="section-card">
-            <h4 class="card-title">Clinical Narrative</h4>
-            <p class="narrative-text">
-              {{ ticket.description }}
-            </p>
+    <!-- Drawer Content -->
+    <div class="drawer-body">
+      <!-- TAB 1: OVERVIEW -->
+      <div v-if="activeTab === 'overview'" class="tab-pane">
+        <div class="section-card">
+          <h4 class="card-title">Clinical Narrative</h4>
+          <p class="narrative-text">
+            {{ ticket.description }}
+          </p>
+        </div>
+
+        <div class="section-card">
+          <h4 class="card-title">Trial &amp; Site Context</h4>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">Study ID</span>
+              <span class="meta-value">{{ ticket.study_id || "N/A" }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Site ID</span>
+              <span class="meta-value">{{ ticket.site_id || "N/A" }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Subject ID</span>
+              <span class="meta-value">{{ ticket.subject_id || "N/A" }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Priority</span>
+              <span
+                class="meta-value priority-tag"
+                :class="`priority-${ticket.priority?.toLowerCase()}`"
+              >
+                {{ ticket.priority }}
+              </span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Created By</span>
+              <span class="meta-value">{{ ticket.created_by }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Created At</span>
+              <span class="meta-value">{{
+                formatDate(ticket.created_at)
+              }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grounded Protocol RAG Triage Card -->
+        <div v-if="aiTriage" class="section-card ai-triage-card">
+          <div class="ai-card-header">
+            <div class="ai-card-title-group">
+              <span class="ai-robot-icon" aria-hidden="true">
+                <Bot :size="18" :stroke-width="1.75" aria-hidden="true" />
+              </span>
+              <h4 class="card-title ai-title">Grounded Protocol RAG Triage</h4>
+            </div>
+            <span
+              class="badge"
+              :class="
+                aiTriage.rag_status === 'DRAFT_AVAILABLE'
+                  ? 'badge-ai-grounded'
+                  : 'badge-ai-failclosed'
+              "
+            >
+              <Target
+                v-if="aiTriage.rag_status === 'DRAFT_AVAILABLE'"
+                :size="13"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
+              <AlertTriangle
+                v-else
+                :size="13"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
+              {{
+                aiTriage.rag_status === "DRAFT_AVAILABLE"
+                  ? `${Math.round(aiTriage.faithfulness_score * 100)}% Faithfulness (Grounded)`
+                  : "Routed to Human Queue (< 85% Confidence)"
+              }}
+            </span>
           </div>
 
-          <div class="section-card">
-            <h4 class="card-title">Trial &amp; Site Context</h4>
-            <div class="meta-grid">
-              <div class="meta-item">
-                <span class="meta-label">Study ID</span>
-                <span class="meta-value">{{ ticket.study_id || "N/A" }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Site ID</span>
-                <span class="meta-value">{{ ticket.site_id || "N/A" }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Subject ID</span>
-                <span class="meta-value">{{ ticket.subject_id || "N/A" }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Priority</span>
-                <span
-                  class="meta-value priority-tag"
-                  :class="`priority-${ticket.priority?.toLowerCase()}`"
-                >
-                  {{ ticket.priority }}
-                </span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Created By</span>
-                <span class="meta-value">{{ ticket.created_by }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Created At</span>
-                <span class="meta-value">{{
-                  formatDate(ticket.created_at)
-                }}</span>
-              </div>
+          <div
+            v-if="aiTriage.rag_status === 'DRAFT_AVAILABLE'"
+            class="ai-draft-content"
+          >
+            <p class="ai-draft-text">
+              {{ aiTriage.draft_answer }}
+            </p>
+            <div
+              v-if="aiTriage.citations && aiTriage.citations.length > 0"
+              class="citation-badge-list"
+            >
+              <span class="citation-label">Verified Protocol Citations:</span>
+              <button
+                v-for="(cit, cIdx) in aiTriage.citations"
+                :key="cIdx"
+                type="button"
+                class="citation-chip-btn"
+                title="Open protocol document viewer at referenced page"
+                @click="openCitationViewer(cit)"
+              >
+                <BookOpen :size="13" :stroke-width="1.75" aria-hidden="true" />
+                {{
+                  cit.citation_marker ||
+                  `Protocol ${cit.protocol_version} §${cit.section_number || "General"} p.${cit.page_number}`
+                }}
+              </button>
+            </div>
+            <div class="ai-draft-actions">
+              <button
+                type="button"
+                class="btn btn-sm btn-secondary"
+                @click="applyAiDraftToComment"
+              >
+                <MessageSquare
+                  :size="14"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                Use Draft as Public Comment
+              </button>
             </div>
           </div>
 
-          <!-- Grounded Protocol RAG Triage Card -->
-          <div v-if="aiTriage" class="section-card ai-triage-card">
-            <div class="ai-card-header">
-              <div class="ai-card-title-group">
-                <span class="ai-robot-icon">🤖</span>
-                <h4 class="card-title ai-title">
-                  Grounded Protocol RAG Triage
-                </h4>
-              </div>
+          <div v-else class="ai-failclosed-box">
+            <p class="ai-failclosed-text">
+              {{
+                aiTriage.routing_reason ||
+                "Inquiry confidence is below the 85% gating threshold. Automatically routed to human Data Manager review."
+              }}
+            </p>
+            <div class="human-routed-badge">
+              <User :size="13" :stroke-width="1.75" aria-hidden="true" />
+              Assigned Queue: <strong>Data Manager Review</strong>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="relatedEntityType" class="section-card">
+          <h4 class="card-title">Cross-App Entity Linkage</h4>
+          <div class="entity-badge-box">
+            <span class="entity-type-badge">{{ relatedEntityType }}</span>
+            <span class="entity-id-value">{{ relatedEntityId }}</span>
+          </div>
+        </div>
+
+        <div
+          v-if="ticket.root_cause_category || ticket.root_cause_summary"
+          class="section-card rca-card"
+        >
+          <h4 class="card-title">Root Cause Analysis (5-Whys)</h4>
+          <div class="rca-category-pill">
+            Category: {{ formatRCA(ticket.root_cause_category) }}
+          </div>
+          <div v-if="ticket.resolution_code" class="rca-category-pill">
+            Resolution: {{ ticket.resolution_code }}
+          </div>
+          <p class="rca-summary">
+            {{ ticket.root_cause_summary }}
+          </p>
+        </div>
+
+        <div
+          v-if="
+            ticket.context_payload &&
+            Object.keys(ticket.context_payload).length > 0
+          "
+          class="section-card"
+        >
+          <h4 class="card-title">Structured Ingestion Payload</h4>
+          <pre class="json-viewer">{{
+            JSON.stringify(ticket.context_payload, null, 2)
+          }}</pre>
+        </div>
+      </div>
+
+      <!-- TAB 2: DISCUSSION -->
+      <div v-if="activeTab === 'discussion'" class="tab-pane">
+        <div class="comments-filter-bar">
+          <button
+            type="button"
+            class="filter-chip"
+            :class="{ active: commentFilter === 'ALL' }"
+            @click="commentFilter = 'ALL'"
+          >
+            All Notes
+          </button>
+          <button
+            type="button"
+            class="filter-chip"
+            :class="{ active: commentFilter === 'PUBLIC' }"
+            @click="commentFilter = 'PUBLIC'"
+          >
+            <Globe :size="13" :stroke-width="1.75" aria-hidden="true" />
+            Public (Site &amp; Sponsor)
+          </button>
+          <button
+            v-if="canViewInternalSponsorNotes"
+            type="button"
+            class="filter-chip"
+            :class="{ active: commentFilter === 'INTERNAL_SPONSOR' }"
+            @click="commentFilter = 'INTERNAL_SPONSOR'"
+          >
+            <Lock :size="13" :stroke-width="1.75" aria-hidden="true" />
+            Internal Sponsor Only
+          </button>
+        </div>
+
+        <div class="comment-stream">
+          <div
+            v-for="c in filteredComments"
+            :key="c.id"
+            class="comment-card"
+            :class="{
+              'comment-internal': c.visibility === 'INTERNAL_SPONSOR',
+            }"
+          >
+            <div class="comment-header">
+              <span class="comment-author">{{
+                c.created_by || c.user_id
+              }}</span>
               <span
                 class="badge"
                 :class="
-                  aiTriage.rag_status === 'DRAFT_AVAILABLE'
-                    ? 'badge-ai-grounded'
-                    : 'badge-ai-failclosed'
+                  c.visibility === 'INTERNAL_SPONSOR'
+                    ? 'badge-internal'
+                    : 'badge-public'
                 "
               >
+                <Lock
+                  v-if="c.visibility === 'INTERNAL_SPONSOR'"
+                  :size="11"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                <Globe
+                  v-else
+                  :size="11"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
                 {{
-                  aiTriage.rag_status === "DRAFT_AVAILABLE"
-                    ? `🎯 ${Math.round(aiTriage.faithfulness_score * 100)}% Faithfulness (Grounded)`
-                    : "⚠️ Routed to Human Queue (< 85% Confidence)"
+                  c.visibility === "INTERNAL_SPONSOR"
+                    ? "Internal Note"
+                    : "Public"
                 }}
               </span>
+              <span class="comment-time">{{ formatDate(c.created_at) }}</span>
             </div>
-
-            <div
-              v-if="aiTriage.rag_status === 'DRAFT_AVAILABLE'"
-              class="ai-draft-content"
-            >
-              <p class="ai-draft-text">
-                {{ aiTriage.draft_answer }}
-              </p>
-              <div
-                v-if="aiTriage.citations && aiTriage.citations.length > 0"
-                class="citation-badge-list"
-              >
-                <span class="citation-label">Verified Protocol Citations:</span>
-                <button
-                  v-for="(cit, cIdx) in aiTriage.citations"
-                  :key="cIdx"
-                  type="button"
-                  class="citation-chip-btn"
-                  title="Open protocol document viewer at referenced page"
-                  @click="openCitationViewer(cit)"
-                >
-                  📖
-                  {{
-                    cit.citation_marker ||
-                    `Protocol ${cit.protocol_version} §${cit.section_number || "General"} p.${cit.page_number}`
-                  }}
-                </button>
-              </div>
-              <div class="ai-draft-actions">
-                <button
-                  type="button"
-                  class="btn btn-sm btn-secondary"
-                  @click="applyAiDraftToComment"
-                >
-                  💬 Use Draft as Public Comment
-                </button>
-              </div>
-            </div>
-
-            <div v-else class="ai-failclosed-box">
-              <p class="ai-failclosed-text">
-                {{
-                  aiTriage.routing_reason ||
-                  "Inquiry confidence is below the 85% gating threshold. Automatically routed to human Data Manager review."
-                }}
-              </p>
-              <div class="human-routed-badge">
-                👤 Assigned Queue: <strong>Data Manager Review</strong>
-              </div>
+            <div class="comment-body">
+              {{ c.body ?? c.content }}
             </div>
           </div>
 
-          <div v-if="relatedEntityType" class="section-card">
-            <h4 class="card-title">Cross-App Entity Linkage</h4>
-            <div class="entity-badge-box">
-              <span class="entity-type-badge">{{ relatedEntityType }}</span>
-              <span class="entity-id-value">{{ relatedEntityId }}</span>
-            </div>
-          </div>
-
-          <div
-            v-if="ticket.root_cause_category || ticket.root_cause_summary"
-            class="section-card rca-card"
-          >
-            <h4 class="card-title">Root Cause Analysis (5-Whys)</h4>
-            <div class="rca-category-pill">
-              Category: {{ formatRCA(ticket.root_cause_category) }}
-            </div>
-            <div v-if="ticket.resolution_code" class="rca-category-pill">
-              Resolution: {{ ticket.resolution_code }}
-            </div>
-            <p class="rca-summary">
-              {{ ticket.root_cause_summary }}
-            </p>
-          </div>
-
-          <div
-            v-if="
-              ticket.context_payload &&
-              Object.keys(ticket.context_payload).length > 0
-            "
-            class="section-card"
-          >
-            <h4 class="card-title">Structured Ingestion Payload</h4>
-            <pre class="json-viewer">{{
-              JSON.stringify(ticket.context_payload, null, 2)
-            }}</pre>
+          <div v-if="filteredComments.length === 0" class="empty-placeholder">
+            No comments match the selected visibility filter.
           </div>
         </div>
 
-        <!-- TAB 2: DISCUSSION -->
-        <div v-if="activeTab === 'discussion'" class="tab-pane">
-          <div class="comments-filter-bar">
-            <button
-              class="filter-chip"
-              :class="{ active: commentFilter === 'ALL' }"
-              @click="commentFilter = 'ALL'"
-            >
-              All Notes
-            </button>
-            <button
-              class="filter-chip"
-              :class="{ active: commentFilter === 'PUBLIC' }"
-              @click="commentFilter = 'PUBLIC'"
-            >
-              🌐 Public (Site &amp; Sponsor)
-            </button>
-            <button
-              v-if="canViewInternalSponsorNotes"
-              class="filter-chip"
-              :class="{ active: commentFilter === 'INTERNAL_SPONSOR' }"
-              @click="commentFilter = 'INTERNAL_SPONSOR'"
-            >
-              🔒 Internal Sponsor Only
-            </button>
+        <div v-if="canMutateTicket && !isSigned" class="new-comment-box">
+          <div class="visibility-selector">
+            <label class="radio-label">
+              <input
+                v-model="newCommentVisibility"
+                type="radio"
+                value="PUBLIC"
+              />
+              <span>
+                <Globe :size="13" :stroke-width="1.75" aria-hidden="true" />
+                Public (Site Visible)
+              </span>
+            </label>
+            <label v-if="canViewInternalSponsorNotes" class="radio-label">
+              <input
+                v-model="newCommentVisibility"
+                type="radio"
+                value="INTERNAL_SPONSOR"
+              />
+              <span>
+                <Lock :size="13" :stroke-width="1.75" aria-hidden="true" />
+                Internal Sponsor Note
+              </span>
+            </label>
           </div>
-
-          <div class="comment-stream">
-            <div
-              v-for="c in filteredComments"
-              :key="c.id"
-              class="comment-card"
-              :class="{
-                'comment-internal': c.visibility === 'INTERNAL_SPONSOR',
-              }"
-            >
-              <div class="comment-header">
-                <span class="comment-author">{{
-                  c.created_by || c.user_id
-                }}</span>
-                <span
-                  class="badge"
-                  :class="
-                    c.visibility === 'INTERNAL_SPONSOR'
-                      ? 'badge-internal'
-                      : 'badge-public'
-                  "
-                >
-                  {{
-                    c.visibility === "INTERNAL_SPONSOR"
-                      ? "🔒 Internal Note"
-                      : "🌐 Public"
-                  }}
-                </span>
-                <span class="comment-time">{{ formatDate(c.created_at) }}</span>
-              </div>
-              <div class="comment-body">
-                {{ c.body ?? c.content }}
-              </div>
-            </div>
-
-            <div v-if="filteredComments.length === 0" class="empty-placeholder">
-              No comments match the selected visibility filter.
-            </div>
-          </div>
-
-          <div v-if="canMutateTicket && !isSigned" class="new-comment-box">
-            <div class="visibility-selector">
-              <label class="radio-label">
-                <input
-                  v-model="newCommentVisibility"
-                  type="radio"
-                  value="PUBLIC"
-                />
-                <span>🌐 Public (Site Visible)</span>
-              </label>
-              <label v-if="canViewInternalSponsorNotes" class="radio-label">
-                <input
-                  v-model="newCommentVisibility"
-                  type="radio"
-                  value="INTERNAL_SPONSOR"
-                />
-                <span>🔒 Internal Sponsor Note</span>
-              </label>
-            </div>
-            <textarea
-              v-model="newCommentContent"
-              rows="3"
-              aria-label="Clinical discussion note"
-              class="form-control"
-              placeholder="Add a clinical note, investigator response, or internal audit review (no participant PII)..."
+          <textarea
+            v-model="newCommentContent"
+            rows="3"
+            aria-label="Clinical discussion note"
+            class="form-control"
+            placeholder="Add a clinical note, investigator response, or internal audit review (no participant PII)..."
+          />
+          <div class="comment-submit-row">
+            <input
+              v-model="newCommentReason"
+              type="text"
+              aria-label="Reason for adding note"
+              class="form-control flex-1"
+              placeholder="Reason for change (GxP justification)..."
             />
-            <div class="comment-submit-row">
-              <input
-                v-model="newCommentReason"
-                type="text"
-                aria-label="Reason for adding note"
-                class="form-control flex-1"
-                placeholder="Reason for change (GxP justification)..."
-              />
-              <button
-                id="btn-post-ticket-comment"
-                class="btn btn-primary"
-                :disabled="
-                  !newCommentContent.trim() ||
-                  !newCommentReason.trim() ||
-                  commentSubmitting
-                "
-                @click="submitComment"
-              >
-                Post Note
-              </button>
-            </div>
-          </div>
-          <div v-else class="empty-placeholder">
-            {{
-              isSigned
-                ? "Discussion is locked because this ticket has been signed under 21 CFR Part 11."
-                : "Read-only auditor view — adding discussion notes is disabled."
-            }}
-          </div>
-        </div>
-
-        <!-- TAB 3: ATTACHMENTS (Demo mode only while blob storage is out of scope) -->
-        <div v-if="demoBuild && activeTab === 'attachments'" class="tab-pane">
-          <div class="attachment-upload-box">
-            <h4 class="card-title">Upload Audited Evidence Blob</h4>
-            <p class="upload-hint">
-              Upload logs, temperature traces, source certificates, or PDFs (21
-              CFR Part 11 &amp; DEID scanned).
-            </p>
-            <div class="upload-inputs">
-              <input
-                ref="fileInput"
-                type="file"
-                aria-label="Evidence attachment file"
-                class="file-input"
-                @change="onFileSelected"
-              />
-              <input
-                v-model="attachmentReason"
-                type="text"
-                aria-label="Reason for attaching evidence"
-                class="form-control"
-                placeholder="Mandatory GxP reason for attachment..."
-              />
-              <button
-                class="btn btn-primary"
-                :disabled="
-                  !selectedFile || !attachmentReason.trim() || uploadSubmitting
-                "
-                @click="uploadAttachment"
-              >
-                📎 Attach Evidence
-              </button>
-            </div>
-          </div>
-
-          <div class="attachments-list">
-            <div
-              v-for="att in attachments"
-              :key="att.id"
-              class="attachment-card"
-            >
-              <div class="attachment-icon">📄</div>
-              <div class="attachment-details">
-                <div class="attachment-filename">
-                  {{ att.filename }}
-                </div>
-                <div class="attachment-meta">
-                  <span>{{ (att.file_size_bytes / 1024).toFixed(1) }} KB</span>
-                  • <span>Uploaded by {{ att.uploaded_by }}</span> •
-                  <span>{{ formatDate(att.uploaded_at) }}</span>
-                </div>
-                <div class="sha-hash" :title="att.sha256_hash">
-                  SHA-256:
-                  <code>{{ att.sha256_hash?.substring(0, 16) }}...</code>
-                </div>
-              </div>
-              <div class="attachment-badges">
-                <span v-if="att.deid_scrubbed" class="badge badge-deid"
-                  >🛡️ DEID Verified</span
-                >
-              </div>
-            </div>
-
-            <div v-if="attachments.length === 0" class="empty-placeholder">
-              <EmptyState
-                icon="📎"
-                title="No Evidence Attached"
-                message="No evidence files have been attached to this ticket yet."
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 4: SIGNATURES -->
-        <div v-if="activeTab === 'signatures'" class="tab-pane">
-          <div v-if="ticket.signature_token" class="signature-record-card">
-            <div class="sig-card-header">
-              <span class="sig-seal-icon">🛡️</span>
-              <div>
-                <h4 class="sig-card-title">
-                  Authoritative 21 CFR Part 11 Electronic Signature
-                </h4>
-                <p class="sig-card-subtitle">
-                  Legally binding sign-off recorded in tamper-evident ledger
-                </p>
-              </div>
-            </div>
-            <div class="sig-details-grid">
-              <div class="sig-item">
-                <span class="sig-label">Signer Identity:</span>
-                <span class="sig-val">{{ ticket.signature_user }}</span>
-              </div>
-              <div class="sig-item">
-                <span class="sig-label">Timestamp (UTC):</span>
-                <span class="sig-val">{{
-                  formatDate(ticket.signature_timestamp)
-                }}</span>
-              </div>
-              <div class="sig-item full-width">
-                <span class="sig-label">Signature Meaning:</span>
-                <span class="sig-val meaning-val">{{
-                  ticket.signature_meaning
-                }}</span>
-              </div>
-              <div class="sig-item full-width">
-                <span class="sig-label">Cryptographic Token:</span>
-                <span class="sig-val token-val"
-                  ><code>{{ ticket.signature_token }}</code></span
-                >
-              </div>
-            </div>
-          </div>
-
-          <div v-else class="empty-sig-box">
-            <p>
-              No 21 CFR Part 11 electronic signature has been captured for this
-              ticket.
-            </p>
             <button
-              v-if="canSignTicket"
-              class="btn btn-primary btn-sign-action"
-              @click="isSignModalOpen = true"
+              id="btn-post-ticket-comment"
+              class="btn btn-primary"
+              :disabled="
+                !newCommentContent.trim() ||
+                !newCommentReason.trim() ||
+                commentSubmitting
+              "
+              @click="submitComment"
             >
-              ✍️ Sign &amp; Authorize Ticket
+              Post Note
             </button>
-            <p v-else class="sig-prereq-hint">
-              {{
-                canMutateTicket
-                  ? "Resolve the clinical issue first to unlock 21 CFR Part 11 closure sign-off."
-                  : "Read-only auditor view — electronic signature capture requires operational staff access."
-              }}
-            </p>
+          </div>
+        </div>
+        <div v-else class="empty-placeholder">
+          {{
+            isSigned
+              ? "Discussion is locked because this ticket has been signed under 21 CFR Part 11."
+              : "Read-only auditor view — adding discussion notes is disabled."
+          }}
+        </div>
+      </div>
+
+      <!-- TAB 3: ATTACHMENTS (Demo mode only while blob storage is out of scope) -->
+      <div v-if="demoBuild && activeTab === 'attachments'" class="tab-pane">
+        <div class="attachment-upload-box">
+          <h4 class="card-title">Upload Audited Evidence Blob</h4>
+          <p class="upload-hint">
+            Upload logs, temperature traces, source certificates, or PDFs (21
+            CFR Part 11 &amp; DEID scanned).
+          </p>
+          <div class="upload-inputs">
+            <input
+              ref="fileInput"
+              type="file"
+              aria-label="Evidence attachment file"
+              class="file-input"
+              @change="onFileSelected"
+            />
+            <input
+              v-model="attachmentReason"
+              type="text"
+              aria-label="Reason for attaching evidence"
+              class="form-control"
+              placeholder="Mandatory GxP reason for attachment..."
+            />
+            <button
+              type="button"
+              class="btn btn-primary"
+              :disabled="
+                !selectedFile || !attachmentReason.trim() || uploadSubmitting
+              "
+              @click="uploadAttachment"
+            >
+              <Paperclip :size="14" :stroke-width="1.75" aria-hidden="true" />
+              Attach Evidence
+            </button>
           </div>
         </div>
 
-        <!-- TAB 5: AUDIT TRAIL -->
-        <div v-if="activeTab === 'audit'" class="tab-pane">
-          <div class="audit-timeline">
-            <template v-if="isAuditLoading">
-              <SkeletonLoader type="timeline" :count="3" />
-            </template>
-            <template v-else-if="auditLogs && auditLogs.length > 0">
-              <div v-for="(log, idx) in auditLogs" :key="idx" class="audit-row">
-                <div class="audit-bullet" />
-                <div class="audit-content">
-                  <div class="audit-row-header">
-                    <span class="audit-action">{{ log.action }}</span>
-                    <span class="audit-user">{{ log.user_id }}</span>
-                    <span class="audit-time">{{
-                      formatDate(log.timestamp)
-                    }}</span>
-                  </div>
-                  <div class="audit-reason">
-                    Reason: {{ log.reason_for_change || log.change_reason }}
-                  </div>
-                  <div v-if="log.block_hash" class="audit-hash">
-                    Ledger Hash:
-                    <code
-                      >{{ String(log.block_hash).substring(0, 16) }}...</code
-                    >
-                  </div>
+        <div class="attachments-list">
+          <div v-for="att in attachments" :key="att.id" class="attachment-card">
+            <div class="attachment-icon" aria-hidden="true">
+              <FileText :size="20" :stroke-width="1.75" aria-hidden="true" />
+            </div>
+            <div class="attachment-details">
+              <div class="attachment-filename">
+                {{ att.filename }}
+              </div>
+              <div class="attachment-meta">
+                <span>{{ (att.file_size_bytes / 1024).toFixed(1) }} KB</span>
+                • <span>Uploaded by {{ att.uploaded_by }}</span> •
+                <span>{{ formatDate(att.uploaded_at) }}</span>
+              </div>
+              <div class="sha-hash" :title="att.sha256_hash">
+                SHA-256:
+                <code>{{ att.sha256_hash?.substring(0, 16) }}...</code>
+              </div>
+            </div>
+            <div class="attachment-badges">
+              <span v-if="att.deid_scrubbed" class="badge badge-deid">
+                <ShieldCheck
+                  :size="12"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                DEID Verified
+              </span>
+            </div>
+          </div>
+
+          <div v-if="attachments.length === 0" class="empty-placeholder">
+            <EmptyState
+              title="No Evidence Attached"
+              message="No evidence files have been attached to this ticket yet."
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: SIGNATURES -->
+      <div v-if="activeTab === 'signatures'" class="tab-pane">
+        <div v-if="ticket.signature_token" class="signature-record-card">
+          <div class="sig-card-header">
+            <span class="sig-seal-icon" aria-hidden="true">
+              <ShieldCheck :size="22" :stroke-width="1.75" aria-hidden="true" />
+            </span>
+            <div>
+              <h4 class="sig-card-title">
+                Authoritative 21 CFR Part 11 Electronic Signature
+              </h4>
+              <p class="sig-card-subtitle">
+                Legally binding sign-off recorded in tamper-evident ledger
+              </p>
+            </div>
+          </div>
+          <div class="sig-details-grid">
+            <div class="sig-item">
+              <span class="sig-label">Signer Identity:</span>
+              <span class="sig-val">{{ ticket.signature_user }}</span>
+            </div>
+            <div class="sig-item">
+              <span class="sig-label">Timestamp (UTC):</span>
+              <span class="sig-val">{{
+                formatDate(ticket.signature_timestamp)
+              }}</span>
+            </div>
+            <div class="sig-item full-width">
+              <span class="sig-label">Signature Meaning:</span>
+              <span class="sig-val meaning-val">{{
+                ticket.signature_meaning
+              }}</span>
+            </div>
+            <div class="sig-item full-width">
+              <span class="sig-label">Cryptographic Token:</span>
+              <span class="sig-val token-val"
+                ><code>{{ ticket.signature_token }}</code></span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="empty-sig-box">
+          <p>
+            No 21 CFR Part 11 electronic signature has been captured for this
+            ticket.
+          </p>
+          <button
+            v-if="canSignTicket"
+            type="button"
+            class="btn btn-primary btn-sign-action"
+            @click="isSignModalOpen = true"
+          >
+            <PenTool :size="14" :stroke-width="1.75" aria-hidden="true" />
+            Sign &amp; Authorize Ticket
+          </button>
+          <p v-else class="sig-prereq-hint">
+            {{
+              canMutateTicket
+                ? "Resolve the clinical issue first to unlock 21 CFR Part 11 closure sign-off."
+                : "Read-only auditor view — electronic signature capture requires operational staff access."
+            }}
+          </p>
+        </div>
+      </div>
+
+      <!-- TAB 5: AUDIT TRAIL -->
+      <div v-if="activeTab === 'audit'" class="tab-pane">
+        <div class="audit-timeline">
+          <template v-if="isAuditLoading">
+            <SkeletonLoader type="timeline" :count="3" />
+          </template>
+          <template v-else-if="auditLogs && auditLogs.length > 0">
+            <div v-for="(log, idx) in auditLogs" :key="idx" class="audit-row">
+              <div class="audit-bullet" />
+              <div class="audit-content">
+                <div class="audit-row-header">
+                  <span class="audit-action">{{ log.action }}</span>
+                  <span class="audit-user">{{ log.user_id }}</span>
+                  <span class="audit-time">{{
+                    formatDate(log.timestamp)
+                  }}</span>
+                </div>
+                <div class="audit-reason">
+                  Reason: {{ log.reason_for_change || log.change_reason }}
+                </div>
+                <div v-if="log.block_hash" class="audit-hash">
+                  Ledger Hash:
+                  <code>{{ String(log.block_hash).substring(0, 16) }}...</code>
                 </div>
               </div>
-            </template>
-            <template v-else>
-              <EmptyState
-                icon="🔒"
-                title="No Audit Entries Found"
-                message="No GxP 21 CFR Part 11 audit trail events have been recorded for this ticket."
-              />
-            </template>
-          </div>
+            </div>
+          </template>
+          <template v-else>
+            <EmptyState
+              title="No Audit Entries Found"
+              message="No GxP 21 CFR Part 11 audit trail events have been recorded for this ticket."
+            />
+          </template>
         </div>
       </div>
     </div>
 
-    <!-- Protocol Document Viewer Modal -->
-    <div
-      v-if="isCitationViewerOpen && activeCitation"
-      class="citation-modal-backdrop"
-      role="presentation"
-      @click.self="closeCitationViewer"
-    >
-      <div
-        ref="citationModalRef"
-        class="citation-modal-panel"
-        role="dialog"
-        aria-modal="true"
+    <template #after-panel>
+      <!-- Protocol Document Viewer Modal -->
+      <ClinicalModal
+        :open="Boolean(isCitationViewerOpen && activeCitation)"
+        :teleport="false"
+        size="lg"
+        backdrop-class="citation-modal-backdrop"
+        dialog-class="citation-modal-panel"
         aria-labelledby="citation-viewer-title"
-        tabindex="-1"
+        :show-close-button="false"
+        @close="closeCitationViewer"
       >
-        <div class="citation-modal-header">
-          <div class="citation-modal-meta">
-            <span class="badge badge-gxp">21 CFR Part 11 Verified</span>
-            <span class="badge badge-standard"
-              >Protocol {{ activeCitation.protocol_version }}</span
+        <template #header>
+          <div v-if="activeCitation" class="citation-modal-header">
+            <div class="citation-modal-meta">
+              <span class="badge badge-gxp">21 CFR Part 11 Verified</span>
+              <span class="badge badge-standard"
+                >Protocol {{ activeCitation.protocol_version }}</span
+              >
+              <span
+                v-if="activeCitation.section_number"
+                class="badge badge-primary"
+              >
+                Section {{ activeCitation.section_number }}
+              </span>
+              <span class="badge badge-page"
+                >Page {{ activeCitation.page_number }}</span
+              >
+            </div>
+            <h3 id="citation-viewer-title" class="citation-modal-title">
+              <BookOpen :size="16" :stroke-width="1.75" aria-hidden="true" />
+              {{ activeCitation.section_title || "Study Protocol Reference" }}
+            </h3>
+            <button
+              type="button"
+              class="drawer-close"
+              aria-label="Close"
+              @click="closeCitationViewer"
             >
-            <span
-              v-if="activeCitation.section_number"
-              class="badge badge-primary"
-            >
-              Section {{ activeCitation.section_number }}
-            </span>
-            <span class="badge badge-page"
-              >Page {{ activeCitation.page_number }}</span
-            >
+              <X :size="18" :stroke-width="1.75" aria-hidden="true" />
+            </button>
           </div>
-          <h3 id="citation-viewer-title" class="citation-modal-title">
-            📖 {{ activeCitation.section_title || "Study Protocol Reference" }}
-          </h3>
-          <button
-            type="button"
-            class="drawer-close"
-            aria-label="Close"
-            @click="closeCitationViewer"
-          >
-            ✕
-          </button>
-        </div>
-        <div class="citation-modal-body">
+        </template>
+
+        <div v-if="activeCitation" class="citation-modal-body">
           <div class="citation-coordinates-box">
             <div class="coord-item">
               <span class="coord-label">Citation Tag:</span>
@@ -799,9 +875,10 @@
             </div>
             <div class="coord-item">
               <span class="coord-label">Status:</span>
-              <span class="coord-val text-success"
-                >✓ Approved Protocol Version</span
-              >
+              <span class="coord-val text-success">
+                <Check :size="13" :stroke-width="1.75" aria-hidden="true" />
+                Approved Protocol Version
+              </span>
             </div>
           </div>
           <div class="citation-excerpt-card">
@@ -816,7 +893,8 @@
             </div>
           </div>
         </div>
-        <div class="citation-modal-footer">
+
+        <template #footer>
           <button
             type="button"
             class="btn btn-secondary"
@@ -824,23 +902,45 @@
           >
             Close Preview
           </button>
-        </div>
-      </div>
-    </div>
+        </template>
+      </ClinicalModal>
 
-    <!-- Sign Modal -->
-    <TicketSignModal
-      :is-open="isSignModalOpen"
-      :ticket="ticket"
-      @close="isSignModalOpen = false"
-      @signed="onTicketSigned"
-    />
-  </div>
+      <!-- Sign Modal -->
+      <TicketSignModal
+        :is-open="isSignModalOpen"
+        :ticket="ticket"
+        @close="isSignModalOpen = false"
+        @signed="onTicketSigned"
+      />
+    </template>
+  </ClinicalDrawer>
 </template>
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
-import { EmptyState, useFocusTrap } from "ui";
+import { ClinicalDrawer, ClinicalModal, EmptyState } from "ui";
+import {
+  AlertTriangle,
+  BookOpen,
+  Bot,
+  Check,
+  ClipboardList,
+  Clock,
+  Eye,
+  FileText,
+  Globe,
+  Lock,
+  MessageSquare,
+  Paperclip,
+  Pause,
+  PenTool,
+  Play,
+  ShieldCheck,
+  Siren,
+  Target,
+  User,
+  X,
+} from "lucide-vue-next";
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import { useAuthStore, normalizeRole } from "../../stores/auth";
@@ -917,8 +1017,6 @@ const emit = defineEmits([
 
 const demoBuild = isDemoBuild();
 const authStore = useAuthStore();
-const drawerRef = ref(null);
-const citationModalRef = ref(null);
 const activeTab = ref("overview");
 const actionLoading = ref(false);
 const isSignModalOpen = ref(false);
@@ -1041,16 +1139,6 @@ const close = () => {
   emit("close");
 };
 
-useFocusTrap(drawerRef, {
-  isOpen: () => props.isOpen,
-  onEscape: close,
-});
-
-useFocusTrap(citationModalRef, {
-  isOpen: () => Boolean(isCitationViewerOpen.value && activeCitation.value),
-  onEscape: closeCitationViewer,
-});
-
 // SLA calculations
 const slaElapsedPercent = computed(() => {
   if (!props.ticket?.sla_target_at || !props.ticket?.created_at) return 0;
@@ -1080,12 +1168,12 @@ const slaProgressClass = computed(() => {
   return "fill-normal";
 });
 
-const slaIcon = computed(() => {
-  if (props.ticket.sla_breached) return "🚨";
+const slaIconComponent = computed(() => {
+  if (props.ticket.sla_breached) return Siren;
   if (props.ticket.sla_amber_warned || slaElapsedPercent.value >= 75)
-    return "⚠️";
-  if (props.ticket.status?.startsWith("WAITING_")) return "⏸";
-  return "⏱";
+    return AlertTriangle;
+  if (props.ticket.status?.startsWith("WAITING_")) return Pause;
+  return Clock;
 });
 
 const slaStatusText = computed(() => {
@@ -1241,20 +1329,10 @@ const onTicketSigned = (sigPayload) => {
 </script>
 
 <style scoped>
-.drawer-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  max-width: 100vw;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(3px);
+:deep(.clinical-drawer-body) {
+  padding: 0;
   display: flex;
-  justify-content: flex-end;
-  z-index: 999;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
+  flex-direction: column;
 }
 
 .drawer-panel {
@@ -1263,24 +1341,11 @@ const onTicketSigned = (sigPayload) => {
     var(--drawer-width-lg, min(100vw, 640px))
   );
   max-width: 100vw;
-  height: 100vh;
   background: var(--semantic-color-surface);
   display: flex;
   flex-direction: column;
-  box-shadow: -10px 0 25px -5px rgba(0, 0, 0, 0.2);
-  border-left: 1px solid var(--semantic-color-border-control);
-  animation: slideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overscroll-behavior: contain;
   touch-action: pan-y;
-}
-
-@keyframes slideLeft {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
 }
 
 .drawer-header {
@@ -2141,34 +2206,12 @@ const onTicketSigned = (sigPayload) => {
 }
 
 /* Citation Document Viewer Modal */
-.citation-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.65);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1200;
-  backdrop-filter: blur(2px);
-}
-
-.citation-modal-panel {
-  background: var(--semantic-color-surface);
-  border-radius: 10px;
-  width: 90%;
+:deep(.citation-modal-panel) {
   max-width: 650px;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--semantic-color-border-control);
-  overflow: hidden;
 }
 
 .citation-modal-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--semantic-color-border);
-  background: var(--semantic-color-surface-muted);
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 6px;

@@ -276,122 +276,92 @@
     </div>
 
     <!-- Batch Accept Modal -->
-    <div
-      v-if="showBatchModal"
-      class="qc-modal-overlay"
-      role="presentation"
-      @click.self="showBatchModal = false"
+    <ClinicalModal
+      :is-open="showBatchModal"
+      :teleport="false"
+      :dismissible="!isSubmittingQc"
+      size="sm"
+      title="Batch Accept AI Classifications"
+      aria-labelledby="qc-batch-modal-title"
+      backdrop-class="qc-modal-overlay"
+      dialog-class="qc-modal"
+      @close="showBatchModal = false"
     >
-      <div
-        ref="batchModalRef"
-        class="qc-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="qc-batch-modal-title"
-        tabindex="-1"
+      <p
+        style="
+          font-size: 12px;
+          color: var(--semantic-color-text-secondary);
+          margin-bottom: 12px;
+        "
       >
-        <h4
-          id="qc-batch-modal-title"
-          style="margin: 0 0 8px 0; font-size: 16px"
+        You are approving predicted DIA TMF taxonomy tags for
+        <strong>{{ selectedItemIds.length }}</strong> staged documents.
+      </p>
+      <div class="form-group" style="margin-bottom: 0">
+        <label
+          for="batch-accept-reason"
+          class="form-label"
+          style="font-size: 12px; font-weight: 600"
         >
-          Batch Accept AI Classifications
-        </h4>
-        <p
+          21 CFR Part 11 Reason for Approval <span class="required">*</span>
+        </label>
+        <input
+          id="batch-accept-reason"
+          v-model="batchReason"
+          type="text"
+          class="form-control"
+          placeholder="e.g. Verified AI classifications against source regulatory document originals"
+          style="font-size: 12px"
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          style="font-size: 12px"
+          :disabled="isSubmittingQc"
+          @click="showBatchModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary btn-confirm-batch-accept"
           style="
             font-size: 12px;
-            color: var(--semantic-color-text-secondary);
-            margin-bottom: 12px;
-          "
-        >
-          You are approving predicted DIA TMF taxonomy tags for
-          <strong>{{ selectedItemIds.length }}</strong> staged documents.
-        </p>
-        <div class="form-group" style="margin-bottom: 16px">
-          <label
-            for="batch-accept-reason"
-            class="form-label"
-            style="font-size: 12px; font-weight: 600"
-          >
-            21 CFR Part 11 Reason for Approval <span class="required">*</span>
-          </label>
-          <input
-            id="batch-accept-reason"
-            v-model="batchReason"
-            type="text"
-            class="form-control"
-            placeholder="e.g. Verified AI classifications against source regulatory document originals"
-            style="font-size: 12px"
-          />
-        </div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px">
-          <button
-            class="btn btn-secondary"
-            style="font-size: 12px"
-            @click="showBatchModal = false"
-          >
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary btn-confirm-batch-accept"
-            style="font-size: 12px"
-            :disabled="!batchReason || batchReason.length < 10"
-            @click="executeBatchAccept"
-          >
-            ✓ Confirm Batch Accept
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Single Item Inspection & Override Modal Drawer -->
-    <div
-      v-if="inspectedItem"
-      class="qc-modal-overlay"
-      role="presentation"
-      @click.self="inspectedItem = null"
-    >
-      <div
-        ref="inspectModalRef"
-        class="qc-modal qc-modal-lg"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="qc-inspect-modal-title"
-        tabindex="-1"
-      >
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
+            display: inline-flex;
             align-items: center;
-            margin-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 8px;
+            gap: 6px;
           "
+          :disabled="isSubmittingQc || !batchReason || batchReason.length < 10"
+          @click="executeBatchAccept"
         >
-          <h4
-            id="qc-inspect-modal-title"
-            style="margin: 0; font-size: 15px; font-weight: 700"
-          >
-            CRA Quality Control Review: {{ inspectedItem.filename }}
-          </h4>
-          <button
-            type="button"
-            class="btn btn-secondary btn-xs"
-            aria-label="Close"
-            @click="inspectedItem = null"
-          >
-            ✕
-          </button>
-        </div>
+          <Check :size="14" aria-hidden="true" />
+          <span>Confirm Batch Accept</span>
+        </button>
+      </template>
+    </ClinicalModal>
 
-        <div
-          style="
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 16px;
-          "
-        >
+    <!-- Single Item Inspection & Override Modal -->
+    <ClinicalModal
+      :is-open="Boolean(inspectedItem)"
+      :teleport="false"
+      :dismissible="!isSubmittingQc"
+      size="lg"
+      :title="
+        inspectedItem
+          ? `CRA Quality Control Review: ${inspectedItem.filename}`
+          : 'CRA Quality Control Review'
+      "
+      aria-labelledby="qc-inspect-modal-title"
+      close-label="Close"
+      backdrop-class="qc-modal-overlay"
+      dialog-class="qc-modal qc-modal-lg"
+      @close="inspectedItem = null"
+    >
+      <template v-if="inspectedItem">
+        <div class="grid-2-responsive" style="gap: 16px; margin-bottom: 16px">
           <!-- Predicted Classification Panel -->
           <div class="info-card">
             <h5
@@ -493,7 +463,7 @@
         </div>
 
         <!-- 21 CFR Part 11 Change Reason -->
-        <div class="form-group" style="margin-bottom: 16px">
+        <div class="form-group" style="margin-bottom: 0">
           <label
             for="review-reason-input"
             class="form-label"
@@ -510,62 +480,71 @@
             style="font-size: 12px"
           />
         </div>
+      </template>
 
-        <!-- Action Buttons -->
-        <div
-          style="
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            border-top: 1px solid var(--border);
-            padding-top: 12px;
-          "
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          style="font-size: 12px"
+          :disabled="isSubmittingQc"
+          @click="inspectedItem = null"
         >
-          <button
-            class="btn btn-secondary"
-            style="font-size: 12px"
-            @click="inspectedItem = null"
-          >
-            Cancel
-          </button>
-          <button
-            class="btn btn-danger btn-reject-qc"
-            style="font-size: 12px"
-            :disabled="
-              !canReviewQc || !reviewReason || reviewReason.length < 10
-            "
-            :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
-            @click="submitDecision('REJECT')"
-          >
-            ✕ Reject
-          </button>
-          <button
-            class="btn btn-primary btn-accept-qc"
-            style="font-size: 12px"
-            :disabled="
-              !canReviewQc || !reviewReason || reviewReason.length < 10
-            "
-            :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
-            @click="
-              submitDecision(overrideArtifactCode ? 'OVERRIDE' : 'ACCEPT')
-            "
-          >
-            ✓
-            {{
-              overrideArtifactCode
-                ? "Override Tag & Approve"
-                : "Accept & Approve"
-            }}
-          </button>
-        </div>
-      </div>
-    </div>
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger btn-reject-qc"
+          style="
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          "
+          :disabled="
+            isSubmittingQc ||
+            !canReviewQc ||
+            !reviewReason ||
+            reviewReason.length < 10
+          "
+          :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
+          @click="submitDecision('REJECT')"
+        >
+          <X :size="14" aria-hidden="true" />
+          <span>Reject</span>
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary btn-accept-qc"
+          style="
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          "
+          :disabled="
+            isSubmittingQc ||
+            !canReviewQc ||
+            !reviewReason ||
+            reviewReason.length < 10
+          "
+          :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
+          @click="submitDecision(overrideArtifactCode ? 'OVERRIDE' : 'ACCEPT')"
+        >
+          <Check :size="14" aria-hidden="true" />
+          <span>{{
+            overrideArtifactCode ? "Override Tag & Approve" : "Accept & Approve"
+          }}</span>
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
+import { Check, X } from "lucide-vue-next";
 import { ref, computed, onMounted, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";
 import { useToastStore } from "../../stores/toasts.js";
@@ -598,22 +577,7 @@ const batchReason = ref(
 const inspectedItem = ref(null);
 const reviewReason = ref("CRA QC review verified taxonomy metadata");
 const overrideArtifactCode = ref("");
-const batchModalRef = ref(null);
-const inspectModalRef = ref(null);
-
-useFocusTrap(batchModalRef, {
-  isOpen: () => showBatchModal.value,
-  onEscape: () => {
-    showBatchModal.value = false;
-  },
-});
-
-useFocusTrap(inspectModalRef, {
-  isOpen: () => Boolean(inspectedItem.value),
-  onEscape: () => {
-    inspectedItem.value = null;
-  },
-});
+const isSubmittingQc = ref(false);
 
 const queueItems = computed(() => etmfStore.qcQueue || []);
 
@@ -695,6 +659,7 @@ async function executeBatchAccept() {
   if (!batchReason.value || batchReason.value.length < 10) return;
 
   const count = selectedItemIds.value.length;
+  isSubmittingQc.value = true;
   try {
     await etmfStore.batchAcceptClassifications(
       selectedItemIds.value,
@@ -710,6 +675,8 @@ async function executeBatchAccept() {
   } catch (err) {
     queueError.value = err?.message || "Batch QC acceptance failed.";
     toastStore.apiError("Batch QC acceptance failed", err);
+  } finally {
+    isSubmittingQc.value = false;
   }
 }
 
@@ -725,6 +692,7 @@ async function submitDecision(decision) {
   if (!reviewReason.value || reviewReason.value.length < 10) return;
 
   const currentFilename = inspectedItem.value.filename;
+  isSubmittingQc.value = true;
 
   try {
     await etmfStore.reviewQcDocument(inspectedItem.value.document_id, {
@@ -741,6 +709,8 @@ async function submitDecision(decision) {
   } catch (err) {
     queueError.value = err?.message || "QC adjudication failed.";
     toastStore.apiError("QC adjudication failed", err);
+  } finally {
+    isSubmittingQc.value = false;
   }
 }
 
@@ -820,30 +790,12 @@ onMounted(() => {
   background-color: var(--semantic-color-surface-muted);
 }
 
-.qc-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.35);
-  z-index: 1200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+:deep(.qc-modal) {
+  max-width: 440px;
 }
 
-.qc-modal {
-  width: 440px;
-  max-width: 90vw;
-  background: var(--semantic-color-surface);
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-}
-
-.qc-modal-lg {
-  width: 620px;
+:deep(.qc-modal-lg) {
+  max-width: 620px;
 }
 
 .info-card {

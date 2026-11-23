@@ -399,7 +399,9 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     );
     expect(drawerSrc).toContain(':role="role"');
     expect(drawerSrc).toContain('default: "dialog"');
-    expect(drawerSrc).toContain('aria-modal="true"');
+    expect(drawerSrc).toContain(
+      ":aria-modal=\"drawerOpen && !isDockedDesktop ? 'true' : undefined\""
+    );
     expect(drawerSrc).toContain("useFocusTrap");
     expect(drawerSrc).not.toContain("<main");
     expect(drawerSrc).not.toContain("vuejs-accessibility");
@@ -646,6 +648,95 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     const tabEvt = dom.dispatchKey("Tab");
     expect(tabEvt.defaultPrevented).toBe(true);
     expect(dom.doc.activeElement).toBe(emptyModal);
+  });
+
+  it("disables Tab capture and background sibling inert when desktopMode is docked at 1280px+ and reconciles dynamically on resize", async () => {
+    let isDesktop = true;
+    const mqListeners = new Set();
+    dom.win.innerWidth = 1440;
+    dom.win.matchMedia = vi.fn(() => ({
+      get matches() {
+        return isDesktop;
+      },
+      addEventListener: (_type, fn) => mqListeners.add(fn),
+      removeEventListener: (_type, fn) => mqListeners.delete(fn),
+    }));
+
+    const workspace = dom.body.appendChild(
+      new MockElement("main", { id: "clinical-workspace" })
+    );
+    const workspaceInput = workspace.appendChild(
+      new MockElement("input", { id: "ecrf-field", type: "text" })
+    );
+    const drawerBackdrop = dom.body.appendChild(
+      new MockElement("div", { class: "clinical-drawer-backdrop" })
+    );
+    const drawerPanel = drawerBackdrop.appendChild(
+      new MockElement("aside", { id: "help-drawer", tabindex: "-1" })
+    );
+    const drawerClose = drawerPanel.appendChild(
+      new MockElement("button", { id: "help-close" })
+    );
+    const drawerSearch = drawerPanel.appendChild(
+      new MockElement("input", { id: "help-search", type: "text" })
+    );
+
+    const isOpen = ref(false);
+    const onEscape = vi.fn(() => {
+      isOpen.value = false;
+    });
+
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(drawerPanel), {
+        isOpen,
+        desktopMode: "docked",
+        onEscape,
+      });
+    });
+
+    workspaceInput.focus();
+    isOpen.value = true;
+    await nextTick();
+
+    // At 1440px (1280px+), workspace sibling remains interactive (no inert, no aria-hidden)
+    expect(workspace.inert).toBe(false);
+    expect(workspace.hasAttribute("aria-hidden")).toBe(false);
+
+    // Tab at end of docked drawer is NOT trapped (defaultPrevented remains false)
+    drawerSearch.focus();
+    const dockedTabEvt = dom.dispatchKey("Tab");
+    expect(dockedTabEvt.defaultPrevented).toBe(false);
+
+    // Resizing down to 1024px (< 1280px) activates modal sibling inert + Tab containment
+    isDesktop = false;
+    dom.win.innerWidth = 1024;
+    for (const fn of mqListeners) fn();
+    dom.win.dispatchEvent({ type: "resize" });
+    await nextTick();
+
+    expect(workspace.inert).toBe(true);
+    expect(workspace.getAttribute("aria-hidden")).toBe("true");
+    drawerSearch.focus();
+    const tabletTabEvt = dom.dispatchKey("Tab");
+    expect(tabletTabEvt.defaultPrevented).toBe(true);
+    expect(dom.doc.activeElement).toBe(drawerClose);
+
+    // Resizing back to 1440px (1280px+) restores non-inert workspace
+    isDesktop = true;
+    dom.win.innerWidth = 1440;
+    for (const fn of mqListeners) fn();
+    dom.win.dispatchEvent({ type: "resize" });
+    await nextTick();
+
+    expect(workspace.inert).toBe(false);
+    expect(workspace.hasAttribute("aria-hidden")).toBe(false);
+
+    // Escape still closes the docked drawer cleanly
+    const escEvt = dom.dispatchKey("Escape");
+    expect(escEvt.defaultPrevented).toBe(true);
+    expect(onEscape).toHaveBeenCalledTimes(1);
   });
 
   it("defines prefers-reduced-motion rules in tokens.css while keeping default tokens intact", () => {

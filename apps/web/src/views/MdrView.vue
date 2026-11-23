@@ -1618,347 +1618,343 @@
     </div>
 
     <!-- USDM Ingestion and Synthesis Modal -->
-    <div
-      v-if="showUsdmModal"
+    <ClinicalModal
       id="usdm-ingestion-modal"
-      ref="usdmModalRef"
-      class="modal-overlay"
-      style="display: flex"
-      role="dialog"
-      aria-modal="true"
+      :is-open="showUsdmModal"
+      :teleport="false"
+      :dismissible="!isSynthesizing"
+      size="lg"
       aria-labelledby="usdm-modal-title"
+      close-label="Close modal"
+      backdrop-class="modal-overlay"
+      dialog-class="modal"
+      @close="closeUsdmModal"
     >
-      <div
-        class="modal"
-        style="max-width: 780px; width: 92%; max-height: 90vh; overflow-y: auto"
-      >
-        <div
+      <template #header>
+        <span
           id="usdm-modal-title"
-          class="modal-header"
           style="
-            display: flex;
-            justify-content: space-between;
+            display: inline-flex;
             align-items: center;
+            gap: 6px;
+            font-weight: 700;
           "
         >
-          <span>⚡ Zero-Click USDM Study Ingestion &amp; Synthesis</span>
-          <button
-            class="btn btn-secondary"
-            style="
-              padding: 2px 8px;
-              font-size: 1.1rem;
-              border: none;
-              background: transparent;
-              cursor: pointer;
-            "
-            aria-label="Close modal"
-            @click="closeUsdmModal"
-          >
-            &times;
-          </button>
+          <Zap :size="16" :stroke-width="1.75" aria-hidden="true" />
+          <span>Zero-Click USDM Study Ingestion &amp; Synthesis</span>
+        </span>
+      </template>
+
+      <p
+        style="
+          font-size: 0.85rem;
+          color: var(--semantic-color-text-secondary);
+          margin-top: 0;
+          margin-bottom: 14px;
+          line-height: 1.4;
+        "
+      >
+        Ingest CDISC USDM v3.0 / v4.0 JSON protocols to automatically generate
+        the USDM study design model, synthesize responsive CDASH eCRFs with
+        custom widgets (VAS Pain Slider, 74-Zone Body Map), compile the Schedule
+        of Activities matrix, and pre-seed DIA TMF Expected Document List (EDL)
+        placeholders across Zones 1–11.
+      </p>
+
+      <!-- Dropzone Area -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <div
+        class="dropzone-area"
+        :class="{ dragging: isDragging }"
+        style="
+          border: 2px dashed var(--border);
+          border-radius: var(--radius-md, 8px);
+          padding: 20px;
+          text-align: center;
+          background-color: var(--semantic-color-surface-muted);
+          cursor: pointer;
+          margin-bottom: 14px;
+          transition: all 0.2s ease;
+        "
+        @dragover.prevent="isDragging = true"
+        @dragleave.prevent="isDragging = false"
+        @drop.prevent="handleFileDrop"
+        @click="triggerFileInput"
+      >
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <input
+          ref="fileInputRef"
+          type="file"
+          accept=".json,application/json"
+          style="display: none"
+          @change="handleFileSelected"
+        />
+        <div style="margin-bottom: 6px; color: var(--primary)">
+          <FolderOpen :size="28" :stroke-width="1.75" aria-hidden="true" />
         </div>
-        <div class="modal-body">
-          <p
-            style="
-              font-size: 0.85rem;
-              color: var(--semantic-color-text-secondary);
-              margin-top: 0;
-              margin-bottom: 14px;
-              line-height: 1.4;
-            "
-          >
-            Ingest CDISC USDM v3.0 / v4.0 JSON protocols to automatically
-            generate the USDM study design model, synthesize responsive CDASH
-            eCRFs with custom widgets (VAS Pain Slider, 74-Zone Body Map),
-            compile the Schedule of Activities matrix, and pre-seed DIA TMF
-            Expected Document List (EDL) placeholders across Zones 1–11.
-          </p>
+        <div style="font-size: 0.9rem; font-weight: 600; color: var(--primary)">
+          Drag &amp; drop a CDISC USDM protocol (.json) file here, or click to
+          browse
+        </div>
+        <div
+          style="
+            font-size: 0.78rem;
+            color: var(--semantic-color-text-secondary);
+            margin-top: 4px;
+          "
+        >
+          Supports CDISC USDM v3.0, v4.0, and DDF JSON specifications
+        </div>
+      </div>
 
-          <!-- Dropzone Area -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <div
-            class="dropzone-area"
-            :class="{ dragging: isDragging }"
-            style="
-              border: 2px dashed var(--border);
-              border-radius: var(--radius-md, 8px);
-              padding: 20px;
-              text-align: center;
-              background-color: var(--semantic-color-surface-muted);
-              cursor: pointer;
-              margin-bottom: 14px;
-              transition: all 0.2s ease;
-            "
-            @dragover.prevent="isDragging = true"
-            @dragleave.prevent="isDragging = false"
-            @drop.prevent="handleFileDrop"
-            @click="triggerFileInput"
-          >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input
-              ref="fileInputRef"
-              type="file"
-              accept=".json,application/json"
-              style="display: none"
-              @change="handleFileSelected"
-            />
-            <div style="font-size: 1.8rem; margin-bottom: 6px">📁</div>
-            <div
-              style="font-size: 0.9rem; font-weight: 600; color: var(--primary)"
-            >
-              Drag &amp; drop a CDISC USDM protocol (.json) file here, or click
-              to browse
-            </div>
-            <div
-              style="
-                font-size: 0.78rem;
-                color: var(--semantic-color-text-secondary);
-                margin-top: 4px;
-              "
-            >
-              Supports CDISC USDM v3.0, v4.0, and DDF JSON specifications
-            </div>
-          </div>
+      <!-- Quick Actions & Payload Input -->
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 6px;
+          flex-wrap: wrap;
+          gap: 8px;
+        "
+      >
+        <label
+          for="usdm-payload-input"
+          style="
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--semantic-color-text-body);
+          "
+        >
+          Or paste raw CDISC USDM JSON payload:
+        </label>
+        <button
+          id="btn-load-sample-usdm"
+          class="btn btn-secondary"
+          style="
+            font-size: 0.78rem;
+            padding: 4px 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+          "
+          type="button"
+          @click="loadSampleUsdm"
+        >
+          <Download :size="14" :stroke-width="1.75" aria-hidden="true" />
+          <span>Load Sample Phase II USDM Protocol</span>
+        </button>
+      </div>
 
-          <!-- Quick Actions & Payload Input -->
+      <textarea
+        id="usdm-payload-input"
+        v-model="rawUsdmInput"
+        class="json-editor"
+        spellcheck="false"
+        placeholder="Paste CDISC USDM v3.0 / v4.0 JSON structure here..."
+        style="
+          min-height: 200px;
+          font-family: monospace;
+          font-size: 0.82rem;
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid var(--border);
+          border-radius: var(--radius-md, 8px);
+          padding: 10px;
+        "
+        @input="validateUsdmPayload"
+      />
+
+      <!-- Client-Side Schema Validation Feedback -->
+      <div v-if="rawUsdmInput && rawUsdmInput.trim()" style="margin-top: 12px">
+        <!-- Valid state -->
+        <div
+          v-if="validationStatus.isValid"
+          class="validation-status-box valid"
+          style="
+            background: var(--semantic-color-success-bg-soft);
+            border: 1px solid var(--semantic-color-success-border);
+            border-radius: 6px;
+            padding: 10px 14px;
+          "
+        >
           <div
             style="
               display: flex;
-              justify-content: space-between;
               align-items: center;
-              margin-bottom: 6px;
+              justify-content: space-between;
               flex-wrap: wrap;
               gap: 8px;
+              margin-bottom: 8px;
             "
           >
-            <label
-              for="usdm-payload-input"
+            <span class="badge lookup-valid" style="font-weight: 600"
+              >✓ Valid USDM Schema (v4.0 Compliant)</span
+            >
+            <span
               style="
-                font-size: 0.82rem;
+                font-size: 0.8rem;
+                color: var(--semantic-color-success-dark);
                 font-weight: 700;
-                color: var(--semantic-color-text-body);
               "
             >
-              Or paste raw CDISC USDM JSON payload:
-            </label>
-            <button
-              id="btn-load-sample-usdm"
-              class="btn btn-secondary"
+              {{ validationSummary.id }}: {{ validationSummary.title }}
+            </span>
+          </div>
+          <div
+            style="display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.78rem"
+          >
+            <span
+              class="badge"
               style="
-                font-size: 0.78rem;
-                padding: 4px 10px;
+                background-color: var(--semantic-color-success-bg);
+                color: var(--semantic-color-success);
+                border: 1px solid var(--semantic-color-success-border);
+              "
+            >
+              {{ validationSummary.armsCount }} Arms
+            </span>
+            <span
+              class="badge"
+              style="
+                background-color: var(--semantic-color-success-bg);
+                color: var(--semantic-color-success);
+                border: 1px solid var(--semantic-color-success-border);
+              "
+            >
+              {{ validationSummary.epochsCount }} Epochs
+            </span>
+            <span
+              class="badge"
+              style="
+                background-color: var(--semantic-color-success-bg);
+                color: var(--semantic-color-success);
+                border: 1px solid var(--semantic-color-success-border);
+              "
+            >
+              {{ validationSummary.visitsCount }} Encounters/Visits
+            </span>
+            <span
+              class="badge"
+              style="
+                background-color: var(--semantic-color-success-bg);
+                color: var(--semantic-color-success);
+                border: 1px solid var(--semantic-color-success-border);
+              "
+            >
+              {{ validationSummary.activitiesCount }} Activities
+            </span>
+            <span
+              class="badge"
+              style="
+                background-color: var(--semantic-color-success-bg);
+                color: var(--semantic-color-success);
+                border: 1px solid var(--semantic-color-success-border);
+              "
+            >
+              {{ validationSummary.criteriaCount }} Criteria
+            </span>
+          </div>
+        </div>
+
+        <!-- Invalid state -->
+        <div
+          v-else
+          class="validation-status-box invalid"
+          style="
+            background: var(--semantic-color-error-bg-soft);
+            border: 1px solid var(--semantic-color-error-border);
+            border-radius: 6px;
+            padding: 10px 14px;
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              margin-bottom: 4px;
+            "
+          >
+            <span
+              class="badge lookup-invalid"
+              style="
+                font-weight: 600;
                 display: inline-flex;
                 align-items: center;
                 gap: 4px;
               "
-              type="button"
-              @click="loadSampleUsdm"
             >
-              <span>📥</span> Load Sample Phase II USDM Protocol
-            </button>
-          </div>
-
-          <textarea
-            id="usdm-payload-input"
-            v-model="rawUsdmInput"
-            class="json-editor"
-            spellcheck="false"
-            placeholder="Paste CDISC USDM v3.0 / v4.0 JSON structure here..."
-            style="
-              min-height: 200px;
-              font-family: monospace;
-              font-size: 0.82rem;
-              width: 100%;
-              box-sizing: border-box;
-              border: 1px solid var(--border);
-              border-radius: var(--radius-md, 8px);
-              padding: 10px;
-            "
-            @input="validateUsdmPayload"
-          />
-
-          <!-- Client-Side Schema Validation Feedback -->
-          <div
-            v-if="rawUsdmInput && rawUsdmInput.trim()"
-            style="margin-top: 12px"
-          >
-            <!-- Valid state -->
-            <div
-              v-if="validationStatus.isValid"
-              class="validation-status-box valid"
+              <AlertTriangle
+                :size="13"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
+              <span>Schema Validation Issue</span>
+            </span>
+            <span
               style="
-                background: var(--semantic-color-success-bg-soft);
-                border: 1px solid var(--semantic-color-success-border);
-                border-radius: 6px;
-                padding: 10px 14px;
+                font-size: 0.82rem;
+                color: var(--semantic-color-error-text-dark);
+                font-weight: 600;
               "
             >
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  justify-content: space-between;
-                  flex-wrap: wrap;
-                  gap: 8px;
-                  margin-bottom: 8px;
-                "
-              >
-                <span class="badge lookup-valid" style="font-weight: 600"
-                  >✓ Valid USDM Schema (v4.0 Compliant)</span
-                >
-                <span
-                  style="
-                    font-size: 0.8rem;
-                    color: var(--semantic-color-success-dark);
-                    font-weight: 700;
-                  "
-                >
-                  {{ validationSummary.id }}: {{ validationSummary.title }}
-                </span>
-              </div>
-              <div
-                style="
-                  display: flex;
-                  gap: 8px;
-                  flex-wrap: wrap;
-                  font-size: 0.78rem;
-                "
-              >
-                <span
-                  class="badge"
-                  style="
-                    background-color: var(--semantic-color-success-bg);
-                    color: var(--semantic-color-success);
-                    border: 1px solid var(--semantic-color-success-border);
-                  "
-                >
-                  {{ validationSummary.armsCount }} Arms
-                </span>
-                <span
-                  class="badge"
-                  style="
-                    background-color: var(--semantic-color-success-bg);
-                    color: var(--semantic-color-success);
-                    border: 1px solid var(--semantic-color-success-border);
-                  "
-                >
-                  {{ validationSummary.epochsCount }} Epochs
-                </span>
-                <span
-                  class="badge"
-                  style="
-                    background-color: var(--semantic-color-success-bg);
-                    color: var(--semantic-color-success);
-                    border: 1px solid var(--semantic-color-success-border);
-                  "
-                >
-                  {{ validationSummary.visitsCount }} Encounters/Visits
-                </span>
-                <span
-                  class="badge"
-                  style="
-                    background-color: var(--semantic-color-success-bg);
-                    color: var(--semantic-color-success);
-                    border: 1px solid var(--semantic-color-success-border);
-                  "
-                >
-                  {{ validationSummary.activitiesCount }} Activities
-                </span>
-                <span
-                  class="badge"
-                  style="
-                    background-color: var(--semantic-color-success-bg);
-                    color: var(--semantic-color-success);
-                    border: 1px solid var(--semantic-color-success-border);
-                  "
-                >
-                  {{ validationSummary.criteriaCount }} Criteria
-                </span>
-              </div>
-            </div>
-
-            <!-- Invalid state -->
-            <div
-              v-else
-              class="validation-status-box invalid"
-              style="
-                background: var(--semantic-color-error-bg-soft);
-                border: 1px solid var(--semantic-color-error-border);
-                border-radius: 6px;
-                padding: 10px 14px;
-              "
-            >
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  margin-bottom: 4px;
-                "
-              >
-                <span class="badge lookup-invalid" style="font-weight: 600"
-                  >⚠️ Schema Validation Issue</span
-                >
-                <span
-                  style="
-                    font-size: 0.82rem;
-                    color: var(--semantic-color-error-text-dark);
-                    font-weight: 600;
-                  "
-                >
-                  {{ validationStatus.errorMessage }}
-                </span>
-              </div>
-              <ul
-                v-if="validationStatus.errors.length > 1"
-                style="
-                  margin: 6px 0 0 0;
-                  padding-left: 20px;
-                  font-size: 0.78rem;
-                  color: var(--semantic-color-error-text-dark);
-                "
-              >
-                <li v-for="(err, idx) in validationStatus.errors" :key="idx">
-                  {{ err }}
-                </li>
-              </ul>
-            </div>
+              {{ validationStatus.errorMessage }}
+            </span>
           </div>
-        </div>
-        <div
-          class="modal-footer"
-          style="display: flex; justify-content: flex-end; gap: 10px"
-        >
-          <button
-            class="btn btn-secondary"
-            type="button"
-            @click="closeUsdmModal"
-          >
-            Cancel
-          </button>
-          <button
-            id="btn-synthesize-usdm"
-            class="btn btn-primary"
-            type="button"
-            :disabled="!validationStatus.isValid || isSynthesizing"
+          <ul
+            v-if="validationStatus.errors.length > 1"
             style="
-              font-weight: 700;
-              display: inline-flex;
-              align-items: center;
-              gap: 6px;
+              margin: 6px 0 0 0;
+              padding-left: 20px;
+              font-size: 0.78rem;
+              color: var(--semantic-color-error-text-dark);
             "
-            @click="executeZeroClickBuild"
           >
-            {{
-              isSynthesizing
-                ? "⏳ Synthesizing Protocol Build..."
-                : "⚡ Synthesize USDM Protocol"
-            }}
-          </button>
+            <li v-for="(err, idx) in validationStatus.errors" :key="idx">
+              {{ err }}
+            </li>
+          </ul>
         </div>
       </div>
-    </div>
+
+      <template #footer>
+        <button
+          class="btn btn-secondary"
+          type="button"
+          :disabled="isSynthesizing"
+          @click="closeUsdmModal"
+        >
+          Cancel
+        </button>
+        <button
+          id="btn-synthesize-usdm"
+          class="btn btn-primary"
+          type="button"
+          :disabled="!validationStatus.isValid || isSynthesizing"
+          style="
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          "
+          @click="executeZeroClickBuild"
+        >
+          <Loader2
+            v-if="isSynthesizing"
+            :size="15"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <Zap v-else :size="15" :stroke-width="1.75" aria-hidden="true" />
+          <span>{{
+            isSynthesizing
+              ? "Synthesizing Protocol Build..."
+              : "Synthesize USDM Protocol"
+          }}</span>
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- Promotion 21 CFR Part 11 Reason Modal -->
     <ReasonModal
@@ -1967,7 +1963,7 @@
       description="Document the regulatory justification for promoting this synthesized CDISC USDM study build into the active clinical runtime environment."
       :options="promotionReasonOptions"
       default-option="Initial Entry"
-      confirm-text="🚀 Sign &amp; Promote to Active EDC"
+      confirm-text="Sign &amp; Promote to Active EDC"
       cancel-text="Cancel"
       @confirm="confirmPromotion"
       @cancel="cancelPromotion"
@@ -1987,6 +1983,13 @@
 </template>
 
 <script setup>
+import {
+  AlertTriangle,
+  Download,
+  FolderOpen,
+  Loader2,
+  Zap,
+} from "lucide-vue-next";
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import * as usdmSchemas from "usdm-schemas";
@@ -2006,7 +2009,7 @@ import { useErrorPresenter } from "../composables/useErrorPresenter";
 import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
 import ClinicalGanttVisualizer from "../components/clinical/ClinicalGanttVisualizer.vue";
 import { terminologyClient } from "../api/terminologyClient.js";
-import { debounce, useFocusTrap } from "ui";
+import { ClinicalModal, debounce } from "ui";
 import ReasonModal from "../components/ReasonModal.vue";
 import CrfAuthoringCanvas from "../components/crf/CrfAuthoringCanvas.vue";
 import { useDesignerStore } from "../stores/designer.js";
@@ -2677,12 +2680,7 @@ function handleToggleApplicability(isApplicable) {
 // =========================================================================
 
 const showUsdmModal = ref(false);
-const usdmModalRef = ref(null);
 const rawUsdmInput = ref("");
-
-useFocusTrap(usdmModalRef, showUsdmModal, {
-  onEscape: () => closeUsdmModal(),
-});
 const isDragging = ref(false);
 const fileInputRef = ref(null);
 const isSynthesizing = ref(false);

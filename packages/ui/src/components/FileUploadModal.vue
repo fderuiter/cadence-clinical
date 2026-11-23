@@ -1,4 +1,5 @@
 <script setup>
+import { FileText, FolderOpen, Loader2 } from "lucide-vue-next";
 import { computed, ref, watch } from "vue";
 import ClinicalDropzone from "./clinical/ClinicalDropzone.vue";
 import ClinicalModal from "./clinical/ClinicalModal.vue";
@@ -251,7 +252,6 @@ defineExpose({
         class="dropzone"
         :has-selection="!!selectedFile"
         :disabled="isUploadLocked"
-        :icon="selectedFile ? '📄' : '📁'"
         :prompt-text="
           selectedFile ? '' : 'Select or drag and drop a clinical document file'
         "
@@ -268,6 +268,20 @@ defineExpose({
         @file-selected="handleSelectedFile"
         @remove="clearSelectedFile"
       >
+        <template #icon>
+          <FileText
+            v-if="selectedFile"
+            :size="28"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <FolderOpen
+            v-else
+            :size="28"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+        </template>
         <template #selected>
           <div v-if="selectedFile" class="dropzone-file-info">
             <div class="file-details">
@@ -282,7 +296,13 @@ defineExpose({
                 <code>{{ calculatedSha256.substring(0, 16) }}...</code>
               </p>
               <p v-else-if="status === 'hashing'" class="file-hashing">
-                ⏳ Calculating cryptographic SHA-256...
+                <Loader2
+                  :size="14"
+                  :stroke-width="1.75"
+                  class="hash-spinner"
+                  aria-hidden="true"
+                />
+                <span>Calculating cryptographic SHA-256...</span>
               </p>
             </div>
           </div>
@@ -343,54 +363,27 @@ defineExpose({
 </template>
 
 <style scoped>
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(2px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  padding: 16px;
-}
-
-.modal-dialog {
-  background: var(--semantic-color-surface);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xl);
-  border: 1px solid var(--semantic-color-border);
-  display: flex;
-  flex-direction: column;
+:deep(.file-upload-modal) {
   max-width: 580px;
-  width: 100%;
-  max-height: 90vh;
 }
 
-.modal-header {
-  display: flex;
-  justify-content: space-between;
+.file-hashing {
+  display: inline-flex;
   align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--semantic-color-border);
+  gap: 6px;
 }
 
-.modal-title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--semantic-color-text);
+.hash-spinner {
+  animation: file-hash-spin 1.1s linear infinite;
 }
 
-.close-btn {
-  background: transparent;
-  border: none;
-  font-size: 18px;
-  color: var(--semantic-color-text-muted);
-  cursor: pointer;
+@keyframes file-hash-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .upload-modal-content {

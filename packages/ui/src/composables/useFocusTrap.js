@@ -164,6 +164,16 @@ const isJSDOMEnv = () =>
     navigator.userAgent.includes("Node.js") ||
     (typeof window !== "undefined" && typeof window.happyDOM !== "undefined"));
 
+export function isDesktopDockedViewport() {
+  if (typeof window === "undefined") return false;
+  if (typeof window.matchMedia === "function") {
+    const mq = window.matchMedia("(min-width: 1280px)");
+    if (mq && mq.matches) return true;
+    if (!isJSDOMEnv()) return false;
+  }
+  return typeof window.innerWidth === "number" && window.innerWidth >= 1280;
+}
+
 const isElementInertOrHidden = (el, container) => {
   if (!el || el.disabled) return true;
   let node = el;
@@ -322,9 +332,9 @@ const handleTrapKeyDown = (e, trapEntry) => {
   if (activeTrapStack.length === 0) return;
 
   const topTrap = activeTrapStack[activeTrapStack.length - 1];
-  if (topTrap !== trapEntry) return;
 
   if (e.key === "Escape") {
+    if (topTrap !== trapEntry) return;
     if (topTrap.getEscapeDeactivates() === false) {
       handledEvents.add(e);
       e.preventDefault();
@@ -348,10 +358,19 @@ const handleTrapKeyDown = (e, trapEntry) => {
     return;
   }
 
-  const container = topTrap.getContainer();
+  let topModalTrap = null;
+  for (let i = activeTrapStack.length - 1; i >= 0; i--) {
+    if (activeTrapStack[i].getModal()) {
+      topModalTrap = activeTrapStack[i];
+      break;
+    }
+  }
+  if (!topModalTrap || topModalTrap !== trapEntry) return;
+
+  const container = topModalTrap.getContainer();
   if (!container) return;
 
-  // Tab / Shift+Tab containment
+  // Tab / Shift+Tab containment (active only for modal traps; disabled when docked at 1280px+)
   trapTabFocus(e, container);
 };
 
@@ -396,8 +415,15 @@ export function useFocusTrap(
   const getContainer = () => resolveOption(targetRef) || null;
   const getIsOpen = () =>
     hasExplicitIsOpen ? Boolean(resolveOption(options.isOpen)) : true;
-  const getModal = () =>
-    options.modal === undefined ? true : Boolean(resolveOption(options.modal));
+  const isDockedAtDesktop = () =>
+    resolveOption(options.desktopMode) === "docked" &&
+    isDesktopDockedViewport();
+  const getModal = () => {
+    if (isDockedAtDesktop()) return false;
+    return options.modal === undefined
+      ? true
+      : Boolean(resolveOption(options.modal));
+  };
   const getEscapeDeactivates = () =>
     options.escapeDeactivates === undefined
       ? true
@@ -461,6 +487,39 @@ export function useFocusTrap(
 
   const onTrapKeyDown = (e) => {
     handleTrapKeyDown(e, trapEntry);
+  };
+
+  let desktopMediaQuery = null;
+  const onViewportChange = () => {
+    if (!isActive) return;
+    reconcileBackgroundInert();
+  };
+
+  const attachViewportListeners = () => {
+    if (typeof window === "undefined") return;
+    window.addEventListener("resize", onViewportChange);
+    if (typeof window.matchMedia === "function") {
+      desktopMediaQuery = window.matchMedia("(min-width: 1280px)");
+      if (
+        desktopMediaQuery &&
+        typeof desktopMediaQuery.addEventListener === "function"
+      ) {
+        desktopMediaQuery.addEventListener("change", onViewportChange);
+      }
+    }
+  };
+
+  const detachViewportListeners = () => {
+    if (typeof window !== "undefined") {
+      window.removeEventListener("resize", onViewportChange);
+    }
+    if (
+      desktopMediaQuery &&
+      typeof desktopMediaQuery.removeEventListener === "function"
+    ) {
+      desktopMediaQuery.removeEventListener("change", onViewportChange);
+    }
+    desktopMediaQuery = null;
   };
 
   const syncContainerFocus = (container) => {
@@ -538,6 +597,7 @@ export function useFocusTrap(
     if (typeof window !== "undefined") {
       window.addEventListener("keydown", onTrapKeyDown);
     }
+    attachViewportListeners();
 
     reconcileBackgroundInert();
     if (container) {
@@ -549,6 +609,7 @@ export function useFocusTrap(
     if (!isActive) return;
     isActive = false;
 
+    detachViewportListeners();
     if (typeof document !== "undefined") {
       document.removeEventListener("keydown", onTrapKeyDown);
     }
@@ -623,6 +684,19 @@ export function useFocusTrap(
     { flush: "sync", immediate: true }
   );
 
+  const stopModalWatch = watch(
+    () => ({
+      modal: getModal(),
+      desktopMode: resolveOption(options.desktopMode),
+    }),
+    () => {
+      if (isActive) {
+        reconcileBackgroundInert();
+      }
+    },
+    { flush: "sync" }
+  );
+
   if (getCurrentInstance()) {
     onMounted(() => {
       const container = getContainer();
@@ -634,12 +708,14 @@ export function useFocusTrap(
     onBeforeUnmount(() => {
       if (stopOpenWatch) stopOpenWatch();
       stopActiveWatch();
+      stopModalWatch();
       deactivate();
     });
   } else if (getCurrentScope()) {
     onScopeDispose(() => {
       if (stopOpenWatch) stopOpenWatch();
       stopActiveWatch();
+      stopModalWatch();
       deactivate();
     });
   }

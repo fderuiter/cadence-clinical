@@ -1,28 +1,22 @@
 <template>
   <!-- Global Floating Sync Drawer -->
-  <div
-    class="global-drawer-overlay"
-    :class="{ active: sync.isSyncDrawerOpen }"
-    role="presentation"
-    aria-hidden="true"
-    :inert="!sync.isSyncDrawerOpen || undefined"
-    @click="toggleSyncDrawer"
-  />
-
-  <div
+  <ClinicalDrawer
     id="global-sync-drawer"
-    ref="drawerRef"
-    class="global-drawer"
-    :class="{ active: sync.isSyncDrawerOpen }"
-    role="dialog"
-    :aria-modal="sync.isSyncDrawerOpen ? 'true' : undefined"
-    :aria-hidden="!sync.isSyncDrawerOpen ? 'true' : undefined"
-    :inert="!sync.isSyncDrawerOpen || undefined"
+    :is-open="sync.isSyncDrawerOpen"
+    keep-mounted
+    :teleport="false"
+    :show-header="false"
+    overlay-class="global-drawer-overlay"
+    panel-class="global-drawer"
+    body-class="drawer-content-passthrough"
     aria-labelledby="drawer-title"
-    tabindex="-1"
+    @close="handleCloseDrawer"
   >
     <div class="drawer-header">
-      <h3 id="drawer-title">🔄 Submission Sync Status</h3>
+      <h3 id="drawer-title" class="drawer-title-heading">
+        <RefreshCw :size="18" :stroke-width="1.75" aria-hidden="true" />
+        <span>Submission Sync Status</span>
+      </h3>
       <button
         id="btn-close-sync-drawer"
         type="button"
@@ -30,7 +24,7 @@
         aria-label="Close drawer"
         @click="toggleSyncDrawer"
       >
-        ×
+        <X :size="20" :stroke-width="1.75" aria-hidden="true" />
       </button>
     </div>
 
@@ -142,12 +136,12 @@
         region-label="Sync drawer study site coordinator contacts"
       />
     </div>
-  </div>
+  </ClinicalDrawer>
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { useFocusTrap } from "ui";
+import { RefreshCw, X } from "lucide-vue-next";
+import { ClinicalDrawer } from "ui";
 
 import {
   COORDINATOR_QUARANTINE_STEPS,
@@ -164,18 +158,14 @@ import { useSyncStore } from "../stores/sync.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
-const drawerRef = ref(null);
 const sync = useSyncStore();
 const { toggleSyncDrawer } = sync;
 
-useFocusTrap(drawerRef, {
-  isOpen: () => sync.isSyncDrawerOpen,
-  onEscape: () => {
-    if (sync.isSyncDrawerOpen) {
-      toggleSyncDrawer();
-    }
-  },
-});
+function handleCloseDrawer() {
+  if (sync.isSyncDrawerOpen) {
+    toggleSyncDrawer();
+  }
+}
 
 function triggerManualSync() {
   syncOfflineQueue(true, { autoDisburse: isDemoModeActive() });
@@ -220,3 +210,17 @@ function getStatusDescription(item) {
   );
 }
 </script>
+
+<style scoped>
+.drawer-title-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-close-drawer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+</style>

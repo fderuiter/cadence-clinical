@@ -503,6 +503,98 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       state.closeDrawer();
       expect(emit).not.toHaveBeenCalled();
     });
+
+    it("supports keepMounted persistent DOM rendering with inert and aria-hidden when closed and UX-3 desktopMode=docked non-modal rendering at 1280px+", async () => {
+      const closedModalHtml = await renderToString(
+        createSSRApp({
+          render: () =>
+            h(
+              ClinicalModal,
+              {
+                isOpen: false,
+                keepMounted: true,
+                teleport: false,
+                overlayId: "portal-sign-modal",
+                id: "portal-sign-dialog",
+                title: "Confirm and Sign",
+              },
+              {
+                default: () => h("input", { id: "sign-password" }),
+              }
+            ),
+        })
+      );
+      expect(closedModalHtml).toContain('id="portal-sign-modal"');
+      expect(closedModalHtml).toContain('id="sign-password"');
+      expect(closedModalHtml).toContain("display:none");
+      expect(closedModalHtml).toContain('aria-hidden="true"');
+      expect(closedModalHtml).toContain("inert");
+      expect(closedModalHtml).not.toContain('aria-modal="true"');
+
+      const closedDrawerHtml = await renderToString(
+        createSSRApp({
+          render: () =>
+            h(
+              ClinicalDrawer,
+              {
+                isOpen: false,
+                keepMounted: true,
+                teleport: false,
+                overlayId: "global-drawer-overlay",
+                id: "global-drawer",
+                title: "Sync Queue",
+              },
+              {
+                default: () => h("p", "Offline queue empty"),
+              }
+            ),
+        })
+      );
+      expect(closedDrawerHtml).toContain('id="global-drawer-overlay"');
+      expect(closedDrawerHtml).toContain('id="global-drawer"');
+      expect(closedDrawerHtml).toContain("is-closed");
+      expect(closedDrawerHtml).toContain('aria-hidden="true"');
+      expect(closedDrawerHtml).toContain("inert");
+      expect(closedDrawerHtml).not.toContain('aria-modal="true"');
+
+      const origWindow = globalThis.window;
+      try {
+        globalThis.window = {
+          innerWidth: 1440,
+          matchMedia: vi.fn().mockReturnValue({
+            matches: true,
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+          }),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        };
+
+        const dockedDrawerHtml = await renderToString(
+          createSSRApp({
+            render: () =>
+              h(
+                ClinicalDrawer,
+                {
+                  isOpen: true,
+                  desktopMode: "docked",
+                  teleport: false,
+                  id: "contextual-help-drawer",
+                  title: "Clinical Guidance & SOPs",
+                },
+                {
+                  default: () => h("p", "SOP Guidance"),
+                }
+              ),
+          })
+        );
+        expect(dockedDrawerHtml).toContain("desktop-mode-docked");
+        expect(dockedDrawerHtml).toContain("is-docked-desktop");
+        expect(dockedDrawerHtml).not.toContain("aria-modal");
+      } finally {
+        globalThis.window = origWindow;
+      }
+    });
   });
 
   describe("ClinicalIconButton, ClinicalDropzone, & Label-in-Name Helpers (ADR-2822)", () => {

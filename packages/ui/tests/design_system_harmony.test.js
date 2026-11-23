@@ -907,13 +907,45 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(violatingFiles).toEqual([]);
     });
 
-    it("enforces prefers-reduced-motion rules on shared ClinicalModal and ClinicalDrawer surfaces", () => {
+    it("enforces prefers-reduced-motion, dvh safe-area bottom sheets, UX-3 desktop docking, keepMounted, and viewport-fit=cover across shared primitives and app entry points", () => {
+      const webIndexHtml = fs.readFileSync(
+        path.join(repoRoot, "apps/web/index.html"),
+        "utf-8"
+      );
+      const portalIndexHtml = fs.readFileSync(
+        path.join(repoRoot, "apps/subject-portal/index.html"),
+        "utf-8"
+      );
+      expect(webIndexHtml).toContain("viewport-fit=cover");
+      expect(portalIndexHtml).toContain("viewport-fit=cover");
+
+      const tokensCss = fs.readFileSync(
+        path.join(uiDir, "tokens.css"),
+        "utf-8"
+      );
+      const responsiveCss = fs.readFileSync(
+        path.join(uiDir, "responsive.css"),
+        "utf-8"
+      );
+      expect(tokensCss).toContain("--overlay-viewport-height: 100dvh");
+      expect(tokensCss).toContain("--overlay-sheet-max-height: 90dvh");
+      expect(tokensCss).toContain(
+        "--safe-area-inset-bottom: env(safe-area-inset-bottom, 0px)"
+      );
+      expect(tokensCss).toContain("--breakpoint-docked: 1280px");
+      expect(responsiveCss).toMatch(/100vh[\s\S]{0,120}?100dvh/);
+      expect(responsiveCss).toContain("env(safe-area-inset-bottom");
+
       const modalVue = fs.readFileSync(
         path.join(uiDir, "src/components/clinical/ClinicalModal.vue"),
         "utf-8"
       );
       const drawerVue = fs.readFileSync(
         path.join(uiDir, "src/components/clinical/ClinicalDrawer.vue"),
+        "utf-8"
+      );
+      const focusTrapJs = fs.readFileSync(
+        path.join(uiDir, "src/composables/useFocusTrap.js"),
         "utf-8"
       );
 
@@ -923,9 +955,150 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(drawerVue).toMatch(
         /@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)/
       );
+      expect(modalVue).toContain("keepMounted");
+      expect(drawerVue).toContain("keepMounted");
+      expect(modalVue).toMatch(/@media\s*\(\s*max-width:\s*480px\s*\)/);
+      expect(drawerVue).toMatch(/@media\s*\(\s*max-width:\s*480px\s*\)/);
+      expect(drawerVue).toContain("desktop-mode-docked");
+      expect(drawerVue).toMatch(/@media\s*\(\s*min-width:\s*1280px\s*\)/);
+      expect(focusTrapJs).toContain("(min-width: 1280px)");
+
+      // Verify static 100vh/90vh overrides were removed from app stylesheets and drawers
+      const helpDrawerVue = fs.readFileSync(
+        path.join(webSrcDir, "components/ContextualHelpDrawer.vue"),
+        "utf-8"
+      );
+      const aiDrawerVue = fs.readFileSync(
+        path.join(uiDir, "src/components/clinical/AiSuggestionDrawer.vue"),
+        "utf-8"
+      );
+      const webStyleCss = fs.readFileSync(
+        path.join(webSrcDir, "style.css"),
+        "utf-8"
+      );
+      const portalStyleCss = fs.readFileSync(
+        path.join(portalSrcDir, "style.css"),
+        "utf-8"
+      );
+      expect(helpDrawerVue).not.toMatch(/height:\s*100vh\b/);
+      expect(aiDrawerVue).not.toMatch(/height:\s*100vh\b/);
+      expect(webStyleCss).toMatch(
+        /\.modal-body\s*\{[\s\S]*?overflow-y:\s*auto/
+      );
+      expect(portalStyleCss).not.toMatch(
+        /(?:^|[{;])\s*(?:max-)?height:\s*(?:100vh|90vh)\s*;/
+      );
+      expect(portalStyleCss).toContain("--overlay-viewport-height, 100dvh");
+      expect(portalStyleCss).toContain("--overlay-sheet-max-height, 90dvh");
     });
 
-    it("rejects raw overlay divs and vuejs-accessibility backdrop suppressions via custom-vue/no-raw-overlays in eslint.config.mjs", async () => {
+    it("migrates all 43 formerly focus-trap-exempted dialogs across apps/web and apps/subject-portal with zero raw overlay or useFocusTrap exemptions", () => {
+      const migratedWebFiles = [
+        "features/signatures/components/SignatureCaptureModal.vue",
+        "components/tickets/TicketSignModal.vue",
+        "components/tickets/TicketCreateModal.vue",
+        "components/tickets/TicketDetailDrawer.vue",
+        "components/shared/ReAuthModal.vue",
+        "components/ReasonModal.vue",
+        "components/auditor/AuditorExportModal.vue",
+        "components/etmf/CraQcQueue.vue",
+        "components/etmf/DocumentGrid.vue",
+        "components/etmf/BatchUploadDrawer.vue",
+        "components/etmf/ExportJobDrawer.vue",
+        "components/etmf/PdfPreviewModal.vue",
+        "components/ContextualHelpDrawer.vue",
+        "components/OnboardingChecklistDrawer.vue",
+        "components/ConfirmationDialogHost.vue",
+        "components/OnboardingTour.vue",
+        "components/DictionaryBrowserModal.vue",
+        "components/SynonymImportDrawer.vue",
+        "components/UpversioningImpactDrawer.vue",
+        "components/canvas/CanvasPalette.vue",
+        "components/CodingQueueTable.vue",
+        "components/econsent/QuizTemplateDrawer.vue",
+        "components/econsent/ReadabilityDrawer.vue",
+        "components/fileshare/ActivityFeed.vue",
+        "components/fileshare/MediaPreviewModal.vue",
+        "components/fileshare/ShareDrawer.vue",
+        "components/imaging/BatchDicomDropzoneModal.vue",
+        "components/imaging/DualReaderAdjudicationPanel.vue",
+        "components/imaging/OncologyCalipers.vue",
+        "components/clinical/AggregateSafetyConsole.vue",
+        "components/quality/StatisticalForensicsViewer.vue",
+        "components/clinical/BulkIpKitReconciliationDrawer.vue",
+        "components/clinical/DeviceInvestigationConsole.vue",
+        "components/clinical/EhrReconciliationDrawer.vue",
+        "components/clinical/LabGovernanceConsole.vue",
+        "components/clinical/TelehealthDtpConsole.vue",
+        "components/clinical/UsdmConceptStagingDrawer.vue",
+        "views/MdrView.vue",
+        "views/AmendmentDiffView.vue",
+      ];
+
+      const migratedPortalFiles = [
+        "components/PinSetupModal.vue",
+        "components/PinUnlockModal.vue",
+        "components/ReconsentModal.vue",
+        "components/SignatureModal.vue",
+        "components/SyncDrawer.vue",
+        "views/QuestionnaireView.vue",
+        "views/WalletView.vue",
+      ];
+
+      expect(
+        migratedWebFiles.length + migratedPortalFiles.length
+      ).toBeGreaterThanOrEqual(43);
+
+      for (const relPath of migratedWebFiles) {
+        const content = fs.readFileSync(path.join(webSrcDir, relPath), "utf-8");
+        expect(
+          /\b(?:ClinicalModal|ClinicalDrawer)\b/.test(content),
+          `apps/web/src/${relPath} must use ClinicalModal or ClinicalDrawer`
+        ).toBe(true);
+      }
+
+      for (const relPath of migratedPortalFiles) {
+        const content = fs.readFileSync(
+          path.join(portalSrcDir, relPath),
+          "utf-8"
+        );
+        expect(
+          /\b(?:ClinicalModal|ClinicalDrawer)\b/.test(content),
+          `apps/subject-portal/src/${relPath} must use ClinicalModal or ClinicalDrawer`
+        ).toBe(true);
+      }
+
+      const appVueFiles = [
+        ...walkFiles(webSrcDir, [".vue"]),
+        ...walkFiles(portalSrcDir, [".vue"]),
+      ];
+      const rawOverlayTagRe =
+        /<(?:div|section|aside)\b[^>]*class=["':][^>]*((?:modal|drawer|dialog)-(?:overlay|backdrop|mask|bg)|overlay-backdrop)/i;
+
+      const focusTrapImporters = [];
+      const rawAriaModalFiles = [];
+      const rawOverlayFiles = [];
+
+      for (const file of appVueFiles) {
+        const content = fs.readFileSync(file, "utf-8");
+        const rel = path.relative(repoRoot, file);
+        if (/\buseFocusTrap\b/.test(content)) {
+          focusTrapImporters.push(rel);
+        }
+        if (/\baria-modal\b/.test(content)) {
+          rawAriaModalFiles.push(rel);
+        }
+        if (rawOverlayTagRe.test(content)) {
+          rawOverlayFiles.push(rel);
+        }
+      }
+
+      expect(focusTrapImporters).toEqual([]);
+      expect(rawAriaModalFiles).toEqual([]);
+      expect(rawOverlayFiles).toEqual([]);
+    });
+
+    it("rejects raw overlay divs, useFocusTrap-guarded raw dialogs, and vuejs-accessibility backdrop suppressions across both apps via custom-vue/no-raw-overlays in eslint.config.mjs", async () => {
       const { ESLint } = await import("eslint");
       const eslint = new ESLint({
         cwd: repoRoot,
@@ -951,6 +1124,39 @@ const open = ref(true);
       expect(
         ruleIds.filter((id) => id === "custom-vue/no-raw-overlays").length
       ).toBeGreaterThanOrEqual(2);
+
+      // Verify former useFocusTrap exemption is closed in both apps/web and apps/subject-portal
+      const focusTrapBypassMarkup = `<template>
+  <div v-if="open" class="modal-backdrop" role="presentation" @click.self="open = false">
+    <div ref="dialogRef" class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-title" tabindex="-1">
+      <h3 id="dlg-title">Formerly Exempted Raw Dialog</h3>
+    </div>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+const open = ref(true);
+const dialogRef = ref(null);
+useFocusTrap(dialogRef, { isOpen: open });
+</script>
+`;
+
+      for (const targetFilePath of [
+        path.join(webSrcDir, "components/__SyntheticFocusTrapBypass.vue"),
+        path.join(portalSrcDir, "components/__SyntheticFocusTrapBypass.vue"),
+      ]) {
+        const [bypassResult] = await eslint.lintText(focusTrapBypassMarkup, {
+          filePath: targetFilePath,
+        });
+        const overlayErrors = bypassResult.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-raw-overlays" && m.severity === 2
+        );
+        expect(
+          overlayErrors.length,
+          `Expected custom-vue/no-raw-overlays errors on ${path.relative(repoRoot, targetFilePath)}`
+        ).toBeGreaterThanOrEqual(1);
+      }
 
       const compliantResults = await eslint.lintText(
         `<template>

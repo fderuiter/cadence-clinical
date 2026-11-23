@@ -390,166 +390,164 @@
     </div>
 
     <!-- GxP Electronic Record Drag & Drop Upload Modal -->
-    <div
-      v-if="showUploadModal"
-      ref="uploadModalRef"
-      class="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="showUploadModal"
+      :teleport="false"
+      :dismissible="!isSubmitting"
+      size="md"
       aria-label="Document Ingestion Modal"
-      tabindex="-1"
+      close-label="Close modal"
+      backdrop-class="modal-backdrop"
+      dialog-class="modal-card upload-modal"
+      :show-footer="false"
+      @close="closeUploadModal"
     >
-      <div class="modal-card upload-modal">
-        <div class="modal-header">
-          <h3>FDA 21 CFR Part 11 Compliant Document Ingestion</h3>
+      <template #header>
+        <h3>FDA 21 CFR Part 11 Compliant Document Ingestion</h3>
+      </template>
+
+      <!-- GxP Compliance Warning Box -->
+      <div class="gxp-warning-alert">
+        <strong>
+          <AlertTriangle :size="15" :stroke-width="1.75" aria-hidden="true" />
+          Regulated Record Ingestion Warning:
+        </strong>
+        All actions are logged in the append-only eTMF audit ledger. You must
+        provide a valid electronic signature context and change reason
+        justification to submit this record.
+      </div>
+
+      <!-- Drag and Drop Target -->
+      <ClinicalDropzone
+        class="drag-drop-zone"
+        accept=".pdf"
+        :disabled="isSubmitting"
+        :has-selection="!!selectedFile"
+        :prompt-text="
+          selectedFile ? '' : 'Drag and drop your regulated PDF here'
+        "
+        :button-label="
+          selectedFile ? 'Replace Regulated PDF' : 'Browse Regulated PDF'
+        "
+        input-aria-label="Regulated PDF file"
+        removable
+        remove-label="Remove File"
+        :remove-context="selectedFile ? selectedFile.name : ''"
+        @file-selected="onRegulatedFileSelected"
+        @remove="selectedFile = null"
+      >
+        <template #icon>
+          <CloudUpload :size="28" :stroke-width="1.75" aria-hidden="true" />
+        </template>
+        <template #selected>
+          <div v-if="selectedFile" class="selected-file-details">
+            <p class="file-name-success">
+              <CheckCircle2
+                :size="15"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
+              {{ selectedFile.name }}
+            </p>
+            <p class="file-size-meta">
+              Size: {{ (selectedFile.size / 1024).toFixed(1) }} KB | Type:
+              {{ selectedFile.type || "application/pdf" }}
+            </p>
+          </div>
+        </template>
+      </ClinicalDropzone>
+
+      <!-- Upload Metadata Form -->
+      <form class="upload-meta-form" @submit.prevent="submitUpload">
+        <div class="form-group-row">
+          <div class="form-group">
+            <label for="etmf-upload-study-id">Target Study ID</label>
+            <input
+              id="etmf-upload-study-id"
+              v-model="studyId"
+              type="text"
+              class="form-control"
+              readonly
+            />
+          </div>
+          <div class="form-group">
+            <label for="etmf-upload-site-id">Site ID (Optional)</label>
+            <input
+              id="etmf-upload-site-id"
+              v-model="siteId"
+              type="text"
+              placeholder="e.g. SITE-01"
+              class="form-control"
+            />
+          </div>
+        </div>
+
+        <div class="form-group-row">
+          <div class="form-group">
+            <label for="etmf-upload-artifact-code">DIA TMF Artifact Code</label>
+            <input
+              id="etmf-upload-artifact-code"
+              v-model="artifactCode"
+              type="text"
+              class="form-control"
+              readonly
+            />
+          </div>
+          <div class="form-group">
+            <label for="etmf-upload-artifact-type">Artifact Type (Label)</label>
+            <input
+              id="etmf-upload-artifact-type"
+              v-model="artifactType"
+              type="text"
+              class="form-control"
+              readonly
+            />
+          </div>
+        </div>
+
+        <!-- Mandatory Reason for Change under 21 CFR Part 11 -->
+        <div class="form-group">
+          <label for="etmf-upload-reason" class="required-label">
+            Reason for Change / Upload Justification
+          </label>
+          <textarea
+            id="etmf-upload-reason"
+            v-model="reasonForChange"
+            rows="3"
+            placeholder="Specify the regulatory or scientific justification for ingesting this record version (e.g. 'Initial Approved protocol for site initiation', 'Site license renewal')."
+            class="form-control"
+            required
+          />
+        </div>
+
+        <div v-if="uploadError" class="upload-error-banner">
+          <XCircle :size="15" :stroke-width="1.75" aria-hidden="true" />
+          {{ uploadError }}
+        </div>
+
+        <div class="modal-footer-actions">
           <button
             type="button"
-            class="close-modal-btn"
-            style="min-width: 28px; min-height: 28px"
-            aria-label="Close modal"
+            class="btn btn-outline-secondary"
+            :disabled="isSubmitting"
             @click="closeUploadModal"
           >
-            ×
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            :disabled="isSubmitting || !selectedFile || !reasonForChange.trim()"
+          >
+            <span v-if="isSubmitting">Uploading & Indexing...</span>
+            <span v-else class="btn-inline-icon">
+              <Lock :size="14" :stroke-width="1.75" aria-hidden="true" />
+              <span>Commit Electronic Record</span>
+            </span>
           </button>
         </div>
-
-        <div class="modal-body">
-          <!-- GxP Compliance Warning Box -->
-          <div class="gxp-warning-alert">
-            <strong>⚠️ Regulated Record Ingestion Warning:</strong>
-            All actions are logged in the append-only eTMF audit ledger. You
-            must provide a valid electronic signature context and change reason
-            justification to submit this record.
-          </div>
-
-          <!-- Drag and Drop Target -->
-          <ClinicalDropzone
-            class="drag-drop-zone"
-            accept=".pdf"
-            :disabled="isSubmitting"
-            :has-selection="!!selectedFile"
-            icon="☁️"
-            :prompt-text="
-              selectedFile ? '' : 'Drag and drop your regulated PDF here'
-            "
-            :button-label="
-              selectedFile ? 'Replace Regulated PDF' : 'Browse Regulated PDF'
-            "
-            input-aria-label="Regulated PDF file"
-            removable
-            remove-label="Remove File"
-            :remove-context="selectedFile ? selectedFile.name : ''"
-            @file-selected="onRegulatedFileSelected"
-            @remove="selectedFile = null"
-          >
-            <template #selected>
-              <div v-if="selectedFile" class="selected-file-details">
-                <p class="file-name-success">
-                  <span aria-hidden="true">🎉 </span>{{ selectedFile.name }}
-                </p>
-                <p class="file-size-meta">
-                  Size: {{ (selectedFile.size / 1024).toFixed(1) }} KB | Type:
-                  {{ selectedFile.type || "application/pdf" }}
-                </p>
-              </div>
-            </template>
-          </ClinicalDropzone>
-
-          <!-- Upload Metadata Form -->
-          <form class="upload-meta-form" @submit.prevent="submitUpload">
-            <div class="form-group-row">
-              <div class="form-group">
-                <label for="etmf-upload-study-id">Target Study ID</label>
-                <input
-                  id="etmf-upload-study-id"
-                  v-model="studyId"
-                  type="text"
-                  class="form-control"
-                  readonly
-                />
-              </div>
-              <div class="form-group">
-                <label for="etmf-upload-site-id">Site ID (Optional)</label>
-                <input
-                  id="etmf-upload-site-id"
-                  v-model="siteId"
-                  type="text"
-                  placeholder="e.g. SITE-01"
-                  class="form-control"
-                />
-              </div>
-            </div>
-
-            <div class="form-group-row">
-              <div class="form-group">
-                <label for="etmf-upload-artifact-code"
-                  >DIA TMF Artifact Code</label
-                >
-                <input
-                  id="etmf-upload-artifact-code"
-                  v-model="artifactCode"
-                  type="text"
-                  class="form-control"
-                  readonly
-                />
-              </div>
-              <div class="form-group">
-                <label for="etmf-upload-artifact-type"
-                  >Artifact Type (Label)</label
-                >
-                <input
-                  id="etmf-upload-artifact-type"
-                  v-model="artifactType"
-                  type="text"
-                  class="form-control"
-                  readonly
-                />
-              </div>
-            </div>
-
-            <!-- Mandatory Reason for Change under 21 CFR Part 11 -->
-            <div class="form-group">
-              <label for="etmf-upload-reason" class="required-label">
-                Reason for Change / Upload Justification
-              </label>
-              <textarea
-                id="etmf-upload-reason"
-                v-model="reasonForChange"
-                rows="3"
-                placeholder="Specify the regulatory or scientific justification for ingesting this record version (e.g. 'Initial Approved protocol for site initiation', 'Site license renewal')."
-                class="form-control"
-                required
-              />
-            </div>
-
-            <div v-if="uploadError" class="upload-error-banner">
-              ❌ {{ uploadError }}
-            </div>
-
-            <div class="modal-footer-actions">
-              <button
-                type="button"
-                class="btn btn-outline-secondary"
-                :disabled="isSubmitting"
-                @click="closeUploadModal"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="btn btn-primary"
-                :disabled="
-                  isSubmitting || !selectedFile || !reasonForChange.trim()
-                "
-              >
-                <span v-if="isSubmitting">Uploading & Indexing...</span>
-                <span v-else>🔒 Commit Electronic Record</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+      </form>
+    </ClinicalModal>
 
     <!-- Batch Ingestion Drawer -->
     <BatchUploadDrawer
@@ -562,8 +560,15 @@
 </template>
 
 <script setup>
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CloudUpload,
+  Lock,
+  XCircle,
+} from "lucide-vue-next";
 import { ref, computed, watch, nextTick } from "vue";
-import { ClinicalDropzone, EmptyState, useFocusTrap } from "ui";
+import { ClinicalDropzone, ClinicalModal, EmptyState } from "ui";
 import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf";
 import { useAuthStore } from "../../stores/auth";
 import { etmfService } from "../../api/etmf";
@@ -853,7 +858,6 @@ async function handleExportSelected() {
 
 // Selected File reference
 const selectedFile = ref(null);
-const uploadModalRef = ref(null);
 
 // Form Fields
 const studyId = ref(etmfStore.currentStudyId || "");
@@ -869,11 +873,6 @@ watch(
     siteId.value = nextSite || "";
   }
 );
-
-useFocusTrap(uploadModalRef, {
-  isOpen: showUploadModal,
-  onEscape: closeUploadModal,
-});
 
 // Local pagination state
 const currentPage = ref(1);
@@ -1253,65 +1252,15 @@ async function submitUpload() {
   font-size: 0.85rem;
 }
 
-/* Modals */
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-card {
-  background-color: var(--semantic-color-surface);
-  border-radius: 12px;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+/* Upload Modal Helpers */
+.upload-modal {
   max-width: 600px;
-  width: 90%;
-  display: flex;
-  flex-direction: column;
 }
 
-.modal-header {
-  display: flex;
-  justify-content: space-between;
+.btn-inline-icon {
+  display: inline-flex;
   align-items: center;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--semantic-color-border); /* deid-ignore */
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--semantic-color-text);
-}
-
-.close-modal-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--semantic-color-text-secondary);
-  padding: 0;
-}
-
-.close-modal-btn:hover {
-  color: var(--semantic-color-text-secondary);
-}
-
-.modal-body {
-  padding: 24px;
-  max-height: 80vh;
-  overflow-y: auto;
+  gap: 6px;
 }
 
 .gxp-warning-alert {

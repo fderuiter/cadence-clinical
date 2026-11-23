@@ -1,347 +1,368 @@
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      ref="modalRef"
-      class="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="batch-modal-title"
-      tabindex="-1"
-    >
-      <div class="modal-card">
-        <!-- Header -->
-        <div class="modal-header">
-          <div class="title-group">
-            <span class="badge badge-gxp">21 CFR Part 11 / DICOM PS 3.15</span>
-            <h3 id="batch-modal-title" class="modal-title">
-              Batch DICOM Folder &amp; Archive Ingestion
-            </h3>
-            <p class="modal-subtitle">
-              Drag and drop complete DICOM study directories or ZIP archives.
-              Non-DICOM items (PDFs, notes) are automatically filtered and
-              reported.
-            </p>
-          </div>
-          <button
-            type="button"
-            class="btn-close"
-            aria-label="Close modal"
-            @click="handleClose"
+  <ClinicalModal
+    :open="isOpen"
+    size="lg"
+    backdrop-class="modal-backdrop"
+    dialog-class="modal-card"
+    aria-labelledby="batch-modal-title"
+    :dismissible="!isUploading"
+    :show-close-button="false"
+    @close="handleClose"
+  >
+    <template #header>
+      <div class="title-group">
+        <span class="badge badge-gxp">21 CFR Part 11 / DICOM PS 3.15</span>
+        <h3 id="batch-modal-title" class="modal-title">
+          Batch DICOM Folder &amp; Archive Ingestion
+        </h3>
+        <p class="modal-subtitle">
+          Drag and drop complete DICOM study directories or ZIP archives.
+          Non-DICOM items (PDFs, notes) are automatically filtered and reported.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="btn-close"
+        aria-label="Close modal"
+        :disabled="isUploading"
+        @click="handleClose"
+      >
+        <X :size="20" :stroke-width="1.75" aria-hidden="true" />
+      </button>
+    </template>
+
+    <!-- Body -->
+    <div class="modal-body-inner">
+      <!-- Parameter Bindings -->
+      <div class="param-grid">
+        <div class="param-field">
+          <label for="batch-subj-input" class="param-label">Subject ID</label>
+          <input
+            id="batch-subj-input"
+            v-model="inputSubjectId"
+            type="text"
+            class="param-input"
+            placeholder="e.g. SUBJ-ONC-001"
+          />
+        </div>
+        <div class="param-field">
+          <label for="batch-time-input" class="param-label">Timepoint</label>
+          <input
+            id="batch-time-input"
+            v-model="inputTimepoint"
+            type="text"
+            class="param-input"
+            placeholder="e.g. BASELINE"
+          />
+        </div>
+        <div class="param-field">
+          <label for="batch-study-input" class="param-label"
+            >Study Protocol</label
           >
-            &times;
-          </button>
+          <input
+            id="batch-study-input"
+            v-model="inputStudyId"
+            type="text"
+            class="param-input"
+            placeholder="e.g. STUDY-ONC-2026"
+          />
+        </div>
+        <div class="param-field">
+          <label for="batch-site-input" class="param-label">Site ID</label>
+          <input
+            id="batch-site-input"
+            v-model="inputSiteId"
+            type="text"
+            class="param-input"
+            placeholder="e.g. SITE-101"
+          />
+        </div>
+      </div>
+
+      <!-- Step 1: Dropzone State -->
+      <div v-if="!ingestionResult && !isUploading">
+        <div
+          class="dropzone-area"
+          role="presentation"
+          :class="{ 'is-dragging': isDragging }"
+          @dragover.prevent="isDragging = true"
+          @dragleave.prevent="isDragging = false"
+          @drop.prevent="handleDrop"
+        >
+          <div class="dropzone-content">
+            <span class="dropzone-icon" aria-hidden="true">
+              <Folder :size="36" :stroke-width="1.75" aria-hidden="true" />
+            </span>
+            <p class="dropzone-title">
+              Drag &amp; Drop DICOM Study Folder or ZIP Archive
+            </p>
+            <p class="dropzone-hint">
+              Supports multi-slice DICOM folders, subdirectories, or .zip files
+              up to 2 GB
+            </p>
+
+            <div class="dropzone-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                @click="triggerFolderSelect"
+              >
+                <FolderOpen
+                  :size="16"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                Select Folder
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                @click="triggerFileSelect"
+              >
+                <Archive :size="16" :stroke-width="1.75" aria-hidden="true" />
+                Select Files / ZIP
+              </button>
+            </div>
+
+            <!-- Hidden file inputs -->
+            <input
+              ref="folderInputRef"
+              type="file"
+              aria-label="DICOM study folder"
+              webkitdirectory
+              directory
+              multiple
+              class="sr-only"
+              @change="handleFileInput"
+            />
+            <input
+              ref="fileInputRef"
+              type="file"
+              multiple
+              aria-label="DICOM files or ZIP archive"
+              accept=".dcm,.zip,application/zip"
+              class="sr-only"
+              @change="handleFileInput"
+            />
+          </div>
         </div>
 
-        <!-- Body -->
-        <div class="modal-body">
-          <!-- Parameter Bindings -->
-          <div class="param-grid">
-            <div class="param-field">
-              <label for="batch-subj-input" class="param-label"
-                >Subject ID</label
-              >
-              <input
-                id="batch-subj-input"
-                v-model="inputSubjectId"
-                type="text"
-                class="param-input"
-                placeholder="e.g. SUBJ-ONC-001"
-              />
-            </div>
-            <div class="param-field">
-              <label for="batch-time-input" class="param-label"
-                >Timepoint</label
-              >
-              <input
-                id="batch-time-input"
-                v-model="inputTimepoint"
-                type="text"
-                class="param-input"
-                placeholder="e.g. BASELINE"
-              />
-            </div>
-            <div class="param-field">
-              <label for="batch-study-input" class="param-label"
-                >Study Protocol</label
-              >
-              <input
-                id="batch-study-input"
-                v-model="inputStudyId"
-                type="text"
-                class="param-input"
-                placeholder="e.g. STUDY-ONC-2026"
-              />
-            </div>
-            <div class="param-field">
-              <label for="batch-site-input" class="param-label">Site ID</label>
-              <input
-                id="batch-site-input"
-                v-model="inputSiteId"
-                type="text"
-                class="param-input"
-                placeholder="e.g. SITE-101"
-              />
-            </div>
-          </div>
-
-          <!-- Step 1: Dropzone State -->
-          <div v-if="!ingestionResult && !isUploading">
-            <div
-              class="dropzone-area"
-              role="presentation"
-              :class="{ 'is-dragging': isDragging }"
-              @dragover.prevent="isDragging = true"
-              @dragleave.prevent="isDragging = false"
-              @drop.prevent="handleDrop"
+        <!-- Pre-Upload File Detection Summary -->
+        <div v-if="selectedFiles.length > 0" class="file-summary-card">
+          <div class="summary-header">
+            <span class="summary-title">Selected Items Summary</span>
+            <span class="badge badge-info"
+              >{{ selectedFiles.length }} Total Files</span
             >
-              <div class="dropzone-content">
-                <span class="dropzone-icon">📁</span>
-                <p class="dropzone-title">
-                  Drag &amp; Drop DICOM Study Folder or ZIP Archive
-                </p>
-                <p class="dropzone-hint">
-                  Supports multi-slice DICOM folders, subdirectories, or .zip
-                  files up to 2 GB
-                </p>
+          </div>
 
-                <div class="dropzone-actions">
-                  <button
-                    type="button"
-                    class="btn btn-secondary"
-                    @click="triggerFolderSelect"
-                  >
-                    📂 Select Folder
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-secondary"
-                    @click="triggerFileSelect"
-                  >
-                    📦 Select Files / ZIP
-                  </button>
-                </div>
-
-                <!-- Hidden file inputs -->
-                <input
-                  ref="folderInputRef"
-                  type="file"
-                  aria-label="DICOM study folder"
-                  webkitdirectory
-                  directory
-                  multiple
-                  class="sr-only"
-                  @change="handleFileInput"
-                />
-                <input
-                  ref="fileInputRef"
-                  type="file"
-                  multiple
-                  aria-label="DICOM files or ZIP archive"
-                  accept=".dcm,.zip,application/zip"
-                  class="sr-only"
-                  @change="handleFileInput"
-                />
-              </div>
+          <div class="summary-stats">
+            <div class="stat-box">
+              <span class="stat-num text-success">{{
+                candidateDicomCount
+              }}</span>
+              <span class="stat-label">Candidate DICOM Items</span>
             </div>
-
-            <!-- Pre-Upload File Detection Summary -->
-            <div v-if="selectedFiles.length > 0" class="file-summary-card">
-              <div class="summary-header">
-                <span class="summary-title">Selected Items Summary</span>
-                <span class="badge badge-info"
-                  >{{ selectedFiles.length }} Total Files</span
-                >
-              </div>
-
-              <div class="summary-stats">
-                <div class="stat-box">
-                  <span class="stat-num text-success">{{
-                    candidateDicomCount
-                  }}</span>
-                  <span class="stat-label">Candidate DICOM Items</span>
-                </div>
-                <div class="stat-box">
-                  <span class="stat-num text-warning">{{
-                    nonDicomList.length
-                  }}</span>
-                  <span class="stat-label">Non-DICOM Files Detected</span>
-                </div>
-              </div>
-
-              <!-- Non-DICOM Alert -->
-              <div v-if="nonDicomList.length > 0" class="non-dicom-alert">
-                <span class="alert-icon">⚠️</span>
-                <div class="alert-text">
-                  <strong>Non-DICOM Files Detected:</strong> The following
-                  {{ nonDicomList.length }} file(s) will be automatically
-                  filtered out during ingestion:
-                  <ul class="non-dicom-file-list">
-                    <li v-for="f in nonDicomList.slice(0, 5)" :key="f.name">
-                      <code>{{ f.name }}</code>
-                    </li>
-                    <li v-if="nonDicomList.length > 5">
-                      <em
-                        >...and {{ nonDicomList.length - 5 }} more non-DICOM
-                        file(s)</em
-                      >
-                    </li>
-                  </ul>
-                </div>
-              </div>
+            <div class="stat-box">
+              <span class="stat-num text-warning">{{
+                nonDicomList.length
+              }}</span>
+              <span class="stat-label">Non-DICOM Files Detected</span>
             </div>
           </div>
 
-          <!-- Step 2: Uploading / Processing State -->
-          <div v-if="isUploading" class="uploading-state-card">
-            <div class="spinner-icon">🔄</div>
-            <h4 class="uploading-title">
-              Streaming &amp; De-identifying DICOM Batch...
-            </h4>
-            <p class="uploading-desc">
-              Scrubbing 50+ PHI header tags, shifting dates, and applying PS
-              3.15 pixel masks in memory.
-            </p>
-            <div class="progress-bar-track">
-              <div
-                class="progress-bar-fill"
-                :style="{ width: uploadProgress + '%' }"
-              ></div>
-            </div>
-            <span class="progress-text">{{ uploadProgress }}% Complete</span>
-          </div>
-
-          <!-- Step 3: Success Certificate Summary -->
-          <div v-if="ingestionResult" class="certificate-summary-card">
-            <div class="cert-banner">
-              <span class="cert-icon">🔒</span>
-              <div>
-                <h4 class="cert-title">
-                  PS 3.15 De-Identification Certificate Issued
-                </h4>
-                <p class="cert-subtitle">
-                  Batch session cryptographic manifest persisted with
-                  HMAC-SHA256 signature.
-                </p>
-              </div>
-            </div>
-
-            <div class="cert-details-grid">
-              <div class="detail-row">
-                <span class="detail-label">Certificate ID:</span>
-                <span class="detail-val code">{{
-                  ingestionResult.certificateId
-                }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Anonymized Study UID:</span>
-                <span class="detail-val code">{{
-                  ingestionResult.anonymizedStudyUid
-                }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Ingested Slices:</span>
-                <span class="detail-val font-bold text-success"
-                  >{{ ingestionResult.ingestedSliceCount }} slices</span
-                >
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Filtered Non-DICOM Items:</span>
-                <span class="detail-val"
-                  >{{ ingestionResult.skippedNonDicomCount }} files
-                  skipped</span
-                >
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Scrubbed PHI Tags:</span>
-                <span class="detail-val"
-                  >{{
-                    ingestionResult.manifest?.scrubbed_tags_count || 56
-                  }}
-                  DICOM tags sanitized</span
-                >
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Pixel Masking:</span>
-                <span class="detail-val">{{
-                  ingestionResult.manifest?.pixel_mask_applied
-                    ? "Applied (Header & Overlay Redacted)"
-                    : "Cleared"
-                }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">HMAC Signature:</span>
-                <span class="detail-val code signature-truncate">{{
-                  ingestionResult.signature
-                }}</span>
-              </div>
-            </div>
-
-            <!-- Reported Skipped Non-DICOM Files -->
-            <div
-              v-if="
-                ingestionResult.skippedNonDicomFiles &&
-                ingestionResult.skippedNonDicomFiles.length > 0
-              "
-              class="skipped-report-box"
-            >
-              <span class="report-heading"
-                >Reported Non-DICOM Items Filtered:</span
-              >
-              <ul class="skipped-list">
-                <li v-for="f in ingestionResult.skippedNonDicomFiles" :key="f">
-                  <code>{{ f }}</code>
+          <!-- Non-DICOM Alert -->
+          <div v-if="nonDicomList.length > 0" class="non-dicom-alert">
+            <AlertTriangle
+              class="alert-icon"
+              :size="18"
+              :stroke-width="1.75"
+              aria-hidden="true"
+            />
+            <div class="alert-text">
+              <strong>Non-DICOM Files Detected:</strong> The following
+              {{ nonDicomList.length }} file(s) will be automatically filtered
+              out during ingestion:
+              <ul class="non-dicom-file-list">
+                <li v-for="f in nonDicomList.slice(0, 5)" :key="f.name">
+                  <code>{{ f.name }}</code>
+                </li>
+                <li v-if="nonDicomList.length > 5">
+                  <em
+                    >...and {{ nonDicomList.length - 5 }} more non-DICOM
+                    file(s)</em
+                  >
                 </li>
               </ul>
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- Error Alert -->
-          <div v-if="errorMessage" class="error-alert-box">
-            <span class="error-icon">❌</span>
-            <span>{{ errorMessage }}</span>
+      <!-- Step 2: Uploading / Processing State -->
+      <div v-if="isUploading" class="uploading-state-card">
+        <div class="spinner-icon" aria-hidden="true">
+          <RefreshCw :size="28" :stroke-width="1.75" aria-hidden="true" />
+        </div>
+        <h4 class="uploading-title">
+          Streaming &amp; De-identifying DICOM Batch...
+        </h4>
+        <p class="uploading-desc">
+          Scrubbing 50+ PHI header tags, shifting dates, and applying PS 3.15
+          pixel masks in memory.
+        </p>
+        <div class="progress-bar-track">
+          <div
+            class="progress-bar-fill"
+            :style="{ width: uploadProgress + '%' }"
+          ></div>
+        </div>
+        <span class="progress-text">{{ uploadProgress }}% Complete</span>
+      </div>
+
+      <!-- Step 3: Success Certificate Summary -->
+      <div v-if="ingestionResult" class="certificate-summary-card">
+        <div class="cert-banner">
+          <Lock
+            class="cert-icon"
+            :size="22"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <div>
+            <h4 class="cert-title">
+              PS 3.15 De-Identification Certificate Issued
+            </h4>
+            <p class="cert-subtitle">
+              Batch session cryptographic manifest persisted with HMAC-SHA256
+              signature.
+            </p>
           </div>
         </div>
 
-        <!-- Footer -->
-        <div class="modal-footer">
-          <button
-            v-if="!ingestionResult"
-            type="button"
-            class="btn btn-secondary"
-            :disabled="isUploading"
-            @click="handleClose"
-          >
-            Cancel
-          </button>
+        <div class="cert-details-grid">
+          <div class="detail-row">
+            <span class="detail-label">Certificate ID:</span>
+            <span class="detail-val code">{{
+              ingestionResult.certificateId
+            }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Anonymized Study UID:</span>
+            <span class="detail-val code">{{
+              ingestionResult.anonymizedStudyUid
+            }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Ingested Slices:</span>
+            <span class="detail-val font-bold text-success"
+              >{{ ingestionResult.ingestedSliceCount }} slices</span
+            >
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Filtered Non-DICOM Items:</span>
+            <span class="detail-val"
+              >{{ ingestionResult.skippedNonDicomCount }} files skipped</span
+            >
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Scrubbed PHI Tags:</span>
+            <span class="detail-val"
+              >{{ ingestionResult.manifest?.scrubbed_tags_count || 56 }} DICOM
+              tags sanitized</span
+            >
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Pixel Masking:</span>
+            <span class="detail-val">{{
+              ingestionResult.manifest?.pixel_mask_applied
+                ? "Applied (Header & Overlay Redacted)"
+                : "Cleared"
+            }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">HMAC Signature:</span>
+            <span class="detail-val code signature-truncate">{{
+              ingestionResult.signature
+            }}</span>
+          </div>
+        </div>
 
-          <button
-            v-if="!ingestionResult"
-            type="button"
-            class="btn btn-primary"
-            :disabled="selectedFiles.length === 0 || isUploading"
-            @click="startBatchIngestion"
-          >
-            {{ isUploading ? "Ingesting..." : "Start Batch Ingestion" }}
-          </button>
-
-          <button
-            v-if="ingestionResult"
-            type="button"
-            class="btn btn-success"
-            @click="completeAndClose"
-          >
-            Done &amp; View Ingested Series
-          </button>
+        <!-- Reported Skipped Non-DICOM Files -->
+        <div
+          v-if="
+            ingestionResult.skippedNonDicomFiles &&
+            ingestionResult.skippedNonDicomFiles.length > 0
+          "
+          class="skipped-report-box"
+        >
+          <span class="report-heading">Reported Non-DICOM Items Filtered:</span>
+          <ul class="skipped-list">
+            <li v-for="f in ingestionResult.skippedNonDicomFiles" :key="f">
+              <code>{{ f }}</code>
+            </li>
+          </ul>
         </div>
       </div>
+
+      <!-- Error Alert -->
+      <div v-if="errorMessage" class="error-alert-box">
+        <XCircle
+          class="error-icon"
+          :size="18"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
+        <span>{{ errorMessage }}</span>
+      </div>
     </div>
-  </Teleport>
+
+    <template #footer>
+      <button
+        v-if="!ingestionResult"
+        type="button"
+        class="btn btn-secondary"
+        :disabled="isUploading"
+        @click="handleClose"
+      >
+        Cancel
+      </button>
+
+      <button
+        v-if="!ingestionResult"
+        type="button"
+        class="btn btn-primary"
+        :disabled="selectedFiles.length === 0 || isUploading"
+        @click="startBatchIngestion"
+      >
+        {{ isUploading ? "Ingesting..." : "Start Batch Ingestion" }}
+      </button>
+
+      <button
+        v-if="ingestionResult"
+        type="button"
+        class="btn btn-success"
+        @click="completeAndClose"
+      >
+        Done &amp; View Ingested Series
+      </button>
+    </template>
+  </ClinicalModal>
 </template>
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
+import {
+  AlertTriangle,
+  Archive,
+  Folder,
+  FolderOpen,
+  Lock,
+  RefreshCw,
+  X,
+  XCircle,
+} from "lucide-vue-next";
 
 const props = defineProps({
   isOpen: { type: Boolean, default: false },
@@ -353,7 +374,6 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "ingested"]);
 
-const modalRef = ref(null);
 const folderInputRef = ref(null);
 const fileInputRef = ref(null);
 
@@ -554,15 +574,10 @@ async function startBatchIngestion() {
 }
 
 function handleClose() {
+  if (isUploading.value) return;
   resetState();
   emit("close");
 }
-
-useFocusTrap(modalRef, {
-  isOpen: () => props.isOpen,
-  onEscape: handleClose,
-  escapeLock: () => isUploading.value,
-});
 
 function completeAndClose() {
   if (ingestionResult.value) {
@@ -573,18 +588,6 @@ function completeAndClose() {
 </script>
 
 <style scoped>
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 16px;
-}
-
 .modal-card {
   background-color: var(--semantic-color-surface);
   border-radius: 12px;
@@ -593,7 +596,6 @@ function completeAndClose() {
     0 10px 10px -5px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 680px;
-  max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -656,6 +658,11 @@ function completeAndClose() {
   line-height: 1;
   cursor: pointer;
   padding: 0;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-close:hover {

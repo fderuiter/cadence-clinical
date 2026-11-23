@@ -233,10 +233,13 @@ export const ClinicalModal: DefineComponent<
     title?: string;
     ariaLabel?: string;
     ariaLabelledby?: string;
-    size?: "sm" | "md" | "lg" | "xl" | string;
+    ariaDescribedby?: string;
+    size?: "sm" | "md" | "lg" | "xl" | "full" | string;
     role?: "dialog" | "alertdialog" | string;
+    modal?: boolean;
     dismissible?: boolean;
     closeOnBackdrop?: boolean;
+    keepMounted?: boolean;
     initialFocus?:
       | import("vue").Ref<HTMLElement | null>
       | (() => HTMLElement | null)
@@ -246,6 +249,8 @@ export const ClinicalModal: DefineComponent<
     teleport?: boolean | string;
     id?: string;
     overlayId?: string;
+    closeButtonId?: string;
+    closeButtonClass?: string | any[] | Record<string, boolean>;
     dialogClass?: string | any[] | Record<string, boolean>;
     backdropClass?: string | any[] | Record<string, boolean>;
     headerClass?: string | any[] | Record<string, boolean>;
@@ -253,6 +258,7 @@ export const ClinicalModal: DefineComponent<
     footerClass?: string | any[] | Record<string, boolean>;
     closeLabel?: string;
     showHeader?: boolean;
+    showCloseButton?: boolean;
     showFooter?: boolean;
   },
   {},
@@ -263,20 +269,28 @@ export const ClinicalDrawer: DefineComponent<
   {
     modelValue?: boolean;
     isOpen?: boolean;
+    open?: boolean;
     title?: string;
     subtitle?: string;
     ariaLabel?: string;
     ariaLabelledby?: string;
+    ariaDescribedby?: string;
     id?: string;
     overlayId?: string;
+    closeButtonId?: string;
     overlayClass?: string | any[] | Record<string, boolean>;
+    backdropClass?: string | any[] | Record<string, boolean>;
     panelClass?: string | any[] | Record<string, boolean>;
+    headerClass?: string | any[] | Record<string, boolean>;
     bodyClass?: string | any[] | Record<string, boolean>;
+    footerClass?: string | any[] | Record<string, boolean>;
     position?: "right" | "left" | string;
-    size?: "sm" | "md" | "lg" | "xl" | string;
+    desktopMode?: "overlay" | "docked" | string;
+    size?: "sm" | "md" | "lg" | "xl" | "full" | string;
     role?: "dialog" | "alertdialog" | string;
     dismissible?: boolean;
     closeOnBackdrop?: boolean;
+    keepMounted?: boolean;
     teleport?: boolean | string;
     initialFocus?:
       | import("vue").Ref<HTMLElement | null>
@@ -286,6 +300,7 @@ export const ClinicalDrawer: DefineComponent<
     restoreFocus?: boolean | (() => HTMLElement | null);
     closeLabel?: string;
     showHeader?: boolean;
+    showCloseButton?: boolean;
   },
   {},
   any

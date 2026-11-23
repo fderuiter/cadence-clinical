@@ -915,6 +915,10 @@ main {
   border-radius: 12px;
   width: 100%;
   max-width: 450px;
+  max-height: var(--overlay-sheet-max-height-fallback, 90vh);
+  max-height: var(--overlay-sheet-max-height, 90dvh);
+  display: flex;
+  flex-direction: column;
   box-shadow:
     0 20px 25px -5px rgb(0 0 0 / 0.1),
     0 8px 10px -6px rgb(0 0 0 / 0.1);
@@ -927,10 +931,15 @@ main {
   padding: 16px 20px;
   font-weight: 700;
   font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
 .modal-body {
   padding: 20px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-body p {
@@ -967,19 +976,25 @@ main {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .modal-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100vw;
-  height: 100vh;
+  height: var(--overlay-viewport-height-fallback, 100vh);
+  height: var(--overlay-viewport-height, 100dvh);
   background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
+  padding: max(16px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+    max(16px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px)))
+    max(16px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)))
+    max(16px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px)));
   z-index: 1000;
 }
 
@@ -993,13 +1008,45 @@ main {
     0 10px 10px -5px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   border: 1px solid var(--semantic-color-border-muted);
-  max-height: 90vh;
+  max-height: var(--overlay-sheet-max-height-fallback, 90vh);
+  max-height: var(--overlay-sheet-max-height, 90dvh);
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
+@media (max-width: 480px) {
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) 0 0 0;
+  }
+
+  .modal,
+  .modal-dialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: var(--overlay-sheet-max-height-fallback, 90vh);
+    max-height: var(--overlay-sheet-max-height, 90dvh);
+    border-radius: 16px 16px 0 0;
+    padding-bottom: var(
+      --safe-area-inset-bottom,
+      env(safe-area-inset-bottom, 0px)
+    );
+  }
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  .modal-body input:not([type="checkbox"]):not([type="radio"]),
+  .modal-body select,
+  .modal-body textarea {
+    font-size: max(16px, 1rem);
+  }
+}
+
 .modal-header-icon {
-  font-size: 1.6rem;
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.4rem;
 }
 
 .modal-title {
@@ -1017,12 +1064,17 @@ main {
 
 .btn-close {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-target-staff-min, 44px);
+  min-height: var(--touch-target-staff-min, 44px);
   background: none;
   border: none;
   font-size: 1.2rem;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px 8px;
   border-radius: 6px;
 }
 

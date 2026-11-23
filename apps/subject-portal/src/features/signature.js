@@ -35,7 +35,7 @@ function handleSignatureModalKeydown(event) {
       ? document.getElementById("portal-sign-modal")
       : null;
   if (!modal) return;
-  if (event.key === "Tab") {
+  if (event.key === "Tab" && !event.defaultPrevented) {
     trapTabFocus(event, modal);
   } else if (event.key === "Escape" && !event.defaultPrevented) {
     event.preventDefault();
@@ -107,15 +107,22 @@ export function openSignatureModal(actionType = "epro") {
   const modal = document.getElementById("portal-sign-modal");
   if (modal) {
     modal.style.display = "flex";
+    const dialogEl =
+      modal.querySelector('[role="dialog"], [role="alertdialog"]') || modal;
     if (
       typeof HTMLElement !== "undefined" &&
       "inert" in HTMLElement.prototype
     ) {
       modal.inert = false;
+      dialogEl.inert = false;
     }
     modal.removeAttribute("inert");
     modal.removeAttribute("aria-hidden");
-    modal.setAttribute("aria-modal", "true");
+    dialogEl.removeAttribute("inert");
+    dialogEl.removeAttribute("aria-hidden");
+    if (dialogEl.getAttribute("role") !== "presentation") {
+      dialogEl.setAttribute("aria-modal", "true");
+    }
   }
   state.signatureModalOpen = true;
   attachSignatureModalTrap();
@@ -137,15 +144,21 @@ export function closeSignatureModal() {
   const modalEl = document.getElementById("portal-sign-modal");
   if (modalEl) {
     modalEl.style.display = "none";
+    const dialogEl =
+      modalEl.querySelector('[role="dialog"], [role="alertdialog"]') || modalEl;
     if (
       typeof HTMLElement !== "undefined" &&
       "inert" in HTMLElement.prototype
     ) {
       modalEl.inert = true;
+      dialogEl.inert = true;
     }
     modalEl.setAttribute("inert", "");
     modalEl.setAttribute("aria-hidden", "true");
     modalEl.removeAttribute("aria-modal");
+    dialogEl.setAttribute("inert", "");
+    dialogEl.setAttribute("aria-hidden", "true");
+    dialogEl.removeAttribute("aria-modal");
   }
   state.signatureModalOpen = false;
   if (

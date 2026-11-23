@@ -23,6 +23,10 @@ export const clinicalOverlayProps = {
     type: [Boolean, Function],
     default: true,
   },
+  keepMounted: {
+    type: Boolean,
+    default: false,
+  },
 };
 
 export const clinicalFieldBaseProps = {

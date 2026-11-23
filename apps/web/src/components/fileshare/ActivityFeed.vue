@@ -1,22 +1,20 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="activity-feed-overlay"
-    role="presentation"
-    @click.self="$emit('close')"
+  <ClinicalDrawer
+    :open="isOpen"
+    :teleport="false"
+    size="lg"
+    backdrop-class="activity-feed-overlay"
+    panel-class="activity-feed-drawer"
+    aria-label="Document Activity Feed"
+    :body-padding="false"
+    @close="$emit('close')"
   >
-    <div
-      ref="drawerRef"
-      class="activity-feed-drawer"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Document Activity Feed"
-      tabindex="-1"
-    >
-      <!-- Header -->
+    <template #header>
       <div class="drawer-header">
         <div class="header-info">
-          <span class="activity-header-icon">📜</span>
+          <span class="activity-header-icon" aria-hidden="true">
+            <ScrollText :size="20" :stroke-width="1.75" aria-hidden="true" />
+          </span>
           <div>
             <h3 class="drawer-title">Document Activity Feed</h3>
             <p class="drawer-subtitle" :title="file?.filename || 'Document'">
@@ -28,14 +26,17 @@
           </div>
         </div>
         <button
+          type="button"
           class="close-drawer-btn"
           aria-label="Close activity feed"
           @click="$emit('close')"
         >
-          ✕
+          <X :size="18" :stroke-width="1.75" aria-hidden="true" />
         </button>
       </div>
+    </template>
 
+    <template #subheader>
       <!-- Filter Ribbon -->
       <div class="filter-ribbon">
         <div class="filter-group">
@@ -83,6 +84,7 @@
 
         <button
           v-if="hasActiveFilters"
+          type="button"
           class="reset-filters-btn"
           title="Reset filters"
           @click="resetFilters"
@@ -93,231 +95,285 @@
 
       <!-- Compliance Notice Banner -->
       <div class="gxp-badge-strip">
-        <span class="gxp-icon">🛡️</span>
+        <ShieldCheck
+          class="gxp-icon"
+          :size="15"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
         <span class="gxp-text">
-          ICH E6(R2) & 21 CFR Part 11 Inspection-Ready Audit Trail.
+          ICH E6(R2) &amp; 21 CFR Part 11 Inspection-Ready Audit Trail.
           Chronological UTC timeline.
         </span>
       </div>
+    </template>
 
-      <!-- Drawer Body: Timeline -->
-      <div class="drawer-body">
-        <!-- Loading State -->
-        <div v-if="loading && entries.length === 0" class="loading-state">
-          <div class="spinner" />
-          <p>Retrieving immutable audit events...</p>
-        </div>
+    <!-- Drawer Body: Timeline -->
+    <div class="drawer-body">
+      <!-- Loading State -->
+      <div v-if="loading && entries.length === 0" class="loading-state">
+        <div class="spinner" />
+        <p>Retrieving immutable audit events...</p>
+      </div>
 
-        <!-- Error State -->
-        <div v-else-if="error" class="error-state">
-          <span class="error-icon">⚠️</span>
-          <p>{{ error }}</p>
-          <button class="retry-btn" @click="loadFeed(1)">Retry</button>
-        </div>
+      <!-- Error State -->
+      <div v-else-if="error" class="error-state">
+        <AlertTriangle
+          class="error-icon"
+          :size="32"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
+        <p>{{ error }}</p>
+        <button type="button" class="retry-btn" @click="loadFeed(1)">
+          Retry
+        </button>
+      </div>
 
-        <!-- Empty State -->
-        <div v-else-if="entries.length === 0" class="empty-state">
-          <span class="empty-icon">📭</span>
-          <h4>No Activity Events Found</h4>
-          <p v-if="hasActiveFilters">
-            Try adjusting your filters to see historical events.
-          </p>
-          <p v-else>No audit log records exist for this document yet.</p>
-        </div>
+      <!-- Empty State -->
+      <div v-else-if="entries.length === 0" class="empty-state">
+        <Inbox
+          class="empty-icon"
+          :size="32"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
+        <h4>No Activity Events Found</h4>
+        <p v-if="hasActiveFilters">
+          Try adjusting your filters to see historical events.
+        </p>
+        <p v-else>No audit log records exist for this document yet.</p>
+      </div>
 
-        <!-- Timeline List -->
-        <div v-else class="timeline-container">
-          <div
-            v-for="(entry, index) in entries"
-            :key="`${entry.event_type}-${entry.timestamp}-${index}`"
-            class="timeline-item"
-            :class="`event-${entry.event_type.toLowerCase()}`"
-          >
-            <!-- Timeline Track Icon -->
-            <div class="timeline-marker">
-              <span class="marker-icon" :title="entry.event_type">
-                {{ getEventIcon(entry.event_type) }}
-              </span>
-              <div
-                v-if="index < entries.length - 1"
-                class="timeline-connector"
+      <!-- Timeline List -->
+      <div v-else class="timeline-container">
+        <div
+          v-for="(entry, index) in entries"
+          :key="`${entry.event_type}-${entry.timestamp}-${index}`"
+          class="timeline-item"
+          :class="`event-${entry.event_type.toLowerCase()}`"
+        >
+          <!-- Timeline Track Icon -->
+          <div class="timeline-marker">
+            <span class="marker-icon" :title="entry.event_type">
+              <component
+                :is="getEventIconComponent(entry.event_type)"
+                :size="15"
+                :stroke-width="1.75"
+                aria-hidden="true"
               />
+            </span>
+            <div v-if="index < entries.length - 1" class="timeline-connector" />
+          </div>
+
+          <!-- Timeline Content Card -->
+          <div class="timeline-card">
+            <div class="card-header">
+              <div class="event-title-group">
+                <span
+                  class="event-badge"
+                  :class="getEventBadgeClass(entry.event_type)"
+                >
+                  {{ formatEventTitle(entry.event_type) }}
+                </span>
+                <span class="event-actor">
+                  by
+                  <strong>{{
+                    entry.actor_display_name || entry.actor_user_id
+                  }}</strong>
+                </span>
+              </div>
+              <time
+                class="event-time"
+                :datetime="entry.timestamp"
+                :title="formatFullDate(entry.timestamp)"
+              >
+                {{ formatRelativeTime(entry.timestamp) }}
+              </time>
             </div>
 
-            <!-- Timeline Content Card -->
-            <div class="timeline-card">
-              <div class="card-header">
-                <div class="event-title-group">
-                  <span
-                    class="event-badge"
-                    :class="getEventBadgeClass(entry.event_type)"
-                  >
-                    {{ formatEventTitle(entry.event_type) }}
-                  </span>
-                  <span class="event-actor">
-                    by
-                    <strong>{{
-                      entry.actor_display_name || entry.actor_user_id
-                    }}</strong>
-                  </span>
-                </div>
-                <time
-                  class="event-time"
-                  :datetime="entry.timestamp"
-                  :title="formatFullDate(entry.timestamp)"
-                >
-                  {{ formatRelativeTime(entry.timestamp) }}
-                </time>
-              </div>
+            <!-- Detail preview or toggle -->
+            <div v-if="hasDetail(entry.detail)" class="card-detail-section">
+              <button
+                type="button"
+                class="detail-toggle-btn"
+                :aria-expanded="isExpanded(index)"
+                @click="toggleExpand(index)"
+              >
+                <ChevronDown
+                  v-if="isExpanded(index)"
+                  :size="14"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                <ChevronRight
+                  v-else
+                  :size="14"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                <span>{{
+                  isExpanded(index) ? "Hide Details" : "Show Details"
+                }}</span>
+              </button>
 
-              <!-- Detail preview or toggle -->
-              <div v-if="hasDetail(entry.detail)" class="card-detail-section">
-                <button
-                  class="detail-toggle-btn"
-                  :aria-expanded="isExpanded(index)"
-                  @click="toggleExpand(index)"
-                >
-                  <span>{{
-                    isExpanded(index) ? "▼ Hide Details" : "▶ Show Details"
+              <div v-if="isExpanded(index)" class="detail-content">
+                <!-- Formatted detail fields -->
+                <div v-if="entry.detail.hold_reason" class="detail-row">
+                  <span class="detail-label">Hold Reason:</span>
+                  <span class="detail-value text-danger">{{
+                    entry.detail.hold_reason
                   }}</span>
-                </button>
+                </div>
 
-                <div v-if="isExpanded(index)" class="detail-content">
-                  <!-- Formatted detail fields -->
-                  <div v-if="entry.detail.hold_reason" class="detail-row">
-                    <span class="detail-label">Hold Reason:</span>
-                    <span class="detail-value text-danger">{{
-                      entry.detail.hold_reason
-                    }}</span>
+                <div v-if="entry.detail.permission_level" class="detail-row">
+                  <span class="detail-label">Permission:</span>
+                  <span class="detail-value">{{
+                    entry.detail.permission_level
+                  }}</span>
+                </div>
+
+                <div v-if="entry.detail.granted_to_user_id" class="detail-row">
+                  <span class="detail-label">Granted To:</span>
+                  <span class="detail-value font-mono">{{
+                    entry.detail.granted_to_user_id
+                  }}</span>
+                </div>
+
+                <div v-if="entry.detail.scope" class="detail-row">
+                  <span class="detail-label">Scope:</span>
+                  <span class="detail-value">{{ entry.detail.scope }}</span>
+                </div>
+
+                <div v-if="entry.detail.expires_at" class="detail-row">
+                  <span class="detail-label">Expires:</span>
+                  <span class="detail-value">{{
+                    formatFullDate(entry.detail.expires_at)
+                  }}</span>
+                </div>
+
+                <div v-if="entry.detail.scan_engine" class="detail-row">
+                  <span class="detail-label">Engine:</span>
+                  <span class="detail-value"
+                    >{{ entry.detail.scan_engine }} ({{
+                      entry.detail.status || "CLEAN"
+                    }})</span
+                  >
+                </div>
+
+                <div
+                  v-if="entry.detail.threat_name"
+                  class="detail-row text-danger"
+                >
+                  <span class="detail-label">Threat:</span>
+                  <span class="detail-value font-bold">{{
+                    entry.detail.threat_name
+                  }}</span>
+                </div>
+
+                <div
+                  v-if="entry.detail.signature_manifestation"
+                  class="detail-row signature-box"
+                >
+                  <span class="detail-label">Part 11 Signature:</span>
+                  <div class="sig-details">
+                    <div>
+                      Signer:
+                      {{
+                        entry.detail.signature_manifestation.printed_name ||
+                        entry.detail.user_id
+                      }}
+                    </div>
+                    <div>
+                      Reason:
+                      {{
+                        entry.detail.signature_manifestation.meaning ||
+                        "Approval"
+                      }}
+                    </div>
+                    <div class="font-mono text-xs">
+                      Sig:
+                      {{
+                        entry.detail.signature_manifestation.signature?.substring(
+                          0,
+                          32
+                        )
+                      }}...
+                    </div>
                   </div>
+                </div>
 
-                  <div v-if="entry.detail.permission_level" class="detail-row">
-                    <span class="detail-label">Permission:</span>
-                    <span class="detail-value">{{
-                      entry.detail.permission_level
-                    }}</span>
-                  </div>
-
+                <!-- Fallback raw key/values for any remaining fields -->
+                <div
+                  v-if="getRawDetailKeys(entry.detail).length > 0"
+                  class="raw-detail-grid"
+                >
                   <div
-                    v-if="entry.detail.granted_to_user_id"
+                    v-for="k in getRawDetailKeys(entry.detail)"
+                    :key="k"
                     class="detail-row"
                   >
-                    <span class="detail-label">Granted To:</span>
-                    <span class="detail-value font-mono">{{
-                      entry.detail.granted_to_user_id
-                    }}</span>
-                  </div>
-
-                  <div v-if="entry.detail.scope" class="detail-row">
-                    <span class="detail-label">Scope:</span>
-                    <span class="detail-value">{{ entry.detail.scope }}</span>
-                  </div>
-
-                  <div v-if="entry.detail.expires_at" class="detail-row">
-                    <span class="detail-label">Expires:</span>
+                    <span class="detail-label">{{ k }}:</span>
                     <span class="detail-value">{{
-                      formatFullDate(entry.detail.expires_at)
+                      typeof entry.detail[k] === "object"
+                        ? JSON.stringify(entry.detail[k])
+                        : entry.detail[k]
                     }}</span>
-                  </div>
-
-                  <div v-if="entry.detail.scan_engine" class="detail-row">
-                    <span class="detail-label">Engine:</span>
-                    <span class="detail-value"
-                      >{{ entry.detail.scan_engine }} ({{
-                        entry.detail.status || "CLEAN"
-                      }})</span
-                    >
-                  </div>
-
-                  <div
-                    v-if="entry.detail.threat_name"
-                    class="detail-row text-danger"
-                  >
-                    <span class="detail-label">Threat:</span>
-                    <span class="detail-value font-bold">{{
-                      entry.detail.threat_name
-                    }}</span>
-                  </div>
-
-                  <div
-                    v-if="entry.detail.signature_manifestation"
-                    class="detail-row signature-box"
-                  >
-                    <span class="detail-label">Part 11 Signature:</span>
-                    <div class="sig-details">
-                      <div>
-                        Signer:
-                        {{
-                          entry.detail.signature_manifestation.printed_name ||
-                          entry.detail.user_id
-                        }}
-                      </div>
-                      <div>
-                        Reason:
-                        {{
-                          entry.detail.signature_manifestation.meaning ||
-                          "Approval"
-                        }}
-                      </div>
-                      <div class="font-mono text-xs">
-                        Sig:
-                        {{
-                          entry.detail.signature_manifestation.signature?.substring(
-                            0,
-                            32
-                          )
-                        }}...
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Fallback raw key/values for any remaining fields -->
-                  <div
-                    v-if="getRawDetailKeys(entry.detail).length > 0"
-                    class="raw-detail-grid"
-                  >
-                    <div
-                      v-for="k in getRawDetailKeys(entry.detail)"
-                      :key="k"
-                      class="detail-row"
-                    >
-                      <span class="detail-label">{{ k }}:</span>
-                      <span class="detail-value">{{
-                        typeof entry.detail[k] === "object"
-                          ? JSON.stringify(entry.detail[k])
-                          : entry.detail[k]
-                      }}</span>
-                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Pagination / Load More -->
-          <div v-if="hasMore" class="load-more-section">
-            <button
-              class="load-more-btn"
-              :disabled="loadingMore"
-              @click="loadMore"
-            >
-              <span v-if="loadingMore" class="btn-spinner" />
-              {{
-                loadingMore
-                  ? "Loading..."
-                  : `Load More Activities (${entries.length} of ${total})`
-              }}
-            </button>
-          </div>
+        <!-- Pagination / Load More -->
+        <div v-if="hasMore" class="load-more-section">
+          <button
+            type="button"
+            class="load-more-btn"
+            :disabled="loadingMore"
+            @click="loadMore"
+          >
+            <span v-if="loadingMore" class="btn-spinner" />
+            {{
+              loadingMore
+                ? "Loading..."
+                : `Load More Activities (${entries.length} of ${total})`
+            }}
+          </button>
         </div>
       </div>
     </div>
-  </div>
+  </ClinicalDrawer>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalDrawer } from "ui";
+import {
+  AlertTriangle,
+  Ban,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  FileCheck2,
+  FileText,
+  Globe,
+  Inbox,
+  Lock,
+  OctagonAlert,
+  Play,
+  RefreshCw,
+  ScrollText,
+  ShieldCheck,
+  Square,
+  Undo2,
+  Unlock,
+  Users,
+  X,
+  XCircle,
+} from "lucide-vue-next";
 import { useFileshareStore } from "../../stores/fileshare";
 
 const props = defineProps({
@@ -331,10 +387,9 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["close"]);
+defineEmits(["close"]);
 
 const fileshareStore = useFileshareStore();
-const drawerRef = ref(null);
 
 const loading = ref(false);
 const loadingMore = ref(false);
@@ -376,11 +431,6 @@ const hasActiveFilters = computed(() => {
 
 const hasMore = computed(() => {
   return entries.value.length < total.value;
-});
-
-useFocusTrap(drawerRef, {
-  isOpen: () => props.isOpen,
-  onEscape: () => emit("close"),
 });
 
 onMounted(() => {
@@ -503,50 +553,50 @@ function getRawDetailKeys(detail) {
   return Object.keys(detail).filter((k) => !HANDLED_DETAIL_KEYS.includes(k));
 }
 
-function getEventIcon(eventType) {
+function getEventIconComponent(eventType) {
   const norm = (eventType || "").toUpperCase();
   switch (norm) {
     case "FILE_UPLOADED":
-      return "📄";
+      return FileText;
     case "VERSION_CREATED":
     case "REVISION_UPLOADED":
-      return "🔄";
+      return RefreshCw;
     case "GRANT_CREATED":
-      return "👥";
+      return Users;
     case "GRANT_REVOKED":
-      return "🚫";
+      return Ban;
     case "GUEST_LINK_CREATED":
-      return "🌐";
+      return Globe;
     case "GUEST_LINK_ACCESSED":
-      return "👁️";
+      return Eye;
     case "GUEST_LINK_REVOKED":
-      return "🔒";
+      return Lock;
     case "SCAN_COMPLETE":
-      return "🛡️";
+      return ShieldCheck;
     case "SCAN_QUARANTINED":
-      return "⚠️";
+      return AlertTriangle;
     case "CONVERSION_COMPLETE":
-      return "📑";
+      return FileCheck2;
     case "HOLD_SET":
-      return "🛑";
+      return OctagonAlert;
     case "HOLD_CLEARED":
-      return "🔓";
+      return Unlock;
     case "DOCUMENT_APPROVED":
     case "FILE_APPROVED":
-      return "✅";
+      return CheckCircle2;
     case "DOCUMENT_REJECTED":
     case "FILE_REJECTED":
-      return "❌";
+      return XCircle;
     case "APPROVAL_RESCINDED":
-      return "↩️";
+      return Undo2;
     case "VIEW_OPEN":
-      return "👁️";
+      return Eye;
     case "PLAY_START":
-      return "▶️";
+      return Play;
     case "PLAY_END":
-      return "⏹️";
+      return Square;
     default:
-      return "📜";
+      return ScrollText;
   }
 }
 
@@ -613,44 +663,16 @@ function formatRelativeTime(isoString) {
 </script>
 
 <style scoped>
-.activity-feed-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(4px);
-  z-index: 1000;
-  display: flex;
-  justify-content: flex-end;
-  animation: fadeIn 0.2s ease-out;
-}
-
 .activity-feed-drawer {
-  width: 100%;
-  max-width: 580px;
-  height: 100%;
   background: var(--semantic-color-surface);
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
+@media (min-width: 481px) {
+  .activity-feed-drawer {
+    max-width: 580px;
   }
 }
 
@@ -721,6 +743,11 @@ function formatRelativeTime(isoString) {
   font-size: 1.1rem;
   cursor: pointer;
   padding: 0.4rem 0.6rem;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: var(--radius-sm, 6px);
   transition: all 0.15s ease;
 }
@@ -989,6 +1016,9 @@ function formatRelativeTime(isoString) {
   cursor: pointer;
   padding: 0;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .detail-toggle-btn:hover {

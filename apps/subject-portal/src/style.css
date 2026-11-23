@@ -638,16 +638,18 @@ body {
 /* Modals */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
+  height: var(--overlay-viewport-height-fallback, 100vh);
+  height: var(--overlay-viewport-height, 100dvh);
   background-color: rgba(15, 23, 42, 0.65);
   display: flex;
   justify-content: center;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: var(--spacing-md, 16px);
+  align-items: center;
+  box-sizing: border-box;
+  padding: max(16px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+    max(16px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px)))
+    max(16px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)))
+    max(16px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px)));
   z-index: 1000;
 }
 
@@ -656,7 +658,9 @@ body {
   border-radius: 12px;
   width: 100%;
   max-width: 500px;
-  max-height: calc(100vh - 32px);
+  max-height: var(--overlay-sheet-max-height-fallback, 90vh);
+  max-height: var(--overlay-sheet-max-height, 90dvh);
+  min-height: 0;
   margin: auto;
   display: flex;
   flex-direction: column;
@@ -668,7 +672,9 @@ body {
 }
 
 .modal > form,
-.modal > #pin-reset-confirmation {
+.modal > #pin-reset-confirmation,
+.modal-content-passthrough > form,
+.modal-content-passthrough > #pin-reset-confirmation {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
@@ -733,11 +739,20 @@ body {
 
 @media (max-width: 480px) {
   .modal-overlay {
-    padding: var(--spacing-xs, 8px);
+    align-items: flex-end;
+    padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) 0 0 0;
   }
 
   .modal {
-    max-height: calc(100vh - 16px);
+    max-width: 100%;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    max-height: var(--overlay-sheet-max-height-fallback, 90vh);
+    max-height: var(--overlay-sheet-max-height, 90dvh);
+    padding-bottom: var(
+      --safe-area-inset-bottom,
+      env(safe-area-inset-bottom, 0px)
+    );
   }
 
   .modal-header {
@@ -757,21 +772,64 @@ body {
   }
 }
 
+.modal-shell {
+  max-width: 500px;
+  border-radius: 12px;
+}
+
+.modal.modal-content-passthrough {
+  max-width: 100%;
+  max-height: none;
+  margin: 0;
+  box-shadow: none;
+  animation: none;
+}
+
+.modal-content-passthrough {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.drawer-content-passthrough {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
 @media (max-height: 480px) {
   .modal-overlay {
     padding: var(--spacing-xs, 8px);
   }
 
   .modal {
-    max-height: calc(100vh - 16px);
+    max-height: var(--overlay-sheet-max-height-fallback, 90vh);
+    max-height: var(--overlay-sheet-max-height, 90dvh);
+  }
+}
+
+@media (max-height: 360px) {
+  .modal {
+    max-height: var(--overlay-sheet-max-height-fallback, 90vh);
+    max-height: var(--overlay-sheet-max-height, 90dvh);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     display: block;
   }
 
+  .modal-content-passthrough,
+  .modal-content-passthrough > form,
+  .modal-content-passthrough > #pin-reset-confirmation,
   .modal > form,
   .modal > #pin-reset-confirmation {
     display: block;
+    overflow: visible;
   }
 
   .modal-body {
@@ -1026,58 +1084,38 @@ body {
 
 /* Scrim / Overlay */
 .global-drawer-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(2px);
+  height: var(--overlay-viewport-height-fallback, 100vh);
+  height: var(--overlay-viewport-height, 100dvh);
   z-index: 1000;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition:
-    opacity 0.25s ease,
-    visibility 0s linear 0.25s;
-}
-
-.global-drawer-overlay.active {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transition:
-    opacity 0.25s ease,
-    visibility 0s linear 0s;
 }
 
 /* Floating Drawer Panel */
 .global-drawer {
-  position: fixed;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 400px;
+  width: min(100vw, 400px);
   max-width: 100vw;
+  height: var(--overlay-viewport-height-fallback, 100vh);
+  height: var(--overlay-viewport-height, 100dvh);
   background-color: var(--bg-card);
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
   z-index: 1001;
   display: flex;
   flex-direction: column;
-  visibility: hidden;
   outline: none;
-  transform: translateX(100%);
-  transition:
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0s linear 0.3s;
 }
 
-.global-drawer.active {
-  visibility: visible;
-  transform: translateX(0);
-  transition:
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0s linear 0s;
+@media (max-width: 480px) {
+  .global-drawer {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: var(--overlay-sheet-max-height-fallback, 90vh);
+    max-height: var(--overlay-sheet-max-height, 90dvh);
+    border-radius: 16px 16px 0 0;
+    padding-bottom: var(
+      --safe-area-inset-bottom,
+      env(safe-area-inset-bottom, 0px)
+    );
+  }
 }
 
 .drawer-header {

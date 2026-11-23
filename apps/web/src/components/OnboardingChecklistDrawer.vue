@@ -16,7 +16,9 @@
         <div class="drawer-header">
           <div class="header-main-row">
             <div class="header-title-group">
-              <span class="header-icon">🚀</span>
+              <span class="header-icon" aria-hidden="true">
+                <Rocket :size="22" :stroke-width="1.75" aria-hidden="true" />
+              </span>
               <div>
                 <h3 id="checklist-drawer-title" class="drawer-title">
                   Workspace Setup Checklist
@@ -32,7 +34,7 @@
               aria-label="Close Setup Checklist Drawer"
               @click="onboardingStore.closeDrawer()"
             >
-              ✕
+              <X :size="18" :stroke-width="1.75" aria-hidden="true" />
             </button>
           </div>
 
@@ -64,7 +66,15 @@
               v-if="onboardingStore.isChecklistComplete"
               class="complete-banner"
             >
-              🎉 All setup milestones completed! Study configuration ready.
+              <CheckCircle2
+                :size="16"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
+              <span
+                >All setup milestones completed! Study configuration
+                ready.</span
+              >
             </div>
           </div>
         </div>
@@ -113,7 +123,12 @@
               :aria-label="'Go to Task — ' + task.title"
               @click="navigateToTask(task)"
             >
-              Go to Task ↗
+              <span>Go to Task</span>
+              <ArrowUpRight
+                :size="14"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
             </button>
           </div>
         </div>
@@ -162,6 +177,7 @@
 </template>
 
 <script setup>
+import { ArrowUpRight, CheckCircle2, Rocket, X } from "lucide-vue-next";
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { ClinicalDrawer, useEscapeClose } from "ui";
@@ -242,39 +258,15 @@ function startGuidedTour() {
 
 <style scoped>
 :deep(.drawer-overlay) {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(2px);
   z-index: 1050;
-  display: flex;
-  justify-content: flex-end;
 }
 
 :deep(.drawer-panel) {
-  width: 420px;
-  max-width: 100vw;
-  height: 100%;
+  width: min(100vw, 420px);
   background-color: var(--semantic-color-surface);
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
   z-index: 1051;
   font-family: var(--semantic-font-family);
   color: var(--semantic-color-text);
-  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
 }
 
 .drawer-header {

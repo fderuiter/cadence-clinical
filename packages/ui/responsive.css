@@ -190,7 +190,17 @@
   border-radius: 4px !important;
 }
 
-/* 7. Mobile Breakpoint Drawer Rules (Requirement 2) */
+/* 7. Mobile Breakpoint Drawer & Overlay Rules (Requirement 2) */
+.overlay-viewport-full {
+  height: var(--overlay-viewport-height-fallback, 100vh);
+  height: var(--overlay-viewport-height, 100dvh);
+}
+
+.overlay-sheet-bounded {
+  max-height: var(--overlay-sheet-max-height-fallback, 90vh);
+  max-height: var(--overlay-sheet-max-height, 90dvh);
+}
+
 @media (max-width: 640px) {
   .drawer-mobile-full,
   .drawer-panel-mobile-full,
@@ -199,5 +209,35 @@
   .readability-drawer {
     width: 100vw !important;
     max-width: 100vw !important;
+    max-height: var(--overlay-viewport-height-fallback, 100vh);
+    max-height: var(--overlay-viewport-height, 100dvh);
+  }
+}
+
+@media (max-width: 480px) {
+  .drawer-mobile-full,
+  .drawer-panel-mobile-full,
+  .ehr-reconciliation-drawer,
+  .share-drawer,
+  .readability-drawer {
+    height: auto !important;
+    max-height: var(--overlay-sheet-max-height-fallback, 90vh) !important;
+    max-height: var(--overlay-sheet-max-height, 90dvh) !important;
+    padding-bottom: var(
+      --safe-area-inset-bottom,
+      env(safe-area-inset-bottom, 0px)
+    );
+  }
+}
+
+/* Prevent iOS Safari auto-zoom on form controls inside clinical overlays */
+@media (max-width: 768px), (pointer: coarse) {
+  .clinical-modal-dialog input:not([type="checkbox"]):not([type="radio"]),
+  .clinical-modal-dialog select,
+  .clinical-modal-dialog textarea,
+  .clinical-drawer-panel input:not([type="checkbox"]):not([type="radio"]),
+  .clinical-drawer-panel select,
+  .clinical-drawer-panel textarea {
+    font-size: max(16px, 1rem);
   }
 }

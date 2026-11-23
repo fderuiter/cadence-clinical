@@ -1,20 +1,21 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="modal-backdrop"
-    role="presentation"
-    @click.self="close"
+  <ClinicalModal
+    :is-open="isOpen"
+    :teleport="false"
+    :dismissible="!loading"
+    size="lg"
+    aria-labelledby="create-modal-title"
+    close-label="Close"
+    backdrop-class="modal-backdrop"
+    dialog-class="modal-dialog ticket-create-modal"
+    body-class="ticket-create-body"
+    @close="close"
   >
-    <div
-      ref="modalRef"
-      class="modal-dialog ticket-create-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="create-modal-title"
-      tabindex="-1"
-    >
-      <div class="modal-header">
-        <div class="modal-header-icon">🎫</div>
+    <template #header>
+      <div class="ticket-header-main">
+        <div class="modal-header-icon" aria-hidden="true">
+          <Ticket :size="20" />
+        </div>
         <div>
           <h3 id="create-modal-title" class="modal-title">
             Log Clinical Issue / Ticket
@@ -24,234 +25,223 @@
             operational issue
           </p>
         </div>
-        <button
-          type="button"
-          class="btn-close"
-          aria-label="Close"
-          @click="close"
-        >
-          ✕
-        </button>
       </div>
+    </template>
 
-      <div class="modal-body">
-        <div class="form-row">
-          <div class="form-group flex-2">
-            <label for="ticket-title" class="form-label"
-              >Issue Title <span class="text-danger">*</span></label
-            >
-            <input
-              id="ticket-title"
-              v-model="form.title"
-              type="text"
-              class="form-control"
-              placeholder="e.g. Temperature Excursion in IP Storage Room 102"
-              required
-            />
-          </div>
-          <div class="form-group flex-1">
-            <label for="ticket-category" class="form-label"
-              >ICH GCP Category <span class="text-danger">*</span></label
-            >
-            <select
-              id="ticket-category"
-              v-model="form.category"
-              class="form-control"
-            >
-              <option value="PROTOCOL_DEVIATION">Protocol Deviation</option>
-              <option value="DATA_QUERY">Data Query / Discrepancy</option>
-              <option value="SAFETY_ADVERSE_EVENT">
-                Safety &amp; SAE Event
-              </option>
-              <option value="SUPPLY_EXCURSION">
-                Supply &amp; Temp Excursion
-              </option>
-              <option value="SITE_OPERATIONS">Site Operations</option>
-              <option value="MONITORING_FINDING">
-                Monitoring Finding (MVR)
-              </option>
-              <option value="TECHNICAL_SYSTEM">Technical / System Bug</option>
-              <option value="ACCESS_CONTROL">
-                Access &amp; Role Provisioning
-              </option>
-              <option value="REGULATORY_QUERY">
-                Regulatory &amp; Ethics Query
-              </option>
-              <option value="SYSTEM_SUPPORT">System Support</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group flex-1">
-            <label for="ticket-severity" class="form-label"
-              >GxP Severity Rating <span class="text-danger">*</span></label
-            >
-            <select
-              id="ticket-severity"
-              v-model="form.gxp_severity"
-              class="form-control"
-            >
-              <option value="MINOR">
-                Minor (No safety or data integrity impact)
-              </option>
-              <option value="MAJOR">
-                Major (Potential impact on protocol/endpoint)
-              </option>
-              <option value="CRITICAL">
-                Critical (Immediate safety, integrity, or compliance breach)
-              </option>
-            </select>
-          </div>
-          <div class="form-group flex-1">
-            <label for="ticket-priority" class="form-label">Priority</label>
-            <select
-              id="ticket-priority"
-              v-model="form.priority"
-              class="form-control"
-            >
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-              <option value="CRITICAL">Critical</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="ticket-desc" class="form-label"
-            >Clinical Narrative &amp; Description
-            <span class="text-danger">*</span></label
-          >
-          <textarea
-            id="ticket-desc"
-            v-model="form.description"
-            rows="3"
-            class="form-control"
-            placeholder="Detailed description of the issue, circumstances, and immediate containment..."
-            required
-          />
-        </div>
-
-        <div class="form-row">
-          <div class="form-group flex-1">
-            <label for="ticket-study" class="form-label">Study ID</label>
-            <input
-              id="ticket-study"
-              v-model="form.study_id"
-              type="text"
-              class="form-control"
-              placeholder="e.g. STUDY-ONC-202"
-            />
-          </div>
-          <div class="form-group flex-1">
-            <label for="ticket-site" class="form-label">Site ID</label>
-            <input
-              id="ticket-site"
-              v-model="form.site_id"
-              type="text"
-              class="form-control"
-              placeholder="e.g. SITE-101"
-            />
-          </div>
-          <div class="form-group flex-1">
-            <label for="ticket-subject" class="form-label">Subject ID</label>
-            <input
-              id="ticket-subject"
-              v-model="form.subject_id"
-              type="text"
-              class="form-control"
-              placeholder="e.g. SUBJ-8812"
-            />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group flex-1">
-            <label for="ticket-entity-type" class="form-label"
-              >Linked Entity Type</label
-            >
-            <select
-              id="ticket-entity-type"
-              v-model="form.entity_type"
-              class="form-control"
-            >
-              <option value="">None / General</option>
-              <option value="SUBJECT">Clinical Subject</option>
-              <option value="CRF_FORM">eCRF Form Submission</option>
-              <option value="SAE_CASE">Safety SAE Case</option>
-              <option value="CAPA_ACTION">Quality CAPA Record</option>
-              <option value="TMF_DOCUMENT">eTMF Document</option>
-              <option value="MVR_VISIT">Monitoring Visit Finding</option>
-              <option value="SUPPLY_KIT">Investigational Product Kit</option>
-            </select>
-          </div>
-          <div class="form-group flex-2">
-            <label for="ticket-entity-id" class="form-label"
-              >Linked Entity ID</label
-            >
-            <input
-              id="ticket-entity-id"
-              v-model="form.entity_id"
-              type="text"
-              class="form-control"
-              placeholder="e.g. FORM-AE-001 or CAPA-2026-09"
-            />
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="ticket-reason" class="form-label"
-            >GxP Justification / Reason for Creation
-            <span class="text-danger">*</span></label
-          >
-          <input
-            id="ticket-reason"
-            v-model="form.reason_for_change"
-            type="text"
-            class="form-control"
-            placeholder="Mandatory 21 CFR Part 11 audit reason..."
-            required
-          />
-        </div>
-
-        <div
-          v-if="errorMessage"
-          id="ticket-escalation-refusal"
-          class="error-banner"
-          role="alert"
+    <div class="form-row">
+      <div class="form-group flex-2">
+        <label for="ticket-title" class="form-label"
+          >Issue Title <span class="text-danger">*</span></label
         >
-          ⚠️ {{ errorMessage }}
-        </div>
+        <input
+          id="ticket-title"
+          v-model="form.title"
+          type="text"
+          class="form-control"
+          placeholder="e.g. Temperature Excursion in IP Storage Room 102"
+          required
+        />
       </div>
-
-      <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          :disabled="loading"
-          @click="close"
+      <div class="form-group flex-1">
+        <label for="ticket-category" class="form-label"
+          >ICH GCP Category <span class="text-danger">*</span></label
         >
-          Cancel
-        </button>
-        <button
-          id="btn-submit-ticket"
-          type="button"
-          class="btn btn-primary"
-          :disabled="loading || !isFormValid"
-          @click="handleSubmit"
+        <select
+          id="ticket-category"
+          v-model="form.category"
+          class="form-control"
         >
-          <span v-if="loading" class="spinner" />
-          <span v-else>🚀 Log Issue</span>
-        </button>
+          <option value="PROTOCOL_DEVIATION">Protocol Deviation</option>
+          <option value="DATA_QUERY">Data Query / Discrepancy</option>
+          <option value="SAFETY_ADVERSE_EVENT">Safety &amp; SAE Event</option>
+          <option value="SUPPLY_EXCURSION">Supply &amp; Temp Excursion</option>
+          <option value="SITE_OPERATIONS">Site Operations</option>
+          <option value="MONITORING_FINDING">Monitoring Finding (MVR)</option>
+          <option value="TECHNICAL_SYSTEM">Technical / System Bug</option>
+          <option value="ACCESS_CONTROL">Access &amp; Role Provisioning</option>
+          <option value="REGULATORY_QUERY">
+            Regulatory &amp; Ethics Query
+          </option>
+          <option value="SYSTEM_SUPPORT">System Support</option>
+        </select>
       </div>
     </div>
-  </div>
+
+    <div class="form-row">
+      <div class="form-group flex-1">
+        <label for="ticket-severity" class="form-label"
+          >GxP Severity Rating <span class="text-danger">*</span></label
+        >
+        <select
+          id="ticket-severity"
+          v-model="form.gxp_severity"
+          class="form-control"
+        >
+          <option value="MINOR">
+            Minor (No safety or data integrity impact)
+          </option>
+          <option value="MAJOR">
+            Major (Potential impact on protocol/endpoint)
+          </option>
+          <option value="CRITICAL">
+            Critical (Immediate safety, integrity, or compliance breach)
+          </option>
+        </select>
+      </div>
+      <div class="form-group flex-1">
+        <label for="ticket-priority" class="form-label">Priority</label>
+        <select
+          id="ticket-priority"
+          v-model="form.priority"
+          class="form-control"
+        >
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+          <option value="CRITICAL">Critical</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="ticket-desc" class="form-label"
+        >Clinical Narrative &amp; Description
+        <span class="text-danger">*</span></label
+      >
+      <textarea
+        id="ticket-desc"
+        v-model="form.description"
+        rows="3"
+        class="form-control"
+        placeholder="Detailed description of the issue, circumstances, and immediate containment..."
+        required
+      />
+    </div>
+
+    <div class="form-row">
+      <div class="form-group flex-1">
+        <label for="ticket-study" class="form-label">Study ID</label>
+        <input
+          id="ticket-study"
+          v-model="form.study_id"
+          type="text"
+          class="form-control"
+          placeholder="e.g. STUDY-ONC-202"
+        />
+      </div>
+      <div class="form-group flex-1">
+        <label for="ticket-site" class="form-label">Site ID</label>
+        <input
+          id="ticket-site"
+          v-model="form.site_id"
+          type="text"
+          class="form-control"
+          placeholder="e.g. SITE-101"
+        />
+      </div>
+      <div class="form-group flex-1">
+        <label for="ticket-subject" class="form-label">Subject ID</label>
+        <input
+          id="ticket-subject"
+          v-model="form.subject_id"
+          type="text"
+          class="form-control"
+          placeholder="e.g. SUBJ-8812"
+        />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group flex-1">
+        <label for="ticket-entity-type" class="form-label"
+          >Linked Entity Type</label
+        >
+        <select
+          id="ticket-entity-type"
+          v-model="form.entity_type"
+          class="form-control"
+        >
+          <option value="">None / General</option>
+          <option value="SUBJECT">Clinical Subject</option>
+          <option value="CRF_FORM">eCRF Form Submission</option>
+          <option value="SAE_CASE">Safety SAE Case</option>
+          <option value="CAPA_ACTION">Quality CAPA Record</option>
+          <option value="TMF_DOCUMENT">eTMF Document</option>
+          <option value="MVR_VISIT">Monitoring Visit Finding</option>
+          <option value="SUPPLY_KIT">Investigational Product Kit</option>
+        </select>
+      </div>
+      <div class="form-group flex-2">
+        <label for="ticket-entity-id" class="form-label"
+          >Linked Entity ID</label
+        >
+        <input
+          id="ticket-entity-id"
+          v-model="form.entity_id"
+          type="text"
+          class="form-control"
+          placeholder="e.g. FORM-AE-001 or CAPA-2026-09"
+        />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="ticket-reason" class="form-label"
+        >GxP Justification / Reason for Creation
+        <span class="text-danger">*</span></label
+      >
+      <input
+        id="ticket-reason"
+        v-model="form.reason_for_change"
+        type="text"
+        class="form-control"
+        placeholder="Mandatory 21 CFR Part 11 audit reason..."
+        required
+      />
+    </div>
+
+    <div
+      v-if="errorMessage"
+      id="ticket-escalation-refusal"
+      class="error-banner"
+      style="display: flex; align-items: center; gap: 6px"
+      role="alert"
+    >
+      <AlertTriangle :size="16" aria-hidden="true" />
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <template #footer>
+      <button
+        type="button"
+        class="btn btn-secondary"
+        :disabled="loading"
+        @click="close"
+      >
+        Cancel
+      </button>
+      <button
+        id="btn-submit-ticket"
+        type="button"
+        class="btn btn-primary"
+        style="display: inline-flex; align-items: center; gap: 6px"
+        :disabled="loading || !isFormValid"
+        @click="handleSubmit"
+      >
+        <span v-if="loading" class="spinner" />
+        <template v-else>
+          <Send :size="14" aria-hidden="true" />
+          <span>Log Issue</span>
+        </template>
+      </button>
+    </template>
+  </ClinicalModal>
 </template>
 
 <script setup>
+import { AlertTriangle, Send, Ticket } from "lucide-vue-next";
 import { ref, reactive, computed, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 import { ticketsApi } from "../../api/ticketsApi";
 import { describeApiError } from "../../utils/apiErrors.js";
 import { isDemoBuild } from "../../utils/demoMode.js";
@@ -277,7 +267,6 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "created"]);
 
-const modalRef = ref(null);
 const loading = ref(false);
 const errorMessage = ref("");
 
@@ -340,14 +329,10 @@ const isFormValid = computed(() => {
 });
 
 const close = () => {
+  if (loading.value) return;
   errorMessage.value = "";
   emit("close");
 };
-
-useFocusTrap(modalRef, {
-  isOpen: () => props.isOpen,
-  onEscape: close,
-});
 
 const handleSubmit = async () => {
   if (!isFormValid.value) {
@@ -385,16 +370,23 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-.modal-backdrop {
-  z-index: 1100;
+.ticket-header-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.modal-body {
+.modal-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 0.78rem;
+  color: var(--semantic-color-text-secondary);
+}
+
+:deep(.ticket-create-body) {
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  overflow-y: auto;
 }
 
 .form-row {

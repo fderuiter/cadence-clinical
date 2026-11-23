@@ -1,522 +1,583 @@
 <template>
-  <div class="modal-backdrop" role="presentation" @click.self="$emit('close')">
-    <div
-      ref="modalRef"
-      class="modal-card media-preview-modal"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="'Secure Media Preview: ' + (fileRecord?.filename || 'File')"
-      tabindex="-1"
-      @contextmenu.prevent
-    >
-      <!-- Header -->
-      <div class="modal-header">
-        <div class="header-details">
-          <h3>
-            <span class="secure-icon" aria-hidden="true">🔒</span>
-            Secure Regulated Viewer — {{ fileRecord?.filename }}
-          </h3>
-          <p class="gxp-tracking-subtitle">
-            System ID: <code>{{ fileRecord?.id }}</code> | Version:
-            <strong>v{{ fileRecord?.version_index || 1 }}.0</strong> | MIME:
-            <code>{{
-              fileRecord?.mime_type || "application/octet-stream"
-            }}</code>
-          </p>
-        </div>
-        <div class="header-actions">
-          <div
-            v-if="fileRecord?.conversion_status === 'READY'"
-            class="approval-badge rendition-pill"
-            data-testid="rendition-badge"
-            title="Automatic PDF Rendition generated for regulated preview"
-          >
-            <span class="badge-icon">📄</span>
-            <span class="badge-label">PDF Rendition</span>
-          </div>
-          <div
-            v-else-if="fileRecord?.conversion_status === 'PENDING'"
-            class="approval-badge pending-pill"
-            data-testid="converting-badge"
-            title="Converting Office document to PDF rendition in background"
-          >
-            <span class="badge-icon">🔄</span>
-            <span class="badge-label">Converting...</span>
-          </div>
-          <div
-            v-if="isApproved"
-            class="approval-badge approved-pill"
-            data-testid="approved-badge"
-          >
-            <span class="badge-icon">✅</span>
-            <span class="badge-label">Approved</span>
-            <span v-if="fileRecord?.approved_by" class="badge-signer font-mono"
-              >by {{ fileRecord.approved_by }}</span
-            >
-          </div>
-          <button
-            v-if="canApprove && !isApproved"
-            class="btn btn-sm btn-success btn-approve"
-            data-testid="approve-doc-btn"
-            title="Approve this document with 21 CFR Part 11 Electronic Signature"
-            @click="openReAuthModal"
-          >
-            ✍️ Approve this document
-          </button>
-          <button
-            v-if="canDownload"
-            class="btn btn-sm btn-outline-primary btn-download"
-            title="Download Original File"
-            :aria-label="'Download ' + fileRecord?.filename"
-            @click="handleDownload"
-          >
-            📥 Download
-          </button>
-          <button
-            class="close-modal-btn"
-            aria-label="Close preview modal"
-            @click="$emit('close')"
-          >
-            ×
-          </button>
-        </div>
+  <ClinicalModal
+    :open="true"
+    :teleport="false"
+    size="xl"
+    backdrop-class="modal-backdrop"
+    dialog-class="modal-card media-preview-modal"
+    :aria-label="'Secure Media Preview: ' + (fileRecord?.filename || 'File')"
+    :show-close-button="false"
+    :show-footer="false"
+    body-class="modal-content-passthrough"
+    @contextmenu.prevent
+    @close="$emit('close')"
+  >
+    <template #header>
+      <div class="header-details">
+        <h3>
+          <span class="secure-icon" aria-hidden="true">
+            <Lock :size="16" :stroke-width="1.75" aria-hidden="true" />
+          </span>
+          Secure Regulated Viewer — {{ fileRecord?.filename }}
+        </h3>
+        <p class="gxp-tracking-subtitle">
+          System ID: <code>{{ fileRecord?.id }}</code> | Version:
+          <strong>v{{ fileRecord?.version_index || 1 }}.0</strong> | MIME:
+          <code>{{ fileRecord?.mime_type || "application/octet-stream" }}</code>
+        </p>
       </div>
-
-      <!-- Layout: Sidebar + Main Viewer Workspace -->
-      <div class="modal-body-layout">
-        <!-- Metadata Sidebar -->
-        <aside
-          class="metadata-sidebar"
-          aria-label="File Metadata and Audit Ledger"
+      <div class="header-actions">
+        <div
+          v-if="fileRecord?.conversion_status === 'READY'"
+          class="approval-badge rendition-pill"
+          data-testid="rendition-badge"
+          title="Automatic PDF Rendition generated for regulated preview"
         >
-          <div class="meta-section">
-            <h4>Record Details</h4>
-            <div class="meta-row">
-              <span class="meta-label">Filename:</span>
-              <span
-                class="meta-value font-mono"
-                :title="fileRecord?.filename"
-                >{{ fileRecord?.filename }}</span
-              >
-            </div>
-            <div class="meta-row">
-              <span class="meta-label">Study ID:</span>
-              <span class="meta-value font-mono">{{
-                fileRecord?.study_id
-              }}</span>
-            </div>
-            <div v-if="fileRecord?.site_id" class="meta-row">
-              <span class="meta-label">Site ID:</span>
-              <span class="meta-value font-mono">{{
-                fileRecord?.site_id
-              }}</span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-label">File Size:</span>
-              <span class="meta-value">{{
-                formatFileSize(fileRecord?.size_bytes)
-              }}</span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-label">Status:</span>
-              <span
-                class="meta-value font-bold"
-                :class="getStatusClass(fileRecord?.status)"
-              >
-                {{ fileRecord?.status || "ACTIVE" }}
-              </span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-label">Uploaded By:</span>
-              <span class="meta-value font-mono">{{
-                fileRecord?.uploaded_by || fileRecord?.created_by
-              }}</span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-label">Uploaded At:</span>
-              <span class="meta-value">{{
-                formatDate(fileRecord?.uploaded_at || fileRecord?.created_at)
-              }}</span>
-            </div>
-          </div>
+          <FileText
+            class="badge-icon"
+            :size="14"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <span class="badge-label">PDF Rendition</span>
+        </div>
+        <div
+          v-else-if="fileRecord?.conversion_status === 'PENDING'"
+          class="approval-badge pending-pill"
+          data-testid="converting-badge"
+          title="Converting Office document to PDF rendition in background"
+        >
+          <RefreshCw
+            class="badge-icon"
+            :size="14"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <span class="badge-label">Converting...</span>
+        </div>
+        <div
+          v-if="isApproved"
+          class="approval-badge approved-pill"
+          data-testid="approved-badge"
+        >
+          <CheckCircle2
+            class="badge-icon"
+            :size="14"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <span class="badge-label">Approved</span>
+          <span v-if="fileRecord?.approved_by" class="badge-signer font-mono"
+            >by {{ fileRecord.approved_by }}</span
+          >
+        </div>
+        <button
+          v-if="canApprove && !isApproved"
+          type="button"
+          class="btn btn-sm btn-success btn-approve"
+          data-testid="approve-doc-btn"
+          title="Approve this document with 21 CFR Part 11 Electronic Signature"
+          @click="openReAuthModal"
+        >
+          <PenTool :size="14" :stroke-width="1.75" aria-hidden="true" />
+          Approve this document
+        </button>
+        <button
+          v-if="canDownload"
+          type="button"
+          class="btn btn-sm btn-outline-primary btn-download"
+          title="Download Original File"
+          :aria-label="'Download ' + fileRecord?.filename"
+          @click="handleDownload"
+        >
+          <Download :size="14" :stroke-width="1.75" aria-hidden="true" />
+          Download
+        </button>
+        <button
+          type="button"
+          class="close-modal-btn"
+          aria-label="Close preview modal"
+          @click="$emit('close')"
+        >
+          <X :size="18" :stroke-width="1.75" aria-hidden="true" />
+        </button>
+      </div>
+    </template>
 
-          <!-- 21 CFR Part 11 Audit Record -->
-          <div class="meta-section border-top">
-            <h4>21 CFR Part 11 Audit Trail</h4>
-            <div class="meta-row">
-              <span class="meta-label">Audit Status:</span>
-              <span
-                class="meta-value font-bold"
-                :class="auditErrorState ? 'text-danger' : 'text-success'"
-                data-testid="audit-status-badge"
-              >
-                {{ auditErrorState ? "Audit Interrupted" : "Audit Active" }}
-              </span>
+    <!-- Layout: Sidebar + Main Viewer Workspace -->
+    <div class="modal-body-layout">
+      <!-- Metadata Sidebar -->
+      <aside
+        class="metadata-sidebar"
+        aria-label="File Metadata and Audit Ledger"
+      >
+        <div class="meta-section">
+          <h4>Record Details</h4>
+          <div class="meta-row">
+            <span class="meta-label">Filename:</span>
+            <span class="meta-value font-mono" :title="fileRecord?.filename">{{
+              fileRecord?.filename
+            }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Study ID:</span>
+            <span class="meta-value font-mono">{{ fileRecord?.study_id }}</span>
+          </div>
+          <div v-if="fileRecord?.site_id" class="meta-row">
+            <span class="meta-label">Site ID:</span>
+            <span class="meta-value font-mono">{{ fileRecord?.site_id }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">File Size:</span>
+            <span class="meta-value">{{
+              formatFileSize(fileRecord?.size_bytes)
+            }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Status:</span>
+            <span
+              class="meta-value font-bold"
+              :class="getStatusClass(fileRecord?.status)"
+            >
+              {{ fileRecord?.status || "ACTIVE" }}
+            </span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Uploaded By:</span>
+            <span class="meta-value font-mono">{{
+              fileRecord?.uploaded_by || fileRecord?.created_by
+            }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Uploaded At:</span>
+            <span class="meta-value">{{
+              formatDate(fileRecord?.uploaded_at || fileRecord?.created_at)
+            }}</span>
+          </div>
+        </div>
+
+        <!-- 21 CFR Part 11 Audit Record -->
+        <div class="meta-section border-top">
+          <h4>21 CFR Part 11 Audit Trail</h4>
+          <div class="meta-row">
+            <span class="meta-label">Audit Status:</span>
+            <span
+              class="meta-value font-bold"
+              :class="auditErrorState ? 'text-danger' : 'text-success'"
+              data-testid="audit-status-badge"
+            >
+              {{ auditErrorState ? "Audit Interrupted" : "Audit Active" }}
+            </span>
+          </div>
+          <div class="change-reason-block">
+            <h5>Change Justification:</h5>
+            <p class="reason-text">
+              {{
+                fileRecord?.reason_for_change ||
+                "Standard regulated file ingestion."
+              }}
+            </p>
+          </div>
+          <div class="checksum-block">
+            <h5>SHA-256 Digest:</h5>
+            <code class="checksum-text" :title="fileRecord?.checksum_sha256">
+              {{ fileRecord?.checksum_sha256 || emptySha256Digest }}
+            </code>
+          </div>
+        </div>
+
+        <!-- Active Access Permissions -->
+        <div class="meta-section border-top">
+          <h4>Security Context</h4>
+          <div class="manifest-card signed">
+            <p class="sign-status">
+              <ShieldCheck :size="14" :stroke-width="1.75" aria-hidden="true" />
+              PROTECTED VIEW ENFORCED
+            </p>
+            <p class="signer-meta">
+              Viewer: <strong>{{ currentUserId }}</strong>
+            </p>
+            <p class="signer-meta">
+              Role Context:
+              <span>{{ activeUserRoles.join(", ") || "Authenticated" }}</span>
+            </p>
+            <p class="signer-meta">
+              Download:
+              <strong>{{
+                canDownload ? "Permitted" : "Restricted (View-Only)"
+              }}</strong>
+            </p>
+          </div>
+        </div>
+
+        <!-- 21 CFR Part 11 Electronic Signature Approval Manifestation -->
+        <div
+          v-if="isApproved"
+          class="meta-section border-top"
+          data-testid="approval-details-section"
+        >
+          <h4>Document Approval</h4>
+          <div class="manifest-card approved">
+            <p class="sign-status text-success font-bold">
+              <CheckCircle2
+                :size="14"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
+              Approved
+            </p>
+            <p v-if="fileRecord?.approved_by" class="signer-meta">
+              Signer:
+              <strong class="font-mono">{{ fileRecord.approved_by }}</strong>
+            </p>
+            <p v-if="fileRecord?.approved_at" class="signer-meta">
+              Approved At:
+              <span>{{ formatDate(fileRecord.approved_at) }}</span>
+            </p>
+            <p v-if="fileRecord?.approval_reason" class="signer-meta">
+              Meaning: <em>{{ fileRecord.approval_reason }}</em>
+            </p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Viewer Workspace -->
+      <div
+        class="viewer-workspace"
+        role="region"
+        aria-label="Media Canvas Workspace"
+      >
+        <!-- Watermark Overlay (Pointer events none, subtle rotating diagonal text) -->
+        <div class="watermark-overlay-container" aria-hidden="true">
+          <div v-for="n in 4" :key="n" class="diagonal-watermark-row">
+            <span class="watermark-text">{{ watermarkText }}</span>
+          </div>
+        </div>
+
+        <!-- Media Container with Type Switching -->
+        <div class="media-canvas-frame">
+          <!-- Video Player with HLS, Quality Selector & Transcode Polling -->
+          <div
+            v-if="mediaType === 'video'"
+            class="media-player-container video-container"
+          >
+            <!-- 1. Transcode Pending / In-Progress Placeholder -->
+            <div
+              v-if="
+                transcodeStatus === 'PENDING' ||
+                transcodeStatus === 'IN_PROGRESS'
+              "
+              class="video-processing-card"
+              role="status"
+              aria-live="polite"
+            >
+              <div class="spinner-circle" aria-hidden="true" />
+              <h4 class="processing-title">
+                Processing video — check back soon
+              </h4>
+              <p class="processing-subtitle">
+                Generating HLS adaptive bitrate streams for secure clinical
+                inspection.
+              </p>
+              <p class="polling-status font-mono">
+                Status: <strong>{{ transcodeStatus }}</strong> (Attempt
+                {{ pollCount }}/{{ maxPollAttempts }})
+              </p>
             </div>
-            <div class="change-reason-block">
-              <h5>Change Justification:</h5>
-              <p class="reason-text">
+
+            <!-- 2. Transcode Timeout State -->
+            <div
+              v-else-if="transcodeStatus === 'TIMEOUT'"
+              class="video-processing-card timeout-card"
+              role="alert"
+            >
+              <span class="processing-icon warning-icon" aria-hidden="true">
+                <Clock :size="28" :stroke-width="1.75" aria-hidden="true" />
+              </span>
+              <h4 class="processing-title">
+                Video processing is taking longer than expected — try again
+                later
+              </h4>
+              <p class="processing-subtitle">
+                The transcode task is still in progress. Please check again
+                shortly or reopen the viewer later.
+              </p>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-light"
+                @click="retryTranscodeCheck"
+              >
+                <RefreshCw :size="14" :stroke-width="1.75" aria-hidden="true" />
+                Check Again
+              </button>
+            </div>
+
+            <!-- 3. Transcode Failed State -->
+            <div
+              v-else-if="transcodeStatus === 'FAILED'"
+              class="video-processing-card error-card"
+              role="alert"
+            >
+              <span class="processing-icon error-icon" aria-hidden="true">
+                <AlertTriangle
+                  :size="28"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+              </span>
+              <h4 class="processing-title">Video Transcoding Failed</h4>
+              <p class="processing-subtitle font-mono">
                 {{
-                  fileRecord?.reason_for_change ||
-                  "Standard regulated file ingestion."
+                  transcodeError ||
+                  "An unexpected error occurred during HLS stream processing."
                 }}
               </p>
-            </div>
-            <div class="checksum-block">
-              <h5>SHA-256 Digest:</h5>
-              <code class="checksum-text" :title="fileRecord?.checksum_sha256">
-                {{ fileRecord?.checksum_sha256 || emptySha256Digest }}
-              </code>
-            </div>
-          </div>
-
-          <!-- Active Access Permissions -->
-          <div class="meta-section border-top">
-            <h4>Security Context</h4>
-            <div class="manifest-card signed">
-              <p class="sign-status">🛡️ PROTECTED VIEW ENFORCED</p>
-              <p class="signer-meta">
-                Viewer: <strong>{{ currentUserId }}</strong>
-              </p>
-              <p class="signer-meta">
-                Role Context:
-                <span>{{ activeUserRoles.join(", ") || "Authenticated" }}</span>
-              </p>
-              <p class="signer-meta">
-                Download:
-                <strong>{{
-                  canDownload ? "Permitted" : "Restricted (View-Only)"
-                }}</strong>
-              </p>
-            </div>
-          </div>
-
-          <!-- 21 CFR Part 11 Electronic Signature Approval Manifestation -->
-          <div
-            v-if="isApproved"
-            class="meta-section border-top"
-            data-testid="approval-details-section"
-          >
-            <h4>Document Approval</h4>
-            <div class="manifest-card approved">
-              <p class="sign-status text-success font-bold">✅ Approved</p>
-              <p v-if="fileRecord?.approved_by" class="signer-meta">
-                Signer:
-                <strong class="font-mono">{{ fileRecord.approved_by }}</strong>
-              </p>
-              <p v-if="fileRecord?.approved_at" class="signer-meta">
-                Approved At:
-                <span>{{ formatDate(fileRecord.approved_at) }}</span>
-              </p>
-              <p v-if="fileRecord?.approval_reason" class="signer-meta">
-                Meaning: <em>{{ fileRecord.approval_reason }}</em>
-              </p>
-            </div>
-          </div>
-        </aside>
-
-        <!-- Viewer Workspace -->
-        <div
-          class="viewer-workspace"
-          role="region"
-          aria-label="Media Canvas Workspace"
-        >
-          <!-- Watermark Overlay (Pointer events none, subtle rotating diagonal text) -->
-          <div class="watermark-overlay-container" aria-hidden="true">
-            <div v-for="n in 4" :key="n" class="diagonal-watermark-row">
-              <span class="watermark-text">{{ watermarkText }}</span>
-            </div>
-          </div>
-
-          <!-- Media Container with Type Switching -->
-          <div class="media-canvas-frame">
-            <!-- Video Player with HLS, Quality Selector & Transcode Polling -->
-            <div
-              v-if="mediaType === 'video'"
-              class="media-player-container video-container"
-            >
-              <!-- 1. Transcode Pending / In-Progress Placeholder -->
-              <div
-                v-if="
-                  transcodeStatus === 'PENDING' ||
-                  transcodeStatus === 'IN_PROGRESS'
-                "
-                class="video-processing-card"
-                role="status"
-                aria-live="polite"
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-light"
+                @click="retryTranscodeCheck"
               >
-                <div class="spinner-circle" aria-hidden="true" />
-                <h4 class="processing-title">
-                  Processing video — check back soon
-                </h4>
-                <p class="processing-subtitle">
-                  Generating HLS adaptive bitrate streams for secure clinical
-                  inspection.
-                </p>
-                <p class="polling-status font-mono">
-                  Status: <strong>{{ transcodeStatus }}</strong> (Attempt
-                  {{ pollCount }}/{{ maxPollAttempts }})
-                </p>
-              </div>
+                <RefreshCw :size="14" :stroke-width="1.75" aria-hidden="true" />
+                Retry
+              </button>
+            </div>
 
-              <!-- 2. Transcode Timeout State -->
+            <!-- 4. Video Player Ready State -->
+            <div v-else class="video-player-wrapper">
+              <!-- Compliance Warning Overlay for Audit Failure -->
               <div
-                v-else-if="transcodeStatus === 'TIMEOUT'"
-                class="video-processing-card timeout-card"
+                v-if="auditErrorState"
+                class="audit-compliance-overlay"
                 role="alert"
+                data-testid="audit-error-overlay"
               >
-                <span class="processing-icon warning-icon" aria-hidden="true"
-                  >⏱️</span
-                >
-                <h4 class="processing-title">
-                  Video processing is taking longer than expected — try again
-                  later
-                </h4>
-                <p class="processing-subtitle">
-                  The transcode task is still in progress. Please check again
-                  shortly or reopen the viewer later.
-                </p>
-                <button
-                  class="btn btn-sm btn-outline-light"
-                  @click="retryTranscodeCheck"
-                >
-                  🔄 Check Again
-                </button>
-              </div>
-
-              <!-- 3. Transcode Failed State -->
-              <div
-                v-else-if="transcodeStatus === 'FAILED'"
-                class="video-processing-card error-card"
-                role="alert"
-              >
-                <span class="processing-icon error-icon" aria-hidden="true"
-                  >⚠️</span
-                >
-                <h4 class="processing-title">Video Transcoding Failed</h4>
-                <p class="processing-subtitle font-mono">
-                  {{
-                    transcodeError ||
-                    "An unexpected error occurred during HLS stream processing."
-                  }}
-                </p>
-                <button
-                  class="btn btn-sm btn-outline-light"
-                  @click="retryTranscodeCheck"
-                >
-                  🔄 Retry
-                </button>
-              </div>
-
-              <!-- 4. Video Player Ready State -->
-              <div v-else class="video-player-wrapper">
-                <!-- Compliance Warning Overlay for Audit Failure -->
-                <div
-                  v-if="auditErrorState"
-                  class="audit-compliance-overlay"
-                  role="alert"
-                  data-testid="audit-error-overlay"
-                >
-                  <div class="audit-alert-card">
-                    <span class="alert-icon" aria-hidden="true">⚠️</span>
-                    <h4 class="alert-title">Audit Telemetry Interrupted</h4>
-                    <p class="alert-message">
-                      21 CFR Part 11 compliance requires verified audit trail
-                      transmission. Video playback is paused until telemetry is
-                      restored.
-                    </p>
-                    <button
-                      class="btn btn-sm btn-primary btn-retry-audit"
-                      data-testid="retry-audit-btn"
-                      @click="retryAuditConnection"
-                    >
-                      🔄 Retry Audit Connection
-                    </button>
-                  </div>
-                </div>
-
-                <video
-                  ref="videoPlayerRef"
-                  controls
-                  controlslist="nodownload"
-                  class="video-element"
-                  preload="metadata"
-                  @playing="onVideoPlaying"
-                  @play="onVideoPlay"
-                  @timeupdate="onVideoTimeUpdate"
-                  @ended="onVideoEnded"
-                >
-                  <track kind="captions" />
-                  Your browser does not support HTML5 video playback.
-                </video>
-
-                <!-- Quality selector overlay -->
-                <div
-                  v-if="qualityLevels.length > 0"
-                  class="video-quality-overlay"
-                >
-                  <label for="quality-select" class="quality-label"
-                    >Quality:</label
-                  >
-                  <select
-                    id="quality-select"
-                    class="quality-select"
-                    :value="selectedQuality"
-                    aria-label="Select video streaming quality"
-                    @change="onQualityChange"
-                  >
-                    <option
-                      v-for="lvl in qualityLevels"
-                      :key="lvl.index"
-                      :value="lvl.index"
-                    >
-                      {{ lvl.label }}
-                    </option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="media-meta-badge">
-                🎬 Regulated Video Stream ({{ fileRecord?.filename }})
-                <span
-                  v-if="selectedQualityLabel && transcodeStatus === 'READY'"
-                  class="quality-badge font-mono"
-                  >[{{ selectedQualityLabel }}]</span
-                >
-              </div>
-            </div>
-
-            <!-- Audio Player -->
-            <div
-              v-else-if="mediaType === 'audio'"
-              class="media-player-container audio-container"
-            >
-              <div class="audio-player-card">
-                <div class="audio-icon-display">🎙️</div>
-                <h4 class="audio-filename">
-                  {{ fileRecord?.filename }}
-                </h4>
-                <p class="audio-duration-meta">
-                  {{ formatFileSize(fileRecord?.size_bytes) }} — Audio Recording
-                </p>
-                <audio
-                  controls
-                  controlslist="nodownload"
-                  class="audio-element"
-                  :src="mediaSourceUrl"
-                >
-                  <track kind="captions" />
-                  Your browser does not support the audio element.
-                </audio>
-              </div>
-            </div>
-
-            <!-- Image Viewer -->
-            <div
-              v-else-if="mediaType === 'image'"
-              class="media-player-container image-container"
-            >
-              <img
-                :src="mediaSourceUrl || defaultPlaceholderImage"
-                :alt="fileRecord?.filename || 'Clinical Image'"
-                class="preview-image-element"
-                @error="onImageError"
-              />
-            </div>
-
-            <!-- PDF / Document Page Canvas View -->
-            <div v-else class="media-player-container pdf-container">
-              <div class="pdf-document-sheet">
-                <div class="doc-sheet-header">
-                  <div class="header-logo">
-                    Cadence Clinical Research Platform
-                  </div>
-                  <div class="header-doc-code">
-                    REF: {{ fileRecord?.study_id || "CAD-001" }}
-                  </div>
-                </div>
-
-                <div class="doc-sheet-body">
-                  <h2 class="doc-display-title">
-                    {{ fileRecord?.filename }}
-                  </h2>
-                  <p class="doc-display-subtitle">
-                    Study Scope: {{ fileRecord?.study_id }} | Site Scope:
-                    {{ fileRecord?.site_id || "All Sites" }} | Version: v{{
-                      fileRecord?.version_index || 1
-                    }}.0
+                <div class="audit-alert-card">
+                  <span class="alert-icon" aria-hidden="true">
+                    <AlertTriangle
+                      :size="24"
+                      :stroke-width="1.75"
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <h4 class="alert-title">Audit Telemetry Interrupted</h4>
+                  <p class="alert-message">
+                    21 CFR Part 11 compliance requires verified audit trail
+                    transmission. Video playback is paused until telemetry is
+                    restored.
                   </p>
-                  <hr class="doc-divider" />
-
-                  <section class="doc-text-section">
-                    <h4>1. ELECTRONIC RECORD INTEGRITY & CLASSIFICATION</h4>
-                    <p>
-                      This electronic record has been indexed within the Cadence
-                      Clinical Digital Data Flow and Fileshare platform in full
-                      conformance with FDA 21 CFR Part 11 and EU Annex 11
-                      standards. Cryptographic checksums and immutable audit
-                      metadata have been recorded in the central compliance
-                      ledger.
-                    </p>
-                  </section>
-
-                  <section class="doc-text-section">
-                    <h4>2. CLINICAL METADATA SUMMARY</h4>
-                    <p>
-                      <strong>Parent Study:</strong> {{ fileRecord?.study_id
-                      }}<br />
-                      <strong>Site Code:</strong>
-                      {{ fileRecord?.site_id || "Global Study Level" }}<br />
-                      <strong>Originator:</strong>
-                      {{ fileRecord?.uploaded_by || fileRecord?.created_by
-                      }}<br />
-                      <strong>MIME Specification:</strong>
-                      {{ fileRecord?.mime_type }}<br />
-                      <strong>Reason for Ingestion:</strong>
-                      {{ fileRecord?.reason_for_change }}
-                    </p>
-                  </section>
-
-                  <section class="doc-text-section">
-                    <h4>3. REGULATORY PREVIEW WATERMARK NOTICE</h4>
-                    <p>
-                      This document is being inspected in a protected viewer
-                      session with real-time watermark placement rendering the
-                      viewing identity and timestamp dynamically. Unauthorized
-                      reproduction, screen capture, or distribution is
-                      prohibited.
-                    </p>
-                  </section>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-primary btn-retry-audit"
+                    data-testid="retry-audit-btn"
+                    @click="retryAuditConnection"
+                  >
+                    <RefreshCw
+                      :size="14"
+                      :stroke-width="1.75"
+                      aria-hidden="true"
+                    />
+                    Retry Audit Connection
+                  </button>
                 </div>
+              </div>
 
-                <div class="doc-sheet-footer">
-                  <span>Page 1 of 1</span>
-                  <span>CONFIDENTIAL — REGULATED CLINICAL DATA</span>
+              <video
+                ref="videoPlayerRef"
+                controls
+                controlslist="nodownload"
+                class="video-element"
+                preload="metadata"
+                @playing="onVideoPlaying"
+                @play="onVideoPlay"
+                @timeupdate="onVideoTimeUpdate"
+                @ended="onVideoEnded"
+              >
+                <track kind="captions" />
+                Your browser does not support HTML5 video playback.
+              </video>
+
+              <!-- Quality selector overlay -->
+              <div
+                v-if="qualityLevels.length > 0"
+                class="video-quality-overlay"
+              >
+                <label for="quality-select" class="quality-label"
+                  >Quality:</label
+                >
+                <select
+                  id="quality-select"
+                  class="quality-select"
+                  :value="selectedQuality"
+                  aria-label="Select video streaming quality"
+                  @change="onQualityChange"
+                >
+                  <option
+                    v-for="lvl in qualityLevels"
+                    :key="lvl.index"
+                    :value="lvl.index"
+                  >
+                    {{ lvl.label }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div class="media-meta-badge">
+              <Film :size="14" :stroke-width="1.75" aria-hidden="true" />
+              Regulated Video Stream ({{ fileRecord?.filename }})
+              <span
+                v-if="selectedQualityLabel && transcodeStatus === 'READY'"
+                class="quality-badge font-mono"
+                >[{{ selectedQualityLabel }}]</span
+              >
+            </div>
+          </div>
+
+          <!-- Audio Player -->
+          <div
+            v-else-if="mediaType === 'audio'"
+            class="media-player-container audio-container"
+          >
+            <div class="audio-player-card">
+              <div class="audio-icon-display" aria-hidden="true">
+                <Mic :size="32" :stroke-width="1.75" aria-hidden="true" />
+              </div>
+              <h4 class="audio-filename">
+                {{ fileRecord?.filename }}
+              </h4>
+              <p class="audio-duration-meta">
+                {{ formatFileSize(fileRecord?.size_bytes) }} — Audio Recording
+              </p>
+              <audio
+                controls
+                controlslist="nodownload"
+                class="audio-element"
+                :src="mediaSourceUrl"
+              >
+                <track kind="captions" />
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+          </div>
+
+          <!-- Image Viewer -->
+          <div
+            v-else-if="mediaType === 'image'"
+            class="media-player-container image-container"
+          >
+            <img
+              :src="mediaSourceUrl || defaultPlaceholderImage"
+              :alt="fileRecord?.filename || 'Clinical Image'"
+              class="preview-image-element"
+              @error="onImageError"
+            />
+          </div>
+
+          <!-- PDF / Document Page Canvas View -->
+          <div v-else class="media-player-container pdf-container">
+            <div class="pdf-document-sheet">
+              <div class="doc-sheet-header">
+                <div class="header-logo">
+                  Cadence Clinical Research Platform
                 </div>
+                <div class="header-doc-code">
+                  REF: {{ fileRecord?.study_id || "CAD-001" }}
+                </div>
+              </div>
+
+              <div class="doc-sheet-body">
+                <h2 class="doc-display-title">
+                  {{ fileRecord?.filename }}
+                </h2>
+                <p class="doc-display-subtitle">
+                  Study Scope: {{ fileRecord?.study_id }} | Site Scope:
+                  {{ fileRecord?.site_id || "All Sites" }} | Version: v{{
+                    fileRecord?.version_index || 1
+                  }}.0
+                </p>
+                <hr class="doc-divider" />
+
+                <section class="doc-text-section">
+                  <h4>1. ELECTRONIC RECORD INTEGRITY & CLASSIFICATION</h4>
+                  <p>
+                    This electronic record has been indexed within the Cadence
+                    Clinical Digital Data Flow and Fileshare platform in full
+                    conformance with FDA 21 CFR Part 11 and EU Annex 11
+                    standards. Cryptographic checksums and immutable audit
+                    metadata have been recorded in the central compliance
+                    ledger.
+                  </p>
+                </section>
+
+                <section class="doc-text-section">
+                  <h4>2. CLINICAL METADATA SUMMARY</h4>
+                  <p>
+                    <strong>Parent Study:</strong> {{ fileRecord?.study_id
+                    }}<br />
+                    <strong>Site Code:</strong>
+                    {{ fileRecord?.site_id || "Global Study Level" }}<br />
+                    <strong>Originator:</strong>
+                    {{ fileRecord?.uploaded_by || fileRecord?.created_by
+                    }}<br />
+                    <strong>MIME Specification:</strong>
+                    {{ fileRecord?.mime_type }}<br />
+                    <strong>Reason for Ingestion:</strong>
+                    {{ fileRecord?.reason_for_change }}
+                  </p>
+                </section>
+
+                <section class="doc-text-section">
+                  <h4>3. REGULATORY PREVIEW WATERMARK NOTICE</h4>
+                  <p>
+                    This document is being inspected in a protected viewer
+                    session with real-time watermark placement rendering the
+                    viewing identity and timestamp dynamically. Unauthorized
+                    reproduction, screen capture, or distribution is prohibited.
+                  </p>
+                </section>
+              </div>
+
+              <div class="doc-sheet-footer">
+                <span>Page 1 of 1</span>
+                <span>CONFIDENTIAL — REGULATED CLINICAL DATA</span>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+  </ClinicalModal>
 
-    <!-- 21 CFR Part 11 Electronic Signature Re-Authentication Modal -->
-    <ReAuthModal
-      :is-open="isReAuthOpen"
-      :filename="fileRecord?.filename"
-      :username="currentUserId"
-      :busy="isApproving"
-      :error-message="approvalError"
-      @cancel="isReAuthOpen = false"
-      @close="isReAuthOpen = false"
-      @confirm="handleApproveConfirm"
-    />
-  </div>
+  <!-- 21 CFR Part 11 Electronic Signature Re-Authentication Modal -->
+  <ReAuthModal
+    :is-open="isReAuthOpen"
+    :filename="fileRecord?.filename"
+    :username="currentUserId"
+    :busy="isApproving"
+    :error-message="approvalError"
+    @cancel="isReAuthOpen = false"
+    @close="isReAuthOpen = false"
+    @confirm="handleApproveConfirm"
+  />
 </template>
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Download,
+  FileText,
+  Film,
+  Lock,
+  Mic,
+  PenTool,
+  RefreshCw,
+  ShieldCheck,
+  X,
+} from "lucide-vue-next";
 import { fileshareService } from "../../api/fileshare";
 import { useAuthStore } from "../../stores/auth";
 import {
@@ -548,12 +609,7 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "download", "approved"]);
 
-const modalRef = ref(null);
 const videoPlayerRef = ref(null);
-
-useFocusTrap(modalRef, {
-  onEscape: () => emit("close"),
-});
 
 const authStore = useAuthStore();
 
@@ -1098,10 +1154,30 @@ function getStatusClass(status) {
 </script>
 
 <style scoped>
-.media-preview-modal {
-  max-width: 1100px !important;
-  width: 95% !important;
+:deep(.media-preview-modal) {
+  max-width: 1100px;
+  width: 95%;
   height: 88vh;
+  height: 88dvh;
+}
+
+@media (max-width: 480px) {
+  :deep(.media-preview-modal) {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+  }
+
+  .modal-body-layout {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .metadata-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
 }
 
 .modal-header {
@@ -1242,6 +1318,9 @@ function getStatusClass(status) {
 .sign-status {
   font-weight: 700;
   margin: 0 0 6px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .signer-meta {
