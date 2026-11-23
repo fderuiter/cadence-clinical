@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cadence.clinical/schemas/demo-seed.schema.json",
+  "title": "Cadence Canonical Demo Seed Contract",
+  "description": "Declarative seed contract for CADENCE-101, CADENCE-PHARMA, sites, compliance stages, participants, roles, capabilities, and Keycloak realm persona bindings.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "tenantCode",
+    "epoch",
+    "sponsor",
+    "study",
+    "sites",
+    "participants",
+    "roles",
+    "users"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "tenantCode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "epoch": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sponsor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "name"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "study": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "title", "phase"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "phase": { "type": "string", "minLength": 1 }
+      }
+    },
+    "sites": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "name",
+          "country",
+          "institutionCode",
+          "complianceStage"
+        ],
+        "properties": {
+          "code": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "country": { "type": "string", "minLength": 2 },
+          "institutionCode": { "type": "string", "minLength": 1 },
+          "complianceStage": {
+            "type": "string",
+            "enum": ["SITE_ACTIVATION", "CONDUCT", "CLOSEOUT"]
+          }
+        }
+      }
+    },
+    "participants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["subjectCode", "siteCode", "status"],
+        "properties": {
+          "subjectCode": { "type": "string", "minLength": 1 },
+          "siteCode": { "type": "string", "minLength": 1 },
+          "status": {
+            "type": "string",
+            "enum": ["SCREENED", "ENROLLED", "ACTIVE", "COMPLETED", "WITHDRAWN"]
+          }
+        }
+      }
+    },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "name", "capabilities"],
+        "properties": {
+          "code": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "capabilities": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "users": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "subject",
+          "email",
+          "firstName",
+          "lastName",
+          "tenantId",
+          "role",
+          "site",
+          "workflow",
+          "workspacePersona",
+          "realmRoles"
+        ],
+        "properties": {
+          "username": { "type": "string", "minLength": 1 },
+          "subject": { "type": "string", "minLength": 1 },
+          "email": { "type": "string", "minLength": 3 },
+          "firstName": { "type": "string", "minLength": 1 },
+          "lastName": { "type": "string", "minLength": 1 },
+          "tenantId": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "minLength": 1 },
+          "site": { "type": ["string", "null"] },
+          "workflow": { "type": "string", "minLength": 1 },
+          "workspacePersona": { "type": "string", "minLength": 1 },
+          "realmRoles": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

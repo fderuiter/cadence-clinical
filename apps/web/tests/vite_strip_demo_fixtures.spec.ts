@@ -34,7 +34,18 @@ describe("vite-strip-demo-fixtures plugin", () => {
 
     const fixturesId = resolveId("demo-fixtures");
     expect(fixturesId).toContain("\0virtual:demo-fixtures-prod-stub");
-    expect(load(fixturesId!)).toContain("export const DEMO_MANIFEST");
+    const fixturesStub = load(fixturesId!)!;
+    expect(fixturesStub).toContain("export const DEMO_MANIFEST");
+    expect(fixturesStub).toContain("export function deriveDemoUuidV8");
+
+    const routesId = resolveId("demo-fixtures/routes");
+    expect(routesId).toContain("\0virtual:demo-fixtures-routes-prod-stub");
+    const routesStub = load(routesId!)!;
+    expect(routesStub).toContain("export function createDemoHealthRoute");
+    expect(routesStub).toContain(
+      "export function createDemoParticipantExpenseSubmitRoute"
+    );
+    expect(routesStub).not.toContain("CADENCE-101");
 
     const runtimeId = resolveId("demo-fixtures/runtime");
     expect(runtimeId).toContain("\0virtual:demo-fixtures-runtime-prod-stub");
@@ -90,6 +101,9 @@ describe("vite-strip-demo-fixtures plugin", () => {
     expect(demoBuildResolve("./demo/clinicalEcrf", storesImporter)).toBeNull();
     expect(demoBuildResolve("demo-fixtures")).toContain(
       "packages/demo-fixtures/src/index.js"
+    );
+    expect(demoBuildResolve("demo-fixtures/routes")).toContain(
+      "packages/demo-fixtures/src/routes.js"
     );
 
     const devServeResolve = resolveIdFor("serve", "development");

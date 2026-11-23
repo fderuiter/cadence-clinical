@@ -9,7 +9,10 @@ import {
   resolveWebServiceWorkerOptions,
   startMswWorker,
 } from "../src/mocks/browser.js";
-import { createWebDemoStore } from "../src/mocks/demoStore.js";
+import {
+  WEB_DEMO_SLICE_NAMES,
+  createWebDemoStore,
+} from "../src/mocks/demoStore.js";
 import { buildWebGatewayHandlers } from "../src/mocks/handlers.js";
 import {
   AVAILABLE_SCREENS,
@@ -24,7 +27,7 @@ const DEMO_HEADERS = {
   "Content-Type": "application/json",
 };
 
-describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
+describe("Isolated static demo builds & gateway boundary isolation (web)", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
@@ -176,7 +179,7 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
     });
   });
 
-  describe("Fail-closed demo boundary & stateful OpenAPI handlers", () => {
+  describe("Fail-closed demo gateway boundary & slice composition", () => {
     let store;
     let server;
     const origin = window.location.origin;
@@ -210,561 +213,49 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
       expect(offOriginBody.error).toBe("DEMO_OFF_ORIGIN_BLOCKED");
     });
 
-    it("persists subject enrollment and state transitions across subsequent reads", async () => {
-      const initialRes = await fetch(
-        `${origin}/api/v1/execution/subjects?study_id=DEMO-01`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(initialRes.status).toBe(200);
-      const initialPage = await initialRes.json();
-      expect(initialPage.items.length).toBe(2);
+    it("composes all 9 clinical domain slices with shared demo-fixtures routes and isolated instance state", async () => {
+      expect(WEB_DEMO_SLICE_NAMES).toEqual([
+        "kernel",
+        "protocol-soa",
+        "execution-ecrf",
+        "ctms-ssu",
+        "etmf-documents",
+        "payments-wallet",
+        "knowledge-tickets",
+        "safety-labs-dct",
+        "training-locks",
+      ]);
+      expect(Object.keys(store.slices)).toEqual(WEB_DEMO_SLICE_NAMES);
 
-      const createRes = await fetch(`${origin}/api/v1/execution/subjects`, {
-        method: "POST",
-        headers: {
-          ...DEMO_HEADERS,
-          "X-Change-Reason": "Enroll synthetic participant",
-        },
-        body: JSON.stringify({
-          study_id: "DEMO-01",
-          site_id: "SITE-101",
-          subject_id: "SUBJ-1004",
-          status: "SCREENED",
-        }),
-      });
-      expect(createRes.status).toBe(201);
-      const created = await createRes.json();
-      expect(created.subject_id).toBe("SUBJ-1004");
-
-      const patchRes = await fetch(
-        `${origin}/api/v1/execution/subjects/${created.id}/state`,
-        {
-          method: "PATCH",
-          headers: {
-            ...DEMO_HEADERS,
-            "X-Change-Reason": "Confirm eligibility",
-          },
-          body: JSON.stringify({ status: "ENROLLED" }),
-        }
-      );
-      expect(patchRes.status).toBe(200);
-
-      const lookupCreatedRes = await fetch(
-        `${origin}/api/v1/kernel/enrollments/lookup?study_code=DEMO-01&subject_code=SUBJ-1004`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(lookupCreatedRes.status).toBe(200);
-      const lookupCreated = await lookupCreatedRes.json();
-      expect(lookupCreated).toMatchObject({
-        study_code: "DEMO-01",
-        site_code: "SITE-101",
-        subject_code: "SUBJ-1004",
-        enrollment_ref: `enrollment:${created.id}@1`,
-      });
-      expect(lookupCreated.study_ref).toMatch(/^study:.*@1$/);
-      expect(lookupCreated.study_site_ref).toMatch(/^study_site:.*@1$/);
-
-      const lookupWrongSiteRes = await fetch(
-        `${origin}/api/v1/kernel/enrollments/lookup?study_code=DEMO-01&subject_code=SUBJ-1004&site_code=SITE-999`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(lookupWrongSiteRes.status).toBe(404);
-      expect(lookupWrongSiteRes.headers.get("Content-Type")).toContain(
-        "application/problem+json"
-      );
-
-      const updatedRes = await fetch(
-        `${origin}/api/v1/execution/subjects?study_id=DEMO-01`,
-        { headers: DEMO_HEADERS }
-      );
-      const updatedPage = await updatedRes.json();
-      expect(updatedPage.items.length).toBe(3);
-      const persisted = updatedPage.items.find(
-        (subj) => subj.id === created.id
-      );
-      expect(persisted?.status).toBe("ENROLLED");
-    });
-
-    it("persists eCRF form value saves, signatures, and query workflow transitions", async () => {
-      const openRes = await fetch(`${origin}/api/v1/execution/forms`, {
-        method: "POST",
-        headers: {
-          ...DEMO_HEADERS,
-          "X-Change-Reason": "Open baseline vitals form",
-        },
-        body: JSON.stringify({
-          enrollment_id: "00000000-0000-0000-0000-000000001001",
-          visit_code: "VISIT-BASELINE",
-          form_code: "FORM-VITALS",
-        }),
-      });
-      expect(openRes.status).toBe(201);
-      const opened = await openRes.json();
-
-      const stateBeforeRes = await fetch(
-        `${origin}/api/v1/execution/forms/${opened.form_id}`,
-        { headers: DEMO_HEADERS }
-      );
-      const stateBefore = await stateBeforeRes.json();
-      const sbpBefore = stateBefore.items.find(
-        (it) => it.item_id === "item-sysbp"
-      );
-      expect(sbpBefore.value.value).toBe("128");
-
-      const saveRes = await fetch(
-        `${origin}/api/v1/execution/forms/${opened.form_id}/values`,
-        {
-          method: "PUT",
-          headers: {
-            ...DEMO_HEADERS,
-            "Idempotency-Key": "idem-save-1",
-            "X-Change-Reason": "Source worksheet update",
-          },
-          body: JSON.stringify({
-            values: [
-              {
-                item_id: "item-sysbp",
-                expected_revision: sbpBefore.revision,
-                value: {
-                  type: "quantity",
-                  value: "122",
-                  unit: "mm[Hg]",
-                  comparator: null,
-                },
-              },
-            ],
-          }),
-        }
-      );
-      expect(saveRes.status).toBe(200);
-
-      const raiseQueryRes = await fetch(
-        `${origin}/api/v1/execution/forms/${opened.form_id}/queries`,
-        {
-          method: "POST",
-          headers: {
-            ...DEMO_HEADERS,
-            "X-Change-Reason": "Verify cuff position",
-          },
-          body: JSON.stringify({
-            observation_id: sbpBefore.observation_id,
-            revision: 2,
-            text: "Please confirm seated 5-minute rest before reading.",
-          }),
-        }
-      );
-      expect(raiseQueryRes.status).toBe(201);
-      const raised = await raiseQueryRes.json();
-      expect(raised.status).toBe("open");
-
-      const answerRes = await fetch(
-        `${origin}/api/v1/execution/forms/${opened.form_id}/queries/${raised.query_id}/answer`,
-        {
-          method: "POST",
-          headers: {
-            ...DEMO_HEADERS,
-            "X-Change-Reason": "Site coordinator response",
-          },
-          body: JSON.stringify({
-            text: "Confirmed seated rest per protocol section 6.2.",
-          }),
-        }
-      );
-      expect(answerRes.status).toBe(200);
-      const answered = await answerRes.json();
-      expect(answered.status).toBe("answered");
-
-      const signRes = await fetch(
-        `${origin}/api/v1/execution/forms/${opened.form_id}/signatures`,
-        {
-          method: "POST",
-          headers: {
-            ...DEMO_HEADERS,
-            "X-Change-Reason": "Investigator review complete",
-          },
-          body: JSON.stringify({ meaning: "approved" }),
-        }
-      );
-      expect(signRes.status).toBe(201);
-
-      const rereadRes = await fetch(
-        `${origin}/api/v1/execution/forms/${opened.form_id}`,
-        { headers: DEMO_HEADERS }
-      );
-      const reread = await rereadRes.json();
-      const sbpAfter = reread.items.find((it) => it.item_id === "item-sysbp");
-      expect(sbpAfter.value.value).toBe("122");
-      expect(sbpAfter.revision).toBe(2);
-      expect(reread.signatures.length).toBe(1);
-
-      const listRes = await fetch(
-        `${origin}/api/v1/execution/forms?enrollment_id=00000000-0000-0000-0000-000000001001`, // deid-ignore
-        { headers: DEMO_HEADERS }
-      );
-      expect(listRes.status).toBe(200);
-      const summaries = await listRes.json();
-      const baselineSummary = summaries.find(
-        (s) => s.form_id === opened.form_id
-      );
-      expect(baselineSummary).toMatchObject({
-        complete: true,
-        missing_required_count: 0,
-        open_query_count: 1,
-        answered_query_count: 1,
-        signed: true,
-        signature_superseded: false,
-        signature_count: 1,
-      });
-
-      const unscheduledRes = await fetch(`${origin}/api/v1/execution/forms`, {
-        method: "POST",
-        headers: {
-          ...DEMO_HEADERS,
-          "X-Change-Reason": "Open unscheduled adverse event form",
-        },
-        body: JSON.stringify({
-          enrollment_id: "00000000-0000-0000-0000-000000001001", // deid-ignore
-          collection_spec_id: "form-adverse-event",
-          planned_activity_id: null,
-          collected_at: "2026-08-05T14:00:00Z", // deid-ignore
-        }),
-      });
-      expect(unscheduledRes.status).toBe(201);
-      const unscheduled = await unscheduledRes.json();
-      expect(unscheduled.planned_activity_id).toBeNull();
-      expect(unscheduled.collection_title).toBe("Adverse Event (CDASH AE)");
-    });
-
-    it("persists kernel observation corrections and enforces expected_version conflict checks", async () => {
-      const obsRef = "observation:00000000-0000-0000-0000-000000000001";
-      const getRes = await fetch(
-        `${origin}/api/v1/kernel/observations/${encodeURIComponent(obsRef)}`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(getRes.status).toBe(200);
-      const initialObs = await getRes.json();
-      expect(initialObs.version).toBe(1);
-
-      const correctRes = await fetch(
-        `${origin}/api/v1/kernel/observations/${encodeURIComponent(obsRef)}/corrections`,
-        {
-          method: "POST",
-          headers: {
-            ...DEMO_HEADERS,
-            "Idempotency-Key": "idem-obs-correct-1",
-            "X-Change-Reason": "Transcription correction against source",
-          },
-          body: JSON.stringify({
-            expected_version: 1,
-            value: {
-              type: "quantity",
-              value: "124",
-              unit: "mm[Hg]",
-              comparator: null,
-            },
-          }),
-        }
-      );
-      expect(correctRes.status).toBe(200);
-
-      const staleRes = await fetch(
-        `${origin}/api/v1/kernel/observations/${encodeURIComponent(obsRef)}/corrections`,
-        {
-          method: "POST",
-          headers: {
-            ...DEMO_HEADERS,
-            "Idempotency-Key": "idem-obs-stale",
-            "X-Change-Reason": "Stale version check",
-          },
-          body: JSON.stringify({
-            expected_version: 1,
-            value: {
-              type: "quantity",
-              value: "120",
-              unit: "mm[Hg]",
-              comparator: null,
-            },
-          }),
-        }
-      );
-      expect(staleRes.status).toBe(409);
-
-      const rereadRes = await fetch(
-        `${origin}/api/v1/kernel/observations/${encodeURIComponent(obsRef)}`,
-        { headers: DEMO_HEADERS }
-      );
-      const updatedObs = await rereadRes.json();
-      expect(updatedObs.version).toBe(2);
-      expect(updatedObs.value.value).toBe("124");
-      expect(updatedObs.revisions.length).toBe(2);
-      expect(updatedObs.revisions[1].number).toBe(2);
-    });
-
-    it("persists site activation, SSU certification, and contextual help resolution", async () => {
-      const certifyRes = await fetch(
-        `${origin}/api/v1/ctms/startup/sites/SITE-102/greenlight/certify?study_id=DEMO-01&country_code=US`,
-        {
-          method: "POST",
-          headers: {
-            ...DEMO_HEADERS,
-            "X-Change-Reason": "SSU readiness sign-off",
-          },
-        }
-      );
-      expect(certifyRes.status).toBe(200);
-
-      const matrixRes = await fetch(
-        `${origin}/api/v1/ctms/startup/matrix?country_code=US`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(matrixRes.status).toBe(200);
-      const matrix = await matrixRes.json();
-      const site102 = matrix.find((s) => s.site_id === "SITE-102");
-      expect(site102?.overall_status).toBe("APPROVED");
-      expect(site102?.greenlight_token).toContain("SITE-102");
-
-      const preComplianceRes = await fetch(
-        `${origin}/api/v1/execution/sites/SITE-102/compliance-status?study_id=DEMO-01`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(preComplianceRes.status).toBe(200);
-      const preCompliance = await preComplianceRes.json();
-      expect(preCompliance.is_activated).toBe(false);
-
-      const activateRes = await fetch(
-        `${origin}/api/v1/execution/sites/SITE-102/activate`,
-        {
-          method: "POST",
-          headers: {
-            ...DEMO_HEADERS,
-            "X-Change-Reason": "Greenlight package verified",
-          },
-          body: JSON.stringify({ study_id: "DEMO-01" }),
-        }
-      );
-      expect(activateRes.status).toBe(200);
-
-      const postComplianceRes = await fetch(
-        `${origin}/api/v1/execution/sites/SITE-102/compliance-status?study_id=DEMO-01`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(postComplianceRes.status).toBe(200);
-      const postCompliance = await postComplianceRes.json();
-      expect(postCompliance.is_activated).toBe(true);
-      expect(postCompliance.activated_by).toBeTruthy();
-      expect(postCompliance.activated_at).toBeTruthy();
-
-      const schemesRes = await fetch(
-        `${origin}/api/v1/execution/randomization/schemes?study_id=DEMO-01`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(schemesRes.status).toBe(200);
-      const schemes = await schemesRes.json();
-      expect(schemes.length).toBeGreaterThanOrEqual(1);
-
-      const kitsRes = await fetch(
-        `${origin}/api/v1/execution/rtsm/kits/inventory/DEMO-01/SITE-101`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(kitsRes.status).toBe(200);
-      const kits = await kitsRes.json();
-      expect(Array.isArray(kits)).toBe(true);
-
-      const helpRes = await fetch(
-        `${origin}/api/v1/knowledge/contextual-help?route=/ecrf&persona=super_admin`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(helpRes.status).toBe(200);
-      const help = await helpRes.json();
-      expect(help.primary_article).toBeTruthy();
-    });
-
-    it("supports kernel SDV verifications, retractions, and study-wide query worklist filters", async () => {
-      const obsRef = "observation:00000000-0000-0000-0000-000000000001";
-      const enrollmentRef = "enrollment:00000000-0000-0000-0000-000000001001";
-
-      const verifyRes = await fetch(
-        `${origin}/api/v1/kernel/observations/${encodeURIComponent(obsRef)}/verifications`,
-        {
-          method: "POST",
-          headers: {
-            ...DEMO_HEADERS,
-            "Idempotency-Key": "idem-sdv-1",
-            "X-Change-Reason": "Verified against EHR source",
-          },
-          body: JSON.stringify({
-            enrollment_ref: enrollmentRef,
-            revision: 1,
-          }),
-        }
-      );
-      expect(verifyRes.status).toBe(201);
-      const verified = await verifyRes.json();
-      expect(verified.kind).toBe("Verified");
-      expect(verified.ref).toMatch(/^assertion:/);
-
-      const retractRes = await fetch(
-        `${origin}/api/v1/kernel/assertions/${encodeURIComponent(verified.ref)}/retraction`,
-        {
-          method: "POST",
-          headers: {
-            ...DEMO_HEADERS,
-            "Idempotency-Key": "idem-retract-1",
-            "X-Change-Reason": "Withdrawn after chart update",
-          },
-          body: JSON.stringify({
-            enrollment_ref: enrollmentRef,
-          }),
-        }
-      );
-      expect(retractRes.status).toBe(200);
-      const retracted = await retractRes.json();
-      expect(retracted.retracts).toBe(verified.ref);
-
-      const studyQueriesRes = await fetch(
-        `${origin}/api/v1/execution/forms/queries?study_id=00000000-0000-0000-0000-000000000001&status=open&site=SITE-101`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(studyQueriesRes.status).toBe(200);
-      const studyQueries = await studyQueriesRes.json();
-      expect(studyQueries.length).toBeGreaterThanOrEqual(1);
-      expect(studyQueries[0].site_code).toBe("SITE-101");
-      expect(studyQueries[0].subject_code).toBe("SUBJ-1001");
-    });
-
-    it("lists participant forms for Clinical Canvas and resolves study_site enrollment children and zoom lineage", async () => {
-      const studyRef = "study:00000000-0000-0000-0000-000000000001";
-      const studyChildrenRes = await fetch(
-        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(studyRef)}/children`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(studyChildrenRes.status).toBe(200);
-      const studyChildren = await studyChildrenRes.json();
-      const site101 = studyChildren.find(
-        (c) => c.node.kind === "study_site" && c.node.code === "SITE-101"
-      );
-      expect(site101).toBeTruthy();
-
-      const siteChildrenRes = await fetch(
-        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(site101.node.ref)}/children`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(siteChildrenRes.status).toBe(200);
-      const siteChildren = await siteChildrenRes.json();
-      const subj1001 = siteChildren.find(
-        (c) => c.node.kind === "enrollment" && c.node.code === "SUBJ-1001"
-      );
-      expect(subj1001?.node.ref).toBe(
-        "enrollment:00000000-0000-0000-0000-000000001001"
-      );
-
-      const zoomPathRes = await fetch(
-        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(subj1001.node.ref)}/path`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(zoomPathRes.status).toBe(200);
-      const zoomSteps = await zoomPathRes.json();
-      expect(zoomSteps.find((s) => s.level === "study_site")?.label).toBe(
-        "SITE-101"
-      );
-      expect(zoomSteps.find((s) => s.level === "enrollment")?.label).toBe(
-        "SUBJ-1001"
-      );
-
-      const missingEnrollmentRes = await fetch(
-        `${origin}/api/v1/execution/forms`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(missingEnrollmentRes.status).toBe(400);
-
-      const enrollmentId = "00000000-0000-0000-0000-000000001001";
-      const listRes = await fetch(
-        `${origin}/api/v1/execution/forms?enrollment_id=${enrollmentId}`,
-        { headers: DEMO_HEADERS }
-      );
-      expect(listRes.status).toBe(200);
-      const initialForms = await listRes.json();
-      expect(initialForms.length).toBe(1);
-      expect(initialForms[0].collection_spec_id).toBe("form-vital-signs");
-      expect(initialForms[0].collection_title).toBe("Vital Signs (CDASH VS)");
-      expect(initialForms[0].item_count).toBe(4);
-      expect(initialForms[0].recorded_count).toBe(4);
-      expect(initialForms[0].complete).toBe(true);
-
-      const openChemRes = await fetch(`${origin}/api/v1/execution/forms`, {
-        method: "POST",
-        headers: {
-          ...DEMO_HEADERS,
-          "X-Change-Reason": "Open chemistry panel in canvas",
-        },
-        body: JSON.stringify({
-          enrollment_id: enrollmentId,
-          collection_spec_id: "form-chem-panel",
-          planned_activity_id: "visit-week4",
-        }),
-      });
-      expect(openChemRes.status).toBe(201);
-
-      const updatedListRes = await fetch(
-        `${origin}/api/v1/execution/forms?enrollment_id=${enrollmentId}`,
-        { headers: DEMO_HEADERS }
-      );
-      const updatedForms = await updatedListRes.json();
-      expect(updatedForms.length).toBe(2);
-      const chemSummary = updatedForms.find(
-        (f) => f.collection_spec_id === "form-chem-panel"
-      );
-      expect(chemSummary?.collection_title).toBe(
-        "Clinical Chemistry Panel (CDASH LB)"
-      );
-      expect(chemSummary?.complete).toBe(false);
-    });
-
-    it("serves stateful kernel entitlements and in-place tier upgrades without hitting 501 boundary", async () => {
-      const initialRes = await fetch(`${origin}/api/v1/kernel/entitlements`, {
+      const healthRes = await fetch(`${origin}/api/v1/health`, {
         headers: DEMO_HEADERS,
       });
-      expect(initialRes.status).toBe(200);
-      const initialEntitlements = await initialRes.json();
-      expect(initialEntitlements.tier).toBe("Complete");
+      expect(healthRes.status).toBe(200);
+      expect(await healthRes.json()).toEqual({
+        status: "healthy",
+        mode: "demo",
+      });
 
-      const upgradeRes = await fetch(
-        `${origin}/api/v1/kernel/entitlements/tier`,
+      const sigRes = await fetch(
+        `${origin}/api/v1/auth/signature-verification`,
         {
           method: "POST",
-          headers: {
-            ...DEMO_HEADERS,
-            "Idempotency-Key": "demo-tier-select-1",
-            "X-Change-Reason": "Evaluate Select tier in demo",
-          },
-          body: JSON.stringify({ tier: "Select" }),
+          headers: DEMO_HEADERS,
+          body: JSON.stringify({
+            action: "/api/v1/kernel/library-items/approve",
+            semantic_action: "collection.sign",
+          }),
         }
       );
-      expect(upgradeRes.status).toBe(200);
-      const upgraded = await upgradeRes.json();
-      expect(upgraded.tier).toBe("Select");
-      expect(upgraded.product_families).toEqual([
-        "Blueprint",
-        "Capture",
-        "Orbit",
-        "Engage",
-        "Allocate",
-      ]);
+      expect(sigRes.status).toBe(200);
+      const sigBody = await sigRes.json();
+      expect(sigBody.sig_token).toMatch(/^demo_sig_tok_/);
+      expect(sigBody.semantic_action).toBe("collection.sign");
 
-      const subsequentRes = await fetch(
-        `${origin}/api/v1/kernel/entitlements`,
-        { headers: DEMO_HEADERS }
-      );
-      const subsequent = await subsequentRes.json();
-      expect(subsequent.tier).toBe("Select");
-
-      setActivePinia(createPinia());
-      vi.stubEnv("VITE_DEMO_MODE", "true");
-      const authStore = useAuthStore();
-      authStore.startDemoSession();
-      const loaded = await authStore.loadEntitlements({ force: true });
-      expect(loaded?.tier).toBe("Select");
-      expect(authStore.entitlements?.tier).toBe("Select");
+      const isolatedPeer = createWebDemoStore();
+      store.upgradeSubscriptionTier("Select");
+      expect(store.getEntitlements().tier).toBe("Select");
+      expect(isolatedPeer.getEntitlements().tier).toBe("Complete");
     });
   });
 

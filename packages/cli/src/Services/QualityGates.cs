@@ -239,7 +239,7 @@ public static class QualityGates
         new("doc-index", ["validate-doc-index"], "Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`",
             ctx => DocIndexSyncService.SyncDocIndex(check: true, repoRoot: ctx.RepoRoot) == 0),
         new("demo-manifest", ["validate-demo-manifest"],
-            "`packages/demo-fixtures` matches the canonical demo seed in `packages/demo-fixtures/demo-seed.json`, `ExecutionDbSeeder.cs` and `docker/cadence-realm.json`",
+            "`packages/demo-fixtures/demo-seed.json` conforms to `demo-seed.schema.json` and `docker/cadence-realm.json` (including `K027` Subject-role isolation) with zero generated `manifest.js` or `manifest.d.ts` files",
             ctx => CheckDemoManifest(ctx))
         {
             TakesFiles = true,
@@ -538,10 +538,10 @@ public static class QualityGates
                     using var stagedWorkspace = reader.Materialize(
                     [
                         DemoManifestGeneratorService.DemoSeedRelativePath,
-                        DemoManifestGeneratorService.ExecutionSeedRelativePath,
+                        DemoManifestGeneratorService.DemoSeedSchemaRelativePath,
                         DemoManifestGeneratorService.RealmRelativePath,
-                        DemoManifestGeneratorService.ManifestJsRelativePath,
-                        DemoManifestGeneratorService.ManifestDtsRelativePath,
+                        DemoManifestGeneratorService.LegacyManifestJsRelativePath,
+                        DemoManifestGeneratorService.LegacyManifestDtsRelativePath,
                     ]);
                     return DemoManifestGeneratorService.GenerateDemoManifest(validateOnly: true, repoRoot: stagedWorkspace.RootPath) == 0;
                 }
@@ -568,6 +568,7 @@ public static class QualityGates
 
         return normalized.StartsWith("packages/demo-fixtures/", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(normalized, DemoManifestGeneratorService.DemoSeedRelativePath, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, DemoManifestGeneratorService.DemoSeedSchemaRelativePath, StringComparison.OrdinalIgnoreCase) ||
                string.Equals(normalized, DemoManifestGeneratorService.KernelSeedRelativePath, StringComparison.OrdinalIgnoreCase) ||
                string.Equals(normalized, DemoManifestGeneratorService.ExecutionSeedRelativePath, StringComparison.OrdinalIgnoreCase) ||
                string.Equals(normalized, DemoManifestGeneratorService.RealmRelativePath, StringComparison.OrdinalIgnoreCase) ||

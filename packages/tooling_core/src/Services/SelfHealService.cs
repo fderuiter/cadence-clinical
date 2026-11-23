@@ -73,7 +73,7 @@ public static class SelfHealService
         }
 
         if (File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.DemoSeedRelativePath)) &&
-            File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.ExecutionSeedRelativePath)) &&
+            File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.DemoSeedSchemaRelativePath)) &&
             File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.RealmRelativePath)))
         {
             ok &= DemoManifestGeneratorService.GenerateDemoManifest(validateOnly: false, repoRoot: repoRoot) == 0;

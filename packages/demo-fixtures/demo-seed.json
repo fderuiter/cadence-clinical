@@ -1,4 +1,7 @@
 {
+  "$schema": "./demo-seed.schema.json",
+  "schemaVersion": 1,
+  "tenantCode": "cadence-local",
   "epoch": "2026-01-05T09:00:00Z",
   "sponsor": {
     "code": "CADENCE-PHARMA",
@@ -14,27 +17,32 @@
       "code": "SITE-101",
       "name": "Riverside University Hospital",
       "country": "US",
-      "institutionCode": "INST-SITE-101"
+      "institutionCode": "INST-SITE-101",
+      "complianceStage": "SITE_ACTIVATION"
     },
     {
       "code": "SITE-102",
       "name": "Lakeshore Medical Center",
       "country": "US",
-      "institutionCode": "INST-SITE-102"
+      "institutionCode": "INST-SITE-102",
+      "complianceStage": "CONDUCT"
     }
   ],
   "participants": [
     {
       "subjectCode": "SUBJ-101-001",
-      "siteCode": "SITE-101"
+      "siteCode": "SITE-101",
+      "status": "SCREENED"
     },
     {
       "subjectCode": "SUBJ-101-002",
-      "siteCode": "SITE-101"
+      "siteCode": "SITE-101",
+      "status": "SCREENED"
     },
     {
       "subjectCode": "SUBJ-102-001",
-      "siteCode": "SITE-102"
+      "siteCode": "SITE-102",
+      "status": "SCREENED"
     }
   ],
   "roles": [
@@ -170,68 +178,145 @@
     {
       "username": "crc.site101",
       "subject": "1a4345cc-364c-4b8b-881e-93bbea528b0a",
+      "email": "crc.site101@example.com",
+      "firstName": "Site",
+      "lastName": "Coordinator",
+      "tenantId": "cadence-local",
       "role": "DEMO_CRC",
-      "site": "SITE-101"
+      "site": "SITE-101",
+      "workflow": "coordinator",
+      "workspacePersona": "site_crc",
+      "realmRoles": ["Site Investigator"]
     },
     {
       "username": "pi.site101",
       "subject": "cf64a3b4-33cc-4925-8452-75e29ca9526e",
+      "email": "pi.site101@example.com",
+      "firstName": "Principal",
+      "lastName": "Investigator",
+      "tenantId": "cadence-local",
       "role": "DEMO_INVESTIGATOR",
-      "site": "SITE-101"
+      "site": "SITE-101",
+      "workflow": "investigator",
+      "workspacePersona": "site_investigator",
+      "realmRoles": ["Site Investigator", "Principal Investigator"]
     },
     {
       "username": "cra.monitor",
       "subject": "ee2cfdb6-d893-4fb4-a10f-d50830b6728a",
+      "email": "cra.monitor@example.com",
+      "firstName": "CRA",
+      "lastName": "Monitor",
+      "tenantId": "cadence-local",
       "role": "DEMO_MONITOR",
-      "site": "SITE-101"
+      "site": "SITE-101",
+      "workflow": "monitor",
+      "workspacePersona": "cra_monitor",
+      "realmRoles": ["CRA", "Monitor", "Sponsor Admin"]
     },
     {
       "username": "dm.lead",
       "subject": "47a9d88f-73d7-4aca-9fd6-14b8e6e9284f",
+      "email": "dm.lead@example.com",
+      "firstName": "Data",
+      "lastName": "Manager",
+      "tenantId": "cadence-local",
       "role": "DEMO_DATA_MANAGER",
-      "site": null
+      "site": null,
+      "workflow": "data_manager",
+      "workspacePersona": "data_manager",
+      "realmRoles": ["Data Manager", "Sponsor Designer", "Sponsor Admin"]
     },
     {
       "username": "designer_demo",
       "subject": "d0b6257b-57fe-420b-9526-366e83c756aa",
+      "email": "designer_demo@example.com",
+      "firstName": "Designer",
+      "lastName": "Demo",
+      "tenantId": "cadence-local",
       "role": "DEMO_DESIGNER",
-      "site": null
+      "site": null,
+      "workflow": "designer",
+      "workspacePersona": "sponsor_designer",
+      "realmRoles": ["Sponsor Designer"]
     },
     {
       "username": "designer.lead",
       "subject": "8808e058-a472-4f72-9970-a027eddf35bc",
+      "email": "designer.lead@example.com",
+      "firstName": "Designer",
+      "lastName": "Lead",
+      "tenantId": "cadence-local",
       "role": "DEMO_DESIGNER",
-      "site": null
+      "site": null,
+      "workflow": "designer_lead",
+      "workspacePersona": "super_admin",
+      "realmRoles": ["Sponsor Designer", "Data Manager", "Sponsor Admin"]
     },
     {
       "username": "safety.officer",
       "subject": "3d290711-4167-4da5-b55a-4c75760bd27c",
+      "email": "safety.officer@example.com",
+      "firstName": "Safety",
+      "lastName": "Officer",
+      "tenantId": "cadence-local",
       "role": "DEMO_SAFETY",
-      "site": null
+      "site": null,
+      "workflow": "safety",
+      "workspacePersona": "safety_officer",
+      "realmRoles": ["Sponsor Admin"]
     },
     {
       "username": "auditor.lead",
       "subject": "d43095eb-1912-40dd-a528-fa04335a2342",
+      "email": "auditor.lead@example.com",
+      "firstName": "Auditor",
+      "lastName": "Lead",
+      "tenantId": "cadence-local",
       "role": "DEMO_AUDITOR",
-      "site": null
+      "site": null,
+      "workflow": "auditor",
+      "workspacePersona": "auditor",
+      "realmRoles": ["Auditor", "Sponsor Admin"]
     },
     {
       "username": "stat.author",
       "subject": "a1b2c3d4-e5f6-4a7b-8c9d-e1f2a3b4c5d6",
+      "email": "stat.author@example.com",
+      "firstName": "Statistician",
+      "lastName": "Author",
+      "tenantId": "cadence-local",
       "role": "DEMO_STATISTICIAN",
-      "site": null
+      "site": null,
+      "workflow": "statistician",
+      "workspacePersona": "unblinded_statistician",
+      "realmRoles": ["unblinded_statistician"]
     },
     {
       "username": "stat.approver",
       "subject": "b2c3d4e5-f6a7-4b8c-9d1e-f2a3b4c5d6e7",
+      "email": "stat.approver@example.com",
+      "firstName": "Statistician",
+      "lastName": "Approver",
+      "tenantId": "cadence-local",
       "role": "DEMO_STATISTICIAN",
-      "site": null
+      "site": null,
+      "workflow": "statistician_approver",
+      "workspacePersona": "unblinded_statistician",
+      "realmRoles": ["unblinded_statistician"]
     },
     {
       "username": "pharmacist.site101",
       "subject": "c3d4e5f6-a7b8-4c9d-8e1f-a3b4c5d6e7f8",
+      "email": "pharmacist.site101@example.com",
+      "firstName": "Site",
+      "lastName": "Pharmacist",
+      "tenantId": "cadence-local",
       "role": "DEMO_PHARMACIST",
-      "site": "SITE-101"
+      "site": "SITE-101",
+      "workflow": "pharmacist",
+      "workspacePersona": "pharmacist",
+      "realmRoles": ["pharmacist"]
     }
   ]
 }

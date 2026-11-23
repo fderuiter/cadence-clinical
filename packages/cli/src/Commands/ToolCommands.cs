@@ -95,7 +95,7 @@ public static class ToolCommands
     {
         var check = new Option<bool>("--check")
         {
-            Description = "Only check that packages/demo-fixtures matches demo-seed.json, ExecutionDbSeeder.cs, and cadence-realm.json without modifying files",
+            Description = "Only check that demo-seed.json conforms to demo-seed.schema.json and cadence-realm.json without modifying files",
         };
         command.Options.Add(check);
         command.SetAction(result => DemoManifestGeneratorService.GenerateDemoManifest(validateOnly: result.GetValue(check)));

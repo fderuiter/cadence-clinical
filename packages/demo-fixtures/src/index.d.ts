@@ -1,22 +1,75 @@
-import type {
-  DemoManifestFixture,
-  DemoParticipantFixture,
-  DemoPersonaFixture,
-  DemoRoleFixture,
-  DemoSiteFixture,
-  DemoSponsorFixture,
-  DemoStudyFixture,
-} from "./manifest.js";
+export interface DemoSponsorFixture {
+  readonly code: string;
+  readonly name: string;
+  readonly organizationUuid: string;
+}
 
-export type {
-  DemoManifestFixture,
-  DemoParticipantFixture,
-  DemoPersonaFixture,
-  DemoRoleFixture,
-  DemoSiteFixture,
-  DemoSponsorFixture,
-  DemoStudyFixture,
-};
+export interface DemoStudyFixture {
+  readonly code: string;
+  readonly title: string;
+  readonly phase: string;
+  readonly sponsorCode: string;
+  readonly uuid: string;
+  readonly ref: string;
+}
+
+export interface DemoSiteFixture {
+  readonly code: string;
+  readonly name: string;
+  readonly country: string;
+  readonly institutionCode: string;
+  readonly complianceStage: string;
+  readonly institutionUuid: string;
+  readonly siteUuid: string;
+  readonly studySiteUuid: string;
+  readonly studySiteRef: string;
+}
+
+export interface DemoParticipantFixture {
+  readonly subjectCode: string;
+  readonly siteCode: string;
+  readonly enrollmentIndex: number;
+  readonly status: string;
+  readonly screenedAt: string;
+  readonly participantUuid: string;
+  readonly enrollmentUuid: string;
+  readonly enrollmentRef: string;
+}
+
+export interface DemoRoleFixture {
+  readonly code: string;
+  readonly name: string;
+  readonly roleUuid: string;
+  readonly capabilities: readonly string[];
+}
+
+export interface DemoPersonaFixture {
+  readonly username: string;
+  readonly id: string;
+  readonly email: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly tenantId: string;
+  readonly kernelRole: string;
+  readonly workflow: string;
+  readonly workspacePersona: string;
+  readonly siteCode: string | null;
+  readonly grantUuid: string;
+  readonly realmRoles: readonly string[];
+}
+
+export interface DemoManifestFixture {
+  readonly tenantCode: string;
+  readonly tenantUuid: string;
+  readonly epochIso: string;
+  readonly epochMs: number;
+  readonly sponsor: DemoSponsorFixture;
+  readonly study: DemoStudyFixture;
+  readonly sites: readonly DemoSiteFixture[];
+  readonly participants: readonly DemoParticipantFixture[];
+  readonly roles: readonly DemoRoleFixture[];
+  readonly personas: readonly DemoPersonaFixture[];
+}
 
 export interface DemoAuthUser {
   readonly username: string;
@@ -47,6 +100,11 @@ export declare const DEMO_PERSONA_BY_WORKSPACE: Readonly<
   Record<string, DemoPersonaFixture>
 >;
 
+export declare function deriveDemoUuidV8(
+  tenantScope: string,
+  kind: string,
+  name: string
+): string;
 export declare function getDemoSiteByCode(
   siteCode?: string | null
 ): DemoSiteFixture | null;

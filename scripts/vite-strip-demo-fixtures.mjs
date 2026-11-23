@@ -3,6 +3,7 @@ import path from "path";
 
 const VIRTUAL_DEMO_FIXTURES_ID = "\0virtual:demo-fixtures-prod-stub";
 const VIRTUAL_DEMO_RUNTIME_ID = "\0virtual:demo-fixtures-runtime-prod-stub";
+const VIRTUAL_DEMO_ROUTES_ID = "\0virtual:demo-fixtures-routes-prod-stub";
 const VIRTUAL_DEMO_VIEW_PREFIX = "\0virtual:demo-view-prod-stub:";
 const VIRTUAL_DEMO_STORE_PREFIX = "\0virtual:demo-store-prod-stub:";
 
@@ -44,6 +45,10 @@ export const DEFAULT_DEMO_SITE = null;
 export const DEFAULT_DEMO_PARTICIPANT = null;
 export const DEMO_PERSONA_BY_WORKFLOW = EMPTY_RECORD;
 export const DEMO_PERSONA_BY_WORKSPACE = EMPTY_RECORD;
+
+export function deriveDemoUuidV8() {
+  return "";
+}
 
 export function getDemoSiteByCode() {
   return null;
@@ -139,6 +144,33 @@ export function createUnbackedActionGuard({
     refuseUnbackedAction,
     unbackedActionsEnabled: (env) => Boolean(isAllowed(env)),
   };
+}
+`;
+
+const EMPTY_PROD_ROUTES_STUB_SOURCE = `
+export function decodeReceiptBase64ToText() {
+  return "";
+}
+export function parseDemoReceiptContent() {
+  return {};
+}
+export function evaluateDemoExpenseSubmission() {
+  return {};
+}
+export function createDemoHealthRoute() {
+  return null;
+}
+export function createDemoSignatureVerificationRoute() {
+  return null;
+}
+export function createDemoAmendmentReconsentRoute() {
+  return null;
+}
+export function createDemoParticipantExpenseOcrRoute() {
+  return null;
+}
+export function createDemoParticipantExpenseSubmitRoute() {
+  return null;
 }
 `;
 
@@ -340,6 +372,10 @@ export function createDemoFixturesPlugin(appDir) {
     appDir,
     "../../packages/demo-fixtures/src/runtime.js"
   );
+  const demoFixturesRoutesEntry = path.resolve(
+    appDir,
+    "../../packages/demo-fixtures/src/routes.js"
+  );
   const viewsDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/views/demo"))}/`;
   const storesDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/stores/demo"))}/`;
 
@@ -378,6 +414,11 @@ export function createDemoFixturesPlugin(appDir) {
           ? VIRTUAL_DEMO_RUNTIME_ID
           : demoFixturesRuntimeEntry;
       }
+      if (source === "demo-fixtures/routes") {
+        return stripDemoFixtures
+          ? VIRTUAL_DEMO_ROUTES_ID
+          : demoFixturesRoutesEntry;
+      }
       if (!stripDemoFixtures) {
         return null;
       }
@@ -399,6 +440,9 @@ export function createDemoFixturesPlugin(appDir) {
       }
       if (id === VIRTUAL_DEMO_RUNTIME_ID) {
         return EMPTY_PROD_RUNTIME_STUB_SOURCE;
+      }
+      if (id === VIRTUAL_DEMO_ROUTES_ID) {
+        return EMPTY_PROD_ROUTES_STUB_SOURCE;
       }
       if (id.startsWith(VIRTUAL_DEMO_VIEW_PREFIX)) {
         return EMPTY_DEMO_VIEW_STUB_SOURCE;

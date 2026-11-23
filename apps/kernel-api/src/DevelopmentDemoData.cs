@@ -754,6 +754,8 @@ internal static partial class DevelopmentDemoData
 }
 
 internal sealed record DevelopmentDemoSeed(
+    int SchemaVersion,
+    string TenantCode,
     string Epoch,
     DevelopmentDemoSponsorSeed Sponsor,
     DevelopmentDemoStudySeed Study,
@@ -766,13 +768,32 @@ internal sealed record DevelopmentDemoSponsorSeed(string Code, string Name);
 
 internal sealed record DevelopmentDemoStudySeed(string Code, string Title, string Phase);
 
-internal sealed record DevelopmentDemoSiteSeed(string Code, string Name, string Country, string InstitutionCode);
+internal sealed record DevelopmentDemoSiteSeed(
+    string Code,
+    string Name,
+    string Country,
+    string InstitutionCode,
+    string ComplianceStage);
 
-internal sealed record DevelopmentDemoParticipantSeed(string SubjectCode, string SiteCode);
+internal sealed record DevelopmentDemoParticipantSeed(
+    string SubjectCode,
+    string SiteCode,
+    string Status);
 
 internal sealed record DevelopmentDemoRoleSeed(string Code, string Name, string[] Capabilities);
 
-internal sealed record DevelopmentDemoUserSeed(string Username, string Subject, string Role, string? Site);
+internal sealed record DevelopmentDemoUserSeed(
+    string Username,
+    string Subject,
+    string Email,
+    string FirstName,
+    string LastName,
+    string TenantId,
+    string Role,
+    string? Site,
+    string Workflow,
+    string WorkspacePersona,
+    string[] RealmRoles);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(DevelopmentDemoSeed))]
