@@ -10,7 +10,7 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [designer](designer.md) | 6 |
 | [econsent](econsent.md) | 6 |
 | [eisf](eisf.md) | 2 |
-| [etmf](etmf.md) | 14 |
+| [etmf](etmf.md) | 17 |
 | [execution_forms](execution_forms.md) | 15 |
 | [execution](execution.md) | 64 |
 | [fileshare](fileshare.md) | 2 |
