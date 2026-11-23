@@ -1137,10 +1137,4 @@ function synthesizeProtocol() {
   border-radius: 6px;
   cursor: pointer;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

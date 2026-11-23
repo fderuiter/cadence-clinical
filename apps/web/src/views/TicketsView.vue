@@ -1356,18 +1356,26 @@ const exportAuditTrail = (format) => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
 }
 
 /* Header */
 .section-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 24px;
+  gap: 16px 24px;
+  min-width: 0;
+}
+
+.header-content-group {
+  min-width: 0;
 }
 
 .header-badge-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -1411,14 +1419,17 @@ const exportAuditTrail = (format) => {
 
 .header-action-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
 }
 
 /* Stats Cards Grid */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr));
   gap: 16px;
+  min-width: 0;
 }
 
 .stat-card {
@@ -1429,6 +1440,7 @@ const exportAuditTrail = (format) => {
   display: flex;
   align-items: center;
   gap: 16px;
+  min-width: 0;
   cursor: pointer;
   transition:
     transform 0.15s ease,
@@ -1507,6 +1519,7 @@ const exportAuditTrail = (format) => {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .search-box {
@@ -1517,8 +1530,9 @@ const exportAuditTrail = (format) => {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 6px 12px;
-  flex: 1;
-  min-width: 240px;
+  flex: 1 1 15rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .search-icon {
@@ -1531,11 +1545,15 @@ const exportAuditTrail = (format) => {
   outline: none;
   font-size: 0.85rem;
   width: 100%;
+  min-width: 0;
 }
 
 .filter-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .filter-select {
@@ -1546,6 +1564,8 @@ const exportAuditTrail = (format) => {
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-body);
   outline: none;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .view-mode-toggle {
@@ -1575,10 +1595,12 @@ const exportAuditTrail = (format) => {
 /* KANBAN BOARD VIEW */
 .kanban-board {
   display: grid;
-  grid-template-columns: repeat(5, minmax(240px, 1fr));
+  grid-template-columns: repeat(5, minmax(15rem, 1fr));
   gap: 16px;
   overflow-x: auto;
   align-items: flex-start;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .kanban-column {
@@ -1588,6 +1610,20 @@ const exportAuditTrail = (format) => {
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 320px);
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .dashboard-section {
+    padding: 12px 0;
+  }
+  .kanban-board {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-x: visible;
+  }
+  .kanban-column {
+    max-height: none;
+  }
 }
 
 .column-header {
@@ -1936,11 +1972,5 @@ const exportAuditTrail = (format) => {
 
 .btn-secondary:hover {
   background: var(--semantic-color-surface-header);
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

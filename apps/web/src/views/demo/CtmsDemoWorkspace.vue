@@ -4749,12 +4749,6 @@ textarea {
   font-size: var(--font-size-sm, 0.875rem);
 }
 
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
-
 .role-note {
   margin: 8px 0 0;
   font-size: 0.75rem;

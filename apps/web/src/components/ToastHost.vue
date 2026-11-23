@@ -64,17 +64,34 @@ function handleAction(toast) {
 <style scoped>
 .toast-host {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  right: 1rem;
+  bottom: 1rem;
   z-index: calc(9999 + 51);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-width: min(420px, calc(100vw - 32px));
+  gap: 0.5rem;
+  max-width: min(26.25rem, calc(100vw - 2rem));
+  max-height: calc(
+    100vh - var(--shell-header-height, 0px) - var(--canvas-topbar-height, 0px) -
+      1.5rem
+  );
+  overflow-y: auto;
+}
+@media (max-width: 767px), (max-height: 479px) {
+  .toast-host {
+    right: 0.5rem;
+    bottom: 0.5rem;
+    max-width: calc(100vw - 1rem);
+    max-height: calc(
+      100vh - var(--shell-header-height, 0px) -
+        var(--canvas-topbar-height, 0px) - 1rem
+    );
+  }
 }
 .toast {
   display: flex;
   align-items: flex-start;
+  flex-shrink: 0;
   gap: 12px;
   padding: 12px 14px;
   border: 1px solid var(--border);
@@ -83,6 +100,7 @@ function handleAction(toast) {
   color: var(--primary);
   font-family: var(--font);
   box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+  min-width: 0;
 }
 .toast-error {
   border-color: var(--error);
@@ -101,6 +119,10 @@ function handleAction(toast) {
   flex-direction: column;
   gap: 2px;
   flex: 1;
+  min-width: 0;
+}
+.toast-title {
+  overflow-wrap: anywhere;
 }
 .toast-message {
   font-size: 0.85rem;
@@ -123,6 +145,12 @@ function handleAction(toast) {
   background: var(--semantic-color-surface-header);
 }
 .toast-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
   border: none;
   background: transparent;
   color: inherit;

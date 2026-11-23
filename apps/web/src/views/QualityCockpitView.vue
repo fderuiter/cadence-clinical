@@ -2313,10 +2313,4 @@ function downloadDossierJson() {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-secondary);
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

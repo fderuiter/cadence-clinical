@@ -7,9 +7,12 @@ export interface RoleHolder {
   hasRole: (role: string) => boolean;
 }
 
-/** The realm roles exactly as the gateway signs them to downstream .NET services. */
+/** The realm roles and active persona/site claims as signed by the gateway to downstream .NET services. */
 export interface RawRoleHolder {
   rawRoles?: readonly string[] | null;
+  currentPersona?: string | null;
+  assignedSiteIds?: readonly string[] | null;
+  siteIds?: readonly string[] | null;
 }
 
 export type AuthorityAuth = Partial<RoleHolder> &

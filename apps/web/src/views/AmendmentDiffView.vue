@@ -3494,10 +3494,4 @@ onMounted(() => {
 .color-dot.dot-gray {
   background: var(--semantic-color-border-control);
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

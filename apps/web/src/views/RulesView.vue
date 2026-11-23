@@ -1596,10 +1596,4 @@ onMounted(async () => {
   align-items: flex-start;
   margin-bottom: 8px;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

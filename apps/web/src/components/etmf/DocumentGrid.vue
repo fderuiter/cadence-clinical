@@ -1650,10 +1650,4 @@ async function submitUpload() {
 .scope-forbidden-icon {
   font-size: 1.6rem;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

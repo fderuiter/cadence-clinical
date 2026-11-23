@@ -1161,10 +1161,4 @@ function handleBatchIngested(result) {
   color: var(--semantic-color-error);
   font-weight: 700;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>
