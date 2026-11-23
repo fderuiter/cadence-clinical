@@ -3291,10 +3291,4 @@ onMounted(() => {
   padding: 2rem !important;
   color: var(--color-text-muted);
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

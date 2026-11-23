@@ -20,7 +20,7 @@ De-identification library: PII/PHI detection with compliance profiles, value tra
 
 ## Referenced by
 
-`packages/compliance`, `packages/tooling_core` (the `deid` gate), `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`. No application references it directly.
+`packages/tooling_core` (the `deid` gate), `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`. No application references it directly.
 
 ## Tests
 

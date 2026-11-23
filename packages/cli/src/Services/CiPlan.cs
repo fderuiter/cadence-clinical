@@ -185,8 +185,8 @@ public static class CiPlan
         ["container-security"] = "builds container images across a matrix and uploads Trivy SARIF to GitHub Code Scanning",
         ["ci-gate"] = "aggregates pull-request validation job outcomes into one required branch ruleset status check",
         ["classify"] = "classifies changed paths and labels same-repository pull requests through the GitHub API",
-        ["release-and-archive"] = "calls the production pipeline on pushes to main, release/* and v* tags",
-        ["deploy-docs"] = "deploys the documentation portal to GitHub Pages on a push to main",
+        ["release-and-archive"] = "calls the production pipeline on pushes or ref-guarded dispatches to main, release/* and v* tags",
+        ["deploy-docs"] = "deploys the documentation portal to GitHub Pages on pushes or ref-guarded dispatches to main",
     };
 
     /// <summary>The jobs, in the order <c>cadence ci</c> runs them.</summary>
@@ -292,14 +292,7 @@ public static class CiPlan
         [
             new("docs-build", "Install Node dependencies") { CoveredBy = StyleNodeInstall, Commands = [Pnpm("install", "--frozen-lockfile")] },
             new("docs-build", "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
-            new("docs-build", "Run documentation compilation")
-            {
-                Commands = [Pnpm("docs:build")],
-
-                // scripts/build-docs.js runs openapi, schema-doc, and markdown checks before building; it skips those
-                // duplicate gates when they already passed in this run (#5028), while still running 'check rtm'.
-                EnvironmentIfPassed = [new(QualitySentinels, "CADENCE_DOCS_SKIP_CHECKS", "1")],
-            },
+            new("docs-build", "Run documentation compilation") { Commands = [Pnpm("docs:build")] },
             new("docs-build", "Build and stage co-hosted interactive demos") { Commands = [Pnpm("docs:stage-demos")] },
             new("docs-build", "Verify public bundles") { Commands = [NodeCli("check", "public-bundle")] },
         ])
@@ -422,7 +415,12 @@ public static class CiPlan
                 Commands =
                 [
                     Dotnet("test", "tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj", "--configuration", "Release",
-                        "--filter", "FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason"),
+                        "--filter", "FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason",
+                        "--results-directory", RtmGeneratorService.DefaultResultsDir, "--logger", "trx;LogFilePrefix=gxp_browser")
+                        with
+                        {
+                            CiText = "dotnet test tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --filter FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason --results-directory TestResults/gxp-browser --logger \"trx;LogFilePrefix=gxp_browser\"",
+                        },
                 ],
             },
         ]);

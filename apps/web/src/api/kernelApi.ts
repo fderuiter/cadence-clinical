@@ -43,6 +43,8 @@ export type KernelSoaRow = Schemas["Kernel_KernelSoaRowResponse"];
 export type KernelSoaFootnote = Schemas["Kernel_KernelSoaFootnoteResponse"];
 export type KernelScreenEnrollmentResult =
   Schemas["Kernel_KernelEnrollmentStateResponse"];
+export type KernelEnrollmentLookup =
+  Schemas["Kernel_KernelEnrollmentLookupResponse"];
 export type KernelLineageNode = Schemas["Kernel_KernelLineageNodeResponse"];
 export type KernelLineageEdge = Schemas["Kernel_KernelLineageEdgeResponse"];
 export type KernelLineage = Schemas["Kernel_KernelLineageResponse"];
@@ -68,15 +70,26 @@ export type KernelSimulationResult = Schemas["Kernel_SimulationResult"];
 export type KernelMatrixGapFinding = Schemas["Kernel_MatrixGapFinding"];
 export type KernelLock = Schemas["Kernel_KernelLockResponse"];
 export type KernelStudyLocks = Schemas["Kernel_KernelStudyLocksResponse"];
+export type KernelLockReadiness = Schemas["Kernel_KernelLockReadinessResponse"];
+export type KernelLockBlocker = Schemas["Kernel_KernelLockBlockerResponse"];
 export type KernelLockKind = Schemas["Kernel_LockKind"];
 export type KernelLockMeaning = "Approved" | "Responsibility";
-export type StudyExportFormat = "csv" | "odm_xml" | "dataset_json";
+export type StudyExportFormat =
+  | "csv"
+  | "odm_xml"
+  | "dataset_json"
+  | "sas_bundle"
+  | "r_bundle"
+  | "study_archive";
 export type StudyExportLockFilter =
   "all" | "locked_only" | "frozen_or_locked" | "unlocked_only";
-export type CasebookExportFormat = "json" | "odm_xml" | "html";
+export type CasebookExportFormat = "json" | "odm_xml" | "html" | "pdf";
 export type KernelStudySummary = Schemas["Kernel_KernelStudySummaryResponse"];
 export type KernelOrganizationSummary =
   Schemas["Kernel_KernelOrganizationSummaryResponse"];
+export type KernelSiteSummary = Schemas["Kernel_KernelSiteSummaryResponse"];
+export type KernelStudySiteSummary =
+  Schemas["Kernel_KernelStudySiteSummaryResponse"];
 export type KernelProtocolTemplate =
   Schemas["Kernel_KernelProtocolTemplateResponse"];
 export type KernelProtocolDraftSummary =
@@ -122,6 +135,36 @@ export interface KernelCreateStudyRequest {
   sponsorRef?: string | null;
   sponsorCode?: string | null;
   sponsorName?: string | null;
+  linkSandboxSite?: boolean;
+  initialSiteRef?: string | null;
+  initialSiteCode?: string | null;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelCreateOrganizationInput {
+  name: string;
+  code?: string | null;
+  kind?: string | null;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelCreateSiteInput {
+  siteCode: string;
+  name: string;
+  country: string;
+  institutionRef?: string | null;
+  institutionCode?: string | null;
+  institutionName?: string | null;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelLinkSiteToStudyInput {
+  studyRef: string;
+  siteRef?: string | null;
+  siteCode?: string | null;
   reason: string;
   idempotencyKey: string;
 }
@@ -140,6 +183,7 @@ export interface KernelProtocolImportRequest {
 
 export const ASSERTION_LOCKED = "K.Assertion.Locked";
 export const ASSERTION_ALREADY_LOCKED = "K.Assertion.AlreadyLocked";
+export const ASSERTION_SCOPE_NOT_READY = "K.Assertion.ScopeNotReady";
 export const ASSERTION_REVISION_STALE = "K.Assertion.RevisionStale";
 export const ASSERTION_ALREADY_RETRACTED = "K.Assertion.AlreadyRetracted";
 export const KERNEL_AUTHORIZATION_DENIED = "K.Authorization.Denied";
@@ -288,6 +332,20 @@ export interface KernelStreamedArtifact {
   contentSha256: string | null;
 }
 
+/** Extracts a structured `Explanation` from an RFC 9457 ProblemDetails error when present (`K-EXP-1`). */
+export function extractKernelExplanation(
+  error: unknown
+): KernelExplanation | null {
+  const container =
+    (error as { data?: unknown } | null)?.data ?? (error as unknown);
+  if (!container || typeof container !== "object") return null;
+  const explanation = (container as Record<string, unknown>).explanation;
+  if (!explanation || typeof explanation !== "object") return null;
+  const record = explanation as Record<string, unknown>;
+  if (typeof record.claim !== "string") return null;
+  return explanation as KernelExplanation;
+}
+
 /** Actionable user-facing explanation when a lock apply or release call fails. */
 export function describeLockError(error: unknown): string {
   const code = assertionErrorCode(error);
@@ -298,6 +356,46 @@ export function describeLockError(error: unknown): string {
       (error as { data?: unknown } | null)?.data
     );
     return SUBSCRIPTION_EXPIRED_GUIDANCE;
+  }
+  if (code === ASSERTION_SCOPE_NOT_READY) {
+    const data =
+      ((error as { data?: Record<string, unknown> } | null)?.data as
+        Record<string, unknown> | undefined) ??
+      (error && typeof error === "object"
+        ? (error as Record<string, unknown>)
+        : undefined);
+    const detail =
+      typeof data?.detail === "string" && data.detail.trim()
+        ? data.detail.trim()
+        : "";
+    const explanation = extractKernelExplanation(error);
+    const conditionDetails = Array.isArray(explanation?.conditions)
+      ? explanation.conditions
+          .filter((item) => item && item.met === false)
+          .map((item) => item.description?.trim())
+          .filter((item): item is string => Boolean(item))
+      : [];
+    const nextActions = Array.isArray(explanation?.next_actions)
+      ? explanation.next_actions
+          .map((item) => item?.description?.trim())
+          .filter((item): item is string => Boolean(item))
+      : [];
+    const parts: string[] = [];
+    if (detail) {
+      parts.push(detail);
+    } else if (explanation?.claim) {
+      parts.push(explanation.claim);
+    }
+    if (conditionDetails.length > 0) {
+      parts.push(conditionDetails.slice(0, 3).join(" · "));
+    }
+    if (nextActions.length > 0) {
+      parts.push(`Next actions: ${nextActions.slice(0, 3).join(" · ")}`);
+    }
+    if (parts.length > 0) {
+      return parts.join(" ");
+    }
+    return "This scope has open queries or missing required items that must be resolved before locking. Freeze remains available.";
   }
   if (code === ASSERTION_ALREADY_LOCKED || status === 409) {
     return "That lock state already changed; reload and inspect the current locks.";
@@ -501,6 +599,12 @@ export interface KernelSearchQuery {
   text: string;
   kinds?: string[];
   limit?: number;
+}
+
+export interface KernelEnrollmentLookupQuery {
+  studyCode: string;
+  subjectCode: string;
+  siteCode?: string | null;
 }
 
 /** True when the reader may not see the object: show its place and `mask`, never guess at the rest. */
@@ -727,6 +831,28 @@ export const kernelApi = {
     );
   },
 
+  /**
+   * Resolves a study code, subject code, and optional site code to pinned study, study site, and enrollment NodeRefs
+   * (GET /api/v1/kernel/enrollments/lookup). Rejects with status 404 when absent, site-mismatched, or masked (ADR-2471).
+   */
+  lookupEnrollment({
+    studyCode,
+    subjectCode,
+    siteCode,
+  }: KernelEnrollmentLookupQuery): Promise<KernelEnrollmentLookup> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/enrollments/lookup", {
+        params: {
+          query: {
+            study_code: studyCode,
+            subject_code: subjectCode,
+            site_code: siteCode ? siteCode : undefined,
+          },
+        },
+      })
+    );
+  },
+
   /** Visible studies in the caller's tenant, ordered by study code (GET /api/v1/kernel/studies). */
   listStudies(): Promise<KernelStudySummary[]> {
     return unwrapResponse(client.GET("/api/v1/kernel/studies"));
@@ -741,6 +867,95 @@ export const kernelApi = {
     );
   },
 
+  /** Registers an organization such as a SiteInstitution with a signed reason and idempotency key (POST /api/v1/kernel/organizations). */
+  createOrganization({
+    name,
+    code,
+    kind = "SiteInstitution",
+    reason,
+    idempotencyKey,
+  }: KernelCreateOrganizationInput): Promise<KernelOrganizationSummary> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/organizations", {
+        body: {
+          name,
+          code: code ?? null,
+          kind: kind ?? "SiteInstitution",
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Registered investigational sites in the caller's tenant, ordered by site code (GET /api/v1/kernel/sites). */
+  listSites(): Promise<KernelSiteSummary[]> {
+    return unwrapResponse(client.GET("/api/v1/kernel/sites"));
+  },
+
+  /** Registers an investigational site with a 2-letter ISO country code, signed reason, and idempotency key (POST /api/v1/kernel/sites). */
+  createSite({
+    siteCode,
+    name,
+    country,
+    institutionRef,
+    institutionCode,
+    institutionName,
+    reason,
+    idempotencyKey,
+  }: KernelCreateSiteInput): Promise<KernelSiteSummary> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/sites", {
+        body: {
+          site_code: siteCode,
+          name,
+          country,
+          institution_ref: institutionRef ?? null,
+          institution_code: institutionCode ?? null,
+          institution_name: institutionName ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Sites linked to a study in the caller's tenant, ordered by site code (GET /api/v1/kernel/studies/{studyRef}/sites). */
+  listStudySites(studyRef: string): Promise<KernelStudySiteSummary[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/studies/{studyRef}/sites", {
+        params: { path: { studyRef } },
+      })
+    );
+  },
+
+  /** Links a registered investigational site to a study with a signed reason and idempotency key (POST /api/v1/kernel/studies/{studyRef}/sites). */
+  linkSiteToStudy({
+    studyRef,
+    siteRef,
+    siteCode,
+    reason,
+    idempotencyKey,
+  }: KernelLinkSiteToStudyInput): Promise<KernelStudySiteSummary> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/studies/{studyRef}/sites", {
+        params: { path: { studyRef } },
+        body: {
+          site_ref: siteRef ?? null,
+          site_code: siteCode ?? null,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
   /** Registers a new study with a signed reason for change and idempotency key (POST /api/v1/kernel/studies). */
   createStudy({
     code,
@@ -749,6 +964,9 @@ export const kernelApi = {
     sponsorRef,
     sponsorCode,
     sponsorName,
+    linkSandboxSite,
+    initialSiteRef,
+    initialSiteCode,
     reason,
     idempotencyKey,
   }: KernelCreateStudyRequest): Promise<KernelStudySummary> {
@@ -761,6 +979,9 @@ export const kernelApi = {
           sponsor_ref: sponsorRef ?? null,
           sponsor_code: sponsorCode ?? null,
           sponsor_name: sponsorName ?? null,
+          link_sandbox_site: Boolean(linkSandboxSite),
+          initial_site_ref: initialSiteRef ?? null,
+          initial_site_code: initialSiteCode ?? null,
         },
         headers: {
           "X-Change-Reason": encodeChangeReason(reason),
@@ -1156,6 +1377,21 @@ export const kernelApi = {
     );
   },
 
+  /** Evaluates lock readiness (open queries and missing required items) for a study or child scope (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`). */
+  getStudyLockReadiness(
+    studyRef: string,
+    scopeRef?: string
+  ): Promise<KernelLockReadiness> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/studies/{studyRef}/locks/readiness", {
+        params: {
+          path: { studyRef: unversioned(studyRef) },
+          query: scopeRef ? { scope_ref: unversioned(scopeRef) } : undefined,
+        },
+      })
+    );
+  },
+
   /** Applies a signed Frozen or Locked assertion to a study, site, enrollment, form, or observation (POST /api/v1/kernel/locks). */
   applyLock({
     studyRef,
@@ -1216,7 +1452,7 @@ export const kernelApi = {
     );
   },
 
-  /** Streams a study clinical snapshot in CSV, CDISC ODM v1.3.2 XML, or CDISC Dataset-JSON at optional bitemporal `as_of` (GET /api/v1/kernel/studies/{studyRef}/exports). */
+  /** Streams a study clinical snapshot or statistical/regulatory ZIP bundle at optional bitemporal `as_of` (GET /api/v1/kernel/studies/{studyRef}/exports). */
   streamStudyExport({
     studyRef,
     format = "csv",
@@ -1233,19 +1469,22 @@ export const kernelApi = {
     if (asOf) params.set("as_of", asOf);
     if (validAt) params.set("valid_at", validAt);
     if (knownAt) params.set("known_at", knownAt);
-    const ext =
-      format === "odm_xml"
-        ? "odm.xml"
-        : format === "dataset_json"
-          ? "dataset.json"
-          : "csv";
+    const extByFormat: Record<StudyExportFormat, string> = {
+      csv: "csv",
+      odm_xml: "odm.xml",
+      dataset_json: "dataset.json",
+      sas_bundle: "sas_bundle.zip",
+      r_bundle: "r_bundle.zip",
+      study_archive: "study_archive.zip",
+    };
+    const ext = extByFormat[format] || "csv";
     return streamKernelDownload(
       `/api/v1/kernel/studies/${encodeURIComponent(cleanRef)}/exports?${params.toString()}`,
       `study-export.${ext}`
     );
   },
 
-  /** Streams a participant casebook in JSON, CDISC ODM v1.3.2 XML, or printable HTML with `X-Content-Sha256` integrity digest (GET /api/v1/kernel/enrollments/{enrollmentRef}/casebook). */
+  /** Streams a participant casebook in JSON, CDISC ODM v1.3.2 XML, printable HTML, or certified PDF with `X-Content-Sha256` integrity digest (GET /api/v1/kernel/enrollments/{enrollmentRef}/casebook). */
   streamEnrollmentCasebook({
     enrollmentRef,
     format = "json",
@@ -1258,12 +1497,13 @@ export const kernelApi = {
     if (asOf) params.set("as_of", asOf);
     if (validAt) params.set("valid_at", validAt);
     if (knownAt) params.set("known_at", knownAt);
-    const ext =
-      format === "odm_xml"
-        ? "casebook.odm.xml"
-        : format === "html"
-          ? "casebook.html"
-          : "casebook.json";
+    const extByFormat: Record<CasebookExportFormat, string> = {
+      json: "casebook.json",
+      odm_xml: "casebook.odm.xml",
+      html: "casebook.html",
+      pdf: "casebook.pdf",
+    };
+    const ext = extByFormat[format] || "casebook.json";
     return streamKernelDownload(
       `/api/v1/kernel/enrollments/${encodeURIComponent(cleanRef)}/casebook?${params.toString()}`,
       `participant.${ext}`

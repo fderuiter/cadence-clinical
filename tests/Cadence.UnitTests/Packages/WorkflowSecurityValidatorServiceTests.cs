@@ -363,6 +363,156 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
         WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(0);
     }
 
+    [Fact]
+    public void ValidateWorkflowSecurity_RejectsUnguardedWorkflowDispatchOnDeployAttestOrPublishJobs()
+    {
+        // 1. Standalone workflow_dispatch on a deployment/attestation workflow without ref guard fails
+        Write(".github/workflows/deploy.yml", $$"""
+            name: Unguarded Deploy
+            on:
+              workflow_call:
+              workflow_dispatch:
+            permissions:
+              contents: read
+            jobs:
+              deploy:
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                  pages: write
+                  id-token: write
+                steps:
+                  - uses: actions/setup-node@{{ValidSetupNodeSha}} # v7
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(1);
+
+        // 2. Reusable caller on workflow_dispatch without ref guard fails
+        Write(".github/workflows/deploy.yml", """
+            name: Unguarded Caller
+            on:
+              push:
+                branches: [main]
+              workflow_dispatch:
+            permissions:
+              contents: read
+            jobs:
+              call-release:
+                if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+                permissions:
+                  contents: write
+                  id-token: write
+                  attestations: write
+                uses: ./.github/workflows/production-pipeline.yml
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(1);
+
+        // 3. Ref-guarded workflow_dispatch caller restricted to main, release/*, and v* passes
+        Write(".github/workflows/deploy.yml", """
+            name: Ref-Guarded Caller
+            on:
+              push:
+                branches: [main, release/*]
+                tags: ["v*"]
+              workflow_dispatch:
+                inputs:
+                  target:
+                    description: "Target"
+                    type: choice
+                    options: [all, release-and-archive]
+            permissions:
+              contents: read
+            jobs:
+              call-release:
+                if: >-
+                  (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+                  (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/v'))
+                permissions:
+                  contents: write
+                  packages: write
+                  id-token: write
+                  attestations: write
+                uses: ./.github/workflows/production-pipeline.yml
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(0);
+    }
+
+    [Fact]
+    public void ValidateWorkflowSecurity_EnforcesTypedDispatchInputsAndBlocksDirectRunInterpolation()
+    {
+        // 1. Free-form string workflow_dispatch input fails
+        Write(".github/workflows/dispatch.yml", $$"""
+            name: Untyped Dispatch Input
+            on:
+              workflow_dispatch:
+                inputs:
+                  tag:
+                    description: "Free-form tag"
+                    type: string
+            permissions:
+              contents: read
+            jobs:
+              check:
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                steps:
+                  - uses: actions/setup-node@{{ValidSetupNodeSha}} # v7
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(1);
+
+        // 2. Direct ${{ inputs.* }} interpolation inside run: fails even when input is typed choice
+        Write(".github/workflows/dispatch.yml", """
+            name: Interpolated Dispatch Input
+            on:
+              workflow_dispatch:
+                inputs:
+                  target:
+                    description: "Target"
+                    type: choice
+                    options: [all, validate-only]
+            permissions:
+              contents: read
+            jobs:
+              check:
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                steps:
+                  - name: Unsafe echo
+                    run: echo "${{ inputs.target }}"
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(1);
+
+        // 3. Typed choice/boolean inputs passed via env: pass
+        Write(".github/workflows/dispatch.yml", """
+            name: Safe Dispatch Input
+            on:
+              workflow_dispatch:
+                inputs:
+                  target:
+                    description: "Target"
+                    type: choice
+                    options: [all, validate-only]
+                  dry_run:
+                    description: "Dry run"
+                    type: boolean
+            permissions:
+              contents: read
+            jobs:
+              check:
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                steps:
+                  - name: Safe echo via env
+                    env:
+                      TARGET: ${{ inputs.target }}
+                      DRY_RUN: ${{ inputs.dry_run }}
+                    run: echo "$TARGET $DRY_RUN"
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(0);
+    }
+
     [Theory]
     [InlineData("docs/.vitepress/config.mjs", false)]
     [InlineData("docs/.vitepress/README.md", false)]
