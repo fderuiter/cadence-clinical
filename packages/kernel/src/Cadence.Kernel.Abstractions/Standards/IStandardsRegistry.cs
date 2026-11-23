@@ -28,6 +28,31 @@ public interface IStandardsRegistry
     /// <summary>One library item version, or null.</summary>
     Task<LibraryItemView?> FindLibraryItemAsync(TenantId tenant, LibraryItemId id, CancellationToken cancellationToken);
 
+    /// <summary>Looks up multiple library item versions by id in a single query, keyed by <see cref="LibraryItemId"/>.</summary>
+    async Task<IReadOnlyDictionary<LibraryItemId, LibraryItemView>> FindLibraryItemsAsync(
+        TenantId tenant,
+        IReadOnlyCollection<LibraryItemId> ids,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        if (ids.Count == 0)
+        {
+            return new Dictionary<LibraryItemId, LibraryItemView>();
+        }
+
+        var found = new Dictionary<LibraryItemId, LibraryItemView>();
+        foreach (var id in ids)
+        {
+            if (!found.ContainsKey(id)
+                && await FindLibraryItemAsync(tenant, id, cancellationToken).ConfigureAwait(false) is { } item)
+            {
+                found[id] = item;
+            }
+        }
+
+        return found;
+    }
+
     /// <summary>Every version of a library item, newest first.</summary>
     Task<IReadOnlyList<LibraryItemView>> ListLibraryItemVersionsAsync(TenantId tenant, LibraryItemKind kind, string key, CancellationToken cancellationToken);
 

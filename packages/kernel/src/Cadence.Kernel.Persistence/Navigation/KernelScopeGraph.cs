@@ -9,6 +9,7 @@ using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Domain.Standards;
 using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
@@ -123,6 +124,9 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
 
             case NodeKinds.ProtocolElement:
                 return await ProtocolElementAsync(db, tenant, node.Id, cancellationToken).ConfigureAwait(false);
+
+            case NodeKinds.FormQuery:
+                return await FormQueryAsync(db, tenant, node.Id, cancellationToken).ConfigureAwait(false);
 
             case NodeKinds.StudyStandardsProfile:
                 var profileId = StudyStandardsProfileId.FromGuid(node.Id);
@@ -333,6 +337,132 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
         }
     }
 
+    public async Task<IReadOnlyDictionary<NodeRef, ScopeNode>> FindManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        var distinct = nodes.Select(n => n.Unversioned()).Distinct().ToList();
+        if (distinct.Count == 0)
+        {
+            return new Dictionary<NodeRef, ScopeNode>();
+        }
+
+        var found = new Dictionary<NodeRef, ScopeNode>(distinct.Count);
+        await using var db = contexts.Create(tenant);
+        var tenantRef = NodeRef.For(tenant);
+
+        var studyIds = distinct.Where(n => n.Kind == NodeKinds.Study).Select(n => StudyId.FromGuid(n.Id)).ToList();
+        if (studyIds.Count > 0)
+        {
+            var studies = await db.Studies.AsNoTracking()
+                .Where(s => s.TenantId == tenant && studyIds.Contains(s.Id))
+                .Select(s => new { s.Id, s.Title, s.StudyCode, s.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var study in studies)
+            {
+                found[NodeRef.For(study.Id)] = new ScopeNode(
+                    new NodeSummary(NodeRef.For(study.Id, study.VersionIndex), study.Title, study.StudyCode),
+                    tenantRef);
+            }
+        }
+
+        var studySiteIds = distinct.Where(n => n.Kind == NodeKinds.StudySite).Select(n => StudySiteId.FromGuid(n.Id)).ToList();
+        if (studySiteIds.Count > 0)
+        {
+            var studySites = await StudySitesWithSites(db, tenant)
+                .Where(x => studySiteIds.Contains(x.Id))
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var studySite in studySites)
+            {
+                found[NodeRef.For(studySite.Id)] = new ScopeNode(
+                    StudySiteSummary(studySite),
+                    NodeRef.For(studySite.StudyId),
+                    studySite.Country);
+            }
+        }
+
+        var enrollmentIds = distinct.Where(n => n.Kind == NodeKinds.Enrollment).Select(n => EnrollmentId.FromGuid(n.Id)).ToList();
+        if (enrollmentIds.Count > 0)
+        {
+            var enrollments = await db.Enrollments.AsNoTracking()
+                .Where(e => e.TenantId == tenant && enrollmentIds.Contains(e.Id))
+                .Select(e => new { e.Id, e.SubjectCode, e.StudyId, e.StudySiteId, e.Status, e.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var enrollment in enrollments)
+            {
+                found[NodeRef.For(enrollment.Id)] = new ScopeNode(
+                    EnrollmentSummary(enrollment.Id, enrollment.SubjectCode, enrollment.Status, enrollment.VersionIndex),
+                    ZoomRules.EnrollmentParent(enrollment.StudyId, enrollment.StudySiteId));
+            }
+        }
+
+        foreach (var remaining in distinct.Where(n => n.Kind is not (NodeKinds.Study or NodeKinds.StudySite or NodeKinds.Enrollment)))
+        {
+            if (await FindAsync(tenant, remaining, cancellationToken).ConfigureAwait(false) is { } scopeNode)
+            {
+                found[remaining] = scopeNode;
+            }
+        }
+
+        return found;
+    }
+
+    public async Task<IReadOnlyList<StudyEnrollmentNode>?> StudyEnrollmentsAsync(
+        TenantId tenant,
+        StudyId study,
+        CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        var studySites = StudySitesWithSites(db, tenant).Where(ss => ss.StudyId == study);
+        var rows = await (
+                from enrollment in db.Enrollments.AsNoTracking()
+                where enrollment.TenantId == tenant && enrollment.StudyId == study
+                join studySite in studySites on enrollment.StudySiteId equals studySite.Id into studySiteGroup
+                from studySite in studySiteGroup.DefaultIfEmpty()
+                select new
+                {
+                    enrollment.Id,
+                    enrollment.SubjectCode,
+                    enrollment.StudySiteId,
+                    HasSite = studySite != null,
+                    SiteCode = studySite != null ? studySite.SiteCode : null,
+                    SiteName = studySite != null ? studySite.SiteName : null,
+                })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (rows.Count == 0)
+        {
+            var exists = await db.Studies.AsNoTracking()
+                .AnyAsync(s => s.TenantId == tenant && s.Id == study, cancellationToken)
+                .ConfigureAwait(false);
+            return exists ? [] : null;
+        }
+
+        return
+        [
+            .. rows
+                .OrderBy(r => r.SubjectCode.Value, StringComparer.Ordinal)
+                .Select(r => new StudyEnrollmentNode(
+                    r.Id,
+                    r.SubjectCode.Value,
+                    r.HasSite ? r.StudySiteId : null,
+                    SiteLabel(r.HasSite, r.SiteCode, r.SiteName))),
+        ];
+    }
+
+    private static string? SiteLabel(bool hasSite, string? siteCode, string? siteName)
+    {
+        if (!hasSite)
+        {
+            return null;
+        }
+
+        return string.IsNullOrEmpty(siteCode) ? siteName : siteCode;
+    }
+
     /// <summary>
     /// A protocol element (ADR-2474) sits under the protocol version that last governed it, at its latest lineage version,
     /// labelled with its element id from that version's content.
@@ -364,6 +494,41 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
         return new ScopeNode(
             new NodeSummary(NodeRef.For(id, latest.Value), elementId is null ? "Protocol element" : $"Protocol element {elementId}", elementId),
             NodeRef.For(versionId));
+    }
+
+    /// <summary>
+    /// A discrepancy query (<c>FormQuery</c>, ADR-2625) sits under the enrollment that governs it in lineage, at its
+    /// latest recorded lineage version, so enrollment, study-site, and study activity streams include query workflow events.
+    /// </summary>
+    private static async Task<ScopeNode?> FormQueryAsync(KernelDbContext db, TenantId tenant, Guid queryGuid, CancellationToken cancellationToken)
+    {
+        var enrollmentGuid = await db.LineageEdges.AsNoTracking()
+            .Where(e => e.TenantId == tenant
+                && e.ToKind == NodeKinds.FormQuery
+                && e.ToId == queryGuid
+                && e.FromKind == NodeKinds.Enrollment
+                && e.Kind == LineageEdgeKind.GovernedBy)
+            .OrderByDescending(e => e.RecordedAt)
+            .ThenByDescending(e => e.Id)
+            .Select(e => (Guid?)e.FromId)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (enrollmentGuid is null)
+        {
+            return null;
+        }
+
+        var latest = await db.LineageNodes.AsNoTracking()
+            .Where(n => n.TenantId == tenant && n.Kind == NodeKinds.FormQuery && n.NodeId == queryGuid)
+            .MaxAsync(n => (long?)n.Version, cancellationToken).ConfigureAwait(false);
+        if (latest is null)
+        {
+            return null;
+        }
+
+        var id = FormQueryId.FromGuid(queryGuid);
+        return new ScopeNode(
+            new NodeSummary(NodeRef.For(id, latest.Value), $"Form query {queryGuid:D}", Code: null),
+            NodeRef.For(EnrollmentId.FromGuid(enrollmentGuid.Value)));
     }
 
     /// <summary>A proposal's label: the start of its intent, on one line.</summary>

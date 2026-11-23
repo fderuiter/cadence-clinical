@@ -46,7 +46,7 @@ if [ "$SDK_INSTALLED" = false ]; then
         TEMP_SCRIPT="$(mktemp /tmp/dotnet-install.XXXXXX.sh)"
         curl -fsSL --connect-timeout 15 --retry 3 https://dot.net/v1/dotnet-install.sh -o "$TEMP_SCRIPT"
 
-        PINNED_DOTNET_INSTALL_SH_SHA256="082f7685e156738a1b2e2ed8381a621870d4ce8e8c59278034556f05c186eb2e"
+        PINNED_DOTNET_INSTALL_SH_SHA256="082f7685e156738a1b2e2ed8381a621870d4ce8e8c59278034556f05c186eb2e" # pragma: allowlist secret
         EXPECTED_HASH="${DOTNET_INSTALL_SH_SHA256:-$PINNED_DOTNET_INSTALL_SH_SHA256}"
 
         echo "  [ACTION] Verifying SHA256 checksum for dotnet-install.sh..."

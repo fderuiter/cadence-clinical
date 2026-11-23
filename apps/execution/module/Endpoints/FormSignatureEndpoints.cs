@@ -51,6 +51,7 @@ internal static class FormSignatureEndpoints
             .WithTags("Execution forms");
 
         group.MapPost("/{formId:guid}/signatures", SignAsync)
+            .AllowExpiredTenantWrite()
             .WithName("ExecutionSignForm")
             .WithSummary("Signs the form's current values with an X-Sig-Token step-up token (collection.sign); 409 when the form changed since it was read.")
             .ProducesProblem(StatusCodes.Status400BadRequest)

@@ -25,3 +25,9 @@ public sealed record SubjectSummaryResponse(
 
 /// <summary>One page of a study's subjects. <see cref="Total"/> counts every subject that matches the filters.</summary>
 public sealed record SubjectListResponse(IReadOnlyList<SubjectSummaryResponse> Items, int Total, int Limit, int Offset);
+
+/// <summary>
+/// Participant counts for one study grouped by lifecycle status code (<see cref="SubjectStateCodec.ToCode"/>), plus
+/// the total across all statuses.
+/// </summary>
+public sealed record SubjectCountsResponse(int Total, IReadOnlyDictionary<string, int> Counts);

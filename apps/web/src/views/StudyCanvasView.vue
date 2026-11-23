@@ -402,6 +402,9 @@
             :can-manage="canManage"
             :can-answer="canAnswer"
             :status="queryStatusFilter"
+            :owner="queryOwnerFilter"
+            :origin="queryOriginFilter"
+            :priority="queryPriorityFilter"
             :site="siteFilter"
             :participant="queryParticipantFilter"
             :changed="queryChangedFilter"
@@ -953,6 +956,9 @@ interface StudyQuery {
   stage?: string;
   section?: string;
   status?: string;
+  owner?: string;
+  origin?: string;
+  priority?: string;
   site?: string;
   q?: string;
   subject?: string;
@@ -1274,6 +1280,18 @@ const queryStatusFilter = computed(() => {
   return ["open", "answered", "closed", "cancelled"].includes(status)
     ? status
     : "";
+});
+const queryOwnerFilter = computed(() => {
+  const owner = single(route.query.owner).toLowerCase();
+  return ["site", "monitor", "data_manager"].includes(owner) ? owner : "";
+});
+const queryOriginFilter = computed(() => {
+  const origin = single(route.query.origin).toLowerCase();
+  return ["manual", "system"].includes(origin) ? origin : "";
+});
+const queryPriorityFilter = computed(() => {
+  const priority = single(route.query.priority).toLowerCase();
+  return ["low", "normal", "high"].includes(priority) ? priority : "";
 });
 const siteFilter = computed(() => single(route.query.site).trim());
 const participantSearchFilter = computed(() => single(route.query.q).trim());
@@ -1919,6 +1937,9 @@ function applyStudyQueryFilter(filter: StudyQueriesFilterState) {
       stage: "data",
       section: "queries",
       status: filter.status,
+      owner: filter.owner,
+      origin: filter.origin,
+      priority: filter.priority,
       site: filter.site,
       subject: filter.participant,
       changed: filter.changed,

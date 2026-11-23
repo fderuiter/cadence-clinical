@@ -87,6 +87,11 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             .ConfigureAwait(false);
         var (complete, missingRequired, openQueries, answeredQueries, errorFindings, blockers) =
             EvaluateFormReadiness(items, values, assertions, found.Id.Value, memberGuids, activeErrorTargets);
+        var enrollmentVersion = await db.Enrollments.AsNoTracking()
+            .Where(e => e.Id == found.EnrollmentId)
+            .Select(e => (long?)e.VersionIndex)
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false) ?? 1L;
 
         return new CollectionInstanceRecord(
             found.Id,
@@ -108,6 +113,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             attestations,
             contentHash,
             collectionTitle,
+            enrollmentVersion,
             complete,
             missingRequired,
             openQueries,
@@ -194,6 +200,47 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         ];
     }
 
+    public async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>> FindManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<CollectionInstanceId> instances,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(instances);
+        var distinctIds = instances.Where(id => !id.IsEmpty).Distinct().ToList();
+        if (distinctIds.Count == 0)
+        {
+            return new Dictionary<CollectionInstanceId, CollectionInstanceRecord>();
+        }
+
+        await using var db = contexts.Create(tenant);
+        var records = await LoadRecordsAsync(
+            db,
+            db.CollectionInstances.AsNoTracking().Where(c => distinctIds.Contains(c.Id)),
+            cancellationToken).ConfigureAwait(false);
+        return records.ToDictionary(r => r.CollectionInstanceId);
+    }
+
+    public async Task<IReadOnlyDictionary<ObservationId, int>> FindObservationRevisionsAsync(
+        TenantId tenant,
+        IReadOnlyCollection<ObservationId> observations,
+        IReadOnlyCollection<CollectionInstanceId>? instances = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(observations);
+        var distinctIds = observations.Where(id => !id.IsEmpty).Distinct().ToList();
+        if (distinctIds.Count == 0)
+        {
+            return new Dictionary<ObservationId, int>();
+        }
+
+        await using var db = contexts.Create(tenant);
+        return await db.Observations.AsNoTracking()
+            .Where(o => distinctIds.Contains(o.Id))
+            .Select(o => new { o.Id, o.Revision })
+            .ToDictionaryAsync(x => x.Id, x => x.Revision, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyList<CollectionInstanceRecord>> ListRecordsForEnrollmentAsync(
         TenantId tenant,
         EnrollmentId enrollment,
@@ -278,6 +325,13 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 .ConfigureAwait(false);
         }
 
+        var enrollmentIds = instances.Select(i => i.EnrollmentId).Distinct().ToList();
+        var enrollmentVersions = await db.Enrollments.AsNoTracking()
+            .Where(e => enrollmentIds.Contains(e.Id))
+            .Select(e => new { e.Id, e.VersionIndex })
+            .ToDictionaryAsync(e => e.Id, e => e.VersionIndex, cancellationToken)
+            .ConfigureAwait(false);
+
         var records = new List<CollectionInstanceRecord>(instances.Count);
         foreach (var instance in instances)
         {
@@ -341,6 +395,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 attestations,
                 contentHash,
                 collectionTitle,
+                enrollmentVersions.GetValueOrDefault(instance.EnrollmentId, 1L),
                 complete,
                 missingRequired,
                 openQueries,

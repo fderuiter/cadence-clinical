@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from "pinia";
 import {
   describeQueryError,
   ecrfQueriesApi,
+  QUERY_SEPARATION_OF_DUTIES,
   queryErrorCode,
 } from "../../src/api/ecrfQueriesApi";
 import { ApiError } from "../../src/api/client";
@@ -16,8 +17,8 @@ function jsonResponse(status, body, contentType = "application/json") {
   });
 }
 
-// #5461: eCRF queries are served by the Execution module on the kernel host, under /api/v1/execution/forms.
-describe("ecrfQueriesApi (#5461)", () => {
+// #5461, ADR-2625: eCRF queries are served by the Execution module on the kernel host, under /api/v1/execution/forms.
+describe("ecrfQueriesApi (#5461, ADR-2625)", () => {
   let fetchSpy;
 
   beforeEach(() => {
@@ -33,7 +34,7 @@ describe("ecrfQueriesApi (#5461)", () => {
     return fetchSpy.mock.calls.at(-1)[0];
   }
 
-  it("raises a query on a value's revision, with the reason and idempotency key", async () => {
+  it("raises a query on a value's revision, with separate reason, routing metadata, and idempotency key", async () => {
     fetchSpy.mockResolvedValueOnce(jsonResponse(201, QUERY));
 
     const result = await ecrfQueriesApi.raise({
@@ -42,7 +43,9 @@ describe("ecrfQueriesApi (#5461)", () => {
       revision: 3,
       text: "Please confirm the value",
       queryId: "query-a",
-      reason: "Please confirm the value",
+      ownerRole: "site",
+      priority: "high",
+      reason: "Source medical chart review",
       idempotencyKey: "raise-1",
     });
 
@@ -54,24 +57,34 @@ describe("ecrfQueriesApi (#5461)", () => {
     );
     expect(request.headers.get("Idempotency-Key")).toBe("raise-1");
     expect(request.headers.get("X-Change-Reason")).toBe(
-      "Please confirm the value"
+      "Source medical chart review"
     );
     expect(await request.json()).toEqual({
       observation_id: "observation-a",
       revision: 3,
       text: "Please confirm the value",
       query_id: "query-a",
+      owner_role: "site",
+      priority: "high",
     });
   });
 
-  it("lists a form's queries, and an enrollment's", async () => {
+  it("lists a form's queries and an enrollment's, including bitemporal coordinates", async () => {
     fetchSpy
+      .mockResolvedValueOnce(jsonResponse(200, [QUERY]))
       .mockResolvedValueOnce(jsonResponse(200, [QUERY]))
       .mockResolvedValueOnce(jsonResponse(200, [QUERY]));
 
     expect(await ecrfQueriesApi.listForForm("form-a")).toEqual([QUERY]);
     expect(new URL(lastRequest().url).pathname).toBe(
       "/api/v1/execution/forms/form-a/queries"
+    );
+
+    await ecrfQueriesApi.listForForm("form-a", {
+      asOf: "2026-08-10T00:00:00Z",
+    });
+    expect(new URL(lastRequest().url).searchParams.get("as_of")).toBe(
+      "2026-08-10T00:00:00Z"
     );
 
     expect(await ecrfQueriesApi.listForEnrollment("enrollment-a")).toEqual([
@@ -92,13 +105,16 @@ describe("ecrfQueriesApi (#5461)", () => {
       itemId: "DIABP",
       text: "Diastolic BP is missing on source",
       queryId: "query-blank",
-      reason: "Diastolic BP is missing on source",
+      reason: "Missing required baseline value",
       idempotencyKey: "raise-blank-1",
     });
 
     const request = lastRequest();
     expect(new URL(request.url).pathname).toBe(
       "/api/v1/execution/forms/form-a/queries"
+    );
+    expect(request.headers.get("X-Change-Reason")).toBe(
+      "Missing required baseline value"
     );
     expect(await request.json()).toEqual({
       observation_id: null,
@@ -109,15 +125,21 @@ describe("ecrfQueriesApi (#5461)", () => {
     });
   });
 
-  it("lists study-wide queries with status, site, participant, and value_changed filters", async () => {
+  it("lists study-wide queries with status, owner, origin, priority, escalated, site, participant, value_changed, and bitemporal filters", async () => {
     fetchSpy.mockResolvedValueOnce(jsonResponse(200, [QUERY]));
 
     expect(
       await ecrfQueriesApi.listForStudy("study-1", {
         status: "open",
+        owner: "site",
+        origin: "manual",
+        priority: "high",
+        escalated: true,
         site: "017",
         participant: "017-0001",
         valueChanged: true,
+        validAt: "2026-08-18T00:00:00Z",
+        knownAt: "2026-08-19T00:00:00Z",
       })
     ).toEqual([QUERY]);
 
@@ -126,36 +148,48 @@ describe("ecrfQueriesApi (#5461)", () => {
     expect(Object.fromEntries(url.searchParams)).toEqual({
       study_id: "study-1",
       status: "open",
+      owner: "site",
+      origin: "manual",
+      priority: "high",
+      escalated: "true",
       site: "017",
       participant: "017-0001",
       value_changed: "true",
+      valid_at: "2026-08-18T00:00:00Z",
+      known_at: "2026-08-19T00:00:00Z",
     });
   });
 
   it.each([
     ["answer", { text: "Confirmed" }],
     ["reopen", { text: "Still differs from source" }],
-  ])("sends %s with its text", async (action, body) => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse(200, QUERY));
+  ])(
+    "sends %s with its text and separate X-Change-Reason",
+    async (action, body) => {
+      fetchSpy.mockResolvedValueOnce(jsonResponse(200, QUERY));
 
-    await ecrfQueriesApi.transition(action, {
-      formId: "form-a",
-      queryId: "query-a",
-      text: body.text,
-      reason: body.text,
-      idempotencyKey: `${action}-1`,
-    });
+      await ecrfQueriesApi.transition(action, {
+        formId: "form-a",
+        queryId: "query-a",
+        text: body.text,
+        reason: "Signed source review",
+        idempotencyKey: `${action}-1`,
+      });
 
-    const request = lastRequest();
-    expect(new URL(request.url).pathname).toBe(
-      `/api/v1/execution/forms/form-a/queries/query-a/${action}`
-    );
-    expect(request.headers.get("Idempotency-Key")).toBe(`${action}-1`);
-    expect(await request.json()).toEqual(body);
-  });
+      const request = lastRequest();
+      expect(new URL(request.url).pathname).toBe(
+        `/api/v1/execution/forms/form-a/queries/query-a/${action}`
+      );
+      expect(request.headers.get("Idempotency-Key")).toBe(`${action}-1`);
+      expect(request.headers.get("X-Change-Reason")).toBe(
+        "Signed source review"
+      );
+      expect(await request.json()).toEqual(body);
+    }
+  );
 
   it.each(["close", "cancel"])(
-    "sends %s with no body and the reason as X-Change-Reason",
+    "sends %s with no body when no distinct note is given and encodes X-Change-Reason",
     async (action) => {
       fetchSpy.mockResolvedValueOnce(jsonResponse(200, QUERY));
 
@@ -176,6 +210,29 @@ describe("ecrfQueriesApi (#5461)", () => {
         "UTF-8''Answer%20accepted%20%E2%80%94%20thanks"
       );
       expect(await request.text()).toBe("");
+    }
+  );
+
+  it.each(["close", "cancel"])(
+    "sends %s with JSON note body when text is distinct from X-Change-Reason",
+    async (action) => {
+      fetchSpy.mockResolvedValueOnce(jsonResponse(200, QUERY));
+
+      await ecrfQueriesApi.transition(action, {
+        formId: "form-a",
+        queryId: "query-a",
+        text: "Accepted corrected systolic value",
+        reason: "SDV completed against flowsheet",
+        idempotencyKey: `${action}-distinct`,
+      });
+
+      const request = lastRequest();
+      expect(request.headers.get("X-Change-Reason")).toBe(
+        "SDV completed against flowsheet"
+      );
+      expect(await request.json()).toEqual({
+        text: "Accepted corrected systolic value",
+      });
     }
   );
 
@@ -212,6 +269,11 @@ describe("ecrfQueriesApi (#5461)", () => {
       409,
       "M.Execution.Query.RevisionStale",
       "The value changed since you loaded the form",
+    ],
+    [
+      409,
+      QUERY_SEPARATION_OF_DUTIES,
+      "another monitor or data manager must review and close it",
     ],
     [404, "M.Execution.Query.ObservationUnknown", "not on this form"],
     [423, "K.Assertion.Locked", "locked"],

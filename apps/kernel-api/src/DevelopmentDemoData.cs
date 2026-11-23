@@ -127,6 +127,8 @@ internal static class DevelopmentDemoData
         "library_item.draft",
         "study.declare_standards",
         "work_queue.define",
+        "person.register",
+        "tenant_membership.register",
     ];
 
     /// <summary>Default capability-keyed work queues seeded idempotently for every tenant.</summary>
@@ -191,6 +193,14 @@ internal static class DevelopmentDemoData
 
         foreach (var (username, subject, role, site) in Users)
         {
+            var personId = PersonId.FromGuid(Guid.Parse(subject));
+            await seeder.SendAsync(
+                new RegisterPerson(tenant, personId, Key($"person:{username}"), Reason),
+                cancellationToken).ConfigureAwait(false);
+            await seeder.SendAsync(
+                new RegisterTenantMembership(tenant, ids.TenantMembership(username), personId, Key($"membership:{username}"), Reason),
+                cancellationToken).ConfigureAwait(false);
+
             AuthorityScope scope;
             if (site is not null)
             {
@@ -798,6 +808,8 @@ internal static class DevelopmentDemoData
         public StudyStandardsProfileId StudyStandardsProfile(string name) => StudyStandardsProfileId.FromGuid(Derive("study-standards-profile", name));
 
         public WorkQueueDefinitionId WorkQueueDefinition(string name) => WorkQueueDefinitionId.FromGuid(Derive("work-queue-definition", name));
+
+        public TenantMembershipId TenantMembership(string name) => TenantMembershipId.FromGuid(Derive("tenant-membership", name));
 
         private Guid Derive(string kind, string name)
         {

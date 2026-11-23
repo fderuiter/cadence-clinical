@@ -17,6 +17,7 @@ using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Security.Authentication;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -63,6 +64,7 @@ public static class KernelLockEndpoints
         var locks = kernel.MapGroup("/locks").AddEndpointFilter<KernelTenantFilter>().WithTags("Kernel locks");
 
         locks.MapPost(string.Empty, ApplyAsync)
+            .AllowExpiredTenantWrite()
             .WithName("KernelApplyLock")
             .WithSummary("Applies a Frozen or Locked assertion to a study, study site, enrollment, form instance or observation (lock.apply).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -74,6 +76,7 @@ public static class KernelLockEndpoints
             .RequireElectronicSignature(ApplyLockSemanticAction, _ => ApplyLockAction);
 
         locks.MapPost("/{lockRef}/release", ReleaseAsync)
+            .AllowExpiredTenantWrite()
             .WithName("KernelReleaseLock")
             .WithSummary("Releases a Frozen or Locked assertion with a signed retracting assertion (lock.release).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -95,6 +98,7 @@ public static class KernelLockEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         studies.MapGet("/{studyRef}/locks/readiness", GetReadinessAsync)
+            .AllowBaselineProductFamily()
             .WithName("KernelGetLockScopeReadiness")
             .WithSummary("Evaluates whether a scope within the study is ready to be frozen or locked, returning diagnostic blockers.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -252,7 +256,7 @@ public static class KernelLockEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
-        StudyId studyId;
+        StudyId? requestedStudyId = null;
         if (!string.IsNullOrWhiteSpace(request?.StudyRef))
         {
             if (!NodeRef.TryParse(request.StudyRef, out var studyNode) || studyNode.Kind != NodeKinds.Study || studyNode.Version is not null)
@@ -260,18 +264,16 @@ public static class KernelLockEndpoints
                 return KernelProblems.BadRequest("Invalid study reference", "Name study_ref as an unversioned study NodeRef (study:<uuid>).");
             }
 
-            studyId = StudyId.FromGuid(studyNode.Id);
+            requestedStudyId = StudyId.FromGuid(studyNode.Id);
         }
-        else
-        {
-            var existing = await locks.FindAsync(tenant, lockId, cancellationToken).ConfigureAwait(false);
-            if (existing is null)
-            {
-                return KernelErrorEndpoints.Problem(KernelErrors.NotFound);
-            }
 
-            studyId = existing.StudyId;
+        var existing = await locks.FindAsync(tenant, lockId, cancellationToken).ConfigureAwait(false);
+        if (existing is null || (requestedStudyId is { } expectedStudy && existing.StudyId != expectedStudy))
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.NotFound);
         }
+
+        var studyId = existing.StudyId;
 
         var releaseId = request?.AssertionId is { } givenRel && givenRel != Guid.Empty
             ? AssertionId.FromGuid(givenRel)

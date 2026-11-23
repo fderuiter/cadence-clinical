@@ -30,6 +30,7 @@ namespace Cadence.Kernel.Host.Onboarding;
 /// </summary>
 public sealed partial class TrialOnboardingService(
     ITenantDirectory directory,
+    ISubjectTenantBindingProbe bindingProbe,
     ITenantEntitlementReader entitlementReader,
     IServiceScopeFactory scopes,
     IKeycloakOnboardingClient keycloak,
@@ -43,7 +44,7 @@ public sealed partial class TrialOnboardingService(
     internal static readonly DateTimeOffset GrantEpoch = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     private const int TrialDurationDays = 30;
-    private const string Reason = "Bootstrap self-service pre-release trial workspace for authenticated OIDC caller";
+    private const string DefaultReason = "Bootstrap self-service pre-release trial workspace for authenticated OIDC caller";
 
     private static readonly string[] OnboardingOperatorCapabilities =
     [
@@ -51,7 +52,6 @@ public sealed partial class TrialOnboardingService(
         "person.register",
         "tenant.enroll_member",
         "subscription.provision",
-        "entitlement.grant",
         "work_queue.define",
     ];
 
@@ -92,10 +92,6 @@ public sealed partial class TrialOnboardingService(
         "effectivity.declare",
         "effectivity.change_status",
         "subscription.switch_tier",
-        "subscription.activate",
-        "subscription.expire",
-        "entitlement.grant",
-        "entitlement.revoke",
         "execution.query.raise",
         "execution.query.answer",
         "execution.query.manage",
@@ -184,6 +180,12 @@ public sealed partial class TrialOnboardingService(
         string subject = caller.Id;
         var ids = new TrialIds(subject);
         string tenantCode = ids.TenantCode;
+        string reason = string.IsNullOrWhiteSpace(input.Reason) ? DefaultReason : input.Reason.Trim();
+
+        if (await bindingProbe.HasForeignBindingAsync(subject, ids.Person, ids.Tenant, cancellationToken).ConfigureAwait(false))
+        {
+            return CommercialErrors.OnboardingCallerInvalid;
+        }
 
         var existingTenant = await directory.FindActiveByCodeAsync(tenantCode, cancellationToken).ConfigureAwait(false);
         bool newlyProvisioned = existingTenant is null;
@@ -195,7 +197,7 @@ public sealed partial class TrialOnboardingService(
         else
         {
             var provisioned = await SendAsOperatorAsync(
-                new ProvisionTenant(ids.Tenant, tenantCode, organizationName, ids.Key("tenant"), Reason, residency),
+                new ProvisionTenant(ids.Tenant, tenantCode, organizationName, ids.Key("tenant"), reason, residency),
                 cancellationToken).ConfigureAwait(false);
             if (!provisioned.IsSuccess)
             {
@@ -229,6 +231,7 @@ public sealed partial class TrialOnboardingService(
                 withGrantOption: false,
                 ids,
                 "operator",
+                reason,
                 cancellationToken).ConfigureAwait(false) is { } operatorErr)
         {
             return operatorErr;
@@ -243,21 +246,21 @@ public sealed partial class TrialOnboardingService(
                     organizationName,
                     OrganizationKind.Sponsor,
                     ids.Key($"organization:{organizationName}"),
-                    Reason),
+                    reason),
                 cancellationToken).ConfigureAwait(false) is { } orgErr)
         {
             return orgErr;
         }
 
         if (await EnsureRecordAsync(
-                new RegisterPerson(tenant, ids.Person, ids.Key("person"), Reason),
+                new RegisterPerson(tenant, ids.Person, ids.Key("person"), reason),
                 cancellationToken).ConfigureAwait(false) is { } personErr)
         {
             return personErr;
         }
 
         if (await EnsureRecordAsync(
-                new RegisterTenantMembership(tenant, ids.Membership, ids.Person, ids.Key("membership"), Reason),
+                new RegisterTenantMembership(tenant, ids.Membership, ids.Person, ids.Key("membership"), reason),
                 cancellationToken).ConfigureAwait(false) is { } membershipErr)
         {
             return membershipErr;
@@ -276,6 +279,7 @@ public sealed partial class TrialOnboardingService(
                 withGrantOption: true,
                 ids,
                 "sponsor-admin",
+                reason,
                 cancellationToken).ConfigureAwait(false) is { } adminErr)
         {
             return adminErr;
@@ -294,6 +298,7 @@ public sealed partial class TrialOnboardingService(
                 withGrantOption: false,
                 ids,
                 "sponsor-designer",
+                reason,
                 cancellationToken).ConfigureAwait(false) is { } designerErr)
         {
             return designerErr;
@@ -314,15 +319,11 @@ public sealed partial class TrialOnboardingService(
                     withGrantOption: false,
                     ids,
                     $"svc:{consumer}",
+                    reason,
                     cancellationToken).ConfigureAwait(false) is { } svcErr)
             {
                 return svcErr;
             }
-        }
-
-        if (await EnsureDefaultWorkQueuesAsync(tenant, ids, cancellationToken).ConfigureAwait(false) is { } wqErr)
-        {
-            return wqErr;
         }
 
         var currentEntitlements = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
@@ -338,30 +339,21 @@ public sealed partial class TrialOnboardingService(
                     SubscriptionStatus.Trialing,
                     trialEndsAt,
                     ids.Key($"subscription:{requestedTier}:{trialEndsAt.UtcTicks}"),
-                    Reason),
+                    reason),
                 cancellationToken).ConfigureAwait(false);
-            if (!subResult.IsSuccess && subResult.Error?.Code != CommercialErrors.SubscriptionAlreadyProvisioned.Code)
+            if (!subResult.IsSuccess
+                && subResult.Error?.Code != CommercialErrors.SubscriptionAlreadyProvisioned.Code
+                && subResult.Error?.Code != KernelErrors.IdempotencyConflict.Code)
             {
                 return subResult.Error!;
             }
         }
 
-        var effectiveTier = currentEntitlements.SubscriptionId is not null ? currentEntitlements.Tier : requestedTier;
-        foreach (var family in CommercialCatalog.FamiliesForTier(effectiveTier))
+        var finalSnapshot = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+        if (!finalSnapshot.IsReadOnly
+            && await EnsureDefaultWorkQueuesAsync(tenant, ids, reason, cancellationToken).ConfigureAwait(false) is { } wqErr)
         {
-            var entitlementResult = await SendAsOperatorAsync(
-                new GrantProductEntitlement(
-                    tenant,
-                    ids.Entitlement(family),
-                    subscriptionId,
-                    family,
-                    ids.Key($"entitlement:{family}"),
-                    Reason),
-                cancellationToken).ConfigureAwait(false);
-            if (!entitlementResult.IsSuccess)
-            {
-                return entitlementResult.Error!;
-            }
+            return wqErr;
         }
 
         try
@@ -373,7 +365,6 @@ public sealed partial class TrialOnboardingService(
             return CommercialErrors.IdentityProviderSyncFailed;
         }
 
-        var finalSnapshot = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         LogTrialProvisioned(logger, tenantCode, tenant, newlyProvisioned, finalSnapshot.Tier);
 
         return CommandResult<TrialOnboardingOutcome>.Success(
@@ -411,22 +402,26 @@ public sealed partial class TrialOnboardingService(
         bool withGrantOption,
         TrialIds ids,
         string keySuffix,
+        string reason,
         CancellationToken cancellationToken)
     {
         var roleResult = await SendAsOperatorAsync(
-            new DefineRole(tenant, roleId, roleCode, roleName, capabilities, ids.Key($"role:{roleCode}"), Reason),
+            new DefineRole(tenant, roleId, roleCode, roleName, capabilities, ids.Key($"role:{roleCode}"), reason),
             cancellationToken).ConfigureAwait(false);
         if (!roleResult.IsSuccess
             && roleResult.Error?.Code != KernelErrors.AlreadyExists.Code
-            && roleResult.Error?.Code != AuthorityErrors.RoleCodeTaken.Code)
+            && roleResult.Error?.Code != AuthorityErrors.RoleCodeTaken.Code
+            && roleResult.Error?.Code != KernelErrors.IdempotencyConflict.Code)
         {
             return roleResult.Error!;
         }
 
         var grantResult = await SendAsOperatorAsync(
-            new IssueGrant(tenant, grantId, grantee, null, roleId, scope, validFrom, null, withGrantOption, ids.Key($"grant:{keySuffix}"), Reason),
+            new IssueGrant(tenant, grantId, grantee, null, roleId, scope, validFrom, null, withGrantOption, ids.Key($"grant:{keySuffix}"), reason),
             cancellationToken).ConfigureAwait(false);
-        if (!grantResult.IsSuccess && grantResult.Error?.Code != KernelErrors.AlreadyExists.Code)
+        if (!grantResult.IsSuccess
+            && grantResult.Error?.Code != KernelErrors.AlreadyExists.Code
+            && grantResult.Error?.Code != KernelErrors.IdempotencyConflict.Code)
         {
             return grantResult.Error!;
         }
@@ -437,6 +432,7 @@ public sealed partial class TrialOnboardingService(
     private async Task<KernelError?> EnsureDefaultWorkQueuesAsync(
         TenantId tenant,
         TrialIds ids,
+        string reason,
         CancellationToken cancellationToken)
     {
         HashSet<string> existingCodes = [];
@@ -466,7 +462,7 @@ public sealed partial class TrialOnboardingService(
                         verbClass,
                         source,
                         ids.Key($"work-queue:{code}"),
-                        Reason),
+                        reason),
                     cancellationToken).ConfigureAwait(false) is { } err)
             {
                 return err;
@@ -479,7 +475,9 @@ public sealed partial class TrialOnboardingService(
     private async Task<KernelError?> EnsureRecordAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken)
     {
         var result = await SendAsOperatorAsync(command, cancellationToken).ConfigureAwait(false);
-        if (result.IsSuccess || result.Error?.Code == KernelErrors.AlreadyExists.Code)
+        if (result.IsSuccess
+            || result.Error?.Code == KernelErrors.AlreadyExists.Code
+            || result.Error?.Code == KernelErrors.IdempotencyConflict.Code)
         {
             return null;
         }
@@ -521,9 +519,6 @@ public sealed partial class TrialOnboardingService(
 
         public GrantId Grant(string name) => GrantId.FromGuid(Derive("grant", name));
 
-        public ProductEntitlementId Entitlement(ProductFamily family) =>
-            ProductEntitlementId.FromGuid(Derive("entitlement", family.ToString()));
-
         public WorkQueueDefinitionId WorkQueueDefinition(string code) =>
             WorkQueueDefinitionId.FromGuid(Derive("work-queue-definition", code));
 
@@ -542,7 +537,12 @@ public sealed partial class TrialOnboardingService(
 }
 
 /// <summary>Validated inputs to <see cref="TrialOnboardingService"/>.</summary>
-public sealed record TrialOnboardingInput(string OrganizationName, string? Residency = null, string? Tier = null);
+public sealed record TrialOnboardingInput(
+    string OrganizationName,
+    string? Residency = null,
+    string? Tier = null,
+    string? IdempotencyKey = null,
+    string? Reason = null);
 
 /// <summary>Result of provisioning or replaying a self-service trial workspace.</summary>
 public sealed record TrialOnboardingOutcome(

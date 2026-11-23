@@ -15,6 +15,7 @@ using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Kernel.Validation;
@@ -300,6 +301,21 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (context.RequestServices.GetService<ITenantEntitlementReader>() is { } entitlementReader)
+        {
+            var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
+            var entitlements = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+            if (entitlements.IsReadOnly)
+            {
+                return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
+            }
+
+            if (!entitlements.ProductFamilies.Contains(ProductFamily.Blueprint))
+            {
+                return KernelErrorEndpoints.Problem(CommercialErrors.ProductFamilyNotEntitled);
+            }
+        }
+
         var existing = await registry.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -659,6 +675,11 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckValidationDecisionEntitlementsAsync(context, tenant, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var attestationId = request?.AttestationId is { } given && given != Guid.Empty
             ? AttestationId.FromGuid(given)
             : AttestationId.FromGuid(DeriveGuid(tenant, "accept-finding-attest", idempotencyKey));
@@ -736,6 +757,11 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckValidationDecisionEntitlementsAsync(context, tenant, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var attestationId = request?.AttestationId is { } given && given != Guid.Empty
             ? AttestationId.FromGuid(given)
             : AttestationId.FromGuid(DeriveGuid(tenant, "explain-finding-attest", idempotencyKey));
@@ -801,6 +827,32 @@ public static class KernelValidationEndpoints
             new ReopenFinding(tenant, findingId, idempotencyKey, reason),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<ProblemHttpResult?> CheckValidationDecisionEntitlementsAsync(
+        HttpContext context,
+        TenantId tenant,
+        CancellationToken cancellationToken)
+    {
+        if (context.RequestServices.GetService<ITenantEntitlementReader>() is not { } entitlementReader)
+        {
+            return null;
+        }
+
+        var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
+        var entitlements = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+        if (entitlements.IsReadOnly)
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
+        }
+
+        if (!entitlements.ProductFamilies.Any(static f =>
+                f is ProductFamily.Blueprint or ProductFamily.Capture or ProductFamily.Assure))
+        {
+            return KernelErrorEndpoints.Problem(CommercialErrors.ProductFamilyNotEntitled);
+        }
+
+        return null;
     }
 
     private static (string IdempotencyKey, string Reason, ProblemHttpResult? Problem) ReadCommandHeaders(

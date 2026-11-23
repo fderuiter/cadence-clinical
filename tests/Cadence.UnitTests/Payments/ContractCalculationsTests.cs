@@ -91,17 +91,17 @@ public class ContractCalculationsTests
         var occurred = new DateTimeOffset(2026, 3, 1, 9, 30, 0, TimeSpan.Zero);
 
         ContractCalculations.LineItemHash(Guid.Parse("00000000-0000-4000-8000-000000000001"), "EV-1", "GC-001", "PI", 1234.5m, "USD", occurred)
-            .Should().Be("153fb471a349e7d92d13799eb835b828dda5adffd49270ff2a554eda50091996");
+            .Should().Be("153fb471a349e7d92d13799eb835b828dda5adffd49270ff2a554eda50091996"); // pragma: allowlist secret
         ContractCalculations.LineItemHash(
                 Guid.Parse("00000000-0000-4000-8000-000000000002"), "EV-2", "GC-001", "INST", 0.1m, "EUR", occurred.AddTicks(1_234_560))
-            .Should().Be("b09fdaab6d793ba6fd91a2d3fa69883948a09121e4a60be491ca9ff11fd8a582");
+            .Should().Be("b09fdaab6d793ba6fd91a2d3fa69883948a09121e4a60be491ca9ff11fd8a582"); // pragma: allowlist secret
     }
 
     [Fact]
     public void SummaryDigest_SortsTheLineItemDigests()
     {
         ContractCalculations.SummaryDigest("GC-001", "11111111-1111-1111-1111-111111111111", 99.5m, ["b", "a"])
-            .Should().Be("b687f57dee07c2935956981931930a19c3e091edc6897cbfc5d15b7002393518");
+            .Should().Be("b687f57dee07c2935956981931930a19c3e091edc6897cbfc5d15b7002393518"); // pragma: allowlist secret
     }
 
     [Theory]

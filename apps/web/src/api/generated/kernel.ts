@@ -893,9 +893,29 @@ export interface paths {
     };
     /**
      * The caller's tenant commercial subscription tier, trial state, and enabled product families.
-     * @description Commercial packaging boundary: never grants clinical study access or bypasses Grant, blinding, or consent. Audit trails, electronic signatures, authorization checks, and regulated record exports remain active regardless of tier or trial expiry.
+     * @description Requires an enrolled TenantMembership and an active Grant visible via GrantNodeVisibility. BillingConfirmation is masked unless the caller holds billing permission. Commercial packaging boundary: never grants clinical study access or bypasses Grant, blinding, or consent.
      */
     get: operations["KernelGetEntitlements"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/entitlements/posture": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Minimal internal tenant commercial posture for the API gateway.
+     * @description Restricted to svc:gateway-entitlements. Returns read-only state, enabled product families, and quantitative scoping caps while omitting BillingConfirmation.
+     */
+    get: operations["KernelGetEntitlementPosture"];
     put?: never;
     post?: never;
     delete?: never;
@@ -915,7 +935,7 @@ export interface paths {
     put?: never;
     /**
      * Switches the tenant's commercial evaluation tier in place while preserving trial countdown and clinical records.
-     * @description Updates enabled product families on an active Trialing or Active subscription without activating billing or extending the original 30-day trial window. Refused with K.Subscription.Expired when the trial has expired.
+     * @description Requires caller Idempotency-Key and signed X-Change-Reason headers. Updates enabled product families on an active Trialing or Active subscription in one atomic transaction without activating billing or extending the original 30-day trial window.
      */
     post: operations["KernelUpgradeSubscriptionTier"];
     delete?: never;
@@ -934,8 +954,8 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Activates a Trialing or Expired commercial subscription after validating study scoping and billing confirmation.
-     * @description Requires study phase, study duration, participating countries, site count, participant count, active study count, and a purchase order or quote reference before transitioning a Trialing or Expired workspace to Active and clearing read-only restrictions.
+     * Activates a Trialing or Expired commercial subscription after validating study scoping and a verified quote token.
+     * @description Requires caller Idempotency-Key and signed X-Change-Reason headers, study scoping parameters, and a verified cryptographic commercial quote token (or CommercialOperators.BillingOperator) before transitioning a Trialing or Expired workspace to Active in one atomic transaction.
      */
     post: operations["KernelActivateSubscription"];
     delete?: never;
@@ -954,8 +974,8 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Provisions an isolated self-service trial workspace for an authenticated OIDC caller.
-     * @description Mapped outside KernelTenantFilter for signed-in callers without an active tenant_id claim. Idempotently provisions Tenant, sponsor Organization, pseudonymous Person, TenantMembership, Sponsor Admin and Sponsor Designer Roles/Grants, and a Trialing Subscription with Blueprint + Capture entitlements, then writes tenant_id and initial roles back to Keycloak.
+     * Provisions an isolated self-service trial workspace for an unbound authenticated OIDC caller.
+     * @description Mapped outside KernelTenantFilter for signed-in callers without an active tenant_id claim, study/site scope, or clinical realm roles. Requires caller Idempotency-Key and signed X-Change-Reason headers.
      */
     post: operations["KernelBootstrapTrialWorkspace"];
     delete?: never;
@@ -1254,6 +1274,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/forms/queries/digests": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists daily de-identified query aging digests for visible scopes of a study. */
+    get: operations["ExecutionListFormQueryAgingDigests"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/forms/queries/escalate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Escalates open queries past their 14-day SLA on IClock and emits daily aging digests (execution.query.manage). */
+    post: operations["ExecutionEscalateOverdueFormQueries"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/forms/{formId}/queries": {
     parameters: {
       query?: never;
@@ -1315,7 +1369,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Closes an open or answered query; the change reason is the closing note (execution.query.manage). */
+    /** Closes an answered manual query (separation of duties) or system query (execution.query.manage). */
     post: operations["ExecutionCloseFormQuery"];
     delete?: never;
     options?: never;
@@ -1621,12 +1675,58 @@ export interface components {
       message: string;
       remediation_guidance?: null | string;
     };
+    Kernel_FormQueryAgingDigestEntry: {
+      /** Format: uuid */
+      query_id: string;
+      /** Format: uuid */
+      form_id: string;
+      item_id: string;
+      site_code: string;
+      subject_code: string;
+      owner_role: string;
+      priority: string;
+      /** Format: date-time */
+      opened_at: string;
+      /** Format: date-time */
+      due_at: string;
+      /** Format: int32 */
+      age_days: number | string;
+    };
+    Kernel_FormQueryAgingDigestResponse: {
+      /** Format: uuid */
+      digest_id: string;
+      /** Format: uuid */
+      study_id: string;
+      /** Format: uuid */
+      study_site_id: null | string;
+      scope_key: string;
+      recipient_role: string;
+      /** Format: date */
+      digest_date: string;
+      /** Format: date-time */
+      generated_at: string;
+      study_code: string;
+      site_code: null | string;
+      /** Format: int32 */
+      escalated_count: number | string;
+      entries: components["schemas"]["Kernel_FormQueryAgingDigestEntry"][];
+    };
+    Kernel_FormQueryEscalationPassResponse: {
+      /** Format: int32 */
+      escalated_queries: number | string;
+      digests: components["schemas"]["Kernel_FormQueryAgingDigestResponse"][];
+    };
     Kernel_FormQueryMessageResponse: {
       kind: string;
       text: string;
       by: string;
       /** Format: date-time */
       at: string;
+      /** @default  */
+      reason_for_change: string;
+    };
+    Kernel_FormQueryNoteRequest: {
+      text?: null | string;
     };
     Kernel_FormQueryResponse: {
       /** Format: uuid */
@@ -1659,6 +1759,22 @@ export interface components {
       subject_code?: null | string;
       collection_spec_id?: null | string;
       planned_activity_id?: null | string;
+      /** @default manual */
+      origin: string;
+      /** @default site */
+      owner_role: string;
+      assignee?: null | string;
+      /** @default normal */
+      priority: string;
+      /** Format: date-time */
+      opened_at?: null | string;
+      /** Format: date-time */
+      status_since?: null | string;
+      /** Format: date-time */
+      due_at?: null | string;
+      /** Format: date-time */
+      escalated_at?: null | string;
+      last_answered_by?: null | string;
     };
     Kernel_FormQueryTextRequest: {
       text: string;
@@ -1718,6 +1834,7 @@ export interface components {
       /** Format: int64 */
       version: number | string;
       values: components["schemas"]["Kernel_FormSavedValueResponse"][];
+      form?: null | components["schemas"]["Kernel_FormResponse"];
     };
     Kernel_FormSavedValueResponse: {
       item_id: string;
@@ -2044,6 +2161,12 @@ export interface components {
       enrollment_number: null | number | string;
       content_hash: string;
     };
+    Kernel_KernelEntitlementPostureResponse: {
+      is_read_only: boolean;
+      product_families: string[];
+      scoping?:
+        null | components["schemas"]["Kernel_KernelPostureScopingResponse"];
+    };
     Kernel_KernelEntitlementsResponse: {
       tenant_ref: string;
       /** Format: uuid */
@@ -2212,6 +2335,18 @@ export interface components {
       code: string;
       name: string;
       kind: string;
+    };
+    Kernel_KernelPostureScopingResponse: {
+      study_phase: string;
+      /** Format: int32 */
+      study_duration_months: number | string;
+      countries: string[];
+      /** Format: int32 */
+      site_count: number | string;
+      /** Format: int32 */
+      participant_count: number | string;
+      /** Format: int32 */
+      active_study_count: number | string;
     };
     Kernel_KernelProposalAffectedResponse: {
       ref: string;
@@ -2548,7 +2683,7 @@ export interface components {
       participant_count: number | string;
       /** Format: int32 */
       active_study_count: number | string;
-      billing_confirmation: string;
+      billing_confirmation?: null | string;
     };
     Kernel_KernelTrialOnboardingRequest: {
       organization_name: string;
@@ -2850,6 +2985,9 @@ export interface components {
       /** Format: uuid */
       query_id?: null | string;
       item_id?: null | string;
+      owner_role?: null | string;
+      priority?: null | string;
+      assignee?: null | string;
     };
     Kernel_SaveFormValuesRequest: {
       values: components["schemas"]["Kernel_FormValueRequest"][];
@@ -6107,6 +6245,44 @@ export interface operations {
       };
     };
   };
+  KernelGetEntitlementPosture: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelEntitlementPostureResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
   KernelUpgradeSubscriptionTier: {
     parameters: {
       query?: never;
@@ -6225,7 +6401,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.QuoteInvalid`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -7189,9 +7365,18 @@ export interface operations {
         enrollment_id?: string;
         study_id?: string;
         status?: string;
+        owner?: string;
+        origin?: string;
+        priority?: string;
+        escalated?: boolean;
         site?: string;
         participant?: string;
         value_changed?: boolean;
+        as_of?: string;
+        valid_at?: string;
+        known_at?: string;
+        limit?: number | string;
+        offset?: number | string;
       };
       header?: never;
       path?: never;
@@ -7237,9 +7422,149 @@ export interface operations {
       };
     };
   };
+  ExecutionListFormQueryAgingDigests: {
+    parameters: {
+      query?: {
+        study_id?: string;
+        site?: string;
+        recipient_role?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_FormQueryAgingDigestResponse"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ExecutionEscalateOverdueFormQueries: {
+    parameters: {
+      query?: {
+        study_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_FormQueryEscalationPassResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Execution.Query.InvalidTransition`. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Locked. Kernel errors: `K.Assertion.Locked`. */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
   ExecutionListFormQueries: {
     parameters: {
-      query?: never;
+      query?: {
+        as_of?: string;
+        valid_at?: string;
+        known_at?: string;
+      };
       header?: never;
       path: {
         formId: string;
@@ -7255,6 +7580,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_FormQueryResponse"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
       /** @description Forbidden */
@@ -7538,7 +7872,11 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["Kernel_FormQueryNoteRequest"];
+      };
+    };
     responses: {
       /** @description OK */
       200: {
@@ -7576,7 +7914,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Execution.Query.InvalidTransition`. */
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Execution.Query.InvalidTransition`, `M.Execution.Query.SeparationOfDuties`. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -7615,7 +7953,11 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["Kernel_FormQueryNoteRequest"];
+      };
+    };
     responses: {
       /** @description OK */
       200: {
