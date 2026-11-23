@@ -10,6 +10,11 @@ import {
   DEMO_STUDY,
   DEMO_TENANT_UUID,
 } from "demo-fixtures";
+import {
+  createDemoRuntime,
+  createUnbackedActionGuard,
+  isDemoBuild as sharedIsDemoBuild,
+} from "demo-fixtures/runtime";
 import { kernelApi } from "@/api/kernelApi";
 import { createWebDemoStore } from "@/mocks/demoStore";
 import { useAuthStore } from "@/stores/auth";
@@ -33,7 +38,7 @@ describe("Canonical Demo Manifest & Deterministic Demo Ledger (apps/web)", () =>
     resetDemoRandom();
   });
 
-  it("exports canonical CADENCE-101 study, sites, participants, and all eight synthetic realm personas", () => {
+  it("exports canonical CADENCE-101 study, sites, participants, and all synthetic realm personas", () => {
     expect(DEMO_EPOCH_ISO).toBe("2026-01-05T09:00:00Z");
     expect(DEMO_STUDY.code).toBe("CADENCE-101");
     expect(DEMO_SPONSOR.code).toBe("CADENCE-PHARMA");
@@ -52,6 +57,9 @@ describe("Canonical Demo Manifest & Deterministic Demo Ledger (apps/web)", () =>
       "designer.lead",
       "safety.officer",
       "auditor.lead",
+      "stat.author",
+      "stat.approver",
+      "pharmacist.site101",
     ]);
 
     const serialized = JSON.stringify(DEMO_MANIFEST);
@@ -237,5 +245,57 @@ describe("Canonical Demo Manifest & Deterministic Demo Ledger (apps/web)", () =>
     expect(trialResult.entitlements.trial_ends_at).toBe(
       "2026-02-04T09:00:00.000Z"
     );
+  });
+
+  it("provides manifest-free demo-fixtures/runtime factories with a 0.5 crypto fallback outside demo mode", () => {
+    expect(sharedIsDemoBuild({ MODE: "demo" })).toBe(true);
+    expect(sharedIsDemoBuild({ MODE: "production" })).toBe(false);
+
+    const liveRuntime = createDemoRuntime({
+      isDemoActive: () => false,
+      epochIso: "",
+      epochMs: 0,
+      defaultTokenLength: 7,
+    });
+
+    const cryptoDescriptor = Object.getOwnPropertyDescriptor(
+      globalThis,
+      "crypto"
+    );
+    try {
+      Object.defineProperty(globalThis, "crypto", {
+        configurable: true,
+        value: {},
+      });
+      expect(liveRuntime.demoRandom()).toBe(0.5);
+    } finally {
+      if (cryptoDescriptor) {
+        Object.defineProperty(globalThis, "crypto", cryptoDescriptor);
+      }
+    }
+
+    const demoRuntime = createDemoRuntime({
+      isDemoActive: () => true,
+      epochIso: "",
+      epochMs: 0,
+      defaultTokenLength: 13,
+    });
+    expect(demoRuntime.demoNowIso()).toBe("2026-01-05T09:00:00.000Z");
+    expect(demoRuntime.demoRandomToken()).toHaveLength(13);
+
+    const refused: string[] = [];
+    const guard = createUnbackedActionGuard({
+      isAllowed: (env) => Boolean(env?.demo),
+      defaultDetail: "No live service.",
+      onRefuse: ({ message }) => {
+        refused.push(message);
+        return message;
+      },
+    });
+    expect(guard.allowUnbackedAction("Save form", { demo: false })).toBe(false);
+    expect(refused).toEqual([
+      "Save form isn't available yet. No live service.",
+    ]);
+    expect(guard.allowUnbackedAction("Save form", { demo: true })).toBe(true);
   });
 });

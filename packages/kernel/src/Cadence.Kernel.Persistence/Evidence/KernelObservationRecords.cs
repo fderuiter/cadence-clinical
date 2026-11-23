@@ -75,6 +75,25 @@ internal sealed class KernelObservationRecords(KernelTenantDbContextFactory cont
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        string? expectedCodelist = string.IsNullOrWhiteSpace(specItem?.Terminology?.Codelist)
+            ? null
+            : specItem.Terminology.Codelist;
+        IReadOnlyList<CodelistOptionView>? expectedCodelistOptions = null;
+        if (expectedCodelist is not null && specItem?.Terminology is { } terminology)
+        {
+            var rawEntries = await db.CodeSystemEntries.AsNoTracking()
+                .Where(e => e.CodeSystemVersionId == terminology.CodeSystemVersionId && e.GroupCode == expectedCodelist)
+                .OrderBy(e => e.Code)
+                .ThenBy(e => e.Ordinal)
+                .Select(e => new { e.Code, e.Display, e.SubmissionValue })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            expectedCodelistOptions = rawEntries
+                .DistinctBy(e => e.Code, StringComparer.Ordinal)
+                .Select(e => new CodelistOptionView(e.Code, e.Display, e.SubmissionValue))
+                .ToList();
+        }
+
         var revisions = found.Revisions.OrderBy(r => r.Number).ToList();
         var views = revisions
             .Select((r, i) => new ObservationRevisionView(
@@ -97,6 +116,8 @@ internal sealed class KernelObservationRecords(KernelTenantDbContextFactory cont
             itemId,
             specItem?.ExpectedKind,
             specItem?.Unit,
-            specItem?.Terminology?.CodeSystemVersionId);
+            specItem?.Terminology?.CodeSystemVersionId,
+            expectedCodelist,
+            expectedCodelistOptions);
     }
 }

@@ -156,7 +156,7 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "scans materialized staged blobs instead of the working tree",
         },
-        new("duplication", ["detect-code-duplication"], "Duplicated code blocks over 15 normalized lines involving a C# file",
+        new("duplication", ["detect-code-duplication"], "Duplicated code blocks over 15 normalized lines involving a C# or JavaScript file",
             ctx => DuplicationDetectorService.DetectDuplication(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("cli-docs", ["validate-cli-docs"],
@@ -198,7 +198,7 @@ public static class QualityGates
             ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("rulesets", ["validate-rulesets"],
-            "Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, `pull_request`-only branch bypasses, release-admin-only tag bypasses, strict status check policy, `CI Gate` upstream job coverage, and workflow check parity",
+            "Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, `pull_request`-only branch bypasses, release-admin-only tag bypasses, `merge_queue` policy, strict status checks, `CI Gate` upstream job coverage, and `pull_request` / `merge_group` workflow parity",
             ctx => RulesetService.Validate(ctx.RepoRoot, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
         {
             PreCommit = PreCommitMode.Quick,
@@ -270,6 +270,13 @@ public static class QualityGates
         {
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH=\"<reason>\"` admits growth",
+        },
+        new("merge-readiness", ["check-merge-readiness"],
+            "Verifies `origin/main` (or `--base`) is present, shares history with `HEAD`, and merges cleanly via `git merge-tree --write-tree` without conflicts",
+            CheckMergeReadiness)
+        {
+            PreCommit = PreCommitMode.Skipped,
+            PreCommitNote = "skipped so pre-commit stays offline and fast; runs in `cadence check`, `cadence ci`, pull requests, and `merge_group`",
         },
         new("public-bundle", ["validate-public-bundle"],
             "Zero-exemption post-build scan of `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` for national IDs, unapproved emails, secrets, external assets, executable local URLs, CSP meta headers, `axe-core`/`keycloak-js` demo contamination, forbidden modulepreloads, and staged demo byte budgets (skipped in unscoped `cadence check` only when all three `dist/` folders are absent; fails closed on partial `dist/` or direct `check public-bundle`)",
@@ -476,6 +483,42 @@ public static class QualityGates
                normalized.EndsWith(".md", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool CheckMergeReadiness(GateContext ctx)
+    {
+        if (ctx.PreCommit)
+        {
+            return true;
+        }
+
+        string effectiveBaseRef = GitRevisionScopeService.NormalizeBaseRef(ctx.BaseRef);
+        if (!string.IsNullOrWhiteSpace(ctx.PushBefore) &&
+            string.IsNullOrWhiteSpace(ctx.BaseRef) &&
+            GitRevisionScopeService.TryResolveCommitSha(ctx.RepoRoot, "HEAD") is not null)
+        {
+            Console.WriteLine($"[MERGE-READINESS] Push scope (--push-before) verified on HEAD; skipping branch merge-tree check against '{effectiveBaseRef}'.");
+            return true;
+        }
+
+        var preview = GitRevisionScopeService.PreviewMergeTree(ctx.RepoRoot, effectiveBaseRef, "HEAD");
+        if (!preview.Succeeded)
+        {
+            Console.WriteLine($"[MERGE-READINESS] [ERROR] {preview.ErrorMessage}");
+            if (preview.HasConflicts && preview.ConflictingFiles.Count > 0)
+            {
+                foreach (string conflictPath in preview.ConflictingFiles)
+                {
+                    Console.WriteLine($"  ✖ {conflictPath}");
+                }
+            }
+
+            return false;
+        }
+
+        Console.WriteLine(
+            $"[MERGE-READINESS] ✔ HEAD merges cleanly with '{preview.EffectiveBaseRef}' (behind by {preview.BehindCount} commit(s); tree {preview.TreeOid}).");
+        return true;
+    }
+
     private static bool CheckDemoManifest(GateContext ctx)
     {
         if (ctx.TargetFiles is { Length: 0 })
@@ -616,6 +659,7 @@ public static class QualityGates
             }
         }
     }
+
     private static string Normalize(string name) => name.Trim().ToLowerInvariant().Replace('_', '-');
 
     private static int RunQuietProcess(string workingDirectory, string fileName, params string[] arguments)

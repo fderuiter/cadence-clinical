@@ -1,4 +1,7 @@
+using System;
+
 using Cadence.Apps.Payments.Domain;
+using Cadence.Database.Tenancy;
 using Cadence.Security.FieldProtection;
 
 using Microsoft.EntityFrameworkCore;
@@ -389,6 +392,14 @@ public class ParticipantWalletConfiguration(IFieldEncryptor fieldEncryptor) : IE
         builder.Property(x => x.AchAccountHolder).HasMaxLength(255);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000);
+        builder.Property<Guid>(StandaloneTenantModelExtensions.TenantPropertyName)
+            .HasColumnName(StandaloneTenantModelExtensions.TenantPropertyName)
+            .IsRequired();
+        builder.HasIndex(
+            StandaloneTenantModelExtensions.TenantPropertyName,
+            nameof(ParticipantWallet.SubjectId),
+            nameof(ParticipantWallet.StudyId))
+            .IsUnique();
     }
 }
 
@@ -434,8 +445,12 @@ public class ParticipantTransactionConfiguration : IEntityTypeConfiguration<Part
         builder.Property(x => x.BalanceAfter).HasColumnType("numeric(18,4)");
         builder.Property(x => x.ReferenceId).HasMaxLength(255).IsRequired();
         builder.HasIndex(x => x.ReferenceId);
+        builder.Property(x => x.IdempotencyKey).HasMaxLength(255);
+        builder.HasIndex(x => new { x.WalletId, x.TransactionType, x.ReferenceId }).IsUnique();
+        builder.HasIndex(x => new { x.WalletId, x.IdempotencyKey }).IsUnique();
         builder.Property(x => x.Description).HasMaxLength(500).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.VersionIndex).IsConcurrencyToken();
     }
 }
 

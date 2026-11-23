@@ -19,6 +19,15 @@ const portalStyleCssPath = path.join(
 const hexColorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}\b/g;
 const cssVarDefRegex = /(--[a-zA-Z0-9_-]+)\s*:/g;
 const cssVarUseRegex = /var\(\s*(--[a-zA-Z0-9_-]+)/g;
+const aiTokenRegex = /--(?:semantic-)?color-ai(?:-[a-zA-Z0-9_-]+)?\b/g;
+
+function isAllowedAiTokenFile(filename) {
+  if (filename.endsWith("/packages/ui/tokens.css")) return true;
+  if (filename.includes("/apps/web/src/components/ai/")) return true;
+  if (/\/packages\/ui\/src\/components\/clinical\/Ai[^/]*\.vue$/.test(filename))
+    return true;
+  return false;
+}
 
 function extractDefinedVarsFromFile(filePath) {
   const vars = new Set();
@@ -1147,6 +1156,121 @@ const noAriaLabelMismatchRule = {
   },
 };
 
+const noMisusedAiTokensRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Reserve --semantic-color-ai* and --color-ai* exclusively for governed AI provenance components and packages/ui/tokens.css definitions (UX-8 / ADR-2635 / ADR-2654).",
+      category: "Best Practices",
+    },
+    messages: {
+      misusedAiToken:
+        'AI token "{{tokenName}}" is reserved exclusively for governed AI components (apps/web/src/components/ai/** and packages/ui/src/components/clinical/Ai*.vue). Use semantic status, interactive, or categorical tokens instead.',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+    if (isAllowedAiTokenFile(filename)) {
+      return {};
+    }
+
+    const sourceText = context.sourceCode.getText();
+
+    if (filename.endsWith(".css")) {
+      const clean = stripCssCommentsPreservingNewlines(sourceText);
+      return {
+        Program() {
+          for (const match of clean.matchAll(aiTokenRegex)) {
+            context.report({
+              loc: offsetToLoc(sourceText, match.index),
+              messageId: "misusedAiToken",
+              data: { tokenName: match[0] },
+            });
+          }
+        },
+      };
+    }
+
+    if (filename.endsWith(".vue")) {
+      const scriptAndStyleCheck = {
+        "Program:exit"() {
+          for (const sm of sourceText.matchAll(
+            /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+          )) {
+            const contentStart = sm.index + sm[1].length;
+            const clean = stripCssCommentsPreservingNewlines(sm[2]);
+            for (const match of clean.matchAll(aiTokenRegex)) {
+              context.report({
+                loc: offsetToLoc(sourceText, contentStart + match.index),
+                messageId: "misusedAiToken",
+                data: { tokenName: match[0] },
+              });
+            }
+          }
+          for (const scm of sourceText.matchAll(
+            /(<script\b[^>]*>)([\s\S]*?)<\/script>/gi
+          )) {
+            const contentStart = scm.index + scm[1].length;
+            const clean = stripCssCommentsPreservingNewlines(scm[2]).replace(
+              /\/\/.*$/gm,
+              (c) => " ".repeat(c.length)
+            );
+            for (const match of clean.matchAll(aiTokenRegex)) {
+              context.report({
+                loc: offsetToLoc(sourceText, contentStart + match.index),
+                messageId: "misusedAiToken",
+                data: { tokenName: match[0] },
+              });
+            }
+          }
+        },
+      };
+
+      const parserServices =
+        context.sourceCode?.parserServices || context.parserServices;
+      if (!parserServices?.defineTemplateBodyVisitor) {
+        return scriptAndStyleCheck;
+      }
+
+      return parserServices.defineTemplateBodyVisitor(
+        {
+          VAttribute(node) {
+            if (!node.value) return;
+            const text = context.sourceCode.getText(node.value);
+            for (const match of text.matchAll(aiTokenRegex)) {
+              context.report({
+                node: node.value,
+                messageId: "misusedAiToken",
+                data: { tokenName: match[0] },
+              });
+            }
+          },
+        },
+        scriptAndStyleCheck
+      );
+    }
+
+    return {
+      Program() {
+        const clean = stripCssCommentsPreservingNewlines(sourceText).replace(
+          /\/\/.*$/gm,
+          (c) => " ".repeat(c.length)
+        );
+        for (const match of clean.matchAll(aiTokenRegex)) {
+          context.report({
+            loc: offsetToLoc(sourceText, match.index),
+            messageId: "misusedAiToken",
+            data: { tokenName: match[0] },
+          });
+        }
+      },
+    };
+  },
+};
+
 const noVuejsA11ySuppressionRule = {
   meta: {
     type: "problem",
@@ -1212,6 +1336,7 @@ const customVuePlugin = {
   rules: {
     "no-inline-hex": noInlineHexRule,
     "no-undefined-css-vars": noUndefinedCssVarsRule,
+    "no-misused-ai-tokens": noMisusedAiTokensRule,
     "no-raw-overlays": noRawOverlaysRule,
     "no-suppressed-focus-outline": noSuppressedFocusOutlineRule,
     "no-unlabeled-glyph-button": noUnlabeledGlyphButtonRule,
@@ -1238,7 +1363,6 @@ export default [
       "**/coverage/**",
       "**/.claude/**",
       "scripts/**",
-      "docs/.vitepress/.temp/**",
       "docs/.vitepress/cache/**",
       "docs/.vitepress/dist/**",
       "**/mockServiceWorker.js",
@@ -1263,6 +1387,7 @@ export default [
     rules: {
       "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
+      "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-raw-overlays": "error",
       "custom-vue/no-suppressed-focus-outline": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
@@ -1301,6 +1426,7 @@ export default [
       ...disabledCoreRulesForCss,
       "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
+      "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-suppressed-focus-outline": "error",
     },
   },
@@ -1317,32 +1443,15 @@ export default [
     },
     rules: {
       "custom-vue/no-undefined-css-vars": "error",
+      "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
     },
   },
   {
-    files: ["docs/.vitepress/*.mjs"],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: "module",
-      globals: {
-        process: "readonly",
-      },
-    },
-  },
-  {
-    files: ["docs/.vitepress/*.cjs"],
+    files: ["**/*.cjs"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "commonjs",
-      globals: {
-        module: "readonly",
-        exports: "writable",
-        require: "readonly",
-        __dirname: "readonly",
-        __filename: "readonly",
-        process: "readonly",
-      },
     },
   },
   {
@@ -1540,9 +1649,13 @@ export default [
   },
   {
     files: ["**/tests/**", "tests/**", "**/*.test.*", "**/*.spec.*"],
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
     rules: {
       "vue/one-component-per-file": "off",
       "vue/require-prop-types": "off",
+      "custom-vue/no-misused-ai-tokens": "off",
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",
     },

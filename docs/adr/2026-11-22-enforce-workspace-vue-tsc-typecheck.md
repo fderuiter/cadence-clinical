@@ -1,4 +1,4 @@
-# ADR-2538: Enforce Strict Workspace TypeScript and Vue SFC Typechecking
+# ADR-2539: Enforce Strict Workspace TypeScript and Vue SFC Typechecking
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

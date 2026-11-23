@@ -160,6 +160,152 @@ public sealed class GitRevisionScopeServiceTests : IDisposable
         scope.Files.Should().Equal("apps/staged.cs");
     }
 
+    [Fact]
+    public void FetchBaseRef_AndTryGetBehindCount_TrackUpstreamCommitsFromOrigin()
+    {
+        string remoteDir = Path.Combine(Path.GetTempPath(), $"git-scope-remote-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(remoteDir);
+            RunGitIn(remoteDir, "init", "-q", "--bare", "-b", "main");
+
+            Write("apps/base.cs", "class Base {}\n");
+            Commit("initial main");
+            Git("remote", "add", "origin", remoteDir);
+            Git("push", "-q", "-u", "origin", "main");
+
+            Git("checkout", "-q", "-b", "feature");
+            Write("apps/feature.cs", "class Feature {}\n");
+            Commit("feature commit");
+
+            string peerDir = Path.Combine(Path.GetTempPath(), $"git-scope-peer-{Guid.NewGuid():N}");
+            try
+            {
+                RunGitIn(Path.GetTempPath(), "clone", "-q", remoteDir, peerDir);
+                File.WriteAllText(Path.Combine(peerDir, "apps", "upstream.cs"), "class Upstream {}\n");
+                RunGitIn(peerDir, "add", "-A");
+                RunGitIn(peerDir, "commit", "-q", "-m", "upstream commit");
+                RunGitIn(peerDir, "push", "-q", "origin", "main");
+            }
+            finally
+            {
+                DeleteDirectorySafe(peerDir);
+            }
+
+            var fetch = GitRevisionScopeService.FetchBaseRef(_dir, "origin/main");
+            fetch.Succeeded.Should().BeTrue(fetch.ErrorMessage);
+            fetch.RemoteName.Should().Be("origin");
+            fetch.RemoteBranch.Should().Be("main");
+
+            GitRevisionScopeService.TryGetBehindCount(_dir, "origin/main").Should().Be(1);
+        }
+        finally
+        {
+            DeleteDirectorySafe(remoteDir);
+        }
+    }
+
+    [Fact]
+    public void PreviewMergeTree_SynthesizeMergedCommit_AndDetachedWorktree_HandleCleanAndConflictingBranches()
+    {
+        Write("apps/shared.cs", "class Shared { public const int A = 1; }\n");
+        Commit("base");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "-b", "feature");
+        Write("apps/feature.cs", "class Feature {}\n");
+        Commit("feature work");
+
+        Git("checkout", "-q", "main");
+        Write("apps/upstream.cs", "class Upstream {}\n");
+        Commit("upstream work");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "feature");
+        Write("apps/uncommitted.txt", "dirty checkout\n");
+
+        var preview = GitRevisionScopeService.PreviewMergeTree(_dir, "origin/main");
+        preview.Succeeded.Should().BeTrue(preview.ErrorMessage);
+        preview.HasConflicts.Should().BeFalse();
+        preview.TreeOid.Should().HaveLength(40);
+
+        var synthesized = GitRevisionScopeService.SynthesizeMergedCommit(_dir, "origin/main");
+        synthesized.MergeTree.Succeeded.Should().BeTrue(synthesized.MergeTree.ErrorMessage);
+        synthesized.MergeTree.BehindCount.Should().Be(1);
+        synthesized.MergeCommitSha.Should().HaveLength(40);
+
+        GitRevisionScopeService.TryCreateDetachedWorktree(_dir, synthesized.MergeCommitSha!, out var worktree, out string? wtError)
+            .Should().BeTrue(wtError);
+        string worktreePath = worktree!.WorktreePath;
+        using (worktree)
+        {
+            worktreePath.Should().StartWith(Path.GetTempPath());
+            File.Exists(Path.Combine(worktreePath, "apps", "feature.cs")).Should().BeTrue();
+            File.Exists(Path.Combine(worktreePath, "apps", "upstream.cs")).Should().BeTrue();
+            File.Exists(Path.Combine(worktreePath, "apps", "uncommitted.txt")).Should().BeFalse("detached worktree checks out synthesized commit only");
+        }
+
+        Directory.Exists(worktreePath).Should().BeFalse("Dispose removes temporary detached worktree");
+        File.Exists(Path.Combine(_dir, "apps", "uncommitted.txt")).Should().BeTrue("caller checkout must not be mutated");
+        File.Delete(Path.Combine(_dir, "apps", "uncommitted.txt"));
+
+        // Now introduce a textual conflict on apps/shared.cs
+        Git("checkout", "-q", "main");
+        Write("apps/shared.cs", "class Shared { public const int A = 100; }\n");
+        Commit("upstream conflict");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "feature");
+        Write("apps/shared.cs", "class Shared { public const int A = 200; }\n");
+        Commit("feature conflict");
+
+        var conflictPreview = GitRevisionScopeService.PreviewMergeTree(_dir, "origin/main");
+        conflictPreview.Succeeded.Should().BeFalse();
+        conflictPreview.HasConflicts.Should().BeTrue();
+        conflictPreview.ConflictingFiles.Should().Equal("apps/shared.cs");
+    }
+
+    private static void DeleteDirectorySafe(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
+        foreach (var file in new DirectoryInfo(path).EnumerateFiles("*", SearchOption.AllDirectories))
+        {
+            file.Attributes = FileAttributes.Normal;
+        }
+
+        Directory.Delete(path, recursive: true);
+    }
+
+    private static void RunGitIn(string workingDirectory, params string[] args)
+    {
+        var psi = new ProcessStartInfo("git")
+        {
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        foreach (string arg in new List<string> { "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false" })
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        foreach (string arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var process = Process.Start(psi)!;
+        string error = process.StandardError.ReadToEnd();
+        process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        process.ExitCode.Should().Be(0, $"git {string.Join(' ', args)} failed: {error}");
+    }
+
     private void Commit(string message)
     {
         Git("add", "-A");

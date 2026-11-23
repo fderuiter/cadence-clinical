@@ -199,6 +199,8 @@ export interface components {
     Safety_DsurApproveRequest: {
       signingReason: null | string;
       reasonForChange: null | string;
+      /** Format: int32 */
+      expectedVersionIndex?: null | number | string;
     };
     Safety_DsurCompileRequest: {
       compoundName: string;
@@ -221,6 +223,8 @@ export interface components {
       /** Format: date-time */
       periodEnd: null | string;
       reasonForChange: null | string;
+      /** Format: int32 */
+      expectedVersionIndex?: null | number | string;
     };
     Safety_HttpValidationProblemDetails: {
       type?: null | string;
@@ -606,7 +610,10 @@ export interface operations {
   };
   GetDsurReportById: {
     parameters: {
-      query?: never;
+      query?: {
+        revision?: number | string;
+        as_of?: string;
+      };
       header?: never;
       path: {
         id: string;
@@ -813,7 +820,10 @@ export interface operations {
   };
   GetPeriodicReportById: {
     parameters: {
-      query?: never;
+      query?: {
+        revision?: number | string;
+        as_of?: string;
+      };
       header?: never;
       path: {
         id: string;

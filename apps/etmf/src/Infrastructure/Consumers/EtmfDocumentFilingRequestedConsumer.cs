@@ -65,6 +65,8 @@ public sealed class EtmfDocumentFilingRequestedConsumer(
         );
 
         dbContext.TmfDocuments.Add(doc);
+        dbContext.TmfDocumentRevisions.Add(
+            TmfDocumentRevision.FromDocument(doc, msg.RequestedAt, createdBy));
         await dbContext.SaveChangesAsync(context.CancellationToken);
 
         logger?.LogInformation("Successfully filed TmfDocument {DocumentId} in eTMF.", msg.DocumentId);

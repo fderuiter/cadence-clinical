@@ -9,6 +9,10 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Deterministic>true</Deterministic>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <!-- xunit.v3 4.x (#6038) imports xunit.v3.core.mtp-v2, which defaults IsTestingPlatformApplication=true when unset
+         and blocks VSTest on the .NET 10 SDK. Keep IsTestingPlatformApplication=false so dotnet test, CI filter flags,
+         and GxP TRX logger pipelines continue executing via VSTest and xunit.runner.visualstudio. -->
+    <IsTestingPlatformApplication Condition="'$(IsTestingPlatformApplication)' == ''">false</IsTestingPlatformApplication>
 
     <!-- Lockstep Dependency Cohort Versions (ADR-2527) -->
     <DotNetServicingVersion>10.0.15</DotNetServicingVersion>

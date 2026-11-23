@@ -6,6 +6,8 @@ on:
     tags: ["v*"]
   pull_request:
     branches: [main, release/*]
+  merge_group:
+    branches: [main, release/*]
   workflow_dispatch:
     inputs:
       target:
@@ -218,14 +220,15 @@ jobs:
       - name: Run Cadence quality sentinels
         env:
           EVENT_NAME: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref || 'main' }}
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
           BEFORE_SHA: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
         run: |
           echo "Scoping quality sentinels at ${HEAD_SHA} (event=${EVENT_NAME})"
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            git fetch --no-tags origin "$BASE_REF"
-            SCOPE_ARGS=(--base "origin/$BASE_REF")
+          if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "merge_group" ]; then
+            BASE_BRANCH="${BASE_REF#refs/heads/}"
+            git fetch --no-tags origin "$BASE_BRANCH"
+            SCOPE_ARGS=(--base "origin/$BASE_BRANCH")
           elif [ -n "$BEFORE_SHA" ]; then
             SCOPE_ARGS=(--push-before "$BEFORE_SHA")
           else
@@ -432,7 +435,7 @@ jobs:
         if: always()
         env:
           EVENT_NAME: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref || 'main' }}
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
           BEFORE_SHA: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
         run: | # pragma: allowlist secret
@@ -440,9 +443,10 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/detect-secrets-venv"
           "$RUNNER_TEMP/detect-secrets-venv/bin/python" -m pip install --quiet --upgrade pip detect-secrets==1.5.0
           export PATH="$RUNNER_TEMP/detect-secrets-venv/bin:$PATH"
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            git fetch --no-tags origin "$BASE_REF"
-            SCOPE_ARGS=(--base "origin/$BASE_REF")
+          if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "merge_group" ]; then
+            BASE_BRANCH="${BASE_REF#refs/heads/}"
+            git fetch --no-tags origin "$BASE_BRANCH"
+            SCOPE_ARGS=(--base "origin/$BASE_BRANCH")
           elif [ -n "$BEFORE_SHA" ]; then
             SCOPE_ARGS=(--push-before "$BEFORE_SHA")
           else
@@ -455,14 +459,15 @@ jobs:
         if: always()
         env:
           EVENT_NAME: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref || 'main' }}
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
           BEFORE_SHA: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
         run: |
           echo "Scoping DEID compliance scan at ${HEAD_SHA} (event=${EVENT_NAME})"
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            git fetch --no-tags origin "$BASE_REF"
-            SCOPE_ARGS=(--base "origin/$BASE_REF")
+          if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "merge_group" ]; then
+            BASE_BRANCH="${BASE_REF#refs/heads/}"
+            git fetch --no-tags origin "$BASE_BRANCH"
+            SCOPE_ARGS=(--base "origin/$BASE_BRANCH")
           elif [ -n "$BEFORE_SHA" ]; then
             SCOPE_ARGS=(--push-before "$BEFORE_SHA")
           else
@@ -476,6 +481,7 @@ jobs:
     if: >-
       always() && !cancelled() && (
         github.event_name == 'push' ||
+        github.event_name == 'merge_group' ||
         (github.event_name == 'workflow_dispatch' && (
           github.ref == 'refs/heads/main' ||
           startsWith(github.ref, 'refs/heads/release/') ||
@@ -544,8 +550,8 @@ jobs:
           severity: "CRITICAL,HIGH"
 
       - name: Upload Trivy scan results to GitHub Security tab
-        if: (success() || failure()) && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        if: (success() || failure()) && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
+        uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         with:
           sarif_file: "trivy-results-${{ matrix.target }}.sarif"
           category: "trivy-${{ matrix.target }}"
@@ -883,14 +889,15 @@ jobs:
       - name: Check GxP Snapshot Policy
         env:
           EVENT_NAME: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref || 'main' }}
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
           BEFORE_SHA: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
         run: |
           echo "Scoping GxP snapshot policy check at ${HEAD_SHA} (event=${EVENT_NAME})"
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            git fetch --no-tags origin "$BASE_REF"
-            SCOPE_ARGS=(--base "origin/$BASE_REF")
+          if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "merge_group" ]; then
+            BASE_BRANCH="${BASE_REF#refs/heads/}"
+            git fetch --no-tags origin "$BASE_BRANCH"
+            SCOPE_ARGS=(--base "origin/$BASE_BRANCH")
           elif [ -n "$BEFORE_SHA" ]; then
             SCOPE_ARGS=(--push-before "$BEFORE_SHA")
           else

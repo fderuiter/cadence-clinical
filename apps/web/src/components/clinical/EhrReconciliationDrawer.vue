@@ -1393,8 +1393,8 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .metric-card.metric-queried {
-  border-color: var(--semantic-color-ai-border);
-  background-color: var(--semantic-color-ai-bg);
+  border-color: var(--semantic-color-warning-border-strong);
+  background-color: var(--semantic-color-warning-bg-soft);
 }
 
 .metric-num {
@@ -1554,7 +1554,7 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .reconciliation-card.status-queried {
-  border-left: 4px solid var(--semantic-color-ai);
+  border-left: 4px solid var(--semantic-color-warning-border-strong);
 }
 
 .reconciliation-card.status-pending_review {
@@ -1659,8 +1659,8 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .status-queried {
-  background-color: var(--semantic-color-ai-bg);
-  color: var(--semantic-color-ai);
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-text-dark);
 }
 
 /* Split Screen Grid */
@@ -1788,8 +1788,8 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .banner-queried {
-  background-color: var(--semantic-color-ai-bg);
-  color: var(--semantic-color-ai-dark);
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-text-dark);
 }
 
 .resolved-by-tag {

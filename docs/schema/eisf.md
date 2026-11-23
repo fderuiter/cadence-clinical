@@ -60,6 +60,41 @@ Indexes:
 - `IX_eisf_document_records_StudyId`: (`StudyId`)
 - `IX_eisf_document_records_tenant_id`: (`tenant_id`)
 
+## eisf.eisf_document_revisions
+
+Entity: `EisfDocumentRevision`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `DocumentId` | `character varying(36)` | no |  |  |
+| `ExpirationDate` | `timestamp with time zone` | yes |  |  |
+| `FilePath` | `character varying(500)` | no |  |  |
+| `Filename` | `character varying(255)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RecordedAt` | `timestamp with time zone` | no |  |  |
+| `RecordedBy` | `character varying(255)` | no |  |  |
+| `RevisionNumber` | `integer` | no |  |  |
+| `SectionCode` | `character varying(50)` | no |  |  |
+| `Sha256Checksum` | `character varying(64)` | no |  |  |
+| `SiteCode` | `character varying(255)` | no |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StudyCode` | `character varying(255)` | no |  |  |
+| `VersionMajor` | `integer` | no |  |  |
+| `VersionMinor` | `integer` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Foreign keys:
+
+- `FK_eisf_document_revisions_eisf_document_records_DocumentId`: (`DocumentId`) references `eisf.eisf_document_records` (`Id`), on delete restrict
+
+Indexes:
+
+- `IX_eisf_document_revisions_DocumentId`: (`DocumentId`)
+- `IX_eisf_document_revisions_DocumentId_RevisionNumber`: unique (`DocumentId`, `RevisionNumber`)
+- `IX_eisf_document_revisions_tenant_id`: (`tenant_id`)
+
 ## eisf.eisf_section_taxonomies
 
 Entity: `EisfSectionTaxonomy`
@@ -71,6 +106,7 @@ Entity: `EisfSectionTaxonomy`
 | `IsMandatory` | `boolean` | no |  |  |
 | `SectionNumber` | `character varying(50)` | no |  |  |
 | `Title` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -94,6 +130,7 @@ Entity: `IsfAuditLog`
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `Sha256Digest` | `character varying(64)` | yes |  |  |
 | `Timestamp` | `timestamp with time zone` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:

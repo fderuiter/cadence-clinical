@@ -352,4 +352,102 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
       "mm[Hg]"
     );
   });
+
+  it("renders a codelist <select> in ObservationView when expected_codelist_options is non-empty and submits coded corrections", async () => {
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.rawRoles = ["investigator"];
+
+    const csVersion = "01950000-0000-7000-8000-000000000099";
+    const obsPayload = {
+      ref: "observation:01950000-0000-7000-8000-000000000089@1",
+      version: 1,
+      enrollment_ref: "enrollment:01950000-0000-7000-8000-000000000020",
+      form_ref: "collection_instance:01950000-0000-7000-8000-000000000001",
+      item_id: "VSPOS",
+      expected_value_kind: "Coded",
+      expected_unit: null,
+      expected_code_system_version_id: csVersion,
+      expected_codelist: "C71148",
+      expected_codelist_options: [
+        { code: "SITTING", display: "Sitting" },
+        { code: "SUPINE", display: "Supine" },
+      ],
+      concept: "concept:01950000-0000-7000-8000-000000000078@1",
+      value: {
+        type: "coded" as const,
+        code_system_version_id: csVersion,
+        code: "SITTING",
+      },
+      observed_at: "2026-03-01T10:00:00Z",
+      revisions: [],
+      locks: [],
+      assertions: [],
+      audit: [],
+    };
+    vi.mocked(kernelApi.getObservation)
+      .mockResolvedValueOnce(obsPayload)
+      .mockResolvedValueOnce({
+        ...obsPayload,
+        version: 2,
+        value: {
+          type: "coded",
+          code_system_version_id: csVersion,
+          code: "SUPINE",
+        },
+      });
+    vi.spyOn(kernelApi, "correctObservation").mockResolvedValue({
+      ref: "observation:01950000-0000-7000-8000-000000000089@2",
+      enrollment_ref: "enrollment:01950000-0000-7000-8000-000000000020",
+      value: {
+        type: "coded",
+        code_system_version_id: csVersion,
+        code: "SUPINE",
+      },
+      version: 2,
+      revision: 2,
+    });
+
+    const router = makeRouter();
+    const wrapper = mount(ObservationView, {
+      props: {
+        observationRef: "observation:01950000-0000-7000-8000-000000000089",
+        embedded: true,
+      },
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    const select = wrapper.find("#observation-new-value");
+    expect(select.exists()).toBe(true);
+    expect(select.element.tagName).toBe("SELECT");
+    expect(
+      select.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual(["", "SITTING", "SUPINE"]);
+
+    await select.setValue("SUPINE");
+    expect(
+      (wrapper.find("#observation-save").element as HTMLButtonElement).disabled
+    ).toBe(false);
+    await wrapper.find("form.observation-correction").trigger("submit");
+    await flushPromises();
+
+    const reasonModal = wrapper.findComponent({ name: "ReasonForChangeModal" });
+    expect(reasonModal.exists()).toBe(true);
+    reasonModal.vm.$emit("confirm", "Position verified on source worksheet");
+    await flushPromises();
+
+    expect(kernelApi.correctObservation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        observationRef: "observation:01950000-0000-7000-8000-000000000089@1",
+        value: {
+          type: "coded",
+          code_system_version_id: csVersion,
+          code: "SUPINE",
+        },
+        expectedVersion: 1,
+        reason: "Position verified on source worksheet",
+      })
+    );
+  });
 });
