@@ -8,7 +8,7 @@
   >
     <div class="work-queues-header">
       <div>
-        <h2 id="study-work-queues-title">Work queues</h2>
+        <h2 id="study-work-queues-title" tabindex="-1">Work queues</h2>
         <p class="work-queues-subtitle">
           Capability-keyed actionable queues for your authority on
           {{ studyCode }}.

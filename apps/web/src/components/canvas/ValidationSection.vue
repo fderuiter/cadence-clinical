@@ -328,6 +328,7 @@
                 Open {{ finding.variable ?? "form" }}
               </router-link>
               <button
+                :data-testid="`btn-inspect-finding-${finding.ref}`"
                 type="button"
                 class="btn btn-secondary"
                 @click="inspectFinding(finding.ref)"
@@ -458,7 +459,7 @@
                 type="button"
                 class="btn btn-secondary"
                 :disabled="busy"
-                @click="findingActionDraft = null"
+                @click="cancelFindingAction(finding)"
               >
                 Cancel
               </button>
@@ -620,6 +621,10 @@ const pinningPack = ref<KernelRulePack | null>(null);
 const pinReason = ref("");
 const pinHandoff = useInlineFocusHandoff({
   openTarget: "#validation-pin-reason-input",
+  closeFallback: "#study-validation-title",
+  scrollIfOffscreen: true,
+});
+const findingActionHandoff = useInlineFocusHandoff({
   closeFallback: "#study-validation-title",
   scrollIfOffscreen: true,
 });
@@ -1012,16 +1017,58 @@ function findingActionPlaceholder(mode: FindingActionMode): string {
   }
 }
 
+function findingRestoreTargets(
+  findingRef: string,
+  preferredMode?: FindingActionMode
+): string[] {
+  const candidates: string[] = [];
+  if (preferredMode) {
+    candidates.push(
+      `[data-testid="btn-${preferredMode}-finding-${findingRef}"]`
+    );
+  }
+  candidates.push(
+    `[data-testid="btn-classify-finding-${findingRef}"]`,
+    `[data-testid="btn-accept-finding-${findingRef}"]`,
+    `[data-testid="btn-explain-finding-${findingRef}"]`,
+    `[data-testid="btn-reopen-finding-${findingRef}"]`,
+    `[data-testid="btn-inspect-finding-${findingRef}"]`,
+    "#study-validation-title"
+  );
+  return candidates;
+}
+
 function beginFindingAction(
   finding: KernelValidationFinding,
   mode: FindingActionMode
 ) {
+  findingActionHandoff.rememberTrigger(
+    `[data-testid="btn-${mode}-finding-${finding.ref}"]`
+  );
   findingActionDraft.value = { finding, mode };
   findingActionText.value = "";
   findingActionClassification.value =
     (finding.classification as KernelFindingClassification | null) ??
     "DataIssue";
   errorMessage.value = "";
+  void findingActionHandoff.handoff(
+    mode === "classify"
+      ? [
+          `[id="finding-classification-${finding.ref}"]`,
+          `[id="finding-action-text-${finding.ref}"]`,
+        ]
+      : `[id="finding-action-text-${finding.ref}"]`,
+    { scrollIfOffscreen: true }
+  );
+}
+
+function cancelFindingAction(finding: KernelValidationFinding) {
+  const preferredMode = findingActionDraft.value?.mode;
+  findingActionDraft.value = null;
+  findingActionText.value = "";
+  void findingActionHandoff.restoreTrigger(
+    findingRestoreTargets(finding.ref, preferredMode)
+  );
 }
 
 async function submitFindingAction() {
@@ -1069,6 +1116,9 @@ async function submitFindingAction() {
     findingActionDraft.value = null;
     findingActionText.value = "";
     await loadFindings();
+    void findingActionHandoff.restoreTrigger(
+      findingRestoreTargets(draft.finding.ref, draft.mode)
+    );
   } catch (error) {
     errorMessage.value = describeKernelError(error);
   } finally {
@@ -1107,6 +1157,9 @@ async function signFindingWithToken(sigToken: string, signingReason: string) {
     findingActionDraft.value = null;
     findingActionText.value = "";
     await loadFindings();
+    void findingActionHandoff.restoreTrigger(
+      findingRestoreTargets(op.finding.ref, op.mode)
+    );
     return { kind: "signed" as const };
   } catch (error) {
     const message = describeKernelError(error);
