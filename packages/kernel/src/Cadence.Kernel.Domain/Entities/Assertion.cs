@@ -108,8 +108,14 @@ public class Assertion : AggregateRoot<AssertionId>
         };
     }
 
-    /// <summary>Raises a query about <paramref name="observation"/>, or returns why the text is refused.</summary>
-    public static CommandResult<Assertion> Query(AssertionId id, Observation observation, string? text, string assertedBy, DateTimeOffset assertedAt)
+    /// <summary>Raises a query about <paramref name="observation"/>, or returns why the text or revision is refused.</summary>
+    public static CommandResult<Assertion> Query(
+        AssertionId id,
+        Observation observation,
+        string? text,
+        string assertedBy,
+        DateTimeOffset assertedAt,
+        int? revision = null)
     {
         ArgumentNullException.ThrowIfNull(observation);
         if (!IsValidText(text))
@@ -117,16 +123,29 @@ public class Assertion : AggregateRoot<AssertionId>
             return AssertionErrors.TextInvalid;
         }
 
+        int targetRevision = revision ?? observation.Revision;
+        if (targetRevision < 1 || targetRevision > observation.Revision)
+        {
+            return AssertionErrors.RevisionStale;
+        }
+
         return CommandResult<Assertion>.Success(new Assertion(
             id, observation.TenantId, AssertionKind.Queried, observation.StudyId, observation.EnrollmentId,
             NodeRef.For(observation.Id), assertedBy, assertedAt)
         {
+            TargetRevision = targetRevision,
             Text = text,
         });
     }
 
     /// <summary>Answers <paramref name="query"/>, or returns why it cannot be answered.</summary>
-    public static CommandResult<Assertion> Answer(AssertionId id, Assertion query, string? text, string assertedBy, DateTimeOffset assertedAt)
+    public static CommandResult<Assertion> Answer(
+        AssertionId id,
+        Assertion query,
+        string? text,
+        string assertedBy,
+        DateTimeOffset assertedAt,
+        int? revision = null)
     {
         ArgumentNullException.ThrowIfNull(query);
         if (query.Kind != AssertionKind.Queried || query.RetractsId is not null)
@@ -139,10 +158,17 @@ public class Assertion : AggregateRoot<AssertionId>
             return AssertionErrors.TextInvalid;
         }
 
+        int? targetRevision = revision ?? query.TargetRevision;
+        if (targetRevision is < 1)
+        {
+            return AssertionErrors.RevisionStale;
+        }
+
         return CommandResult<Assertion>.Success(new Assertion(
             id, query.TenantId, AssertionKind.QueryAnswered, query.StudyId, query.EnrollmentId,
             NodeRef.For(query.Id), assertedBy, assertedAt)
         {
+            TargetRevision = targetRevision,
             Text = text,
         });
     }

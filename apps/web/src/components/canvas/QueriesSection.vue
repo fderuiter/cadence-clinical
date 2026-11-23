@@ -21,6 +21,41 @@
           <option value="cancelled">Cancelled</option>
         </select>
 
+        <label for="study-queries-owner">Owner</label>
+        <select
+          id="study-queries-owner"
+          :value="ownerFilter"
+          @change="onOwnerChange"
+        >
+          <option value="">All owners</option>
+          <option value="site">Site</option>
+          <option value="monitor">Monitor</option>
+          <option value="data_manager">Data manager</option>
+        </select>
+
+        <label for="study-queries-origin">Origin</label>
+        <select
+          id="study-queries-origin"
+          :value="originFilter"
+          @change="onOriginChange"
+        >
+          <option value="">All origins</option>
+          <option value="manual">Manual</option>
+          <option value="system">System</option>
+        </select>
+
+        <label for="study-queries-priority">Priority</label>
+        <select
+          id="study-queries-priority"
+          :value="priorityFilter"
+          @change="onPriorityChange"
+        >
+          <option value="">All priorities</option>
+          <option value="high">High</option>
+          <option value="normal">Normal</option>
+          <option value="low">Low</option>
+        </select>
+
         <label for="study-queries-site">Site</label>
         <input
           id="study-queries-site"
@@ -159,6 +194,9 @@
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import type {
+  FormQueryOrigin,
+  FormQueryOwnerRole,
+  FormQueryPriority,
   FormQueryResponse,
   FormQueryStatus,
 } from "../../api/ecrfQueriesApi";
@@ -175,6 +213,9 @@ import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 
 export interface StudyQueriesFilterState {
   status: string;
+  owner: string;
+  origin: string;
+  priority: string;
   site: string;
   participant: string;
   changed: string;
@@ -188,6 +229,13 @@ const VALID_STATUSES = new Set<FormQueryStatus>([
   "closed",
   "cancelled",
 ]);
+const VALID_OWNERS = new Set<FormQueryOwnerRole>([
+  "site",
+  "monitor",
+  "data_manager",
+]);
+const VALID_ORIGINS = new Set<FormQueryOrigin>(["manual", "system"]);
+const VALID_PRIORITIES = new Set<FormQueryPriority>(["low", "normal", "high"]);
 
 const props = withDefaults(
   defineProps<{
@@ -195,6 +243,9 @@ const props = withDefaults(
     canManage: boolean;
     canAnswer?: boolean;
     status?: string;
+    owner?: string;
+    origin?: string;
+    priority?: string;
     site?: string;
     participant?: string;
     changed?: string;
@@ -217,6 +268,9 @@ const siteFocused = ref(false);
 const participantFocused = ref(false);
 
 const statusFilter = ref(props.status ?? "");
+const ownerFilter = ref(props.owner ?? "");
+const originFilter = ref(props.origin ?? "");
+const priorityFilter = ref(props.priority ?? "");
 const siteInput = ref(props.site ?? "");
 const participantInput = ref(props.participant ?? "");
 const appliedSite = ref((props.site ?? "").trim());
@@ -252,9 +306,20 @@ function isParticipantFocused(): boolean {
 }
 
 watch(
-  () => [props.status, props.site, props.participant, props.changed],
-  ([status, site, participant, changed]) => {
+  () => [
+    props.status,
+    props.owner,
+    props.origin,
+    props.priority,
+    props.site,
+    props.participant,
+    props.changed,
+  ],
+  ([status, owner, origin, priority, site, participant, changed]) => {
     if (status !== undefined) statusFilter.value = status;
+    if (owner !== undefined) ownerFilter.value = owner;
+    if (origin !== undefined) originFilter.value = origin;
+    if (priority !== undefined) priorityFilter.value = priority;
     if (site !== undefined) {
       appliedSite.value = site.trim();
       if (!isSiteFocused()) {
@@ -288,6 +353,9 @@ const knownParticipants = computed(() =>
 const hasActiveFilter = computed(() =>
   Boolean(
     statusFilter.value ||
+    ownerFilter.value ||
+    originFilter.value ||
+    priorityFilter.value ||
     siteInput.value.trim() ||
     participantInput.value.trim() ||
     changedFilter.value
@@ -332,6 +400,9 @@ function queryObservationLocation(
 function syncFilterUrl() {
   emit("filter", {
     status: statusFilter.value,
+    owner: ownerFilter.value,
+    origin: originFilter.value,
+    priority: priorityFilter.value,
     site: appliedSite.value,
     participant: appliedParticipant.value,
     changed: changedFilter.value,
@@ -382,6 +453,24 @@ function onStatusChange(event: Event) {
   syncFilterUrl();
 }
 
+function onOwnerChange(event: Event) {
+  ownerFilter.value = (event.target as HTMLSelectElement).value;
+  flushTextFilters();
+  syncFilterUrl();
+}
+
+function onOriginChange(event: Event) {
+  originFilter.value = (event.target as HTMLSelectElement).value;
+  flushTextFilters();
+  syncFilterUrl();
+}
+
+function onPriorityChange(event: Event) {
+  priorityFilter.value = (event.target as HTMLSelectElement).value;
+  flushTextFilters();
+  syncFilterUrl();
+}
+
 function onSiteInput(event: Event) {
   siteInput.value = (event.target as HTMLInputElement).value;
   scheduleTextFilterSync();
@@ -402,6 +491,9 @@ function clearFilters() {
   clearTimeout(filterTimer);
   filterTimer = undefined;
   statusFilter.value = "";
+  ownerFilter.value = "";
+  originFilter.value = "";
+  priorityFilter.value = "";
   siteInput.value = "";
   participantInput.value = "";
   appliedSite.value = "";
@@ -425,6 +517,21 @@ async function refreshQueries() {
   )
     ? (statusFilter.value as FormQueryStatus)
     : "";
+  const normalizedOwner = VALID_OWNERS.has(
+    ownerFilter.value as FormQueryOwnerRole
+  )
+    ? (ownerFilter.value as FormQueryOwnerRole)
+    : "";
+  const normalizedOrigin = VALID_ORIGINS.has(
+    originFilter.value as FormQueryOrigin
+  )
+    ? (originFilter.value as FormQueryOrigin)
+    : "";
+  const normalizedPriority = VALID_PRIORITIES.has(
+    priorityFilter.value as FormQueryPriority
+  )
+    ? (priorityFilter.value as FormQueryPriority)
+    : "";
   const valueChanged =
     changedFilter.value === "true"
       ? true
@@ -436,6 +543,9 @@ async function refreshQueries() {
       studyId: studyId.value,
       filters: {
         status: normalizedStatus,
+        ...(normalizedOwner ? { owner: normalizedOwner } : {}),
+        ...(normalizedOrigin ? { origin: normalizedOrigin } : {}),
+        ...(normalizedPriority ? { priority: normalizedPriority } : {}),
         site: appliedSite.value || undefined,
         participant: appliedParticipant.value || undefined,
         valueChanged,
@@ -500,11 +610,22 @@ watch(
   { immediate: true }
 );
 
-watch([statusFilter, appliedSite, appliedParticipant, changedFilter], () => {
-  if (studyId.value && !studyLoading.value) {
-    void refreshQueries();
+watch(
+  [
+    statusFilter,
+    ownerFilter,
+    originFilter,
+    priorityFilter,
+    appliedSite,
+    appliedParticipant,
+    changedFilter,
+  ],
+  () => {
+    if (studyId.value && !studyLoading.value) {
+      void refreshQueries();
+    }
   }
-});
+);
 </script>
 
 <style scoped>
