@@ -6,11 +6,16 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Standards;
+using Cadence.Kernel.Time;
+using Cadence.Kernel.Validation;
 using Cadence.Modules.Execution.Domain;
 using Cadence.Modules.Execution.Endpoints;
 using Cadence.Modules.Execution.Infrastructure;
@@ -19,6 +24,7 @@ using FluentAssertions;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
@@ -152,9 +158,109 @@ public sealed class ExecutionFormModuleTests
         injected.Should().Throw<ArgumentException>();
     }
 
-    private static async Task<HttpContext> ContextWithTenantAsync(TenantId tenant)
+    /// <summary>
+    /// Previewing form values loads the target record once and passes that <see cref="CollectionInstanceRecord"/> directly
+    /// to <see cref="ICollectionValidationService.PreviewFormAsync(TenantId, CollectionInstanceRecord, IReadOnlyDictionary{string, ObservationValue?}, DateOnly, CancellationToken)"/>.
+    /// </summary>
+    [Fact(DisplayName = "FormEndpoints_PreviewAsync_ForwardsLoadedRecordWithoutSecondFindAsync")]
+    public async Task FormEndpointsPreviewAsyncForwardsLoadedRecordWithoutSecondFindAsync()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = TenantId.New();
+        var record = Record([Item("sbp", required: true), Item("dbp", required: true)]);
+        var validation = new RecordingValidationService(
+        [
+            new CollectionPreviewWarning("vitals.pack", "R1", 1, ValidationSeverity.Warning, "cs.vitals", "sbp", "High systolic BP"),
+        ]);
+        var services = new ServiceCollection()
+            .AddSingleton<ICollectionValidationService>(validation)
+            .BuildServiceProvider();
+        var http = await ContextWithTenantAsync(tenant, services);
+        var records = new StubCollectionInstanceRecords([], [record]);
+        var request = new PreviewFormValuesRequest([new PreviewFormItemValueRequest("sbp", new QuantityValue(185m, "mm[Hg]"))]);
+
+        var response = await FormEndpoints.PreviewAsync(
+            record.CollectionInstanceId.Value, request, http, records, new StubReadAccess(true), new FixedClock(At), ct);
+
+        var ok = response.Result.Should().BeOfType<Ok<FormPreviewResponse>>().Subject;
+        ok.Value!.FormId.Should().Be(record.CollectionInstanceId.Value);
+        ok.Value.Warnings.Should().ContainSingle().Which.RuleId.Should().Be("R1");
+        records.FindCalls.Should().Be(1);
+        validation.PreviewRecordCalls.Should().Be(1);
+        validation.PreviewByIdCalls.Should().Be(0);
+    }
+
+    /// <summary>
+    /// Saving form values returns the hydrated <see cref="FormResponse"/> in the same response so callers do not issue a
+    /// follow-up <c>GET /forms/{formId}</c> round-trip.
+    /// </summary>
+    [Fact(DisplayName = "FormEndpoints_SaveAsync_ReturnsHydratedFormResponse")]
+    public async Task FormEndpointsSaveAsyncReturnsHydratedFormResponse()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = TenantId.New();
+        var sbpObs = ObservationId.New();
+        var initial = Record([Item("sbp", required: true)]);
+        var updated = new CollectionInstanceRecord(
+            initial.CollectionInstanceId,
+            initial.EnrollmentId,
+            initial.ParticipantId,
+            initial.StudyId,
+            initial.StudySiteId,
+            initial.ProtocolVersionId,
+            initial.CollectionSpecId,
+            initial.PlannedActivityId,
+            initial.CollectedAt,
+            initial.OpenedBy,
+            initial.OpenedAt,
+            2,
+            initial.Items,
+            [new CollectedValueView("sbp", sbpObs, ConceptRef.New(), new QuantityValue(124m, "mm[Hg]"), At, 1, "crc@example.test", At)],
+            [],
+            [],
+            [],
+            "hash-v2",
+            "Vital signs");
+        var http = await ContextWithTenantAsync(tenant);
+        http.Request.Headers[FormEndpoints.IdempotencyKeyHeader] = "idem-save-1";
+        var records = new StubCollectionInstanceRecords([], [initial, updated]);
+        var sender = new StubCommandSender(
+            new CollectedValuesState(
+                initial.CollectionInstanceId,
+                2,
+                [new CollectedValueState("sbp", sbpObs, new QuantityValue(124m, "mm[Hg]"), 1, true)]));
+        var request = new SaveFormValuesRequest(
+            [new FormValueRequest("sbp", new QuantityValue(124m, "mm[Hg]"), 0, null, null)]);
+
+        var response = await FormEndpoints.SaveAsync(
+            initial.CollectionInstanceId.Value,
+            request,
+            http,
+            records,
+            sender,
+            new FixedChangeReason("Initial vitals entry"),
+            ct,
+            contexts: null,
+            access: new StubReadAccess(true, canSign: true));
+
+        var ok = response.Result.Should().BeOfType<Ok<FormSavedResponse>>().Subject;
+        ok.Value!.Version.Should().Be(2);
+        ok.Value.Values.Should().ContainSingle().Which.Revision.Should().Be(1);
+        ok.Value.Form.Should().NotBeNull();
+        ok.Value.Form!.Version.Should().Be(2);
+        ok.Value.Form.Complete.Should().BeTrue();
+        ok.Value.Form.CanSign.Should().BeTrue();
+        ok.Value.Form.Items.Should().ContainSingle().Which.Revision.Should().Be(1);
+    }
+
+    private static async Task<HttpContext> ContextWithTenantAsync(TenantId tenant, IServiceProvider? services = null)
     {
         var http = new DefaultHttpContext();
+        if (services is not null)
+        {
+            http.RequestServices = services;
+        }
+
         var filter = new KernelTenantFilter(new FixedTenantResolver(tenant));
         await filter.InvokeAsync(new DefaultEndpointFilterInvocationContext(http), static _ => ValueTask.FromResult<object?>(null));
         return http;
@@ -181,7 +287,17 @@ public sealed class ExecutionFormModuleTests
             ValueTask.FromResult(KernelTenantResolution.Resolved(tenant));
     }
 
-    private sealed class StubReadAccess(bool canSee) : IKernelReadAccess
+    private sealed class FixedClock(DateTimeOffset utcNow) : IClock
+    {
+        public DateTimeOffset UtcNow => utcNow;
+    }
+
+    private sealed class FixedChangeReason(string reason) : IKernelChangeReason
+    {
+        public string? Read(HttpContext context) => reason;
+    }
+
+    private sealed class StubReadAccess(bool canSee, bool canSign = false) : IKernelReadAccess
     {
         public NodeRef? CheckedNode { get; private set; }
 
@@ -190,14 +306,24 @@ public sealed class ExecutionFormModuleTests
             CheckedNode = node;
             return ValueTask.FromResult(canSee);
         }
+
+        public ValueTask<bool> CanExerciseAsync(TenantId tenant, Capability capability, NodeRef resource, CancellationToken cancellationToken) =>
+            ValueTask.FromResult(canSign);
     }
 
-    private sealed class StubCollectionInstanceRecords(IReadOnlyList<CollectionInstanceSummary> summaries) : ICollectionInstanceRecords
+    private sealed class StubCollectionInstanceRecords(
+        IReadOnlyList<CollectionInstanceSummary> summaries,
+        IReadOnlyList<CollectionInstanceRecord>? findQueue = null) : ICollectionInstanceRecords
     {
+        private readonly Queue<CollectionInstanceRecord> _records = new(findQueue ?? []);
+        public int FindCalls { get; private set; }
         public int ListCalls { get; private set; }
 
-        public Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken) =>
-            Task.FromResult<CollectionInstanceRecord?>(null);
+        public Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken)
+        {
+            FindCalls++;
+            return Task.FromResult(_records.Count > 0 ? _records.Dequeue() : null);
+        }
 
         public Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(
             TenantId tenant,
@@ -207,5 +333,53 @@ public sealed class ExecutionFormModuleTests
             ListCalls++;
             return Task.FromResult(summaries);
         }
+    }
+
+    private sealed class RecordingValidationService(IReadOnlyList<CollectionPreviewWarning> warnings) : ICollectionValidationService
+    {
+        public int PreviewByIdCalls { get; private set; }
+        public int PreviewRecordCalls { get; private set; }
+
+        public Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
+            TenantId tenant,
+            CollectionInstanceId formId,
+            IReadOnlyDictionary<string, ObservationValue?> draftValues,
+            DateOnly asOf,
+            CancellationToken cancellationToken = default)
+        {
+            PreviewByIdCalls++;
+            return Task.FromResult(warnings);
+        }
+
+        public Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
+            TenantId tenant,
+            CollectionInstanceRecord target,
+            IReadOnlyDictionary<string, ObservationValue?> draftValues,
+            DateOnly asOf,
+            CancellationToken cancellationToken = default)
+        {
+            PreviewRecordCalls++;
+            return Task.FromResult(warnings);
+        }
+
+        public Task<CollectionRulePackPreviewResult> PreviewRulePackAsync(
+            TenantId tenant, StudyId studyId, LibraryItemId rulePackId, DateOnly asOf, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<CommandResult<CollectionValidationResult>> ValidateStudyCollectionsAsync(
+            TenantId tenant, StudyId studyId, DateOnly asOf, DateTimeOffset evaluatedAt, string idempotencyKey, string reasonForChange,
+            CommandMetadata? metadata = null, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class StubCommandSender(CollectedValuesState saved) : IKernelCommandSender
+    {
+        public Task<CommandResult<TResult>> SendAsync<TResult>(
+            ICommand<TResult> command,
+            CommandMetadata? metadata = null,
+            CancellationToken cancellationToken = default) =>
+            command is RecordCollectedValues
+                ? Task.FromResult(CommandResult<TResult>.Success((TResult)(object)saved))
+                : throw new NotSupportedException();
     }
 }

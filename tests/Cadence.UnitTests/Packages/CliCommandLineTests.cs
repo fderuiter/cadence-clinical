@@ -34,6 +34,7 @@ public class CliCommandLineTests
     [InlineData("ci")]
     [InlineData("ci", "--job", "dotnet-quality", "--job", "security")]
     [InlineData("ci", "-j", "dotnet-tests", "--allow-skip", "--base", "main", "--list")]
+    [InlineData("ci", "-j", "dotnet-tests", "--allow-missing-tools", "--allow-db-skip", "--base", "main", "--list")]
     [InlineData("rulesets")]
     [InlineData("rulesets", "--dry-run")]
     [InlineData("rulesets", "--dry-run", "--repo", "fderuiter/cadence-clinical")]

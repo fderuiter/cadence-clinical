@@ -59,5 +59,27 @@ public sealed class SubjectListPostgresTests(ExecutionPostgresFixture fixture) :
         var filteredByQuery = await reader.ListAsync(new SubjectListCriteria(study, null, null, 50, 0, Query: "-s2"), ct);
         filteredByQuery.Total.Should().Be(1);
         filteredByQuery.Items.Single().SubjectCode.Value.Should().Be($"{study.Value}-S2");
+
+        var studyCounts = await reader.CountByStatusAsync(new SubjectCountCriteria(study), ct);
+        studyCounts.Should().Equal(new System.Collections.Generic.Dictionary<SubjectState, int>
+        {
+            [SubjectState.Screening] = 1,
+            [SubjectState.Enrolled] = 3,
+        });
+
+        var siteCounts = await reader.CountByStatusAsync(new SubjectCountCriteria(study, SiteCode: site), ct);
+        siteCounts.Should().Equal(new System.Collections.Generic.Dictionary<SubjectState, int>
+        {
+            [SubjectState.Screening] = 1,
+            [SubjectState.Enrolled] = 2,
+        });
+
+        var allowedSiteCounts = await reader.CountByStatusAsync(
+            new SubjectCountCriteria(study, AllowedSites: [new SiteCode("SITE-002")]),
+            ct);
+        allowedSiteCounts.Should().Equal(new System.Collections.Generic.Dictionary<SubjectState, int>
+        {
+            [SubjectState.Enrolled] = 1,
+        });
     }
 }

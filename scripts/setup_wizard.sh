@@ -41,7 +41,7 @@ for arg in "$@"; do
       printf "Usage: %s [--dev] [--minimal] [--linters-only] [--help]\n" "$0"
       printf "  --dev, --non-interactive, -y  Skip prompts and accept all defaults\n"
       printf "  --minimal                     Skip heavy/optional steps (Playwright browsers, cert trust)\n"
-      printf "  --linters-only                Provision only SHA-256 verified actionlint and hadolint in .cadence/bin\n"
+      printf "  --linters-only                Provision only SHA-256 verified actionlint, hadolint, and shellcheck in .cadence/bin\n"
       exit 0
       ;;
   esac
@@ -112,7 +112,7 @@ provision_cli_linters() {
   local cadence_bin="${CADENCE_BIN_DIR:-$REPO_ROOT/.cadence/bin}"
   mkdir -p "$cadence_bin"
 
-  local os_lower arch_raw actionlint_arch hadolint_os hadolint_arch
+  local os_lower arch_raw actionlint_arch hadolint_os hadolint_arch shellcheck_arch
   os_lower="$(uname -s | tr '[:upper:]' '[:lower:]')"
   arch_raw="$(uname -m)"
 
@@ -120,50 +120,59 @@ provision_cli_linters() {
     x86_64|amd64)
       actionlint_arch="amd64"
       hadolint_arch="x86_64"
+      shellcheck_arch="x86_64"
       ;;
     aarch64|arm64)
       actionlint_arch="arm64"
       hadolint_arch="arm64"
+      shellcheck_arch="aarch64"
       ;;
     *)
-      fail_blocking "Unsupported CPU architecture '${arch_raw}' for actionlint/hadolint provisioning."
+      fail_blocking "Unsupported CPU architecture '${arch_raw}' for actionlint/hadolint/shellcheck provisioning."
       return 1
       ;;
   esac
 
   local pinned_actionlint_sha=""
   local pinned_hadolint_sha=""
+  local pinned_shellcheck_sha=""
   case "${os_lower}_${actionlint_arch}" in
     linux_amd64)
       hadolint_os="linux"
       pinned_actionlint_sha="8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8" # pragma: allowlist secret
       pinned_hadolint_sha="c7187db94eeeeca956519a6af171adc31453941a1e777961f6e680f697c8c507" # pragma: allowlist secret
+      pinned_shellcheck_sha="8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198" # pragma: allowlist secret
       ;;
     linux_arm64)
       hadolint_os="linux"
       pinned_actionlint_sha="325e971b6ba9bfa504672e29be93c24981eeb1c07576d730e9f7c8805afff0c6" # pragma: allowlist secret
       pinned_hadolint_sha="f6198ef8090f404dbb771abfee086eb8c48ac177f30da7fd3510aca35b344b5d" # pragma: allowlist secret
+      pinned_shellcheck_sha="12b331c1d2db6b9eb13cfca64306b1b157a86eb69db83023e261eaa7e7c14588" # pragma: allowlist secret
       ;;
     darwin_amd64)
       hadolint_os="macos"
       pinned_actionlint_sha="5b44c3bc2255115c9b69e30efc0fecdf498fdb63c5d58e17084fd5f16324c644" # pragma: allowlist secret
       pinned_hadolint_sha="ffe9bb18b23d5ed1eae50237aecdbb523d016e96da0bd4e7aa432040acfc3fde" # pragma: allowlist secret
+      pinned_shellcheck_sha="3c89db4edcab7cf1c27bff178882e0f6f27f7afdf54e859fa041fca10febe4c6" # pragma: allowlist secret
       ;;
     darwin_arm64)
       hadolint_os="macos"
       pinned_actionlint_sha="aba9ced2dee8d27fecca3dc7feb1a7f9a52caefa1eb46f3271ea66b6e0e6953f" # pragma: allowlist secret
       pinned_hadolint_sha="5c09f3213f8e40406abe048233d985eebef336d4a6a20021be47fadb6cf480a2" # pragma: allowlist secret
+      pinned_shellcheck_sha="56affdd8de5527894dca6dc3d7e0a99a873b0f004d7aabc30ae407d3f48b0a79" # pragma: allowlist secret
       ;;
     *)
-      fail_blocking "Unsupported OS '${os_lower}' for actionlint/hadolint provisioning."
+      fail_blocking "Unsupported OS '${os_lower}' for actionlint/hadolint/shellcheck provisioning."
       return 1
       ;;
   esac
 
   local actionlint_version="1.7.12"
   local hadolint_version="2.15.1"
+  local shellcheck_version="0.11.0"
   local actionlint_bin="$cadence_bin/actionlint"
   local hadolint_bin="$cadence_bin/hadolint"
+  local shellcheck_bin="$cadence_bin/shellcheck"
 
   if [[ -x "$actionlint_bin" ]] && "$actionlint_bin" -version 2>/dev/null | grep -Fq "$actionlint_version" \
      && [[ -z "${ACTIONLINT_SHA256:-}" ]] && [[ -z "${ACTIONLINT_DOWNLOAD_URL:-}" ]]; then
@@ -211,6 +220,47 @@ provision_cli_linters() {
       mv "$tmp_hadolint" "$hadolint_bin"
       chmod +x "$hadolint_bin"
       ok "hadolint ${hadolint_version} SHA-256 verified and installed in .cadence/bin."
+    fi
+  fi
+
+  if [[ -x "$shellcheck_bin" ]] && "$shellcheck_bin" --version 2>/dev/null | grep -Fq "$shellcheck_version" \
+     && [[ -z "${SHELLCHECK_SHA256:-}" ]] && [[ -z "${SHELLCHECK_DOWNLOAD_URL:-}" ]]; then
+    ok "shellcheck ${shellcheck_version} already provisioned in .cadence/bin."
+  elif ! command -v xz >/dev/null 2>&1; then
+    fail_blocking "xz is required to extract ShellCheck (.tar.xz). Install xz-utils (for example 'sudo apt-get install -y xz-utils' on Debian/Ubuntu or 'brew install xz' on macOS) and re-run setup_wizard.sh."
+  else
+    local shellcheck_asset="shellcheck-v${shellcheck_version}.${os_lower}.${shellcheck_arch}.tar.xz"
+    local shellcheck_url="${SHELLCHECK_DOWNLOAD_URL:-https://github.com/koalaman/shellcheck/releases/download/v${shellcheck_version}/${shellcheck_asset}}"
+    local expected_shellcheck_sha="${SHELLCHECK_SHA256:-$pinned_shellcheck_sha}"
+    local tmp_shellcheck_dir
+    tmp_shellcheck_dir="$(mktemp -d /tmp/cadence-shellcheck.XXXXXX)"
+    local tmp_shellcheck_archive="$tmp_shellcheck_dir/$shellcheck_asset"
+
+    if ! curl -fsSL --connect-timeout 15 --retry 3 "$shellcheck_url" -o "$tmp_shellcheck_archive"; then
+      rm -rf "$tmp_shellcheck_dir"
+      fail_blocking "Failed to download shellcheck v${shellcheck_version} from ${shellcheck_url}."
+    elif ! verify_sha256 "shellcheck (${shellcheck_asset})" "$tmp_shellcheck_archive" "$expected_shellcheck_sha"; then
+      rm -rf "$tmp_shellcheck_dir"
+    elif ! tar -xJf "$tmp_shellcheck_archive" -C "$tmp_shellcheck_dir"; then
+      rm -rf "$tmp_shellcheck_dir"
+      fail_blocking "Failed to extract shellcheck archive ${shellcheck_asset}."
+    else
+      local extracted_shellcheck=""
+      if [[ -f "$tmp_shellcheck_dir/shellcheck-v${shellcheck_version}/shellcheck" ]]; then
+        extracted_shellcheck="$tmp_shellcheck_dir/shellcheck-v${shellcheck_version}/shellcheck"
+      elif [[ -f "$tmp_shellcheck_dir/shellcheck" ]]; then
+        extracted_shellcheck="$tmp_shellcheck_dir/shellcheck"
+      fi
+
+      if [[ -z "$extracted_shellcheck" ]]; then
+        rm -rf "$tmp_shellcheck_dir"
+        fail_blocking "Failed to locate shellcheck binary inside ${shellcheck_asset}."
+      else
+        mv "$extracted_shellcheck" "$shellcheck_bin"
+        chmod +x "$shellcheck_bin"
+        rm -rf "$tmp_shellcheck_dir"
+        ok "shellcheck ${shellcheck_version} SHA-256 verified and installed in .cadence/bin."
+      fi
     fi
   fi
 }
