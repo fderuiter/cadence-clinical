@@ -1110,14 +1110,18 @@ onUnmounted(() => {
 
 .mobile-menu-toggle {
   display: none;
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
-  padding: 6px 10px;
+  padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   font-size: 1rem;
+  line-height: 1;
   cursor: pointer;
 }
 
