@@ -11,7 +11,22 @@ import { createPortalDemoHandlers } from "./demoHandlers.js";
 // Deterministic mock-sandbox state for explicit demo mode / Vitest MSW tests.
 // Never fabricates fallback merchant/amount/confidence when receipt content is unreadable.
 const mockWalletLedger = new Map();
+const mockOcrTokens = new Map();
+const consumedMockOcrTokens = new Set();
+const recordedMockReceiptDigests = new Set();
 let mockActionCounter = 0;
+
+function computeMockDigest(rawBytesText) {
+  if (!rawBytesText || typeof rawBytesText !== "string") return null;
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let i = 0; i < rawBytesText.length; i++) {
+    const ch = rawBytesText.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 ^ (ch + i), 0x85ebca6b) >>> 0;
+  }
+  return `${h1.toString(16).padStart(8, "0")}${h2.toString(16).padStart(8, "0")}${rawBytesText.length.toString(16).padStart(8, "0")}`;
+}
 
 function nextMockTimestampMs() {
   mockActionCounter += 1;
@@ -138,13 +153,15 @@ function decodeBase64ToText(imageBase64) {
   }
 }
 
-function parseReceiptContent(body) {
+function parseReceiptContent(body, issueToken = true) {
+  const imagePayload = body.imageBase64 || body.image_base64 || "";
+  const receiptSha256 = imagePayload ? computeMockDigest(imagePayload) : null;
   const rawInput =
     typeof body.rawText === "string" && body.rawText.trim()
       ? body.rawText.trim()
       : typeof body.raw_text === "string" && body.raw_text.trim()
         ? body.raw_text.trim()
-        : decodeBase64ToText(body.imageBase64 || body.image_base64 || "");
+        : decodeBase64ToText(imagePayload);
 
   if (!rawInput || rawInput.replace(/[^a-zA-Z0-9]/g, "").length < 3) {
     return {
@@ -255,25 +272,38 @@ function parseReceiptContent(body) {
   const confidenceScore = ocrReadable
     ? Number(Math.min(0.98, completeness).toFixed(2))
     : Number(Math.min(0.45, completeness).toFixed(2));
+  const taxDeduction =
+    category === "MEAL" && grossAmount > 75.0
+      ? Number(((grossAmount - 75.0) * 0.15).toFixed(2))
+      : 0;
+  const netAmount = Number((grossAmount - taxDeduction).toFixed(2));
+
+  let ocrToken = null;
+  if (issueToken && receiptSha256) {
+    ocrToken = `mock_ocr_token_${nextMockTimestampMs()}`;
+    mockOcrTokens.set(ocrToken, {
+      ocrReadable,
+      merchantName,
+      expenseDate,
+      grossAmount,
+      category,
+      confidenceScore,
+      receiptSha256,
+    });
+  }
 
   return {
     ocrReadable,
-    ocr_readable: ocrReadable,
     merchantName,
-    merchant_name: merchantName,
     expenseDate,
-    expense_date: expenseDate,
     grossAmount,
-    gross_amount: grossAmount,
-    taxDeduction: 0,
-    tax_deduction: 0,
-    netAmount: grossAmount,
-    net_amount: grossAmount,
+    taxDeduction,
+    netAmount,
     category,
     confidenceScore,
-    confidence_score: confidenceScore,
     rawText: rawInput,
-    raw_text: rawInput,
+    ocrToken,
+    receiptSha256,
     warning:
       confidenceScore < 0.9
         ? "We could not read every detail on the receipt photo clearly. Please check the merchant, date, and amount before submitting."
@@ -283,7 +313,6 @@ function parseReceiptContent(body) {
 
 function evaluateExpenseSubmission(body, wallet = null) {
   const grossAmount = Number(body.grossAmount ?? body.gross_amount ?? 0);
-  const confidence = Number(body.ocrConfidence ?? body.ocr_confidence ?? 0);
   const category = String(body.category || "TRANSIT").toUpperCase();
   const merchantName = String(
     body.merchantName ?? body.merchant_name ?? ""
@@ -294,18 +323,99 @@ function evaluateExpenseSubmission(body, wallet = null) {
   const isMeal = Boolean(
     body.isMealAllowance ?? body.is_meal_allowance ?? category === "MEAL"
   );
-  const perDiemCap = Number(body.perDiemCap ?? body.per_diem_cap ?? 75.0);
+  const perDiemCap = 75.0;
+  const taxDeduction =
+    isMeal && grossAmount > perDiemCap
+      ? Number(((grossAmount - perDiemCap) * 0.15).toFixed(2))
+      : 0;
+  const netAmount = Number((grossAmount - taxDeduction).toFixed(2));
   const isW9Blocked = Boolean(
     wallet &&
     (wallet.is1099ThresholdExceeded || Number(wallet.taxableYtd || 0) >= 600) &&
     String(wallet.w9Status || "").toUpperCase() !== "VERIFIED"
   );
 
+  const candidateToken =
+    body.ocrToken ??
+    body.ocr_token ??
+    body.receiptOcrData?.ocrToken ??
+    body.receiptOcrData?.ocr_token ??
+    null;
+  const receiptImageBase64 =
+    body.receiptImageBase64 ?? body.receipt_image_base64 ?? "";
+
+  let confidence = 0;
+  const holdReasons = [];
+  let scanned = null;
+  let receiptSha256 = null;
+
+  if (candidateToken) {
+    if (consumedMockOcrTokens.has(candidateToken)) {
+      holdReasons.push("Receipt OCR token was already consumed.");
+    } else if (!mockOcrTokens.has(candidateToken)) {
+      holdReasons.push("Receipt OCR token could not be verified.");
+    } else {
+      scanned = mockOcrTokens.get(candidateToken);
+      consumedMockOcrTokens.add(candidateToken);
+      receiptSha256 = scanned.receiptSha256;
+    }
+  }
+
+  if (receiptImageBase64) {
+    const parsedFromBytes = parseReceiptContent(
+      { imageBase64: receiptImageBase64, categoryHint: category },
+      false
+    );
+    receiptSha256 = parsedFromBytes.receiptSha256;
+    scanned = parsedFromBytes;
+  }
+
+  if (receiptSha256) {
+    if (recordedMockReceiptDigests.has(receiptSha256)) {
+      holdReasons.push(
+        "Duplicate receipt digest detected across expense claims."
+      );
+      scanned = null;
+    } else {
+      recordedMockReceiptDigests.add(receiptSha256);
+    }
+  }
+
+  if (scanned && scanned.ocrReadable && holdReasons.length === 0) {
+    const amountMatches =
+      Number(grossAmount.toFixed(2)) ===
+      Number(Number(scanned.grossAmount || 0).toFixed(2));
+    const merchantMatches =
+      merchantName.toLowerCase() ===
+      String(scanned.merchantName || "")
+        .trim()
+        .toLowerCase();
+    const categoryMatches =
+      category === String(scanned.category || "").toUpperCase();
+    const dateMatches =
+      !scanned.expenseDate ||
+      !expenseDate ||
+      expenseDate === String(scanned.expenseDate).trim();
+    if (amountMatches && merchantMatches && categoryMatches && dateMatches) {
+      confidence = Number(scanned.confidenceScore || 0);
+    } else {
+      holdReasons.push(
+        "Submitted claim fields differ from server-extracted receipt scan."
+      );
+    }
+  }
+
   const isAmountUnderCap = grossAmount > 0 && grossAmount <= 100.0;
   const isConfidenceHigh = confidence >= 0.9;
   const isMealCompliant = !isMeal || grossAmount <= perDiemCap;
 
-  if (isAmountUnderCap && isConfidenceHigh && isMealCompliant && !isW9Blocked) {
+  if (
+    isAmountUnderCap &&
+    isConfidenceHigh &&
+    isMealCompliant &&
+    !isW9Blocked &&
+    holdReasons.length === 0
+  ) {
     const timestamp = nextMockTimestampMs();
     const disbRef = `DISB-ACH-${timestamp}`;
     const createdIso = nextMockTimestampIso();
@@ -323,15 +433,18 @@ function evaluateExpenseSubmission(body, wallet = null) {
       disbursement_reference: disbRef,
       grossAmount,
       gross_amount: grossAmount,
-      netAmount: grossAmount,
-      net_amount: grossAmount,
+      taxDeduction,
+      tax_deduction: taxDeduction,
+      netAmount,
+      net_amount: netAmount,
+      ocrConfidence: confidence,
       disbursement_method: "DIRECT_ACH",
       dispatched_at: createdIso,
       createdAt: createdIso,
     };
   }
 
-  const reasons = [];
+  const reasons = [...holdReasons];
   if (!isAmountUnderCap) {
     reasons.push(
       `Gross amount $${grossAmount.toFixed(2)} exceeds $100.00 auto-approval threshold.`
@@ -370,8 +483,11 @@ function evaluateExpenseSubmission(body, wallet = null) {
     review_notes: reviewNotes,
     grossAmount,
     gross_amount: grossAmount,
-    netAmount: grossAmount,
-    net_amount: grossAmount,
+    taxDeduction,
+    tax_deduction: taxDeduction,
+    netAmount,
+    net_amount: netAmount,
+    ocrConfidence: confidence,
     createdAt: nextMockTimestampIso(),
   };
 }
@@ -705,6 +821,9 @@ export function buildPortalGatewayHandlers(options = {}) {
 
 export function resetMockWalletLedger() {
   mockWalletLedger.clear();
+  mockOcrTokens.clear();
+  consumedMockOcrTokens.clear();
+  recordedMockReceiptDigests.clear();
   mockActionCounter = 0;
 }
 
