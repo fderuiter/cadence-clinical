@@ -284,7 +284,13 @@
           </button>
         </div>
 
-        <div v-else class="articles-stream">
+        <div
+          v-else
+          class="articles-stream"
+          role="region"
+          aria-label="SOP articles list"
+          tabindex="0"
+        >
           <button
             v-for="art in displayArticles"
             :key="art.id"
@@ -1953,25 +1959,30 @@ export default {
   flex-direction: column;
   gap: 20px;
   width: 100%;
+  min-width: 0;
   max-width: 1600px;
   margin: 0 auto;
   padding: 8px 16px 32px 16px;
+  box-sizing: border-box;
 }
 
 /* Header Architecture */
 .section-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 24px;
+  gap: 16px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 16px;
+  min-width: 0;
 }
 
 .header-content-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .header-badge-row {
@@ -1987,6 +1998,7 @@ export default {
   letter-spacing: -0.02em;
   color: var(--primary);
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .view-subtitle {
@@ -1999,20 +2011,25 @@ export default {
 
 .header-action-group {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Metric KPI Summary Grid */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 16px;
+  min-width: 0;
 }
 
 .stat-card {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   font: inherit;
   color: inherit;
   text-align: left;
@@ -2092,6 +2109,7 @@ export default {
   gap: 16px;
   min-height: 700px;
   align-items: stretch;
+  min-width: 0;
 }
 
 /* Column 1: Category Sidebar */
@@ -2103,12 +2121,16 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .sidebar-box-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 8px;
 }
@@ -2226,6 +2248,10 @@ export default {
 
 .knowledge-scope-input {
   font-family: var(--font-mono);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Column 2: Article Directory Panel */
@@ -2236,6 +2262,8 @@ export default {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .list-search-bar {
@@ -2245,12 +2273,14 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .search-input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .search-symbol {
@@ -2262,6 +2292,7 @@ export default {
 
 .knowledge-search-input {
   width: 100%;
+  min-width: 0;
   min-height: var(--semantic-control-target-min, 24px);
   padding: 8px 32px 8px 32px;
   border: 1px solid var(--border);
@@ -2297,7 +2328,7 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  max-height: 68px;
+  max-height: 76px;
   overflow-y: auto;
   padding: 4px 2px;
 }
@@ -2342,6 +2373,8 @@ export default {
 
 .article-card {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   font: inherit;
   color: inherit;
   text-align: left;
@@ -2433,12 +2466,15 @@ export default {
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .reader-content-wrap {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
 }
 
 .reader-header-card {
@@ -2448,20 +2484,28 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
 }
 
 .reader-meta-top {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .breadcrumbs {
   font-size: 0.78rem;
   color: var(--neutral-dark);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .crumb-separator {
@@ -2473,12 +2517,18 @@ export default {
   background-color: var(--semantic-color-surface-header);
   padding: 1px 6px;
   border-radius: 4px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .reader-badges {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .reader-article-title {
@@ -2487,6 +2537,7 @@ export default {
   color: var(--primary);
   margin: 0;
   line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .reader-author-row {
@@ -2549,15 +2600,21 @@ export default {
 }
 
 /* Reader Tab Navigation */
-.reader-tab-nav {
+.reader-tab-nav,
+:deep(.reader-tab-nav) {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   background-color: var(--semantic-color-surface-header);
   border-bottom: 1px solid var(--border);
   padding: 0 16px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.reader-tab-btn {
+.reader-tab-btn,
+:deep(.reader-tab-btn) {
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -2567,13 +2624,17 @@ export default {
   color: var(--neutral-dark);
   cursor: pointer;
   transition: all 0.15s;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.reader-tab-btn:hover {
+.reader-tab-btn:hover,
+:deep(.reader-tab-btn:hover) {
   color: var(--primary);
 }
 
-.reader-tab-btn.active {
+.reader-tab-btn.active,
+:deep(.reader-tab-btn.active) {
   color: var(--semantic-color-primary);
   border-bottom-color: var(--semantic-color-primary);
   background-color: var(--semantic-color-surface);
@@ -3040,6 +3101,36 @@ export default {
   }
   .knowledge-sidebar {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-section {
+    padding: 4px 0 24px 0;
+  }
+
+  .knowledge-layout {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .knowledge-sidebar {
+    grid-column: auto;
+  }
+
+  .reader-header-card {
+    padding: 14px 16px;
+  }
+
+  .reader-tab-nav,
+  :deep(.reader-tab-nav) {
+    padding: 0 12px;
+  }
+
+  .reader-body-card {
+    padding: 16px;
+    min-width: 0;
+    overflow-x: auto;
   }
 }
 

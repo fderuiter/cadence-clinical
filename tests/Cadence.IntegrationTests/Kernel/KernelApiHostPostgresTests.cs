@@ -346,40 +346,51 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
 
         using var stranger = Client(code, Stranger);
         using var canIResp = await stranger.GetAsync(
-            new Uri($"/api/v1/kernel/can-i?capability=observation.record&resource={Uri.EscapeDataString(otherEnrollment.ToString())}", UriKind.Relative), ct);
-        canIResp.IsSuccessStatusCode.Should().BeTrue();
+            new Uri($"/api/v1/kernel/authorization/can-i?capability=observation.record&resource={Uri.EscapeDataString(otherEnrollment.ToString())}", UriKind.Relative), ct);
         var canIBody = await canIResp.Content.ReadAsStringAsync(ct);
-        canIBody.Should().NotContain(otherEnrollment.Id.ToString("D"));
+        canIResp.IsSuccessStatusCode.Should().BeTrue(canIBody);
         using var canIDoc = JsonDocument.Parse(canIBody);
         canIDoc.RootElement.GetProperty("permitted").GetBoolean().Should().BeFalse();
-        canIDoc.RootElement.GetProperty("explanation").GetProperty("subject").GetString()
+        var canIExp = canIDoc.RootElement.GetProperty("explanation");
+        canIExp.GetRawText().Should().NotContain(otherEnrollment.Id.ToString("D"));
+        canIExp.GetProperty("subject").GetString()
             .Should().Be($"masked:{NodeKinds.Enrollment}:{NotPermitted}");
 
         using var cmdsResp = await stranger.GetAsync(
-            new Uri($"/api/v1/kernel/nodes/{Uri.EscapeDataString(otherEnrollment.ToString())}/commands?capabilities=observation.record", UriKind.Relative), ct);
-        cmdsResp.IsSuccessStatusCode.Should().BeTrue();
+            new Uri($"/api/v1/kernel/nodes/{Uri.EscapeDataString(otherEnrollment.ToString())}/commands", UriKind.Relative), ct);
         var cmdsBody = await cmdsResp.Content.ReadAsStringAsync(ct);
-        cmdsBody.Should().NotContain(otherEnrollment.Id.ToString("D"));
+        cmdsResp.IsSuccessStatusCode.Should().BeTrue(cmdsBody);
         using var cmdsDoc = JsonDocument.Parse(cmdsBody);
-        cmdsDoc.RootElement.GetProperty("subject").GetString()
-            .Should().Be($"masked:{NodeKinds.Enrollment}:{NotPermitted}");
+        cmdsDoc.RootElement.EnumerateArray().Should().NotBeEmpty()
+            .And.OnlyContain(c =>
+                !c.GetProperty("decision").GetProperty("explanation").GetRawText().Contains(otherEnrollment.Id.ToString("D"))
+                && c.GetProperty("decision").GetProperty("explanation").GetProperty("subject").GetString()
+                    == $"masked:{NodeKinds.Enrollment}:{NotPermitted}");
 
-        using var denied = await stranger.PostAsJsonAsync(
-            new Uri($"/api/v1/kernel/protocol-versions/{NodeRef.For(amendment)}/submit", UriKind.Relative),
-            new { idempotency_key = KernelProtocolScenario.Key(), reason = "Unauthorized submit" },
-            Json,
-            ct);
+        using var submitReq = new HttpRequestMessage(
+            HttpMethod.Post,
+            new Uri($"/api/v1/kernel/protocol-versions/{NodeRef.For(amendment)}/submit-for-review", UriKind.Relative));
+        submitReq.Headers.Add("Idempotency-Key", KernelProtocolScenario.Key());
+        submitReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Unauthorized submit"));
+        using var denied = await stranger.SendAsync(submitReq, ct);
         denied.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         var deniedBody = await denied.Content.ReadAsStringAsync(ct);
+        deniedBody.Should().NotContain(amendment.Value.ToString("D"));
         using var deniedDoc = JsonDocument.Parse(deniedBody);
         deniedDoc.RootElement.TryGetProperty("explanation", out var expEl).Should().BeTrue();
         expEl.GetProperty("producer").GetString().Should().Be("kernel.authorization");
+        expEl.GetProperty("conditions")[0].GetProperty("evidence").EnumerateArray().Select(e => e.GetString())
+            .Should().Contain($"masked:{NodeKinds.ProtocolVersion}:{NotPermitted}");
+        expEl.GetProperty("next_actions")[0].GetProperty("target").GetString()
+            .Should().Be($"masked:{NodeKinds.ProtocolVersion}:{NotPermitted}");
 
         await using var db = fixture.CreateAdminContext();
         var denialAudit = await db.AuditEntries.AsNoTracking()
-            .Where(a => a.TenantId == tenant && a.Action == "SubmitProtocolVersionForReview.Denied")
+            .Where(a => a.TenantId == tenant && a.Action == "Denied")
             .SingleAsync(ct);
-        denialAudit.Changes.Should().NotContain("masked:");
+        denialAudit.Changes.Should().NotContain("masked:")
+            .And.Contain("SubmitProtocolVersionForReview")
+            .And.Contain(amendment.Value.ToString("D"));
     }
 
     /// <summary>A client signed as <paramref name="userId"/> in <paramref name="tenantCode"/>, on one host per test class.</summary>
