@@ -21,8 +21,8 @@
         :data-signature="signature.attestation_id"
       >
         <div>
-          <strong>{{ meaningLabel(signature.meaning) }}</strong> by
-          {{ signature.signed_by }} at {{ signature.signed_at }}:
+          <strong>{{ signaturesState.meaningLabel(signature.meaning) }}</strong>
+          by {{ signature.signed_by }} at {{ signature.signed_at }}:
           {{ signature.reason }}
           <span
             v-if="signature.superseded"
@@ -32,93 +32,87 @@
           >
           <span v-else class="ecrf-signature-state">Current</span>
         </div>
-        <table
+        <div
           v-if="signature.superseded && signature.signed_values?.length"
-          class="ecrf-signed-values"
-          data-testid="ecrf-signed-values"
+          class="ecrf-signed-values-scroll"
         >
-          <caption>
-            What this signature signed, beside the current values
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Item</th>
-              <th scope="col">Signed value</th>
-              <th scope="col">Signed revision</th>
-              <th scope="col">Current value</th>
-              <th scope="col">Current revision</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="signed in signature.signed_values"
-              :key="signed.item_id"
-              :data-signed-item="signed.item_id"
-              :class="{
-                'ecrf-signed-changed': changedSince(signed),
-              }"
-            >
-              <th scope="row">
-                {{ signed.item_id }}
-              </th>
-              <td>{{ formatObservationValue(signed.value) }}</td>
-              <td>
-                <component
-                  :is="routerLinkTag"
-                  v-if="
-                    itemObservationLink(signed.observation_id, signed.item_id)
-                  "
-                  class="ecrf-observation-link"
-                  :to="
-                    itemObservationLink(signed.observation_id, signed.item_id)!
-                  "
-                >
-                  {{ signed.revision }}
-                </component>
-                <template v-else>
-                  {{ signed.revision }}
-                </template>
-              </td>
-              <td>{{ currentValueText(signed.item_id) }}</td>
-              <td>{{ currentOf(signed.item_id)?.revision ?? "None" }}</td>
-            </tr>
-          </tbody>
-        </table>
+          <table class="ecrf-signed-values" data-testid="ecrf-signed-values">
+            <caption>
+              What this signature signed, beside the current values
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Item</th>
+                <th scope="col">Signed value</th>
+                <th scope="col">Signed revision</th>
+                <th scope="col">Current value</th>
+                <th scope="col">Current revision</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="signed in signature.signed_values"
+                :key="signed.item_id"
+                :data-signed-item="signed.item_id"
+                :class="{
+                  'ecrf-signed-changed': signaturesState.changedSince(signed),
+                }"
+              >
+                <th scope="row" class="ecrf-signed-item-code">
+                  {{ signed.item_id }}
+                </th>
+                <td>{{ formatObservationValue(signed.value) }}</td>
+                <td>
+                  <component
+                    :is="routerLinkTag"
+                    v-if="
+                      itemObservationLink(signed.observation_id, signed.item_id)
+                    "
+                    class="ecrf-observation-link"
+                    :to="
+                      itemObservationLink(
+                        signed.observation_id,
+                        signed.item_id
+                      )!
+                    "
+                  >
+                    {{ signed.revision }}
+                  </component>
+                  <template v-else>
+                    {{ signed.revision }}
+                  </template>
+                </td>
+                <td>
+                  {{ signaturesState.currentValueText(signed.item_id) }}
+                </td>
+                <td>
+                  {{
+                    signaturesState.currentOf(signed.item_id)?.revision ??
+                    "None"
+                  }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </li>
     </ul>
 
-    <div v-if="hasSignAuthority" class="ecrf-form-row">
+    <div v-if="signaturesState.hasSignAuthority" class="ecrf-form-row">
       <label for="ecrf-sign-meaning">Meaning</label>
-      <select id="ecrf-sign-meaning" v-model="signMeaning" :disabled="signing">
+      <select
+        id="ecrf-sign-meaning"
+        :value="signaturesState.signMeaning"
+        :disabled="signing"
+        @change="
+          signaturesState.signMeaning = ($event.target as HTMLSelectElement)
+            .value as EcrfSignatureMeaning
+        "
+      >
         <option value="approved">Approved</option>
         <option value="responsibility">Responsibility</option>
       </select>
-      <button
-        id="ecrf-form-sign"
-        class="btn btn-primary"
-        type="button"
-        :disabled="!canSign"
-        :aria-describedby="signHint ? 'ecrf-sign-hint' : undefined"
-        @click="showSignModal = true"
-      >
-        {{ signing ? "Signing…" : "Sign form" }}
-      </button>
-      <span
-        v-if="signHint"
-        id="ecrf-sign-hint"
-        class="ecrf-form-hint"
-        data-testid="ecrf-sign-hint"
-        >{{ signHint }}</span
-      >
     </div>
-    <p
-      v-else
-      id="ecrf-sign-unauthorized"
-      class="ecrf-form-hint"
-      data-testid="ecrf-sign-unauthorized"
-    >
-      Only an authorised investigator (collection.sign) may sign this form.
-    </p>
 
     <div
       v-if="signOutcome"
@@ -130,7 +124,7 @@
       :role="signOutcome.kind === 'signed' ? 'status' : 'alert'"
     >
       <template v-if="signOutcome.kind === 'signed'">
-        Form signed: {{ meaningLabel(signOutcome.meaning) }}.
+        Form signed: {{ signaturesState.meaningLabel(signOutcome.meaning) }}.
       </template>
       <template v-else>
         {{ signOutcome.message }}
@@ -148,22 +142,27 @@
   </section>
 
   <SignatureCaptureModal
-    v-if="showSignModal"
-    :is-open="showSignModal"
-    :username="signerUsername"
-    :signer-name="signerFullName"
+    v-if="signaturesState.showSignModal"
+    :is-open="signaturesState.showSignModal"
+    :username="signaturesState.signerUsername"
+    :signer-name="signaturesState.signerFullName"
     signer-role="Investigator"
-    :reasons="ECRF_INVESTIGATOR_REASONS"
+    :reasons="signaturesState.ECRF_INVESTIGATOR_REASONS"
     :action-url="formSignatureAction(form.form_id)"
     :semantic-action="FORM_SIGN_SEMANTIC_ACTION"
-    :on-sign="signWithToken"
-    @cancel="showSignModal = false"
-    @success="showSignModal = false"
+    :on-sign="signaturesState.signWithToken"
+    @cancel="signaturesState.showSignModal = false"
+    @success="signaturesState.showSignModal = false"
   />
 </template>
 
 <script setup lang="ts">
-import { getCurrentInstance, toRef } from "vue";
+import {
+  getCurrentInstance,
+  reactive,
+  toRef,
+  type UnwrapNestedRefs,
+} from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import { formatObservationValue } from "../../api/observationValue";
 import {
@@ -193,6 +192,7 @@ const props = defineProps<{
     observationId: string | null | undefined,
     itemId?: string | null
   ) => RouteLocationRaw | null;
+  signatures?: UnwrapNestedRefs<ReturnType<typeof useEcrfSignatures>>;
 }>();
 
 const emit = defineEmits<{
@@ -202,34 +202,21 @@ const emit = defineEmits<{
 const instance = getCurrentInstance();
 const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
 
-const {
-  ECRF_INVESTIGATOR_REASONS,
-  signMeaning,
-  showSignModal,
-  hasSignAuthority,
-  signerUsername,
-  signerFullName,
-  meaningLabel,
-  signHint,
-  currentOf,
-  currentValueText,
-  changedSince,
-  signWithToken,
-} = useEcrfSignatures({
-  form: toRef(props, "form"),
-  items: toRef(props, "items"),
-  dirty: toRef(props, "dirty"),
-  signing: toRef(props, "signing"),
-  sign: (meaning, sigToken, signingReason) =>
-    props.sign(meaning, sigToken, signingReason),
-});
+const localSignatures = reactive(
+  useEcrfSignatures({
+    form: toRef(props, "form"),
+    items: toRef(props, "items"),
+    dirty: toRef(props, "dirty"),
+    signing: toRef(props, "signing"),
+    sign: (meaning, sigToken, signingReason) =>
+      props.sign(meaning, sigToken, signingReason),
+  })
+);
+
+const signaturesState = props.signatures ?? localSignatures;
 </script>
 
 <style scoped>
-.ecrf-form-hint {
-  font-size: 0.85rem;
-  color: var(--semantic-color-text-secondary);
-}
 .ecrf-form-row {
   display: flex;
   flex-wrap: wrap;
@@ -250,6 +237,7 @@ const {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 12px;
+  min-width: 0;
 }
 .ecrf-signature--superseded {
   background-color: var(--semantic-color-surface-muted);
@@ -268,10 +256,15 @@ const {
   background-color: var(--semantic-color-warning-bg-soft);
   color: var(--semantic-color-warning-dark);
 }
+.ecrf-signed-values-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
 .ecrf-signed-values {
   margin-top: 6px;
   border-collapse: collapse;
   font-size: 0.8rem;
+  width: 100%;
 }
 .ecrf-signed-values caption {
   text-align: left;
@@ -283,6 +276,9 @@ const {
   border-bottom: 1px solid var(--border);
   padding: 4px 6px;
   text-align: left;
+}
+.ecrf-signed-item-code {
+  font-family: var(--font-mono);
 }
 .ecrf-signed-changed {
   background-color: var(--semantic-color-warning-bg-soft);

@@ -587,20 +587,22 @@
             </label>
           </div>
 
-          <button
-            id="btn-confirm-reimburse"
-            type="button"
-            class="btn btn-primary"
-            :disabled="wallet.expenseSubmitting"
-            style="width: 100%; margin-top: 12px"
-            @click="handleConfirmReimburse"
-          >
-            {{
-              wallet.expenseSubmitting
-                ? "Submitting Claim..."
-                : "🚀 Confirm & Reimburse"
-            }}
-          </button>
+          <ClinicalFormActionBar aria-label="Expense reimbursement actions">
+            <button
+              id="btn-confirm-reimburse"
+              type="button"
+              class="btn btn-primary"
+              :disabled="wallet.expenseSubmitting"
+              @click="handleConfirmReimburse"
+            >
+              {{
+                wallet.expenseSubmitting
+                  ? "Submitting Claim..."
+                  : "Confirm & Reimburse"
+              }}
+              <Send :size="16" aria-hidden="true" />
+            </button>
+          </ClinicalFormActionBar>
         </div>
 
         <!-- Submission Result Banner -->
@@ -1024,7 +1026,8 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { ClinicalDropzone, useFocusTrap } from "ui";
+import { ClinicalDropzone, ClinicalFormActionBar, useFocusTrap } from "ui";
+import { Send } from "lucide-vue-next";
 
 import {
   closeDisburseModal,

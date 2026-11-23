@@ -1073,7 +1073,17 @@ async function handleExecuteBulkSignOff() {
   border-radius: var(--radius-sm, 4px);
   background: var(--semantic-color-surface);
   font-size: 0.9rem;
-  min-width: 320px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (min-width: 641px) {
+  .select-input {
+    min-width: 320px;
+    width: auto;
+  }
 }
 
 .status-summary-chips {
@@ -1755,5 +1765,54 @@ async function handleExecuteBulkSignOff() {
   background: var(--semantic-color-success-bg);
   border: 1px solid var(--semantic-color-success-border);
   color: var(--semantic-color-success-dark);
+}
+
+@media (max-width: 640px) {
+  .protocol-training-console {
+    min-width: 0;
+  }
+
+  .console-header,
+  .tab-bar,
+  .status-summary-chips,
+  .reader-header,
+  .reader-footer,
+  .quiz-header-card,
+  .quiz-actions-bar,
+  .cert-routing-status,
+  .sync-error-banner,
+  .batch-preview-bar,
+  .preview-info,
+  .result-header,
+  .result-stats,
+  .delegation-header,
+  .delegation-actions-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .assignment-selector-panel .form-group {
+    width: 100%;
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .modules-layout,
+  .batch-filter-grid,
+  .manifest-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .module-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-right: 0;
+    padding-bottom: 12px;
+  }
+
+  .certificate-paper {
+    padding: 16px;
+  }
 }
 </style>

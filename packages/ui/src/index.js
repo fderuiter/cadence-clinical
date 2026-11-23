@@ -5,6 +5,7 @@ import ClinicalDataTable from "./components/clinical/ClinicalDataTable.vue";
 import ClinicalDrawer from "./components/clinical/ClinicalDrawer.vue";
 import ClinicalDropzone from "./components/clinical/ClinicalDropzone.vue";
 import ClinicalFieldLayout from "./components/clinical/ClinicalFieldLayout.vue";
+import ClinicalFormActionBar from "./components/clinical/ClinicalFormActionBar.vue";
 import ClinicalFormField from "./components/clinical/ClinicalFormField.vue";
 import ClinicalIconButton from "./components/clinical/ClinicalIconButton.vue";
 import ClinicalInput from "./components/clinical/ClinicalInput.vue";
@@ -44,6 +45,7 @@ export {
   ClinicalDrawer,
   ClinicalDropzone,
   ClinicalFieldLayout,
+  ClinicalFormActionBar,
   ClinicalFormField,
   ClinicalIconButton,
   ClinicalInput,

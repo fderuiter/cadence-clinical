@@ -13,7 +13,7 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 22 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 23 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
 | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
@@ -25,7 +25,8 @@ All 22 Vue components and interaction helpers are exported directly from the roo
 | `SignOutConfirmModal`                      | Draft-safe voluntary sign-out confirmation dialog with focus containment and unsaved-work warning                             | `dialog`, `aria-modal="true"`     |
 | [`PersonaSwitcher`](./persona-switcher.md) | Top-bar multi-role persona switcher (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`) | `menu`, `menuitem`                |
 | [`AuditLogViewer`](./audit-viewer.md)      | 21 CFR Part 11 immutable audit trail explorer with diff viewer                                                                | `feed`, `article`                 |
-| `ClinicalFieldLayout`                      | Shared accessible field wrapper for inputs, radio groups, validation messages, and query flags                                | `group`, `status`                 |
+| `ClinicalFieldLayout`                      | Shared accessible field wrapper binding `--field-grid-span` for inputs, radio groups, validation messages, and query flags    | `group`, `status`                 |
+| `ClinicalFormActionBar`                    | Sticky clinical form action bar (`bottom: var(--form-action-bar-bottom, 0px)`) with compact `<= 56px` row and inline `#tray`  | `group`                           |
 | `ClinicalFormField`                        | Schema-driven CDASH form field dispatcher                                                                                     | `group`                           |
 | `ClinicalInput`                            | Accessible 48px touch-target clinical text input                                                                              | `textbox`                         |
 | `ClinicalRadioGroup`                       | Accessible clinical radio group fieldset                                                                                      | `radiogroup`                      |

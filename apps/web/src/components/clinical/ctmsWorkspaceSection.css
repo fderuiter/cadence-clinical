@@ -123,3 +123,31 @@
   padding: 4px 8px;
   font-size: 0.8rem;
 }
+
+@media (max-width: 640px) {
+  .ctms-section {
+    padding: 14px;
+  }
+
+  .ctms-section .section-header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ctms-section .scope-bar,
+  .ctms-section .form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ctms-section .scope-bar input,
+  .ctms-section .scope-bar select,
+  .ctms-section .scope-bar button,
+  .ctms-section .form-row input,
+  .ctms-section .form-row select,
+  .ctms-section .form-row button {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}

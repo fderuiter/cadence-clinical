@@ -182,6 +182,27 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-content-group,
+.protocol-filter-group {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.protocol-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.protocol-filter-input {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .header-badge-row {
@@ -245,7 +266,7 @@ onMounted(() => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: var(--spacing-md, 16px);
 }
 

@@ -1525,4 +1525,181 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       .analyze();
     expect(reflowAudit.violations).toEqual([]);
   });
+
+  test("should offset ClinicalFormActionBar cleanly above .nav-tabs at 390x844 with >= 48px touch targets and zero horizontal overflow across 320x640, 390x844, 768x1024, and 1024x768 (AC1, AC6, AC7)", async ({
+    page,
+  }) => {
+    const viewports = [
+      { width: 320, height: 640 },
+      { width: 390, height: 844 },
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 },
+    ];
+
+    async function expectZeroOverflow(label) {
+      const dims = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }));
+      expect(
+        dims.scrollWidth,
+        `Expected scrollWidth === clientWidth on ${label}, got ${dims.scrollWidth} vs ${dims.clientWidth}`
+      ).toBe(dims.clientWidth);
+    }
+
+    async function expectActionBarAboveMobileNav(viewSelector, label) {
+      const navTabs = page.locator(".nav-tabs");
+      const actionBar = page
+        .locator(`${viewSelector} [data-testid="clinical-form-action-bar"]`)
+        .first();
+      await expect(navTabs).toBeVisible();
+      await expect(actionBar).toBeVisible();
+      await actionBar.scrollIntoViewIfNeeded();
+
+      const navBox = await navTabs.boundingBox();
+      const barBox = await actionBar.boundingBox();
+      expect(navBox).not.toBeNull();
+      expect(barBox).not.toBeNull();
+      expect(
+        barBox.y + barBox.height,
+        `Expected ClinicalFormActionBar bottom (${barBox.y + barBox.height}) <= .nav-tabs top (${navBox.y}) on ${label}`
+      ).toBeLessThanOrEqual(navBox.y + 0.5);
+
+      const buttons = actionBar.locator("button:visible");
+      const btnCount = await buttons.count();
+      expect(btnCount).toBeGreaterThan(0);
+      for (let i = 0; i < btnCount; i++) {
+        const bBox = await buttons.nth(i).boundingBox();
+        expect(bBox).not.toBeNull();
+        expect(
+          bBox.height,
+          `Expected >= 48px touch target height on ${label} button[${i}]`
+        ).toBeGreaterThanOrEqual(47.5);
+        expect(bBox.y + bBox.height).toBeLessThanOrEqual(navBox.y + 0.5);
+      }
+    }
+
+    await page.route("**/econsent/templates/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("approved-content")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            template_id: "template-icf",
+            template_name: "Main Study Informed Consent Form",
+            version_index: 1,
+            language_code: "en",
+            clauses: [
+              {
+                clause_id: "clause-1",
+                title: "Study Purpose",
+                text: "This study evaluates participant symptom tracking.",
+                version_index: 1,
+              },
+            ],
+          }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            template_id: "template-icf",
+            version_index: 1,
+            questions: [
+              {
+                question_id: "q1",
+                prompt: "Is participation in this clinical trial voluntary?",
+                options: ["Yes, completely voluntary", "No"],
+              },
+            ],
+          }),
+        });
+      }
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("http://127.0.0.1:5175/subject-portal/");
+    await completeInitialPinSetupIfOpen(page);
+
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+
+      // 1. QuestionnaireView
+      await page.click("#btn-tab-btn-tasks");
+      const taskStartBtn = page.locator("#view-tasks .btn-start-task").first();
+      if (await taskStartBtn.isVisible().catch(() => false)) {
+        await taskStartBtn.click();
+      }
+      await expect(page.locator("#view-questionnaire")).toBeVisible();
+      await expectZeroOverflow(
+        `QuestionnaireView at ${viewport.width}x${viewport.height}`
+      );
+      if (viewport.width === 390) {
+        await expectActionBarAboveMobileNav(
+          "#view-questionnaire",
+          "QuestionnaireView at 390x844"
+        );
+        await page.screenshot({
+          path: "/tmp/subject-portal-mobile-sticky-action-bar.png",
+        });
+        const qAudit = await new AxeBuilder({ page })
+          .include("#view-questionnaire")
+          .withTags(WCAG_AA_TAGS)
+          .analyze();
+        expect(qAudit.violations).toEqual([]);
+      }
+
+      // 2. ConsentView
+      await page.click("#btn-tab-btn-consent");
+      await expect(page.locator("#view-consent")).toBeVisible();
+      await expectZeroOverflow(
+        `ConsentView at ${viewport.width}x${viewport.height}`
+      );
+      if (viewport.width === 390) {
+        await expectActionBarAboveMobileNav(
+          "#view-consent",
+          "ConsentView at 390x844"
+        );
+        const cAudit = await new AxeBuilder({ page })
+          .include("#view-consent")
+          .withTags(WCAG_AA_TAGS)
+          .analyze();
+        expect(cAudit.violations).toEqual([]);
+      }
+
+      // 3. WalletView
+      await page.click("#btn-tab-btn-wallet");
+      await expect(page.locator("#view-wallet")).toBeVisible();
+      const walletActionBar = page.locator(
+        '#view-wallet [data-testid="clinical-form-action-bar"]'
+      );
+      if (!(await walletActionBar.isVisible().catch(() => false))) {
+        const manualReceiptBtn = page.locator("#view-wallet button", {
+          hasText: "Enter Receipt Details Manually",
+        });
+        if (await manualReceiptBtn.isVisible().catch(() => false)) {
+          await manualReceiptBtn.click();
+        }
+      }
+      await expect(walletActionBar).toBeVisible();
+      // Scroll expense reimbursement form into view so sticky bottom action bar docks against .nav-tabs
+      await walletActionBar.scrollIntoViewIfNeeded();
+      await expectZeroOverflow(
+        `WalletView at ${viewport.width}x${viewport.height}`
+      );
+      if (viewport.width === 390) {
+        await expectActionBarAboveMobileNav(
+          "#view-wallet",
+          "WalletView at 390x844"
+        );
+        const wAudit = await new AxeBuilder({ page })
+          .include("#view-wallet")
+          .withTags(WCAG_AA_TAGS)
+          .analyze();
+        expect(wAudit.violations).toEqual([]);
+      }
+    }
+  });
 });

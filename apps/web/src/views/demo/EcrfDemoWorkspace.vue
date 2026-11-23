@@ -84,18 +84,6 @@
     >
       <!-- Left Column: Persona Walkthrough in Demo Builds -->
       <div class="ecrf-form-column" style="flex: 1 1 580px; min-width: 0">
-        <SubjectEnrollmentForm
-          :can-enroll="
-            authStore.isCrc ||
-            activeUserRole === 'site_investigator' ||
-            activeUserRole === 'crc'
-          "
-          :screening-result="screeningResult"
-          :is-enrolling="isEnrolling"
-          @enroll="onSubjectEnroll"
-          @screen="onSubjectScreen"
-        />
-
         <EcrfFormPanel
           :form-id="routeQuery('formId')"
           :enrollment-id="routeQuery('enrollmentId')"
@@ -117,6 +105,18 @@
           @dirty-change="formPanelDirty = $event"
           @form-loaded="emit('form-loaded', $event)"
           @closed="onFormClosed"
+        />
+
+        <SubjectEnrollmentForm
+          :can-enroll="
+            authStore.isCrc ||
+            activeUserRole === 'site_investigator' ||
+            activeUserRole === 'crc'
+          "
+          :screening-result="screeningResult"
+          :is-enrolling="isEnrolling"
+          @enroll="onSubjectEnroll"
+          @screen="onSubjectScreen"
         />
 
         <CrcFormRenderer

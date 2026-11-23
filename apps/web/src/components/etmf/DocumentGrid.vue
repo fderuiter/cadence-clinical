@@ -1390,6 +1390,21 @@ async function submitUpload() {
 
 .form-group-row .form-group {
   flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .form-group-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .form-group-row .form-group,
+  .form-control {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
 }
 
 .form-group {

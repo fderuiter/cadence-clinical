@@ -1,5 +1,5 @@
 <template>
-  <form id="ecrf-form-page" @submit.prevent="submit">
+  <form id="ecrf-form-page" @submit.prevent="emit('submit-page')">
     <div
       class="ecrf-table-scroll"
       data-testid="ecrf-form-items-scroll"
@@ -19,33 +19,35 @@
           </tr>
         </thead>
         <tbody>
-          <template v-for="item in formState.items" :key="item.item_id">
-            <tr
-              :id="`ecrf-row-${item.item_id}`"
-              :data-item="item.item_id"
-              :data-highlighted="
-                highlightItemId === item.item_id ? 'true' : undefined
-              "
-              :class="{
-                'ecrf-item-edited': formState.isEdited(item),
-                'ecrf-item-highlighted': highlightItemId === item.item_id,
-              }"
-            >
-              <th scope="row">
-                <label :for="`ecrf-item-${item.item_id}`">
-                  {{ item.item_id }}
-                  <abbr
-                    v-if="item.required"
-                    class="ecrf-required"
-                    title="Required"
-                    >*</abbr
-                  >
-                </label>
-                <div v-if="item.concept" class="ecrf-item-concept">
-                  {{ item.concept }}
-                </div>
-              </th>
-              <td>
+          <tr
+            v-for="item in formState.items"
+            :id="`ecrf-row-${item.item_id}`"
+            :key="item.item_id"
+            :data-item="item.item_id"
+            :data-highlighted="
+              highlightItemId === item.item_id ? 'true' : undefined
+            "
+            :class="{
+              'ecrf-item-edited': formState.isEdited(item),
+              'ecrf-item-highlighted': highlightItemId === item.item_id,
+            }"
+          >
+            <th scope="row">
+              <label class="ecrf-item-label" :for="`ecrf-item-${item.item_id}`">
+                <span class="ecrf-item-code">{{ item.item_id }}</span>
+                <abbr
+                  v-if="item.required"
+                  class="ecrf-required"
+                  title="Required"
+                  >*</abbr
+                >
+              </label>
+              <div v-if="item.concept" class="ecrf-item-concept">
+                {{ item.concept }}
+              </div>
+            </th>
+            <td data-cell-label="Value">
+              <div class="ecrf-value-control">
                 <input
                   :id="`ecrf-item-${item.item_id}`"
                   :value="formState.entries[item.item_id]?.text ?? ''"
@@ -69,293 +71,175 @@
                 <span v-if="item.unit" class="ecrf-item-unit">{{
                   item.unit
                 }}</span>
-                <p
-                  :id="`ecrf-item-${item.item_id}-error`"
-                  class="ecrf-form-error"
+              </div>
+              <p
+                :id="`ecrf-item-${item.item_id}-error`"
+                class="ecrf-form-error"
+              >
+                {{ (formState.itemErrors[item.item_id] ?? []).join(" ") }}
+              </p>
+              <ul
+                v-if="formState.previewWarnings[item.item_id]?.length"
+                :id="`ecrf-item-${item.item_id}-warnings`"
+                :data-testid="`ecrf-preview-warnings-${item.item_id}`"
+                class="ecrf-preview-warnings"
+              >
+                <li
+                  v-for="warn in formState.previewWarnings[item.item_id]"
+                  :key="warn.rule_id"
                 >
-                  {{ (formState.itemErrors[item.item_id] ?? []).join(" ") }}
-                </p>
-                <ul
-                  v-if="formState.previewWarnings[item.item_id]?.length"
-                  :id="`ecrf-item-${item.item_id}-warnings`"
-                  :data-testid="`ecrf-preview-warnings-${item.item_id}`"
-                  class="ecrf-preview-warnings"
+                  <strong>[{{ warn.severity }}] {{ warn.rule_id }}:</strong>
+                  {{ warn.message }}
+                </li>
+              </ul>
+            </td>
+            <td data-cell-label="Or missing because">
+              <select
+                :value="formState.entries[item.item_id]?.missing ?? ''"
+                :aria-label="`Why ${item.item_id} is missing`"
+                :disabled="formState.locked || formState.saving"
+                @change="
+                  emit(
+                    'entry-missing',
+                    item.item_id,
+                    ($event.target as HTMLSelectElement).value
+                  )
+                "
+              >
+                <option value="">Not missing</option>
+                <option
+                  v-for="option in MISSING_REASONS"
+                  :key="option.reason"
+                  :value="option.reason"
                 >
-                  <li
-                    v-for="warn in formState.previewWarnings[item.item_id]"
-                    :key="warn.rule_id"
-                  >
-                    <strong>[{{ warn.severity }}] {{ warn.rule_id }}:</strong>
-                    {{ warn.message }}
-                  </li>
-                </ul>
-              </td>
-              <td>
-                <select
-                  :value="formState.entries[item.item_id]?.missing ?? ''"
-                  :aria-label="`Why ${item.item_id} is missing`"
-                  :disabled="formState.locked || formState.saving"
-                  @change="
-                    emit(
-                      'entry-missing',
-                      item.item_id,
-                      ($event.target as HTMLSelectElement).value
-                    )
-                  "
+                  {{ option.text }}
+                </option>
+              </select>
+            </td>
+            <td class="ecrf-item-revision" data-cell-label="Revision">
+              <template v-if="item.value && !isUnrecordedValue(item.value)">
+                <component
+                  :is="routerLinkTag"
+                  v-if="itemObservationLink(item.observation_id, item.item_id)"
+                  :id="`ecrf-item-observation-${item.item_id}`"
+                  class="ecrf-observation-link"
+                  :to="itemObservationLink(item.observation_id, item.item_id)!"
                 >
-                  <option value="">Not missing</option>
-                  <option
-                    v-for="option in MISSING_REASONS"
-                    :key="option.reason"
-                    :value="option.reason"
-                  >
-                    {{ option.text }}
-                  </option>
-                </select>
-              </td>
-              <td class="ecrf-item-revision">
-                <template v-if="item.value && !isUnrecordedValue(item.value)">
-                  <component
-                    :is="routerLinkTag"
-                    v-if="
-                      itemObservationLink(item.observation_id, item.item_id)
-                    "
-                    :id="`ecrf-item-observation-${item.item_id}`"
-                    class="ecrf-observation-link"
-                    :to="
-                      itemObservationLink(item.observation_id, item.item_id)!
-                    "
-                  >
-                    {{ item.revision }}
-                  </component>
-                  <template v-else>
-                    {{ item.revision }}
-                  </template>
-                  by {{ item.recorded_by }} at {{ item.recorded_at }}
+                  {{ item.revision }}
+                </component>
+                <template v-else>
+                  {{ item.revision }}
                 </template>
-                <template v-else> No value </template>
-              </td>
-              <td>
-                <div class="ecrf-item-sdv">
-                  <span
-                    v-if="sdv.activeVerification(item)"
-                    class="ecrf-sdv-badge ecrf-sdv-badge--verified"
-                    :data-testid="`ecrf-sdv-status-${item.item_id}`"
-                  >
-                    Verified (rev {{ item.revision }})
-                  </span>
-                  <span
-                    v-else-if="sdv.needsReverification(item)"
-                    class="ecrf-sdv-badge ecrf-sdv-badge--reverify"
-                    :data-testid="`ecrf-sdv-status-${item.item_id}`"
-                  >
-                    Needs re-verification
-                  </span>
-                  <span
-                    v-else-if="hasRecordedValue(item)"
-                    class="ecrf-sdv-badge ecrf-sdv-badge--unverified"
-                    :data-testid="`ecrf-sdv-status-${item.item_id}`"
-                  >
-                    Unverified
-                  </span>
-                  <span
-                    v-else
-                    class="ecrf-sdv-none"
-                    :data-testid="`ecrf-sdv-status-${item.item_id}`"
-                  >
-                    No value
-                  </span>
-                  <div
-                    v-if="canVerifySource && hasRecordedValue(item)"
-                    class="ecrf-sdv-actions"
-                  >
-                    <template v-if="!sdv.activeVerification(item)">
-                      <input
-                        :id="`ecrf-sdv-select-${item.item_id}`"
-                        type="checkbox"
-                        :checked="sdv.selectedSdvItems.includes(item.item_id)"
-                        :value="item.item_id"
-                        :disabled="sdv.sdvBusy || formState.assertionsLocked"
-                        :aria-label="`Select ${item.item_id} for source verification`"
-                        @change="
-                          sdv.toggleSdvItem(
-                            item.item_id,
-                            ($event.target as HTMLInputElement).checked
-                          )
-                        "
-                      />
-                      <button
-                        :id="`ecrf-verify-${item.item_id}`"
-                        class="btn btn-secondary"
-                        type="button"
-                        :disabled="sdv.sdvBusy || formState.assertionsLocked"
-                        @click="sdv.beginVerify(item)"
-                      >
-                        Verify<span class="sr-only"> {{ item.item_id }}</span>
-                      </button>
-                    </template>
+                by {{ item.recorded_by }} at {{ item.recorded_at }}
+              </template>
+              <template v-else> No value </template>
+            </td>
+            <td data-cell-label="Verification">
+              <div class="ecrf-item-sdv">
+                <span
+                  v-if="sdv.activeVerification(item)"
+                  class="ecrf-sdv-badge ecrf-sdv-badge--verified"
+                  :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                >
+                  Verified (rev {{ item.revision }})
+                </span>
+                <span
+                  v-else-if="sdv.needsReverification(item)"
+                  class="ecrf-sdv-badge ecrf-sdv-badge--reverify"
+                  :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                >
+                  Needs re-verification
+                </span>
+                <span
+                  v-else-if="hasRecordedValue(item)"
+                  class="ecrf-sdv-badge ecrf-sdv-badge--unverified"
+                  :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                >
+                  Unverified
+                </span>
+                <span
+                  v-else
+                  class="ecrf-sdv-none"
+                  :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                >
+                  No value
+                </span>
+                <div
+                  v-if="canVerifySource && hasRecordedValue(item)"
+                  class="ecrf-sdv-actions"
+                >
+                  <template v-if="!sdv.activeVerification(item)">
+                    <input
+                      :id="`ecrf-sdv-select-${item.item_id}`"
+                      type="checkbox"
+                      :checked="sdv.selectedSdvItems.includes(item.item_id)"
+                      :value="item.item_id"
+                      :disabled="sdv.sdvBusy || formState.assertionsLocked"
+                      :aria-label="`Select ${item.item_id} for source verification`"
+                      @change="
+                        sdv.toggleSdvItem(
+                          item.item_id,
+                          ($event.target as HTMLInputElement).checked
+                        )
+                      "
+                    />
                     <button
-                      v-else
-                      :id="`ecrf-unverify-${item.item_id}`"
+                      :id="`ecrf-verify-${item.item_id}`"
                       class="btn btn-secondary"
                       type="button"
                       :disabled="sdv.sdvBusy || formState.assertionsLocked"
-                      @click="
-                        sdv.beginRetract(item, sdv.activeVerification(item)!)
-                      "
+                      @click="sdv.beginVerify(item)"
                     >
-                      Withdraw verification<span class="sr-only">
-                        for {{ item.item_id }}</span
-                      >
+                      Verify<span class="sr-only"> {{ item.item_id }}</span>
                     </button>
-                  </div>
-                </div>
-              </td>
-              <td>
-                <div class="ecrf-item-queries">
-                  <span
-                    v-if="liveOn(item).length"
-                    class="ecrf-query-badge"
-                    :data-testid="`ecrf-query-badge-${item.item_id}`"
-                  >
-                    {{ liveOn(item).length }} unresolved
-                    {{ liveOn(item).length === 1 ? "query" : "queries" }}
-                  </span>
-                  <span
-                    v-if="liveOn(item).some((q) => q.value_changed)"
-                    class="ecrf-query-changed"
-                    :data-testid="`ecrf-query-changed-${item.item_id}`"
-                  >
-                    Value changed since queried
-                  </span>
+                  </template>
                   <button
-                    v-if="canManageQueries"
-                    :id="`ecrf-raise-${item.item_id}`"
+                    v-else
+                    :id="`ecrf-unverify-${item.item_id}`"
                     class="btn btn-secondary"
                     type="button"
-                    :disabled="queries.busy || formState.assertionsLocked"
-                    @click="beginRaise(item)"
+                    :disabled="sdv.sdvBusy || formState.assertionsLocked"
+                    @click="
+                      sdv.beginRetract(item, sdv.activeVerification(item)!)
+                    "
                   >
-                    Raise query<span class="sr-only">
-                      on {{ item.item_id }}</span
+                    Withdraw verification<span class="sr-only">
+                      for {{ item.item_id }}</span
                     >
                   </button>
                 </div>
-              </td>
-            </tr>
-            <tr
-              v-if="sdv.pendingSdv?.item_id === item.item_id"
-              class="ecrf-sdv-row"
-            >
-              <td colspan="6">
-                <div class="ecrf-form-row">
-                  <label for="ecrf-sdv-reason">
-                    <template v-if="sdv.pendingSdv.mode === 'verify'">
-                      Reason for verifying
-                      {{ sdv.pendingSdv.item_id }} (revision
-                      {{ sdv.pendingSdv.revision }})
-                    </template>
-                    <template v-else>
-                      Reason for withdrawing verification on
-                      {{ sdv.pendingSdv.item_id }}
-                    </template>
-                  </label>
-                  <input
-                    id="ecrf-sdv-reason"
-                    :value="sdv.sdvReason"
-                    type="text"
-                    autocomplete="off"
-                    :disabled="sdv.sdvBusy || formState.assertionsLocked"
-                    @input="
-                      sdv.setSdvReason(
-                        ($event.target as HTMLInputElement).value
-                      )
-                    "
-                  />
-                  <button
-                    id="ecrf-sdv-confirm"
-                    class="btn btn-primary"
-                    type="button"
-                    :disabled="
-                      sdv.sdvBusy ||
-                      formState.assertionsLocked ||
-                      !sdv.sdvReason.trim()
-                    "
-                    @click="sdv.confirmSdv()"
-                  >
-                    {{
-                      sdv.pendingSdv.mode === "verify"
-                        ? "Confirm verification"
-                        : "Withdraw verification"
-                    }}
-                  </button>
-                  <button
-                    id="ecrf-sdv-cancel"
-                    class="btn btn-secondary"
-                    type="button"
-                    :disabled="sdv.sdvBusy"
-                    @click="sdv.cancelPendingSdv()"
-                  >
-                    Back
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr v-if="raising?.item_id === item.item_id" class="ecrf-raise-row">
-              <td colspan="6">
-                <div class="ecrf-form-row">
-                  <label for="ecrf-raise-text">
-                    <template v-if="raising.unrecorded">
-                      Missing-data query on {{ raising.item_id }} (no value
-                      recorded)
-                    </template>
-                    <template v-else>
-                      Query on {{ raising.item_id }} (revision
-                      {{ raising.revision }})
-                    </template>
-                  </label>
-                  <textarea id="ecrf-raise-text" v-model="raiseText" rows="2" />
-                  <label for="ecrf-raise-reason">Reason for change</label>
-                  <input
-                    id="ecrf-raise-reason"
-                    v-model="raiseReason"
-                    type="text"
-                    autocomplete="off"
-                  />
-                  <label for="ecrf-raise-owner">Owner</label>
-                  <select id="ecrf-raise-owner" v-model="raiseOwnerRole">
-                    <option value="site">Site</option>
-                    <option value="monitor">Monitor</option>
-                    <option value="data_manager">Data manager</option>
-                  </select>
-                  <label for="ecrf-raise-priority">Priority</label>
-                  <select id="ecrf-raise-priority" v-model="raisePriority">
-                    <option value="normal">Normal</option>
-                    <option value="high">High</option>
-                    <option value="low">Low</option>
-                  </select>
-                  <button
-                    id="ecrf-raise-confirm"
-                    class="btn btn-primary"
-                    type="button"
-                    :disabled="
-                      queries.busy || !raiseText.trim() || !raiseReason.trim()
-                    "
-                    @click="confirmRaise"
-                  >
-                    Raise query
-                  </button>
-                  <button
-                    class="btn btn-secondary"
-                    type="button"
-                    @click="raising = null"
-                  >
-                    Back
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </template>
+              </div>
+            </td>
+            <td data-cell-label="Queries">
+              <div class="ecrf-item-queries">
+                <span
+                  v-if="liveOn(item).length"
+                  class="ecrf-query-badge"
+                  :data-testid="`ecrf-query-badge-${item.item_id}`"
+                >
+                  {{ liveOn(item).length }} unresolved
+                  {{ liveOn(item).length === 1 ? "query" : "queries" }}
+                </span>
+                <span
+                  v-if="liveOn(item).some((q) => q.value_changed)"
+                  class="ecrf-query-changed"
+                  :data-testid="`ecrf-query-changed-${item.item_id}`"
+                >
+                  Value changed since queried
+                </span>
+                <button
+                  v-if="canManageQueries"
+                  :id="`ecrf-raise-${item.item_id}`"
+                  class="btn btn-secondary"
+                  type="button"
+                  :disabled="queries.busy || formState.assertionsLocked"
+                  @click="emit('begin-raise', item)"
+                >
+                  Raise query<span class="sr-only"> on {{ item.item_id }}</span>
+                </button>
+              </div>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -388,38 +272,6 @@
           {{ warn.message }}
         </li>
       </ul>
-    </div>
-
-    <div v-if="!formState.locked" class="ecrf-form-row">
-      <label for="ecrf-save-reason">Reason for change</label>
-      <input
-        id="ecrf-save-reason"
-        v-model="reason"
-        type="text"
-        autocomplete="off"
-        placeholder="Initial data entry"
-      />
-      <button
-        id="ecrf-form-save"
-        class="btn btn-primary"
-        type="submit"
-        :disabled="formState.saving || !formState.dirty || !reason.trim()"
-      >
-        {{
-          formState.saving
-            ? "Saving…"
-            : `Save page (${formState.editedItems.length})`
-        }}
-      </button>
-      <button
-        id="ecrf-form-close"
-        class="btn btn-secondary"
-        type="button"
-        :disabled="formState.saving"
-        @click="emit('close-form')"
-      >
-        Close form
-      </button>
     </div>
   </form>
 
@@ -469,13 +321,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  computed,
-  getCurrentInstance,
-  ref,
-  watch,
-  type UnwrapNestedRefs,
-} from "vue";
+import { computed, getCurrentInstance, type UnwrapNestedRefs } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   formatObservationValue,
@@ -484,11 +330,7 @@ import {
   type KernelObservationValue,
 } from "../../api/observationValue";
 import type { EcrfFormItem } from "../../api/ecrfFormsApi";
-import type {
-  FormQueryOwnerRole,
-  FormQueryPriority,
-  FormQueryResponse,
-} from "../../api/ecrfQueriesApi";
+import type { FormQueryResponse } from "../../api/ecrfQueriesApi";
 import type {
   EcrfUnsavedItem,
   useEcrfForm,
@@ -525,28 +367,12 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "entry-text", itemId: string, text: string): void;
   (e: "entry-missing", itemId: string, missing: string): void;
-  (e: "close-form"): void;
+  (e: "begin-raise", item: EcrfFormItem): void;
+  (e: "submit-page"): void;
 }>();
 
 const instance = getCurrentInstance();
 const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
-
-const reason = ref("");
-const raising = ref<RaisingQueryTarget | null>(null);
-const raiseText = ref("");
-const raiseReason = ref("");
-const raiseOwnerRole = ref<FormQueryOwnerRole>("site");
-const raisePriority = ref<FormQueryPriority>("normal");
-
-watch(
-  () =>
-    props.formState.form
-      ? `${props.formState.form.form_id}@${props.formState.form.version}`
-      : null,
-  () => {
-    raising.value = null;
-  }
-);
 
 function liveOn(item: EcrfFormItem): FormQueryResponse[] {
   return props.formState.form
@@ -554,55 +380,6 @@ function liveOn(item: EcrfFormItem): FormQueryResponse[] {
         .forItem(props.formState.form.form_id, item.item_id)
         .filter(isLiveQuery)
     : [];
-}
-
-function beginRaise(item: EcrfFormItem) {
-  raising.value = {
-    item_id: item.item_id,
-    observation_id: item.observation_id ?? null,
-    revision: item.observation_id ? Number(item.revision) : null,
-    unrecorded: !item.observation_id || isUnrecordedValue(item.value),
-  };
-  raiseText.value = "";
-  raiseReason.value = "";
-  raiseOwnerRole.value = "site";
-  raisePriority.value = "normal";
-}
-
-async function confirmRaise() {
-  const target = raising.value;
-  const text = raiseText.value.trim();
-  const changeReason = raiseReason.value.trim();
-  if (!props.formState.form || !target || !text || !changeReason) return;
-  const wasUnasked = !target.observation_id;
-  const options = {
-    ...(raiseOwnerRole.value !== "site"
-      ? { ownerRole: raiseOwnerRole.value }
-      : {}),
-    ...(raisePriority.value !== "normal"
-      ? { priority: raisePriority.value }
-      : {}),
-  };
-  const raised = await props.queries.raise(
-    {
-      formId: props.formState.form.form_id,
-      itemId: target.item_id,
-      observationId: target.observation_id,
-      revision: target.revision,
-    },
-    text,
-    changeReason,
-    Object.keys(options).length > 0 ? options : undefined
-  );
-  if (raised) {
-    raising.value = null;
-    if (wasUnasked) await props.formState.reload();
-  }
-}
-
-async function submit() {
-  await props.formState.save(reason.value.trim());
-  if (props.formState.outcome?.kind === "saved") reason.value = "";
 }
 
 const allPreviewWarnings = computed(() =>
@@ -625,17 +402,12 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 </script>
 
 <style scoped>
-.ecrf-form-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 8px 0;
-}
 .ecrf-table-scroll {
+  position: relative;
   overflow-x: auto;
   max-width: 100%;
-  padding: 2px;
+  padding-block: 2px;
+  padding-inline: 0;
 }
 .ecrf-table-scroll:focus-visible {
   outline: 2px solid var(--semantic-color-accent);
@@ -644,7 +416,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 }
 .ecrf-form-items {
   width: 100%;
-  min-width: 52rem;
+  min-width: 56rem;
   border-collapse: collapse;
   font-size: 0.85rem;
 }
@@ -657,27 +429,40 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 }
 .ecrf-form-items > thead > tr > th:nth-child(1),
 .ecrf-form-items > tbody > tr > th:not([colspan]):nth-child(1) {
-  min-width: 7.5rem;
+  min-width: 8rem;
 }
 .ecrf-form-items > thead > tr > th:nth-child(2),
 .ecrf-form-items > tbody > tr > td:not([colspan]):nth-child(2) {
-  min-width: 11rem;
+  min-width: 12rem;
 }
 .ecrf-form-items > thead > tr > th:nth-child(3),
 .ecrf-form-items > tbody > tr > td:not([colspan]):nth-child(3) {
-  min-width: 9.5rem;
+  min-width: 10rem;
 }
 .ecrf-form-items > thead > tr > th:nth-child(4),
 .ecrf-form-items > tbody > tr > td:not([colspan]):nth-child(4) {
-  min-width: 8rem;
+  min-width: 9rem;
 }
 .ecrf-form-items > thead > tr > th:nth-child(5),
 .ecrf-form-items > tbody > tr > td:not([colspan]):nth-child(5) {
-  min-width: 8.5rem;
+  min-width: 9rem;
 }
 .ecrf-form-items > thead > tr > th:nth-child(6),
 .ecrf-form-items > tbody > tr > td:not([colspan]):nth-child(6) {
-  min-width: 7.5rem;
+  min-width: 8rem;
+}
+.ecrf-item-label {
+  font-weight: 600;
+}
+.ecrf-item-code,
+.ecrf-observation-link {
+  font-family: var(--font-mono);
+}
+.ecrf-value-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 .ecrf-required {
   color: var(--semantic-color-error);
@@ -690,7 +475,6 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   font-size: 0.75rem;
 }
 .ecrf-item-unit {
-  margin-left: 4px;
   color: var(--semantic-color-text-secondary);
 }
 .ecrf-item-queries {
@@ -706,6 +490,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   color: var(--semantic-color-warning-dark);
   font-size: 0.75rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .ecrf-query-changed {
   color: var(--semantic-color-interactive-primary);
@@ -729,12 +514,14 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 .ecrf-sdv-badge {
   padding: 0 8px;
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .ecrf-sdv-badge--verified {
   background-color: var(--semantic-color-success-bg-soft);
@@ -799,9 +586,127 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   padding: 8px 12px;
   margin-bottom: 10px;
   border-radius: 6px;
+  background-color: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--warning);
-  background: var(--warning-bg);
-  color: var(--warning);
+  color: var(--semantic-color-warning-dark);
   font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Tablet & desktop horizontal scroll: pin row header column (R4) */
+@media (min-width: 481px) {
+  .ecrf-form-items > thead > tr > th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background-color: var(--semantic-color-surface);
+    box-shadow: inset -1px 0 0 var(--border);
+  }
+  .ecrf-form-items > tbody > tr > th[scope="row"] {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background-color: var(--semantic-color-surface);
+    box-shadow: inset -1px 0 0 var(--border);
+  }
+  .ecrf-form-items > tbody > tr.ecrf-item-edited > th[scope="row"] {
+    background-color: var(--semantic-color-warning-bg-soft);
+  }
+  .ecrf-form-items > tbody > tr.ecrf-item-highlighted > th[scope="row"] {
+    background-color: var(--semantic-color-info-bg);
+  }
+}
+
+/* Mobile 320px-480px: progressive item cards preserving single semantic table DOM (R5) */
+@media (max-width: 480px) {
+  .ecrf-table-scroll {
+    overflow-x: visible;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+  .ecrf-form-items {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+  .ecrf-form-items > thead {
+    display: none;
+  }
+  .ecrf-form-items > tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+  }
+  .ecrf-form-items > tbody > tr {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background-color: var(--semantic-color-surface);
+    box-sizing: border-box;
+  }
+  .ecrf-form-items > tbody > tr.ecrf-item-edited {
+    background-color: var(--semantic-color-warning-bg-soft);
+  }
+  .ecrf-form-items > tbody > tr.ecrf-item-highlighted {
+    background-color: var(--semantic-color-info-bg);
+  }
+  .ecrf-form-items > tbody > tr > th,
+  .ecrf-form-items > tbody > tr > td {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    min-width: 0 !important;
+    padding: 0;
+    border-bottom: none;
+    box-sizing: border-box;
+  }
+  .ecrf-form-items > tbody > tr > th[scope="row"] {
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ecrf-form-items > tbody > tr > td[data-cell-label]::before {
+    content: attr(data-cell-label);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--semantic-color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .ecrf-value-control {
+    width: 100%;
+    min-width: 0;
+  }
+  .ecrf-value-control input[type="text"],
+  .ecrf-form-items select {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+  .ecrf-item-revision {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .ecrf-sdv-actions button,
+  .ecrf-item-queries button {
+    min-height: 44px;
+    width: 100%;
+  }
+  .ecrf-item-queries {
+    align-items: stretch;
+  }
 }
 </style>

@@ -5,19 +5,13 @@
 /* Default stack (single column) on mobile, becomes 12-column grid on desktop (1024px) and up */
 .responsive-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--spacing-md, 16px);
 }
 
 @media (min-width: 1024px) {
   .responsive-grid {
     grid-template-columns: repeat(12, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 1023px) {
-  .responsive-grid > * {
-    grid-column: span 1 / span 1 !important;
   }
 }
 
@@ -59,6 +53,34 @@
   grid-column: span 12 / span 12;
 }
 
+.clinical-field-layout,
+.field-grid-span {
+  grid-column: span var(--field-grid-span, 12) / span var(--field-grid-span, 12);
+  min-width: 0;
+}
+
+@media (max-width: 1023px) {
+  .responsive-grid {
+    --field-grid-span: 1;
+  }
+
+  .responsive-grid,
+  .responsive-grid * {
+    --field-grid-span: 1 !important;
+  }
+
+  .responsive-grid > *,
+  .responsive-grid fieldset > *,
+  .responsive-grid .clinical-field-layout,
+  .responsive-grid .field-grid-span,
+  .responsive-grid .clinical-input,
+  .responsive-grid .clinical-radio-grid,
+  .responsive-grid [class*="grid-span-"] {
+    grid-column: 1 / -1 !important;
+    min-width: 0;
+  }
+}
+
 /* 2. Grid Helpers modeled on .grid-layout & .grid-2 conventions */
 
 /* .grid-layout-responsive: 1 column on mobile/tablet, 1fr 2fr on larger screens (1024px and up) */
@@ -77,13 +99,34 @@
 /* .grid-2-responsive: 1 column on mobile, 2 columns on desktop (1024px) and up */
 .grid-2-responsive {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--spacing-xl, 24px);
 }
 
 @media (min-width: 1024px) {
   .grid-2-responsive {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1023px) {
+  .grid-2-responsive {
+    --field-grid-span: 1;
+  }
+
+  .grid-2-responsive,
+  .grid-2-responsive * {
+    --field-grid-span: 1 !important;
+  }
+
+  .grid-2-responsive > *,
+  .grid-2-responsive fieldset > *,
+  .grid-2-responsive .card,
+  .grid-2-responsive .clinical-field-layout,
+  .grid-2-responsive .field-grid-span,
+  .grid-2-responsive [class*="grid-span-"] {
+    grid-column: 1 / -1 !important;
+    min-width: 0;
   }
 }
 
@@ -154,6 +197,7 @@
 
 /* 5. Horizontal-Scroll Table Wrapper */
 .scrollable-table-wrapper {
+  position: relative;
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;

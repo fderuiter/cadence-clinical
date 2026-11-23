@@ -423,17 +423,24 @@ const outcomeBadgeText = computed(() => {
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: var(--spacing-sm, 12px);
 }
 
 .col-6 {
-  grid-column: span 6;
+  --field-grid-span: 6;
+  grid-column: span var(--field-grid-span, 6) / span var(--field-grid-span, 6);
+  min-width: 0;
 }
 
 @media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .col-6 {
-    grid-column: span 12;
+    --field-grid-span: 1;
+    grid-column: 1 / -1;
   }
 }
 
@@ -500,6 +507,7 @@ const outcomeBadgeText = computed(() => {
 
 .form-actions-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--spacing-sm, 12px);
   padding-top: var(--spacing-sm, 8px);

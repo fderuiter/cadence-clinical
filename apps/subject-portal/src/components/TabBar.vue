@@ -60,12 +60,43 @@ const tablistRef = ref(null);
 const tabRefs = {};
 const activeTab = computed(() => activeTabForView(ui.currentView));
 
+let navResizeObserver = null;
+
+function syncMobileNavOffset() {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
+  const el = tablistRef.value;
+  if (!el) return;
+  const computedPos = window.getComputedStyle(el).position;
+  if (computedPos === "fixed") {
+    const height = Math.ceil(el.getBoundingClientRect().height);
+    if (height > 0) {
+      document.documentElement.style.setProperty(
+        "--portal-mobile-nav-offset",
+        `${height}px`
+      );
+    }
+  } else {
+    document.documentElement.style.removeProperty("--portal-mobile-nav-offset");
+  }
+}
+
 onMounted(() => {
   tablistRef.value?.addEventListener("keydown", handleTabKeyDown);
+  syncMobileNavOffset();
+  window.addEventListener("resize", syncMobileNavOffset);
+  if (typeof ResizeObserver !== "undefined" && tablistRef.value) {
+    navResizeObserver = new ResizeObserver(syncMobileNavOffset);
+    navResizeObserver.observe(tablistRef.value);
+  }
 });
 
 onBeforeUnmount(() => {
   tablistRef.value?.removeEventListener("keydown", handleTabKeyDown);
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", syncMobileNavOffset);
+  }
+  navResizeObserver?.disconnect();
+  navResizeObserver = null;
 });
 
 const visibleTabs = computed(() => {

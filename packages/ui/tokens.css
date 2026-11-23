@@ -69,6 +69,11 @@
   /* Touch Target Minimums */
   --touch-target-min: 48px;
 
+  /* Form Grid Reflow & Sticky Action Bar Custom Properties (ADR-2651) */
+  --field-grid-span: 12;
+  --form-action-bar-bottom: 0px;
+  --form-action-bar-target-min: 44px;
+
   /* Drawer Width Tier Tokens */
   --drawer-width-sm: min(100vw, 440px);
   --drawer-width-md: min(100vw, 480px);

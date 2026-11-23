@@ -1356,6 +1356,8 @@ const exportAuditTrail = (format) => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Header */
@@ -1363,11 +1365,18 @@ const exportAuditTrail = (format) => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  flex-wrap: wrap;
   gap: 24px;
+}
+
+.header-content-group {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .header-badge-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -1411,13 +1420,14 @@ const exportAuditTrail = (format) => {
 
 .header-action-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
 /* Stats Cards Grid */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 16px;
 }
 
@@ -1517,8 +1527,9 @@ const exportAuditTrail = (format) => {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 6px 12px;
-  flex: 1;
-  min-width: 240px;
+  flex: 1 1 200px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .search-icon {
@@ -1531,11 +1542,15 @@ const exportAuditTrail = (format) => {
   outline: none;
   font-size: 0.85rem;
   width: 100%;
+  min-width: 0;
 }
 
 .filter-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .filter-select {
@@ -1546,6 +1561,8 @@ const exportAuditTrail = (format) => {
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-body);
   outline: none;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .view-mode-toggle {
@@ -1574,11 +1591,14 @@ const exportAuditTrail = (format) => {
 
 /* KANBAN BOARD VIEW */
 .kanban-board {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(5, minmax(240px, 1fr));
   gap: 16px;
   overflow-x: auto;
   align-items: flex-start;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .kanban-column {
@@ -1761,10 +1781,13 @@ const exportAuditTrail = (format) => {
 
 /* TABLE VIEW */
 .table-card {
+  position: relative;
   background: var(--semantic-color-surface);
   border-radius: 8px;
   border: 1px solid var(--semantic-color-border);
   overflow-x: auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .clinical-table {
@@ -1931,5 +1954,11 @@ const exportAuditTrail = (format) => {
 
 .btn-secondary:hover {
   background: var(--semantic-color-surface-header);
+}
+
+@media (max-width: 640px) {
+  .dashboard-section {
+    padding: 16px;
+  }
 }
 </style>

@@ -1,15 +1,19 @@
 <template>
   <dl class="ecrf-form-summary" data-testid="ecrf-form-summary">
     <dt>Form</dt>
-    <dd data-testid="ecrf-form-id">{{ form.form_id }}</dd>
+    <dd class="ecrf-mono-value" data-testid="ecrf-form-id">
+      {{ form.form_id }}
+    </dd>
     <dt>Collects</dt>
-    <dd>{{ form.collection_spec_id }}</dd>
+    <dd class="ecrf-mono-value">{{ form.collection_spec_id }}</dd>
     <dt>Visit</dt>
     <dd>{{ form.planned_activity_id ?? "Unscheduled" }}</dd>
     <dt>Collected</dt>
     <dd>{{ form.collected_at }}</dd>
     <dt>Version</dt>
-    <dd data-testid="ecrf-form-version">{{ form.version }}</dd>
+    <dd class="ecrf-mono-value" data-testid="ecrf-form-version">
+      {{ form.version }}
+    </dd>
     <dt>Status</dt>
     <dd data-testid="ecrf-form-status">
       <span v-if="form.complete" class="ecrf-form-complete">Complete</span>
@@ -54,90 +58,24 @@
     @changed="emit('lock-changed')"
   />
 
-  <div
-    v-if="canVerifySource && sdv.unverifiedItems.length > 0"
-    class="ecrf-bulk-sdv"
-    data-testid="ecrf-bulk-sdv"
+  <ul
+    v-if="sdv.bulkSdvResults.length > 0"
+    class="ecrf-bulk-sdv-results"
+    data-testid="ecrf-bulk-sdv-results"
+    aria-live="polite"
   >
-    <div class="ecrf-form-row">
-      <strong
-        >Source verification ({{ sdv.unverifiedItems.length }} unverified
-        {{ sdv.unverifiedItems.length === 1 ? "item" : "items" }})</strong
-      >
-      <button
-        id="ecrf-sdv-select-all"
-        class="btn btn-secondary"
-        type="button"
-        :disabled="sdv.sdvBusy || assertionsLocked"
-        @click="sdv.selectAllUnverifiedSdv()"
-      >
-        Select all unverified
-      </button>
-      <button
-        v-if="sdv.selectedSdvItems.length > 0"
-        id="ecrf-sdv-clear-selection"
-        class="btn btn-secondary"
-        type="button"
-        :disabled="sdv.sdvBusy"
-        @click="sdv.clearSdvSelection()"
-      >
-        Clear selection
-      </button>
-    </div>
-    <p
-      v-if="assertionsLocked"
-      class="ecrf-form-hint"
-      data-testid="ecrf-sdv-locked-note"
+    <li
+      v-for="res in sdv.bulkSdvResults"
+      :key="res.itemId"
+      :data-sdv-result="res.itemId"
+      :data-ok="String(res.ok)"
+      :class="
+        res.ok ? 'ecrf-bulk-sdv-result--ok' : 'ecrf-bulk-sdv-result--failed'
+      "
     >
-      This scope is Locked, so source verifications cannot be recorded or
-      withdrawn until the lock is released.
-    </p>
-    <div v-else-if="sdv.selectedSdvItems.length > 0" class="ecrf-form-row">
-      <label for="ecrf-bulk-sdv-reason"
-        >Verification reason ({{ sdv.selectedSdvItems.length }} selected)</label
-      >
-      <input
-        id="ecrf-bulk-sdv-reason"
-        :value="sdv.bulkSdvReason"
-        type="text"
-        autocomplete="off"
-        placeholder="Verified against source medical record"
-        :disabled="sdv.sdvBusy"
-        @input="sdv.setBulkSdvReason(($event.target as HTMLInputElement).value)"
-      />
-      <button
-        id="ecrf-bulk-sdv-submit"
-        class="btn btn-primary"
-        type="button"
-        :disabled="sdv.sdvBusy || !sdv.bulkSdvReason.trim()"
-        @click="sdv.submitBulkSdv()"
-      >
-        {{
-          sdv.sdvBusy
-            ? "Verifying…"
-            : `Verify selected (${sdv.selectedSdvItems.length})`
-        }}
-      </button>
-    </div>
-    <ul
-      v-if="sdv.bulkSdvResults.length > 0"
-      class="ecrf-bulk-sdv-results"
-      data-testid="ecrf-bulk-sdv-results"
-      aria-live="polite"
-    >
-      <li
-        v-for="res in sdv.bulkSdvResults"
-        :key="res.itemId"
-        :data-sdv-result="res.itemId"
-        :data-ok="String(res.ok)"
-        :class="
-          res.ok ? 'ecrf-bulk-sdv-result--ok' : 'ecrf-bulk-sdv-result--failed'
-        "
-      >
-        <strong>{{ res.itemId }}:</strong> {{ res.message }}
-      </li>
-    </ul>
-  </div>
+      <strong>{{ res.itemId }}:</strong> {{ res.message }}
+    </li>
+  </ul>
 
   <div
     v-if="sdv.sdvOutcome"
@@ -197,12 +135,20 @@ const directFormLocks = computed<DirectScopeLockItem[]>(() =>
 <style scoped>
 .ecrf-form-summary {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 4px 12px;
   font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 .ecrf-form-summary dt {
   font-weight: 600;
+}
+.ecrf-form-summary dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ecrf-mono-value {
+  font-family: var(--font-mono);
 }
 .ecrf-form-complete {
   color: var(--semantic-color-success-dark);
@@ -218,27 +164,13 @@ const directFormLocks = computed<DirectScopeLockItem[]>(() =>
   padding: 8px 12px;
   font-size: 0.85rem;
 }
-.ecrf-form-hint {
-  font-size: 0.85rem;
-  color: var(--semantic-color-text-secondary);
-}
-.ecrf-form-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 8px 0;
-}
-.ecrf-bulk-sdv {
+.ecrf-bulk-sdv-results {
+  margin: 0;
+  padding: 8px 12px 8px 28px;
   background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 8px 12px;
   font-size: 0.85rem;
-}
-.ecrf-bulk-sdv-results {
-  margin: 6px 0 0;
-  padding-left: 18px;
   display: flex;
   flex-direction: column;
   gap: 4px;

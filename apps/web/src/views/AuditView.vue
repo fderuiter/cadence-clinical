@@ -238,7 +238,10 @@
       </div>
 
       <!-- Card 3: Ingest / Upload TMF Document -->
-      <div class="card card-upload-document" style="grid-column: span 2">
+      <div
+        class="card card-upload-document field-grid-span"
+        :style="{ '--field-grid-span': '2' }"
+      >
         <div class="card-title">
           <span>Ingest New TMF Document</span>
         </div>
@@ -619,7 +622,10 @@
           >
             <span>🖋️</span> 21 CFR Part 11 Electronic Signature Manifestation
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+          <div
+            class="audit-manifest-grid"
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px"
+          >
             <div>
               Signer:
               <strong id="manifest-signer">{{
@@ -716,6 +722,7 @@
 
       <!-- Audit Log Filter Bar -->
       <div
+        class="audit-filter-bar"
         style="
           display: flex;
           flex-wrap: wrap;
@@ -1146,6 +1153,7 @@
 
                     <!-- State Diff: old_value vs new_value -->
                     <div
+                      class="audit-diff-grid"
                       style="
                         display: grid;
                         grid-template-columns: 1fr 1fr;
@@ -1339,6 +1347,7 @@
 
       <!-- Completeness Controls -->
       <div
+        class="audit-completeness-bar"
         style="
           display: flex;
           flex-wrap: wrap;
@@ -2310,8 +2319,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.clinical-table {
+  position: relative;
+}
 .clinical-table th,
 .clinical-table td {
+  position: relative;
   border-bottom: 1px solid var(--border);
 }
 .clinical-table tr:hover {
@@ -2334,6 +2347,26 @@ onMounted(() => {
   }
   100% {
     transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .audit-filter-bar .form-group,
+  .audit-completeness-bar .form-group {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  .audit-manifest-grid,
+  .audit-diff-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .audit-manifest-grid > *,
+  .audit-diff-grid > * {
+    grid-column: 1 / -1 !important;
+    min-width: 0;
   }
 }
 </style>

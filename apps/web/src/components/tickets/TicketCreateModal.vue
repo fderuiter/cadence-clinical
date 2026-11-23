@@ -402,6 +402,30 @@ const handleSubmit = async () => {
   gap: 12px;
 }
 
+@media (max-width: 640px) {
+  .modal-body {
+    padding: 16px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .form-row .form-group,
+  .form-control {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
+    box-sizing: border-box;
+  }
+
+  .modal-footer {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+}
+
 .flex-1 {
   flex: 1;
 }

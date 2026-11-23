@@ -485,7 +485,8 @@ body {
 main {
   flex: 1;
   padding: 32px;
-  overflow-y: auto;
+  overflow: visible;
+  min-width: 0;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;

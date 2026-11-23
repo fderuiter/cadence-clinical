@@ -1,6 +1,15 @@
 @import "../../../packages/ui/tokens.css";
 @import "../../../packages/ui/responsive.css";
 
+:root {
+  --portal-mobile-nav-height: 56px;
+  --portal-mobile-nav-offset: calc(
+    var(--portal-mobile-nav-height) + env(safe-area-inset-bottom, 0px)
+  );
+  --form-action-bar-bottom: env(safe-area-inset-bottom, 0px);
+  --form-action-bar-target-min: var(--touch-target-min, 48px);
+}
+
 /* eCOA Subject Portal styles */
 
 body {
@@ -120,10 +129,22 @@ body {
 }
 
 @media (max-width: 767px) {
+  :root {
+    --form-action-bar-bottom: var(
+      --portal-mobile-nav-offset,
+      calc(
+        var(--portal-mobile-nav-height, 56px) + env(safe-area-inset-bottom, 0px)
+      )
+    );
+  }
+
   #app {
     padding-bottom: calc(
-      var(--touch-target-min, 48px) + var(--spacing-2xl, 32px) +
-        env(safe-area-inset-bottom, 0px)
+      var(
+          --portal-mobile-nav-offset,
+          calc(var(--touch-target-min, 48px) + env(safe-area-inset-bottom, 0px))
+        ) +
+        var(--spacing-2xl, 32px)
     );
   }
 
@@ -345,6 +366,7 @@ body {
 .portal-main {
   flex: 1;
   min-width: 0;
+  overflow: visible;
 }
 
 .portal-view {

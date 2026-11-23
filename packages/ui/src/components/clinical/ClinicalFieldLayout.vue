@@ -4,10 +4,11 @@
     :id="`field-container-${id}`"
     :class="[
       tag === 'fieldset' ? 'clinical-radio-grid' : 'clinical-input',
+      'clinical-field-layout',
       { 'has-error': showError, [`grid-span-${gridSpan}`]: true },
       extraClass,
     ]"
-    :style="`grid-column: span ${gridSpan};`"
+    :style="{ '--field-grid-span': String(gridSpan) }"
     v-bind="attributes"
   >
     <legend v-if="tag === 'fieldset'">

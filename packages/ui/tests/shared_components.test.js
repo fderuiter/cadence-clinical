@@ -8,6 +8,7 @@ import {
   ClinicalDrawer,
   ClinicalDropzone,
   ClinicalFieldLayout,
+  ClinicalFormActionBar,
   ClinicalIconButton,
   ClinicalModal,
   ClinicalQueryFlag,
@@ -376,22 +377,27 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
 
     it("renders ClinicalFieldLayout label/legend, validation error status, and query flag", async () => {
       const divHtml = await renderToString(
-        createSSRApp(
-          ClinicalFieldLayout,
-          {
-            id: "sysbp",
-            label: "Systolic Blood Pressure",
-            error: "Value exceeds physiological range",
-            gridSpan: 6,
-          },
-          {
-            default: () => h("input", { id: "sysbp", type: "text" }),
-          }
-        )
+        createSSRApp({
+          render: () =>
+            h(
+              ClinicalFieldLayout,
+              {
+                id: "sysbp",
+                label: "Systolic Blood Pressure",
+                error: "Value exceeds physiological range",
+                gridSpan: 6,
+              },
+              {
+                default: () => h("input", { id: "sysbp", type: "text" }),
+              }
+            ),
+        })
       );
       expect(divHtml).toContain("Systolic Blood Pressure");
       expect(divHtml).toContain("Value exceeds physiological range");
       expect(divHtml).toContain('role="status"');
+      expect(divHtml).toContain("--field-grid-span:6");
+      expect(divHtml).not.toContain("grid-column:");
 
       const fieldsetHtml = await renderToString(
         createSSRApp(ClinicalFieldLayout, {
@@ -402,6 +408,78 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       );
       expect(fieldsetHtml).toContain("<fieldset");
       expect(fieldsetHtml).toContain("<legend");
+      expect(fieldsetHtml).toContain("--field-grid-span:12");
+    });
+
+    it("renders ClinicalFormActionBar collapsed, expanded tray, and gated/muted status hints with zero emojis", async () => {
+      const collapsedHtml = await renderToString(
+        createSSRApp({
+          render: () =>
+            h(
+              ClinicalFormActionBar,
+              {
+                ariaLabel: "Vital Signs form actions",
+                statusHint: "Save all unsaved changes before signing.",
+                statusTone: "gated",
+                statusHintId: "ecrf-sign-hint",
+                statusHintTestId: "ecrf-sign-unauthorized",
+                trayOpen: false,
+                trayLabel: "Reason for change",
+              },
+              {
+                tray: () =>
+                  h("label", { for: "reason-input" }, [
+                    "Reason",
+                    h("input", { id: "reason-input", type: "text" }),
+                  ]),
+                secondary: () =>
+                  h(
+                    "button",
+                    { type: "button", class: "btn-secondary" },
+                    "Cancel"
+                  ),
+                default: () =>
+                  h(
+                    "button",
+                    { type: "submit", class: "btn-primary" },
+                    "Save page"
+                  ),
+              }
+            ),
+        })
+      );
+      expect(collapsedHtml).toContain('role="group"');
+      expect(collapsedHtml).toContain('aria-label="Vital Signs form actions"');
+      expect(collapsedHtml).toContain('id="ecrf-sign-hint"');
+      expect(collapsedHtml).toContain('data-testid="ecrf-sign-unauthorized"');
+      expect(collapsedHtml).toContain(
+        "Save all unsaved changes before signing."
+      );
+      expect(collapsedHtml).toContain("Save page");
+      expect(collapsedHtml).toContain("Cancel");
+      expect(collapsedHtml).toContain("display:none");
+      expect(collapsedHtml).not.toMatch(/\p{Extended_Pictographic}/u);
+
+      const openTrayHtml = await renderToString(
+        createSSRApp({
+          render: () =>
+            h(
+              ClinicalFormActionBar,
+              {
+                statusHint: "Ready to sign",
+                statusTone: "muted",
+                trayOpen: true,
+              },
+              {
+                tray: () => h("div", "Inline tray active"),
+                default: () => h("button", { type: "button" }, "Sign form"),
+              }
+            ),
+        })
+      );
+      expect(openTrayHtml).toContain("clinical-form-action-bar--tray-open");
+      expect(openTrayHtml).toContain("Inline tray active");
+      expect(openTrayHtml).not.toContain("display:none");
     });
   });
 

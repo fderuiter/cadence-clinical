@@ -1,6 +1,19 @@
 <template>
   <section id="ecrf-form-instance" class="card ecrf-form-panel">
-    <div class="card-title">Case report form</div>
+    <div class="ecrf-panel-header">
+      <div class="card-title">Case report form</div>
+      <button
+        v-if="form && !formState.locked"
+        id="ecrf-form-close"
+        class="btn btn-secondary ecrf-close-btn"
+        type="button"
+        :disabled="formState.saving"
+        @click="closeForm"
+      >
+        <X :size="15" aria-hidden="true" />
+        Close form
+      </button>
+    </div>
 
     <EcrfFormOpener
       v-if="!form"
@@ -43,7 +56,8 @@
         :item-observation-link="itemObservationLink"
         @entry-text="setEntryText"
         @entry-missing="setEntryMissing"
-        @close-form="closeForm"
+        @begin-raise="beginRaise"
+        @submit-page="submitSavePage"
       />
 
       <EcrfAssertionsList
@@ -77,8 +91,304 @@
         :sign-outcome="formState.signOutcome"
         :sign="formState.sign"
         :item-observation-link="itemObservationLink"
+        :signatures="signatures"
         @reload-stale="reloadAfterStale"
       />
+
+      <ClinicalFormActionBar
+        aria-label="Case report form actions"
+        :tray-open="isActionTrayOpen"
+        :tray-label="activeTrayLabel"
+        :status-hint="actionBarStatusHint"
+        :status-tone="actionBarStatusTone"
+        :status-hint-id="actionBarStatusHintId"
+        :status-hint-test-id="actionBarStatusHintTestId"
+      >
+        <template #tray>
+          <!-- Single-item SDV verify / withdraw reason tray -->
+          <div v-if="sdv.pendingSdv" class="ecrf-action-tray-row">
+            <label for="ecrf-sdv-reason">
+              <template v-if="sdv.pendingSdv.mode === 'verify'">
+                Reason for verifying
+                {{ sdv.pendingSdv.item_id }} (revision
+                {{ sdv.pendingSdv.revision }})
+              </template>
+              <template v-else>
+                Reason for withdrawing verification on
+                {{ sdv.pendingSdv.item_id }}
+              </template>
+            </label>
+            <input
+              id="ecrf-sdv-reason"
+              :value="sdv.sdvReason"
+              type="text"
+              autocomplete="off"
+              :disabled="sdv.sdvBusy || formState.assertionsLocked"
+              @input="
+                sdv.setSdvReason(($event.target as HTMLInputElement).value)
+              "
+            />
+            <button
+              id="ecrf-sdv-confirm"
+              class="btn btn-primary"
+              type="button"
+              :disabled="
+                sdv.sdvBusy ||
+                formState.assertionsLocked ||
+                !sdv.sdvReason.trim()
+              "
+              @click="sdv.confirmSdv()"
+            >
+              {{
+                sdv.pendingSdv.mode === "verify"
+                  ? "Confirm verification"
+                  : "Withdraw verification"
+              }}
+            </button>
+            <button
+              id="ecrf-sdv-cancel"
+              class="btn btn-secondary"
+              type="button"
+              :disabled="sdv.sdvBusy"
+              @click="sdv.cancelPendingSdv()"
+            >
+              Back
+            </button>
+          </div>
+
+          <!-- Open query inline tray -->
+          <div v-if="raising !== null" class="ecrf-action-tray-row">
+            <label for="ecrf-raise-item">Item</label>
+            <select
+              id="ecrf-raise-item"
+              :value="raising.item_id"
+              @change="
+                onRaiseItemChange(($event.target as HTMLSelectElement).value)
+              "
+            >
+              <option
+                v-for="formItem in formState.items"
+                :key="formItem.item_id"
+                :value="formItem.item_id"
+              >
+                {{ formItem.item_id }}
+              </option>
+            </select>
+            <label for="ecrf-raise-text">
+              <template v-if="raising.unrecorded">
+                Missing-data query on {{ raising.item_id }} (no value recorded)
+              </template>
+              <template v-else>
+                Query on {{ raising.item_id }} (revision {{ raising.revision }})
+              </template>
+            </label>
+            <textarea id="ecrf-raise-text" v-model="raiseText" rows="2" />
+            <label for="ecrf-raise-reason">Reason for change</label>
+            <input
+              id="ecrf-raise-reason"
+              v-model="raiseReason"
+              type="text"
+              autocomplete="off"
+            />
+            <label for="ecrf-raise-owner">Owner</label>
+            <select id="ecrf-raise-owner" v-model="raiseOwnerRole">
+              <option value="site">Site</option>
+              <option value="monitor">Monitor</option>
+              <option value="data_manager">Data manager</option>
+            </select>
+            <label for="ecrf-raise-priority">Priority</label>
+            <select id="ecrf-raise-priority" v-model="raisePriority">
+              <option value="normal">Normal</option>
+              <option value="high">High</option>
+              <option value="low">Low</option>
+            </select>
+            <button
+              id="ecrf-raise-confirm"
+              class="btn btn-primary"
+              type="button"
+              :disabled="
+                queries.busy || !raiseText.trim() || !raiseReason.trim()
+              "
+              @click="confirmRaise"
+            >
+              Raise query
+            </button>
+            <button
+              id="ecrf-raise-cancel"
+              class="btn btn-secondary"
+              type="button"
+              @click="raising = null"
+            >
+              Back
+            </button>
+          </div>
+
+          <!-- Bulk SDV selection & reason tray -->
+          <div
+            v-if="canVerifySource && sdv.unverifiedItems.length > 0"
+            v-show="showBulkSdvTray"
+            class="ecrf-bulk-sdv-tray"
+            data-testid="ecrf-bulk-sdv"
+          >
+            <div class="ecrf-action-tray-row">
+              <strong>
+                Source verification ({{ sdv.unverifiedItems.length }} unverified
+                {{ sdv.unverifiedItems.length === 1 ? "item" : "items" }})
+              </strong>
+              <button
+                id="ecrf-sdv-select-all"
+                class="btn btn-secondary"
+                type="button"
+                :disabled="sdv.sdvBusy || formState.assertionsLocked"
+                @click="sdv.selectAllUnverifiedSdv()"
+              >
+                Select all unverified
+              </button>
+              <button
+                v-if="sdv.selectedSdvItems.length > 0"
+                id="ecrf-sdv-clear-selection"
+                class="btn btn-secondary"
+                type="button"
+                :disabled="sdv.sdvBusy"
+                @click="sdv.clearSdvSelection()"
+              >
+                Clear selection
+              </button>
+              <button
+                v-if="
+                  activeTray === 'verify' && sdv.selectedSdvItems.length === 0
+                "
+                class="btn btn-secondary"
+                type="button"
+                @click="activeTray = null"
+              >
+                Close
+              </button>
+            </div>
+            <p
+              v-if="formState.assertionsLocked"
+              class="ecrf-form-hint"
+              data-testid="ecrf-sdv-locked-note"
+            >
+              This scope is Locked, so source verifications cannot be recorded
+              or withdrawn until the lock is released.
+            </p>
+            <div
+              v-else-if="sdv.selectedSdvItems.length > 0"
+              class="ecrf-action-tray-row"
+            >
+              <label for="ecrf-bulk-sdv-reason">
+                Verification reason ({{ sdv.selectedSdvItems.length }} selected)
+              </label>
+              <input
+                id="ecrf-bulk-sdv-reason"
+                :value="sdv.bulkSdvReason"
+                type="text"
+                autocomplete="off"
+                placeholder="Verified against source medical record"
+                :disabled="sdv.sdvBusy"
+                @input="
+                  sdv.setBulkSdvReason(
+                    ($event.target as HTMLInputElement).value
+                  )
+                "
+              />
+              <button
+                id="ecrf-bulk-sdv-submit"
+                class="btn btn-primary"
+                type="button"
+                :disabled="sdv.sdvBusy || !sdv.bulkSdvReason.trim()"
+                @click="sdv.submitBulkSdv()"
+              >
+                {{
+                  sdv.sdvBusy
+                    ? "Verifying…"
+                    : `Verify selected (${sdv.selectedSdvItems.length})`
+                }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Save page reason tray -->
+          <div
+            v-if="!formState.locked"
+            v-show="showSaveTray"
+            class="ecrf-action-tray-row"
+          >
+            <label for="ecrf-save-reason">Reason for change</label>
+            <input
+              id="ecrf-save-reason"
+              v-model="saveReason"
+              type="text"
+              autocomplete="off"
+              placeholder="Initial data entry"
+            />
+          </div>
+        </template>
+
+        <button
+          v-if="!formState.locked"
+          id="ecrf-form-save"
+          class="btn btn-primary"
+          type="submit"
+          form="ecrf-form-page"
+          :disabled="formState.saving || !formState.dirty || !saveReason.trim()"
+        >
+          <Save :size="15" aria-hidden="true" />
+          {{
+            formState.saving
+              ? "Saving…"
+              : `Save page (${formState.editedItems.length})`
+          }}
+        </button>
+
+        <button
+          id="ecrf-action-verify"
+          class="btn btn-secondary"
+          type="button"
+          :disabled="
+            !canVerifySource ||
+            formState.assertionsLocked ||
+            sdv.sdvBusy ||
+            sdv.unverifiedItems.length === 0
+          "
+          :aria-expanded="showBulkSdvTray || Boolean(sdv.pendingSdv)"
+          @click="toggleVerifyTray"
+        >
+          <ShieldCheck :size="15" aria-hidden="true" />
+          Verify
+        </button>
+
+        <button
+          id="ecrf-action-open-query"
+          class="btn btn-secondary"
+          type="button"
+          :disabled="
+            !canManageQueries ||
+            queries.busy ||
+            formState.assertionsLocked ||
+            formState.items.length === 0
+          "
+          :aria-expanded="raising !== null"
+          @click="toggleOpenQueryTray"
+        >
+          <MessageSquarePlus :size="15" aria-hidden="true" />
+          Open query
+        </button>
+
+        <button
+          v-if="signatures.hasSignAuthority"
+          id="ecrf-form-sign"
+          class="btn btn-primary"
+          type="button"
+          :disabled="!formState.canSign"
+          :aria-describedby="signatures.signHint ? 'ecrf-sign-hint' : undefined"
+          @click="signatures.showSignModal = true"
+        >
+          <FileSignature :size="15" aria-hidden="true" />
+          {{ formState.signing ? "Signing…" : "Sign form" }}
+        </button>
+      </ClinicalFormActionBar>
     </template>
   </section>
 </template>
@@ -95,11 +405,25 @@ import {
   onMounted,
   onUnmounted,
   reactive,
+  ref,
   watch,
 } from "vue";
+import {
+  FileSignature,
+  MessageSquarePlus,
+  Save,
+  ShieldCheck,
+  X,
+} from "lucide-vue-next";
+import { ClinicalFormActionBar } from "ui";
 import type { RouteLocationRaw } from "vue-router";
-import type { EcrfForm } from "../../api/ecrfFormsApi";
-import type { FormQueryResponse } from "../../api/ecrfQueriesApi";
+import type { EcrfForm, EcrfFormItem } from "../../api/ecrfFormsApi";
+import type {
+  FormQueryOwnerRole,
+  FormQueryPriority,
+  FormQueryResponse,
+} from "../../api/ecrfQueriesApi";
+import { isUnrecordedValue } from "../../api/observationValue";
 import { canAnswerQueries as hasQueryAnswerRole } from "../../canvas/authority";
 import {
   collectionInstanceRef,
@@ -108,13 +432,14 @@ import {
 import { confirmDialog } from "../../composables/useConfirmDialog.js";
 import { useEcrfForm } from "../../composables/useEcrfForm";
 import { useEcrfSdv } from "../../composables/useEcrfSdv";
+import { useEcrfSignatures } from "../../composables/useEcrfSignatures";
 import { useFormQueries } from "../../composables/useFormQueries";
 import { useAuthStore } from "../../stores/auth.js";
 import EcrfAssertionsList from "./EcrfAssertionsList.vue";
 import EcrfFormOpener, {
   type CanvasFormEnrollmentContext,
 } from "./EcrfFormOpener.vue";
-import EcrfItemTable from "./EcrfItemTable.vue";
+import EcrfItemTable, { type RaisingQueryTarget } from "./EcrfItemTable.vue";
 import EcrfSdvToolbar from "./EcrfSdvToolbar.vue";
 import EcrfSignaturesSection from "./EcrfSignaturesSection.vue";
 
@@ -164,12 +489,178 @@ const sdv = reactive(
   useEcrfSdv({ form, items: rawForm.items, reload: rawForm.reload })
 );
 const queries = reactive(useFormQueries());
+const signatures = reactive(
+  useEcrfSignatures({
+    form,
+    items: rawForm.items,
+    dirty,
+    signing: rawForm.signing,
+    sign: (meaning, sigToken, signingReason) =>
+      rawForm.sign(meaning, sigToken, signingReason),
+  })
+);
+
+const saveReason = ref("");
+const activeTray = ref<"verify" | null>(null);
+const raising = ref<RaisingQueryTarget | null>(null);
+const raiseText = ref("");
+const raiseReason = ref("");
+const raiseOwnerRole = ref<FormQueryOwnerRole>("site");
+const raisePriority = ref<FormQueryPriority>("normal");
+
+const showBulkSdvTray = computed(
+  () =>
+    Boolean(props.canVerifySource) &&
+    sdv.unverifiedItems.length > 0 &&
+    !sdv.pendingSdv &&
+    raising.value === null &&
+    (activeTray.value === "verify" || sdv.selectedSdvItems.length > 0)
+);
+
+const showSaveTray = computed(
+  () =>
+    !formState.locked &&
+    !sdv.pendingSdv &&
+    raising.value === null &&
+    !showBulkSdvTray.value &&
+    dirty.value
+);
+
+const isActionTrayOpen = computed(
+  () =>
+    Boolean(sdv.pendingSdv) ||
+    raising.value !== null ||
+    showBulkSdvTray.value ||
+    showSaveTray.value
+);
+
+const activeTrayLabel = computed(() => {
+  if (sdv.pendingSdv) return "Source verification reason";
+  if (raising.value !== null) return "Open clinical query";
+  if (showBulkSdvTray.value) return "Bulk source verification";
+  return "Reason for change";
+});
+
+const actionBarStatusHint = computed(() => {
+  if (!signatures.hasSignAuthority) {
+    return "Only an authorised investigator (collection.sign) may sign this form.";
+  }
+  if (signatures.signHint) {
+    return signatures.signHint;
+  }
+  if (formState.locked) {
+    return formState.assertionsLocked
+      ? "Scope locked: edits, verifications, and queries are disabled."
+      : "Values frozen: source verification and queries remain available.";
+  }
+  return "";
+});
+
+const actionBarStatusTone = computed(() =>
+  actionBarStatusHint.value ? "gated" : "muted"
+);
+
+const actionBarStatusHintId = computed(() => {
+  if (!signatures.hasSignAuthority) return "ecrf-sign-unauthorized";
+  if (signatures.signHint) return "ecrf-sign-hint";
+  return "";
+});
+
+const actionBarStatusHintTestId = computed(() => {
+  if (!signatures.hasSignAuthority) return "ecrf-sign-unauthorized";
+  if (signatures.signHint) return "ecrf-sign-hint";
+  return "";
+});
 
 function setEntryText(itemId: string, text: string) {
   if (formState.entries[itemId]) formState.entries[itemId].text = text;
 }
 function setEntryMissing(itemId: string, missing: string) {
   if (formState.entries[itemId]) formState.entries[itemId].missing = missing;
+}
+
+function buildRaiseTarget(item: EcrfFormItem): RaisingQueryTarget {
+  return {
+    item_id: item.item_id,
+    observation_id: item.observation_id ?? null,
+    revision: item.observation_id ? Number(item.revision) : null,
+    unrecorded: !item.observation_id || isUnrecordedValue(item.value),
+  };
+}
+
+function beginRaise(item: EcrfFormItem) {
+  sdv.cancelPendingSdv();
+  activeTray.value = null;
+  raising.value = buildRaiseTarget(item);
+  raiseText.value = "";
+  raiseReason.value = "";
+  raiseOwnerRole.value = "site";
+  raisePriority.value = "normal";
+}
+
+function onRaiseItemChange(nextItemId: string) {
+  const matched = formState.items.find((it) => it.item_id === nextItemId);
+  if (matched) {
+    raising.value = buildRaiseTarget(matched);
+  }
+}
+
+function toggleVerifyTray() {
+  raising.value = null;
+  sdv.cancelPendingSdv();
+  activeTray.value = activeTray.value === "verify" ? null : "verify";
+}
+
+function toggleOpenQueryTray() {
+  if (raising.value !== null) {
+    raising.value = null;
+    return;
+  }
+  const preferred =
+    (props.highlightItemId
+      ? formState.items.find((it) => it.item_id === props.highlightItemId)
+      : undefined) ?? formState.items[0];
+  if (preferred) {
+    beginRaise(preferred);
+  }
+}
+
+async function confirmRaise() {
+  const target = raising.value;
+  const text = raiseText.value.trim();
+  const changeReason = raiseReason.value.trim();
+  if (!form.value || !target || !text || !changeReason) return;
+  const wasUnasked = !target.observation_id;
+  const options = {
+    ...(raiseOwnerRole.value !== "site"
+      ? { ownerRole: raiseOwnerRole.value }
+      : {}),
+    ...(raisePriority.value !== "normal"
+      ? { priority: raisePriority.value }
+      : {}),
+  };
+  const raised = await queries.raise(
+    {
+      formId: form.value.form_id,
+      itemId: target.item_id,
+      observationId: target.observation_id,
+      revision: target.revision,
+    },
+    text,
+    changeReason,
+    Object.keys(options).length > 0 ? options : undefined
+  );
+  if (raised) {
+    raising.value = null;
+    if (wasUnasked) await formState.reload();
+  }
+}
+
+async function submitSavePage() {
+  await formState.save(saveReason.value.trim());
+  if (formState.outcome?.kind === "saved") {
+    saveReason.value = "";
+  }
 }
 
 function itemObservationLink(
@@ -273,6 +764,8 @@ watch(
   () => (form.value ? `${form.value.form_id}@${form.value.version}` : null),
   (loaded) => {
     sdv.cancelPendingSdv();
+    raising.value = null;
+    activeTray.value = null;
     if (loaded && form.value) {
       emit("form-loaded", form.value);
       const hydrated = lastHydratedSave.value;
@@ -288,6 +781,15 @@ watch(
       }
     } else {
       queries.clear();
+    }
+  }
+);
+
+watch(
+  () => sdv.selectedSdvItems.length,
+  (count) => {
+    if (count === 0 && activeTray.value === "verify") {
+      activeTray.value = null;
     }
   }
 );
@@ -327,5 +829,59 @@ onUnmounted(() => {
   margin-bottom: 20px;
   min-width: 0;
   max-width: 100%;
+}
+.ecrf-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ecrf-panel-header .card-title {
+  margin-bottom: 0;
+}
+.ecrf-close-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+.ecrf-action-tray-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ecrf-action-tray-row input[type="text"],
+.ecrf-action-tray-row textarea {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.ecrf-action-tray-row button {
+  min-height: 44px;
+}
+.ecrf-bulk-sdv-tray {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+.ecrf-form-hint {
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-secondary);
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .ecrf-action-tray-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ecrf-action-tray-row input[type="text"],
+  .ecrf-action-tray-row textarea,
+  .ecrf-action-tray-row select,
+  .ecrf-action-tray-row button {
+    width: 100%;
+    flex: 1 1 auto;
+  }
 }
 </style>

@@ -159,15 +159,16 @@
           <!-- Dynamically rendered questions using radio grids -->
         </div>
 
-        <div class="form-actions" style="margin-top: 20px">
+        <ClinicalFormActionBar aria-label="Comprehension check actions">
           <button
             id="btn-submit-consent-answers"
             type="button"
             class="btn btn-primary"
           >
             Verify and Submit Answers
+            <CheckCircle2 :size="16" aria-hidden="true" />
           </button>
-        </div>
+        </ClinicalFormActionBar>
       </div>
 
       <!-- Signature Section -->
@@ -223,30 +224,30 @@
           </p>
         </div>
 
-        <div
-          class="form-actions"
-          style="display: flex; gap: 12px; flex-wrap: wrap"
-        >
+        <ClinicalFormActionBar aria-label="Camera identity check actions">
+          <template #secondary>
+            <button
+              id="btn-liveness-fallback"
+              type="button"
+              class="btn btn-secondary"
+              style="
+                border: 1px solid var(--semantic-color-border-control);
+                background: var(--semantic-color-surface);
+              "
+            >
+              Verify with Study Coordinator Instead
+              <UserCheck :size="16" aria-hidden="true" />
+            </button>
+          </template>
           <button
             id="btn-verify-liveness"
             type="button"
             class="btn btn-primary"
           >
             Complete Camera Check
+            <Camera :size="16" aria-hidden="true" />
           </button>
-
-          <button
-            id="btn-liveness-fallback"
-            type="button"
-            class="btn btn-secondary"
-            style="
-              border: 1px solid var(--semantic-color-border-control);
-              background: var(--semantic-color-surface);
-            "
-          >
-            Verify with Study Coordinator Instead
-          </button>
-        </div>
+        </ClinicalFormActionBar>
       </div>
 
       <!-- Signature Section -->
@@ -260,7 +261,15 @@
           By signing this document, you confirm that you have read this informed
           consent, have passed the verification, and agree to participate.
         </p>
-        <div class="form-actions">
+        <ClinicalFormActionBar
+          aria-label="Electronic consent signature actions"
+          :status-hint="
+            isConsentSignGated
+              ? 'Complete the understanding check and camera verification above before signing.'
+              : ''
+          "
+          :status-tone="isConsentSignGated ? 'gated' : 'muted'"
+        >
           <button
             id="btn-trigger-consent-sign"
             type="button"
@@ -268,15 +277,28 @@
             disabled
           >
             Sign Consent Form
+            <FileSignature :size="16" aria-hidden="true" />
           </button>
-        </div>
+        </ClinicalFormActionBar>
       </div>
     </div>
   </section>
 </template>
 
 <script setup>
+import { computed } from "vue";
+import { ClinicalFormActionBar } from "ui";
+import {
+  Camera,
+  CheckCircle2,
+  FileSignature,
+  UserCheck,
+} from "lucide-vue-next";
+import { state } from "../stores/state.js";
 import { useUiStore } from "../stores/ui.js";
 
 const ui = useUiStore();
+const isConsentSignGated = computed(
+  () => !(state.consentPassed && state.livenessVerified)
+);
 </script>

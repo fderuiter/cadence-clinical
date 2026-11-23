@@ -2418,3 +2418,78 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
     ]);
   });
 });
+
+describe("EcrfFormPanel: consolidated ClinicalFormActionBar (ADR-2651)", () => {
+  let wrapper: VueWrapper | undefined;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.mocked(ecrfFormsApi.getForm).mockReset();
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    resetQueries();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    wrapper = undefined;
+    localStorage.clear();
+  });
+
+  it("mounts a single ClinicalFormActionBar consolidating Save page, Verify, Open query, and Sign form with inline gated explanation", async () => {
+    const auth = useAuthStore();
+    auth.setAuth({
+      authenticated: true,
+      token: "token-pi-1",
+      tokenParsed: {
+        sub: "pi-1",
+        tenant_id: "tenant-1",
+        realm_access: { roles: ["INVESTIGATOR"] },
+      },
+    });
+
+    wrapper = mount(EcrfFormPanel, {
+      props: {
+        formId: FORM_ID,
+        canVerifySource: true,
+        canManageQueries: true,
+      },
+    });
+    await flushPromises();
+
+    const actionBars = wrapper.findAll(
+      '[data-testid="clinical-form-action-bar"]'
+    );
+    expect(actionBars).toHaveLength(1);
+
+    const bar = actionBars[0];
+    expect(bar.find("#ecrf-form-save").exists()).toBe(true);
+    expect(bar.find("#ecrf-action-verify").exists()).toBe(true);
+    expect(bar.find("#ecrf-action-open-query").exists()).toBe(true);
+    expect(bar.find("#ecrf-form-sign").exists()).toBe(true);
+    expect(bar.find("#ecrf-form-sign").attributes("disabled")).toBeUndefined();
+
+    // Unsaved edits gate Sign form and surface plain-language explanation inline
+    await wrapper.find("#ecrf-item-DIABP").setValue("80");
+    expect(bar.find("#ecrf-form-sign").attributes("disabled")).toBeDefined();
+    expect(bar.find("#ecrf-sign-hint").text()).toContain(
+      "Save or discard your changes before signing."
+    );
+
+    // Toggle inline Open query tray
+    expect(
+      bar.find("#ecrf-action-open-query").attributes("aria-expanded")
+    ).toBe("false");
+    await bar.find("#ecrf-action-open-query").trigger("click");
+    expect(
+      bar.find("#ecrf-action-open-query").attributes("aria-expanded")
+    ).toBe("true");
+    expect(bar.find("#ecrf-raise-text").exists()).toBe(true);
+
+    // Toggle inline Verify tray
+    await bar.find("#ecrf-action-verify").trigger("click");
+    expect(bar.find("#ecrf-action-verify").attributes("aria-expanded")).toBe(
+      "true"
+    );
+    expect(bar.find('[data-testid="ecrf-bulk-sdv"]').exists()).toBe(true);
+  });
+});

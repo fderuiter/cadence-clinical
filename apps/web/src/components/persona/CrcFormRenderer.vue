@@ -2,10 +2,13 @@
   <div class="crc-form-renderer">
     <div class="card">
       <div
+        class="crc-header-row"
         style="
           display: flex;
           justify-content: space-between;
           align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
           margin-bottom: var(--spacing-sm);
         "
       >
@@ -56,6 +59,7 @@
 
       <!-- Subject & Visit Selection Panel -->
       <div
+        class="crc-selector-bar"
         style="
           display: flex;
           flex-wrap: wrap;
@@ -65,7 +69,7 @@
           padding-bottom: 12px;
         "
       >
-        <div class="form-group" style="flex: 1">
+        <div class="form-group" style="flex: 1 1 200px; min-width: 0">
           <label for="ecrf-subject-selector" style="font-weight: bold">{{
             $t("ecrf.form.activeSubjectId")
           }}</label>
@@ -74,9 +78,11 @@
             :value="selectedSubjectId"
             style="
               width: 100%;
+              min-height: 44px;
               padding: 8px;
-              border: 1px solid var(--border);
+              border: 1px solid var(--border-control);
               border-radius: 4px;
+              box-sizing: border-box;
             "
             @change="
               $emit('update:selectedSubjectId', $event.target.value);
@@ -99,7 +105,7 @@
             </option>
           </select>
         </div>
-        <div class="form-group" style="flex: 1">
+        <div class="form-group" style="flex: 1 1 200px; min-width: 0">
           <label for="ecrf-visit-selector" style="font-weight: bold">{{
             $t("ecrf.form.activeVisit")
           }}</label>
@@ -108,9 +114,11 @@
             :value="selectedVisitId"
             style="
               width: 100%;
+              min-height: 44px;
               padding: 8px;
-              border: 1px solid var(--border);
+              border: 1px solid var(--border-control);
               border-radius: 4px;
+              box-sizing: border-box;
             "
             @change="
               $emit('update:selectedVisitId', $event.target.value);
@@ -413,8 +421,8 @@
           <template v-for="field in renderedFields" :key="field.id">
             <div
               v-show="store.fieldVisibility[field.id] ?? true"
-              :style="`grid-column: span ${field.gridSpan || 12}; display: flex; flex-direction: column; gap: 8px;`"
-              style="margin-bottom: 8px; position: relative"
+              class="crc-field-cell field-grid-span"
+              :style="{ '--field-grid-span': String(field.gridSpan || 12) }"
             >
               <div
                 v-if="dirtyFields && dirtyFields[field.id]"
@@ -582,24 +590,28 @@
         </fieldset>
       </form>
 
-      <div class="form-actions">
-        <button
-          id="btn-clear-ecrf"
-          class="btn"
-          :disabled="isReconsentGated"
-          @click="$emit('clear-form')"
-        >
-          {{ $t("ecrf.form.clearForm") }}
-        </button>
+      <ClinicalFormActionBar
+        :aria-label="$t('ecrf.form.title')"
+        :status-hint="isReconsentGated ? $t('ecrf.gateModal.desc') : ''"
+        :status-tone="isReconsentGated ? 'gated' : 'muted'"
+      >
+        <template #secondary>
+          <button
+            id="btn-clear-ecrf"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="isReconsentGated"
+            @click="$emit('clear-form')"
+          >
+            {{ $t("ecrf.form.clearForm") }}
+            <RotateCcw :size="15" aria-hidden="true" />
+          </button>
+        </template>
         <button
           id="btn-submit-ecrf"
+          type="button"
           class="btn btn-primary"
-          :style="{
-            backgroundColor: isReconsentGated
-              ? 'var(--semantic-color-error)'
-              : undefined,
-            opacity: isReconsentGated ? 0.9 : 1,
-          }"
+          :class="{ 'crc-submit-gated': isReconsentGated }"
           @click="handleSubmitClick"
         >
           {{
@@ -607,8 +619,10 @@
               ? $t("ecrf.form.lockedReconsent")
               : $t("ecrf.form.submitEcrfSession")
           }}
+          <Lock v-if="isReconsentGated" :size="15" aria-hidden="true" />
+          <CheckCircle2 v-else :size="15" aria-hidden="true" />
         </button>
-      </div>
+      </ClinicalFormActionBar>
     </div>
 
     <!-- Subject Enrollment Modal Dialog -->
@@ -920,7 +934,8 @@
 
 <script setup>
 import { computed, reactive, ref } from "vue";
-import { ClinicalFormField, ClinicalModal } from "ui";
+import { ClinicalFormActionBar, ClinicalFormField, ClinicalModal } from "ui";
+import { CheckCircle2, Lock, RotateCcw } from "lucide-vue-next";
 import { isScreenAvailable } from "../../router/availability.js";
 import { useClinicalStore } from "../../stores/clinical";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
@@ -1143,3 +1158,27 @@ function updateFieldValue(fieldId, val) {
   storeInstance.formValues[fieldId] = val;
 }
 </script>
+
+<style scoped>
+.crc-field-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+  position: relative;
+  min-width: 0;
+}
+
+.crc-submit-gated {
+  background-color: var(--semantic-color-error);
+  opacity: 0.92;
+}
+
+@media (max-width: 640px) {
+  .crc-selector-bar .form-group {
+    flex: 1 1 100% !important;
+    width: 100%;
+    min-width: 0;
+  }
+}
+</style>

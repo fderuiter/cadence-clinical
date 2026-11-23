@@ -39,6 +39,9 @@ catalogs:
     keycloak-js:
       specifier: ^26.2.5
       version: 26.2.5
+    lucide-vue-next:
+      specifier: ^0.577.0
+      version: 0.577.0
     msw:
       specifier: ^3.0.7
       version: 3.0.7
@@ -141,6 +144,9 @@ importers:
       keycloak-js:
         specifier: 'catalog:'
         version: 26.2.5
+      lucide-vue-next:
+        specifier: 'catalog:'
+        version: 0.577.0(vue@3.5.45(typescript@6.0.3))
       pinia:
         specifier: 'catalog:'
         version: 4.1.0(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.45(typescript@6.0.3))
@@ -196,6 +202,9 @@ importers:
       keycloak-js:
         specifier: 'catalog:'
         version: 26.2.5
+      lucide-vue-next:
+        specifier: 'catalog:'
+        version: 0.577.0(vue@3.5.45(typescript@6.0.3))
       openapi-fetch:
         specifier: ^0.13.0
         version: 0.13.8
@@ -274,6 +283,9 @@ importers:
       axe-core:
         specifier: 'catalog:'
         version: 4.14.1
+      lucide-vue-next:
+        specifier: 'catalog:'
+        version: 0.577.0(vue@3.5.45(typescript@6.0.3))
       pinia:
         specifier: 'catalog:'
         version: 4.1.0(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.45(typescript@6.0.3))
@@ -2301,6 +2313,12 @@ packages:
   lru-cache@11.5.3:
     resolution: {integrity: sha512-U4N8FgzmWxc8k1VH8Kr6lQg18U7Fjvby6wXHVRX/ZZ7IwWbRMgrRbP0Wrb5q5NVinryp4SQampHKdvtecItxUg==}
     engines: {node: 20 || >=22}
+
+  lucide-vue-next@0.577.0:
+    resolution: {integrity: sha512-py05bAfv9SHVJqscbiOnjcnLlEmOffA58a+7XhZuFxrs6txe1E8VoR1ngWGTYO+9aVKABAz8l3ee3PqiQN9QPA==}
+    deprecated: Package deprecated. Please use @lucide/vue instead.
+    peerDependencies:
+      vue: '>=3.0.1'
 
   magic-string-ast@1.0.3:
     resolution: {integrity: sha512-CvkkH1i81zl7mmb94DsRiFeG9V2fR2JeuK8yDgS8oiZSFa++wWLEgZ5ufEOyLHbvSbD1gTRKv9NdX69Rnvr9JA==}
@@ -5102,6 +5120,10 @@ snapshots:
   lodash-es@4.18.1: {}
 
   lru-cache@11.5.3: {}
+
+  lucide-vue-next@0.577.0(vue@3.5.45(typescript@6.0.3)):
+    dependencies:
+      vue: 3.5.45(typescript@6.0.3)
 
   magic-string-ast@1.0.3:
     dependencies:

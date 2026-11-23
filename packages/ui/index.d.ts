@@ -54,6 +54,21 @@ export const AiSuggestionDrawer: DefineComponent<
   any
 >;
 
+export const ClinicalFormActionBar: DefineComponent<
+  {
+    ariaLabel?: string;
+    trayOpen?: boolean;
+    trayLabel?: string;
+    statusHint?: string;
+    statusTone?: "muted" | "gated" | "warning" | string;
+    statusHintId?: string;
+    statusHintTestId?: string;
+    compact?: boolean;
+  },
+  {},
+  any
+>;
+
 export const ClinicalFormField: DefineComponent<
   {
     field: any;

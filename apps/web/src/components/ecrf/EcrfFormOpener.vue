@@ -329,13 +329,43 @@ function submitOpenNew() {
 }
 .ecrf-form-grid {
   display: grid;
-  grid-template-columns: minmax(140px, max-content) 1fr;
+  grid-template-columns: minmax(140px, max-content) minmax(0, 1fr);
   gap: 6px 12px;
   align-items: center;
+}
+.ecrf-form-grid input,
+.ecrf-form-grid select {
+  min-width: 0;
+  max-width: 100%;
 }
 .ecrf-form-grid button {
   grid-column: 2;
   justify-self: start;
+}
+
+@media (max-width: 640px) {
+  .ecrf-form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ecrf-form-row input,
+  .ecrf-form-row button {
+    width: 100%;
+    min-width: 0;
+  }
+  .ecrf-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+  .ecrf-form-grid input,
+  .ecrf-form-grid select {
+    width: 100%;
+  }
+  .ecrf-form-grid button {
+    grid-column: 1;
+    justify-self: stretch;
+    width: 100%;
+  }
 }
 .ecrf-form-error {
   color: var(--semantic-color-error);

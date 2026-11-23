@@ -504,4 +504,30 @@ onMounted(() => {
 .muted-inline {
   color: var(--semantic-color-text-subtle);
 }
+
+@media (max-width: 640px) {
+  .gate-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .facet-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  .certify-box {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .certify-box input,
+  .certify-box button {
+    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
 </style>

@@ -788,4 +788,396 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expectPageWithin320("ProtocolVersionsSection");
     await expectNoWcagViolations(page, "ProtocolVersionsSection at 320x640");
   });
+
+  test("ClinicalFormActionBar and EcrfItemTable satisfy tablet sticky controls, pinned row headers, and mobile progressive item cards (AC3, AC4, AC5, AC7)", async ({
+    page,
+  }) => {
+    const demoFormRoute = "/ecrf?formId=00000000-0000-0000-0000-000000002001";
+
+    // 1. AC5 & AC4 on tablet viewports (768x1024 and 1024x768)
+    for (const viewport of [
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await gotoHashRoute(page, demoFormRoute);
+      await page.evaluate(() => window.scrollTo(0, 0));
+
+      const formPanel = page.locator("#ecrf-form-instance");
+      await expect(formPanel).toBeVisible();
+
+      const scrollWidth = await page.evaluate(
+        () => document.documentElement.scrollWidth
+      );
+      const clientWidth = await page.evaluate(
+        () => document.documentElement.clientWidth
+      );
+      expect(scrollWidth).toBe(clientWidth);
+
+      const actionBar = formPanel.locator(
+        '[data-testid="clinical-form-action-bar"]'
+      );
+      await expect(actionBar).toBeVisible();
+
+      const barBox = await actionBar.boundingBox();
+      expect(barBox).not.toBeNull();
+      expect(
+        barBox!.height,
+        `Expected collapsed ClinicalFormActionBar <= 56px on ${viewport.width}x${viewport.height}, got ${barBox!.height}`
+      ).toBeLessThanOrEqual(56.5);
+      expect(barBox!.y).toBeGreaterThanOrEqual(0);
+      expect(barBox!.y + barBox!.height).toBeLessThanOrEqual(
+        viewport.height + 0.5
+      );
+
+      for (const selector of [
+        "#ecrf-form-save",
+        "#ecrf-form-sign",
+        "#ecrf-action-verify",
+        "#ecrf-action-open-query",
+      ]) {
+        const btn = formPanel.locator(selector);
+        await expect(btn).toBeVisible();
+        const btnBox = await btn.boundingBox();
+        expect(btnBox).not.toBeNull();
+        expect(
+          btnBox!.height,
+          `Expected >= 44px touch target for ${selector}`
+        ).toBeGreaterThanOrEqual(43.5);
+        expect(btnBox!.y).toBeGreaterThanOrEqual(0);
+        expect(btnBox!.y + btnBox!.height).toBeLessThanOrEqual(
+          viewport.height + 0.5
+        );
+      }
+
+      if (viewport.width === 768) {
+        // AC4: Verify sticky th[scope="row"] stays pinned when scrolling .ecrf-table-scroll horizontally
+        const tableScroll = formPanel.locator(".ecrf-table-scroll");
+        await expect(tableScroll).toBeVisible();
+        const rowHeader = formPanel
+          .locator('#ecrf-row-item-sysbp th[scope="row"]')
+          .first();
+        await expect(rowHeader).toBeVisible();
+
+        const stickyPos = await rowHeader.evaluate(
+          (el) => window.getComputedStyle(el).position
+        );
+        expect(stickyPos).toBe("sticky");
+
+        const pinnedDelta = await tableScroll.evaluate((wrapper) => {
+          const th = wrapper.querySelector(
+            '#ecrf-row-item-sysbp th[scope="row"]'
+          ) as HTMLElement | null;
+          if (!th) return 999;
+          // Ensure horizontal overflow exists to exercise horizontal scrollport pinning
+          const table = wrapper.querySelector("table") as HTMLElement | null;
+          const prevMinWidth = table ? table.style.minWidth : "";
+          if (table && wrapper.scrollWidth <= wrapper.clientWidth) {
+            table.style.minWidth = `${wrapper.clientWidth + 240}px`;
+          }
+          wrapper.scrollLeft = 120;
+          const wrapperLeft = wrapper.getBoundingClientRect().left;
+          const thLeft = th.getBoundingClientRect().left;
+          const scrolledAmount = wrapper.scrollLeft;
+          wrapper.scrollLeft = 0;
+          if (table) {
+            table.style.minWidth = prevMinWidth;
+          }
+          return scrolledAmount > 0 ? Math.abs(thLeft - wrapperLeft) : 999;
+        });
+        expect(pinnedDelta).toBeLessThanOrEqual(2);
+
+        await page.screenshot({
+          path: "/tmp/ecrf-tablet-sticky-action-bar.png",
+        });
+
+        // Open inline query tray inside ClinicalFormActionBar and verify WCAG 2.2 AA
+        await formPanel.locator("#ecrf-action-open-query").click();
+        await expect(
+          formPanel.locator('[data-testid="clinical-form-action-bar-tray"]')
+        ).toBeVisible();
+        await expectNoWcagViolations(
+          page,
+          "EcrfFormPanel with open query tray at 768x1024"
+        );
+        await formPanel.locator("#ecrf-action-open-query").click();
+      }
+
+      await expectNoWcagViolations(
+        page,
+        `EcrfFormPanel at ${viewport.width}x${viewport.height}`
+      );
+    }
+
+    // 2. AC3 on mobile viewports (390x844 and 320x640): single <table>, zero wrapper overflow, visible row & item IDs
+    for (const viewport of [
+      { width: 390, height: 844 },
+      { width: 320, height: 640 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await gotoHashRoute(page, demoFormRoute);
+      await page.evaluate(() => window.scrollTo(0, 0));
+
+      const formPanel = page.locator("#ecrf-form-instance");
+      await expect(formPanel).toBeVisible();
+      await expect(formPanel.locator("table.ecrf-form-items")).toHaveCount(1);
+
+      const scrollMetrics = await formPanel
+        .locator(".ecrf-table-scroll")
+        .evaluate((el) => ({
+          scrollWidth: el.scrollWidth,
+          clientWidth: el.clientWidth,
+          docScrollWidth: document.documentElement.scrollWidth,
+          docClientWidth: document.documentElement.clientWidth,
+        }));
+      expect(scrollMetrics.scrollWidth).toBeLessThanOrEqual(
+        scrollMetrics.clientWidth
+      );
+      expect(scrollMetrics.docScrollWidth).toBe(scrollMetrics.docClientWidth);
+
+      await expectNoWcagViolations(
+        page,
+        `EcrfFormPanel initial scroll at ${viewport.width}x${viewport.height}`
+      );
+
+      const sysbpRow = page.locator("#ecrf-row-item-sysbp");
+      const sysbpInput = page.locator("#ecrf-item-item-sysbp");
+      await expect(sysbpRow).toBeVisible();
+      await expect(sysbpInput).toBeVisible();
+      await sysbpRow.scrollIntoViewIfNeeded();
+
+      const mobileActionBar = formPanel.locator(
+        '[data-testid="clinical-form-action-bar"]'
+      );
+      await expect(mobileActionBar).toBeVisible();
+
+      if (viewport.width === 390) {
+        await page.screenshot({
+          path: "/tmp/ecrf-mobile-progressive-cards.png",
+        });
+      }
+
+      await expectNoWcagViolations(
+        page,
+        `EcrfItemTable progressive cards at ${viewport.width}x${viewport.height}`
+      );
+    }
+  });
+
+  test("CSS variable form reflow enforces zero horizontal overflow across 320x640, 390x844, 768x1024, and 1024x768 and single-column tracks at 320x640 (AC1, AC2, AC7)", async ({
+    page,
+  }) => {
+    const viewports = [
+      { width: 320, height: 640 },
+      { width: 390, height: 844 },
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 },
+    ];
+
+    async function expectZeroDocOverflow(label: string) {
+      const dims = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }));
+      expect(
+        dims.scrollWidth,
+        `Expected scrollWidth === clientWidth on ${label}, got ${dims.scrollWidth} vs ${dims.clientWidth}`
+      ).toBe(dims.clientWidth);
+    }
+
+    async function expectSingleColumnFullWidth(
+      containerSelector: string,
+      itemSelector: string,
+      label: string
+    ) {
+      const metrics = await page.evaluate(
+        ({ cSel, iSel }) => {
+          const container = document.querySelector(cSel) as HTMLElement | null;
+          if (!container) return null;
+          const cStyle = window.getComputedStyle(container);
+          const contentWidth =
+            container.getBoundingClientRect().width -
+            parseFloat(cStyle.paddingLeft || "0") -
+            parseFloat(cStyle.paddingRight || "0") -
+            parseFloat(cStyle.borderLeftWidth || "0") -
+            parseFloat(cStyle.borderRightWidth || "0");
+          const items = Array.from(container.querySelectorAll(iSel)).filter(
+            (el) => {
+              const s = window.getComputedStyle(el);
+              return (
+                s.display !== "none" &&
+                s.visibility !== "hidden" &&
+                el.getBoundingClientRect().height > 0
+              );
+            }
+          );
+          const boxes = items.map((el) => {
+            const r = el.getBoundingClientRect();
+            return { x: r.x, y: r.y, width: r.width, height: r.height };
+          });
+          return { contentWidth, boxes };
+        },
+        { cSel: containerSelector, iSel: itemSelector }
+      );
+      expect(
+        metrics,
+        `Container ${containerSelector} missing on ${label}`
+      ).not.toBeNull();
+      expect(
+        metrics!.boxes.length,
+        `Expected >= 1 visible item for ${itemSelector} on ${label}`
+      ).toBeGreaterThan(0);
+      for (let i = 0; i < metrics!.boxes.length; i++) {
+        const box = metrics!.boxes[i];
+        expect(
+          Math.abs(box.width - metrics!.contentWidth),
+          `Expected item[${i}] width (${box.width}) to match single-column container width (${metrics!.contentWidth}) on ${label}`
+        ).toBeLessThanOrEqual(4);
+        if (i > 0) {
+          const prev = metrics!.boxes[i - 1];
+          expect(
+            box.y,
+            `Expected item[${i}] to stack vertically below item[${i - 1}] on ${label}`
+          ).toBeGreaterThanOrEqual(prev.y + prev.height - 1);
+        }
+      }
+    }
+
+    const routesToCheck = [
+      {
+        path: "/ecrf?formId=00000000-0000-0000-0000-000000002001",
+        readySelector: "#section-ecrf",
+        label: "EcrfView (EcrfFormPanel + CrcFormRenderer)",
+      },
+      {
+        path: "/studies/DEMO-01?form=00000000-0000-0000-0000-000000002001",
+        readySelector: "#ecrf-form-instance",
+        label: "StudyCanvasView EcrfFormPanel",
+      },
+      {
+        path: "/ecrf",
+        readySelector: ".ecrf-form-open",
+        label: "EcrfFormOpener",
+      },
+      {
+        path: "/observations/observation:00000000-0000-0000-0000-000000000001",
+        readySelector: "#section-observation",
+        label: "ObservationView",
+      },
+      {
+        path: "/audit",
+        readySelector: "#section-audit",
+        label: "AuditView",
+      },
+      {
+        path: "/training",
+        readySelector: "#section-study-training",
+        label: "ProtocolTrainingConsole",
+      },
+      {
+        path: "/studies/DEMO-01?stage=start&section=startup-greenlight",
+        readySelector: "#ctms-greenlight-section",
+        label: "CtmsGreenlightSection",
+      },
+      {
+        path: "/tickets",
+        readySelector: "#section-tickets-hub",
+        label: "TicketsView",
+      },
+    ];
+
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      for (const route of routesToCheck) {
+        await gotoHashRoute(page, route.path);
+        await expect(page.locator(route.readySelector).first()).toBeVisible();
+        await expectZeroDocOverflow(
+          `${route.label} at ${viewport.width}x${viewport.height}`
+        );
+      }
+    }
+
+    // AC2 & AC7 deep single-column field verification at 320x640
+    await page.setViewportSize({ width: 320, height: 640 });
+
+    // 1. EcrfDemoWorkspace: SubjectEnrollmentForm (ClinicalFieldLayout) + CrcFormRenderer (display: contents fieldset)
+    await gotoHashRoute(page, "/ecrf");
+    await expect(page.locator("#section-ecrf")).toBeVisible();
+    await expectZeroDocOverflow("EcrfDemoWorkspace at 320x640");
+    await expectSingleColumnFullWidth(
+      ".subject-enrollment-card .form-grid",
+      ".clinical-field-layout",
+      "SubjectEnrollmentForm ClinicalFieldLayout at 320x640"
+    );
+    await expectSingleColumnFullWidth(
+      ".crc-form-renderer .responsive-grid",
+      ".crc-field-cell",
+      "CrcFormRenderer responsive-grid at 320x640"
+    );
+    await expectNoWcagViolations(page, "EcrfDemoWorkspace at 320x640");
+
+    // 2. ObservationView with consolidated ClinicalFormActionBar
+    await gotoHashRoute(
+      page,
+      "/observations/observation:00000000-0000-0000-0000-000000000001"
+    );
+    await expect(page.locator("#section-observation")).toBeVisible();
+    await expect(
+      page.locator(
+        '#section-observation [data-testid="clinical-form-action-bar"]'
+      )
+    ).toBeVisible();
+    await expectZeroDocOverflow("ObservationView at 320x640");
+    await expectNoWcagViolations(page, "ObservationView at 320x640");
+
+    // 3. AuditView (.grid-2-responsive multi-span cards collapse to 1 column)
+    await gotoHashRoute(page, "/audit");
+    await expect(page.locator("#section-audit")).toBeVisible();
+    await expectSingleColumnFullWidth(
+      "#section-audit .grid-2-responsive",
+      ":scope > .card",
+      "AuditView grid-2-responsive at 320x640"
+    );
+
+    // 4. ProtocolTrainingConsole (.assignment-selector-panel collapses to 1 column)
+    await gotoHashRoute(page, "/training");
+    await expect(page.locator("#section-study-training")).toBeVisible();
+    await expectSingleColumnFullWidth(
+      "#section-study-training .assignment-selector-panel",
+      ":scope > .form-group, :scope > .status-summary-chips",
+      "ProtocolTrainingConsole selector panel at 320x640"
+    );
+    await expectNoWcagViolations(page, "ProtocolTrainingConsole at 320x640");
+
+    // 5. CtmsGreenlightSection (scope form + site gate facet rows collapse cleanly)
+    await gotoHashRoute(
+      page,
+      "/studies/DEMO-01?stage=start&section=startup-greenlight&site=SITE-101"
+    );
+    await expect(page.locator("#ctms-greenlight-section")).toBeVisible();
+    await page.locator("#btn-load-greenlight").click();
+    await expect(page.locator("#greenlight-site-card")).toBeVisible();
+    await expectSingleColumnFullWidth(
+      "#greenlight-scope-form",
+      ":scope > select, :scope > input, :scope > button",
+      "CtmsGreenlightSection scope form controls at 320x640"
+    );
+    await expectZeroDocOverflow("CtmsGreenlightSection loaded at 320x640");
+    await expectNoWcagViolations(page, "CtmsGreenlightSection at 320x640");
+
+    // 6. TicketCreateModal (.form-row flex groups stack vertically in 1 column)
+    await gotoHashRoute(page, "/tickets");
+    await expect(page.locator("#section-tickets-hub")).toBeVisible();
+    await page
+      .locator("#section-tickets-hub button", { hasText: "Log Issue" })
+      .click();
+    const ticketModal = page.locator(".ticket-create-modal");
+    await expect(ticketModal).toBeVisible();
+    await expectSingleColumnFullWidth(
+      ".ticket-create-modal .form-row",
+      ":scope > .form-group",
+      "TicketCreateModal .form-row at 320x640"
+    );
+    await expectZeroDocOverflow("TicketCreateModal open at 320x640");
+  });
 });

@@ -64,28 +64,28 @@
 
         <form
           v-if="!locked && canCorrect"
+          id="observation-correction-form"
           class="observation-correction"
           @submit.prevent="askReason"
         >
           <label for="observation-new-value">Corrected value</label>
-          <input
-            id="observation-new-value"
-            v-model="newValue"
-            type="text"
-            autocomplete="off"
-            :disabled="saving"
-            :aria-invalid="parseError !== null"
-            aria-describedby="observation-new-value-hint"
-          />
-          <span v-if="unit" data-testid="observation-unit">{{ unit }}</span>
-          <button
-            id="observation-save"
-            class="btn btn-primary"
-            type="submit"
-            :disabled="saving || !canSave"
-          >
-            {{ saving ? "Saving…" : "Save correction" }}
-          </button>
+          <div class="observation-input-row">
+            <input
+              id="observation-new-value"
+              v-model="newValue"
+              type="text"
+              autocomplete="off"
+              :disabled="saving"
+              :aria-invalid="parseError !== null"
+              aria-describedby="observation-new-value-hint"
+            />
+            <span
+              v-if="unit"
+              class="observation-unit-badge"
+              data-testid="observation-unit"
+              >{{ unit }}</span
+            >
+          </div>
           <p
             id="observation-new-value-hint"
             class="observation-hint"
@@ -183,6 +183,27 @@
             </tbody>
           </table>
         </div>
+        <ClinicalFormActionBar
+          v-if="!locked && canCorrect"
+          aria-label="Observation correction actions"
+          :status-hint="
+            parseError ??
+            (!canSave ? 'Enter a modified value to enable saving.' : '')
+          "
+          :status-tone="parseError ? 'gated' : 'muted'"
+        >
+          <button
+            id="observation-save"
+            class="btn btn-primary"
+            type="submit"
+            form="observation-correction-form"
+            :disabled="saving || !canSave"
+            @click.prevent="askReason"
+          >
+            {{ saving ? "Saving…" : "Save correction" }}
+            <Save :size="15" aria-hidden="true" />
+          </button>
+        </ClinicalFormActionBar>
       </template>
     </div>
 
@@ -200,6 +221,8 @@
 <script setup lang="ts">
 import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
 import type { RouteLocationRaw, Router } from "vue-router";
+import { ClinicalFormActionBar } from "ui";
+import { Save } from "lucide-vue-next";
 import ScopeLockControls, {
   type DirectScopeLockItem,
 } from "../components/canvas/ScopeLockControls.vue";
@@ -520,20 +543,63 @@ watch(() => props.observationRef, load);
 }
 .observation-summary {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 4px 16px;
+}
+.observation-summary dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
 .observation-correction {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 16px 0;
+  min-width: 0;
+}
+.observation-correction label {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.observation-input-row {
+  display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  align-items: center;
-  margin: 16px 0;
+  min-width: 0;
+}
+.observation-input-row input {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.observation-unit-badge {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-secondary);
 }
 .observation-hint {
-  flex-basis: 100%;
   margin: 0;
   color: var(--semantic-color-error-text-dark);
+}
+@media (max-width: 640px) {
+  .observation-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+  .observation-summary dt {
+    font-weight: 600;
+    margin-top: 6px;
+  }
+  .observation-input-row input {
+    flex: 1 1 100%;
+    width: 100%;
+  }
 }
 .observation-outcome {
   padding: 8px 12px;

@@ -44,24 +44,28 @@
         <div id="questionnaire-form-container">
           <!-- Dynamically compiled CDASH-inputs go here -->
         </div>
-        <div class="form-actions">
-          <button
-            id="btn-cancel-questionnaire"
-            type="button"
-            class="btn btn-secondary"
-            data-vue-bound="true"
-            @click="handleRequestCancel"
-          >
-            Cancel
-          </button>
+        <ClinicalFormActionBar aria-label="Questionnaire actions">
+          <template #secondary>
+            <button
+              id="btn-cancel-questionnaire"
+              type="button"
+              class="btn btn-secondary"
+              data-vue-bound="true"
+              @click="handleRequestCancel"
+            >
+              Cancel
+              <X :size="16" aria-hidden="true" />
+            </button>
+          </template>
           <button
             id="btn-submit-questionnaire"
             type="submit"
             class="btn btn-primary"
           >
             Sign and Submit
+            <CheckCircle2 :size="16" aria-hidden="true" />
           </button>
-        </div>
+        </ClinicalFormActionBar>
       </form>
     </div>
 
@@ -114,7 +118,8 @@
 
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalFormActionBar, useFocusTrap } from "ui";
+import { CheckCircle2, X } from "lucide-vue-next";
 
 import {
   confirmCancelQuestionnaire,
