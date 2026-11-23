@@ -60,6 +60,7 @@
             class="casebook-select"
             :disabled="casebookBusy"
           >
+            <option value="pdf">Certified PDF casebook (.pdf)</option>
             <option value="html">Printable HTML casebook</option>
             <option value="odm_xml">CDISC ODM v1.3.2 XML casebook</option>
             <option value="json">Structured JSON casebook</option>
