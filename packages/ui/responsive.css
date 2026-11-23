@@ -201,3 +201,26 @@
     max-width: 100vw !important;
   }
 }
+
+/* 8. Workspace Action Toolbars & Clinical Monospace Identifiers */
+.clinical-action-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs, 8px);
+  min-width: 0;
+}
+
+.clinical-mono-id {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.touch-hit-area {
+  min-height: var(--touch-hit-area-min, 44px);
+  min-width: var(--touch-hit-area-min, 44px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}

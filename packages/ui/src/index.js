@@ -7,12 +7,14 @@ import ClinicalDropzone from "./components/clinical/ClinicalDropzone.vue";
 import ClinicalFieldLayout from "./components/clinical/ClinicalFieldLayout.vue";
 import ClinicalFormField from "./components/clinical/ClinicalFormField.vue";
 import ClinicalIconButton from "./components/clinical/ClinicalIconButton.vue";
+import ClinicalIconRail from "./components/clinical/ClinicalIconRail.vue";
 import ClinicalInput from "./components/clinical/ClinicalInput.vue";
 import ClinicalLookupInput from "./components/clinical/ClinicalLookupInput.vue";
 import ClinicalModal from "./components/clinical/ClinicalModal.vue";
 import ClinicalQueryFlag from "./components/clinical/ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./components/clinical/ClinicalQueryPanel.vue";
 import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
+import ClinicalSplitWorkspace from "./components/clinical/ClinicalSplitWorkspace.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
 import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
 import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
@@ -35,6 +37,11 @@ import {
   resetDraftSourcesForTests,
   useSignOutGuard,
 } from "./composables/useSignOutGuard.js";
+import {
+  WORKSPACE_BREAKPOINTS,
+  resolveWorkspaceTierFromWidth,
+  useWorkspaceTier,
+} from "./composables/useWorkspaceTier.js";
 
 export {
   AiActionButton,
@@ -46,12 +53,14 @@ export {
   ClinicalFieldLayout,
   ClinicalFormField,
   ClinicalIconButton,
+  ClinicalIconRail,
   ClinicalInput,
   ClinicalLookupInput,
   ClinicalModal,
   ClinicalQueryFlag,
   ClinicalQueryPanel,
   ClinicalRadioGroup,
+  ClinicalSplitWorkspace,
   ConfidenceBadge,
   EmptyState,
   FileUploadModal,
@@ -59,15 +68,18 @@ export {
   ModalErrorAlert,
   PersonaSwitcher,
   SignOutConfirmModal,
+  WORKSPACE_BREAKPOINTS,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
   hasRegisteredUnsavedDrafts,
   registerDraftSource,
   resetDraftSourcesForTests,
+  resolveWorkspaceTierFromWidth,
   trapTabFocus,
   useAsyncRetry,
   useEscapeClose,
   useFocusTrap,
   useSignOutGuard,
+  useWorkspaceTier,
 };

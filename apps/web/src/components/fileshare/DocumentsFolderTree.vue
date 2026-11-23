@@ -3,7 +3,9 @@
   <div class="documents-tree-container">
     <div class="tree-header">
       <div class="tree-title-row">
-        <span class="tree-title-icon">🗂️</span>
+        <span class="tree-title-icon" aria-hidden="true">
+          <FolderTree :size="18" :stroke-width="1.75" aria-hidden="true" />
+        </span>
         <h3 class="tree-title">Clinical Document Tree</h3>
       </div>
       <div class="tree-search-bar">
@@ -52,7 +54,9 @@
         @click="selectGlobalRoot"
       >
         <div class="node-header">
-          <span class="folder-icon">📂</span>
+          <span class="folder-icon" aria-hidden="true">
+            <FolderOpen :size="15" :stroke-width="1.75" aria-hidden="true" />
+          </span>
           <span class="node-name font-bold">All Documents (Cross-Study)</span>
         </div>
       </div>
@@ -80,10 +84,23 @@
           tabindex="0"
           @click="clickStudy(study)"
         >
-          <span class="toggle-icon">{{
-            isExpanded(study.id) ? "▼" : "▶"
-          }}</span>
-          <span class="folder-icon">🏥</span>
+          <span class="toggle-icon" aria-hidden="true">
+            <ChevronDown
+              v-if="isExpanded(study.id)"
+              :size="13"
+              :stroke-width="1.75"
+              aria-hidden="true"
+            />
+            <ChevronRight
+              v-else
+              :size="13"
+              :stroke-width="1.75"
+              aria-hidden="true"
+            />
+          </span>
+          <span class="folder-icon" aria-hidden="true">
+            <Building2 :size="15" :stroke-width="1.75" aria-hidden="true" />
+          </span>
           <span class="study-code">[{{ study.code }}]</span>
           <span class="node-name" :title="study.title">{{ study.id }}</span>
         </div>
@@ -112,10 +129,23 @@
               tabindex="0"
               @click="clickSite(study, site)"
             >
-              <span class="toggle-icon">{{
-                isExpanded(study.id + "-" + site.id) ? "▼" : "▶"
-              }}</span>
-              <span class="folder-icon">📍</span>
+              <span class="toggle-icon" aria-hidden="true">
+                <ChevronDown
+                  v-if="isExpanded(study.id + '-' + site.id)"
+                  :size="13"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                <ChevronRight
+                  v-else
+                  :size="13"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+              </span>
+              <span class="folder-icon" aria-hidden="true">
+                <MapPin :size="14" :stroke-width="1.75" aria-hidden="true" />
+              </span>
               <span class="node-name">{{ site.name }}</span>
             </div>
 
@@ -143,10 +173,27 @@
                   tabindex="0"
                   @click="clickZone(zone)"
                 >
-                  <span class="toggle-icon">{{
-                    isExpanded(zone.id) ? "▼" : "▶"
-                  }}</span>
-                  <span class="folder-icon">📁</span>
+                  <span class="toggle-icon" aria-hidden="true">
+                    <ChevronDown
+                      v-if="isExpanded(zone.id)"
+                      :size="13"
+                      :stroke-width="1.75"
+                      aria-hidden="true"
+                    />
+                    <ChevronRight
+                      v-else
+                      :size="13"
+                      :stroke-width="1.75"
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <span class="folder-icon" aria-hidden="true">
+                    <Folder
+                      :size="14"
+                      :stroke-width="1.75"
+                      aria-hidden="true"
+                    />
+                  </span>
                   <span class="zone-label">Zone {{ zone.code }}:</span>
                   <span class="node-name">{{ zone.name }}</span>
                 </div>
@@ -175,10 +222,27 @@
                       tabindex="0"
                       @click="clickSection(sec)"
                     >
-                      <span class="toggle-icon">{{
-                        isExpanded(sec.id) ? "▼" : "▶"
-                      }}</span>
-                      <span class="folder-icon">📂</span>
+                      <span class="toggle-icon" aria-hidden="true">
+                        <ChevronDown
+                          v-if="isExpanded(sec.id)"
+                          :size="13"
+                          :stroke-width="1.75"
+                          aria-hidden="true"
+                        />
+                        <ChevronRight
+                          v-else
+                          :size="13"
+                          :stroke-width="1.75"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <span class="folder-icon" aria-hidden="true">
+                        <FolderOpen
+                          :size="14"
+                          :stroke-width="1.75"
+                          aria-hidden="true"
+                        />
+                      </span>
                       <span class="section-label">S{{ sec.code }}:</span>
                       <span class="node-name">{{ sec.name }}</span>
                     </div>
@@ -203,7 +267,13 @@
                         @click="clickFolder(folder)"
                       >
                         <div class="node-header folder-header">
-                          <span class="folder-icon">📄</span>
+                          <span class="folder-icon" aria-hidden="true">
+                            <FileText
+                              :size="14"
+                              :stroke-width="1.75"
+                              aria-hidden="true"
+                            />
+                          </span>
                           <span class="folder-code">[{{ folder.code }}]</span>
                           <span class="node-name">{{ folder.name }}</span>
                         </div>
@@ -222,6 +292,16 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import {
+  Building2,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Folder,
+  FolderOpen,
+  FolderTree,
+  MapPin,
+} from "lucide-vue-next";
 
 const props = defineProps({
   studiesTree: {
@@ -411,8 +491,9 @@ function handleTreeKeyDown(e) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
+  min-width: 0;
   background-color: var(--semantic-color-surface);
-  border-right: 1px solid var(--border);
   box-sizing: border-box;
 }
 
@@ -432,7 +513,9 @@ function handleTreeKeyDown(e) {
 }
 
 .tree-title-icon {
-  font-size: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  color: var(--primary);
 }
 
 .tree-title {
@@ -513,20 +596,24 @@ function handleTreeKeyDown(e) {
 }
 
 .toggle-icon {
-  font-size: 0.65rem;
-  width: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
   color: var(--semantic-color-text-secondary);
   flex-shrink: 0;
 }
 
 .folder-icon {
+  display: inline-flex;
+  align-items: center;
   margin-right: 6px;
-  font-size: 0.95rem;
+  color: var(--semantic-color-text-secondary);
   flex-shrink: 0;
 }
 
 .study-code {
-  font-family: monospace;
+  font-family: var(--font-mono, monospace);
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--semantic-color-primary);
@@ -541,7 +628,7 @@ function handleTreeKeyDown(e) {
 }
 
 .folder-code {
-  font-family: monospace;
+  font-family: var(--font-mono, monospace);
   font-size: 0.72rem;
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-interactive-primary);

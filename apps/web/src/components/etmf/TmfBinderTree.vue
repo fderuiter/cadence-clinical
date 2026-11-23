@@ -9,11 +9,9 @@
         :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
         @click="exportFullBinder"
       >
-        <span aria-hidden="true">📦</span> Export Complete Study Binder<span
-          class="sr-only"
-        >
-          (eTMF)</span
-        >
+        <Package :size="15" :stroke-width="1.75" aria-hidden="true" />
+        <span>Export Complete Study Binder</span
+        ><span class="sr-only"> (eTMF)</span>
       </button>
       <p
         v-if="!canExport"
@@ -75,8 +73,23 @@
           @click="clickZone(zone)"
           @focus="activeFocusedNodeId = zone.id"
         >
-          <span class="toggle-icon">{{ isExpanded(zone.id) ? "▼" : "▶" }}</span>
-          <span class="folder-icon">📂</span>
+          <span class="toggle-icon" aria-hidden="true">
+            <ChevronDown
+              v-if="isExpanded(zone.id)"
+              :size="14"
+              :stroke-width="1.75"
+              aria-hidden="true"
+            />
+            <ChevronRight
+              v-else
+              :size="14"
+              :stroke-width="1.75"
+              aria-hidden="true"
+            />
+          </span>
+          <span class="folder-icon" aria-hidden="true">
+            <FolderOpen :size="16" :stroke-width="1.75" aria-hidden="true" />
+          </span>
           <span class="zone-label">Zone {{ zone.code }}:</span>
           <span class="node-name">{{ zone.name }}</span>
           <span
@@ -95,7 +108,7 @@
             :aria-label="'Export Zone ' + zone.code + ' documents'"
             @click.stop="exportZone(zone)"
           >
-            📥
+            <Download :size="14" :stroke-width="1.75" aria-hidden="true" />
           </button>
         </div>
 
@@ -122,10 +135,23 @@
               @click="clickSection(section)"
               @focus="activeFocusedNodeId = section.id"
             >
-              <span class="toggle-icon">{{
-                isExpanded(section.id) ? "▼" : "▶"
-              }}</span>
-              <span class="folder-icon">📁</span>
+              <span class="toggle-icon" aria-hidden="true">
+                <ChevronDown
+                  v-if="isExpanded(section.id)"
+                  :size="14"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                <ChevronRight
+                  v-else
+                  :size="14"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+              </span>
+              <span class="folder-icon" aria-hidden="true">
+                <Folder :size="15" :stroke-width="1.75" aria-hidden="true" />
+              </span>
               <span class="section-label">Section {{ section.code }}:</span>
               <span class="node-name">{{ section.name }}</span>
               <span
@@ -146,7 +172,7 @@
                 :aria-label="'Export Section ' + section.code + ' documents'"
                 @click.stop="exportSection(section)"
               >
-                📥
+                <Download :size="14" :stroke-width="1.75" aria-hidden="true" />
               </button>
             </div>
 
@@ -170,7 +196,13 @@
                 @focus="activeFocusedNodeId = artifact.id"
               >
                 <div class="node-header artifact-header">
-                  <span class="file-icon">📄</span>
+                  <span class="file-icon" aria-hidden="true">
+                    <FileText
+                      :size="14"
+                      :stroke-width="1.75"
+                      aria-hidden="true"
+                    />
+                  </span>
                   <span class="artifact-code">[{{ artifact.code }}]</span>
                   <span class="node-name">{{ artifact.name }}</span>
                   <span
@@ -191,6 +223,15 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
+import {
+  ChevronDown,
+  ChevronRight,
+  Download,
+  FileText,
+  Folder,
+  FolderOpen,
+  Package,
+} from "lucide-vue-next";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";
 import { useToastStore } from "../../stores/toasts.js";
@@ -565,9 +606,10 @@ function getDocumentCount(node) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
+  min-width: 0;
   background-color: var(--semantic-color-surface);
-  border-right: 1px solid var(--semantic-color-border);
-  padding: 16px;
+  padding: 14px;
   box-sizing: border-box;
 }
 
@@ -577,6 +619,7 @@ function getDocumentCount(node) {
 
 .btn-export-full-binder {
   width: 100%;
+  min-height: var(--touch-hit-area-min, 44px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -600,16 +643,18 @@ function getDocumentCount(node) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  min-height: 24px;
+  min-width: var(--touch-hit-area-min, 44px);
+  min-height: var(--touch-hit-area-min, 44px);
+  margin: -6px -6px -6px 2px;
   background: transparent;
   border: none;
+  color: var(--semantic-color-text-secondary);
   font-size: 0.85rem;
   cursor: pointer;
-  opacity: 0.6;
-  padding: 2px 4px;
+  opacity: 0.75;
+  padding: 4px;
   border-radius: 4px;
-  margin-left: 4px;
+  flex-shrink: 0;
 }
 
 .btn-node-export:hover {
@@ -682,15 +727,21 @@ function getDocumentCount(node) {
 }
 
 .toggle-icon {
-  font-size: 0.7rem;
-  width: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
   color: var(--semantic-color-text-secondary);
+  flex-shrink: 0;
 }
 
 .folder-icon,
 .file-icon {
+  display: inline-flex;
+  align-items: center;
   margin-right: 8px;
-  font-size: 1.1rem;
+  color: var(--semantic-color-text-secondary);
+  flex-shrink: 0;
 }
 
 .zone-label {
@@ -706,8 +757,8 @@ function getDocumentCount(node) {
 }
 
 .artifact-code {
-  font-family: monospace;
-  font-size: 0.8rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
   color: var(--semantic-color-interactive-primary);
   background-color: var(--semantic-color-info-bg);
   padding: 2px 4px;

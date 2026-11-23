@@ -1,6 +1,9 @@
 <!-- apps/web/src/views/DocumentManagerView.vue -->
 <template>
-  <div class="document-manager-layout">
+  <div
+    class="document-manager-layout"
+    :class="{ 'document-manager-embedded': props.embedded }"
+  >
     <template v-if="!canRead">
       <div
         id="etmf-read-role-banner"
@@ -13,122 +16,172 @@
     </template>
 
     <template v-else>
-      <aside class="sidebar-binder-tree">
-        <TmfBinderTree
-          :tree="etmfStore.binderTree"
-          @select-artifact="handleArtifactSelect"
-        />
-      </aside>
-      <main class="document-content-area">
-        <div class="etmf-workspace-bar">
-          <div class="etmf-tab-group">
-            <button
-              id="btn-etmf-tab-binder"
-              type="button"
-              class="etmf-tab-btn"
-              :class="{ active: activeWorkspaceTab === 'binder' }"
-              @click="activeWorkspaceTab = 'binder'"
-            >
-              📁 Binder Documents
-            </button>
-            <button
-              id="btn-etmf-tab-qc-queue"
-              type="button"
-              class="etmf-tab-btn"
-              :class="{ active: activeWorkspaceTab === 'qc-queue' }"
-              @click="activeWorkspaceTab = 'qc-queue'"
-            >
-              🛡️ Clinical QC Queue
-            </button>
-          </div>
+      <ClinicalSplitWorkspace
+        v-model:sidebar-open="isBinderDrawerOpen"
+        class="etmf-split-workspace"
+        :embedded="props.embedded"
+        sidebar-class="sidebar-binder-tree"
+        sidebar-title="Study Binder Tree"
+        sidebar-aria-label="TMF Binder Folder Tree"
+        main-tag="div"
+        main-class="document-content-area"
+        main-role="region"
+        main-aria-label="Regulated documents workspace"
+      >
+        <template #sidebar="{ close }">
+          <TmfBinderTree
+            :tree="etmfStore.binderTree"
+            @select-artifact="
+              (code) => {
+                handleArtifactSelect(code);
+                close();
+              }
+            "
+          />
+        </template>
 
-          <!-- Standalone /etmf Study & Site Scope Selector -->
-          <form
-            v-if="!props.studyId"
-            id="etmf-scope-bar"
-            class="etmf-scope-form"
-            aria-label="eTMF study and site scope"
-            @submit.prevent="applyStandaloneScope"
-          >
-            <label for="etmf-study-select" class="etmf-scope-label"
-              >Study</label
-            >
-            <input
-              id="etmf-study-select"
-              v-model="standaloneStudyInput"
-              type="text"
-              class="etmf-scope-input"
-              autocomplete="off"
-              placeholder="e.g. CADENCE-101"
-              :list="studyOptions.length ? 'etmf-studies-datalist' : undefined"
-              @change="applyStandaloneScope"
-            />
-            <datalist v-if="studyOptions.length" id="etmf-studies-datalist">
-              <option
-                v-for="opt in studyOptions"
-                :key="opt.code"
-                :value="opt.code"
+        <template #default="{ dockSidebarInline, openSidebar }">
+          <div class="etmf-workspace-bar clinical-action-toolbar">
+            <div class="etmf-tab-group">
+              <button
+                v-if="!dockSidebarInline"
+                id="btn-etmf-toggle-binder-tree"
+                type="button"
+                class="etmf-tab-btn etmf-binder-trigger-btn"
+                @click="openSidebar()"
               >
-                {{ opt.label }}
-              </option>
-            </datalist>
+                <FolderTree
+                  :size="15"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                <span>Binder Tree</span>
+              </button>
+              <button
+                id="btn-etmf-tab-binder"
+                type="button"
+                class="etmf-tab-btn"
+                :class="{ active: activeWorkspaceTab === 'binder' }"
+                @click="activeWorkspaceTab = 'binder'"
+              >
+                <FolderOpen
+                  :size="15"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                <span>Binder Documents</span>
+              </button>
+              <button
+                id="btn-etmf-tab-qc-queue"
+                type="button"
+                class="etmf-tab-btn"
+                :class="{ active: activeWorkspaceTab === 'qc-queue' }"
+                @click="activeWorkspaceTab = 'qc-queue'"
+              >
+                <ShieldCheck
+                  :size="15"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                <span>Clinical QC Queue</span>
+              </button>
+            </div>
 
-            <label for="etmf-site-select" class="etmf-scope-label">Site</label>
-            <input
-              id="etmf-site-select"
-              v-model="standaloneSiteInput"
-              type="text"
-              class="etmf-scope-input etmf-scope-site-input"
-              autocomplete="off"
-              placeholder="All assigned sites"
-              :list="siteOptions.length ? 'etmf-sites-datalist' : undefined"
-              @change="applyStandaloneScope"
-            />
-            <datalist v-if="siteOptions.length" id="etmf-sites-datalist">
-              <option v-for="site in siteOptions" :key="site" :value="site" />
-            </datalist>
-
-            <button
-              id="btn-etmf-apply-scope"
-              type="submit"
-              class="btn btn-secondary etmf-scope-apply-btn"
+            <!-- Standalone /etmf Study & Site Scope Selector -->
+            <form
+              v-if="!props.studyId"
+              id="etmf-scope-bar"
+              class="etmf-scope-form"
+              aria-label="eTMF study and site scope"
+              @submit.prevent="applyStandaloneScope"
             >
-              Apply Scope
-            </button>
-          </form>
+              <label for="etmf-study-select" class="etmf-scope-label"
+                >Study</label
+              >
+              <input
+                id="etmf-study-select"
+                v-model="standaloneStudyInput"
+                type="text"
+                class="etmf-scope-input clinical-mono-id"
+                autocomplete="off"
+                placeholder="e.g. CADENCE-101"
+                :list="
+                  studyOptions.length ? 'etmf-studies-datalist' : undefined
+                "
+                @change="applyStandaloneScope"
+              />
+              <datalist v-if="studyOptions.length" id="etmf-studies-datalist">
+                <option
+                  v-for="opt in studyOptions"
+                  :key="opt.code"
+                  :value="opt.code"
+                >
+                  {{ opt.label }}
+                </option>
+              </datalist>
 
-          <div v-else class="etmf-study-chip">
-            Study: <strong>{{ effectiveStudyId }}</strong>
-            <template v-if="effectiveSiteId">
-              · Site: <strong>{{ effectiveSiteId }}</strong>
-            </template>
+              <label for="etmf-site-select" class="etmf-scope-label"
+                >Site</label
+              >
+              <input
+                id="etmf-site-select"
+                v-model="standaloneSiteInput"
+                type="text"
+                class="etmf-scope-input etmf-scope-site-input clinical-mono-id"
+                autocomplete="off"
+                placeholder="All assigned sites"
+                :list="siteOptions.length ? 'etmf-sites-datalist' : undefined"
+                @change="applyStandaloneScope"
+              />
+              <datalist v-if="siteOptions.length" id="etmf-sites-datalist">
+                <option v-for="site in siteOptions" :key="site" :value="site" />
+              </datalist>
+
+              <button
+                id="btn-etmf-apply-scope"
+                type="submit"
+                class="btn btn-secondary etmf-scope-apply-btn"
+              >
+                Apply Scope
+              </button>
+            </form>
+
+            <div v-else class="etmf-study-chip">
+              Study:
+              <strong class="clinical-mono-id">{{ effectiveStudyId }}</strong>
+              <template v-if="effectiveSiteId">
+                · Site:
+                <strong class="clinical-mono-id">{{ effectiveSiteId }}</strong>
+              </template>
+            </div>
           </div>
-        </div>
 
-        <div
-          v-if="etmfStore.scopeForbiddenGuidance"
-          id="etmf-scope-forbidden-banner"
-          class="etmf-scope-guidance-banner"
-          role="alert"
-        >
-          <strong>Study or Site Assignment Required:</strong>
-          <span>{{ etmfStore.scopeForbiddenGuidance }}</span>
-        </div>
+          <div
+            v-if="etmfStore.scopeForbiddenGuidance"
+            id="etmf-scope-forbidden-banner"
+            class="etmf-scope-guidance-banner"
+            role="alert"
+          >
+            <strong>Study or Site Assignment Required:</strong>
+            <span>{{ etmfStore.scopeForbiddenGuidance }}</span>
+          </div>
 
-        <DocumentGrid
-          v-if="activeWorkspaceTab === 'binder'"
-          :documents="etmfStore.documents"
-          @preview="handlePreviewDocument"
-          @inspect="handleInspectDocument"
-        />
-        <CraQcQueue v-else />
-      </main>
+          <DocumentGrid
+            v-if="activeWorkspaceTab === 'binder'"
+            :documents="etmfStore.documents"
+            @preview="handlePreviewDocument"
+            @inspect="handleInspectDocument"
+          />
+          <CraQcQueue v-else />
+        </template>
+      </ClinicalSplitWorkspace>
     </template>
 
     <!-- Document Metadata Inspection Drawer -->
     <ClinicalDrawer
       :is-open="Boolean(inspectedDoc)"
       :teleport="false"
+      :mobile-bottom-sheet="true"
       :dismissible="!reviewingQc && !submittingDraftQc"
       overlay-class="metadata-drawer-overlay"
       panel-class="metadata-drawer"
@@ -137,8 +190,8 @@
     >
       <template #header="{ titleId, close }">
         <div v-if="inspectedDoc" class="drawer-header">
-          <div style="display: flex; align-items: center; gap: 8px">
-            <span style="font-size: 20px" aria-hidden="true">📋</span>
+          <div class="drawer-header-title-group">
+            <ClipboardList :size="20" :stroke-width="1.75" aria-hidden="true" />
             <div>
               <h3 :id="titleId" style="margin: 0; font-size: 16px">
                 Document Metadata &amp; 21 CFR Part 11 Manifest
@@ -157,12 +210,11 @@
           <button
             type="button"
             class="btn btn-secondary btn-close-drawer"
-            style="padding: 4px 8px; font-size: 12px; cursor: pointer"
             aria-label="Close inspection drawer"
             :disabled="reviewingQc || submittingDraftQc"
             @click="close"
           >
-            ✕
+            <X :size="16" :stroke-width="1.75" aria-hidden="true" />
           </button>
         </div>
       </template>
@@ -268,18 +320,26 @@
         <div class="drawer-section">
           <h4 class="section-heading">HIPAA / GDPR De-identification</h4>
           <div class="redaction-info">
-            <span v-if="inspectedDoc.is_redacted" class="badge status-approved">
-              🛡️ De-Identified Copy (PHI/PII Scrubber Applied)
+            <span
+              v-if="inspectedDoc.is_redacted"
+              class="badge status-approved badge-with-icon"
+            >
+              <ShieldCheck :size="13" :stroke-width="1.75" aria-hidden="true" />
+              <span>De-Identified Copy (PHI/PII Scrubber Applied)</span>
             </span>
-            <span v-else class="badge status-draft">
-              🔒 Regulated Source Original
+            <span v-else class="badge status-draft badge-with-icon">
+              <Lock :size="13" :stroke-width="1.75" aria-hidden="true" />
+              <span>Regulated Source Original</span>
             </span>
           </div>
         </div>
 
         <!-- Multimodal DIA Document Intelligence & Lifecycle Transitions -->
         <div class="drawer-section">
-          <h4 class="section-heading">🤖 DIA Document Intelligence</h4>
+          <h4 class="section-heading section-heading-icon">
+            <Bot :size="14" :stroke-width="1.75" aria-hidden="true" />
+            <span>DIA Document Intelligence</span>
+          </h4>
           <div class="intelligence-card">
             <div
               style="
@@ -363,13 +423,7 @@
               <button
                 id="btn-submit-technical-qc"
                 type="button"
-                class="btn btn-secondary"
-                style="
-                  width: 100%;
-                  padding: 6px 10px;
-                  font-size: 11px;
-                  cursor: pointer;
-                "
+                class="btn btn-secondary qc-action-btn"
                 :disabled="
                   !canStage ||
                   submittingDraftQc ||
@@ -378,11 +432,17 @@
                 :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
                 @click="handleSubmitDraftForQc(inspectedDoc)"
               >
-                {{
+                <Upload
+                  v-if="!submittingDraftQc"
+                  :size="14"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                <span>{{
                   submittingDraftQc
                     ? "Submitting for Technical QC..."
-                    : "📤 Submit for Technical QC"
-                }}
+                    : "Submit for Technical QC"
+                }}</span>
               </button>
             </div>
 
@@ -420,13 +480,7 @@
               <button
                 id="btn-accept-ai-classification"
                 type="button"
-                class="btn btn-secondary"
-                style="
-                  width: 100%;
-                  padding: 6px 10px;
-                  font-size: 11px;
-                  cursor: pointer;
-                "
+                class="btn btn-secondary qc-action-btn"
                 :disabled="
                   !canReviewQc ||
                   reviewingQc ||
@@ -435,11 +489,17 @@
                 :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
                 @click="handleAcceptClassification(inspectedDoc)"
               >
-                {{
+                <Check
+                  v-if="!reviewingQc"
+                  :size="14"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                <span>{{
                   reviewingQc
                     ? "Submitting Clinical QC..."
-                    : "✓ Accept AI Classification"
-                }}
+                    : "Accept AI Classification"
+                }}</span>
               </button>
             </div>
           </div>
@@ -451,11 +511,11 @@
           v-if="inspectedDoc"
           type="button"
           class="btn btn-primary btn-preview-from-drawer"
-          style="padding: 8px 16px; font-size: 12px; cursor: pointer"
           :disabled="reviewingQc || submittingDraftQc"
           @click="handlePreviewFromDrawer(inspectedDoc)"
         >
-          👁️ Open Secure PDF Preview
+          <Eye :size="15" :stroke-width="1.75" aria-hidden="true" />
+          <span>Open Secure PDF Preview</span>
         </button>
       </template>
     </ClinicalDrawer>
@@ -473,7 +533,19 @@
 </template>
 
 <script setup>
-import { ClinicalDrawer } from "ui";
+import { ClinicalDrawer, ClinicalSplitWorkspace } from "ui";
+import {
+  Bot,
+  Check,
+  ClipboardList,
+  Eye,
+  FolderOpen,
+  FolderTree,
+  Lock,
+  ShieldCheck,
+  Upload,
+  X,
+} from "lucide-vue-next";
 import { computed, onMounted, ref, watch } from "vue";
 import * as VueRouter from "vue-router";
 import { kernelApi } from "../api/kernelApi";
@@ -508,6 +580,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  embedded: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const authStore = useAuthStore();
@@ -519,6 +595,7 @@ const router =
   typeof VueRouter.useRouter === "function" ? VueRouter.useRouter() : null;
 
 const activeWorkspaceTab = ref("binder");
+const isBinderDrawerOpen = ref(false);
 const selectedDoc = ref(null);
 const inspectedDoc = ref(null);
 const qcAcceptReason = ref(
@@ -727,13 +804,13 @@ function getSigStatusText(doc) {
   const report = getIntelligenceReport(doc);
   if (report && report.signature_analysis) {
     const status = report.signature_analysis.status;
-    if (status === "FULLY_SIGNED") return "✓ Fully Signed (Verified)";
-    if (status === "PARTIALLY_SIGNED") return "⚠️ Partially Signed";
-    if (status === "UNSIGNED") return "❌ Unsigned";
-    if (status === "SIGNATURE_NOT_REQUIRED") return "⚪ Not Required";
+    if (status === "FULLY_SIGNED") return "Fully Signed (Verified)";
+    if (status === "PARTIALLY_SIGNED") return "Partially Signed";
+    if (status === "UNSIGNED") return "Unsigned";
+    if (status === "SIGNATURE_NOT_REQUIRED") return "Not Required";
   }
   if (doc.signer || doc.signing_timestamp) {
-    return "✓ Signed";
+    return "Signed";
   }
   return "Unsigned";
 }
@@ -934,18 +1011,31 @@ defineExpose({
 <style scoped>
 .document-manager-layout {
   display: flex;
-  height: calc(100vh - 120px);
-  gap: 20px;
+  flex-direction: column;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: calc(100dvh - var(--shell-header-height, 48px));
   background-color: var(--semantic-color-surface-muted);
-  margin: -20px;
-  padding: 20px;
-  overflow: hidden;
   position: relative;
+  box-sizing: border-box;
+}
+
+.document-manager-layout.document-manager-embedded {
+  min-height: 0;
+  background-color: transparent;
+}
+
+.etmf-split-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
 }
 
 .etmf-role-restricted-card {
   flex: 1;
   align-self: flex-start;
+  margin: 16px;
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-warning-border);
   border-left: 4px solid var(--semantic-color-warning-border-strong);
@@ -965,21 +1055,16 @@ defineExpose({
   color: var(--semantic-color-text-secondary);
 }
 
-.sidebar-binder-tree {
-  width: 340px;
-  min-width: 300px;
+:deep(.sidebar-binder-tree) {
+  width: var(--shell-sidebar-width, 280px);
+  min-width: var(--shell-sidebar-width, 280px);
   background-color: var(--semantic-color-surface);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.document-content-area {
-  flex: 1;
+:deep(.document-content-area) {
+  flex: 1 1 auto;
+  min-width: 0;
   background-color: var(--semantic-color-surface);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
 }
@@ -989,10 +1074,11 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface-muted);
+  min-width: 0;
 }
 
 .etmf-scope-form {
@@ -1000,6 +1086,8 @@ defineExpose({
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .etmf-scope-label {
@@ -1009,24 +1097,45 @@ defineExpose({
 }
 
 .etmf-scope-input {
-  padding: 5px 10px;
+  padding: 6px 10px;
+  min-height: 36px;
   font-size: 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  min-width: 140px;
+  min-width: 0;
+  width: 150px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .etmf-scope-site-input {
-  min-width: 125px;
+  width: 135px;
 }
 
 .etmf-scope-apply-btn {
-  padding: 5px 10px;
+  min-height: var(--touch-hit-area-min, 44px);
+  padding: 6px 12px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .etmf-workspace-bar {
+    padding: 10px 12px;
+  }
+
+  .etmf-scope-form {
+    width: 100%;
+  }
+
+  .etmf-scope-input,
+  .etmf-scope-site-input {
+    flex: 1 1 120px;
+    width: auto;
+  }
 }
 
 .etmf-scope-guidance-banner {
@@ -1045,10 +1154,16 @@ defineExpose({
 
 .etmf-tab-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
 }
 
 .etmf-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--touch-hit-area-min, 44px);
   padding: 6px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -1123,6 +1238,48 @@ defineExpose({
   touch-action: pan-y;
 }
 
+.drawer-header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--semantic-color-text);
+}
+
+.badge-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.section-heading-icon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qc-action-btn {
+  width: 100%;
+  min-height: var(--touch-hit-area-min, 44px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btn-preview-from-drawer {
+  min-height: var(--touch-hit-area-min, 44px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .metadata-drawer {
   width: var(
     --semantic-drawer-width-sm,
@@ -1130,7 +1287,6 @@ defineExpose({
   );
   max-width: 100vw;
   background: var(--semantic-color-surface);
-  height: 100%;
   display: flex;
   flex-direction: column;
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);

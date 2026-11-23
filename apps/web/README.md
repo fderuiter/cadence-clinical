@@ -66,7 +66,7 @@ Run from the repository root with pnpm (the workspace is defined in `pnpm-worksp
 
 ## Dependencies
 
-- Runtime: `vue`, `vue-router`, `pinia`, `keycloak-js`, `openapi-fetch`, `hls.js`, `vuedraggable`, and the workspace packages [ui](../../packages/ui/README.md) and [usdm-schemas](../../packages/usdm-schemas/README.md).
+- Runtime: `vue`, `vue-router`, `pinia`, `keycloak-js`, `lucide-vue-next`, `openapi-fetch`, `hls.js`, `vuedraggable`, and the workspace packages [ui](../../packages/ui/README.md) and [usdm-schemas](../../packages/usdm-schemas/README.md).
 - Development: Vite, Vitest, Playwright with `@axe-core/playwright`, MSW, `openapi-typescript`, TypeScript.
 
 ## Running against the backend

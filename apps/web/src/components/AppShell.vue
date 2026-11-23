@@ -5,14 +5,23 @@
   >
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
-    <header ref="headerRef" class="app-header">
+    <header
+      ref="headerRef"
+      class="app-header"
+      :class="{ 'has-study-context': isStudyContextRoute }"
+    >
       <div class="header-left">
         <router-link
           :to="authStore.isAuthenticated ? studiesPath : '/login'"
           class="brand-link"
         >
-          <span class="brand-mark" aria-hidden="true">◆</span>
-          <div class="header-title-area">
+          <span class="brand-mark" aria-hidden="true">
+            <Activity :size="18" :stroke-width="1.75" aria-hidden="true" />
+          </span>
+          <div
+            class="header-title-area"
+            :class="{ 'compact-on-study-mobile': isStudyContextRoute }"
+          >
             <h1>Cadence Clinical</h1>
           </div>
         </router-link>
@@ -74,6 +83,12 @@
             Knowledge
           </router-link>
         </nav>
+
+        <div
+          id="shell-study-context"
+          ref="shellStudyContextRef"
+          class="shell-study-context"
+        ></div>
       </div>
 
       <div class="header-controls">
@@ -82,7 +97,7 @@
             v-if="authStore.activePlanBadge"
             id="shell-plan-badge"
             to="/plans"
-            class="plan-status-badge"
+            class="plan-status-badge shell-desktop-only"
             :class="{
               'is-expired': authStore.isTrialExpired,
               'is-trial': authStore.subscriptionStatus === 'Trialing',
@@ -100,13 +115,14 @@
             aria-keyshortcuts="Control+K Meta+K"
             @click="isCommandPaletteOpen = true"
           >
+            <Search :size="15" :stroke-width="1.75" aria-hidden="true" />
             <span class="palette-trigger-text">Search</span>
-            <kbd class="palette-kbd" aria-hidden="true">⌘K</kbd>
+            <kbd class="palette-kbd" aria-hidden="true">Ctrl+K</kbd>
           </button>
 
           <div
             v-if="availablePersonas.length > 0"
-            class="persona-switcher-wrapper"
+            class="persona-switcher-wrapper shell-desktop-only"
           >
             <label for="persona-select" class="persona-label">View</label>
             <select
@@ -121,7 +137,7 @@
                 :key="persona.key"
                 :value="persona.key"
               >
-                {{ persona.label }}
+                {{ formatPersonaLabel(persona.label) }}
               </option>
             </select>
           </div>
@@ -130,11 +146,12 @@
             v-if="onboardingStore.totalTasksCount > 0"
             id="btn-onboarding-checklist-trigger"
             type="button"
-            class="shell-control-btn"
+            class="shell-control-btn shell-desktop-only"
             title="Open workspace orientation and setup checklist"
             @click="onboardingStore.toggleDrawer()"
           >
-            <span>Orientation</span>
+            <ListChecks :size="15" :stroke-width="1.75" aria-hidden="true" />
+            <span class="shell-btn-label">Orientation</span>
             <span class="setup-progress-pill">
               {{ onboardingStore.completedTasksCount }}/{{
                 onboardingStore.totalTasksCount
@@ -145,25 +162,30 @@
           <button
             id="btn-contextual-help-trigger"
             type="button"
-            class="shell-control-btn"
+            class="shell-control-btn shell-tablet-up"
             :aria-expanded="knowledgeStore.isOpen"
-            aria-label="Help & SOPs — Open contextual help and SOP guidance"
+            title="Open contextual help and SOP guidance"
             @click="knowledgeStore.toggleDrawer()"
           >
-            Help &amp; SOPs
+            <HelpCircle :size="15" :stroke-width="1.75" aria-hidden="true" />
+            <span class="shell-btn-label">Help &amp; SOPs</span>
+            <span class="sr-only">
+              — Open contextual help and SOP guidance
+            </span>
           </button>
 
-          <div class="user-session-controls">
+          <div class="user-session-controls shell-tablet-up">
             <span class="user-badge">
               {{ authStore.identity?.username || "Signed in" }}
             </span>
             <button
               id="btn-logout"
               type="button"
-              class="btn btn-sm btn-secondary"
+              class="shell-control-btn shell-logout-btn"
               @click="handleLogout"
             >
-              Sign out
+              <LogOut :size="15" :stroke-width="1.75" aria-hidden="true" />
+              <span class="logout-btn-label">Sign out</span>
             </button>
           </div>
         </template>
@@ -180,7 +202,7 @@
             v-if="!authStore.isDemoMode"
             id="btn-register"
             type="button"
-            class="btn btn-sm btn-secondary"
+            class="btn btn-sm btn-secondary shell-public-btn"
             @click="handleRegister"
           >
             Start trial
@@ -188,7 +210,7 @@
           <button
             id="btn-login"
             type="button"
-            class="btn btn-sm btn-primary"
+            class="btn btn-sm btn-primary shell-public-btn"
             @click="handleLogin"
           >
             Sign in
@@ -205,7 +227,13 @@
           :aria-expanded="isMobileMenuOpen ? 'true' : 'false'"
           @click="isMobileMenuOpen = !isMobileMenuOpen"
         >
-          ☰
+          <X
+            v-if="isMobileMenuOpen"
+            :size="18"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <Menu v-else :size="18" :stroke-width="1.75" aria-hidden="true" />
         </button>
       </div>
 
@@ -216,46 +244,91 @@
         :class="{ 'is-open': isMobileMenuOpen }"
         aria-label="Mobile navigation"
       >
-        <router-link
-          v-if="showStudiesNav"
-          :to="studiesPath"
-          class="mobile-nav-link"
-          @click="isMobileMenuOpen = false"
-        >
-          Studies
-        </router-link>
-        <router-link
-          v-if="showDataCollectionNav"
-          :to="dataCollectionPath"
-          class="mobile-nav-link"
-          @click="isMobileMenuOpen = false"
-        >
-          Data collection
-        </router-link>
-        <router-link
-          v-if="siteReadinessPath"
-          :to="siteReadinessPath"
-          class="mobile-nav-link"
-          @click="isMobileMenuOpen = false"
-        >
-          Site readiness
-        </router-link>
-        <router-link
-          v-if="showSupportNav"
-          to="/tickets"
-          class="mobile-nav-link"
-          @click="isMobileMenuOpen = false"
-        >
-          Support
-        </router-link>
-        <router-link
-          v-if="showKnowledgeNav"
-          to="/knowledge"
-          class="mobile-nav-link"
-          @click="isMobileMenuOpen = false"
-        >
-          Knowledge
-        </router-link>
+        <div class="mobile-nav-links">
+          <router-link
+            v-if="showStudiesNav"
+            :to="studiesPath"
+            class="mobile-nav-link"
+            @click="isMobileMenuOpen = false"
+          >
+            Studies
+          </router-link>
+          <router-link
+            v-if="showDataCollectionNav"
+            :to="dataCollectionPath"
+            class="mobile-nav-link"
+            @click="isMobileMenuOpen = false"
+          >
+            Data collection
+          </router-link>
+          <router-link
+            v-if="siteReadinessPath"
+            :to="siteReadinessPath"
+            class="mobile-nav-link"
+            @click="isMobileMenuOpen = false"
+          >
+            Site readiness
+          </router-link>
+          <router-link
+            v-if="showSupportNav"
+            to="/tickets"
+            class="mobile-nav-link"
+            @click="isMobileMenuOpen = false"
+          >
+            Support
+          </router-link>
+          <router-link
+            v-if="showKnowledgeNav"
+            to="/knowledge"
+            class="mobile-nav-link"
+            @click="isMobileMenuOpen = false"
+          >
+            Knowledge
+          </router-link>
+        </div>
+
+        <div class="mobile-nav-utilities">
+          <button
+            type="button"
+            class="mobile-utility-btn"
+            @click="
+              isMobileMenuOpen = false;
+              knowledgeStore.toggleDrawer();
+            "
+          >
+            <HelpCircle :size="16" :stroke-width="1.75" aria-hidden="true" />
+            <span>Help &amp; SOPs</span>
+          </button>
+          <button
+            v-if="onboardingStore.totalTasksCount > 0"
+            type="button"
+            class="mobile-utility-btn"
+            @click="
+              isMobileMenuOpen = false;
+              onboardingStore.toggleDrawer();
+            "
+          >
+            <ListChecks :size="16" :stroke-width="1.75" aria-hidden="true" />
+            <span>
+              Orientation ({{ onboardingStore.completedTasksCount }}/{{
+                onboardingStore.totalTasksCount
+              }})
+            </span>
+          </button>
+          <button
+            type="button"
+            class="mobile-utility-btn"
+            @click="
+              isMobileMenuOpen = false;
+              handleLogout();
+            "
+          >
+            <LogOut :size="16" :stroke-width="1.75" aria-hidden="true" />
+            <span>
+              Sign out ({{ authStore.identity?.username || "Signed in" }})
+            </span>
+          </button>
+        </div>
       </div>
 
       <div
@@ -299,7 +372,7 @@
     <main
       id="main-content"
       class="shell-main"
-      :class="{ 'shell-main-canvas': isStudiesRoute }"
+      :class="{ 'shell-main-canvas': isFullBleedWorkspaceRoute }"
       tabindex="-1"
     >
       <slot />
@@ -332,6 +405,15 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import {
+  Activity,
+  HelpCircle,
+  ListChecks,
+  LogOut,
+  Menu,
+  Search,
+  X,
+} from "lucide-vue-next";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
@@ -355,7 +437,9 @@ const OnboardingTour = defineAsyncComponent(
   () => import("./OnboardingTour.vue")
 );
 
+const shellStudyContextRef = ref(null);
 provide("inAppShell", true);
+provide("shellStudyContextEl", shellStudyContextRef);
 
 const authStore = useAuthStore();
 const knowledgeStore = useKnowledgeStore();
@@ -368,15 +452,17 @@ const isCommandPaletteOpen = ref(false);
 const isMobileMenuOpen = ref(false);
 const statusAnnouncement = ref("");
 const headerRef = ref(null);
-const headerHeight = ref(57);
+const headerHeight = ref(48);
 let headerResizeObserver = null;
 
 function syncHeaderHeight() {
   const el = headerRef.value;
   if (!el || typeof el.getBoundingClientRect !== "function") return;
   const measured = Math.round(el.getBoundingClientRect().height);
-  if (measured > 0) {
+  if (measured > 0 && measured <= 52) {
     headerHeight.value = measured;
+  } else if (measured > 52) {
+    headerHeight.value = 52;
   }
 }
 
@@ -425,6 +511,23 @@ const isStudiesRoute = computed(
     route?.name === "study" ||
     Boolean(route?.path && route.path.startsWith("/studies"))
 );
+
+const isStudyContextRoute = computed(() => isStudiesRoute.value);
+
+const isFullBleedWorkspaceRoute = computed(
+  () =>
+    isStudiesRoute.value ||
+    route?.name === "etmf" ||
+    route?.name === "documents" ||
+    route?.name === "knowledge" ||
+    Boolean(
+      route?.path &&
+      (route.path.startsWith("/etmf") ||
+        route.path.startsWith("/documents") ||
+        route.path.startsWith("/knowledge"))
+    )
+);
+
 const isDataCollectionRoute = computed(
   () =>
     route?.name === "ecrf" ||
@@ -466,12 +569,19 @@ const showOnboardingTour = computed(
     route?.path !== "/unavailable"
 );
 
+function formatPersonaLabel(label) {
+  return String(label || "")
+    .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]+/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function handlePersonaChange(event) {
   const nextPersona = event?.target?.value;
   if (nextPersona) {
     authStore.switchPersona(nextPersona);
     const matched = availablePersonas.value.find((p) => p.key === nextPersona);
-    statusAnnouncement.value = `Switched workspace view to ${matched?.label || nextPersona}`;
+    statusAnnouncement.value = `Switched workspace view to ${formatPersonaLabel(matched?.label || nextPersona)}`;
   }
 }
 
@@ -528,6 +638,7 @@ watch(
     authStore.isAuthenticated,
     authStore.activePlanBadge,
     isMobileMenuOpen.value,
+    route?.fullPath,
   ],
   () => {
     nextTick(syncHeaderHeight);
@@ -578,8 +689,8 @@ onUnmounted(() => {
 
 .skip-link:focus {
   position: fixed;
-  top: 8px;
-  left: 16px;
+  top: 6px;
+  left: 12px;
   width: auto;
   height: auto;
   padding: 8px 14px;
@@ -595,61 +706,81 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 10px 20px;
+  flex-wrap: nowrap;
+  gap: 8px;
+  height: var(--shell-header-height, 48px);
+  max-height: var(--shell-header-max-height, 52px);
+  min-height: 44px;
+  padding: 0 12px;
   background: var(--semantic-color-surface);
   border-bottom: 1px solid var(--semantic-color-border);
   position: sticky;
   top: 0;
   z-index: 30;
+  box-sizing: border-box;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
+  flex-wrap: nowrap;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .brand-link {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  min-height: var(--touch-hit-area-min, 44px);
   text-decoration: none;
   color: var(--semantic-color-text);
+  flex-shrink: 0;
 }
 
 .brand-mark {
   color: var(--semantic-color-interactive-primary);
-  font-size: 1rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--semantic-color-info-bg);
+  flex-shrink: 0;
 }
 
 .header-title-area h1 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--semantic-color-text);
+  white-space: nowrap;
 }
 
 .primary-nav {
   display: flex;
   align-items: center;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .primary-nav-link {
   display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
+  min-height: var(--touch-hit-area-min, 44px);
+  padding: 0 9px;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 0.83rem;
   font-weight: 500;
   color: var(--semantic-color-text-body);
   text-decoration: none;
   border: 1px solid transparent;
+  white-space: nowrap;
+  box-sizing: border-box;
   transition:
     background-color 0.15s ease,
     color 0.15s ease,
@@ -668,25 +799,42 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+.shell-study-context {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.shell-study-context:empty {
+  display: none;
+}
+
 .header-controls {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .plan-status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 5px 10px;
+  min-height: 32px;
+  max-width: 130px;
+  padding: 2px 8px;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   text-decoration: none;
   background: var(--semantic-color-info-bg);
   border: 1px solid var(--semantic-color-info-border);
   color: var(--semantic-color-info);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .plan-status-badge:hover {
@@ -712,11 +860,11 @@ onUnmounted(() => {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  padding: 10px 24px;
+  padding: 8px 20px;
   background: var(--semantic-color-error-bg);
   border-bottom: 1px solid var(--semantic-color-error-border);
   color: var(--semantic-color-error-dark);
-  font-size: 0.86rem;
+  font-size: 0.84rem;
 }
 
 .shell-expired-copy {
@@ -734,15 +882,20 @@ onUnmounted(() => {
 .command-palette-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--touch-hit-area-min, 44px);
+  height: 36px;
+  padding: 0 9px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-body);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .command-palette-trigger:hover {
@@ -752,9 +905,9 @@ onUnmounted(() => {
 }
 
 .palette-kbd {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.75rem;
-  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 1px 4px;
   border-radius: 4px;
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
@@ -764,41 +917,50 @@ onUnmounted(() => {
 .persona-switcher-wrapper {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  max-width: 100%;
+  flex-wrap: nowrap;
+  gap: 5px;
   min-width: 0;
 }
 
 .persona-label {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
+  white-space: nowrap;
 }
 
 .persona-select {
-  padding: 5px 8px;
+  height: 36px;
+  min-height: var(--touch-hit-area-min, 44px);
+  padding: 0 6px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-size: 0.83rem;
-  max-width: min(220px, 100%);
+  font-size: 0.78rem;
+  max-width: 128px;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 .shell-control-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  justify-content: center;
+  gap: 5px;
+  min-height: var(--touch-hit-area-min, 44px);
+  height: 36px;
+  padding: 0 9px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-dark);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
 .shell-control-btn:hover {
@@ -806,31 +968,42 @@ onUnmounted(() => {
   border-color: var(--semantic-color-border-control);
 }
 
+.shell-public-btn {
+  min-height: var(--touch-hit-area-min, 44px) !important;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
 .setup-progress-pill {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  padding: 1px 6px;
+  padding: 1px 5px;
   border-radius: 999px;
   background: var(--semantic-color-info-bg);
   color: var(--semantic-color-info);
+  font-variant-numeric: tabular-nums;
 }
 
 .user-session-controls {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 6px;
   padding-left: 6px;
   border-left: 1px solid var(--semantic-color-border);
-  max-width: 100%;
   min-width: 0;
 }
 
 .user-badge {
-  font-size: 0.83rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--semantic-color-text-body);
-  overflow-wrap: anywhere;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .shell-main {
@@ -854,37 +1027,72 @@ onUnmounted(() => {
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 6px 10px;
+  min-width: var(--touch-hit-area-min, 44px);
+  min-height: var(--touch-hit-area-min, 44px);
+  padding: 0;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-size: 1rem;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .mobile-nav-drawer {
   display: none;
-  width: 100%;
+  position: fixed;
+  top: var(--shell-header-height, 48px);
+  left: 0;
+  right: 0;
+  max-height: calc(100dvh - var(--shell-header-height, 48px));
+  overflow-y: auto;
+  background: var(--semantic-color-surface);
+  border-bottom: 1px solid var(--semantic-color-border);
+  box-shadow: var(--shadow-lg);
+  padding: 12px 16px;
   flex-direction: column;
-  gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid var(--semantic-color-border);
+  gap: 10px;
+  z-index: 40;
+  box-sizing: border-box;
 }
 
 .mobile-nav-drawer.is-open {
   display: flex;
 }
 
-.mobile-nav-link {
-  padding: 8px 12px;
-  border-radius: 6px;
-  color: var(--semantic-color-text-dark);
-  text-decoration: none;
-  font-weight: 500;
+.mobile-nav-links,
+.mobile-nav-utilities {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.mobile-nav-link:hover {
+.mobile-nav-utilities {
+  padding-top: 8px;
+  border-top: 1px solid var(--semantic-color-border);
+}
+
+.mobile-nav-link,
+.mobile-utility-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--touch-hit-area-min, 44px);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--semantic-color-text-dark);
+  text-decoration: none;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mobile-nav-link:hover,
+.mobile-utility-btn:hover {
   background: var(--semantic-color-surface-header);
 }
 
@@ -900,8 +1108,30 @@ onUnmounted(() => {
   border: 0;
 }
 
-@media (max-width: 860px) {
-  .primary-nav {
+@media (max-width: 1400px) {
+  .persona-label,
+  .user-badge,
+  .shell-btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .shell-control-btn {
+    min-width: var(--touch-hit-area-min, 44px);
+    padding: 0 8px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .primary-nav,
+  .shell-desktop-only {
     display: none;
   }
 
@@ -910,14 +1140,52 @@ onUnmounted(() => {
   }
 }
 
+@media (max-width: 900px) {
+  .palette-kbd,
+  .palette-trigger-text,
+  .logout-btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .command-palette-trigger,
+  .shell-logout-btn {
+    min-width: var(--touch-hit-area-min, 44px);
+    padding: 0;
+  }
+}
+
 @media (max-width: 640px) {
   .app-header {
-    padding: 10px 12px;
-    gap: 10px;
+    padding: 0 8px;
+    gap: 4px;
+  }
+
+  .shell-tablet-up {
+    display: none;
+  }
+
+  .header-title-area.compact-on-study-mobile {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .shell-expired-banner {
-    padding: 10px 12px;
+    padding: 8px 12px;
   }
 
   .shell-expired-cta {
@@ -925,7 +1193,7 @@ onUnmounted(() => {
   }
 
   .shell-main:not(.shell-main-canvas) {
-    padding: 16px 12px;
+    padding: 14px 12px;
   }
 }
 </style>

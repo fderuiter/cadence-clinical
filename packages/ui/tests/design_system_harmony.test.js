@@ -19,12 +19,14 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalFieldLayout",
   "ClinicalFormField",
   "ClinicalIconButton",
+  "ClinicalIconRail",
   "ClinicalInput",
   "ClinicalLookupInput",
   "ClinicalModal",
   "ClinicalQueryFlag",
   "ClinicalQueryPanel",
   "ClinicalRadioGroup",
+  "ClinicalSplitWorkspace",
   "ConfidenceBadge",
   "EmptyState",
   "FileUploadModal",
@@ -191,7 +193,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 22 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 24 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -201,7 +203,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(22);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(24);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
@@ -221,7 +223,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 22 components and helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 24 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(

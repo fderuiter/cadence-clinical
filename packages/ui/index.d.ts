@@ -272,7 +272,8 @@ export const ClinicalDrawer: DefineComponent<
     overlayClass?: string | any[] | Record<string, boolean>;
     panelClass?: string | any[] | Record<string, boolean>;
     bodyClass?: string | any[] | Record<string, boolean>;
-    position?: "right" | "left" | string;
+    position?: "right" | "left" | "bottom" | string;
+    mobileBottomSheet?: boolean;
     size?: "sm" | "md" | "lg" | "xl" | string;
     role?: "dialog" | "alertdialog" | string;
     dismissible?: boolean;
@@ -290,6 +291,90 @@ export const ClinicalDrawer: DefineComponent<
   {},
   any
 >;
+
+export interface ClinicalIconRailItem {
+  id: string;
+  label: string;
+  ariaLabel?: string;
+  domId?: string;
+  icon?: any;
+  badge?: string | number | null;
+  active?: boolean;
+  disabled?: boolean;
+  [key: string]: any;
+}
+
+export interface ClinicalIconRailGroup {
+  id: string;
+  label?: string;
+  items: ClinicalIconRailItem[];
+}
+
+export const ClinicalIconRail: DefineComponent<
+  {
+    id?: string;
+    ariaLabel?: string;
+    title?: string;
+    items?: ClinicalIconRailItem[];
+    groups?: ClinicalIconRailGroup[];
+    collapsed?: boolean;
+    collapsible?: boolean;
+    drawerOpen?: boolean;
+    expandLabel?: string;
+    collapseLabel?: string;
+    teleport?: boolean | string;
+  },
+  {},
+  any
+>;
+
+export const ClinicalSplitWorkspace: DefineComponent<
+  {
+    sidebarOpen?: boolean;
+    inspectorOpen?: boolean;
+    sidebarTitle?: string;
+    sidebarAriaLabel?: string;
+    sidebarId?: string;
+    sidebarClass?: string | any[] | Record<string, boolean>;
+    sidebarDrawerSize?: "sm" | "md" | "lg" | "xl" | string;
+    inspectorTitle?: string;
+    inspectorAriaLabel?: string;
+    inspectorId?: string;
+    inspectorClass?: string | any[] | Record<string, boolean>;
+    inspectorDrawerSize?: "sm" | "md" | "lg" | "xl" | string;
+    inspectorCollapsed?: boolean;
+    showInspectorDrawerHeader?: boolean;
+    embedded?: boolean;
+    forceOverlaySidebar?: boolean;
+    mainTag?: string;
+    mainId?: string;
+    mainClass?: string | any[] | Record<string, boolean>;
+    mainAriaLabel?: string;
+    mainRole?: string;
+    mainTabindex?: number | string;
+    teleport?: boolean | string;
+  },
+  {},
+  any
+>;
+
+export type WorkspaceTier = "desktop" | "tablet" | "mobile";
+
+export const WORKSPACE_BREAKPOINTS: Readonly<{
+  MOBILE_SHEET: 480;
+  TABLET: 768;
+  DESKTOP_WIDE: 1280;
+}>;
+
+export function resolveWorkspaceTierFromWidth(width: number): WorkspaceTier;
+
+export function useWorkspaceTier(options?: { defaultTier?: WorkspaceTier }): {
+  tier: import("vue").Ref<WorkspaceTier>;
+  isDesktop: import("vue").ComputedRef<boolean>;
+  isTablet: import("vue").ComputedRef<boolean>;
+  isMobile: import("vue").ComputedRef<boolean>;
+  syncTier: () => void;
+};
 
 export const AuditLogViewer: DefineComponent<
   {

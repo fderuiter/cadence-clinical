@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref, useAttrs, useId, useSlots } from "vue";
+import { X } from "lucide-vue-next";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
+import { useWorkspaceTier } from "../../composables/useWorkspaceTier.js";
 import { clinicalOverlayProps } from "./sharedProps.js";
 
 defineOptions({
@@ -59,6 +61,11 @@ const props = defineProps({
   position: {
     type: String,
     default: "right",
+    validator: (val) => ["right", "left", "bottom"].includes(val),
+  },
+  mobileBottomSheet: {
+    type: Boolean,
+    default: false,
   },
   role: {
     type: String,
@@ -81,6 +88,8 @@ const attrs = useAttrs();
 const slots = useSlots();
 const drawerRef = ref(null);
 const instanceId = useId();
+const { isMobile } = useWorkspaceTier();
+
 const headingId = computed(
   () => props.ariaLabelledby || `clinical-drawer-title-${instanceId}`
 );
@@ -89,6 +98,12 @@ const drawerOpen = computed(() => {
   if (props.modelValue !== undefined) return props.modelValue;
   if (props.open !== undefined) return props.open;
   return props.isOpen;
+});
+
+const effectivePosition = computed(() => {
+  if (props.position === "bottom") return "bottom";
+  if (props.mobileBottomSheet && isMobile.value) return "bottom";
+  return props.position === "left" ? "left" : "right";
 });
 
 const teleportTarget = computed(() =>
@@ -137,7 +152,7 @@ useFocusTrap(drawerRef, {
       :id="overlayId"
       :class="[
         'clinical-drawer-backdrop',
-        `position-${position}`,
+        `position-${effectivePosition}`,
         overlayClass,
       ]"
       role="presentation"
@@ -150,7 +165,7 @@ useFocusTrap(drawerRef, {
         :class="[
           'clinical-drawer-panel',
           `size-${size}`,
-          `position-${position}`,
+          `position-${effectivePosition}`,
           panelClass,
         ]"
         :role="role"
@@ -159,6 +174,14 @@ useFocusTrap(drawerRef, {
         :aria-label="computedAriaLabel"
         tabindex="-1"
       >
+        <div
+          v-if="effectivePosition === 'bottom'"
+          class="clinical-drawer-grabber"
+          aria-hidden="true"
+        >
+          <span class="clinical-drawer-grabber-bar"></span>
+        </div>
+
         <slot
           v-if="showHeader"
           name="header"
@@ -181,7 +204,7 @@ useFocusTrap(drawerRef, {
               :disabled="!dismissible"
               @click="closeDrawer"
             >
-              ✕
+              <X :size="18" :stroke-width="1.75" aria-hidden="true" />
             </button>
           </header>
         </slot>
@@ -189,7 +212,7 @@ useFocusTrap(drawerRef, {
         <slot name="subheader" />
 
         <div :class="['clinical-drawer-body', bodyClass]">
-          <slot />
+          <slot :close="closeDrawer" />
         </div>
 
         <footer v-if="$slots.footer" class="clinical-drawer-footer">
@@ -208,6 +231,7 @@ useFocusTrap(drawerRef, {
   inset: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(2px);
   z-index: 9999;
@@ -219,8 +243,14 @@ useFocusTrap(drawerRef, {
   justify-content: flex-start;
 }
 
+.clinical-drawer-backdrop.position-bottom {
+  justify-content: center;
+  align-items: flex-end;
+}
+
 .clinical-drawer-panel {
   height: 100vh;
+  height: 100dvh;
   max-width: 100vw;
   background: var(--color-surface);
   border-left: 1px solid var(--color-border);
@@ -238,8 +268,39 @@ useFocusTrap(drawerRef, {
   animation-name: clinical-drawer-slide-in-left;
 }
 
+.clinical-drawer-panel.position-bottom {
+  width: 100vw;
+  max-width: 100vw;
+  height: auto;
+  max-height: var(--drawer-bottom-max-height, 90dvh);
+  border-left: none;
+  border-right: none;
+  border-top: 1px solid var(--color-border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: 0 -10px 25px -5px rgba(15, 23, 42, 0.2);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation-name: clinical-drawer-slide-up;
+}
+
+.clinical-drawer-grabber {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 2px;
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  flex-shrink: 0;
+}
+
+.clinical-drawer-grabber-bar {
+  width: 36px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-border-control);
+  opacity: 0.6;
+}
+
 .size-sm {
-  width: min(100vw, 400px);
+  width: min(100vw, 360px);
 }
 
 .size-md {
@@ -255,6 +316,14 @@ useFocusTrap(drawerRef, {
 
 .size-xl {
   width: min(100vw, 820px);
+}
+
+.clinical-drawer-panel.position-bottom.size-sm,
+.clinical-drawer-panel.position-bottom.size-md,
+.clinical-drawer-panel.position-bottom.size-lg,
+.clinical-drawer-panel.position-bottom.size-xl {
+  width: 100vw;
+  max-width: 100vw;
 }
 
 @keyframes clinical-drawer-slide-in {
@@ -275,6 +344,15 @@ useFocusTrap(drawerRef, {
   }
 }
 
+@keyframes clinical-drawer-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .clinical-drawer-backdrop,
   .clinical-drawer-panel,
@@ -286,12 +364,13 @@ useFocusTrap(drawerRef, {
 
 .clinical-drawer-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 24px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface-muted);
+  flex-shrink: 0;
 }
 
 .clinical-drawer-titles {
@@ -314,13 +393,17 @@ useFocusTrap(drawerRef, {
 
 .clinical-drawer-close-btn {
   background: transparent;
-  border: none;
-  font-size: 16px;
+  border: 1px solid transparent;
   color: var(--color-text-muted);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  line-height: 1.2;
+  min-width: var(--touch-hit-area-min, 44px);
+  min-height: var(--touch-hit-area-min, 44px);
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .clinical-drawer-close-btn:hover:not(:disabled) {
@@ -335,18 +418,20 @@ useFocusTrap(drawerRef, {
 
 .clinical-drawer-body {
   flex: 1;
-  padding: 20px 24px;
+  min-height: 0;
+  padding: 16px 20px;
   overflow-y: auto;
 }
 
 .clinical-drawer-footer {
-  padding: 16px 24px;
+  padding: 14px 20px;
   border-top: 1px solid var(--color-border);
   background: var(--color-surface-muted);
+  flex-shrink: 0;
 }
 
 @media (max-width: 640px) {
-  .clinical-drawer-panel {
+  .clinical-drawer-panel:not(.position-bottom) {
     width: 100vw;
     max-width: 100vw;
   }

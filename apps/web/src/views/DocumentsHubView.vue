@@ -1,421 +1,535 @@
 <template>
   <div class="documents-hub-layout">
-    <!-- Left Navigation Panel: Folder Tree -->
-    <aside class="hub-sidebar" aria-label="Clinical Folder Tree">
-      <DocumentsFolderTree
-        :studies-tree="fileshareStore.filteredStudiesTree"
-        :initial-study-id="initialStudyId"
-        @select-node="handleTreeNodeSelect"
-      />
-    </aside>
+    <ClinicalSplitWorkspace
+      v-model:sidebar-open="isFolderDrawerOpen"
+      class="hub-split-workspace"
+      sidebar-class="hub-sidebar"
+      sidebar-title="Clinical Document Tree"
+      sidebar-aria-label="Clinical Folder Tree"
+      main-tag="div"
+      main-class="hub-content-area"
+      main-role="region"
+      main-aria-label="Documents Grid Workspace"
+    >
+      <template #sidebar="{ close }">
+        <DocumentsFolderTree
+          :studies-tree="fileshareStore.filteredStudiesTree"
+          :initial-study-id="initialStudyId"
+          @select-node="
+            (node) => {
+              handleTreeNodeSelect(node);
+              close();
+            }
+          "
+        />
+      </template>
 
-    <!-- Main Workspace: Search Bar, Toolbar & Documents Grid -->
-    <main class="hub-content-area" aria-label="Documents Grid Workspace">
-      <!-- Top Action Bar -->
-      <div class="hub-header-bar">
-        <div class="header-left-col">
-          <h2 class="hub-page-title">Documents Hub</h2>
-          <p class="hub-page-subtitle">
-            Cross-study unified clinical fileshare, protected media viewer &amp;
-            permission delegation vault
-          </p>
-        </div>
+      <template #default="{ dockSidebarInline, openSidebar }">
+        <!-- Top Action Bar -->
+        <div class="hub-header-bar clinical-action-toolbar">
+          <div class="header-left-col">
+            <h2 class="hub-page-title">Documents Hub</h2>
+            <p class="hub-page-subtitle">
+              Cross-study unified clinical fileshare, protected media viewer
+              &amp; permission delegation vault
+            </p>
+          </div>
 
-        <div
-          class="header-right-col"
-          style="display: flex; align-items: center; gap: 8px"
-        >
-          <button
-            class="btn btn-primary btn-batch-upload"
-            style="font-size: 13px; font-weight: 600; padding: 6px 14px"
-            @click="isBatchDrawerOpen = true"
-          >
-            📤 Batch Ingestion
-          </button>
-          <button
-            class="btn btn-outline-secondary btn-qc-queue"
-            style="font-size: 13px; font-weight: 600; padding: 6px 14px"
-            @click="showQcQueue = !showQcQueue"
-          >
-            🛡️ CRA QC Queue
-          </button>
-
-          <!-- Search Bar -->
-          <div class="search-input-wrapper">
-            <span class="search-icon-prefix">🔍</span>
-            <input
-              v-model="searchInput"
-              type="text"
-              placeholder="Search by filename, study, uploader, or site..."
-              class="hub-search-input"
-              aria-label="Search all documents"
-              @input="onSearchInput"
-            />
+          <div class="header-right-col">
             <button
-              v-if="searchInput"
-              class="clear-search-btn"
-              aria-label="Clear search"
-              @click="clearSearch"
+              v-if="!dockSidebarInline"
+              id="btn-hub-toggle-folder-tree"
+              type="button"
+              class="btn btn-outline-secondary btn-folder-tree-trigger"
+              @click="openSidebar()"
             >
-              ×
+              <FolderTree :size="15" :stroke-width="1.75" aria-hidden="true" />
+              <span>Folder Tree</span>
             </button>
+            <button
+              type="button"
+              class="btn btn-primary btn-batch-upload"
+              @click="isBatchDrawerOpen = true"
+            >
+              <Upload :size="15" :stroke-width="1.75" aria-hidden="true" />
+              <span>Batch Ingestion</span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-secondary btn-qc-queue"
+              @click="showQcQueue = !showQcQueue"
+            >
+              <ShieldCheck :size="15" :stroke-width="1.75" aria-hidden="true" />
+              <span>CRA QC Queue</span>
+            </button>
+
+            <!-- Search Bar -->
+            <div class="search-input-wrapper">
+              <span class="search-icon-prefix" aria-hidden="true">
+                <Search :size="15" :stroke-width="1.75" aria-hidden="true" />
+              </span>
+              <input
+                v-model="searchInput"
+                type="text"
+                placeholder="Search by filename, study, uploader, or site..."
+                class="hub-search-input"
+                aria-label="Search all documents"
+                @input="onSearchInput"
+              />
+              <button
+                v-if="searchInput"
+                type="button"
+                class="clear-search-btn"
+                aria-label="Clear search"
+                @click="clearSearch"
+              >
+                <X :size="14" :stroke-width="1.75" aria-hidden="true" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- CRA Quality Control Review Queue Panel -->
-      <CraQcQueue v-if="showQcQueue" style="margin-bottom: 20px" />
+        <!-- CRA Quality Control Review Queue Panel -->
+        <CraQcQueue v-if="showQcQueue" style="margin-bottom: 20px" />
 
-      <!-- Active Filters & Bulk Actions Ribbon -->
-      <div class="hub-filter-ribbon">
-        <div class="active-filter-pills">
-          <span
-            v-if="fileshareStore.activeFilters.studyId"
-            class="filter-pill study-pill"
-          >
-            Study: <strong>{{ fileshareStore.activeFilters.studyId }}</strong>
-            <ClinicalIconButton
-              class="remove-pill-btn"
-              :label="`Remove study filter ${fileshareStore.activeFilters.studyId}`"
-              @click="clearFilter('studyId')"
+        <!-- Active Filters & Bulk Actions Ribbon -->
+        <div class="hub-filter-ribbon">
+          <div class="active-filter-pills">
+            <span
+              v-if="fileshareStore.activeFilters.studyId"
+              class="filter-pill study-pill"
             >
-              ×
-            </ClinicalIconButton>
-          </span>
+              Study:
+              <strong class="clinical-mono-id">{{
+                fileshareStore.activeFilters.studyId
+              }}</strong>
+              <ClinicalIconButton
+                class="remove-pill-btn"
+                :label="`Remove study filter ${fileshareStore.activeFilters.studyId}`"
+                @click="clearFilter('studyId')"
+              >
+                <X :size="12" :stroke-width="1.75" aria-hidden="true" />
+              </ClinicalIconButton>
+            </span>
 
-          <span
-            v-if="fileshareStore.activeFilters.siteId"
-            class="filter-pill site-pill"
-          >
-            Site: <strong>{{ fileshareStore.activeFilters.siteId }}</strong>
-            <ClinicalIconButton
-              class="remove-pill-btn"
-              :label="`Remove site filter ${fileshareStore.activeFilters.siteId}`"
-              @click="clearFilter('siteId')"
+            <span
+              v-if="fileshareStore.activeFilters.siteId"
+              class="filter-pill site-pill"
             >
-              ×
-            </ClinicalIconButton>
-          </span>
+              Site:
+              <strong class="clinical-mono-id">{{
+                fileshareStore.activeFilters.siteId
+              }}</strong>
+              <ClinicalIconButton
+                class="remove-pill-btn"
+                :label="`Remove site filter ${fileshareStore.activeFilters.siteId}`"
+                @click="clearFilter('siteId')"
+              >
+                <X :size="12" :stroke-width="1.75" aria-hidden="true" />
+              </ClinicalIconButton>
+            </span>
 
-          <span
-            v-if="fileshareStore.activeFilters.zoneCode"
-            class="filter-pill zone-pill"
-          >
-            Zone: <strong>{{ fileshareStore.activeFilters.zoneCode }}</strong>
-            <ClinicalIconButton
-              class="remove-pill-btn"
-              :label="`Remove zone filter ${fileshareStore.activeFilters.zoneCode}`"
-              @click="clearFilter('zoneCode')"
+            <span
+              v-if="fileshareStore.activeFilters.zoneCode"
+              class="filter-pill zone-pill"
             >
-              ×
-            </ClinicalIconButton>
-          </span>
+              Zone:
+              <strong class="clinical-mono-id">{{
+                fileshareStore.activeFilters.zoneCode
+              }}</strong>
+              <ClinicalIconButton
+                class="remove-pill-btn"
+                :label="`Remove zone filter ${fileshareStore.activeFilters.zoneCode}`"
+                @click="clearFilter('zoneCode')"
+              >
+                <X :size="12" :stroke-width="1.75" aria-hidden="true" />
+              </ClinicalIconButton>
+            </span>
 
-          <span
-            v-if="fileshareStore.activeFilters.sectionCode"
-            class="filter-pill section-pill"
-          >
-            Section:
-            <strong>{{ fileshareStore.activeFilters.sectionCode }}</strong>
-            <ClinicalIconButton
-              class="remove-pill-btn"
-              :label="`Remove section filter ${fileshareStore.activeFilters.sectionCode}`"
-              @click="clearFilter('sectionCode')"
+            <span
+              v-if="fileshareStore.activeFilters.sectionCode"
+              class="filter-pill section-pill"
             >
-              ×
-            </ClinicalIconButton>
-          </span>
+              Section:
+              <strong class="clinical-mono-id">{{
+                fileshareStore.activeFilters.sectionCode
+              }}</strong>
+              <ClinicalIconButton
+                class="remove-pill-btn"
+                :label="`Remove section filter ${fileshareStore.activeFilters.sectionCode}`"
+                @click="clearFilter('sectionCode')"
+              >
+                <X :size="12" :stroke-width="1.75" aria-hidden="true" />
+              </ClinicalIconButton>
+            </span>
 
-          <button
-            v-if="hasActiveFilter"
-            class="btn btn-sm btn-outline-secondary btn-reset-all"
-            @click="resetAllFilters"
-          >
-            Reset All Filters
-          </button>
-        </div>
-
-        <!-- Bulk Selection Action Ribbon -->
-        <div v-if="selectedFiles.length > 0" class="bulk-actions-toolbar">
-          <span class="selection-count-badge">
-            ✓ {{ selectedFiles.length }} Selected
-          </span>
-          <button
-            class="btn btn-sm btn-primary btn-bulk-share"
-            @click="openBulkShareDrawer"
-          >
-            🔗 Bulk Share ({{ selectedFiles.length }})
-          </button>
-          <button
-            class="btn btn-sm btn-outline-secondary btn-deselect-all"
-            @click="fileshareStore.clearSelection()"
-          >
-            Deselect All
-          </button>
-        </div>
-      </div>
-
-      <!-- Main Data Table -->
-      <div class="table-responsive hub-table-container">
-        <table class="documents-table">
-          <thead>
-            <tr>
-              <th class="checkbox-col">
-                <input
-                  type="checkbox"
-                  :checked="isAllSelected"
-                  :indeterminate="isPartiallySelected"
-                  aria-label="Select all visible documents"
-                  @change="toggleSelectAll"
-                />
-              </th>
-              <th class="sortable-th" @click="setSort('filename')">
-                Name
-                <span class="sort-indicator">{{
-                  getSortIndicator("filename")
-                }}</span>
-              </th>
-              <th class="sortable-th" @click="setSort('study_id')">
-                Study
-                <span class="sort-indicator">{{
-                  getSortIndicator("study_id")
-                }}</span>
-              </th>
-              <th class="sortable-th" @click="setSort('site_id')">
-                Site
-                <span class="sort-indicator">{{
-                  getSortIndicator("site_id")
-                }}</span>
-              </th>
-              <th class="sortable-th" @click="setSort('uploaded_by')">
-                Uploaded By
-                <span class="sort-indicator">{{
-                  getSortIndicator("uploaded_by")
-                }}</span>
-              </th>
-              <th class="sortable-th" @click="setSort('uploaded_at')">
-                Last Modified
-                <span class="sort-indicator">{{
-                  getSortIndicator("uploaded_at")
-                }}</span>
-              </th>
-              <th class="sortable-th" @click="setSort('status')">
-                Status
-                <span class="sort-indicator">{{
-                  getSortIndicator("status")
-                }}</span>
-              </th>
-              <th>Shared</th>
-              <th class="actions-th">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="paginatedDocuments.length === 0">
-              <td colspan="9" class="empty-grid-cell">
-                <div class="empty-state-box">
-                  <span class="empty-state-icon">📂</span>
-                  <h4>
-                    No clinical documents match your search or filter criteria.
-                  </h4>
-                  <p>
-                    Try resetting filters or expanding other study branches in
-                    the folder tree.
-                  </p>
-                </div>
-              </td>
-            </tr>
-
-            <tr
-              v-for="file in paginatedDocuments"
-              :key="file.id"
-              class="document-row"
-              :class="{ 'row-selected': isFileSelected(file.id) }"
-            >
-              <!-- Multi-select Checkbox -->
-              <td class="checkbox-col" @click.stop>
-                <input
-                  type="checkbox"
-                  :checked="isFileSelected(file.id)"
-                  :aria-label="'Select document ' + file.filename"
-                  @change="fileshareStore.toggleFileSelection(file.id)"
-                />
-              </td>
-
-              <!-- File Name & MIME Icon -->
-              <td class="filename-col" @click="openPreview(file)">
-                <span class="mime-icon" :title="file.mime_type">{{
-                  getMimeIcon(file)
-                }}</span>
-                <span class="filename-text" :title="file.filename">{{
-                  file.filename
-                }}</span>
-                <span v-if="file.version_index > 1" class="version-pill"
-                  >v{{ file.version_index }}.0</span
-                >
-              </td>
-
-              <!-- Study ID -->
-              <td>
-                <span class="study-badge">{{ file.study_id }}</span>
-              </td>
-
-              <!-- Site ID -->
-              <td>
-                <span v-if="file.site_id" class="site-badge">{{
-                  file.site_id
-                }}</span>
-                <span v-else class="text-muted">Global</span>
-              </td>
-
-              <!-- Uploaded By -->
-              <td>
-                <span class="uploader-name">{{
-                  file.uploaded_by || file.created_by
-                }}</span>
-              </td>
-
-              <!-- Last Modified -->
-              <td class="date-cell">
-                {{ formatDate(file.uploaded_at || file.created_at) }}
-              </td>
-
-              <!-- Status -->
-              <td>
-                <span
-                  v-if="file.is_on_hold"
-                  class="status-pill status-hold"
-                  :title="file.hold_reason || 'File is under retention hold.'"
-                >
-                  🔒
-                  {{
-                    file.status === "ON_HOLD"
-                      ? "ON HOLD"
-                      : file.status || "ON HOLD"
-                  }}
-                </span>
-                <span
-                  v-else
-                  class="status-pill"
-                  :class="getStatusClass(file.status)"
-                >
-                  {{ file.status || "ACTIVE" }}
-                </span>
-              </td>
-
-              <!-- Shared Active Grant Count -->
-              <td>
-                <span
-                  v-if="file.grant_count > 0"
-                  class="shared-badge has-grants"
-                  :title="`${file.grant_count} active share delegations`"
-                >
-                  👥 {{ file.grant_count }} Shared
-                </span>
-                <span
-                  v-else
-                  class="shared-badge private"
-                  title="Private to study team"
-                >
-                  🔒 Private
-                </span>
-              </td>
-
-              <!-- Action Buttons -->
-              <td class="actions-cell" @click.stop>
-                <div class="action-btn-group">
-                  <button
-                    class="btn btn-sm btn-outline-primary btn-preview-action"
-                    title="View Protected Preview"
-                    :aria-label="'Preview ' + file.filename"
-                    @click="openPreview(file)"
-                  >
-                    👁️ Preview
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-secondary btn-share-action"
-                    title="Manage Share Permissions"
-                    :aria-label="'Share ' + file.filename"
-                    @click="openShareDrawerForFile(file)"
-                  >
-                    🔗 Share
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-info btn-activity-action"
-                    title="View Document Activity Feed"
-                    :aria-label="'Activity for ' + file.filename"
-                    @click="openActivityDrawerForFile(file)"
-                  >
-                    📋 Activity
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-danger btn-delete-action"
-                    :disabled="file.is_on_hold"
-                    :title="
-                      file.is_on_hold
-                        ? 'File is under retention hold.'
-                        : 'Delete document'
-                    "
-                    :aria-label="'Delete ' + file.filename"
-                    @click="handleDeleteFile(file)"
-                  >
-                    🗑️ Delete
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination Footer -->
-      <div v-if="totalItems > 0" class="hub-pagination-bar">
-        <div class="pagination-info">
-          Showing
-          <span class="font-bold">{{
-            Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)
-          }}</span>
-          to
-          <span class="font-bold">{{
-            Math.min(currentPage * itemsPerPage, totalItems)
-          }}</span>
-          of
-          <span class="font-bold">{{ totalItems }}</span> documents
-        </div>
-
-        <div class="pagination-buttons">
-          <button
-            class="btn btn-sm btn-outline-secondary prev-btn"
-            :disabled="currentPage === 1"
-            aria-label="Previous page"
-            @click="currentPage--"
-          >
-            ◀ Previous
-          </button>
-
-          <div class="page-numbers">
             <button
-              v-for="page in totalPages"
-              :key="page"
-              class="btn btn-sm page-num-btn"
-              :class="{ active: currentPage === page }"
-              :aria-label="'Go to page ' + page"
-              @click="currentPage = page"
+              v-if="hasActiveFilter"
+              type="button"
+              class="btn btn-sm btn-outline-secondary btn-reset-all"
+              @click="resetAllFilters"
             >
-              {{ page }}
+              Reset All Filters
             </button>
           </div>
 
-          <button
-            class="btn btn-sm btn-outline-secondary next-btn"
-            :disabled="currentPage === totalPages"
-            aria-label="Next page"
-            @click="currentPage++"
-          >
-            Next ▶
-          </button>
+          <!-- Bulk Selection Action Ribbon -->
+          <div v-if="selectedFiles.length > 0" class="bulk-actions-toolbar">
+            <span class="selection-count-badge">
+              <Check :size="13" :stroke-width="1.75" aria-hidden="true" />
+              <span>{{ selectedFiles.length }} Selected</span>
+            </span>
+            <button
+              type="button"
+              class="btn btn-sm btn-primary btn-bulk-share"
+              @click="openBulkShareDrawer"
+            >
+              <Link2 :size="13" :stroke-width="1.75" aria-hidden="true" />
+              <span>Bulk Share ({{ selectedFiles.length }})</span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary btn-deselect-all"
+              @click="fileshareStore.clearSelection()"
+            >
+              Deselect All
+            </button>
+          </div>
         </div>
-      </div>
-    </main>
+
+        <!-- Main Data Table -->
+        <div class="table-responsive hub-table-container">
+          <table class="documents-table">
+            <thead>
+              <tr>
+                <th class="checkbox-col">
+                  <input
+                    type="checkbox"
+                    :checked="isAllSelected"
+                    :indeterminate="isPartiallySelected"
+                    aria-label="Select all visible documents"
+                    @change="toggleSelectAll"
+                  />
+                </th>
+                <th class="sortable-th" @click="setSort('filename')">
+                  <span>Name</span>
+                  <component
+                    :is="getSortIconComponent('filename')"
+                    :size="12"
+                    :stroke-width="1.75"
+                    class="sort-indicator"
+                    aria-hidden="true"
+                  />
+                </th>
+                <th class="sortable-th" @click="setSort('study_id')">
+                  <span>Study</span>
+                  <component
+                    :is="getSortIconComponent('study_id')"
+                    :size="12"
+                    :stroke-width="1.75"
+                    class="sort-indicator"
+                    aria-hidden="true"
+                  />
+                </th>
+                <th class="sortable-th" @click="setSort('site_id')">
+                  <span>Site</span>
+                  <component
+                    :is="getSortIconComponent('site_id')"
+                    :size="12"
+                    :stroke-width="1.75"
+                    class="sort-indicator"
+                    aria-hidden="true"
+                  />
+                </th>
+                <th class="sortable-th" @click="setSort('uploaded_by')">
+                  <span>Uploaded By</span>
+                  <component
+                    :is="getSortIconComponent('uploaded_by')"
+                    :size="12"
+                    :stroke-width="1.75"
+                    class="sort-indicator"
+                    aria-hidden="true"
+                  />
+                </th>
+                <th class="sortable-th" @click="setSort('uploaded_at')">
+                  <span>Last Modified</span>
+                  <component
+                    :is="getSortIconComponent('uploaded_at')"
+                    :size="12"
+                    :stroke-width="1.75"
+                    class="sort-indicator"
+                    aria-hidden="true"
+                  />
+                </th>
+                <th class="sortable-th" @click="setSort('status')">
+                  <span>Status</span>
+                  <component
+                    :is="getSortIconComponent('status')"
+                    :size="12"
+                    :stroke-width="1.75"
+                    class="sort-indicator"
+                    aria-hidden="true"
+                  />
+                </th>
+                <th>Shared</th>
+                <th class="actions-th">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="paginatedDocuments.length === 0">
+                <td colspan="9" class="empty-grid-cell">
+                  <div class="empty-state-box">
+                    <span class="empty-state-icon" aria-hidden="true">
+                      <FolderOpen
+                        :size="36"
+                        :stroke-width="1.75"
+                        aria-hidden="true"
+                      />
+                    </span>
+                    <h4>
+                      No clinical documents match your search or filter
+                      criteria.
+                    </h4>
+                    <p>
+                      Try resetting filters or expanding other study branches in
+                      the folder tree.
+                    </p>
+                  </div>
+                </td>
+              </tr>
+
+              <tr
+                v-for="file in paginatedDocuments"
+                :key="file.id"
+                class="document-row"
+                :class="{ 'row-selected': isFileSelected(file.id) }"
+              >
+                <!-- Multi-select Checkbox -->
+                <td class="checkbox-col" @click.stop>
+                  <input
+                    type="checkbox"
+                    :checked="isFileSelected(file.id)"
+                    :aria-label="'Select document ' + file.filename"
+                    @change="fileshareStore.toggleFileSelection(file.id)"
+                  />
+                </td>
+
+                <!-- File Name & MIME Icon -->
+                <td class="filename-col" @click="openPreview(file)">
+                  <span
+                    class="mime-icon"
+                    :title="file.mime_type"
+                    aria-hidden="true"
+                  >
+                    <component
+                      :is="getMimeIconComponent(file)"
+                      :size="16"
+                      :stroke-width="1.75"
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <span class="filename-text" :title="file.filename">{{
+                    file.filename
+                  }}</span>
+                  <span v-if="file.version_index > 1" class="version-pill"
+                    >v{{ file.version_index }}.0</span
+                  >
+                </td>
+
+                <!-- Study ID -->
+                <td>
+                  <span class="study-badge">{{ file.study_id }}</span>
+                </td>
+
+                <!-- Site ID -->
+                <td>
+                  <span v-if="file.site_id" class="site-badge">{{
+                    file.site_id
+                  }}</span>
+                  <span v-else class="text-muted">Global</span>
+                </td>
+
+                <!-- Uploaded By -->
+                <td>
+                  <span class="uploader-name">{{
+                    file.uploaded_by || file.created_by
+                  }}</span>
+                </td>
+
+                <!-- Last Modified -->
+                <td class="date-cell">
+                  {{ formatDate(file.uploaded_at || file.created_at) }}
+                </td>
+
+                <!-- Status -->
+                <td>
+                  <span
+                    v-if="file.is_on_hold"
+                    class="status-pill status-hold"
+                    :title="file.hold_reason || 'File is under retention hold.'"
+                  >
+                    🔒
+                    {{
+                      file.status === "ON_HOLD"
+                        ? "ON HOLD"
+                        : file.status || "ON HOLD"
+                    }}
+                  </span>
+                  <span
+                    v-else
+                    class="status-pill"
+                    :class="getStatusClass(file.status)"
+                  >
+                    {{ file.status || "ACTIVE" }}
+                  </span>
+                </td>
+
+                <!-- Shared Active Grant Count -->
+                <td>
+                  <span
+                    v-if="file.grant_count > 0"
+                    class="shared-badge has-grants"
+                    :title="`${file.grant_count} active share delegations`"
+                  >
+                    <Users :size="12" :stroke-width="1.75" aria-hidden="true" />
+                    <span>{{ file.grant_count }} Shared</span>
+                  </span>
+                  <span
+                    v-else
+                    class="shared-badge private"
+                    title="Private to study team"
+                  >
+                    <Lock :size="12" :stroke-width="1.75" aria-hidden="true" />
+                    <span>Private</span>
+                  </span>
+                </td>
+
+                <!-- Action Buttons -->
+                <td class="actions-cell" @click.stop>
+                  <div class="action-btn-group">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary btn-preview-action"
+                      title="View Protected Preview"
+                      :aria-label="'Preview ' + file.filename"
+                      @click="openPreview(file)"
+                    >
+                      <Eye :size="13" :stroke-width="1.75" aria-hidden="true" />
+                      <span>Preview</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary btn-share-action"
+                      title="Manage Share Permissions"
+                      :aria-label="'Share ' + file.filename"
+                      @click="openShareDrawerForFile(file)"
+                    >
+                      <Link2
+                        :size="13"
+                        :stroke-width="1.75"
+                        aria-hidden="true"
+                      />
+                      <span>Share</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-info btn-activity-action"
+                      title="View Document Activity Feed"
+                      :aria-label="'Activity for ' + file.filename"
+                      @click="openActivityDrawerForFile(file)"
+                    >
+                      <ClipboardList
+                        :size="13"
+                        :stroke-width="1.75"
+                        aria-hidden="true"
+                      />
+                      <span>Activity</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger btn-delete-action"
+                      :disabled="file.is_on_hold"
+                      :title="
+                        file.is_on_hold
+                          ? 'File is under retention hold.'
+                          : 'Delete document'
+                      "
+                      :aria-label="'Delete ' + file.filename"
+                      @click="handleDeleteFile(file)"
+                    >
+                      <Trash2
+                        :size="13"
+                        :stroke-width="1.75"
+                        aria-hidden="true"
+                      />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Footer -->
+        <div v-if="totalItems > 0" class="hub-pagination-bar">
+          <div class="pagination-info">
+            Showing
+            <span class="font-bold">{{
+              Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)
+            }}</span>
+            to
+            <span class="font-bold">{{
+              Math.min(currentPage * itemsPerPage, totalItems)
+            }}</span>
+            of
+            <span class="font-bold">{{ totalItems }}</span> documents
+          </div>
+
+          <div class="pagination-buttons">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary prev-btn"
+              :disabled="currentPage === 1"
+              aria-label="Previous page"
+              @click="currentPage--"
+            >
+              <ChevronLeft :size="14" :stroke-width="1.75" aria-hidden="true" />
+              <span>Previous</span>
+            </button>
+
+            <div class="page-numbers">
+              <button
+                v-for="page in totalPages"
+                :key="page"
+                type="button"
+                class="btn btn-sm page-num-btn"
+                :class="{ active: currentPage === page }"
+                :aria-label="'Go to page ' + page"
+                @click="currentPage = page"
+              >
+                {{ page }}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary next-btn"
+              :disabled="currentPage === totalPages"
+              aria-label="Next page"
+              @click="currentPage++"
+            >
+              <span>Next</span>
+              <ChevronRight
+                :size="14"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+        </div>
+      </template>
+    </ClinicalSplitWorkspace>
 
     <!-- Slide-in Share Management Drawer -->
     <ShareDrawer
@@ -454,7 +568,32 @@
 
 <script setup>
 import { ref, computed, defineAsyncComponent, onMounted, watch } from "vue";
-import { ClinicalIconButton } from "ui";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  Eye,
+  FileSpreadsheet,
+  FileText,
+  Film,
+  FolderOpen,
+  FolderTree,
+  Image,
+  Link2,
+  Lock,
+  Mic,
+  Search,
+  ShieldCheck,
+  Trash2,
+  Upload,
+  Users,
+  X,
+} from "lucide-vue-next";
+import { ClinicalIconButton, ClinicalSplitWorkspace } from "ui";
 import { useFileshareStore } from "../stores/fileshare";
 import DocumentsFolderTree from "../components/fileshare/DocumentsFolderTree.vue";
 import ShareDrawer from "../components/fileshare/ShareDrawer.vue";
@@ -479,6 +618,7 @@ const { confirmDialog } = useConfirmDialog();
 
 // Batch Ingestion and CRA QC state
 const isBatchDrawerOpen = ref(false);
+const isFolderDrawerOpen = ref(false);
 const showQcQueue = ref(false);
 
 // Search & Sorting state
@@ -571,9 +711,9 @@ function setSort(field) {
   }
 }
 
-function getSortIndicator(field) {
-  if (sortField.value !== field) return "↕";
-  return sortDirection.value === "asc" ? "▲" : "▼";
+function getSortIconComponent(field) {
+  if (sortField.value !== field) return ArrowUpDown;
+  return sortDirection.value === "asc" ? ArrowUp : ArrowDown;
 }
 
 const sortedDocuments = computed(() => {
@@ -674,25 +814,23 @@ function handleFileDownload(file) {
   console.log("Downloading regulated file:", file.filename);
 }
 
-function getMimeIcon(file) {
+function getMimeIconComponent(file) {
   const mime = (file.mime_type || "").toLowerCase();
   const name = (file.filename || "").toLowerCase();
 
-  if (mime.includes("pdf") || name.endsWith(".pdf")) return "📕";
   if (mime.includes("video") || name.endsWith(".mp4") || name.endsWith(".webm"))
-    return "🎬";
+    return Film;
   if (mime.includes("audio") || name.endsWith(".mp3") || name.endsWith(".wav"))
-    return "🎙️";
+    return Mic;
   if (mime.includes("image") || name.endsWith(".png") || name.endsWith(".jpg"))
-    return "🖼️";
+    return Image;
   if (
     mime.includes("spreadsheet") ||
     name.endsWith(".xlsx") ||
     name.endsWith(".csv")
   )
-    return "📊";
-  if (mime.includes("word") || name.endsWith(".docx")) return "📝";
-  return "📄";
+    return FileSpreadsheet;
+  return FileText;
 }
 
 function formatDate(dateStr) {
@@ -739,41 +877,74 @@ async function handleDeleteFile(file) {
 <style scoped>
 .documents-hub-layout {
   display: flex;
-  height: calc(100vh - 120px);
+  flex-direction: column;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: calc(100dvh - var(--shell-header-height, 48px));
   background-color: var(--semantic-color-surface-muted);
-  margin: -20px;
-  overflow: hidden;
   position: relative;
+  box-sizing: border-box;
+}
+
+.hub-split-workspace {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
 }
 
 /* Sidebar Folder Tree */
-.hub-sidebar {
-  width: 340px;
-  min-width: 300px;
+:deep(.hub-sidebar) {
+  width: var(--shell-sidebar-width, 280px);
+  min-width: var(--shell-sidebar-width, 280px);
   background-color: var(--semantic-color-surface);
-  height: 100%;
-  overflow: hidden;
-  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.03);
 }
 
 /* Main Workspace */
-.hub-content-area {
-  flex: 1;
+:deep(.hub-content-area) {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
   background-color: var(--semantic-color-surface);
 }
 
 .hub-header-bar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--border);
   background-color: var(--semantic-color-surface);
-  gap: 16px;
+  gap: 12px;
+  min-width: 0;
+}
+
+.header-left-col {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.header-right-col {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.header-right-col > .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--touch-hit-area-min, 44px);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .hub-page-title {
@@ -791,7 +962,29 @@ async function handleDeleteFile(file) {
 
 .search-input-wrapper {
   position: relative;
-  width: 380px;
+  flex: 1 1 220px;
+  width: min(100%, 340px);
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .hub-header-bar {
+    padding: 12px;
+  }
+
+  .header-right-col {
+    width: 100%;
+  }
+
+  .header-right-col > .btn {
+    flex: 1 1 auto;
+  }
+
+  .search-input-wrapper {
+    flex: 1 1 100%;
+    width: 100%;
+  }
 }
 
 .search-icon-prefix {
@@ -799,7 +992,8 @@ async function handleDeleteFile(file) {
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
   color: var(--semantic-color-text-secondary);
 }
 
@@ -823,12 +1017,16 @@ async function handleDeleteFile(file) {
 
 .clear-search-btn {
   position: absolute;
-  right: 10px;
+  right: 4px;
   top: 50%;
   transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
   background: none;
   border: none;
-  font-size: 1rem;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
 }
@@ -836,13 +1034,15 @@ async function handleDeleteFile(file) {
 /* Filter & Ribbon Bar */
 .hub-filter-ribbon {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 24px;
+  padding: 10px 20px;
   background-color: var(--semantic-color-surface-muted);
   border-bottom: 1px solid var(--border);
   min-height: 44px;
   gap: 12px;
+  min-width: 0;
 }
 
 .active-filter-pills {
@@ -875,11 +1075,15 @@ async function handleDeleteFile(file) {
 
 .bulk-actions-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }
 
 .selection-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--semantic-color-primary);
@@ -890,8 +1094,10 @@ async function handleDeleteFile(file) {
 
 /* Data Table Container */
 .hub-table-container {
-  flex: 1;
+  flex: 1 1 auto;
+  overflow-x: auto;
   overflow-y: auto;
+  min-width: 0;
 }
 
 .documents-table {
@@ -955,7 +1161,10 @@ async function handleDeleteFile(file) {
 }
 
 .mime-icon {
-  font-size: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  color: var(--semantic-color-text-secondary);
+  flex-shrink: 0;
 }
 
 .filename-text {
@@ -973,6 +1182,7 @@ async function handleDeleteFile(file) {
 }
 
 .version-pill {
+  font-family: var(--font-mono, monospace);
   font-size: 0.7rem;
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-secondary);
@@ -982,14 +1192,14 @@ async function handleDeleteFile(file) {
 }
 
 .study-badge {
-  font-family: monospace;
+  font-family: var(--font-mono, monospace);
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--semantic-color-primary);
 }
 
 .site-badge {
-  font-family: monospace;
+  font-family: var(--font-mono, monospace);
   font-size: 0.78rem;
   background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
@@ -997,7 +1207,7 @@ async function handleDeleteFile(file) {
 }
 
 .uploader-name {
-  font-family: monospace;
+  font-family: var(--font-mono, monospace);
   font-size: 0.78rem;
   color: var(--semantic-color-text-secondary);
 }
@@ -1037,6 +1247,9 @@ async function handleDeleteFile(file) {
 }
 
 .shared-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.75rem;
   font-weight: 600;
   padding: 3px 8px;
@@ -1067,6 +1280,14 @@ async function handleDeleteFile(file) {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
+}
+
+.action-btn-group > .btn,
+.bulk-actions-toolbar > .btn,
+.pagination-buttons > .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .btn-outline-info {
@@ -1129,9 +1350,11 @@ async function handleDeleteFile(file) {
 /* Pagination Bar */
 .hub-pagination-bar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 24px;
+  gap: 10px;
+  padding: 12px 20px;
   border-top: 1px solid var(--border);
   background-color: var(--semantic-color-surface);
   font-size: 0.82rem;
@@ -1139,6 +1362,7 @@ async function handleDeleteFile(file) {
 
 .pagination-buttons {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }

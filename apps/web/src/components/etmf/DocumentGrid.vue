@@ -5,13 +5,13 @@
         <h2>Artifact Documents Registry</h2>
         <p v-if="selectedArtifactCode" class="active-artifact-subtitle">
           Showing documents for Artifact:
-          <strong>{{ selectedArtifactCode }}</strong>
+          <strong class="clinical-mono-id">{{ selectedArtifactCode }}</strong>
         </p>
         <p v-else class="active-artifact-subtitle">
           Please select an artifact from the binder tree to view documents.
         </p>
       </div>
-      <div style="display: flex; gap: 8px">
+      <div class="grid-header-actions clinical-action-toolbar">
         <button
           v-if="selectedDocumentIds.length > 0"
           type="button"
@@ -20,9 +20,9 @@
           :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
           @click="handleExportSelected"
         >
-          <span aria-hidden="true">📦</span> Download Selected ({{
-            selectedDocumentIds.length
-          }})<span class="sr-only"> documents as ZIP package</span>
+          <Package :size="15" :stroke-width="1.75" aria-hidden="true" />
+          <span>Download Selected ({{ selectedDocumentIds.length }})</span
+          ><span class="sr-only"> documents as ZIP package</span>
         </button>
         <button
           type="button"
@@ -31,11 +31,9 @@
           :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
           @click="openBatchDrawer"
         >
-          <span aria-hidden="true">📤</span> Batch Ingestion<span
-            class="sr-only"
-          >
-            multi-file upload</span
-          >
+          <Upload :size="15" :stroke-width="1.75" aria-hidden="true" />
+          <span>Batch Ingestion</span
+          ><span class="sr-only"> multi-file upload</span>
         </button>
         <button
           type="button"
@@ -44,10 +42,9 @@
           :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
           @click="openUploadModal"
         >
-          <span aria-hidden="true">📄</span> Upload Single Document<span
-            v-if="selectedArtifactCode"
-            class="sr-only"
-          >
+          <FileText :size="15" :stroke-width="1.75" aria-hidden="true" />
+          <span>Upload Single Document</span
+          ><span v-if="selectedArtifactCode" class="sr-only">
             for artifact {{ selectedArtifactCode }}</span
           >
         </button>
@@ -113,7 +110,9 @@
                 class="scope-forbidden-guidance"
                 role="alert"
               >
-                <span class="scope-forbidden-icon" aria-hidden="true">🔒</span>
+                <span class="scope-forbidden-icon" aria-hidden="true">
+                  <Lock :size="24" :stroke-width="1.75" aria-hidden="true" />
+                </span>
                 <h3>Study or Site Scope Assignment Required</h3>
                 <p>{{ etmfStore.scopeForbiddenGuidance }}</p>
               </div>
@@ -123,13 +122,19 @@
                 class="scope-forbidden-guidance"
                 role="alert"
               >
-                <span class="scope-forbidden-icon" aria-hidden="true">⚠️</span>
+                <span class="scope-forbidden-icon" aria-hidden="true">
+                  <AlertTriangle
+                    :size="24"
+                    :stroke-width="1.75"
+                    aria-hidden="true"
+                  />
+                </span>
                 <h3>Unable to Load Regulated Documents</h3>
                 <p>{{ etmfStore.documentsError }}</p>
               </div>
               <EmptyState
                 v-else
-                icon="📄"
+                icon=""
                 title="No Regulated Documents Found"
                 message="No documents have been uploaded for this artifact yet. Upload a single document or run batch ingestion to populate the eTMF."
               >
@@ -141,7 +146,12 @@
                     :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
                     @click="openUploadModal"
                   >
-                    <span>📄</span> Upload Single Document
+                    <FileText
+                      :size="14"
+                      :stroke-width="1.75"
+                      aria-hidden="true"
+                    />
+                    <span>Upload Single Document</span>
                   </button>
                   <button
                     type="button"
@@ -150,7 +160,12 @@
                     :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
                     @click="openBatchDrawer"
                   >
-                    <span>📤</span> Batch Ingestion
+                    <Upload
+                      :size="14"
+                      :stroke-width="1.75"
+                      aria-hidden="true"
+                    />
+                    <span>Batch Ingestion</span>
                   </button>
                 </template>
               </EmptyState>
@@ -182,7 +197,13 @@
                 @click="selectCell(rIndex, 0)"
                 @keydown="handleCellKeyDown($event, rIndex, 0, doc)"
               >
-                <span class="file-icon">📄</span>
+                <span class="file-icon" aria-hidden="true">
+                  <FileText
+                    :size="15"
+                    :stroke-width="1.75"
+                    aria-hidden="true"
+                  />
+                </span>
                 <span class="filename" :title="doc.filename">{{
                   doc.filename
                 }}</span>
@@ -190,8 +211,14 @@
                   v-if="doc.is_redacted"
                   class="compliance-badge-pill"
                   title="HIPAA/GDPR Compliant Redacted Copy"
-                  >🛡️ Compliant</span
                 >
+                  <ShieldCheck
+                    :size="12"
+                    :stroke-width="1.75"
+                    aria-hidden="true"
+                  />
+                  <span>Compliant</span>
+                </span>
               </td>
               <td
                 role="gridcell"
@@ -315,7 +342,12 @@
                     :aria-label="'Inspect metadata for ' + doc.filename"
                     @click.stop="$emit('inspect', doc)"
                   >
-                    <span aria-hidden="true">📋</span> Inspect
+                    <ClipboardList
+                      :size="13"
+                      :stroke-width="1.75"
+                      aria-hidden="true"
+                    />
+                    <span>Inspect</span>
                   </button>
                   <button
                     type="button"
@@ -326,7 +358,8 @@
                     "
                     @click.stop="$emit('preview', doc)"
                   >
-                    <span aria-hidden="true">👁️</span> Preview
+                    <Eye :size="13" :stroke-width="1.75" aria-hidden="true" />
+                    <span>Preview</span>
                   </button>
                 </div>
               </td>
@@ -359,7 +392,8 @@
           aria-label="Previous page"
           @click="prevPage"
         >
-          <span aria-hidden="true">◀</span> Previous
+          <ChevronLeft :size="14" :stroke-width="1.75" aria-hidden="true" />
+          <span>Previous</span>
         </button>
 
         <div class="page-numbers">
@@ -384,7 +418,8 @@
           aria-label="Next page"
           @click="nextPage"
         >
-          Next <span aria-hidden="true">▶</span>
+          <span>Next</span>
+          <ChevronRight :size="14" :stroke-width="1.75" aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -405,18 +440,24 @@
           <button
             type="button"
             class="close-modal-btn"
-            style="min-width: 28px; min-height: 28px"
             aria-label="Close modal"
             @click="closeUploadModal"
           >
-            ×
+            <X :size="18" :stroke-width="1.75" aria-hidden="true" />
           </button>
         </div>
 
         <div class="modal-body">
           <!-- GxP Compliance Warning Box -->
           <div class="gxp-warning-alert">
-            <strong>⚠️ Regulated Record Ingestion Warning:</strong>
+            <strong class="gxp-warning-heading">
+              <AlertTriangle
+                :size="15"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
+              <span>Regulated Record Ingestion Warning:</span>
+            </strong>
             All actions are logged in the append-only eTMF audit ledger. You
             must provide a valid electronic signature context and change reason
             justification to submit this record.
@@ -428,7 +469,7 @@
             accept=".pdf"
             :disabled="isSubmitting"
             :has-selection="!!selectedFile"
-            icon="☁️"
+            icon=""
             :prompt-text="
               selectedFile ? '' : 'Drag and drop your regulated PDF here'
             "
@@ -445,7 +486,12 @@
             <template #selected>
               <div v-if="selectedFile" class="selected-file-details">
                 <p class="file-name-success">
-                  <span aria-hidden="true">🎉 </span>{{ selectedFile.name }}
+                  <CheckCircle2
+                    :size="15"
+                    :stroke-width="1.75"
+                    aria-hidden="true"
+                  />
+                  <span>{{ selectedFile.name }}</span>
                 </p>
                 <p class="file-size-meta">
                   Size: {{ (selectedFile.size / 1024).toFixed(1) }} KB | Type:
@@ -523,7 +569,12 @@
             </div>
 
             <div v-if="uploadError" class="upload-error-banner">
-              ❌ {{ uploadError }}
+              <AlertTriangle
+                :size="15"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
+              <span>{{ uploadError }}</span>
             </div>
 
             <div class="modal-footer-actions">
@@ -542,8 +593,11 @@
                   isSubmitting || !selectedFile || !reasonForChange.trim()
                 "
               >
-                <span v-if="isSubmitting">Uploading & Indexing...</span>
-                <span v-else>🔒 Commit Electronic Record</span>
+                <span v-if="isSubmitting">Uploading &amp; Indexing...</span>
+                <span v-else class="commit-btn-label">
+                  <Lock :size="14" :stroke-width="1.75" aria-hidden="true" />
+                  <span>Commit Electronic Record</span>
+                </span>
               </button>
             </div>
           </form>
@@ -563,6 +617,20 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  Eye,
+  FileText,
+  Lock,
+  Package,
+  ShieldCheck,
+  Upload,
+  X,
+} from "lucide-vue-next";
 import { ClinicalDropzone, EmptyState, useFocusTrap } from "ui";
 import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf";
 import { useAuthStore } from "../../stores/auth";
@@ -1102,23 +1170,33 @@ async function submitUpload() {
   display: flex;
   flex-direction: column;
   background-color: var(--semantic-color-surface);
-  padding: 24px;
+  padding: 20px;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  height: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .grid-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
+  gap: 12px;
+  margin-bottom: 20px;
   border-bottom: 1px solid var(--semantic-color-surface-header); /* deid-ignore */
   padding-bottom: 16px;
+  min-width: 0;
+}
+
+.header-titles {
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
 .header-titles h2 {
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0 0 6px 0;
@@ -1130,14 +1208,47 @@ async function submitUpload() {
   margin: 0;
 }
 
-.upload-trigger-btn {
+.grid-header-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.grid-header-actions > .btn {
+  min-height: var(--touch-hit-area-min, 44px);
+  gap: 6px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.upload-trigger-btn {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
   font-weight: 600;
   font-size: 0.9rem;
   border-radius: 6px;
+}
+
+@media (max-width: 640px) {
+  .document-grid-container {
+    padding: 12px;
+  }
+
+  .grid-header-actions {
+    width: 100%;
+  }
+
+  .grid-header-actions > .btn {
+    flex: 1 1 100%;
+    width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
 }
 
 .table-responsive {
@@ -1194,7 +1305,7 @@ async function submitUpload() {
 }
 
 .taxonomy-pill {
-  font-family: monospace;
+  font-family: var(--font-mono, monospace);
   font-size: 0.8rem;
   background-color: var(--semantic-color-surface-header); /* deid-ignore */
   color: var(--semantic-color-text-secondary);
@@ -1204,7 +1315,7 @@ async function submitUpload() {
 }
 
 .version-tag {
-  font-family: monospace;
+  font-family: var(--font-mono, monospace);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -1284,7 +1395,11 @@ async function submitUpload() {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   padding: 16px 24px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
   border-bottom: 1px solid var(--semantic-color-border); /* deid-ignore */
 }
 
@@ -1296,9 +1411,13 @@ async function submitUpload() {
 }
 
 .close-modal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-hit-area-min, 44px);
+  min-height: var(--touch-hit-area-min, 44px);
   background: none;
   border: none;
-  font-size: 1.5rem;
   cursor: pointer;
   color: var(--semantic-color-text-secondary);
   padding: 0;
@@ -1365,7 +1484,16 @@ async function submitUpload() {
   text-decoration: underline;
 }
 
+.gxp-warning-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .file-name-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 700;
   color: var(--semantic-color-success-dark);
   margin: 0 0 4px 0;
@@ -1430,6 +1558,9 @@ async function submitUpload() {
 }
 
 .upload-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background-color: var(--semantic-color-error-bg-soft);
   border: 1px solid var(--semantic-color-error-border);
   color: var(--semantic-color-error-text-dark);
@@ -1438,8 +1569,15 @@ async function submitUpload() {
   font-size: 0.85rem;
 }
 
+.commit-btn-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .modal-footer-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
@@ -1451,6 +1589,7 @@ async function submitUpload() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   padding: 8px 16px;
   font-size: 0.9rem;
   font-weight: 500;
@@ -1503,8 +1642,10 @@ async function submitUpload() {
 /* Pagination Styling */
 .pagination-controls {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   margin-top: 20px;
   padding-top: 16px;
   border-top: 1px solid var(--semantic-color-border); /* deid-ignore */
@@ -1522,6 +1663,7 @@ async function submitUpload() {
 
 .pagination-buttons {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
@@ -1589,6 +1731,9 @@ async function submitUpload() {
 }
 
 .compliance-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.7rem;
   background-color: var(--semantic-color-info-light);
   color: var(--semantic-color-info);

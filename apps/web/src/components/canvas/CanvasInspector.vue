@@ -1,29 +1,46 @@
 <template>
-  <aside
+  <component
+    :is="overlayMode ? 'div' : 'aside'"
     id="canvas-inspector"
     class="inspector"
-    :class="{ 'inspector--collapsed': isCollapsed }"
-    :data-collapsed="isCollapsed ? 'true' : 'false'"
-    aria-labelledby="canvas-inspector-title"
+    :class="{
+      'inspector--collapsed': effectiveCollapsed,
+      'inspector--overlay': overlayMode,
+    }"
+    :data-collapsed="effectiveCollapsed ? 'true' : 'false'"
+    :aria-labelledby="!overlayMode ? 'canvas-inspector-title' : undefined"
   >
-    <div class="inspector-rail">
+    <div v-if="!overlayMode" class="inspector-rail">
       <button
         id="btn-toggle-inspector"
         type="button"
         class="inspector-toggle"
-        :aria-expanded="!isCollapsed"
+        :aria-expanded="!effectiveCollapsed"
         aria-controls="canvas-inspector-body"
-        :aria-label="isCollapsed ? 'Expand inspector' : 'Collapse inspector'"
-        :title="isCollapsed ? 'Expand inspector' : 'Collapse inspector'"
+        :aria-label="
+          effectiveCollapsed ? 'Expand inspector' : 'Collapse inspector'
+        "
+        :title="effectiveCollapsed ? 'Expand inspector' : 'Collapse inspector'"
         @click="toggleCollapsed"
       >
-        <span aria-hidden="true">{{ isCollapsed ? "◂" : "▸" }}</span>
+        <PanelRightOpen
+          v-if="effectiveCollapsed"
+          :size="16"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
+        <PanelRightClose
+          v-else
+          :size="16"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
       </button>
     </div>
 
     <div
       id="canvas-inspector-body"
-      v-show="!isCollapsed"
+      v-show="!effectiveCollapsed"
       class="inspector-body"
     >
       <template v-if="hasSelection">
@@ -316,6 +333,7 @@
             id="inspector-open-record"
             class="inspector-link"
             :to="recordLocation"
+            @click="emit('navigate')"
           >
             Open participant's data
           </router-link>
@@ -324,6 +342,7 @@
             id="inspector-open-data-entry"
             class="inspector-link"
             :to="dataEntryLocation"
+            @click="emit('navigate')"
           >
             Open in data entry
           </router-link>
@@ -333,6 +352,7 @@
             data-testid="inspector-ecrf-handoff"
             class="inspector-link"
             :to="handoffLocation"
+            @click="emit('navigate')"
           >
             Open standalone form view
           </router-link>
@@ -416,11 +436,12 @@
         />
       </template>
     </div>
-  </aside>
+  </component>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { PanelRightClose, PanelRightOpen } from "lucide-vue-next";
 import type { RouteLocationRaw } from "vue-router";
 import type { SubjectSummary } from "../../api/executionApi";
 import { participantStateLabel } from "../../canvas/lifecycle";
@@ -480,10 +501,13 @@ const props = defineProps<{
   canManageParticipants?: boolean;
   /** A question from the palette's Ask entry: opens Assist with it (ADR-2635). */
   assistPrompt?: string;
+  /** True when rendered inside a tablet slide-over or mobile bottom-sheet ClinicalDrawer. */
+  overlayMode?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: "update:collapsed", collapsed: boolean): void;
+  (e: "navigate"): void;
 }>();
 
 const { enabled: aiEnabled } = useAiAssistance();
@@ -542,6 +566,9 @@ const hasActiveContent = computed(() =>
 const manualCollapsed = ref<boolean | null>(null);
 const isCollapsed = computed(
   () => manualCollapsed.value ?? !hasActiveContent.value
+);
+const effectiveCollapsed = computed(() =>
+  props.overlayMode ? false : isCollapsed.value
 );
 
 function toggleCollapsed() {
@@ -767,7 +794,7 @@ watch(
 );
 
 watch(
-  isCollapsed,
+  effectiveCollapsed,
   (collapsed) => {
     emit("update:collapsed", collapsed);
   },
@@ -823,9 +850,9 @@ watch(aiEnabled, (on) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  min-height: 28px;
-  padding: 2px 6px;
+  min-width: var(--touch-hit-area-min, 44px);
+  min-height: var(--touch-hit-area-min, 44px);
+  padding: 4px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
@@ -833,6 +860,10 @@ watch(aiEnabled, (on) => {
   font-size: 0.85rem;
   line-height: 1;
   cursor: pointer;
+}
+
+.inspector.inspector--overlay {
+  padding: 16px;
 }
 
 .inspector-toggle:hover {
@@ -863,10 +894,12 @@ watch(aiEnabled, (on) => {
 .inspector-title {
   margin: 0;
   font-size: 1.15rem;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .inspector-ref {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--neutral-dark);
   overflow-wrap: anywhere;

@@ -57,23 +57,39 @@
 
   /* Font Stack */
   --font-sans:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
-  --font-mono: monospace, Courier New, Courier, monospace;
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  --font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
 
   /* Named Breakpoints */
+  --breakpoint-mobile-sheet: 480px;
   --breakpoint-phone: 576px;
   --breakpoint-tablet: 768px;
   --breakpoint-desktop: 1024px;
+  --breakpoint-wide: 1280px;
 
   /* Touch Target Minimums */
   --touch-target-min: 48px;
+  --touch-hit-area-min: 44px;
 
-  /* Drawer Width Tier Tokens */
+  /* Workspace Shell & Three-Tier Pane Tokens */
+  --shell-header-height: 48px;
+  --shell-header-max-height: 52px;
+  --shell-rail-collapsed-width: 60px;
+  --shell-rail-expanded-width: 224px;
+  --shell-sidebar-width: 280px;
+  --shell-inspector-width: 320px;
+  --shell-inspector-collapsed-width: 44px;
+  --shell-workspace-min-width: 480px;
+
+  /* Drawer Width & Bottom Sheet Tier Tokens */
   --drawer-width-sm: min(100vw, 440px);
   --drawer-width-md: min(100vw, 480px);
   --drawer-width-lg: min(100vw, 640px);
   --drawer-width-xl: min(100vw, 920px);
+  --drawer-bottom-max-height: 90dvh;
 
   /* CENTRALIZED SEMANTIC CONTRACT (Requirement 1) */
   /* Semantic Colors - Brand & Accents */

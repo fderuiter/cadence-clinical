@@ -13,13 +13,15 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 22 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 24 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
 | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
 | [`ClinicalDataTable`](./data-table.md)     | Accessible, sortable, paginated clinical dataset table with row selection and tabular numerals                                | `table`, `region`, `columnheader` |
 | [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap and backdrop blur                                                                     | `dialog`, `aria-modal="true"`     |
-| [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer with reactive focus containment                                                                  | `dialog`, `aria-modal="true"`     |
+| [`ClinicalDrawer`](./modal.md)             | Accessible slide-over (`right`, `left`) and bottom-sheet (`bottom`, `mobileBottomSheet`) drawer with reactive focus trapping  | `dialog`, `aria-modal="true"`     |
+| `ClinicalIconRail`                         | Compact `60px` vertical icon rail with `44px x 44px` hit targets, active indicator, and optional expand/collapse trigger      | `navigation`                      |
+| `ClinicalSplitWorkspace`                   | Three-tier responsive split workspace (`>= 1280px` inline panes, `768px–1279px` slide-overs, `< 768px` `<= 90dvh` sheets)     | `complementary`, `dialog`         |
 | `ClinicalDropzone`                         | Accessible drag-and-drop and native `<button type="button">` file selector with live selected-file status and sibling remove  | `button`, `status`                |
 | `ClinicalIconButton`                       | Accessible glyph-only `<button>` requiring a non-empty `label` prop (`aria-label`) with `aria-hidden="true"` glyph slot       | `button`                          |
 | `SignOutConfirmModal`                      | Draft-safe voluntary sign-out confirmation dialog with focus containment and unsaved-work warning                             | `dialog`, `aria-modal="true"`     |
@@ -43,6 +45,7 @@ All 22 Vue components and interaction helpers are exported directly from the roo
 | `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment and focusable element discovery                                                           | Keyboard helper                   |
 | `useEscapeClose`                           | Stack-aware `Escape` dismissal composable                                                                                     | Keyboard helper                   |
 | `useAsyncRetry`                            | Reactive async execution and retry state helper                                                                               | Async helper                      |
+| `useWorkspaceTier`                         | Reactive viewport tier resolver (`desktop` `>= 1280px`, `tablet` `768px–1279px`, `mobile` `< 768px`)                          | Layout composable                 |
 
 ---
 

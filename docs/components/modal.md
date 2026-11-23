@@ -22,14 +22,18 @@ The `ClinicalModal` and `ClinicalDrawer` primitives render accessible modal over
 
 ## ClinicalDrawer Props
 
-| Prop              | Type      | Default   | Description                                                              |
-| :---------------- | :-------- | :-------- | :----------------------------------------------------------------------- |
-| `open` / `isOpen` | `Boolean` | `false`   | Controls slide-over visibility (`modelValue` also supported).            |
-| `title`           | `String`  | `''`      | Drawer header title bound via `aria-labelledby`.                         |
-| `size`            | `String`  | `'md'`    | Width tier (`sm`, `md`, `lg`, `xl`) mapped to `--drawer-width-*` tokens. |
-| `position`        | `String`  | `'right'` | Slide-in edge (`right` or `left`).                                       |
-| `dismissible`     | `Boolean` | `true`    | Locks `Escape`, close button, and backdrop dismissal when `false`.       |
-| `teleport`        | `Boolean` | `true`    | Teleports the drawer overlay to `document.body` when `true`.             |
+| Prop                | Type      | Default     | Description                                                                               |
+| :------------------ | :-------- | :---------- | :---------------------------------------------------------------------------------------- |
+| `open` / `isOpen`   | `Boolean` | `false`     | Controls slide-over visibility (`modelValue` also supported).                             |
+| `title`             | `String`  | `''`        | Drawer header title bound via `aria-labelledby`.                                          |
+| `size`              | `String`  | `'md'`      | Width tier (`sm`, `md`, `lg`, `xl`) mapped to `--drawer-width-*` tokens.                  |
+| `position`          | `String`  | `'right'`   | Slide-in edge (`right`, `left`, or `bottom` `<= 90dvh` sheet with grabber handle).        |
+| `mobileBottomSheet` | `Boolean` | `false`     | Automatically switches `right`/`left` drawers to a `position-bottom` sheet below `768px`. |
+| `overlayId`         | `String`  | `undefined` | Optional `id` attribute applied to the `.clinical-drawer-backdrop` container.             |
+| `panelClass`        | `String`  | `''`        | Optional custom CSS classes appended to `.clinical-drawer-panel`.                         |
+| `bodyClass`         | `String`  | `''`        | Optional custom CSS classes appended to `.clinical-drawer-body`.                          |
+| `dismissible`       | `Boolean` | `true`      | Locks `Escape`, close button, and backdrop dismissal when `false`.                        |
+| `teleport`          | `Boolean` | `true`      | Teleports the drawer overlay to `document.body` when `true`.                              |
 
 ## Overlay Composables (`useFocusTrap`, `trapTabFocus` & `useEscapeClose`)
 

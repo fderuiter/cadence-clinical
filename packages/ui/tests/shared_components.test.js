@@ -9,12 +9,17 @@ import {
   ClinicalDropzone,
   ClinicalFieldLayout,
   ClinicalIconButton,
+  ClinicalIconRail,
   ClinicalModal,
   ClinicalQueryFlag,
+  ClinicalSplitWorkspace,
   EmptyState,
   MediaPlayer,
   PersonaSwitcher,
+  WORKSPACE_BREAKPOINTS,
   createSrOnlyActionButton,
+  resolveWorkspaceTierFromWidth,
+  useWorkspaceTier,
 } from "../index.js";
 
 async function mountSetupSSR(Component, props = {}, emit = vi.fn()) {
@@ -657,6 +662,219 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       expect(btnHtml).toBe(
         '<button type="button" class="btn-primary btn-start-task" data-id="assign_01">Start Survey<span class="sr-only">: Daily Health &amp; Vital &lt;Diary&gt;</span></button>'
       );
+    });
+
+    it("resolves workspace tiers and renders ClinicalDrawer bottom-sheet mode, ClinicalIconRail, and ClinicalSplitWorkspace", async () => {
+      expect(WORKSPACE_BREAKPOINTS).toEqual({
+        MOBILE_SHEET: 480,
+        TABLET: 768,
+        DESKTOP_WIDE: 1280,
+      });
+      expect(resolveWorkspaceTierFromWidth(1440)).toBe("desktop");
+      expect(resolveWorkspaceTierFromWidth(1280)).toBe("desktop");
+      expect(resolveWorkspaceTierFromWidth(1024)).toBe("tablet");
+      expect(resolveWorkspaceTierFromWidth(768)).toBe("tablet");
+      expect(resolveWorkspaceTierFromWidth(390)).toBe("mobile");
+      expect(resolveWorkspaceTierFromWidth(NaN)).toBe("desktop");
+
+      const ssrTier = useWorkspaceTier();
+      expect(ssrTier.tier.value).toBe("desktop");
+      expect(ssrTier.isDesktop.value).toBe(true);
+      expect(ssrTier.isTablet.value).toBe(false);
+      expect(ssrTier.isMobile.value).toBe(false);
+
+      const bottomDrawerHtml = await renderToString(
+        createSSRApp({
+          render: () =>
+            h(
+              ClinicalDrawer,
+              {
+                modelValue: true,
+                position: "bottom",
+                title: "Mobile Inspector",
+                teleport: false,
+              },
+              {
+                default: () => h("p", "Bottom sheet body"),
+              }
+            ),
+        })
+      );
+      expect(bottomDrawerHtml).toContain("position-bottom");
+      expect(bottomDrawerHtml).toContain("clinical-drawer-grabber");
+      expect(bottomDrawerHtml).toContain("Mobile Inspector");
+      expect(bottomDrawerHtml).toContain("Bottom sheet body");
+      expect(bottomDrawerHtml).toContain("<svg");
+      expect(bottomDrawerHtml).not.toContain("✕");
+
+      const railGroups = [
+        {
+          id: "conduct",
+          label: "Conduct",
+          items: [
+            {
+              id: "participants",
+              domId: "nav-item-participants",
+              label: "Participants",
+              badge: 12,
+              active: true,
+            },
+            {
+              id: "documents",
+              domId: "nav-item-documents",
+              label: "Documents",
+              badge: 4,
+              active: false,
+            },
+          ],
+        },
+      ];
+
+      const railEmit = vi.fn();
+      const { state: railState, html: railDesktopHtml } = await mountSetupSSR(
+        ClinicalIconRail,
+        {
+          id: "test-rail",
+          title: "Study Navigator",
+          groups: railGroups,
+          teleport: false,
+        },
+        railEmit
+      );
+      expect(railDesktopHtml).toContain('id="test-rail"');
+      expect(railDesktopHtml).toContain("is-expanded");
+      expect(railDesktopHtml).toContain("Participants");
+      railState.toggleDesktopRail();
+      expect(railEmit).toHaveBeenCalledWith("update:collapsed", true);
+      railState.handleSelectItem(railGroups[0].items[0]);
+      expect(railEmit).toHaveBeenCalledWith("select", railGroups[0].items[0]);
+
+      const splitDesktopHtml = await renderToString(
+        createSSRApp({
+          render: () =>
+            h(
+              ClinicalSplitWorkspace,
+              {
+                sidebarId: "split-sidebar",
+                sidebarTitle: "Folder Tree",
+                inspectorId: "split-inspector",
+                inspectorTitle: "Entity Inspector",
+                mainId: "split-main",
+                teleport: false,
+              },
+              {
+                sidebar: () => h("div", { class: "sidebar-inner" }, "Tree"),
+                default: () =>
+                  h("div", { class: "main-inner" }, "Primary Canvas"),
+                inspector: () =>
+                  h("div", { class: "inspector-inner" }, "Details"),
+              }
+            ),
+        })
+      );
+      expect(splitDesktopHtml).toContain("clinical-split-sidebar");
+      expect(splitDesktopHtml).toContain("clinical-split-main");
+      expect(splitDesktopHtml).toContain("clinical-split-inspector");
+      expect(splitDesktopHtml).toContain("Primary Canvas");
+
+      // Simulate tablet and mobile matchMedia environments
+      const prevWindow = globalThis.window;
+      try {
+        globalThis.window = {
+          matchMedia: (query) => ({
+            matches: query.includes("768px") && !query.includes("1280px"),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+          }),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        };
+
+        const tabletRailHtml = await renderToString(
+          createSSRApp(ClinicalIconRail, {
+            id: "tablet-rail",
+            groups: railGroups,
+            drawerOpen: true,
+            teleport: false,
+          })
+        );
+        expect(tabletRailHtml).toContain("is-compact");
+        expect(tabletRailHtml).toContain("tier-tablet");
+        expect(tabletRailHtml).toContain("position-left");
+
+        const tabletSplitHtml = await renderToString(
+          createSSRApp({
+            render: () =>
+              h(
+                ClinicalSplitWorkspace,
+                {
+                  sidebarOpen: true,
+                  inspectorOpen: true,
+                  sidebarTitle: "Binder Tree",
+                  inspectorTitle: "Inspector",
+                  teleport: false,
+                },
+                {
+                  sidebar: () => h("div", "Tablet Drawer Tree"),
+                  default: () => h("div", "Tablet Canvas"),
+                  inspector: () => h("div", "Tablet Inspector"),
+                }
+              ),
+          })
+        );
+        expect(tabletSplitHtml).toContain("tier-tablet");
+        expect(tabletSplitHtml).toContain("position-left");
+        expect(tabletSplitHtml).toContain("position-right");
+
+        globalThis.window = {
+          matchMedia: (query) => ({
+            matches: query.includes("max-width"),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+          }),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        };
+
+        const mobileSplitHtml = await renderToString(
+          createSSRApp({
+            render: () =>
+              h(
+                ClinicalSplitWorkspace,
+                {
+                  sidebarOpen: true,
+                  sidebarTitle: "Mobile Binder",
+                  teleport: false,
+                },
+                {
+                  sidebar: () => h("div", "Mobile Bottom Sheet Tree"),
+                  default: () => h("div", "Mobile Canvas"),
+                }
+              ),
+          })
+        );
+        expect(mobileSplitHtml).toContain("tier-mobile");
+        expect(mobileSplitHtml).toContain("position-bottom");
+        expect(mobileSplitHtml).toContain("Mobile Bottom Sheet Tree");
+
+        globalThis.window = {
+          matchMedia: () => ({
+            matches: false,
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+          }),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        };
+        const inertStubHtml = await renderToString(
+          createSSRApp({
+            render: () => h(ClinicalSplitWorkspace, { teleport: false }),
+          })
+        );
+        expect(inertStubHtml).toContain("tier-desktop");
+      } finally {
+        globalThis.window = prevWindow;
+      }
     });
   });
 });

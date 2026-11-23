@@ -9,520 +9,648 @@
       >Skip to workspace</a
     >
 
-    <component
-      :is="inAppShell ? 'div' : 'header'"
-      ref="topbarRef"
-      class="topbar"
-      :role="inAppShell ? 'region' : undefined"
-      :aria-label="inAppShell ? 'Study context' : undefined"
-    >
-      <nav id="canvas-zoom-path" class="zoom-path" aria-label="Zoom path">
-        <ol>
-          <li>
-            <router-link id="zoom-studies" :to="{ name: 'study' }">
-              Studies
-            </router-link>
-          </li>
-          <li v-if="studyCode">
-            <router-link
-              id="zoom-study"
-              :to="studyLocation()"
-              :aria-current="zoomCurrent === 'study' ? 'page' : undefined"
-            >
-              {{ studyCode }}
-            </router-link>
-          </li>
-          <li v-if="zoomSite">
-            <router-link
-              id="zoom-site"
-              :to="
-                studyLocation({
-                  stage: 'conduct',
-                  section: 'participants',
-                  site: zoomSite,
-                })
-              "
-              :aria-current="zoomCurrent === 'site' ? 'page' : undefined"
-            >
-              Site {{ zoomSite }}
-            </router-link>
-          </li>
-          <li v-if="zoomParticipantCode">
-            <span
-              v-if="zoomCurrent === 'participant'"
-              id="zoom-participant"
-              aria-current="page"
-              >{{ zoomParticipantCode }}</span
-            >
-            <router-link
-              v-else
-              id="zoom-participant"
-              :to="zoomParticipantLocation"
-            >
-              {{ zoomParticipantCode }}
-            </router-link>
-          </li>
-          <li v-if="hasOpenForm">
-            <span
-              v-if="zoomCurrent === 'form'"
-              id="zoom-form"
-              aria-current="page"
-              >{{ zoomFormLabel }}</span
-            >
-            <router-link v-else id="zoom-form" :to="zoomFormLocation">
-              {{ zoomFormLabel }}
-            </router-link>
-          </li>
-          <li v-if="openObservationRef">
-            <span id="zoom-observation" aria-current="page">{{
-              zoomObservationLabel
-            }}</span>
-          </li>
-        </ol>
-      </nav>
-
-      <button
-        v-if="!inAppShell"
-        id="btn-open-palette"
-        type="button"
-        class="palette-trigger"
-        aria-keyshortcuts="Meta+K Control+K"
-        @click="paletteOpen = true"
+    <Teleport :to="teleportTargetEl || 'body'" :disabled="!teleportTargetEl">
+      <component
+        :is="inAppShell ? 'div' : 'header'"
+        ref="topbarRef"
+        :class="inAppShell ? 'shell-study-bar' : 'topbar'"
+        :role="inAppShell ? 'region' : undefined"
+        :aria-label="inAppShell ? 'Study context' : undefined"
       >
-        <span>Go to…</span>
-        <kbd>⌘K</kbd>
-      </button>
-
-      <button
-        id="btn-ai-assistance"
-        type="button"
-        class="ai-toggle"
-        :aria-pressed="aiEnabled"
-        aria-describedby="ai-assistance-note"
-        @click="setAiEnabled(!aiEnabled)"
-      >
-        AI assistance: {{ aiEnabled ? "on" : "off" }}
-      </button>
-      <span id="ai-assistance-note" class="sr-only">
-        Shows or hides Assist and the palette's Ask entry. Proposals an agent
-        already made still wait for a decision in Needs attention.
-      </span>
-
-      <div v-if="!inAppShell" class="user">
-        <span id="canvas-user">{{
-          authStore.identity?.username || "Signed in"
-        }}</span>
-        <button
-          id="btn-canvas-logout"
-          type="button"
-          class="btn btn-secondary"
-          @click="requestCanvasSignOut"
-        >
-          Sign out
-        </button>
-      </div>
-    </component>
-
-    <template v-if="studyCode">
-      <div class="study-header">
-        <h1 id="canvas-study-title">
-          {{ studyCode }}
-        </h1>
-        <nav aria-label="Lifecycle">
-          <ol class="lifecycle-rail">
-            <li v-for="item in STAGES" :key="item.id">
-              <router-link
-                :id="`stage-${item.id}`"
-                :to="studyLocation({ stage: item.id })"
-                class="stage"
-                :class="{ current: stage?.id === item.id }"
-                :aria-current="stage?.id === item.id ? 'step' : undefined"
-              >
-                {{ item.label }}
+        <nav id="canvas-zoom-path" class="zoom-path" aria-label="Zoom path">
+          <ol>
+            <li>
+              <router-link id="zoom-studies" :to="{ name: 'study' }">
+                Studies
               </router-link>
+            </li>
+            <li v-if="studyCode">
+              <router-link
+                id="zoom-study"
+                class="clinical-mono-id"
+                :to="studyLocation()"
+                :aria-current="zoomCurrent === 'study' ? 'page' : undefined"
+              >
+                {{ studyCode }}
+              </router-link>
+            </li>
+            <li v-if="zoomSite">
+              <router-link
+                id="zoom-site"
+                :to="
+                  studyLocation({
+                    stage: 'conduct',
+                    section: 'participants',
+                    site: zoomSite,
+                  })
+                "
+                :aria-current="zoomCurrent === 'site' ? 'page' : undefined"
+              >
+                Site <span class="clinical-mono-id">{{ zoomSite }}</span>
+              </router-link>
+            </li>
+            <li v-if="zoomParticipantCode">
+              <span
+                v-if="zoomCurrent === 'participant'"
+                id="zoom-participant"
+                class="clinical-mono-id"
+                aria-current="page"
+                >{{ zoomParticipantCode }}</span
+              >
+              <router-link
+                v-else
+                id="zoom-participant"
+                class="clinical-mono-id"
+                :to="zoomParticipantLocation"
+              >
+                {{ zoomParticipantCode }}
+              </router-link>
+            </li>
+            <li v-if="hasOpenForm">
+              <span
+                v-if="zoomCurrent === 'form'"
+                id="zoom-form"
+                aria-current="page"
+                >{{ zoomFormLabel }}</span
+              >
+              <router-link v-else id="zoom-form" :to="zoomFormLocation">
+                {{ zoomFormLabel }}
+              </router-link>
+            </li>
+            <li v-if="openObservationRef">
+              <span id="zoom-observation" aria-current="page">{{
+                zoomObservationLabel
+              }}</span>
             </li>
           </ol>
         </nav>
+
+        <button
+          v-if="!inAppShell"
+          id="btn-open-palette"
+          type="button"
+          class="palette-trigger"
+          aria-keyshortcuts="Meta+K Control+K"
+          @click="paletteOpen = true"
+        >
+          <Search :size="14" :stroke-width="1.75" aria-hidden="true" />
+          <span>Go to…</span>
+          <kbd>Ctrl+K</kbd>
+        </button>
+
+        <button
+          id="btn-ai-assistance"
+          type="button"
+          class="ai-toggle"
+          :aria-pressed="aiEnabled"
+          aria-describedby="ai-assistance-note"
+          @click="setAiEnabled(!aiEnabled)"
+        >
+          <Sparkles :size="14" :stroke-width="1.75" aria-hidden="true" />
+          <span
+            >AI <span class="ai-toggle-verbose">assistance: </span
+            >{{ aiEnabled ? "on" : "off" }}</span
+          >
+        </button>
+        <span id="ai-assistance-note" class="sr-only">
+          Shows or hides Assist and the palette's Ask entry. Proposals an agent
+          already made still wait for a decision in Needs attention.
+        </span>
+
+        <div v-if="!inAppShell" class="user">
+          <span id="canvas-user">{{
+            authStore.identity?.username || "Signed in"
+          }}</span>
+          <button
+            id="btn-canvas-logout"
+            type="button"
+            class="btn btn-secondary"
+            @click="requestCanvasSignOut"
+          >
+            Sign out
+          </button>
+        </div>
+      </component>
+    </Teleport>
+
+    <template v-if="studyCode">
+      <div class="study-header">
+        <div class="study-header-primary">
+          <h1 id="canvas-study-title" class="clinical-mono-id">
+            {{ studyCode }}
+          </h1>
+          <nav aria-label="Lifecycle" class="lifecycle-nav">
+            <ol class="lifecycle-rail">
+              <li v-for="item in STAGES" :key="item.id">
+                <router-link
+                  :id="`stage-${item.id}`"
+                  :to="studyLocation({ stage: item.id })"
+                  class="stage"
+                  :class="{ current: stage?.id === item.id }"
+                  :aria-current="stage?.id === item.id ? 'step' : undefined"
+                >
+                  {{ item.label }}
+                </router-link>
+              </li>
+            </ol>
+          </nav>
+        </div>
+
+        <div v-if="!isDesktopTier" class="study-pane-triggers">
+          <button
+            v-if="isMobileTier"
+            id="btn-open-navigator-sheet"
+            type="button"
+            class="pane-trigger-btn"
+            @click="navigatorDrawerOpen = true"
+          >
+            <PanelLeft :size="16" :stroke-width="1.75" aria-hidden="true" />
+            <span>Sections</span>
+          </button>
+          <button
+            id="btn-open-inspector-overlay"
+            type="button"
+            class="pane-trigger-btn"
+            @click="openOverlayInspector"
+          >
+            <PanelRight :size="16" :stroke-width="1.75" aria-hidden="true" />
+            <span>Inspector</span>
+          </button>
+        </div>
       </div>
 
-      <div
+      <ClinicalSplitWorkspace
+        v-model:inspector-open="inspectorOverlayOpen"
         class="panes"
         :class="{ 'panes--inspector-collapsed': inspectorCollapsed }"
+        :inspector-collapsed="inspectorCollapsed"
+        inspector-title="Inspector"
+        inspector-aria-label="Study record inspector"
+        inspector-drawer-size="sm"
+        :show-inspector-drawer-header="true"
+        :main-tag="inAppShell ? 'div' : 'main'"
+        main-id="canvas-workspace"
+        main-class="workspace"
+        :main-role="inAppShell ? 'region' : undefined"
+        :main-aria-label="inAppShell ? workspaceLabel : undefined"
+        :main-tabindex="-1"
       >
-        <nav id="canvas-navigator" class="navigator" aria-label="Sections">
-          <router-link
-            id="nav-study-home"
-            :to="studyLocation()"
-            class="nav-link"
-            :class="{ current: !stage }"
-            :aria-current="!stage ? 'page' : undefined"
+        <template #rail>
+          <ClinicalIconRail
+            id="canvas-navigator"
+            v-model:drawer-open="navigatorDrawerOpen"
+            class="navigator"
+            aria-label="Sections"
+            title="Sections"
+            :collapsible="false"
+            :groups="navigatorRailGroups"
+            expand-label="Open study sections drawer"
+            @select="onSelectNavigatorRailItem"
           >
-            Study home
-          </router-link>
-          <div
-            v-for="group in navigatorStages"
-            :key="group.id"
-            class="nav-group"
-          >
-            <h2 class="nav-group-title">
-              {{ group.label }}
-            </h2>
-            <ul v-if="group.sections.length">
-              <li v-for="item in group.sections" :key="item.id">
+            <template #default>
+              <router-link
+                id="nav-study-home"
+                :to="studyLocation()"
+                class="nav-link"
+                :class="{ current: !stage }"
+                :aria-current="!stage ? 'page' : undefined"
+              >
+                <LayoutDashboard
+                  :size="15"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                />
+                <span>Study home</span>
+              </router-link>
+              <div
+                v-for="group in navigatorStages"
+                :key="group.id"
+                class="nav-group"
+              >
+                <h2 class="nav-group-title">
+                  {{ group.label }}
+                </h2>
+                <ul v-if="group.sections.length">
+                  <li v-for="item in group.sections" :key="item.id">
+                    <router-link
+                      :id="`nav-${item.id}`"
+                      :to="studyLocation({ stage: group.id, section: item.id })"
+                      class="nav-link"
+                      :class="{ current: section?.id === item.id }"
+                      :aria-current="
+                        section?.id === item.id ? 'page' : undefined
+                      "
+                    >
+                      <component
+                        :is="sectionIconFor(item.id)"
+                        :size="15"
+                        :stroke-width="1.75"
+                        aria-hidden="true"
+                      />
+                      <span>{{ item.label }}</span>
+                    </router-link>
+                  </li>
+                </ul>
+                <p v-else class="nav-empty">
+                  No sections are available in this stage yet.
+                </p>
+              </div>
+            </template>
+
+            <template #drawer="{ close }">
+              <nav aria-label="Sections" class="navigator-drawer-list">
                 <router-link
-                  :id="`nav-${item.id}`"
-                  :to="studyLocation({ stage: group.id, section: item.id })"
+                  id="nav-drawer-study-home"
+                  :to="studyLocation()"
                   class="nav-link"
-                  :class="{ current: section?.id === item.id }"
-                  :aria-current="section?.id === item.id ? 'page' : undefined"
+                  :class="{ current: !stage }"
+                  :aria-current="!stage ? 'page' : undefined"
+                  @click="close()"
                 >
-                  {{ item.label }}
+                  <LayoutDashboard
+                    :size="15"
+                    :stroke-width="1.75"
+                    aria-hidden="true"
+                  />
+                  <span>Study home</span>
                 </router-link>
-              </li>
-            </ul>
-            <p v-else class="nav-empty">
-              No sections are available in this stage yet.
-            </p>
-          </div>
-        </nav>
+                <div
+                  v-for="group in navigatorStages"
+                  :key="group.id"
+                  class="nav-group"
+                >
+                  <h3 class="nav-group-title">
+                    {{ group.label }}
+                  </h3>
+                  <ul v-if="group.sections.length">
+                    <li v-for="item in group.sections" :key="item.id">
+                      <router-link
+                        :to="
+                          studyLocation({ stage: group.id, section: item.id })
+                        "
+                        class="nav-link"
+                        :class="{ current: section?.id === item.id }"
+                        :aria-current="
+                          section?.id === item.id ? 'page' : undefined
+                        "
+                        @click="close()"
+                      >
+                        <component
+                          :is="sectionIconFor(item.id)"
+                          :size="15"
+                          :stroke-width="1.75"
+                          aria-hidden="true"
+                        />
+                        <span>{{ item.label }}</span>
+                      </router-link>
+                    </li>
+                  </ul>
+                  <p v-else class="nav-empty">
+                    No sections are available in this stage yet.
+                  </p>
+                </div>
+              </nav>
+            </template>
+          </ClinicalIconRail>
+        </template>
 
-        <component
-          :is="inAppShell ? 'div' : 'main'"
-          id="canvas-workspace"
-          class="workspace"
-          :role="inAppShell ? 'region' : undefined"
-          tabindex="-1"
-          :aria-label="workspaceLabel"
-        >
-          <ProposalReview
-            v-if="proposalRef"
-            :key="proposalRef"
-            :study-code="studyCode"
-            :proposal-ref="proposalRef"
-            :reviewer="authStore.userId ?? ''"
-          />
-
-          <ObservationView
-            v-else-if="openObservationRef"
-            :key="openObservationRef"
-            embedded
-            :study-code="studyCode"
-            :observation-ref="openObservationRef"
-            :return-to="observationReturnLocation"
-            :return-label="observationReturnLabel"
-            @loaded="onObservationLoaded"
-          />
-
-          <template v-else-if="hasOpenForm">
-            <p
-              v-if="
-                isNewForm &&
-                recordRef &&
-                !recordParticipant &&
-                isRecordParticipantLoading
-              "
-              id="record-loading"
-              class="stage-empty"
-              role="status"
-            >
-              Loading participant…
-            </p>
-            <p
-              v-else-if="isNewForm && recordRef && !recordParticipant"
-              id="record-not-loaded"
-              class="stage-empty"
-            >
-              This participant isn't among those loaded for {{ studyCode }}.
-              <router-link
-                :to="
-                  studyLocation({ stage: 'conduct', section: 'participants' })
-                "
-              >
-                Find it in Participants </router-link
-              >.
-            </p>
-            <CanvasFormWorkspace
-              v-else
+        <template #default>
+          <div class="workspace-inner">
+            <ProposalReview
+              v-if="proposalRef"
+              :key="proposalRef"
               :study-code="studyCode"
-              :participant="activeFormParticipant"
-              :enrollment-id="activeEnrollmentId"
-              :record-loading="canvas.record.loading"
-              :form-id="openFormId"
-              :collection-spec-id="initialSpecId || null"
-              :planned-activity-id="initialVisitId || null"
-              :form-label="
-                loadedForm && loadedForm.form_id === openFormId
-                  ? formatFormLabel(loadedForm)
-                  : undefined
-              "
-              :can-manage-queries="canManage"
-              :can-answer-queries="canAnswer"
-              :can-verify-source="canVerify"
-              :highlight-item-id="highlightItemQuery || null"
-              :back-location="formBackLocation"
-              :back-label="formBackLabel"
-              :handoff-location="
-                activeFormParticipant
-                  ? ecrfHandoffLocationFor(activeFormParticipant)
-                  : null
-              "
-              :form-location="formLocationById"
-              :observation-location="observationLocationFromForm"
-              @dirty-change="formWorkspaceDirty = $event"
-              @form-loaded="onFormLoaded"
-              @closed="onFormClosed"
+              :proposal-ref="proposalRef"
+              :reviewer="authStore.userId ?? ''"
             />
-          </template>
 
-          <template v-else-if="recordRef">
-            <ParticipantRecord
-              v-if="recordParticipant"
-              :participant="recordParticipant"
-              :can-manage="canManage"
-              :form-location="formLocationById"
-              :new-form-location="newFormLocationFor(recordParticipant)"
-              :new-form-cell-location="
-                (specId, visitId) =>
-                  newFormCellLocationFor(recordParticipant!, specId, visitId)
-              "
-              :handoff-location="ecrfHandoffLocationFor(recordParticipant)"
-              :observation-location="observationLocationFromRecord"
-              @retry="canvas.loadRecord(recordParticipant)"
+            <ObservationView
+              v-else-if="openObservationRef"
+              :key="openObservationRef"
+              embedded
+              :study-code="studyCode"
+              :observation-ref="openObservationRef"
+              :return-to="observationReturnLocation"
+              :return-label="observationReturnLabel"
+              @loaded="onObservationLoaded"
             />
-            <p
-              v-else-if="isRecordParticipantLoading"
-              id="record-loading"
-              class="stage-empty"
-              role="status"
-            >
-              Loading participant…
-            </p>
-            <p v-else id="record-not-loaded" class="stage-empty">
-              This participant isn't among those loaded for {{ studyCode }}.
-              <router-link
-                :to="
-                  studyLocation({ stage: 'conduct', section: 'participants' })
+
+            <template v-else-if="hasOpenForm">
+              <p
+                v-if="
+                  isNewForm &&
+                  recordRef &&
+                  !recordParticipant &&
+                  isRecordParticipantLoading
                 "
+                id="record-loading"
+                class="stage-empty"
+                role="status"
               >
-                Find it in Participants </router-link
-              >.
-            </p>
-          </template>
+                Loading participant…
+              </p>
+              <p
+                v-else-if="isNewForm && recordRef && !recordParticipant"
+                id="record-not-loaded"
+                class="stage-empty"
+              >
+                This participant isn't among those loaded for {{ studyCode }}.
+                <router-link
+                  :to="
+                    studyLocation({ stage: 'conduct', section: 'participants' })
+                  "
+                >
+                  Find it in Participants </router-link
+                >.
+              </p>
+              <CanvasFormWorkspace
+                v-else
+                :study-code="studyCode"
+                :participant="activeFormParticipant"
+                :enrollment-id="activeEnrollmentId"
+                :record-loading="canvas.record.loading"
+                :form-id="openFormId"
+                :collection-spec-id="initialSpecId || null"
+                :planned-activity-id="initialVisitId || null"
+                :form-label="
+                  loadedForm && loadedForm.form_id === openFormId
+                    ? formatFormLabel(loadedForm)
+                    : undefined
+                "
+                :can-manage-queries="canManage"
+                :can-answer-queries="canAnswer"
+                :can-verify-source="canVerify"
+                :highlight-item-id="highlightItemQuery || null"
+                :back-location="formBackLocation"
+                :back-label="formBackLabel"
+                :handoff-location="
+                  activeFormParticipant
+                    ? ecrfHandoffLocationFor(activeFormParticipant)
+                    : null
+                "
+                :form-location="formLocationById"
+                :observation-location="observationLocationFromForm"
+                @dirty-change="formWorkspaceDirty = $event"
+                @form-loaded="onFormLoaded"
+                @closed="onFormClosed"
+              />
+            </template>
 
-          <template v-else-if="!stage">
-            <StudyPulse @drill="drillToParticipants" />
+            <template v-else-if="recordRef">
+              <ParticipantRecord
+                v-if="recordParticipant"
+                :participant="recordParticipant"
+                :can-manage="canManage"
+                :form-location="formLocationById"
+                :new-form-location="newFormLocationFor(recordParticipant)"
+                :new-form-cell-location="
+                  (specId, visitId) =>
+                    newFormCellLocationFor(recordParticipant!, specId, visitId)
+                "
+                :handoff-location="ecrfHandoffLocationFor(recordParticipant)"
+                :observation-location="observationLocationFromRecord"
+                @retry="canvas.loadRecord(recordParticipant)"
+              />
+              <p
+                v-else-if="isRecordParticipantLoading"
+                id="record-loading"
+                class="stage-empty"
+                role="status"
+              >
+                Loading participant…
+              </p>
+              <p v-else id="record-not-loaded" class="stage-empty">
+                This participant isn't among those loaded for {{ studyCode }}.
+                <router-link
+                  :to="
+                    studyLocation({ stage: 'conduct', section: 'participants' })
+                  "
+                >
+                  Find it in Participants </router-link
+                >.
+              </p>
+            </template>
+
+            <template v-else-if="!stage">
+              <StudyPulse @drill="drillToParticipants" />
+              <StudySitesPanel
+                v-if="hasStudySitesService"
+                :key="`home-sites-${studyCode}`"
+                :study-code="studyCode"
+                :can-manage-sites="authStore.canManageWorkspaceSites"
+                compact
+                @open-participants="openParticipantsForSite"
+              />
+              <NeedsAttention
+                :key="`attention-${studyCode}`"
+                :study-code="studyCode"
+              />
+              <StudyActivity :key="studyCode" :study-code="studyCode" />
+            </template>
+
+            <ParticipantsSection
+              v-else-if="section?.id === 'participants'"
+              :status="statusFilter"
+              :site-id="siteFilter"
+              :query="participantSearchFilter"
+              :selected-id="selectedNode?.id ?? ''"
+              :can-manage-participants="canChangeParticipants"
+              @select="selectParticipant"
+              @filter="applyParticipantFilter"
+            />
+
+            <ProtocolVersionsSection
+              v-else-if="section?.id === 'protocol-versions'"
+              :key="studyCode"
+              :study-code="studyCode"
+              :selected-ref="selectedVersionText"
+              @select="selectVersion"
+            />
+
             <StudySitesPanel
-              v-if="hasStudySitesService"
-              :key="`home-sites-${studyCode}`"
+              v-else-if="section?.id === 'sites'"
+              :key="`sites-${studyCode}`"
               :study-code="studyCode"
               :can-manage-sites="authStore.canManageWorkspaceSites"
-              compact
               @open-participants="openParticipantsForSite"
             />
-            <NeedsAttention
-              :key="`attention-${studyCode}`"
+
+            <SiteActivationPanel
+              v-else-if="section?.id === 'site-activation'"
+              :key="studyCode"
               :study-code="studyCode"
-            />
-            <StudyActivity :key="studyCode" :study-code="studyCode" />
-          </template>
-
-          <ParticipantsSection
-            v-else-if="section?.id === 'participants'"
-            :status="statusFilter"
-            :site-id="siteFilter"
-            :query="participantSearchFilter"
-            :selected-id="selectedNode?.id ?? ''"
-            :can-manage-participants="canChangeParticipants"
-            @select="selectParticipant"
-            @filter="applyParticipantFilter"
-          />
-
-          <ProtocolVersionsSection
-            v-else-if="section?.id === 'protocol-versions'"
-            :key="studyCode"
-            :study-code="studyCode"
-            :selected-ref="selectedVersionText"
-            @select="selectVersion"
-          />
-
-          <StudySitesPanel
-            v-else-if="section?.id === 'sites'"
-            :key="`sites-${studyCode}`"
-            :study-code="studyCode"
-            :can-manage-sites="authStore.canManageWorkspaceSites"
-            @open-participants="openParticipantsForSite"
-          />
-
-          <SiteActivationPanel
-            v-else-if="section?.id === 'site-activation'"
-            :key="studyCode"
-            :study-code="studyCode"
-            :site-id="siteFilter"
-          />
-
-          <CtmsGreenlightSection
-            v-else-if="section?.id === 'startup-greenlight'"
-            :key="`greenlight-${studyCode}`"
-            :study-code="studyCode"
-            :site-id="siteFilter"
-          />
-
-          <CtmsMilestonesSection
-            v-else-if="section?.id === 'site-milestones'"
-            :key="`milestones-${studyCode}`"
-            :study-code="studyCode"
-            :site-id="siteFilter"
-          />
-
-          <CtmsDelegationSection
-            v-else-if="section?.id === 'delegation'"
-            :key="`delegation-${studyCode}`"
-            :study-code="studyCode"
-            :site-id="siteFilter"
-          />
-
-          <CtmsMonitoringSection
-            v-else-if="section?.id === 'monitoring-visits'"
-            :key="`monitoring-${studyCode}`"
-            :study-code="studyCode"
-            :site-id="siteFilter"
-          />
-
-          <RtsmSupplySection
-            v-else-if="section?.id === 'supply'"
-            :key="`supply-${studyCode}`"
-            :study-code="studyCode"
-            :site-id="siteFilter"
-          />
-
-          <template v-else-if="section?.id === 'documents'">
-            <DocumentManagerView
-              v-if="canReadDocuments"
-              :key="`docs-${studyCode}`"
-              :study-id="studyCode"
               :site-id="siteFilter"
             />
-            <p
+
+            <CtmsGreenlightSection
+              v-else-if="section?.id === 'startup-greenlight'"
+              :key="`greenlight-${studyCode}`"
+              :study-code="studyCode"
+              :site-id="siteFilter"
+            />
+
+            <CtmsMilestonesSection
+              v-else-if="section?.id === 'site-milestones'"
+              :key="`milestones-${studyCode}`"
+              :study-code="studyCode"
+              :site-id="siteFilter"
+            />
+
+            <CtmsDelegationSection
+              v-else-if="section?.id === 'delegation'"
+              :key="`delegation-${studyCode}`"
+              :study-code="studyCode"
+              :site-id="siteFilter"
+            />
+
+            <CtmsMonitoringSection
+              v-else-if="section?.id === 'monitoring-visits'"
+              :key="`monitoring-${studyCode}`"
+              :study-code="studyCode"
+              :site-id="siteFilter"
+            />
+
+            <RtsmSupplySection
+              v-else-if="section?.id === 'supply'"
+              :key="`supply-${studyCode}`"
+              :study-code="studyCode"
+              :site-id="siteFilter"
+            />
+
+            <template v-else-if="section?.id === 'documents'">
+              <DocumentManagerView
+                v-if="canReadDocuments"
+                :key="`docs-${studyCode}`"
+                :study-id="studyCode"
+                :site-id="siteFilter"
+                embedded
+              />
+              <p
+                v-else
+                id="etmf-read-role-guidance"
+                class="stage-empty"
+                role="status"
+              >
+                {{ ETMF_READ_ROLE_REASON }}
+              </p>
+            </template>
+
+            <StudyTrainingView
+              v-else-if="section?.id === 'training'"
+              :key="`training-${studyCode}`"
+              :study-id="studyCode"
+            />
+
+            <QueriesSection
+              v-else-if="section?.id === 'queries'"
+              :key="`queries-${studyCode}`"
+              :study-code="studyCode"
+              :can-manage="canManage"
+              :can-answer="canAnswer"
+              :status="queryStatusFilter"
+              :owner="queryOwnerFilter"
+              :origin="queryOriginFilter"
+              :priority="queryPriorityFilter"
+              :site="siteFilter"
+              :participant="queryParticipantFilter"
+              :changed="queryChangedFilter"
+              @filter="applyStudyQueryFilter"
+            />
+
+            <LocksSection
+              v-else-if="section?.id === 'locks'"
+              :key="`locks-${studyCode}`"
+              :study-code="studyCode"
+            />
+
+            <ValidationSection
+              v-else-if="section?.id === 'validation'"
+              :key="`validation-${studyCode}`"
+              :study-code="studyCode"
+              :can-manage-rules="canManageRules"
+            />
+
+            <ExportsSection
+              v-else-if="section?.id === 'exports'"
+              :key="`exports-${studyCode}`"
+              :study-code="studyCode"
+            />
+
+            <section
               v-else
-              id="etmf-read-role-guidance"
-              class="stage-empty"
-              role="status"
+              id="stage-overview"
+              class="stage-overview"
+              aria-labelledby="stage-overview-title"
             >
-              {{ ETMF_READ_ROLE_REASON }}
-            </p>
-          </template>
+              <h2 id="stage-overview-title">
+                {{ stage.label }}
+              </h2>
+              <p class="stage-scope">{{ stage.scope }}.</p>
+              <ul v-if="stage.sections.length" class="stage-sections">
+                <li v-for="item in stage.sections" :key="item.id">
+                  <router-link
+                    :to="studyLocation({ stage: stage.id, section: item.id })"
+                  >
+                    {{ item.label }}
+                  </router-link>
+                  <span class="stage-section-description">
+                    {{ item.description }}.</span
+                  >
+                </li>
+              </ul>
+              <p id="stage-empty" class="stage-empty">
+                {{
+                  stage.sections.length
+                    ? `The rest of ${stage.label} arrives as its services are built.`
+                    : `No part of ${stage.label} has a service yet.`
+                }}
+                <router-link to="/plans">
+                  Compare product families &amp; pre-release roadmap </router-link
+                >.
+              </p>
+            </section>
+          </div>
+        </template>
 
-          <StudyTrainingView
-            v-else-if="section?.id === 'training'"
-            :key="`training-${studyCode}`"
-            :study-id="studyCode"
-          />
-
-          <QueriesSection
-            v-else-if="section?.id === 'queries'"
-            :key="`queries-${studyCode}`"
+        <template #inspector="{ isOverlay }">
+          <CanvasInspector
+            ref="inspectorRef"
+            :overlay-mode="isOverlay"
             :study-code="studyCode"
-            :can-manage="canManage"
-            :can-answer="canAnswer"
-            :status="queryStatusFilter"
-            :owner="queryOwnerFilter"
-            :origin="queryOriginFilter"
-            :priority="queryPriorityFilter"
-            :site="siteFilter"
-            :participant="queryParticipantFilter"
-            :changed="queryChangedFilter"
-            @filter="applyStudyQueryFilter"
+            :participant="inspectedParticipant"
+            :node-ref="inspectedNodeText"
+            :missing="isSelectedParticipantMissing"
+            :protocol-version="inspectedVersion"
+            :protocol-version-error="inspectedVersionError"
+            :generic-node-ref="selectedGenericNodeRef"
+            :generic-node="inspectedGenericNode"
+            :generic-node-loading="inspectedGenericLoading"
+            :record-location="
+              inspectedParticipant &&
+              (inspectedParticipant !== recordParticipant ||
+                hasOpenForm ||
+                Boolean(openObservationRef))
+                ? recordLocationFor(inspectedParticipant)
+                : null
+            "
+            :data-entry-location="
+              inspectedParticipant &&
+              !(isNewForm && inspectedParticipant === recordParticipant)
+                ? dataEntryLocationFor(inspectedParticipant)
+                : null
+            "
+            :handoff-location="
+              inspectedParticipant
+                ? ecrfHandoffLocationFor(inspectedParticipant)
+                : null
+            "
+            :can-manage-participants="canChangeParticipants"
+            :assist-prompt="askText"
+            @update:collapsed="onInspectorCollapsedChange"
+            @navigate="inspectorOverlayOpen = false"
           />
-
-          <LocksSection
-            v-else-if="section?.id === 'locks'"
-            :key="`locks-${studyCode}`"
-            :study-code="studyCode"
-          />
-
-          <ValidationSection
-            v-else-if="section?.id === 'validation'"
-            :key="`validation-${studyCode}`"
-            :study-code="studyCode"
-            :can-manage-rules="canManageRules"
-          />
-
-          <ExportsSection
-            v-else-if="section?.id === 'exports'"
-            :key="`exports-${studyCode}`"
-            :study-code="studyCode"
-          />
-
-          <section
-            v-else
-            id="stage-overview"
-            class="stage-overview"
-            aria-labelledby="stage-overview-title"
-          >
-            <h2 id="stage-overview-title">
-              {{ stage.label }}
-            </h2>
-            <p class="stage-scope">{{ stage.scope }}.</p>
-            <ul v-if="stage.sections.length" class="stage-sections">
-              <li v-for="item in stage.sections" :key="item.id">
-                <router-link
-                  :to="studyLocation({ stage: stage.id, section: item.id })"
-                >
-                  {{ item.label }}
-                </router-link>
-                <span class="stage-section-description">
-                  {{ item.description }}.</span
-                >
-              </li>
-            </ul>
-            <p id="stage-empty" class="stage-empty">
-              {{
-                stage.sections.length
-                  ? `The rest of ${stage.label} arrives as its services are built.`
-                  : `No part of ${stage.label} has a service yet.`
-              }}
-              <router-link to="/plans">
-                Compare product families &amp; pre-release roadmap </router-link
-              >.
-            </p>
-          </section>
-        </component>
-
-        <CanvasInspector
-          ref="inspectorRef"
-          :study-code="studyCode"
-          :participant="inspectedParticipant"
-          :node-ref="inspectedNodeText"
-          :missing="isSelectedParticipantMissing"
-          :protocol-version="inspectedVersion"
-          :protocol-version-error="inspectedVersionError"
-          :generic-node-ref="selectedGenericNodeRef"
-          :generic-node="inspectedGenericNode"
-          :generic-node-loading="inspectedGenericLoading"
-          :record-location="
-            inspectedParticipant &&
-            (inspectedParticipant !== recordParticipant ||
-              hasOpenForm ||
-              Boolean(openObservationRef))
-              ? recordLocationFor(inspectedParticipant)
-              : null
-          "
-          :data-entry-location="
-            inspectedParticipant &&
-            !(isNewForm && inspectedParticipant === recordParticipant)
-              ? dataEntryLocationFor(inspectedParticipant)
-              : null
-          "
-          :handoff-location="
-            inspectedParticipant
-              ? ecrfHandoffLocationFor(inspectedParticipant)
-              : null
-          "
-          :can-manage-participants="canChangeParticipants"
-          :assist-prompt="askText"
-          @update:collapsed="inspectorCollapsed = $event"
-        />
-      </div>
+        </template>
+      </ClinicalSplitWorkspace>
     </template>
 
     <component
@@ -905,7 +1033,31 @@ import {
   onUnmounted,
   ref,
   watch,
+  type Component,
+  type Ref,
 } from "vue";
+import {
+  Building2,
+  CheckCircle2,
+  CheckSquare,
+  ClipboardCheck,
+  Download,
+  FileCode2,
+  FolderOpen,
+  GraduationCap,
+  LayoutDashboard,
+  Lock,
+  MessageSquareWarning,
+  Milestone,
+  Package,
+  PanelLeft,
+  PanelRight,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  UserCheck,
+  Users,
+} from "lucide-vue-next";
 import {
   onBeforeRouteLeave,
   onBeforeRouteUpdate,
@@ -956,7 +1108,13 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
-import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import {
+  ClinicalIconRail,
+  ClinicalSplitWorkspace,
+  SignOutConfirmModal,
+  useSignOutGuard,
+  useWorkspaceTier,
+} from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
@@ -1029,23 +1187,72 @@ const router = useRouter();
 const authStore = useAuthStore();
 const canvas = useStudyCanvasStore();
 const inAppShell = inject<boolean>("inAppShell", false);
+const shellStudyContextEl = inject<Ref<HTMLElement | null> | null>(
+  "shellStudyContextEl",
+  null
+);
+const { isDesktop: isDesktopTier, isMobile: isMobileTier } = useWorkspaceTier();
+
+const teleportTargetEl = computed(() =>
+  inAppShell && shellStudyContextEl?.value ? shellStudyContextEl.value : null
+);
 
 const { enabled: aiEnabled, setEnabled: setAiEnabled } = useAiAssistance();
 
 const paletteOpen = ref(false);
 const typedStudy = ref("");
 const inspectorCollapsed = ref(true);
+const navigatorDrawerOpen = ref(false);
+const inspectorOverlayOpen = ref(false);
 const inspectorRef = ref<InstanceType<typeof CanvasInspector> | null>(null);
 const topbarRef = ref<HTMLElement | null>(null);
-const topbarHeight = ref(45);
+const topbarHeight = ref(44);
 let topbarResizeObserver: ResizeObserver | null = null;
 
+const SECTION_ICON_MAP: Record<string, Component> = {
+  "protocol-versions": FileCode2,
+  sites: Building2,
+  "site-activation": ShieldCheck,
+  "startup-greenlight": CheckCircle2,
+  "site-milestones": Milestone,
+  delegation: UserCheck,
+  "monitoring-visits": ClipboardCheck,
+  participants: Users,
+  supply: Package,
+  documents: FolderOpen,
+  training: GraduationCap,
+  queries: MessageSquareWarning,
+  locks: Lock,
+  validation: CheckSquare,
+  exports: Download,
+};
+
+function sectionIconFor(sectionId: string): Component {
+  return SECTION_ICON_MAP[sectionId] || FolderOpen;
+}
+
+function openOverlayInspector() {
+  inspectorRef.value?.expand();
+  inspectorOverlayOpen.value = true;
+}
+
+function onInspectorCollapsedChange(collapsed: boolean) {
+  inspectorCollapsed.value = collapsed;
+  if (collapsed && !isDesktopTier.value) {
+    inspectorOverlayOpen.value = false;
+  }
+}
+
 function syncTopbarHeight() {
+  if (inAppShell) {
+    topbarHeight.value = 0;
+    return;
+  }
   const el = topbarRef.value;
   if (!el || typeof el.getBoundingClientRect !== "function") return;
   const measured = Math.round(el.getBoundingClientRect().height);
   if (measured > 0) {
-    topbarHeight.value = measured;
+    topbarHeight.value = Math.min(measured, 52);
   }
 }
 
@@ -1588,6 +1795,31 @@ watch(
   (next, prev) => {
     if (next && next !== prev) {
       inspectorRef.value?.expand();
+      if (!isDesktopTier.value) {
+        inspectorOverlayOpen.value = true;
+      }
+    }
+  },
+  { immediate: true }
+);
+watch(
+  askText,
+  (next) => {
+    if (next && !isDesktopTier.value) {
+      inspectorOverlayOpen.value = true;
+    }
+  },
+  { immediate: true }
+);
+watch(
+  () => route.fullPath,
+  () => {
+    navigatorDrawerOpen.value = false;
+    const nextNode = anySelectedNode.value
+      ? formatNodeRef(anySelectedNode.value)
+      : "";
+    if (!nextNode && !askText.value) {
+      inspectorOverlayOpen.value = false;
     }
   }
 );
@@ -1676,6 +1908,41 @@ const navigatorStages = computed(() =>
   stage.value ? [stage.value] : STAGES.filter((s) => s.sections.length)
 );
 
+const navigatorRailGroups = computed(() => [
+  {
+    id: "study-home",
+    label: "",
+    items: [
+      {
+        id: "__home__",
+        domId: "nav-study-home",
+        label: "Study home",
+        icon: LayoutDashboard,
+        active: !stage.value,
+        location: studyLocation(),
+      },
+    ],
+  },
+  ...navigatorStages.value.map((group) => ({
+    id: group.id,
+    label: group.label,
+    items: group.sections.map((item) => ({
+      id: item.id,
+      domId: `nav-${item.id}`,
+      label: item.label,
+      icon: sectionIconFor(item.id),
+      active: section.value?.id === item.id,
+      location: studyLocation({ stage: group.id, section: item.id }),
+    })),
+  })),
+]);
+
+function onSelectNavigatorRailItem(item: { location?: unknown }) {
+  if (item?.location) {
+    router.push(item.location as Parameters<typeof router.push>[0]);
+  }
+}
+
 const zoomParticipant = computed(
   () =>
     recordParticipant.value ??
@@ -1759,6 +2026,9 @@ function selectParticipant(participant: SubjectSummary) {
   const node = tryNodeRef("participant", participant.id);
   if (!node) return;
   inspectorRef.value?.expand();
+  if (!isDesktopTier.value) {
+    inspectorOverlayOpen.value = true;
+  }
   router.push(
     studyLocation({
       stage: "conduct",
@@ -2116,6 +2386,9 @@ async function onObservationLoaded(obs: KernelObservation) {
 function selectVersion(version: KernelProtocolVersion) {
   if (!version.ref) return;
   inspectorRef.value?.expand();
+  if (!isDesktopTier.value) {
+    inspectorOverlayOpen.value = true;
+  }
   router.push(
     studyLocation({
       stage: "design",
@@ -2456,7 +2729,7 @@ onUnmounted(() => {
 .canvas {
   --canvas-sticky-offset: 0px;
   --canvas-pane-top: calc(
-    var(--canvas-sticky-offset) + var(--canvas-topbar-height, 45px)
+    var(--canvas-sticky-offset) + var(--canvas-topbar-height, 44px)
   );
   display: flex;
   flex-direction: column;
@@ -2467,7 +2740,8 @@ onUnmounted(() => {
 }
 
 .canvas.canvas-in-shell {
-  --canvas-sticky-offset: var(--shell-header-height, 57px);
+  --canvas-sticky-offset: var(--shell-header-height, 48px);
+  --canvas-pane-top: var(--shell-header-height, 48px);
   min-height: calc(100vh - var(--canvas-sticky-offset));
 }
 
@@ -2488,25 +2762,48 @@ onUnmounted(() => {
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 16px;
+  flex-wrap: nowrap;
+  gap: 12px;
+  height: var(--shell-header-height, 48px);
+  max-height: var(--shell-header-max-height, 52px);
+  padding: 0 14px;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface);
+  box-sizing: border-box;
+}
+
+.shell-study-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding-left: 8px;
+  border-left: 1px solid var(--semantic-color-border);
 }
 
 .zoom-path {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.zoom-path::-webkit-scrollbar {
+  display: none;
 }
 
 .zoom-path ol {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
+  white-space: nowrap;
 }
 
 .zoom-path li + li::before {
@@ -2526,28 +2823,56 @@ onUnmounted(() => {
 .palette-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 6px 10px;
+  gap: 8px;
+  min-height: var(--touch-hit-area-min, 44px);
+  height: 36px;
+  padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
   color: var(--neutral-dark);
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .ai-toggle {
-  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: var(--touch-hit-area-min, 44px);
+  height: 34px;
+  padding: 0 9px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
   color: var(--neutral-dark);
+  font-size: 0.8rem;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .ai-toggle[aria-pressed="true"] {
   border-color: var(--semantic-color-ai-border);
   background: var(--semantic-color-ai-bg);
   color: var(--semantic-color-ai);
+}
+
+@media (max-width: 640px) {
+  .ai-toggle-verbose {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .ai-toggle {
+    padding: 0 7px;
+  }
 }
 
 .sr-only {
@@ -2560,30 +2885,68 @@ onUnmounted(() => {
 }
 
 .palette-trigger kbd {
-  font-family: inherit;
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
 }
 
 .user {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .study-header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 24px;
-  padding: 12px 16px;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface);
 }
 
+.study-header-primary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  min-width: 0;
+}
+
 .study-header h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.15rem;
+}
+
+.study-pane-triggers {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.pane-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--touch-hit-area-min, 44px);
+  padding: 6px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pane-trigger-btn:hover {
+  background: var(--semantic-color-surface-header);
 }
 
 .lifecycle-rail {
@@ -2596,12 +2959,14 @@ onUnmounted(() => {
 }
 
 .stage {
-  display: inline-block;
-  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 10px;
   border-radius: 999px;
   color: var(--neutral-dark);
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -2614,45 +2979,46 @@ onUnmounted(() => {
 
 .panes {
   flex: 1;
-  display: grid;
-  grid-template-columns: 14rem minmax(0, 1fr) 20rem;
   min-height: 0;
-}
-
-.panes.panes--inspector-collapsed {
-  grid-template-columns: 14rem minmax(0, 1fr) 2.75rem;
 }
 
 .navigator {
   position: sticky;
   top: var(--canvas-pane-top);
-  align-self: start;
+  align-self: flex-start;
   max-height: calc(100vh - var(--canvas-pane-top));
-  overflow-y: auto;
-  padding: 12px;
   background: var(--semantic-color-surface);
 }
 
+.navigator-drawer-list {
+  padding: 12px 16px;
+}
+
 .nav-group-title {
-  margin: 16px 0 4px;
+  margin: 14px 0 4px;
   color: var(--neutral-dark);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.navigator ul {
+.navigator ul,
+.navigator-drawer-list ul {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .nav-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
   padding: 6px 8px;
   border-radius: 6px;
   color: inherit;
   text-decoration: none;
+  font-size: 0.88rem;
 }
 
 .nav-link.current {
@@ -2667,17 +3033,20 @@ onUnmounted(() => {
   font-size: 0.85rem;
 }
 
-.workspace {
+:deep(.workspace) {
   padding: 16px;
   min-width: 0;
-  border-left: 1px solid var(--border);
   border-right: 1px solid var(--border);
 }
 
-.canvas :deep(#canvas-inspector) {
+.workspace-inner {
+  min-width: 0;
+}
+
+.canvas :deep(.clinical-split-inspector > #canvas-inspector) {
   position: sticky;
   top: var(--canvas-pane-top);
-  align-self: start;
+  align-self: stretch;
   max-height: calc(100vh - var(--canvas-pane-top));
   overflow-y: auto;
   background: var(--semantic-color-surface);
@@ -2904,31 +3273,10 @@ onUnmounted(() => {
   color: var(--neutral-dark);
 }
 
-@media (max-width: 960px) {
-  .panes,
-  .panes.panes--inspector-collapsed {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .navigator {
-    position: static;
-    max-height: none;
-    overflow-y: visible;
-    align-self: stretch;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .workspace {
-    border-left: 0;
+@media (max-width: 1279px) {
+  :deep(.workspace) {
     border-right: 0;
-  }
-
-  .canvas :deep(#canvas-inspector) {
-    position: static;
-    max-height: none;
-    overflow-y: visible;
-    align-self: stretch;
-    border-top: 1px solid var(--border);
+    padding: 12px;
   }
 }
 </style>
