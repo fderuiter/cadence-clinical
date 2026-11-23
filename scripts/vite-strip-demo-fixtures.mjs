@@ -242,6 +242,21 @@ function toPosixPath(value) {
  * @param {string} appDir - Absolute directory of the Vite app.
  * @returns {import("vite").Plugin}
  */
+export function isDemoBuildResolved(appDir, resolved) {
+  let fileFlag = false;
+  const modeEnvPath = path.join(appDir, `.env.${resolved.mode}`);
+  if (fs.existsSync(modeEnvPath)) {
+    const content = fs.readFileSync(modeEnvPath, "utf8");
+    fileFlag = /^\s*VITE_DEMO_MODE\s*=\s*true\s*$/m.test(content);
+  }
+  return (
+    resolved.mode === "demo" ||
+    resolved.env?.VITE_DEMO_MODE === "true" ||
+    process.env.VITE_DEMO_MODE === "true" ||
+    fileFlag
+  );
+}
+
 export function createDemoFixturesPlugin(appDir) {
   let stripDemoFixtures = false;
   const demoFixturesEntry = path.resolve(
@@ -274,17 +289,7 @@ export function createDemoFixturesPlugin(appDir) {
     name: "strip-demo-fixtures-in-prod",
     enforce: "pre",
     configResolved(resolved) {
-      let fileFlag = false;
-      const modeEnvPath = path.join(appDir, `.env.${resolved.mode}`);
-      if (fs.existsSync(modeEnvPath)) {
-        const content = fs.readFileSync(modeEnvPath, "utf8");
-        fileFlag = /^\s*VITE_DEMO_MODE\s*=\s*true\s*$/m.test(content);
-      }
-      const isDemo =
-        resolved.mode === "demo" ||
-        resolved.env?.VITE_DEMO_MODE === "true" ||
-        process.env.VITE_DEMO_MODE === "true" ||
-        fileFlag;
+      const isDemo = isDemoBuildResolved(appDir, resolved);
       stripDemoFixtures = resolved.command === "build" && !isDemo;
     },
     resolveId(source, importer) {
@@ -319,4 +324,81 @@ export function createDemoFixturesPlugin(appDir) {
       return null;
     },
   };
+}
+
+/**
+ * Constant-folds zero-argument `isDemoBuild()` calls during `vite build` so Rollup
+ * dead-code-eliminates OIDC (`keycloak-js`) and streaming (`hls.js`) branches in demo
+ * bundles while preserving `isDemoBuild(env)` overrides and `vi.stubEnv` in Vitest.
+ *
+ * @param {string} appDir - Absolute directory of the Vite app.
+ * @returns {import("vite").Plugin}
+ */
+export function createConstantFoldDemoModePlugin(appDir) {
+  let isDemo = false;
+  const srcRoot = `${path.resolve(appDir, "src").replace(/\\/g, "/")}/`;
+
+  return {
+    name: "constant-fold-demo-mode",
+    apply: "build",
+    configResolved(resolved) {
+      isDemo = isDemoBuildResolved(appDir, resolved);
+    },
+    transform(code, id) {
+      if (!code.includes("isDemoBuild")) {
+        return null;
+      }
+      const cleanId = id.split("?")[0].replace(/\\/g, "/");
+      if (
+        !cleanId.startsWith(srcRoot) ||
+        cleanId.endsWith("/demoMode.js") ||
+        !/\.(?:[cm]?js|ts|vue)$/.test(cleanId)
+      ) {
+        return null;
+      }
+
+      const literal = isDemo ? "(true)" : "(false)";
+      const transformed = code.replace(
+        /(?<!function\s+)(?<![.\w$])isDemoBuild\(\s*\)/g,
+        literal
+      );
+      if (transformed === code) {
+        return null;
+      }
+      return {
+        code: transformed,
+        map: null,
+      };
+    },
+  };
+}
+
+/**
+ * Builds the shared `packages/ui` subpath aliases (`ui/testing`, `ui/vitest`, and `ui`)
+ * so `apps/web` and `apps/subject-portal` keep mock-gateway and Vitest-only entrypoints
+ * isolated from the library root export (#5335, ADR-2537, ADR-2538).
+ *
+ * @param {string} appDir - Absolute directory of the Vite app.
+ * @param {{ uiEntry?: string }} [options] - Relative entry inside `packages/ui`.
+ * @returns {import("vite").Alias[]}
+ */
+export function createUiWorkspaceAliases(
+  appDir,
+  { uiEntry = "index.js" } = {}
+) {
+  const uiRoot = path.resolve(appDir, "../../packages/ui");
+  return [
+    {
+      find: /^ui\/testing$/,
+      replacement: path.resolve(uiRoot, "mockGateway.js"),
+    },
+    {
+      find: /^ui\/vitest$/,
+      replacement: path.resolve(uiRoot, "accessibility-matcher.js"),
+    },
+    {
+      find: /^ui$/,
+      replacement: path.resolve(uiRoot, uiEntry),
+    },
+  ];
 }

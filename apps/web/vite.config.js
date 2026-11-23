@@ -4,7 +4,11 @@ import vue from "@vitejs/plugin-vue";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
-import { createDemoFixturesPlugin } from "../../scripts/vite-strip-demo-fixtures.mjs";
+import {
+  createConstantFoldDemoModePlugin,
+  createDemoFixturesPlugin,
+  createUiWorkspaceAliases,
+} from "../../scripts/vite-strip-demo-fixtures.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -124,21 +128,11 @@ export default defineConfig({
     })(),
     createStripMockWorkerInProdPlugin(__dirname),
     createDemoFixturesPlugin(__dirname),
+    createConstantFoldDemoModePlugin(__dirname),
   ],
   resolve: {
     alias: [
-      // The mock gateway is test and dev tooling, kept out of the library's root export (#5335).
-      {
-        find: /^ui\/testing$/,
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/ui/mockGateway.js"
-        ),
-      },
-      {
-        find: /^ui$/,
-        replacement: path.resolve(__dirname, "../../packages/ui/dist/index.js"),
-      },
+      ...createUiWorkspaceAliases(__dirname, { uiEntry: "dist/index.js" }),
       { find: "@", replacement: path.resolve(__dirname, "./src") },
       {
         find: "pinia",

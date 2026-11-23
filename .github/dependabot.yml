@@ -59,6 +59,10 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Microsoft.CodeAnalysis.NetAnalyzers"
         update-types: ["version-update:semver-major"]
+      # SonarAnalyzer.CSharp > 10.6.x adds rules (S8969, S6444, S5332, …) that require dedicated triage under TreatWarningsAsErrors (#6030).
+      - dependency-name: "SonarAnalyzer.CSharp"
+        update-types:
+          ["version-update:semver-major", "version-update:semver-minor"]
       # Fluid.Core 3.x makes TemplateOptions/MemberAccessStrategy read-only after Build(); stay on 2.41.x until migrated.
       - dependency-name: "Fluid.Core"
         update-types: ["version-update:semver-major"]
@@ -172,6 +176,10 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      # Database tests, CI, AppHost, and docker-compose run one pinned PostgreSQL major (ADR-2533).
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions workflow updates
   - package-ecosystem: "github-actions"
