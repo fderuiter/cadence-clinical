@@ -188,3 +188,44 @@ export function canCorrectObservations(auth: AuthorityAuth): boolean {
   }
   return false;
 }
+
+const PROTOCOL_GOVERNANCE_ROLES: ReadonlySet<string> = new Set([
+  "sysadmin",
+  "sponsor_designer",
+  "sponsor_dm",
+  "protocol_reviewer",
+]);
+
+const KERNEL_SITE_GOVERNANCE_ROLES: ReadonlySet<string> = new Set([
+  "sysadmin",
+  "sponsor_designer",
+  "sponsor_dm",
+]);
+
+/** Submit protocol drafts for review, return to draft, approve via Part 11 signature, register evidence artifacts, and manage protocol effectivities. */
+export function canGovernProtocols(
+  auth: AuthorityAuth | null | undefined
+): boolean {
+  if (!auth || auth.isAuthenticated === false) return false;
+  if (holdsBackendRole(auth, PROTOCOL_GOVERNANCE_ROLES)) return true;
+  if (typeof auth.hasRole === "function") {
+    return ["study_designer", "designer", "data_manager", "sponsor_admin"].some(
+      (role) => auth.hasRole!(role)
+    );
+  }
+  return false;
+}
+
+/** Link and activate kernel study sites once a governing protocol version is effective. */
+export function canManageKernelStudySites(
+  auth: AuthorityAuth | null | undefined
+): boolean {
+  if (!auth || auth.isAuthenticated === false) return false;
+  if (holdsBackendRole(auth, KERNEL_SITE_GOVERNANCE_ROLES)) return true;
+  if (typeof auth.hasRole === "function") {
+    return ["study_designer", "designer", "data_manager", "sponsor_admin"].some(
+      (role) => auth.hasRole!(role)
+    );
+  }
+  return false;
+}

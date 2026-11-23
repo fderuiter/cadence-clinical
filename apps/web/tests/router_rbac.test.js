@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { router } from "../src/router";
 import { setKeycloakClient } from "../src/auth/keycloak.js";
@@ -8,6 +8,7 @@ import { useStudyCanvasStore } from "../src/stores/studyCanvas";
 
 describe("Router OIDC & RBAC Navigation Guards", () => {
   beforeEach(async () => {
+    vi.unstubAllEnvs();
     // Reset Pinia state
     const pinia = createPinia();
     setActivePinia(pinia);
@@ -20,6 +21,10 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
 
     // Always reset router to initial route before each test
     await router.push("/login");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   describe("Unauthenticated Access Restrictions", () => {
@@ -76,11 +81,30 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.query.screen).toBe("audit");
     });
 
-    it("should allow Site Investigator (CRC) to access /ecrf view", async () => {
+    it("should redirect Site Investigator (CRC) from /ecrf to Clinical Canvas Conduct outside demo mode while preserving /ecrf in demo mode", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
       authStore.rawRoles = ["Site Investigator"]; // maps to site_investigator & crc
 
+      await router.push("/ecrf");
+      expect(router.currentRoute.value.path).toBe("/studies");
+
+      await router.push(
+        "/ecrf?studyId=CADENCE-101&subjectId=SUBJ-101-001&siteId=SITE-101&collectionSpecId=cs.vitals&plannedActivityId=pa.screening&itemId=systolic_bp&formId=new"
+      );
+      expect(router.currentRoute.value.path).toBe("/studies/CADENCE-101");
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "conduct",
+        subject: "SUBJ-101-001",
+        site: "SITE-101",
+        spec: "cs.vitals",
+        visit: "pa.screening",
+        item: "systolic_bp",
+        form: "new",
+      });
+
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      await router.push("/login");
       await router.push("/ecrf");
       expect(router.currentRoute.value.path).toBe("/ecrf");
     });
@@ -189,13 +213,18 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/overview");
     });
 
-    it("should dynamically redirect CRC (Site Investigator) to /ecrf when bypass preference is set", async () => {
+    it("should dynamically redirect CRC (Site Investigator) to /studies outside demo mode and /ecrf in demo mode when bypass preference is set", async () => {
       const authStore = useAuthStore();
       const onboardingStore = useOnboardingStore();
       authStore.isAuthenticated = true;
       authStore.rawRoles = ["Site Investigator"];
       onboardingStore.setBypassOverview(true);
 
+      await router.push("/");
+      expect(router.currentRoute.value.path).toBe("/studies");
+
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      await router.push("/login");
       await router.push("/");
       expect(router.currentRoute.value.path).toBe("/ecrf");
     });
@@ -211,7 +240,7 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/ctms");
     });
 
-    it("should land Data Manager on /ecrf when bypass preference is set while /rules has no .NET backend", async () => {
+    it("should land Data Manager on /studies outside demo mode and /rules in demo mode when bypass preference is set while /rules has no .NET backend", async () => {
       const authStore = useAuthStore();
       const onboardingStore = useOnboardingStore();
       authStore.isAuthenticated = true;
@@ -219,7 +248,12 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       onboardingStore.setBypassOverview(true);
 
       await router.push("/");
-      expect(router.currentRoute.value.path).toBe("/ecrf");
+      expect(router.currentRoute.value.path).toBe("/studies");
+
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      await router.push("/login");
+      await router.push("/");
+      expect(router.currentRoute.value.path).toBe("/rules");
     });
 
     it("should admit Data Manager directly to /ctms and /ssu matching ROLE_SPONSOR_DM", async () => {
@@ -258,10 +292,10 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
 
     it("routes all six clinical personas from / to live authorized workspaces without hitting /unavailable or /forbidden", async () => {
       const cases = [
-        { role: "Sponsor Admin", expectedBypassPath: "/ecrf" },
+        { role: "Sponsor Admin", expectedBypassPath: "/studies" },
         { role: "Study Designer", expectedBypassPath: "/studies" },
-        { role: "Data Manager", expectedBypassPath: "/ecrf" },
-        { role: "CRC", expectedBypassPath: "/ecrf" },
+        { role: "Data Manager", expectedBypassPath: "/studies" },
+        { role: "CRC", expectedBypassPath: "/studies" },
         { role: "CRA", expectedBypassPath: "/ctms" },
         { role: "Auditor", expectedBypassPath: "/studies" },
       ];

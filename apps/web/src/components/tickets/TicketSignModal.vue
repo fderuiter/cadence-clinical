@@ -1,179 +1,164 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="modal-backdrop"
-    role="presentation"
-    @click.self="close"
+  <ClinicalModal
+    :is-open="isOpen"
+    :teleport="false"
+    :dismissible="!loading"
+    :fallback-focus="fallbackFocus"
+    size="md"
+    dialog-class="modal-dialog ticket-sign-modal"
+    aria-labelledby="sign-modal-title"
+    close-label="Close"
+    @close="close"
   >
-    <div
-      ref="modalRef"
-      class="modal-dialog ticket-sign-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="sign-modal-title"
-      tabindex="-1"
-    >
-      <div class="modal-header">
-        <div class="modal-header-icon">✍️</div>
-        <div>
-          <h3 id="sign-modal-title" class="modal-title">
+    <template #header>
+      <div class="ticket-sign-header">
+        <div class="modal-header-icon" aria-hidden="true">✍️</div>
+        <div class="ticket-sign-header-text">
+          <h2 id="sign-modal-title" class="modal-title">
             21 CFR Part 11 Electronic Signature
-          </h3>
+          </h2>
           <p class="modal-subtitle">
             Legally binding electronic signature sign-off on ticket resolution
           </p>
         </div>
-        <button
-          type="button"
-          class="btn-close"
-          aria-label="Close"
-          @click="close"
-        >
-          ✕
-        </button>
       </div>
+    </template>
 
-      <div class="modal-body">
-        <div class="compliance-alert">
-          <strong>GxP Regulatory Manifestation:</strong> Executing this action
-          is equivalent to a handwritten signature under 21 CFR Part 11. Your
-          identity, timestamp, role, and intent will be immutably recorded in
-          the audit trail.
-        </div>
-
-        <div class="form-group">
-          <label for="ticket-signer-identity" class="form-label"
-            >Signer Identity</label
-          >
-          <input
-            id="ticket-signer-identity"
-            type="text"
-            class="form-control"
-            :value="currentUser"
-            readonly
-            disabled
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="ticket-signer-role" class="form-label">Active Role</label>
-          <input
-            id="ticket-signer-role"
-            type="text"
-            class="form-control"
-            :value="currentRole"
-            readonly
-            disabled
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="signature-meaning" class="form-label"
-            >Signature Meaning / Intent
-            <span class="text-danger">*</span></label
-          >
-          <select id="signature-meaning" v-model="meaning" class="form-control">
-            <option
-              value="I approve the clinical assessment and corrective medical action."
-            >
-              I approve the clinical assessment and corrective medical action.
-            </option>
-            <option
-              value="I authoritatively verify and close this clinical deviation/query."
-            >
-              I authoritatively verify and close this clinical deviation/query.
-            </option>
-            <option
-              value="I confirm that all root-cause analyses and CAPA actions are fulfilled."
-            >
-              I confirm that all root-cause analyses and CAPA actions are
-              fulfilled.
-            </option>
-            <option
-              value="I acknowledge and endorse this technical/system operational resolution."
-            >
-              I acknowledge and endorse this technical/system operational
-              resolution.
-            </option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="signature-reason" class="form-label"
-            >GxP Reason for Change <span class="text-danger">*</span></label
-          >
-          <input
-            id="signature-reason"
-            v-model="reasonForChange"
-            type="text"
-            class="form-control"
-            placeholder="Mandatory regulatory justification for closure sign-off"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="signature-password" class="form-label"
-            >Re-Authenticate Password / Security Token
-            <span class="text-danger">*</span></label
-          >
-          <input
-            id="signature-password"
-            v-model="password"
-            type="password"
-            class="form-control"
-            placeholder="Enter your user password to confirm identity"
-            autocomplete="current-password"
-            @keyup.enter="handleSign"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="signature-totp" class="form-label"
-            >One-Time Verification Code (TOTP, if MFA enabled)</label
-          >
-          <input
-            id="signature-totp"
-            v-model="totp"
-            type="text"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            class="form-control"
-            placeholder="Optional 6-digit authenticator code"
-            @keyup.enter="handleSign"
-          />
-        </div>
-
-        <div v-if="errorMessage" class="error-banner" role="alert">
-          ⚠️ {{ errorMessage }}
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          :disabled="loading"
-          @click="close"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary btn-sign-action"
-          :disabled="loading || !password.trim() || !reasonForChange.trim()"
-          @click="handleSign"
-        >
-          <span v-if="loading" class="spinner" aria-hidden="true" />
-          <span v-else>✍️ Sign &amp; Authorize</span>
-        </button>
-      </div>
+    <div class="compliance-alert">
+      <strong>GxP Regulatory Manifestation:</strong> Executing this action is
+      equivalent to a handwritten signature under 21 CFR Part 11. Your identity,
+      timestamp, role, and intent will be immutably recorded in the audit trail.
     </div>
-  </div>
+
+    <div class="form-group">
+      <label for="ticket-signer-identity" class="form-label"
+        >Signer Identity</label
+      >
+      <input
+        id="ticket-signer-identity"
+        type="text"
+        class="form-control"
+        :value="currentUser"
+        readonly
+        disabled
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="ticket-signer-role" class="form-label">Active Role</label>
+      <input
+        id="ticket-signer-role"
+        type="text"
+        class="form-control"
+        :value="currentRole"
+        readonly
+        disabled
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="signature-meaning" class="form-label"
+        >Signature Meaning / Intent <span class="text-danger">*</span></label
+      >
+      <select id="signature-meaning" v-model="meaning" class="form-control">
+        <option
+          value="I approve the clinical assessment and corrective medical action."
+        >
+          I approve the clinical assessment and corrective medical action.
+        </option>
+        <option
+          value="I authoritatively verify and close this clinical deviation/query."
+        >
+          I authoritatively verify and close this clinical deviation/query.
+        </option>
+        <option
+          value="I confirm that all root-cause analyses and CAPA actions are fulfilled."
+        >
+          I confirm that all root-cause analyses and CAPA actions are fulfilled.
+        </option>
+        <option
+          value="I acknowledge and endorse this technical/system operational resolution."
+        >
+          I acknowledge and endorse this technical/system operational
+          resolution.
+        </option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="signature-reason" class="form-label"
+        >GxP Reason for Change <span class="text-danger">*</span></label
+      >
+      <input
+        id="signature-reason"
+        v-model="reasonForChange"
+        type="text"
+        class="form-control"
+        placeholder="Mandatory regulatory justification for closure sign-off"
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="signature-password" class="form-label"
+        >Re-Authenticate Password / Security Token
+        <span class="text-danger">*</span></label
+      >
+      <input
+        id="signature-password"
+        v-model="password"
+        type="password"
+        class="form-control"
+        placeholder="Enter your user password to confirm identity"
+        autocomplete="current-password"
+        @keyup.enter="handleSign"
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="signature-totp" class="form-label"
+        >One-Time Verification Code (TOTP, if MFA enabled)</label
+      >
+      <input
+        id="signature-totp"
+        v-model="totp"
+        type="text"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        class="form-control"
+        placeholder="Optional 6-digit authenticator code"
+        @keyup.enter="handleSign"
+      />
+    </div>
+
+    <div v-if="errorMessage" class="error-banner" role="alert">
+      ⚠️ {{ errorMessage }}
+    </div>
+
+    <template #footer>
+      <button
+        type="button"
+        class="btn btn-secondary"
+        :disabled="loading"
+        @click="close"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary btn-sign-action"
+        :disabled="loading || !password.trim() || !reasonForChange.trim()"
+        @click="handleSign"
+      >
+        <span v-if="loading" class="spinner" aria-hidden="true" />
+        <span v-else>✍️ Sign &amp; Authorize</span>
+      </button>
+    </template>
+  </ClinicalModal>
 </template>
 
 <script setup>
 import { ref, computed } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 import { ticketsApi } from "../../api/ticketsApi";
 import { useAuthStore } from "../../stores/auth";
 import { describeApiError } from "../../utils/apiErrors.js";
@@ -197,7 +182,6 @@ const props = defineProps({
 const emit = defineEmits(["close", "signed"]);
 
 const authStore = useAuthStore();
-const modalRef = ref(null);
 const meaning = ref(
   "I approve the clinical assessment and corrective medical action."
 );
@@ -229,12 +213,6 @@ const close = () => {
   errorMessage.value = "";
   emit("close");
 };
-
-useFocusTrap(modalRef, {
-  isOpen: () => props.isOpen,
-  onEscape: close,
-  fallbackFocus: () => props.fallbackFocus,
-});
 
 const handleSign = async () => {
   if (!password.value.trim()) {
@@ -312,8 +290,20 @@ const handleSign = async () => {
 </script>
 
 <style scoped>
-.modal-dialog {
+:deep(.ticket-sign-modal) {
+  width: 100%;
   max-width: 540px;
+}
+
+.ticket-sign-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ticket-sign-header-text {
+  min-width: 0;
 }
 
 .compliance-alert {
@@ -321,10 +311,22 @@ const handleSign = async () => {
   border: 1px solid var(--semantic-color-info-border);
   border-left: 4px solid var(--semantic-color-interactive-primary);
   padding: 12px 14px;
+  margin-bottom: 12px;
   border-radius: 6px;
   font-size: 0.82rem;
   color: var(--semantic-color-info);
   line-height: 1.45;
+}
+
+.form-group {
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.form-control {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .text-danger {
@@ -335,6 +337,11 @@ const handleSign = async () => {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-secondary);
   cursor: not-allowed;
+}
+
+.btn {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .spinner {
