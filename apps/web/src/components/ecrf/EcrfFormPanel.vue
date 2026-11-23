@@ -440,10 +440,17 @@
                     >
                       <component
                         :is="routerLinkTag"
-                        v-if="itemObservationLink(item.observation_id)"
+                        v-if="
+                          itemObservationLink(item.observation_id, item.item_id)
+                        "
                         :id="`ecrf-item-observation-${item.item_id}`"
                         class="ecrf-observation-link"
-                        :to="itemObservationLink(item.observation_id)!"
+                        :to="
+                          itemObservationLink(
+                            item.observation_id,
+                            item.item_id
+                          )!
+                        "
                       >
                         {{ item.revision }}
                       </component>
@@ -628,11 +635,34 @@
                         v-model="raiseText"
                         rows="2"
                       />
+                      <label for="ecrf-raise-reason">Reason for change</label>
+                      <input
+                        id="ecrf-raise-reason"
+                        v-model="raiseReason"
+                        type="text"
+                        autocomplete="off"
+                      />
+                      <label for="ecrf-raise-owner">Owner</label>
+                      <select id="ecrf-raise-owner" v-model="raiseOwnerRole">
+                        <option value="site">Site</option>
+                        <option value="monitor">Monitor</option>
+                        <option value="data_manager">Data manager</option>
+                      </select>
+                      <label for="ecrf-raise-priority">Priority</label>
+                      <select id="ecrf-raise-priority" v-model="raisePriority">
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
+                        <option value="low">Low</option>
+                      </select>
                       <button
                         id="ecrf-raise-confirm"
                         class="btn btn-primary"
                         type="button"
-                        :disabled="queries.busy || !raiseText.trim()"
+                        :disabled="
+                          queries.busy ||
+                          !raiseText.trim() ||
+                          !raiseReason.trim()
+                        "
                         @click="confirmRaise"
                       >
                         Raise query
@@ -780,8 +810,11 @@
           :assertions-locked="assertionsLocked"
           :act="queries.act"
           :act-many="queries.actMany"
+          :form-titles="currentFormTitles"
           :form-to="queryFormLink"
           :observation-to="queryObservationLink"
+          :show-form="Boolean(queryFormLink)"
+          @click="onQueryListClick"
         />
         <div
           data-testid="ecrf-query-outcome"
@@ -832,6 +865,9 @@
           </template>
           by {{ assertion.asserted_by }} at {{ assertion.asserted_at }}
           <template v-if="assertion.text"> : “{{ assertion.text }}” </template>
+          <template v-if="assertion.reason">
+            (reason: {{ assertion.reason }})
+          </template>
           <em v-if="assertion.retracted_at">
             (retracted {{ assertion.retracted_at }})</em
           >
@@ -905,9 +941,19 @@
                   <td>
                     <component
                       :is="routerLinkTag"
-                      v-if="itemObservationLink(signed.observation_id)"
+                      v-if="
+                        itemObservationLink(
+                          signed.observation_id,
+                          signed.item_id
+                        )
+                      "
                       class="ecrf-observation-link"
-                      :to="itemObservationLink(signed.observation_id)!"
+                      :to="
+                        itemObservationLink(
+                          signed.observation_id,
+                          signed.item_id
+                        )!
+                      "
                     >
                       {{ signed.revision }}
                     </component>
@@ -1040,7 +1086,10 @@ import {
   canAnswerQueries as hasQueryAnswerRole,
   canSignForms,
 } from "../../canvas/authority";
-import { observationNodeRef } from "../../canvas/nodeRef";
+import {
+  collectionInstanceRef,
+  observationNodeRef,
+} from "../../canvas/nodeRef";
 import {
   ASSERTION_ALREADY_RETRACTED,
   ASSERTION_REVISION_STALE,
@@ -1053,6 +1102,7 @@ import {
   type EcrfUnsavedItem,
 } from "../../composables/useEcrfForm";
 import { isLiveQuery, useFormQueries } from "../../composables/useFormQueries";
+import { confirmDialog } from "../../composables/useConfirmDialog.js";
 import { useAuthStore } from "../../stores/auth.js";
 import ScopeLockControls, {
   type DirectScopeLockItem,
@@ -1086,10 +1136,14 @@ const props = withDefaults(
     /** Builds a route location for an observation inside the hosting workspace. */
     observationLocation?: (
       observationId: string,
-      formId: string
+      formId: string,
+      itemId?: string | null
     ) => RouteLocationRaw | null;
     /** Builds a route location for a form inside the hosting workspace. */
-    formLocation?: (formId: string) => RouteLocationRaw | null;
+    formLocation?: (
+      formId: string,
+      itemId?: string | null
+    ) => RouteLocationRaw | null;
     /** Offer raising, closing, reopening and cancelling queries (a monitor or data manager); the module still checks. */
     canManageQueries?: boolean;
     /** Offer answering open queries (site coordinator or investigator). */
@@ -1127,6 +1181,7 @@ const {
   openError,
   saving,
   outcome,
+  lastHydratedSave,
   signing,
   signOutcome,
   canSign,
@@ -1228,14 +1283,22 @@ watch(structuredActivities, (allowed) => {
 });
 
 function itemObservationLink(
-  observationId: string | null | undefined
+  observationId: string | null | undefined,
+  itemId?: string | null
 ): RouteLocationRaw | null {
   if (!hasRouter || !observationId || !form.value) return null;
   if (props.observationLocation) {
-    return props.observationLocation(observationId, form.value.form_id);
+    return props.observationLocation(observationId, form.value.form_id, itemId);
   }
   const ref = observationNodeRef(observationId);
-  return ref ? { name: "observation", params: { observationRef: ref } } : null;
+  if (!ref) return null;
+  const formRef = collectionInstanceRef(form.value.form_id);
+  const query: Record<string, string> = {};
+  if (formRef) query.form = formRef;
+  if (itemId) query.item = itemId;
+  return Object.keys(query).length > 0
+    ? { name: "observation", params: { observationRef: ref }, query }
+    : { name: "observation", params: { observationRef: ref } };
 }
 
 function assertionObservationLink(target: string): RouteLocationRaw | null {
@@ -1243,16 +1306,26 @@ function assertionObservationLink(target: string): RouteLocationRaw | null {
   const ref = observationNodeRef(target);
   if (!ref) return null;
   const id = ref.slice("observation:".length);
-  return itemObservationLink(id);
+  const matchedItemId =
+    items.value.find((it) => it.observation_id === id)?.item_id ?? null;
+  return itemObservationLink(id, matchedItemId);
 }
 
 const queryObservationLink = (query: FormQueryResponse) =>
-  itemObservationLink(query.observation_id);
+  itemObservationLink(query.observation_id, query.item_id);
 const queryFormLink = computed(() =>
   props.formLocation
-    ? (q: FormQueryResponse) => props.formLocation!(q.form_id)
+    ? (q: FormQueryResponse) => props.formLocation!(q.form_id, q.item_id)
     : undefined
 );
+const currentFormTitles = computed<Record<string, string>>(() => {
+  if (!form.value) return {};
+  const title = form.value.collection_title || form.value.collection_spec_id;
+  const label = form.value.planned_activity_id
+    ? `${title} · ${form.value.planned_activity_id}`
+    : title;
+  return { [form.value.form_id]: label };
+});
 
 const canOpen = computed(
   () =>
@@ -1285,6 +1358,9 @@ const raising = ref<{
   unrecorded: boolean;
 } | null>(null);
 const raiseText = ref("");
+const raiseReason = ref("");
+const raiseOwnerRole = ref<"site" | "monitor" | "data_manager">("site");
+const raisePriority = ref<"low" | "normal" | "high">("normal");
 
 // Source Data Verification (SDV) state: append-only kernel assertions (`VerifyObservation`, `RetractAssertion`).
 const pendingSdv = ref<
@@ -1446,6 +1522,8 @@ async function confirmSdv() {
   }
 }
 
+const BULK_SDV_CONCURRENCY = 4;
+
 async function submitBulkSdv() {
   const text = bulkSdvReason.value.trim();
   if (
@@ -1456,37 +1534,48 @@ async function submitBulkSdv() {
   )
     return;
   const selected = new Set(selectedSdvItems.value);
-  const targets = unverifiedItems.value.filter((i) => selected.has(i.item_id));
+  const targets = unverifiedItems.value.filter(
+    (i) => selected.has(i.item_id) && Boolean(i.observation_id)
+  );
   if (targets.length === 0) return;
 
   sdvBusy.value = true;
   sdvOutcome.value = null;
-  const results: Array<{ itemId: string; ok: boolean; message: string }> = [];
+  const results = new Array<{ itemId: string; ok: boolean; message: string }>(
+    targets.length
+  );
   const enrollmentRef = `enrollment:${form.value.enrollment_id}`;
   try {
-    for (const target of targets) {
-      if (!target.observation_id) continue;
-      try {
-        await kernelApi.verifyObservation({
-          observationRef: `observation:${target.observation_id}`,
-          enrollmentRef,
-          revision: Number(target.revision),
-          reason: text,
-          idempotencyKey: globalThis.crypto.randomUUID(),
-        });
-        results.push({
-          itemId: target.item_id,
-          ok: true,
-          message: `Verified revision ${target.revision}.`,
-        });
-      } catch (error) {
-        results.push({
-          itemId: target.item_id,
-          ok: false,
-          message: describeAssertionError(error),
-        });
-      }
-    }
+    let nextIndex = 0;
+    const workerCount = Math.min(BULK_SDV_CONCURRENCY, targets.length);
+    await Promise.all(
+      Array.from({ length: workerCount }, async () => {
+        while (nextIndex < targets.length) {
+          const index = nextIndex++;
+          const target = targets[index];
+          try {
+            await kernelApi.verifyObservation({
+              observationRef: `observation:${target.observation_id}`,
+              enrollmentRef,
+              revision: Number(target.revision),
+              reason: text,
+              idempotencyKey: globalThis.crypto.randomUUID(),
+            });
+            results[index] = {
+              itemId: target.item_id,
+              ok: true,
+              message: `Verified revision ${target.revision}.`,
+            };
+          } catch (error) {
+            results[index] = {
+              itemId: target.item_id,
+              ok: false,
+              message: describeAssertionError(error),
+            };
+          }
+        }
+      })
+    );
     bulkSdvResults.value = results;
     const failed = new Set(results.filter((r) => !r.ok).map((r) => r.itemId));
     selectedSdvItems.value = selectedSdvItems.value.filter((id) =>
@@ -1508,26 +1597,53 @@ watch(
     pendingSdv.value = null;
     if (loaded && form.value) {
       emit("form-loaded", form.value);
-      void queries.load({ formId: form.value.form_id });
+      const hydrated = lastHydratedSave.value;
+      if (
+        hydrated &&
+        hydrated.formId === form.value.form_id &&
+        hydrated.version === Number(form.value.version)
+      ) {
+        lastHydratedSave.value = null;
+        queries.applySavedValues(form.value.form_id, hydrated.values);
+      } else {
+        void queries.load({ formId: form.value.form_id });
+      }
     } else {
       queries.clear();
     }
   }
 );
 
+async function focusHighlightedItem(itemId: string) {
+  await nextTick();
+  const row = document.getElementById(`ecrf-row-${itemId}`);
+  row?.scrollIntoView?.({ block: "center" });
+  const input = document.getElementById(
+    `ecrf-item-${itemId}`
+  ) as HTMLInputElement | null;
+  if (input && !input.disabled) {
+    input.focus?.();
+  }
+}
+
+function onQueryListClick(event: MouseEvent) {
+  const target = (event.target as Element | null)?.closest?.(
+    '[data-testid^="query-form-link-"]'
+  );
+  if (!target || !form.value) return;
+  const testId = target.getAttribute("data-testid") || "";
+  const queryId = testId.slice("query-form-link-".length);
+  const matched = queries.queries.find((q) => q.query_id === queryId);
+  if (matched?.item_id && matched.form_id === form.value.form_id) {
+    void focusHighlightedItem(matched.item_id);
+  }
+}
+
 watch(
   [() => form.value?.form_id, () => props.highlightItemId],
   async ([loadedId, itemId]) => {
     if (!loadedId || !itemId) return;
-    await nextTick();
-    const row = document.getElementById(`ecrf-row-${itemId}`);
-    row?.scrollIntoView?.({ block: "center" });
-    const input = document.getElementById(
-      `ecrf-item-${itemId}`
-    ) as HTMLInputElement | null;
-    if (input && !input.disabled) {
-      input.focus?.();
-    }
+    await focusHighlightedItem(itemId);
   },
   { immediate: true }
 );
@@ -1548,13 +1664,25 @@ function beginRaise(item: EcrfFormItem) {
     unrecorded,
   };
   raiseText.value = "";
+  raiseReason.value = "";
+  raiseOwnerRole.value = "site";
+  raisePriority.value = "normal";
 }
 
 async function confirmRaise() {
   const target = raising.value;
   const text = raiseText.value.trim();
-  if (!form.value || !target || !text) return;
+  const changeReason = raiseReason.value.trim();
+  if (!form.value || !target || !text || !changeReason) return;
   const wasUnaskedWithoutObservation = !target.observation_id;
+  const options = {
+    ...(raiseOwnerRole.value !== "site"
+      ? { ownerRole: raiseOwnerRole.value }
+      : {}),
+    ...(raisePriority.value !== "normal"
+      ? { priority: raisePriority.value }
+      : {}),
+  };
   const raised = await queries.raise(
     {
       formId: form.value.form_id,
@@ -1562,7 +1690,9 @@ async function confirmRaise() {
       observationId: target.observation_id,
       revision: target.revision,
     },
-    text
+    text,
+    changeReason,
+    Object.keys(options).length > 0 ? options : undefined
   );
   if (raised) {
     raising.value = null;
@@ -1694,14 +1824,18 @@ async function submit() {
   if (outcome.value?.kind === "saved") reason.value = "";
 }
 
-function closeForm() {
-  if (
-    dirty.value &&
-    !window.confirm(
-      "You have unsaved changes on this form. Discard them and close?"
-    )
-  ) {
-    return;
+async function closeForm() {
+  if (dirty.value) {
+    const confirmed = await confirmDialog({
+      title: "Discard Unsaved Changes",
+      message: "You have unsaved changes on this form. Discard them and close?",
+      confirmLabel: "Discard & Close",
+      cancelLabel: "Keep Editing",
+      variant: "warning",
+    });
+    if (!confirmed) {
+      return;
+    }
   }
   clearDraft();
   close();

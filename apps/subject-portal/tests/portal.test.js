@@ -306,8 +306,11 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     document.getElementById("vssbp").value = "300";
     document.getElementById("vsdpb").value = "80";
     document.getElementById("vshr").value = "72";
-    // Check radio
+    // Check radio and touch required VAS slider
     document.getElementById("has_symptoms_option_1").checked = true;
+    const painSlider = document.getElementById("pain_scale");
+    painSlider.value = "3";
+    painSlider.dispatchEvent(new Event("input", { bubbles: true }));
 
     isValid = portal.validateActiveQuestionnaire();
     expect(isValid).toBe(false);
@@ -335,6 +338,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     document.getElementById("vsdpb").value = "80";
     document.getElementById("vshr").value = "70";
     document.getElementById("has_symptoms_option_1").checked = true;
+    const painSlider = document.getElementById("pain_scale");
+    painSlider.value = "2";
+    painSlider.dispatchEvent(new Event("input", { bubbles: true }));
 
     // Validate
     const isValid = portal.validateActiveQuestionnaire();
@@ -441,6 +447,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       document.getElementById("vsdpb").value = "80";
       document.getElementById("vshr").value = "72";
       document.getElementById("has_symptoms_option_1").checked = true;
+      const painSlider = document.getElementById("pain_scale");
+      painSlider.value = "4";
+      painSlider.dispatchEvent(new Event("input", { bubbles: true }));
       expect(portal.validateActiveQuestionnaire()).toBe(true);
 
       // Submit first entry (it queues because we are offline)
@@ -487,6 +496,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       document.getElementById("vsdpb").value = "78";
       document.getElementById("vshr").value = "68";
       document.getElementById("has_symptoms_option_1").checked = true;
+      const painSlider = document.getElementById("pain_scale");
+      painSlider.value = "1";
+      painSlider.dispatchEvent(new Event("input", { bubbles: true }));
       expect(portal.validateActiveQuestionnaire()).toBe(true);
 
       document.getElementById("sign-username").value = "subject_001";
@@ -573,6 +585,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       document.getElementById("vsdpb").value = "80";
       document.getElementById("vshr").value = "72";
       document.getElementById("has_symptoms_option_1").checked = true;
+      const painSlider = document.getElementById("pain_scale");
+      painSlider.value = "3";
+      painSlider.dispatchEvent(new Event("input", { bubbles: true }));
       expect(portal.validateActiveQuestionnaire()).toBe(true);
 
       document.getElementById("sign-username").value = "subject_001";
@@ -753,6 +768,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       document.getElementById("vsdpb").value = "80";
       document.getElementById("vshr").value = "72";
       document.getElementById("has_symptoms_option_1").checked = true;
+      const painSlider = document.getElementById("pain_scale");
+      painSlider.value = "2";
+      painSlider.dispatchEvent(new Event("input", { bubbles: true }));
       document.getElementById("sign-username").value = "subject_001";
       document.getElementById("sign-password").value = "pin123";
       await portal.verifyAndSubmitSignature();

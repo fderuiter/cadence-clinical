@@ -3,8 +3,11 @@
     id="view-wallet"
     class="portal-view"
     :class="{ active: ui.currentView === 'view-wallet' }"
-    role="tabpanel"
-    aria-labelledby="btn-tab-btn-wallet"
+    :hidden="ui.currentView !== 'view-wallet'"
+    :inert="ui.currentView !== 'view-wallet' || undefined"
+    :role="hasWalletTab ? 'tabpanel' : 'region'"
+    :aria-labelledby="hasWalletTab ? 'btn-tab-btn-wallet' : undefined"
+    :aria-label="hasWalletTab ? undefined : 'Participant Financial Wallet'"
     tabindex="0"
   >
     <div class="view-header">
@@ -1031,6 +1034,7 @@ import {
   openManualExpenseEntry,
   submitExpenseClaim,
 } from "../features/wallet.js";
+import { isScreenAvailable } from "../router/availability.js";
 import { state } from "../stores/state.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
@@ -1075,6 +1079,14 @@ const isAuthenticated = computed(() =>
 );
 
 const isWalletEnabled = computed(() => isDemo.value || isAuthenticated.value);
+
+const hasWalletTab = computed(() => {
+  void session.session?.isDemoMode;
+  void session.session?.token;
+  void session.session?.userId;
+  void session.session?.isOfflineMode;
+  return isDemo.value || isScreenAvailable("wallet");
+});
 
 const normalizedCurrency = computed(() =>
   normalizeCurrencyCode(wallet.currency)

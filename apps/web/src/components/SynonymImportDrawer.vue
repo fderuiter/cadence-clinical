@@ -652,11 +652,15 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { ClinicalDropzone, useFocusTrap } from "ui";
+import { useConfirmDialog } from "../composables/useConfirmDialog.js";
 import { useCodingStore } from "../stores/coding.js";
 import { useAuthStore } from "../stores/auth.js";
+import { useToastStore } from "../stores/toasts.js";
 
 const codingStore = useCodingStore();
 const authStore = useAuthStore();
+const toastStore = useToastStore();
+const { promptDialog } = useConfirmDialog();
 const drawerRef = ref(null);
 
 const activeTab = ref("import"); // 'import' | 'history' | 'rules'
@@ -742,10 +746,15 @@ async function switchToRulesTab() {
 async function deactivateRule(rule) {
   const ruleId = rule.id;
   const verb = rule.verbatim_text || rule.verbatimText || "rule";
-  const reason = window.prompt(
-    `21 CFR Part 11 Reason for Deactivating Synonym Rule '${verb}':`,
-    "Deactivated outdated synonym rule in workbench"
-  );
+  const reason = await promptDialog({
+    title: "Deactivate Synonym Rule",
+    message: `Provide a 21 CFR Part 11 reason for deactivating synonym rule '${verb}'.`,
+    inputLabel: `21 CFR Part 11 Reason for Deactivating Synonym Rule '${verb}'`,
+    defaultValue: "Deactivated outdated synonym rule in workbench",
+    confirmLabel: "Deactivate Rule",
+    cancelLabel: "Cancel",
+    variant: "danger",
+  });
   if (!reason || !reason.trim()) return;
 
   try {
@@ -754,6 +763,11 @@ async function deactivateRule(rule) {
       reason.trim(),
       studyId.value
     );
+    toastStore.push({
+      tone: "success",
+      title: "Synonym Rule Deactivated",
+      message: `Synonym rule '${verb}' was deactivated.`,
+    });
   } catch {
     // Error captured in store
   }

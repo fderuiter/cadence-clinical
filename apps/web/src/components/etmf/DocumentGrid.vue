@@ -16,6 +16,8 @@
           v-if="selectedDocumentIds.length > 0"
           type="button"
           class="btn btn-outline-primary export-selected-btn"
+          :disabled="!canExport"
+          :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
           @click="handleExportSelected"
         >
           <span aria-hidden="true">📦</span> Download Selected ({{
@@ -25,7 +27,9 @@
         <button
           type="button"
           class="btn btn-secondary batch-upload-trigger-btn"
-          @click="isBatchDrawerOpen = true"
+          :disabled="!canStage"
+          :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
+          @click="openBatchDrawer"
         >
           <span aria-hidden="true">📤</span> Batch Ingestion<span
             class="sr-only"
@@ -36,7 +40,8 @@
         <button
           type="button"
           class="btn btn-primary upload-trigger-btn"
-          :disabled="!selectedArtifactCode"
+          :disabled="!canStage || !selectedArtifactCode"
+          :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
           @click="openUploadModal"
         >
           <span aria-hidden="true">📄</span> Upload Single Document<span
@@ -47,6 +52,17 @@
           >
         </button>
       </div>
+    </div>
+
+    <div
+      v-if="!canStage || !canTag"
+      id="document-grid-role-note"
+      class="grid-role-note"
+      role="note"
+    >
+      <span v-if="!canStage">{{ ETMF_STAGE_ROLE_REASON }}</span>
+      <span v-if="!canStage && !canTag"> • </span>
+      <span v-if="!canTag">{{ ETMF_TAG_ROLE_REASON }}</span>
     </div>
 
     <!-- Documents Data Table -->
@@ -91,7 +107,28 @@
           </template>
           <tr v-else-if="paginatedDocuments.length === 0">
             <td colspan="8" role="gridcell" class="empty-table-cell">
+              <div
+                v-if="etmfStore.scopeForbiddenGuidance"
+                id="grid-scope-forbidden-guidance"
+                class="scope-forbidden-guidance"
+                role="alert"
+              >
+                <span class="scope-forbidden-icon" aria-hidden="true">🔒</span>
+                <h3>Study or Site Scope Assignment Required</h3>
+                <p>{{ etmfStore.scopeForbiddenGuidance }}</p>
+              </div>
+              <div
+                v-else-if="etmfStore.documentsError"
+                id="grid-documents-error"
+                class="scope-forbidden-guidance"
+                role="alert"
+              >
+                <span class="scope-forbidden-icon" aria-hidden="true">⚠️</span>
+                <h3>Unable to Load Regulated Documents</h3>
+                <p>{{ etmfStore.documentsError }}</p>
+              </div>
               <EmptyState
+                v-else
                 icon="📄"
                 title="No Regulated Documents Found"
                 message="No documents have been uploaded for this artifact yet. Upload a single document or run batch ingestion to populate the eTMF."
@@ -100,7 +137,8 @@
                   <button
                     type="button"
                     class="btn btn-primary btn-sm upload-empty-btn"
-                    :disabled="!selectedArtifactCode"
+                    :disabled="!canStage || !selectedArtifactCode"
+                    :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
                     @click="openUploadModal"
                   >
                     <span>📄</span> Upload Single Document
@@ -108,7 +146,9 @@
                   <button
                     type="button"
                     class="btn btn-secondary btn-sm batch-empty-btn"
-                    @click="isBatchDrawerOpen = true"
+                    :disabled="!canStage"
+                    :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
+                    @click="openBatchDrawer"
                   >
                     <span>📤</span> Batch Ingestion
                   </button>
@@ -515,6 +555,7 @@
     <BatchUploadDrawer
       :is-open="isBatchDrawerOpen"
       :study-id="etmfStore.currentStudyId"
+      :site-id="etmfStore.currentSiteId || null"
       @close="isBatchDrawerOpen = false"
     />
   </div>
@@ -523,10 +564,19 @@
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
 import { ClinicalDropzone, EmptyState, useFocusTrap } from "ui";
-import { useEtmfStore } from "../../stores/etmf";
+import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf";
+import { useAuthStore } from "../../stores/auth";
 import { etmfService } from "../../api/etmf";
 import { use2DGrid } from "../../composables/use2DGrid";
 import { useToastStore } from "../../stores/toasts.js";
+import {
+  canStageEtmfQc,
+  canTagEtmf,
+  canExportEtmf,
+  ETMF_STAGE_ROLE_REASON,
+  ETMF_TAG_ROLE_REASON,
+  ETMF_EXPORT_ROLE_REASON,
+} from "../../canvas/authority.ts";
 import BatchUploadDrawer from "./BatchUploadDrawer.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 
@@ -546,6 +596,32 @@ const props = defineProps({
 defineEmits(["preview", "inspect"]);
 
 const etmfStore = useEtmfStore();
+const authStore = useAuthStore();
+
+const hasActiveAuth = computed(() =>
+  Boolean(
+    authStore.isAuthenticated ||
+    (Array.isArray(authStore.rawRoles) && authStore.rawRoles.length > 0)
+  )
+);
+const canStage = computed(
+  () => !hasActiveAuth.value || canStageEtmfQc(authStore)
+);
+const canTag = computed(() => !hasActiveAuth.value || canTagEtmf(authStore));
+const canExport = computed(
+  () => !hasActiveAuth.value || canExportEtmf(authStore)
+);
+
+function openBatchDrawer() {
+  if (!canStage.value) {
+    useToastStore().push({
+      message: ETMF_STAGE_ROLE_REASON,
+      tone: "warning",
+    });
+    return;
+  }
+  isBatchDrawerOpen.value = true;
+}
 
 // 2D Interactive Grid selection & editing state
 const containerRef = ref(null);
@@ -597,6 +673,13 @@ function getZoneAndSectionFromCode(code) {
 }
 
 async function startEditing(rIndex, doc) {
+  if (!canTag.value) {
+    useToastStore().push({
+      message: ETMF_TAG_ROLE_REASON,
+      tone: "warning",
+    });
+    return;
+  }
   grid.startEditing(rIndex, 1);
   tempTaxonomyCode.value = doc.artifact_code;
   await nextTick();
@@ -646,7 +729,7 @@ async function commitTaxonomy(doc) {
 
     await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
   } catch (err) {
-    console.error("Failed to tag/classify document:", err);
+    useToastStore().apiError("Failed to update document taxonomy", err);
   } finally {
     exitEditing();
   }
@@ -750,6 +833,13 @@ function toggleSelectAll() {
 }
 
 async function handleExportSelected() {
+  if (!canExport.value) {
+    useToastStore().push({
+      message: ETMF_EXPORT_ROLE_REASON,
+      tone: "warning",
+    });
+    return;
+  }
   if (etmfStore.selectedDocumentIds.length === 0) return;
   try {
     await etmfStore.triggerExport({
@@ -766,11 +856,19 @@ const selectedFile = ref(null);
 const uploadModalRef = ref(null);
 
 // Form Fields
-const studyId = ref("STUDY-USDM-001");
-const siteId = ref("");
+const studyId = ref(etmfStore.currentStudyId || "");
+const siteId = ref(etmfStore.currentSiteId || "");
 const artifactCode = ref("");
 const artifactType = ref("");
 const reasonForChange = ref("");
+
+watch(
+  () => [etmfStore.currentStudyId, etmfStore.currentSiteId],
+  ([nextStudy, nextSite]) => {
+    studyId.value = nextStudy || "";
+    siteId.value = nextSite || "";
+  }
+);
 
 useFocusTrap(uploadModalRef, {
   isOpen: showUploadModal,
@@ -884,8 +982,16 @@ function formatDate(dateStr) {
 
 // Modal Handlers
 function openUploadModal() {
+  if (!canStage.value) {
+    useToastStore().push({
+      message: ETMF_STAGE_ROLE_REASON,
+      tone: "warning",
+    });
+    return;
+  }
   if (!selectedArtifactCode.value) return;
-  studyId.value = etmfStore.currentStudyId;
+  studyId.value = etmfStore.currentStudyId || "";
+  siteId.value = etmfStore.currentSiteId || "";
   selectedFile.value = null;
   reasonForChange.value = "";
   uploadError.value = "";
@@ -937,8 +1043,17 @@ async function submitUpload() {
           )
         );
       };
-      reader.readAsText(file.slice(0, 5000)); // Read first few KB as text safely
+      reader.readAsText(file.slice(0, 65536)); // Read initial text excerpt for search indexing
     });
+
+    let rawBuffer = null;
+    if (typeof file.arrayBuffer === "function") {
+      try {
+        rawBuffer = await file.arrayBuffer();
+      } catch {
+        rawBuffer = null;
+      }
+    }
 
     // Extract zone and section integers/strings dynamically from code
     const codeParts = artifactCode.value.split(".");
@@ -946,14 +1061,21 @@ async function submitUpload() {
     const sectionStr = codeParts.slice(0, 2).join(".");
 
     const formData = new FormData();
-    formData.append("study_id", studyId.value);
-    formData.append("site_id", siteId.value || "");
+    formData.append(
+      "study_id",
+      studyId.value || etmfStore.currentStudyId || ""
+    );
+    formData.append("site_id", siteId.value || etmfStore.currentSiteId || "");
     formData.append("artifact_type", artifactType.value);
     formData.append("filename", file.name);
     formData.append(
       "content",
       `Document content index for: ${file.name}. Raw plaintext: ${fileContent}`
     );
+    if (rawBuffer && rawBuffer.byteLength > 0) {
+      formData.append("content_base64", arrayBufferToBase64(rawBuffer));
+    }
+    formData.append("file", file);
     formData.append("mime_type", file.type || "application/pdf");
     formData.append("artifact_code", artifactCode.value);
     formData.append("zone", String(zoneInt));
@@ -1475,6 +1597,41 @@ async function submitUpload() {
   font-weight: 700;
   margin-left: 6px;
   white-space: nowrap;
+}
+
+.grid-role-note {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  background: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
+}
+
+.scope-forbidden-guidance {
+  padding: 32px 24px;
+  text-align: center;
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border-soft);
+  border-radius: 8px;
+  color: var(--semantic-color-error-text-dark);
+}
+
+.scope-forbidden-guidance h3 {
+  margin: 8px 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.scope-forbidden-guidance p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.scope-forbidden-icon {
+  font-size: 1.6rem;
 }
 
 table,

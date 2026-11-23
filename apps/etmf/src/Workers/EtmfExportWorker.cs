@@ -8,6 +8,7 @@ using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Apps.Etmf.Services;
 using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
+using Cadence.Storage;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -128,6 +129,7 @@ public sealed class EtmfExportWorker : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<EtmfDbContext>();
         var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        var storage = scope.ServiceProvider.GetService<IStoragePort<byte[]>>();
 
         var job = await db.TmfExportJobs.FirstOrDefaultAsync(j => j.Id == jobId, ct);
         if (job == null)
@@ -155,26 +157,34 @@ public sealed class EtmfExportWorker : BackgroundService
             job.ProgressPercentage = 15.0;
             await db.SaveChangesAsync(ct);
 
-            var exportDir = Path.Combine(Path.GetTempPath(), "etmf_exports");
-            Directory.CreateDirectory(exportDir);
-            var filePath = Path.Combine(exportDir, $"{job.Id}.zip");
-
             var now = clock.UtcNow;
 
-            // Stream / package zip in memory or file
-            var zipBytes = EtmfExportPackager.CreateZipArchive(
+            var zipBytes = await EtmfExportPackager.CreateZipArchiveAsync(
                 exportId: job.Id,
                 studyId: job.StudyId,
                 documents: documents,
+                storage: storage,
                 exportedAt: now,
                 progressCallback: (processed, total) =>
                 {
                     job.ProcessedDocuments = processed;
                     job.ProgressPercentage = 15.0 + Math.Min(80.0, (double)processed / Math.Max(1, total) * 80.0);
-                }
+                },
+                ct: ct
             );
 
-            await File.WriteAllBytesAsync(filePath, zipBytes, ct);
+            if (storage is not null)
+            {
+                var exportKey = EtmfExportPackager.BuildExportObjectKey(job.StudyId, job.Id);
+                await storage.PutObjectAsync(exportKey, zipBytes, "application/zip", ct: ct);
+            }
+            else
+            {
+                var exportDir = Path.Combine(Path.GetTempPath(), "etmf_exports");
+                Directory.CreateDirectory(exportDir);
+                var filePath = Path.Combine(exportDir, $"{job.Id}.zip");
+                await File.WriteAllBytesAsync(filePath, zipBytes, ct);
+            }
 
             job.Status = "COMPLETED";
             job.ProgressPercentage = 100.0;

@@ -877,6 +877,49 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       await expect(activePanel).toHaveAttribute("aria-labelledby", current.id);
       await expect(activePanel).toBeVisible();
 
+      const viewStates = await page.evaluate((activePanelId) => {
+        const allViews = Array.from(document.querySelectorAll(".portal-view"));
+        const danglingLabelledBy = Array.from(
+          document.querySelectorAll("[aria-labelledby]")
+        )
+          .filter((el) =>
+            el
+              .getAttribute("aria-labelledby")
+              .trim()
+              .split(/\s+/)
+              .some((id) => !document.getElementById(id))
+          )
+          .map((el) => el.id || el.tagName);
+        const layView = document.getElementById("view-lay-summaries");
+        return {
+          activeHidden: document
+            .getElementById(activePanelId)
+            .hasAttribute("hidden"),
+          activeInert: document
+            .getElementById(activePanelId)
+            .hasAttribute("inert"),
+          inactiveAllHiddenAndInert: allViews
+            .filter((el) => el.id !== activePanelId)
+            .every(
+              (el) => el.hasAttribute("hidden") && el.hasAttribute("inert")
+            ),
+          layRole: layView?.getAttribute("role"),
+          layAriaLabel: layView?.getAttribute("aria-label"),
+          layHasLabelledBy: layView?.hasAttribute("aria-labelledby"),
+          danglingLabelledBy,
+        };
+      }, current.panel);
+
+      expect(viewStates.activeHidden).toBe(false);
+      expect(viewStates.activeInert).toBe(false);
+      expect(viewStates.inactiveAllHiddenAndInert).toBe(true);
+      expect(viewStates.layRole).toBe("region");
+      expect(viewStates.layAriaLabel).toBe(
+        "Plain-Language Clinical Trial Results"
+      );
+      expect(viewStates.layHasLabelledBy).toBe(false);
+      expect(viewStates.danglingLabelledBy).toEqual([]);
+
       const panelAudit = await new AxeBuilder({ page })
         .include(`#${current.panel}`)
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
@@ -939,5 +982,140 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(motionStyles.animationIterationCount).toBe("1");
     expect(motionStyles.animSeconds).toBeLessThanOrEqual(0.001);
     expect(motionStyles.drawerTransitionSec).toBeLessThanOrEqual(0.001);
+  });
+
+  test("should guard untouched VAS sliders, allow deliberate 0 scores, wire view-questionnaire tabpanel ARIA, and flush drafts on tab switch", async ({
+    page,
+  }) => {
+    await page.route("**/instruments", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: "inst_daily_diary",
+            name: "Daily Health & Vital Diary",
+            description:
+              "Please record your blood pressure, pain level, and optional fatigue score.",
+            items: {
+              vssbp: {
+                label: "Systolic Blood Pressure (mmHg)",
+                type: "numeric",
+                required: true,
+                min: 50,
+                max: 250,
+              },
+              pain_scale: {
+                label: "Current Pain Level (0 = No Pain, 10 = Worst Pain)",
+                type: "visual_analog",
+                required: true,
+                min: 0,
+                max: 10,
+                step: 1,
+                min_label: "0 - No Pain",
+                max_label: "10 - Worst Possible Pain",
+              },
+              fatigue_scale: {
+                label: "Optional Fatigue Score (0 = None, 10 = Severe)",
+                type: "visual_analog",
+                required: false,
+                min: 0,
+                max: 10,
+                step: 1,
+                min_label: "0 - None",
+                max_label: "10 - Severe",
+              },
+            },
+          },
+        ]),
+      });
+    });
+
+    await page.goto("");
+    await completeInitialPinSetupIfOpen(page);
+
+    await page.locator("#task-card-assign_01 .btn-start-task").click();
+
+    const questionnaireView = page.locator("#view-questionnaire");
+    const tasksTab = page.locator("#btn-tab-btn-tasks");
+    await expect(questionnaireView).toBeVisible();
+    await expect(questionnaireView).toHaveAttribute("role", "tabpanel");
+    await expect(questionnaireView).toHaveAttribute("tabindex", "0");
+    await expect(questionnaireView).toHaveAttribute(
+      "aria-labelledby",
+      "btn-tab-btn-tasks"
+    );
+    await expect(tasksTab).toHaveAttribute(
+      "aria-controls",
+      "view-questionnaire"
+    );
+
+    const painSlider = page.locator("#pain_scale");
+    const painBadge = page.locator("#pain_scale_display");
+    const fatigueSlider = page.locator("#fatigue_scale");
+    await expect(painBadge).toHaveText("Not answered");
+    await expect(painSlider).toHaveAttribute("data-touched", "false");
+    await expect(painSlider).toHaveAttribute("aria-valuetext", "Not answered");
+
+    const sliderBox = await painSlider.boundingBox();
+    expect(sliderBox.height).toBeGreaterThanOrEqual(48);
+
+    // Fill numeric field, leave required VAS slider untouched -> submit must reject
+    await page.fill("#vssbp", "124");
+    await page.click("#btn-submit-questionnaire");
+
+    await expect(page.locator("#field-container-pain_scale")).toHaveClass(
+      /has-error/
+    );
+    await expect(page.locator("#questionnaire-form-error")).toBeVisible();
+
+    const untouchedAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(untouchedAudit.violations).toEqual([]);
+
+    await page.screenshot({
+      path: "/tmp/vas-slider-untouched-validation.png",
+      fullPage: true,
+    });
+
+    // Deliberately select 0 via keyboard Home key
+    await painSlider.focus();
+    await page.keyboard.press("Home");
+    await expect(painSlider).toHaveAttribute("data-touched", "true");
+    await expect(painSlider).not.toHaveAttribute("aria-valuetext");
+    await expect(painBadge).toHaveText("Value: 0");
+    await expect(fatigueSlider).toHaveAttribute("data-touched", "false");
+
+    // Immediately switch tabs via TabBar (no 1500ms wait) and return to Tasks
+    await page.click("#btn-tab-btn-compliance");
+    await expect(page.locator("#view-compliance")).toBeVisible();
+    await expect(questionnaireView).toBeHidden();
+    await expect(tasksTab).toHaveAttribute("aria-controls", "view-tasks");
+
+    await page.click("#btn-tab-btn-tasks");
+    const resumeBtn = page.locator("#task-card-assign_01 .btn-start-task");
+    await expect(resumeBtn).toContainText("Resume Survey");
+
+    // Reopen survey and verify both numeric input and deliberate 0 VAS score restored
+    await resumeBtn.click();
+    await expect(page.locator("#vssbp")).toHaveValue("124");
+    await expect(painSlider).toHaveAttribute("data-touched", "true");
+    await expect(painBadge).toHaveText("Value: 0");
+    await expect(fatigueSlider).toHaveAttribute("data-touched", "false");
+
+    await page.screenshot({
+      path: "/tmp/vas-slider-zero-selected-and-draft-resume.png",
+      fullPage: true,
+    });
+
+    // Validate & open signature modal cleanly with deliberate 0 required VAS + untouched optional VAS
+    await page.click("#btn-submit-questionnaire");
+    await expect(page.locator("#portal-sign-modal")).toBeVisible();
+
+    const modalAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(modalAudit.violations).toEqual([]);
   });
 });

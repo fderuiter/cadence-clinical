@@ -829,6 +829,171 @@ const open = ref(true);
       );
       expect(compliantErrors).toEqual([]);
     });
+
+    it("eliminates all native alert(), confirm(), and prompt() calls and no-alert suppressions across web, subject-portal, and ui sources, and enforces no-alert: error across .js, .ts, and .vue", async () => {
+      const { parse } = await import("@babel/parser");
+      const { ESLint } = await import("eslint");
+
+      const sourceFiles = [
+        ...walkFiles(webSrcDir, [".js", ".ts", ".vue"]),
+        ...walkFiles(portalSrcDir, [".js", ".ts", ".vue"]),
+        ...walkFiles(path.join(uiDir, "src"), [".js", ".ts", ".vue"]),
+      ];
+
+      const suppressedFiles = [];
+      const nativeDialogCalls = [];
+      const dialogNames = new Set(["alert", "confirm", "prompt"]);
+      const globalReceivers = new Set(["window", "globalThis", "self"]);
+
+      function extractScripts(filePath, raw) {
+        if (!filePath.endsWith(".vue")) return [raw];
+        const blocks = [];
+        const scriptRe = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        while ((match = scriptRe.exec(raw)) !== null) {
+          blocks.push(match[1]);
+        }
+        return blocks;
+      }
+
+      function collectDeclaredFunctionsAndVars(ast) {
+        const localBindings = new Set();
+        function visit(node) {
+          if (!node || typeof node !== "object") return;
+          if (
+            (node.type === "FunctionDeclaration" ||
+              node.type === "FunctionExpression") &&
+            node.id?.name
+          ) {
+            localBindings.add(node.id.name);
+          } else if (
+            node.type === "VariableDeclarator" &&
+            node.id?.type === "Identifier"
+          ) {
+            localBindings.add(node.id.name);
+          } else if (
+            (node.type === "ImportSpecifier" ||
+              node.type === "ImportDefaultSpecifier") &&
+            node.local?.name
+          ) {
+            localBindings.add(node.local.name);
+          }
+          for (const key of Object.keys(node)) {
+            if (key === "loc" || key === "comments") continue;
+            const child = node[key];
+            if (Array.isArray(child)) child.forEach(visit);
+            else if (child && typeof child === "object") visit(child);
+          }
+        }
+        visit(ast);
+        return localBindings;
+      }
+
+      for (const file of sourceFiles) {
+        const raw = fs.readFileSync(file, "utf-8");
+        const rel = path.relative(repoRoot, file);
+        if (raw.includes("no-alert")) {
+          suppressedFiles.push(rel);
+        }
+        for (const script of extractScripts(file, raw)) {
+          const ast = parse(script, {
+            sourceType: "module",
+            plugins: ["typescript", "jsx"],
+          });
+          const localBindings = collectDeclaredFunctionsAndVars(ast.program);
+          function walkAst(node) {
+            if (!node || typeof node !== "object") return;
+            if (node.type === "CallExpression") {
+              const callee = node.callee;
+              if (
+                callee?.type === "Identifier" &&
+                dialogNames.has(callee.name) &&
+                !localBindings.has(callee.name)
+              ) {
+                nativeDialogCalls.push(
+                  `${rel}:${node.loc?.start.line ?? 0} (${callee.name})`
+                );
+              } else if (
+                callee?.type === "MemberExpression" &&
+                callee.object?.type === "Identifier" &&
+                globalReceivers.has(callee.object.name) &&
+                callee.property?.type === "Identifier" &&
+                dialogNames.has(callee.property.name)
+              ) {
+                nativeDialogCalls.push(
+                  `${rel}:${node.loc?.start.line ?? 0} (${callee.object.name}.${callee.property.name})`
+                );
+              }
+            }
+            for (const key of Object.keys(node)) {
+              if (key === "loc" || key === "comments") continue;
+              const child = node[key];
+              if (Array.isArray(child)) child.forEach(walkAst);
+              else if (child && typeof child === "object") walkAst(child);
+            }
+          }
+          walkAst(ast.program);
+        }
+      }
+
+      expect(suppressedFiles).toEqual([]);
+      expect(nativeDialogCalls).toEqual([]);
+
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const checkedConfigPaths = [
+        "apps/web/src/composables/useConfirmDialog.js",
+        "apps/web/src/stores/clinical.ts",
+        "apps/web/src/components/clinical/LabGovernanceConsole.vue",
+        "apps/web/src/views/RulesView.vue",
+        "apps/web/src/views/MdrView.vue",
+        "apps/web/src/views/EcrfView.vue",
+        "apps/web/src/views/QualityCockpitView.vue",
+        "apps/subject-portal/src/main.js",
+        "packages/ui/src/components/clinical/ClinicalModal.vue",
+      ];
+
+      for (const relPath of checkedConfigPaths) {
+        const resolvedConfig = await eslint.calculateConfigForFile(
+          path.join(repoRoot, relPath)
+        );
+        const ruleConfig = resolvedConfig.rules?.["no-alert"];
+        const severity = Array.isArray(ruleConfig) ? ruleConfig[0] : ruleConfig;
+        expect(severity, `Expected no-alert: error (2) for ${relPath}`).toBe(2);
+      }
+
+      // Verify no-alert is enforced as severity 2 ("error") across .js, .ts, and .vue files via lintText
+      const probes = [
+        {
+          filePath: path.join(webSrcDir, "composables/__SyntheticAlert.js"),
+          code: 'export function run() {\n  window.confirm("Blocked?");\n}\n',
+        },
+        {
+          filePath: path.join(webSrcDir, "stores/__SyntheticAlert.ts"),
+          code: 'export function run(): void {\n  window.alert("Blocked!");\n}\n',
+        },
+        {
+          filePath: path.join(webSrcDir, "views/__SyntheticAlert.vue"),
+          code: '<template><button type="button" @click="ask">Ask</button></template>\n<script setup lang="ts">\nfunction ask() {\n  prompt("Reason?");\n}\n</script>\n',
+        },
+      ];
+
+      for (const probe of probes) {
+        const [result] = await eslint.lintText(probe.code, {
+          filePath: probe.filePath,
+        });
+        const alertErrors = result.messages.filter(
+          (m) => m.ruleId === "no-alert" && m.severity === 2
+        );
+        expect(
+          alertErrors.length,
+          `Expected no-alert error (severity 2) on ${path.relative(repoRoot, probe.filePath)}`
+        ).toBe(1);
+      }
+    });
   });
 
   describe("Requirement 8: Shared Accessibility Primitives & Label-in-Name AST Gates (ADR-2822)", () => {
