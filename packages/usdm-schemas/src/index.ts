@@ -151,4 +151,34 @@ export const USDMStudySchema = z.object({
 export type USDMStudy = z.infer<typeof USDMStudySchema>;
 
 export * from "./graph-validator.js";
-export * from "./epro.js";
+export {
+  collectEproAnswerIssues,
+  validateEproPayload,
+  validateEproSubmission,
+} from "./epro.js";
+export type { EproValidationIssue, EproValidationResult } from "./epro.js";
+
+import { collectEproAnswerIssues } from "./epro.js";
+
+export const EPROAnswersSchema = z
+  .record(z.string(), z.any())
+  .superRefine((answers, ctx) => {
+    for (const issue of collectEproAnswerIssues(answers)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: issue.message,
+        ...(issue.path.length > 0 ? { path: issue.path } : {}),
+      });
+    }
+  });
+export type EPROAnswers = z.infer<typeof EPROAnswersSchema>;
+
+export const EPROSubmissionSchema = z.object({
+  subject_id: z.string().min(1, "subject_id is required"),
+  diary_id: z.string().min(1, "diary_id is required"),
+  assignment_id: z.string().optional().nullable(),
+  version_index: z.number().int().optional().default(1),
+  device_timestamp: z.string().optional(),
+  answers: EPROAnswersSchema,
+});
+export type EPROSubmissionPayload = z.infer<typeof EPROSubmissionSchema>;

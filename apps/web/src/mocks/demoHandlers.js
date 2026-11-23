@@ -2898,12 +2898,41 @@ export function createWebDemoHandlers(store = webDemoStore) {
     ),
     http.get("*/api/v1/econsent/clauses", () => HttpResponse.json([])),
     http.get("*/api/v1/econsent/translations", () => HttpResponse.json([])),
-    http.get("*/api/v1/fileshare/files", () =>
-      HttpResponse.json([
+    http.get("*/api/v1/fileshare/files", () => {
+      const xrefEntries = [9, 52, 101, 202, 318].map(
+        (offset) => `${String(offset).padStart(10, "0")} ${"0".repeat(5)} n `
+      );
+      const minimalPdfText = [
+        "%PDF-1.4",
+        "1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj",
+        "2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj",
+        "3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj",
+        "4 0 obj<</Length 68>>stream",
+        "BT /F1 18 Tf 72 720 Td (Cadence Clinical Protocol Synopsis DEMO-01) Tj ET",
+        "endstream",
+        "endobj",
+        "5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj",
+        "xref",
+        "0 6",
+        `${"0".repeat(10)} 65535 f `,
+        ...xrefEntries,
+        "trailer<</Size 6/Root 1 0 R>>",
+        "startxref",
+        "386",
+        "%%EOF",
+      ].join("\n");
+      const pdfBase64 =
+        typeof btoa === "function"
+          ? btoa(minimalPdfText)
+          : Buffer.from(minimalPdfText, "utf8").toString("base64");
+
+      return HttpResponse.json([
         {
           id: "file-demo-01",
           filename: "DEMO-01-Protocol-Synopsis.pdf",
           content_type: "application/pdf",
+          mime_type: "application/pdf",
+          download_url: `data:application/pdf;base64,${pdfBase64}`,
           size_bytes: 245760,
           study_id: "DEMO-01",
           site_id: "SITE-101",
@@ -2913,7 +2942,112 @@ export function createWebDemoHandlers(store = webDemoStore) {
           approval_status: "APPROVED",
           version_number: 1,
         },
-      ])
+        {
+          id: "file-demo-02",
+          filename: "DEMO-01-Site-Initiation-Briefing.mp4",
+          content_type: "video/mp4",
+          mime_type: "video/mp4",
+          transcode_status: "READY",
+          size_bytes: 12582912,
+          study_id: "DEMO-01",
+          site_id: "SITE-101",
+          uploaded_by: "cra_demo",
+          created_at: "2026-07-02T14:30:00Z", // deid-ignore
+          is_on_hold: false,
+          approval_status: "APPROVED",
+          version_number: 1,
+        },
+      ]);
+    }),
+    http.get(
+      "*/api/v1/fileshare/files/:fileId/stream-url",
+      ({ params, request }) => {
+        const reqUrl = new URL(request.url);
+        const apiIdx = reqUrl.pathname.indexOf("/api/v1/fileshare/");
+        const prefix = apiIdx > 0 ? reqUrl.pathname.slice(0, apiIdx) : "";
+        return HttpResponse.json({
+          file_id: String(params.fileId),
+          stream_url: `${prefix}/api/v1/fileshare/demo-stream/master.m3u8`,
+          expires_in: 300,
+          transcode_status: "READY",
+          message: "Demo HLS stream ready",
+        });
+      }
+    ),
+    http.get(
+      "*/api/v1/fileshare/demo-stream/master.m3u8",
+      () =>
+        new HttpResponse(
+          [
+            "#EXTM3U",
+            "#EXT-X-VERSION:3",
+            "#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=640x360",
+            "prog_index.m3u8",
+            "",
+          ].join("\n"),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/vnd.apple.mpegurl" },
+          }
+        )
+    ),
+    http.get(
+      "*/api/v1/fileshare/demo-stream/prog_index.m3u8",
+      () =>
+        new HttpResponse(
+          [
+            "#EXTM3U",
+            "#EXT-X-VERSION:3",
+            "#EXT-X-TARGETDURATION:2",
+            "#EXT-X-MEDIA-SEQUENCE:0",
+            "#EXTINF:1.0,",
+            "seg0.ts",
+            "#EXT-X-ENDLIST",
+            "",
+          ].join("\n"),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/vnd.apple.mpegurl" },
+          }
+        )
+    ),
+    http.get("*/api/v1/fileshare/demo-stream/seg0.ts", () => {
+      // Three 188-byte MPEG-TS packets (sync byte 0x47, null PID 0x1FFF stuffing)
+      const tsBytes = new Uint8Array(188 * 3);
+      tsBytes.fill(0xff);
+      for (let pkt = 0; pkt < 3; pkt++) {
+        const offset = pkt * 188;
+        tsBytes[offset] = 0x47;
+        tsBytes[offset + 1] = 0x1f;
+        tsBytes[offset + 2] = 0xff;
+        tsBytes[offset + 3] = 0x10 | (pkt & 0x0f);
+      }
+      return new HttpResponse(tsBytes, {
+        status: 200,
+        headers: { "Content-Type": "video/mp2t" },
+      });
+    }),
+    http.post("*/api/v1/fileshare/audit/playback", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json({
+        id: "audit-demo-playback-01",
+        file_record_id: body?.file_record_id || "file-demo-02",
+        event: body?.event || "PLAY_START",
+        session_id: body?.session_id || "sess-demo",
+        recorded_at: demoNowIso(nextDemoStep("fileshare-playback-audit")),
+      });
+    }),
+    http.get("*/api/v1/fileshare/files/:fileId/grants", () =>
+      HttpResponse.json([])
+    ),
+    http.get("*/api/v1/fileshare/files/:fileId/guest-links", () =>
+      HttpResponse.json([])
+    ),
+    http.get("*/api/v1/fileshare/files/:fileId/audit-logs", () =>
+      HttpResponse.json([])
+    ),
+    http.get("*/api/v1/fileshare/files/:fileId/activity", () =>
+      HttpResponse.json({ items: [], total: 0 })
     ),
 
     // Central Lab Governance & Toxicity

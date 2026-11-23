@@ -1214,6 +1214,7 @@ watch(
 }
 
 .casebook-matrix-scroll {
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;

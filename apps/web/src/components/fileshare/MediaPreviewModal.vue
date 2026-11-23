@@ -88,6 +88,7 @@
         <aside
           class="metadata-sidebar"
           aria-label="File Metadata and Audit Ledger"
+          tabindex="0"
         >
           <div class="meta-section">
             <h4>Record Details</h4>
@@ -426,7 +427,17 @@
 
             <!-- PDF / Document Page Canvas View -->
             <div v-else class="media-player-container pdf-container">
-              <div class="pdf-document-sheet">
+              <MediaPlayer
+                v-if="mediaSourceUrl"
+                :src="mediaSourceUrl"
+                :mime-type="
+                  fileRecord?.mime_type ||
+                  fileRecord?.content_type ||
+                  'application/pdf'
+                "
+                :title="fileRecord?.filename || 'Clinical PDF Document'"
+              />
+              <div v-else class="pdf-document-sheet">
                 <div class="doc-sheet-header">
                   <div class="header-logo">
                     Cadence Clinical Research Platform
@@ -516,7 +527,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
-import { useFocusTrap } from "ui";
+import { MediaPlayer, useFocusTrap } from "ui";
 import { fileshareService } from "../../api/fileshare";
 import { useAuthStore } from "../../stores/auth";
 import {
@@ -1174,6 +1185,11 @@ function getStatusClass(status) {
   padding: 16px;
   overflow-y: auto;
   box-sizing: border-box;
+}
+
+.metadata-sidebar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .meta-section {

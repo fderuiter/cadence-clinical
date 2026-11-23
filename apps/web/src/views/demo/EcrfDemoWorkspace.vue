@@ -434,9 +434,12 @@ const demoRole = ref("site_investigator");
 
 watch(
   () => authStore.currentPersona,
-  (persona) => {
+  (persona, prevPersona) => {
     if (!authStore.isAuthenticated) return;
     demoRole.value = persona === "cra_monitor" ? "cra" : "site_investigator";
+    if (prevPersona !== undefined && persona !== prevPersona) {
+      selectListedSubject();
+    }
   },
   { immediate: true }
 );
@@ -616,7 +619,10 @@ function handleLookupInput(field, value) {
 const ecrfSessions = reactive({});
 
 function getSessionKey() {
-  return `${selectedSubjectId.value}:${selectedVisitId.value}`;
+  const personaKey = authStore.isAuthenticated
+    ? authStore.currentPersona || "default"
+    : "guest";
+  return `${personaKey}:${selectedSubjectId.value}:${selectedVisitId.value}`;
 }
 
 function loadEcrfSession() {

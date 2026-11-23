@@ -16,6 +16,7 @@ import {
 } from "../sync-queue.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import {
+  bindDelegatedClinicalWidgets,
   createClinicalInput,
   createClinicalRadioGrid,
   createClinicalSlider,
@@ -29,18 +30,6 @@ import { showToast } from "../widgets/toast.js";
 import { registerViewLeaveHandler, showView } from "./navigation.js";
 import { openSignatureModal } from "./signature.js";
 import { renderTasks } from "./tasks.js";
-
-const SLIDER_INTERACTION_KEYS = new Set([
-  "ArrowLeft",
-  "ArrowRight",
-  "ArrowUp",
-  "ArrowDown",
-  "Home",
-  "End",
-  "PageUp",
-  "PageDown",
-  " ",
-]);
 
 let pendingDraftFlushPromise = null;
 
@@ -319,32 +308,10 @@ export async function startQuestionnaire(assignmentId) {
   formHtml += `</div>`;
   formContainer.innerHTML = formHtml;
 
-  // Set up listeners for real-time background auto-saving and slider interaction tracking
-  const markSliderTouchedAndSave = (event) => {
-    if (event?.target?.type === "range") {
-      markClinicalSliderTouched(event.target);
-    }
-    debouncedSaveActiveDraft();
-  };
-  const handleSliderPointerDown = (event) => {
-    if (event?.target?.type === "range") {
-      markClinicalSliderTouched(event.target);
-      debouncedSaveActiveDraft();
-    }
-  };
-  const handleSliderKeyDown = (event) => {
-    if (
-      event?.target?.type === "range" &&
-      SLIDER_INTERACTION_KEYS.has(event.key)
-    ) {
-      markClinicalSliderTouched(event.target);
-      debouncedSaveActiveDraft();
-    }
-  };
-  formContainer.addEventListener("input", markSliderTouchedAndSave);
-  formContainer.addEventListener("change", markSliderTouchedAndSave);
-  formContainer.addEventListener("pointerdown", handleSliderPointerDown);
-  formContainer.addEventListener("keydown", handleSliderKeyDown);
+  // Set up delegated listeners for real-time background auto-saving, slider interaction tracking, and query panels
+  bindDelegatedClinicalWidgets(formContainer, {
+    onFieldInput: () => debouncedSaveActiveDraft(),
+  });
 
   // Render and navigate synchronously
   showView("view-questionnaire");

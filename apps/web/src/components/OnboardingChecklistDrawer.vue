@@ -163,7 +163,7 @@
 
 <script setup>
 import { computed } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { ClinicalDrawer } from "ui";
 import {
   resolveAuthorizedTaskRoute,
@@ -176,6 +176,7 @@ import { hasRequiredRole } from "../router";
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 
 const effectiveRoles = computed(() => {
   if (authStore.rawRoles?.length > 0) {
@@ -230,9 +231,28 @@ function openOrientationHub() {
   }
 }
 
-function startGuidedTour() {
+async function startGuidedTour() {
   onboardingStore.startTour();
   onboardingStore.closeDrawer();
+  const initialRouteName = onboardingStore.currentStepConfig?.routeName;
+  if (
+    initialRouteName &&
+    router &&
+    route?.name !== initialRouteName &&
+    (route?.name === "forbidden" ||
+      route?.path === "/forbidden" ||
+      route?.name === "unavailable" ||
+      route?.path === "/unavailable")
+  ) {
+    const resolved =
+      typeof router.resolve === "function"
+        ? router.resolve({ name: initialRouteName })
+        : null;
+    const targetPath = resolved?.fullPath || resolved?.path;
+    if (targetPath && canPushResolvedPath(targetPath)) {
+      await router.push({ name: initialRouteName });
+    }
+  }
 }
 </script>
 

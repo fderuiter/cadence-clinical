@@ -539,6 +539,12 @@ async function exportCasebook() {
   word-break: break-word;
 }
 
+.casebook-digest-disclosure summary {
+  min-height: var(--control-target-min, 24px);
+  padding: 4px 0;
+  cursor: pointer;
+}
+
 .casebook-outcome--ok {
   background: var(--semantic-color-success-bg);
   color: var(--semantic-color-success-dark);
