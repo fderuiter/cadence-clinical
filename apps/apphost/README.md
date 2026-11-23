@@ -80,7 +80,10 @@ issuer never asks for the Keycloak admin):
   tokens, ADR-2515);
 - `imaging-deid-signing-key` and `imaging-deid-pseudonymization-key`, passed to imaging as
   `CADENCE_IMAGING_DEID_SIGNING_KEY` and `CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY` (base64 of 32 bytes each, two
-  different keys; they sign de-identification certificates and key the anonymized DICOM UIDs, #5399).
+  different keys; they sign de-identification certificates and key the anonymized DICOM UIDs, #5399);
+- `biometric-liveness-key`, passed to kernel (both `core` and `full`) and econsent (`full`) as
+  `CADENCE_BIOMETRIC_LIVENESS_KEY` (base64 of 32 bytes; signs and verifies 15-minute biometric liveness tokens,
+  [ADR-2660](../../docs/adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md)).
 
 The gateway's `OIDC_AUTHORITY` is the Keycloak `cadence` realm. Set the parameters once with user secrets (choose your own values):
 
@@ -97,6 +100,7 @@ dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Param
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:sce-signing-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:imaging-deid-signing-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:imaging-deid-pseudonymization-key" "$(openssl rand -base64 32)"
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:biometric-liveness-key" "$(openssl rand -base64 32)"
 ```
 
 Or set `Parameters__minio-root-user` (and so on) as environment variables. The names contain hyphens, which
@@ -130,6 +134,7 @@ env AppHost__Profile=core \
     "Parameters__gateway-secret=$(openssl rand -hex 24)" \
     "Parameters__audit-log-secret-key=$(openssl rand -hex 24)" \
     "Parameters__demographics-encryption-key=$(openssl rand -base64 32)" \
+    "Parameters__biometric-liveness-key=$(openssl rand -base64 32)" \
     ASPIRE_ALLOW_UNSECURED_TRANSPORT=true \
     dotnet run --project apps/apphost/src/Cadence.AppHost.csproj --launch-profile http
 ```

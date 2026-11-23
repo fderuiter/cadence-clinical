@@ -942,6 +942,7 @@ public sealed class KernelTrialOnboardingPostgresTests(ExecutionFormModulePostgr
         new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseEnvironment(environment)
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
             .ConfigureServices(services =>
             {
