@@ -27,6 +27,7 @@ namespace Cadence.Kernel.Commands;
     nameof(AssertionErrors.AlreadyLocked),
     nameof(AssertionErrors.AttestationRejected))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record ApplyLock(
     TenantId TenantId,
     AssertionId AssertionId,
@@ -52,6 +53,7 @@ public sealed record ApplyLock(
     nameof(AssertionErrors.AlreadyRetracted),
     nameof(AssertionErrors.AttestationRejected))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+[BaselineKernelCommand]
 public sealed record ReleaseLock(
     TenantId TenantId,
     AssertionId AssertionId,
