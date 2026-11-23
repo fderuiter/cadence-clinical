@@ -82,6 +82,9 @@ public static partial class DeidComplianceService
         "designer.lead@example.com",
         "safety.officer@example.com",
         "auditor.lead@example.com",
+        "stat.author@example.com",
+        "stat.approver@example.com",
+        "pharmacist.site101@example.com",
         "subject.site101@example.com",
     };
 

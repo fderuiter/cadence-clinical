@@ -1,4 +1,5 @@
 import { computed, ref, type Ref } from "vue";
+import { handoffFocus } from "ui";
 import { isUnrecordedValue } from "../api/observationValue";
 import type {
   EcrfForm,
@@ -111,6 +112,11 @@ export function useEcrfSdv(options: {
 
   function clearSdvSelection() {
     selectedSdvItems.value = [];
+    void handoffFocus([
+      "#ecrf-sdv-select-all",
+      "#canvas-form-workspace-title",
+      "#ecrf-form-title",
+    ]);
   }
 
   function toggleSdvItem(itemId: string, checked: boolean) {
@@ -135,6 +141,7 @@ export function useEcrfSdv(options: {
     };
     sdvReason.value = "";
     sdvOutcome.value = null;
+    void handoffFocus("#ecrf-sdv-reason", { scrollIfOffscreen: true });
   }
 
   function beginRetract(item: EcrfFormItem, assertion: EcrfFormAssertion) {
@@ -145,10 +152,21 @@ export function useEcrfSdv(options: {
     };
     sdvReason.value = "";
     sdvOutcome.value = null;
+    void handoffFocus("#ecrf-sdv-reason", { scrollIfOffscreen: true });
   }
 
-  function cancelPendingSdv() {
+  function cancelPendingSdv(restoreFocus = false) {
+    const itemId = pendingSdv.value?.item_id ?? null;
     pendingSdv.value = null;
+    if (restoreFocus && itemId) {
+      void handoffFocus([
+        `#ecrf-verify-${itemId}`,
+        `#ecrf-unverify-${itemId}`,
+        `#ecrf-item-${itemId}`,
+        "#canvas-form-workspace-title",
+        "#ecrf-form-title",
+      ]);
+    }
   }
 
   function setSdvReason(next: string) {
@@ -186,6 +204,13 @@ export function useEcrfSdv(options: {
           kind: "done",
           message: `Verified ${current.item_id} (revision ${current.revision}).`,
         };
+        void handoffFocus([
+          `#ecrf-unverify-${current.item_id}`,
+          `#ecrf-verify-${current.item_id}`,
+          `#ecrf-item-${current.item_id}`,
+          "#canvas-form-workspace-title",
+          "#ecrf-form-title",
+        ]);
       } else {
         await kernelApi.retractAssertion({
           assertionRef: `assertion:${current.assertion_id}`,
@@ -200,6 +225,13 @@ export function useEcrfSdv(options: {
           kind: "done",
           message: `Verification withdrawn on ${current.item_id}.`,
         };
+        void handoffFocus([
+          `#ecrf-verify-${current.item_id}`,
+          `#ecrf-unverify-${current.item_id}`,
+          `#ecrf-item-${current.item_id}`,
+          "#canvas-form-workspace-title",
+          "#ecrf-form-title",
+        ]);
       }
     } catch (error) {
       const code = assertionErrorCode(error);
@@ -280,6 +312,21 @@ export function useEcrfSdv(options: {
         bulkSdvReason.value = "";
       }
       await reload();
+      if (selectedSdvItems.value.length === 0) {
+        void handoffFocus([
+          "#ecrf-sdv-select-all",
+          () =>
+            document.querySelector<HTMLElement>(
+              "#ecrf-form-page input:not([disabled])"
+            ),
+          () =>
+            document.querySelector<HTMLElement>(
+              "#ecrf-form-instance input:not([disabled])"
+            ),
+          "#canvas-form-workspace-title",
+          "#ecrf-form-title",
+        ]);
+      }
     } finally {
       sdvBusy.value = false;
     }

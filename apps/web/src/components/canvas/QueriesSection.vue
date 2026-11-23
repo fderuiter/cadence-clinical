@@ -6,7 +6,7 @@
     :aria-busy="queries.loading || queries.refreshing || studyLoading"
   >
     <header class="study-queries-header">
-      <h2 id="study-queries-title">Queries</h2>
+      <h2 id="study-queries-title" tabindex="-1">Queries</h2>
       <div class="study-queries-filters" data-testid="study-queries-filters">
         <label for="study-queries-status">Status</label>
         <select
@@ -193,6 +193,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
+import { handoffFocus } from "ui";
 import type {
   FormQueryOrigin,
   FormQueryOwnerRole,
@@ -515,6 +516,7 @@ function clearFilters() {
   appliedParticipant.value = "";
   changedFilter.value = "";
   syncFilterUrl();
+  void handoffFocus("#study-queries-status");
 }
 
 onBeforeUnmount(() => {

@@ -6,7 +6,9 @@
     :aria-busy="loading"
   >
     <div class="forms-head">
-      <h3 id="record-forms-title">{{ matrixActive ? "Casebook" : "Forms" }}</h3>
+      <h3 id="record-forms-title" tabindex="-1">
+        {{ matrixActive ? "Casebook" : "Forms" }}
+      </h3>
       <div class="forms-head-actions">
         <router-link
           v-if="enrollmentId && newFormLocation"

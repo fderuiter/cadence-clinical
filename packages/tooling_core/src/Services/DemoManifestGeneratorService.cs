@@ -451,7 +451,7 @@ public static partial class DemoManifestGeneratorService
                 continue;
             }
 
-            var (workflow, workspacePersona) = ResolveWorkflowAndWorkspace(roleCode, realmUser.RealmRoles);
+            var (workflow, workspacePersona) = ResolveWorkflowAndWorkspace(username, roleCode, realmUser.RealmRoles);
             personas.Add(new DemoPersonaEntry(
                 Username: username,
                 KeycloakSub: subjectUuid,
@@ -637,6 +637,7 @@ public static partial class DemoManifestGeneratorService
     }
 
     private static (string Workflow, string WorkspacePersona) ResolveWorkflowAndWorkspace(
+        string username,
         string kernelRoleCode,
         IReadOnlyList<string> realmRoles) =>
         kernelRoleCode switch
@@ -649,6 +650,9 @@ public static partial class DemoManifestGeneratorService
             "DEMO_DESIGNER" => ("designer", "sponsor_designer"),
             "DEMO_SAFETY" => ("safety", "safety_officer"),
             "DEMO_AUDITOR" => ("auditor", "auditor"),
+            "DEMO_STATISTICIAN" when string.Equals(username, "stat.approver", StringComparison.Ordinal) => ("statistician_approver", "unblinded_statistician"),
+            "DEMO_STATISTICIAN" => ("statistician", "unblinded_statistician"),
+            "DEMO_PHARMACIST" => ("pharmacist", "pharmacist"),
             _ => (kernelRoleCode.ToLowerInvariant(), "super_admin"),
         };
 

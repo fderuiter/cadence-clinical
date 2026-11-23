@@ -7,7 +7,7 @@
   >
     <header class="study-locks-header">
       <div>
-        <h2 id="study-locks-title">Locks</h2>
+        <h2 id="study-locks-title" tabindex="-1">Locks</h2>
         <p class="study-locks-subtitle">
           Signed <strong>Frozen</strong> and <strong>Locked</strong> assertions
           across study, site, participant, form, and observation scopes.
