@@ -470,7 +470,7 @@ public sealed partial class ContainerImagePinTests
 
         var npmBlock = blocks.Single(b => b.PackageEcosystem == "npm" && b.Directory == "/");
         var npmPackages = CollectAllWorkspaceNpmPackages();
-        npmPackages.Should().HaveCount(38);
+        npmPackages.Should().HaveCount(39);
         foreach (string pkg in npmPackages)
         {
             DependencyValidatorService.FindMatchingGroup(pkg, npmBlock, "minor").Should().Be("npm-workspace");
