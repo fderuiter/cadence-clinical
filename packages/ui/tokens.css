@@ -602,6 +602,11 @@ summary:focus-visible,
   box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
 }
 
+:where([tabindex="-1"]):focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* Shared Form Action Bar & Primary Brand Button Colors */
 .form-actions {
   display: flex;

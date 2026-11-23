@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Commands;
@@ -159,6 +160,8 @@ public sealed record CollectedValue(
 /// <remarks>
 /// <para><c>ProtocolVersionId</c>: The protocol version that governs the form (K-TIME-8).</para>
 /// <para><c>Version</c>: 1 when opened, one more per save.</para>
+/// <para><c>VisitTimingAssessment</c>: How <c>CollectedAt</c> fell against the expected visit window (ADR-2507) when an
+/// enrolled participant opens a timed planned activity; null otherwise.</para>
 /// </remarks>
 public sealed record CollectionInstanceState(
     CollectionInstanceId CollectionInstanceId,
@@ -167,7 +170,8 @@ public sealed record CollectionInstanceState(
     string CollectionSpecId,
     string? PlannedActivityId,
     DateTimeOffset CollectedAt,
-    long Version);
+    long Version,
+    VisitTimingAssessment? VisitTimingAssessment = null);
 
 /// <summary>
 /// A form page after a save: every value of the form instance, ordered by item id, so the client marks values saved only

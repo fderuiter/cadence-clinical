@@ -4,7 +4,9 @@
     class="card site-activation"
     aria-labelledby="site-activation-title"
   >
-    <h3 id="site-activation-title" class="card-title">Site activation</h3>
+    <h3 id="site-activation-title" class="card-title" tabindex="-1">
+      Site activation
+    </h3>
 
     <form
       id="site-activation-scope"

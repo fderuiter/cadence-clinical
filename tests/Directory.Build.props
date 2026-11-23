@@ -1,4 +1,9 @@
 <Project>
   <!-- Inherit the solution-wide build properties and analyzers. -->
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <!-- Keep VSTest active with xunit.v3 4.0+ and xunit.runner.visualstudio so dotnet test VSTest flags (filter, logger trx) work on .NET 10 SDK. -->
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+  </PropertyGroup>
 </Project>

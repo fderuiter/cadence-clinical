@@ -4,6 +4,7 @@
     <RootNamespace>Cadence.Kernel.ConsumerTests</RootNamespace>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
     <Description>C4 package-consumer test (kernel extraction plan, Track C). Compiles a minimal module against the public kernel SDK only.</Description>
   </PropertyGroup>
 

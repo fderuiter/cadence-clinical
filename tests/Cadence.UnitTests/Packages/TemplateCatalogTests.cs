@@ -35,7 +35,9 @@ public sealed class TemplateCatalogTests
     [InlineData("openrosa_template.xml.liquid")]
     [InlineData("e2b_r3_icsr.xml.liquid")]
     [InlineData("confirmation_letter.liquid")]
+    [InlineData("confirmation_letter.html.liquid")]
     [InlineData("Templates.confirmation_letter.liquid")]
+    [InlineData("Templates.confirmation_letter.html.liquid")]
     [InlineData("../../packages/ddf/Templates/odm_template.xml.liquid")]
     [InlineData("..\\odm")]
     [InlineData("CONFIRMATION_LETTER")]
@@ -88,7 +90,7 @@ public sealed class TemplateCatalogTests
     {
         var ctms = new TemplateCatalog(
             typeof(LetterTemplateEndpoints).Assembly,
-            new Dictionary<string, string> { ["document"] = "confirmation_letter.liquid" });
+            new Dictionary<string, string> { ["document"] = "confirmation_letter.html.liquid" });
         var ddf = new TemplateCatalog(
             typeof(UsdmCompiler).Assembly,
             new Dictionary<string, string> { ["document"] = "odm_template.xml.liquid" });

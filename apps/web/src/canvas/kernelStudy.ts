@@ -4,7 +4,6 @@ import {
   registerLogoutCleanup,
   registerSessionCacheClearHandler,
 } from "../auth/sessionCoordinator.js";
-import { mapScheduleOfActivities } from "./kernelSchedule";
 import { parseNodeRef, type NodeRef } from "./nodeRef";
 
 interface AuthLikeState {
@@ -663,7 +662,10 @@ export function findStudyScheduleOptions(
         versions.find((v) => v.ref && !v.mask && v.status === "Approved") ??
         versions.find((v) => v.ref && !v.mask);
       if (!chosen?.ref) return null;
-      const soa = await kernelApi.getScheduleOfActivities(chosen.ref);
+      const [soa, { mapScheduleOfActivities }] = await Promise.all([
+        kernelApi.getScheduleOfActivities(chosen.ref),
+        import("./kernelSchedule"),
+      ]);
       const resolved = mapScheduleOfActivities(soa);
       if (
         bucket.epoch === epochAtStart &&

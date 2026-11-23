@@ -9,6 +9,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
@@ -68,7 +69,7 @@ internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollec
             return CollectionErrors.NoGoverningVersion;
         }
 
-        if (CollectionSpecs.Find(version, command.CollectionSpecId, command.PlannedActivityId) is { } problem)
+        if (CollectionSpecs.Find(version, command.CollectionSpecId, command.PlannedActivityId, out var design) is { } problem)
         {
             return CollectionErrors.SpecUnknown.WithMessage(problem);
         }
@@ -83,7 +84,35 @@ internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollec
                 instance.TenantId, instance.Id, instance.EnrollmentId, instance.ParticipantId, instance.StudyId, version.Id,
                 instance.CollectionSpecId, instance.PlannedActivityId, instance.CollectedAt),
             instance.CollectedAt);
-        return CommandResult<CollectionInstanceState>.Success(CollectionStates.Of(instance, version: 1));
+        var assessment = AssessVisit(design!, enrollment, command.PlannedActivityId, collectedAt, context.RecordedAt);
+        return CommandResult<CollectionInstanceState>.Success(CollectionStates.Of(instance, version: 1, assessment));
+    }
+
+    private static VisitTimingAssessment? AssessVisit(
+        ProtocolDesign design,
+        Enrollment enrollment,
+        string? plannedActivityId,
+        DateTimeOffset collectedAt,
+        DateTimeOffset knownAt)
+    {
+        if (plannedActivityId is null)
+        {
+            return null;
+        }
+
+        if (enrollment.Periods
+            .Where(p => p.Status == EnrollmentStatus.Enrolled && p.Period.Recorded.Contains(knownAt))
+            .OrderBy(p => p.Period.Valid.Start)
+            .FirstOrDefault() is not { } enrolled)
+        {
+            return null;
+        }
+
+        var referenceStart = DateOnly.FromDateTime(enrolled.Period.Valid.Start.UtcDateTime);
+        var actual = DateOnly.FromDateTime(collectedAt.UtcDateTime);
+        var expected = ExpectedSchedule.Compute(design, referenceStart, actual)
+            .FirstOrDefault(v => string.Equals(v.Visit.ActivityId, plannedActivityId, StringComparison.Ordinal));
+        return expected is null ? null : ExpectedSchedule.Assess(expected, actual);
     }
 }
 
@@ -377,15 +406,20 @@ internal static class CollectionSpecs
             .FirstOrDefault(s => string.Equals(s.Id, specId, StringComparison.Ordinal));
 
     /// <summary>Why <paramref name="version"/> cannot govern a form of <paramref name="specId"/> at <paramref name="activityId"/>, or null.</summary>
-    public static string? Find(ProtocolVersion version, string? specId, string? activityId)
+    public static string? Find(ProtocolVersion version, string? specId, string? activityId) =>
+        Find(version, specId, activityId, out _);
+
+    /// <summary>Why <paramref name="version"/> cannot govern a form of <paramref name="specId"/> at <paramref name="activityId"/>, or null.</summary>
+    public static string? Find(ProtocolVersion version, string? specId, string? activityId, out ProtocolDesign? design)
     {
+        design = null;
         if (string.IsNullOrWhiteSpace(specId) || specId.Length > CollectionInstance.ElementIdMaxLength
             || (activityId is not null && (string.IsNullOrWhiteSpace(activityId) || activityId.Length > CollectionInstance.ElementIdMaxLength)))
         {
             return "Name the CollectionSpec, and the planned activity when there is one, by their ids in the protocol design.";
         }
 
-        var design = ProtocolDesignDocument.Read(version.Content).Design;
+        design = ProtocolDesignDocument.Read(version.Content).Design;
         if (design?.CollectionSpecs.Any(s => string.Equals(s.Id, specId, StringComparison.Ordinal)) != true)
         {
             return $"Protocol version {version.Number} has no CollectionSpec {specId}.";
@@ -480,8 +514,16 @@ internal static class CollectionContent
 /// <summary>Shared steps of the form instance handlers.</summary>
 internal static class CollectionStates
 {
-    public static CollectionInstanceState Of(CollectionInstance instance, long version) =>
-        new(instance.Id, instance.EnrollmentId, instance.ProtocolVersionId, instance.CollectionSpecId, instance.PlannedActivityId, instance.CollectedAt, version);
+    public static CollectionInstanceState Of(CollectionInstance instance, long version, VisitTimingAssessment? visitTimingAssessment = null) =>
+        new(
+            instance.Id,
+            instance.EnrollmentId,
+            instance.ProtocolVersionId,
+            instance.CollectionSpecId,
+            instance.PlannedActivityId,
+            instance.CollectedAt,
+            version,
+            visitTimingAssessment);
 
     /// <summary>Every value of <paramref name="instance"/> after a save, reading the members the save did not load.</summary>
     public static async Task<CommandResult<CollectedValuesState>> ValuesAsync(
