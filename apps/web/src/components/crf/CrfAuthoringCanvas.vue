@@ -481,7 +481,7 @@ const props = defineProps({
     required: true,
   },
   selectedFieldId: {
-    type: String,
+    type: [String, null],
     default: null,
   },
 });
