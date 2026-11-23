@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Simulation;
+using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
@@ -81,6 +85,76 @@ internal static class ProtocolElementLineage
         }
 
         return new ElementLineagePlan(parts, [.. edges.Distinct()]);
+    }
+
+    /// <summary>
+    /// Every element of the last version in <paramref name="chain"/> mapped to its pinned <c>protocol_element</c>
+    /// lineage node (at the number of the protocol version that last added or changed it).
+    /// </summary>
+    public static IReadOnlyDictionary<string, NodeRef> Elements(StudyId study, IReadOnlyList<(int Number, string Content)> chain)
+    {
+        ArgumentNullException.ThrowIfNull(chain);
+        if (chain.Count == 0)
+        {
+            throw new ArgumentException("The chain holds at least the governing version.", nameof(chain));
+        }
+
+        var versions = new Dictionary<string, int>(StringComparer.Ordinal);
+        string? before = null;
+        foreach (var (number, content) in chain)
+        {
+            foreach (var change in Changes(before, content))
+            {
+                if (change.Change == ElementChangeKind.Removed)
+                {
+                    versions.Remove(change.ElementId);
+                }
+                else
+                {
+                    versions[change.ElementId] = number;
+                }
+            }
+
+            before = content;
+        }
+
+        return versions.ToDictionary(
+            pair => pair.Key,
+            pair => NodeRef.For(ProtocolElementId.For(study, pair.Key), pair.Value),
+            StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Resolves <paramref name="version"/> and its ancestors via <paramref name="work"/>, returning each design element
+    /// of <paramref name="version"/> mapped to its pinned <c>protocol_element</c> lineage node.
+    /// </summary>
+    public static async Task<IReadOnlyDictionary<string, NodeRef>> ElementsAsync(
+        IKernelUnitOfWork work, ProtocolVersion version, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+        ArgumentNullException.ThrowIfNull(version);
+        var chain = await ChainAsync(work, version, cancellationToken).ConfigureAwait(false);
+        return Elements(version.StudyId, chain);
+    }
+
+    /// <summary>The version and its ancestors, first version first, as (number, content).</summary>
+    public static async Task<IReadOnlyList<(int Number, string Content)>> ChainAsync(
+        IKernelUnitOfWork work, ProtocolVersion version, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+        ArgumentNullException.ThrowIfNull(version);
+        var chain = new List<(int Number, string Content)> { (version.Number, version.Content) };
+        var parentId = version.ParentVersionId;
+        while (parentId is { } id)
+        {
+            var parent = await work.ReadAsync<ProtocolVersion>(id, cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException($"Protocol version {id} names a parent the tenant does not have.");
+            chain.Add((parent.Number, parent.Content));
+            parentId = parent.ParentVersionId;
+        }
+
+        chain.Reverse();
+        return chain;
     }
 
     /// <summary>

@@ -359,7 +359,7 @@ public sealed class ContextualHelpEndpointsTests : IAsyncDisposable
     [GxPRequirement("PRD-KNB-001")]
     [GxPRequirement("PRD-KNB-002")]
     [InlineData("/studies/DEMO-01?stage=design&section=protocol-versions", "sponsor_designer", "SOP-CAN-110", "#canvas-protocol-versions")]
-    [InlineData("/studies/DEMO-01?stage=conduct&section=sites", "super_admin", "SOP-CAN-111", "#canvas-study-sites")]
+    [InlineData("/studies/DEMO-01?stage=start&section=sites", "super_admin", "SOP-CAN-111", "#canvas-study-sites")]
     [InlineData("/studies/DEMO-01?stage=start&section=site-activation", "cra_monitor", "SOP-CAN-112", "#canvas-site-activation")]
     [InlineData("/studies/DEMO-01?stage=start&section=startup-greenlight", "cra_monitor", "SOP-CAN-113", "#canvas-startup-greenlight")]
     [InlineData("/studies/DEMO-01?stage=start&section=documents", "auditor", "SOP-CAN-114", "#canvas-essential-documents")]

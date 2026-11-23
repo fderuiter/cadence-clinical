@@ -473,26 +473,39 @@ function createDefaultContextualSops(): Record<
       summary:
         "Governs ODM XML and USDM JSON protocol draft imports, Schedule of Activities inspection, and immutable version promotion.",
     }),
-    ...buildCanvasSectionSopEntries("stage=conduct&section=sites", {
-      mappingPrefix: "map-can-sites",
-      persona: "super_admin",
-      priority: 45,
-      articleId: "art-can-sites",
-      versionId: "ver-can-111",
-      title: "SOP-CAN-111: Study Site Directory, Country Linking & Assignment",
-      slug: "sop-can-111-study-sites",
-      tags: ["canvas", "sites", "site-directory", "conduct"],
-      categoryId: "cat-site-startup",
-      categoryName: "Site Startup & Activation",
-      authorUserId: "cra_monitor",
-      sectionAnchor: "#canvas-study-sites",
-      heading: "Study Site Linking & Principal Investigator Assignment",
-      summary:
-        "Standardizes linking clinical investigator sites to a study workspace, country feasibility verification, and site roster maintenance.",
-    }),
+    ...(() => {
+      const sitesSpec = {
+        persona: "super_admin",
+        priority: 45,
+        articleId: "art-can-sites",
+        versionId: "ver-can-111",
+        title:
+          "SOP-CAN-111: Study Site Directory, Country Linking & Assignment",
+        slug: "sop-can-111-study-sites",
+        categoryId: "cat-site-startup",
+        categoryName: "Site Startup & Activation",
+        authorUserId: "cra_monitor",
+        sectionAnchor: "#canvas-study-sites",
+        heading: "Study Site Linking & Principal Investigator Assignment",
+        summary:
+          "Standardizes linking clinical investigator sites to a study workspace, country feasibility verification, and site roster maintenance.",
+      };
+      return {
+        ...buildCanvasSectionSopEntries("stage=conduct&section=sites", {
+          ...sitesSpec,
+          mappingPrefix: "map-can-sites-conduct",
+          tags: ["canvas", "sites", "site-directory", "conduct"],
+        }),
+        ...buildCanvasSectionSopEntries("stage=start&section=sites", {
+          ...sitesSpec,
+          mappingPrefix: "map-can-sites",
+          stageFallback: "start",
+          tags: ["canvas", "sites", "site-directory", "start"],
+        }),
+      };
+    })(),
     ...buildCanvasSectionSopEntries("stage=start&section=site-activation", {
       mappingPrefix: "map-can-act",
-      stageFallback: "start",
       persona: "cra_monitor",
       priority: 45,
       articleId: "art-can-act",

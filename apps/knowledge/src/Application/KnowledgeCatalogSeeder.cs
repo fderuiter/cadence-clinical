@@ -790,7 +790,7 @@ public static class KnowledgeCatalogSeeder
                     defaultAnchor: "#canvas-protocol-versions",
                     createdAt: baseTime.AddMinutes(-1).AddSeconds(-55))),
 
-            // 17. Clinical Canvas: Conduct -> Sites (?stage=conduct&section=sites)
+            // 17. Clinical Canvas: Start -> Sites (?stage=start&section=sites)
             CreateSop(
                 articleId: "art-can-sites-sop",
                 versionId: "ver-can-111",
@@ -799,10 +799,10 @@ public static class KnowledgeCatalogSeeder
                 categoryId: "cat-site-startup",
                 versionLabel: "1.0",
                 versionIndex: 1,
-                tags: ["clinical-canvas", "sites", "investigator", "site-roster", "conduct"],
+                tags: ["clinical-canvas", "sites", "investigator", "site-roster", "start"],
                 markdown: """
                     ## Study Site Roster & Investigator Binding
-                    Standardizes clinical site linking, Principal Investigator assignment, and country-level site scope verification in Clinical Canvas (`stage=conduct&section=sites`).
+                    Standardizes clinical site linking, Principal Investigator assignment, and country-level site scope verification in Clinical Canvas (`stage=start&section=sites`).
 
                     ## Operational Steps
                     1. Confirm organization and facility identifiers prior to linking a clinical site to the study.
@@ -812,9 +812,9 @@ public static class KnowledgeCatalogSeeder
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-52),
                 mappings: BuildCanvasSectionMappings(
                     code: "st",
-                    stage: "conduct",
+                    stage: "start",
                     section: "sites",
-                    includeStageFallback: false,
+                    includeStageFallback: true,
                     articleId: "art-can-sites-sop",
                     defaultAnchor: "#canvas-study-sites",
                     createdAt: baseTime.AddMinutes(-1).AddSeconds(-52))),
@@ -843,7 +843,7 @@ public static class KnowledgeCatalogSeeder
                     code: "sa",
                     stage: "start",
                     section: "site-activation",
-                    includeStageFallback: true,
+                    includeStageFallback: false,
                     articleId: "art-can-actv-sop",
                     defaultAnchor: "#canvas-site-activation",
                     createdAt: baseTime.AddMinutes(-1).AddSeconds(-49))),

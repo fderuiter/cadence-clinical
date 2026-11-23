@@ -29,6 +29,7 @@ import {
   portalSessionCoordinator,
   refreshPortalSessionOnUnauthorized,
 } from "./features/auth.js";
+import { renderLedger } from "./features/audit.js";
 import { renderCompliance } from "./features/compliance.js";
 import {
   loadConsentDetails,
@@ -65,6 +66,7 @@ import {
   checkPendingReconsent,
   closeReconsentModal,
   openReconsentModal,
+  resolveReconsentStudyId,
   submitReconsentSignature,
 } from "./features/reconsent.js";
 import {
@@ -107,7 +109,25 @@ import {
   resetExpenseClaimForm,
   submitExpenseClaim,
 } from "./features/wallet.js";
+import { hydrateSessionScopeFromClaims } from "./features/auth.js";
+import { updateConsentReadinessGuidance } from "./features/consent.js";
+import {
+  closePeekRecord,
+  openCompliancePeek,
+  openExpenseClaimPeek,
+  openLedgerPeek,
+  openNotificationPeek,
+  openPeekFullView,
+  openPeekRecord,
+  openSyncSubmissionPeek,
+  openTransactionPeek,
+  syncPeekFromQuery,
+} from "./features/peek.js";
 import { isScreenAvailable } from "./router/availability.js";
+import {
+  resetPortalRouterForTests,
+  syncActiveRouteEntities,
+} from "./router/index.js";
 import { state } from "./stores/state.js";
 import {
   clearAllSubmissions,
@@ -120,6 +140,14 @@ import {
   normalizeCurrencyCode,
 } from "./utils/currency.js";
 import { isDemoBuild, isDemoModeActive } from "./utils/demoMode.js";
+import {
+  PLAIN_OCR_HOLD_EXPLANATION,
+  formatConsentEditionLabel,
+  formatConsentLanguageLabel,
+  humanizeExpenseReviewNotes,
+  isRawProtocolOrStudyCode,
+  resolveFriendlyStudyTitle,
+} from "./utils/participantCopy.js";
 import { markFieldInvalid } from "./widgets/field-errors.js";
 
 // Auto-run on load in DOM environments
@@ -169,6 +197,7 @@ export {
   renderTasks,
   renderCompliance,
   renderInbox,
+  renderLedger,
   loadConsentDetails,
   renderConsentUI,
   submitConsentAnswers,
@@ -196,6 +225,7 @@ export {
   openReconsentModal,
   closeReconsentModal,
   checkPendingReconsent,
+  resolveReconsentStudyId,
   submitReconsentSignature,
   emitSyncLifecycleEvent,
   resetSyncRetryInfo,
@@ -227,4 +257,24 @@ export {
   getInstrumentDisplayName,
   getSyncStatusLabel,
   humanizeValidationError,
+  hydrateSessionScopeFromClaims,
+  updateConsentReadinessGuidance,
+  openPeekRecord,
+  closePeekRecord,
+  openPeekFullView,
+  openNotificationPeek,
+  openCompliancePeek,
+  openExpenseClaimPeek,
+  openTransactionPeek,
+  openLedgerPeek,
+  openSyncSubmissionPeek,
+  syncPeekFromQuery,
+  syncActiveRouteEntities,
+  resetPortalRouterForTests,
+  PLAIN_OCR_HOLD_EXPLANATION,
+  isRawProtocolOrStudyCode,
+  resolveFriendlyStudyTitle,
+  formatConsentEditionLabel,
+  formatConsentLanguageLabel,
+  humanizeExpenseReviewNotes,
 };
