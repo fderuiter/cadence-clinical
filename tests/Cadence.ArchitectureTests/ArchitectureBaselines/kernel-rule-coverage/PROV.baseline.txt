@@ -1,0 +1,4 @@
+# Kernel rules with no test that names them yet (#5467) - docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md.
+# One rule ID per line, sorted ordinally. Shards may only shrink: tag a test that proves the rule with
+# [KernelRule("K-AREA-N")] (docs/TESTING.md) and delete its line. CADENCE_UPDATE_BASELINE=1 deletes covered lines only.
+K-PROV-2

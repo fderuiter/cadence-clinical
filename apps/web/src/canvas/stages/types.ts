@@ -11,6 +11,7 @@ export type SectionId =
   | "site-milestones"
   | "delegation"
   | "participants"
+  | "sites"
   | "monitoring-visits"
   | "supply"
   | "queries"

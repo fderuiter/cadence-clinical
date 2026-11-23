@@ -6,7 +6,7 @@
 /** Canonical role -> resource -> allowed actions from `Cadence.Security.Rbac.PermissionMatrix`. */
 export const ROLE_PERMISSIONS: Readonly<
   Record<string, Readonly<Record<string, readonly string[]>>>
-> = Object.freeze({
+> = /*#__PURE__*/ Object.freeze({
   sysadmin: {
     cec_adjudication: ["read"],
     cgt_chain_of_custody: ["read"],
@@ -279,16 +279,7 @@ export const ROLE_PERMISSIONS: Readonly<
     cgt_chain_of_custody: ["read", "write"],
     ctms_cra_allocation: ["read"],
     ctms_cra_workload: ["read"],
-    ctms_doa: [
-      "assign",
-      "create",
-      "export",
-      "read",
-      "revoke",
-      "sign",
-      "sign_off",
-      "update",
-    ],
+    ctms_doa: ["assign", "create", "export", "read", "revoke", "update"],
     ctms_greenlight: ["read"],
     ctms_monitoring_letter: ["read", "read_type"],
     ctms_monitoring_visit: ["read"],
@@ -364,6 +355,33 @@ export const ROLE_PERMISSIONS: Readonly<
     payments_visit_event: ["record"],
     payments_w9: ["submit", "verify"],
     payments_wallet: ["issue_card", "read"],
+    quality_event: ["read"],
+    regulatory_form: ["create", "read", "sign"],
+    site_compliance: ["read"],
+    soa: ["read"],
+    study_design: ["read"],
+    subject_enrollment: ["create", "randomize", "read", "update"],
+    system_audit_logs: ["read"],
+    tickets: ["comment", "create", "read", "sign", "transition"],
+    training_log: ["create", "read", "sign"],
+    visit_windowing: ["read"],
+  },
+  trial_coordinator: {
+    ctms_cra_allocation: ["read"],
+    ctms_cra_workload: ["read"],
+    ctms_recruitment: ["read"],
+    ctms_site_milestone: ["read"],
+    ctms_study: ["read"],
+    ecoa_diary: ["alert", "create", "read"],
+    ecoa_schedule: ["create", "read"],
+    ecoa_submission: ["create", "read"],
+    ecrf_data_entry: ["create", "read", "update"],
+    eisf_document: ["create", "delete", "read", "sync", "update"],
+    etmf_document: ["read"],
+    etmf_edl: ["read"],
+    etmf_taxonomy: ["read"],
+    knowledge: ["read"],
+    lab_range: ["alert", "read"],
     quality_event: ["read"],
     regulatory_form: ["create", "read", "sign"],
     site_compliance: ["read"],
@@ -858,7 +876,7 @@ export const ROLE_PERMISSIONS: Readonly<
 
 /** `resource:action` -> canonical roles holding that permission in `PermissionMatrix`. */
 export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
-  Object.freeze({
+  /*#__PURE__*/ Object.freeze({
     "cec_adjudication:adjudicate": ["cec_chair"],
     "cec_adjudication:read": [
       "auditor",
@@ -902,6 +920,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "ctms_cra_allocation:update": ["sponsor_dm", "sysadmin"],
     "ctms_cra_workload:read": [
@@ -915,6 +934,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "ctms_doa:assign": [
       "authorized_er_physician",
@@ -977,14 +997,12 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
     ],
     "ctms_doa:sign": [
       "authorized_er_physician",
-      "investigator",
       "lead_investigator",
       "principal_investigator",
       "sysadmin",
     ],
     "ctms_doa:sign_off": [
       "authorized_er_physician",
-      "investigator",
       "lead_investigator",
       "principal_investigator",
       "sysadmin",
@@ -1084,6 +1102,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "ctms_site_milestone:create": ["cra", "monitor", "sponsor_dm", "sysadmin"],
     "ctms_site_milestone:read": [
@@ -1098,6 +1117,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_dm",
       "sponsor_mm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "ctms_site_milestone:update": ["cra", "monitor", "sponsor_dm", "sysadmin"],
     "ctms_study:create": ["cra", "monitor", "sponsor_dm", "sysadmin"],
@@ -1112,6 +1132,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "delegation_log:read": [
       "auditor",
@@ -1180,6 +1201,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "ecoa_diary:create": [
       "authorized_er_physician",
@@ -1192,6 +1214,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_designer",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "ecoa_diary:read": [
       "authorized_er_physician",
@@ -1205,6 +1228,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_dm",
       "subject",
       "sysadmin",
+      "trial_coordinator",
     ],
     "ecoa_schedule:create": [
       "authorized_er_physician",
@@ -1217,6 +1241,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_designer",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "ecoa_schedule:read": [
       "authorized_er_physician",
@@ -1230,6 +1255,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_dm",
       "subject",
       "sysadmin",
+      "trial_coordinator",
     ],
     "ecoa_submission:create": [
       "authorized_er_physician",
@@ -1243,6 +1269,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_dm",
       "subject",
       "sysadmin",
+      "trial_coordinator",
     ],
     "ecoa_submission:read": [
       "authorized_er_physician",
@@ -1256,6 +1283,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_dm",
       "subject",
       "sysadmin",
+      "trial_coordinator",
     ],
     "econsent_consent:capture": [
       "authorized_er_physician",
@@ -1271,6 +1299,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "investigator",
       "lead_investigator",
       "principal_investigator",
+      "trial_coordinator",
     ],
     "ecrf_data_entry:read": [
       "auditor",
@@ -1283,6 +1312,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sponsor_mm",
+      "trial_coordinator",
     ],
     "ecrf_data_entry:update": [
       "authorized_er_physician",
@@ -1290,6 +1320,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "investigator",
       "lead_investigator",
       "principal_investigator",
+      "trial_coordinator",
     ],
     "ecrf_form:sign": [
       "authorized_er_physician",
@@ -1308,6 +1339,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "eisf_document:delete": [
       "authorized_er_physician",
@@ -1319,6 +1351,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "eisf_document:read": [
       "auditor",
@@ -1334,6 +1367,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_mm",
       "sponsor_statistician",
       "sysadmin",
+      "trial_coordinator",
     ],
     "eisf_document:sync": [
       "authorized_er_physician",
@@ -1345,6 +1379,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "eisf_document:update": [
       "authorized_er_physician",
@@ -1356,6 +1391,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "esource_candidate:ingest": [
       "authorized_er_physician",
@@ -1412,6 +1448,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "etmf_document:read_raw": ["sponsor_dm", "sysadmin"],
     "etmf_document:redact": ["cra", "monitor", "sponsor_dm", "sysadmin"],
@@ -1442,6 +1479,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "etmf_taxonomy:read": [
       "auditor",
@@ -1455,6 +1493,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "export_masked:create": ["sponsor_dm", "sponsor_statistician"],
     "export_masked:read": [
@@ -1515,6 +1554,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_statistician",
       "sysadmin",
       "terminology_manager",
+      "trial_coordinator",
       "unblinded_statistician",
     ],
     "lab_range:alert": [
@@ -1527,6 +1567,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "lab_range:create": ["cra", "monitor", "sponsor_dm", "sysadmin"],
     "lab_range:delete": ["cra", "monitor", "sponsor_dm", "sysadmin"],
@@ -1541,6 +1582,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "lab_range:update": ["cra", "monitor", "sponsor_dm", "sysadmin"],
     "lab_range_import:commit": ["sponsor_dm", "sysadmin"],
@@ -1745,6 +1787,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "quality_event:update": ["cra", "monitor", "sponsor_dm", "sysadmin"],
     "randomization_scheme:approve": ["unblinded_statistician"],
@@ -1764,6 +1807,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "regulatory_form:read": [
       "auditor",
@@ -1780,6 +1824,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_mm",
       "sponsor_statistician",
       "sysadmin",
+      "trial_coordinator",
     ],
     "regulatory_form:sign": [
       "authorized_er_physician",
@@ -1791,6 +1836,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "rtsm_allocation:read": ["idmc", "unblinded_statistician"],
     "rtsm_randomization:read": ["idmc", "unblinded_statistician"],
@@ -1847,6 +1893,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_dm",
       "sponsor_mm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "soa:create": ["sponsor_designer", "sysadmin"],
     "soa:delete": ["sponsor_designer", "sysadmin"],
@@ -1865,6 +1912,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_mm",
       "sponsor_statistician",
       "sysadmin",
+      "trial_coordinator",
     ],
     "soa:update": ["sponsor_designer", "sysadmin"],
     "study_design:approve": ["sponsor_designer", "sponsor_dm", "sysadmin"],
@@ -1884,6 +1932,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_mm",
       "sponsor_statistician",
       "sysadmin",
+      "trial_coordinator",
     ],
     "study_design:reorder": ["sponsor_designer", "sysadmin"],
     "study_design:update": ["sponsor_designer", "sysadmin"],
@@ -1893,6 +1942,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "investigator",
       "lead_investigator",
       "principal_investigator",
+      "trial_coordinator",
     ],
     "subject_enrollment:randomize": [
       "authorized_er_physician",
@@ -1900,6 +1950,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "investigator",
       "lead_investigator",
       "principal_investigator",
+      "trial_coordinator",
     ],
     "subject_enrollment:read": [
       "auditor",
@@ -1913,6 +1964,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sponsor_mm",
+      "trial_coordinator",
     ],
     "subject_enrollment:update": [
       "authorized_er_physician",
@@ -1920,6 +1972,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "investigator",
       "lead_investigator",
       "principal_investigator",
+      "trial_coordinator",
     ],
     "system_audit_logs:read": [
       "auditor",
@@ -1935,6 +1988,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_mm",
       "sponsor_statistician",
       "sysadmin",
+      "trial_coordinator",
     ],
     "tickets:comment": [
       "authorized_er_physician",
@@ -1955,6 +2009,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_statistician",
       "sysadmin",
       "terminology_manager",
+      "trial_coordinator",
       "unblinded_statistician",
     ],
     "tickets:create": [
@@ -1976,6 +2031,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_statistician",
       "sysadmin",
       "terminology_manager",
+      "trial_coordinator",
       "unblinded_statistician",
     ],
     "tickets:read": [
@@ -1998,6 +2054,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_statistician",
       "sysadmin",
       "terminology_manager",
+      "trial_coordinator",
       "unblinded_statistician",
     ],
     "tickets:sign": [
@@ -2019,6 +2076,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_statistician",
       "sysadmin",
       "terminology_manager",
+      "trial_coordinator",
       "unblinded_statistician",
     ],
     "tickets:transition": [
@@ -2040,6 +2098,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_statistician",
       "sysadmin",
       "terminology_manager",
+      "trial_coordinator",
       "unblinded_statistician",
     ],
     "training_curriculum:assign": ["sponsor_dm", "sysadmin"],
@@ -2053,6 +2112,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "training_log:read": [
       "auditor",
@@ -2069,6 +2129,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_mm",
       "sponsor_statistician",
       "sysadmin",
+      "trial_coordinator",
     ],
     "training_log:sign": [
       "authorized_er_physician",
@@ -2080,6 +2141,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "principal_investigator",
       "sponsor_dm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "visit_windowing:create": ["sponsor_designer", "sysadmin"],
     "visit_windowing:read": [
@@ -2096,6 +2158,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_mm",
       "sponsor_statistician",
       "sysadmin",
+      "trial_coordinator",
     ],
     "visit_windowing:update": ["sponsor_designer", "sysadmin"],
   });
