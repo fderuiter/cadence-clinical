@@ -34,6 +34,10 @@
         <aside class="metadata-sidebar" aria-label="Document Metadata">
           <div class="meta-section">
             <h4>Record Details</h4>
+            <div v-if="document.artifact_type" class="meta-row">
+              <span class="meta-label">Artifact Type:</span>
+              <span class="meta-value">{{ document.artifact_type }}</span>
+            </div>
             <div class="meta-row">
               <span class="meta-label">DIA Code:</span>
               <span class="meta-value font-mono">{{
@@ -76,17 +80,31 @@
                 }}
               </p>
             </div>
-            <div v-if="document.content_checksum" class="checksum-block">
-              <h5>SHA-256 Digest:</h5>
-              <code class="checksum-text" :title="document.content_checksum">
-                {{ document.content_checksum }}
+            <div v-if="effectiveSha256" class="checksum-block">
+              <h5>
+                {{
+                  verifiedSha256
+                    ? "Verified SHA-256 Digest:"
+                    : "SHA-256 Digest:"
+                }}
+              </h5>
+              <code
+                id="pdf-preview-sha256"
+                class="checksum-text"
+                :class="{ 'text-success': Boolean(verifiedSha256) }"
+                :title="effectiveSha256"
+              >
+                {{ effectiveSha256 }}
               </code>
             </div>
             <div v-else class="checksum-block">
               <h5>Verification Integrity:</h5>
-              <code class="checksum-text text-success">
-                MOCK-SHA256-VALIDATED-INTEGRITY-OK
-              </code>
+              <span
+                id="pdf-preview-unverified"
+                class="checksum-unverified text-muted"
+              >
+                Unverified — no SHA-256 digest recorded
+              </span>
             </div>
           </div>
 
@@ -181,7 +199,7 @@
           </div>
         </aside>
 
-        <!-- Simulated Document Frame with Dynamic Overlay Watermark -->
+        <!-- Stored Document Stream with Dynamic GxP Overlay Watermark -->
         <div
           class="viewer-workspace"
           role="region"
@@ -195,111 +213,72 @@
               </div>
             </div>
 
-            <!-- Page 1 Content Sheet Mock -->
-            <div class="document-page">
-              <div class="page-header">
-                <div class="logo">Cadence Clinical Systems</div>
-                <div class="doc-code">ST-{{ document.study_id }}</div>
-              </div>
+            <div
+              v-if="isLoadingContent"
+              id="pdf-preview-loading"
+              class="stream-status-box"
+              role="status"
+              aria-live="polite"
+            >
+              <p class="stream-status-title">
+                Streaming regulated document from object storage...
+              </p>
+              <p class="stream-status-meta">
+                Verifying SHA-256 digest for
+                <code>{{ document.filename }}</code>
+              </p>
+            </div>
 
-              <div class="page-content">
-                <div v-if="document.is_redacted" class="redaction-badge-banner">
-                  🛡️ COMPLIANT DERIVATIVE - SENSITIVE PII MASKED BY AUTOMATED
-                  NER SCANS
-                </div>
+            <div
+              v-else-if="contentError"
+              id="pdf-preview-error"
+              class="stream-status-box stream-error-box"
+              role="alert"
+            >
+              <p class="stream-status-title">
+                Unable to render stored document stream
+              </p>
+              <p class="stream-status-meta">{{ contentError }}</p>
+              <button
+                type="button"
+                class="btn-retry-stream"
+                @click="loadDocumentStream"
+              >
+                Retry Stream
+              </button>
+            </div>
 
-                <h1 class="doc-title">
-                  {{ document.artifact_type || "Clinical Trial Document" }}
-                </h1>
-                <p class="doc-subtitle">
-                  DIA TMF Code: {{ document.artifact_code }} | Version Index:
-                  {{ document.version_index }}.0
-                </p>
+            <iframe
+              v-else-if="isPdfStream && blobUrl"
+              id="pdf-preview-iframe"
+              :src="blobUrl"
+              class="pdf-stream-frame"
+              :title="`Stored PDF preview for ${document.filename}`"
+            />
 
-                <hr class="divider" />
+            <div
+              v-else-if="decodedTextPreview !== null"
+              id="pdf-preview-text"
+              class="text-stream-sheet"
+            >
+              <pre class="text-stream-content">{{ decodedTextPreview }}</pre>
+            </div>
 
-                <section class="doc-section-content">
-                  <h3>1. REGULATORY INTENT AND AUDIT CLASSIFICATION</h3>
-                  <p>
-                    This electronic record has been indexed within the Cadence
-                    Clinical Electronic Trial Master File (eTMF) in full
-                    alignment with FDA 21 CFR Part 11 and EU Annex 11 digital
-                    record keeping standards. Any modifications, status
-                    transitions, or sign-off requests execute within a validated
-                    transaction boundary and emit to the global cryptographic
-                    ledger chain.
-                  </p>
-                </section>
-
-                <section class="doc-section-content">
-                  <h3>2. DIGITAL TRACEABILITY DATA</h3>
-                  <p>
-                    <strong>Parent Study:</strong> {{ document.study_id }}<br />
-                    <strong>Record ID:</strong> {{ document.id }}<br />
-                    <strong>Ingestion Filename:</strong> {{ document.filename
-                    }}<br />
-                    <strong>MIME Category:</strong> {{ document.mime_type
-                    }}<br />
-                    <strong>Author Identity:</strong>
-                    <span
-                      v-if="document.is_redacted"
-                      class="redaction-overlay-block"
-                      title="Redacted: Author Identity"
-                      >[REDACTED_NAME]</span
-                    >
-                    <span v-else>{{ document.created_by }}</span>
-                  </p>
-                </section>
-
-                <section class="doc-section-content">
-                  <h3>3. GxP COMPLIANCE AND ENCRYPTION CHECKS</h3>
-                  <p>
-                    Verification check completed successfully. System integrity
-                    is active. This preview is generated securely with real-time
-                    watermark placement rendering the viewing identity and
-                    date-timestamp on-the-fly. Do not photocopy or distribute
-                    this document without explicit study delegation authority.
-                  </p>
-                </section>
-
-                <section
-                  v-if="document.is_redacted"
-                  class="doc-section-content"
-                >
-                  <h3>4. SERVER-SIDE REDACTION SUMMARY</h3>
-                  <div class="redaction-summary-box">
-                    <p>
-                      This document was safely processed using the server-side
-                      Named Entity Recognition (NER) pipeline. All standard
-                      HIPAA 18 and GDPR identifiers have been successfully
-                      scrubbed and mapped.
-                    </p>
-                    <div class="visual-redaction-preview">
-                      <div class="redacted-line">
-                        Subject Name:
-                        <span class="redaction-overlay-block">John Doe</span>
-                      </div>
-                      <div class="redacted-line">
-                        Tax Identifier:
-                        <span class="redaction-overlay-block"
-                          >TIN-REDACTED-0000</span
-                        >
-                      </div>
-                      <div class="redacted-line">
-                        Electronic Mail:
-                        <span class="redaction-overlay-block"
-                          >participant.redacted@cadence.clinical</span
-                        >
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              </div>
-
-              <div class="page-footer">
-                <span>Page 1 of 1</span>
-                <span>CONFIDENTIAL - FOR AUTHORIZED CLINICAL USE ONLY</span>
-              </div>
+            <div
+              v-else-if="blobUrl"
+              id="pdf-preview-binary-download"
+              class="stream-status-box"
+            >
+              <p class="stream-status-title">
+                Binary artifact ready ({{ streamMimeType }})
+              </p>
+              <a
+                :href="blobUrl"
+                :download="document.filename"
+                class="btn-retry-stream"
+              >
+                Download Stored Artifact
+              </a>
             </div>
           </div>
         </div>
@@ -309,9 +288,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch, onBeforeUnmount } from "vue";
 import { useFocusTrap } from "ui";
 import { useAuthStore } from "../../stores/auth";
+import { useEtmfStore } from "../../stores/etmf";
 
 const props = defineProps({
   document: {
@@ -328,6 +308,119 @@ useFocusTrap(modalRef, {
 });
 
 const authStore = useAuthStore();
+const etmfStore = useEtmfStore();
+
+const isLoadingContent = ref(false);
+const contentError = ref("");
+const blobUrl = ref("");
+const streamMimeType = ref("");
+const verifiedSha256 = ref("");
+const decodedTextPreview = ref(null);
+
+function revokeCurrentBlobUrl() {
+  if (
+    blobUrl.value &&
+    typeof URL !== "undefined" &&
+    typeof URL.revokeObjectURL === "function"
+  ) {
+    URL.revokeObjectURL(blobUrl.value);
+  }
+  blobUrl.value = "";
+}
+
+const effectiveSha256 = computed(() => {
+  return (
+    verifiedSha256.value ||
+    props.document?.content_checksum ||
+    props.document?.contentChecksum ||
+    ""
+  );
+});
+
+const isPdfStream = computed(() => {
+  const mime = (
+    streamMimeType.value ||
+    props.document?.mime_type ||
+    ""
+  ).toLowerCase();
+  return (
+    mime.includes("pdf") ||
+    String(props.document?.filename || "")
+      .toLowerCase()
+      .endsWith(".pdf")
+  );
+});
+
+async function loadDocumentStream() {
+  revokeCurrentBlobUrl();
+  contentError.value = "";
+  verifiedSha256.value = "";
+  decodedTextPreview.value = null;
+
+  if (!props.document?.id) {
+    contentError.value = "Document record ID is missing.";
+    return;
+  }
+
+  isLoadingContent.value = true;
+  try {
+    const result = await etmfStore.fetchDocumentContent(props.document);
+    const mime =
+      result?.mimeType || props.document?.mime_type || "application/pdf";
+    streamMimeType.value = mime;
+    const blob = result?.blob;
+    if (!blob) {
+      throw new Error("Empty document stream returned by storage service.");
+    }
+
+    if (result?.sha256) {
+      verifiedSha256.value = result.sha256;
+    } else if (
+      typeof blob.arrayBuffer === "function" &&
+      globalThis.crypto?.subtle?.digest
+    ) {
+      const digestBuffer = await globalThis.crypto.subtle.digest(
+        "SHA-256",
+        await blob.arrayBuffer()
+      );
+      verifiedSha256.value = Array.from(new Uint8Array(digestBuffer))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+    }
+
+    if (
+      mime.startsWith("text/") ||
+      mime.includes("json") ||
+      mime.includes("xml") ||
+      mime.includes("csv")
+    ) {
+      decodedTextPreview.value =
+        typeof blob.text === "function" ? await blob.text() : "";
+    } else if (
+      typeof URL !== "undefined" &&
+      typeof URL.createObjectURL === "function"
+    ) {
+      blobUrl.value = URL.createObjectURL(blob);
+    }
+  } catch (err) {
+    contentError.value =
+      err?.message || "Failed to stream document bytes from object storage.";
+  } finally {
+    isLoadingContent.value = false;
+  }
+}
+
+watch(
+  () => props.document?.id,
+  () => {
+    loadDocumentStream();
+  },
+  { immediate: true }
+);
+
+onBeforeUnmount(() => {
+  revokeCurrentBlobUrl();
+});
 
 // Signed-in username from the Keycloak token
 const currentUserId = computed(() => {
@@ -552,7 +645,25 @@ function formatDate(dateStr) {
     0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* CSS Watermarking overlay rotates 35deg diagonally across the page content background */
+.watermark-overlay-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  overflow: hidden;
+  opacity: 0.18;
+}
+
+.diagonal-watermark-row {
+  transform: rotate(-28deg);
+  white-space: nowrap;
+}
+
+/* CSS Watermarking overlay rotates diagonally across the stored document stream */
 .watermark-text {
   font-family: var(--font-sans, Arial, sans-serif);
   font-size: 1rem;
@@ -561,117 +672,77 @@ function formatDate(dateStr) {
   letter-spacing: 0.1em;
 }
 
-/* Page content Mock-up sheet */
-.document-page {
+.pdf-stream-frame {
+  width: 100%;
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 48px;
-  box-sizing: border-box;
+  min-height: 760px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
   z-index: 10;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  color: var(--semantic-color-text-secondary);
-  font-weight: 600;
-  text-transform: uppercase;
-  margin-bottom: 24px;
-}
-
-.page-content {
+.text-stream-sheet {
   flex: 1;
+  padding: 28px;
+  overflow: auto;
+  z-index: 10;
 }
 
-.doc-title {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--semantic-color-text-dark);
-  margin: 0 0 8px 0;
-}
-
-.doc-subtitle {
-  font-size: 0.85rem;
-  color: var(--semantic-color-text-secondary);
-  margin: 0 0 16px 0;
-}
-
-.divider {
-  border: none;
-  border-top: 2px solid var(--semantic-color-border-control);
-  margin-bottom: 24px;
-}
-
-.doc-section-content {
-  margin-bottom: 24px;
-}
-
-.doc-section-content h3 {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--semantic-color-text-dark);
-  margin: 0 0 10px 0;
-}
-
-.doc-section-content p {
-  font-size: 0.85rem;
-  line-height: 1.6;
-  color: var(--semantic-color-text-body);
+.text-stream-content {
   margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--semantic-color-text-dark);
 }
 
-.page-footer {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.7rem;
-  color: var(--semantic-color-text-secondary);
-  border-top: 1px solid var(--semantic-color-border);
-  padding-top: 12px;
-  margin-top: 32px;
-}
-
-/* Redaction styles */
-.redaction-overlay-block {
-  background-color: var(--semantic-color-black);
-  color: var(--semantic-color-black);
-  border-radius: 2px;
-  padding: 1px 4px;
-  font-family: monospace;
-  user-select: none;
-}
-.redaction-overlay-block:hover {
-  color: var(--semantic-color-error);
-}
-.redaction-badge-banner {
-  background-color: var(--semantic-color-error-bg-soft);
-  border: 1px solid var(--semantic-color-error-border);
-  color: var(--semantic-color-error);
-  padding: 8px 12px;
-  border-radius: 4px;
-  font-weight: 700;
-  font-size: 0.8rem;
-  margin-bottom: 16px;
-  text-align: center;
-}
-.redaction-summary-box {
-  background-color: var(--semantic-color-surface-muted);
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 6px;
-  padding: 12px;
-  margin-top: 8px;
-}
-.visual-redaction-preview {
+.stream-status-box {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 10px;
-  font-size: 0.8rem;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 36px;
+  text-align: center;
+  z-index: 10;
 }
-.redacted-line {
-  font-family: monospace;
+
+.stream-error-box {
+  color: var(--semantic-color-error);
+}
+
+.stream-status-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.stream-status-meta {
+  margin: 0;
+  font-size: 0.82rem;
   color: var(--semantic-color-text-secondary);
+}
+
+.btn-retry-stream {
+  margin-top: 8px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-interactive-primary);
+  background: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.checksum-unverified {
+  display: block;
+  font-size: 0.78rem;
+  font-style: italic;
 }
 .manifest-card.redacted {
   background-color: var(--semantic-color-info-bg);

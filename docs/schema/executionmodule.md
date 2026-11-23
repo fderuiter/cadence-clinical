@@ -8,7 +8,10 @@ Generated from the EF Core model of `Cadence.Modules.Execution.Infrastructure.Ex
 | --- | --- | --- |
 | [`execution.consumed_signature_tokens`](#executionconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
 | [`execution.form_instances`](#executionform_instances) | `FormInstance` | 14 |
-| [`execution.form_queries`](#executionform_queries) | `FormQuery`, `FormQueryMessage` | 15 |
+| [`execution.form_queries`](#executionform_queries) | `FormQuery` | 23 |
+| [`execution.form_query_aging_digests`](#executionform_query_aging_digests) | `FormQueryAgingDigest`, `FormQueryAgingDigestEntry` | 16 |
+| [`execution.form_query_messages`](#executionform_query_messages) | `FormQueryMessageRecord` | 9 |
+| [`execution.form_query_periods`](#executionform_query_periods) | `FormQueryPeriod` | 17 |
 
 ## execution.consumed_signature_tokens
 
@@ -51,27 +54,120 @@ Indexes:
 
 ## execution.form_queries
 
-Entity: `FormQuery`, `FormQueryMessage`
+Entity: `FormQuery`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `assignee` | `character varying(256)` | yes |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `due_at` | `timestamp with time zone` | yes |  |  |
+| `enrollment_id` | `uuid` | no |  |  |
+| `escalated_at` | `timestamp with time zone` | yes |  |  |
+| `form_id` | `uuid` | no |  |  |
+| `item_id` | `character varying(128)` | no |  |  |
+| `kernel_answer_id` | `uuid` | yes |  |  |
+| `kernel_query_id` | `uuid` | no |  |  |
+| `last_answered_by` | `character varying(256)` | yes |  |  |
+| `observation_id` | `uuid` | no |  |  |
+| `opened_at` | `timestamp with time zone` | no |  |  |
+| `origin` | `character varying(16)` | no |  |  |
+| `owner_role` | `character varying(24)` | no |  |  |
+| `priority` | `character varying(16)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `revision` | `integer` | no |  |  |
+| `status` | `character varying(16)` | no |  |  |
+| `status_since` | `timestamp with time zone` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Indexes:
+
+- `AK_form_queries_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `ix_form_queries_tenant_enrollment_status`: (`tenant_id`, `enrollment_id`, `status`)
+- `ix_form_queries_tenant_form`: (`tenant_id`, `form_id`)
+- `ix_form_queries_tenant_observation_status`: (`tenant_id`, `observation_id`, `status`)
+
+## execution.form_query_aging_digests
+
+Entity: `FormQueryAgingDigest`, `FormQueryAgingDigestEntry`
 
 | Column | Type | Null | Default | Key |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | no |  | PK |
 | `created_at` | `timestamp with time zone` | no |  |  |
 | `created_by` | `character varying(255)` | no |  |  |
-| `enrollment_id` | `uuid` | no |  |  |
-| `form_id` | `uuid` | no |  |  |
-| `item_id` | `character varying(128)` | no |  |  |
-| `kernel_answer_id` | `uuid` | yes |  |  |
-| `kernel_query_id` | `uuid` | no |  |  |
-| `messages` | `jsonb` | yes |  |  |
-| `observation_id` | `uuid` | no |  |  |
+| `digest_date` | `date` | no |  |  |
+| `entries` | `jsonb` | yes |  |  |
+| `escalated_count` | `integer` | no |  |  |
+| `generated_at` | `timestamp with time zone` | no |  |  |
 | `reason_for_change` | `character varying(1000)` | no |  |  |
-| `revision` | `integer` | no |  |  |
-| `status` | `character varying(16)` | no |  |  |
+| `recipient_role` | `character varying(64)` | no |  |  |
+| `scope_key` | `character varying(128)` | no |  |  |
+| `site_code` | `character varying(128)` | yes |  |  |
+| `study_code` | `character varying(128)` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `study_site_id` | `uuid` | yes |  |  |
 | `tenant_id` | `uuid` | no |  |  |
 | `version_index` | `bigint` | no |  |  |
 
 Indexes:
 
-- `ix_form_queries_tenant_enrollment_status`: (`tenant_id`, `enrollment_id`, `status`)
-- `ix_form_queries_tenant_form`: (`tenant_id`, `form_id`)
+- `ux_form_query_aging_digests_study_date_scope`: unique (`tenant_id`, `study_id`, `digest_date`, `scope_key`)
+
+## execution.form_query_messages
+
+Entity: `FormQueryMessageRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `kind` | `character varying(24)` | no |  |  |
+| `query_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(4000)` | no |  |  |
+| `recorded_at` | `timestamp with time zone` | no |  |  |
+| `recorded_by` | `character varying(256)` | no |  |  |
+| `sequence` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `text` | `character varying(4000)` | no |  |  |
+
+Foreign keys:
+
+- `FK_form_query_messages_form_queries_tenant_id_query_id`: (`tenant_id`, `query_id`) references `execution.form_queries` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `ux_form_query_messages_tenant_query_seq`: unique (`tenant_id`, `query_id`, `sequence`)
+
+## execution.form_query_periods
+
+Entity: `FormQueryPeriod`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `assignee` | `character varying(256)` | yes |  |  |
+| `due_at` | `timestamp with time zone` | yes |  |  |
+| `escalated_at` | `timestamp with time zone` | yes |  |  |
+| `kernel_answer_id` | `uuid` | yes |  |  |
+| `kernel_query_id` | `uuid` | no |  |  |
+| `last_answered_by` | `character varying(256)` | yes |  |  |
+| `owner_role` | `character varying(24)` | no |  |  |
+| `priority` | `character varying(16)` | no |  |  |
+| `query_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(4000)` | no |  |  |
+| `recorded_by` | `character varying(256)` | no |  |  |
+| `recorded_period` | `tstzrange` | no |  |  |
+| `status` | `character varying(16)` | no |  |  |
+| `status_since` | `timestamp with time zone` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
+
+Foreign keys:
+
+- `FK_form_query_periods_form_queries_tenant_id_query_id`: (`tenant_id`, `query_id`) references `execution.form_queries` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `ix_form_query_periods_tenant_query`: (`tenant_id`, `query_id`)

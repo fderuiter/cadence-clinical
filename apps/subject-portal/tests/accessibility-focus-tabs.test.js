@@ -7,11 +7,21 @@ import {
   unmountApp,
   state,
   showView,
+  startQuestionnaire,
+  validateActiveQuestionnaire,
+  confirmCancelQuestionnaire,
+  verifyAndSubmitSignature,
   openSignatureModal,
   openReconsentModal,
 } from "../src/index.js";
 import { tabs } from "../src/router/routes.js";
 import { useSessionStore } from "../src/stores/session.js";
+import {
+  initSessionKey,
+  clearSessionKey,
+  getDraft,
+  clearAllSubmissions,
+} from "../src/sync-queue.js";
 
 const settle = async () => {
   await nextTick();
@@ -336,8 +346,34 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
 
     // 1. Default non-demo mode renders the 4 backed tabs and wraps keyboard navigation cleanly
     state.session.isDemoMode = false;
+    state.walletAvailable = false;
+    state.laySummariesAvailable = false;
     await settle();
     expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(4);
+
+    // Gated views without rendered tabs must use role="region" + aria-label with zero dangling aria-labelledby
+    const walletPanelGated = document.getElementById("view-wallet");
+    const layPanelGated = document.getElementById("view-lay-summaries");
+    expect(walletPanelGated.getAttribute("role")).toBe("region");
+    expect(walletPanelGated.getAttribute("aria-label")).toBe(
+      "Participant Financial Wallet"
+    );
+    expect(walletPanelGated.hasAttribute("aria-labelledby")).toBe(false);
+    expect(layPanelGated.getAttribute("role")).toBe("region");
+    expect(layPanelGated.getAttribute("aria-label")).toBe(
+      "Plain-Language Clinical Trial Results"
+    );
+    expect(layPanelGated.hasAttribute("aria-labelledby")).toBe(false);
+
+    for (const labelledEl of document.querySelectorAll("[aria-labelledby]")) {
+      const refIds = labelledEl
+        .getAttribute("aria-labelledby")
+        .trim()
+        .split(/\s+/);
+      for (const refId of refIds) {
+        expect(document.getElementById(refId)).not.toBeNull();
+      }
+    }
 
     const tasksTab = document.getElementById("btn-tab-btn-tasks");
     const consentTab = document.getElementById("btn-tab-btn-consent");
@@ -379,6 +415,19 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
         const isSelected = candidate.id === tab.id;
         expect(btn.getAttribute("aria-selected")).toBe(String(isSelected));
         expect(btn.getAttribute("tabindex")).toBe(isSelected ? "0" : "-1");
+        expect(panel.hasAttribute("hidden")).toBe(!isSelected);
+        expect(panel.hasAttribute("inert")).toBe(!isSelected);
+        if (!isSelected) {
+          expect(getFocusableElements(panel)).toEqual([]);
+        }
+      }
+
+      // Non-tab portal views (questionnaire, unavailable) must also remain hidden + inert
+      for (const extraViewId of ["view-questionnaire", "view-unavailable"]) {
+        const extraPanel = document.getElementById(extraViewId);
+        expect(extraPanel.hasAttribute("hidden")).toBe(true);
+        expect(extraPanel.hasAttribute("inert")).toBe(true);
+        expect(getFocusableElements(extraPanel)).toEqual([]);
       }
     }
 
@@ -439,5 +488,131 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     expect(document.activeElement).toBe(firstTab);
 
     state.session.isDemoMode = false;
+  });
+
+  it("wires view-questionnaire as an accessible tabpanel with standalone fallback and flushes drafts immediately on tab exits", async () => {
+    unmountApp();
+    document.body.innerHTML = `<div id="app"></div>`;
+    state.session.isDemoMode = true;
+    state.session.isOfflineMode = true;
+    state.session.userId = "subject_001";
+    await initializeApp();
+    await initSessionKey("tab-flush-secret", "subject_001");
+    await clearAllSubmissions();
+    await settle();
+
+    await startQuestionnaire("assign_01");
+    await settle();
+
+    const tasksTab = document.getElementById("btn-tab-btn-tasks");
+    const complianceTab = document.getElementById("btn-tab-btn-compliance");
+    const questionnairePanel = document.getElementById("view-questionnaire");
+    const tasksPanel = document.getElementById("view-tasks");
+
+    expect(questionnairePanel.getAttribute("role")).toBe("tabpanel");
+    expect(questionnairePanel.getAttribute("tabindex")).toBe("0");
+    expect(questionnairePanel.getAttribute("aria-labelledby")).toBe(
+      "btn-tab-btn-tasks"
+    );
+    expect(questionnairePanel.hasAttribute("hidden")).toBe(false);
+    expect(questionnairePanel.hasAttribute("inert")).toBe(false);
+    expect(tasksTab.getAttribute("aria-selected")).toBe("true");
+    expect(tasksTab.getAttribute("aria-controls")).toBe("view-questionnaire");
+    expect(tasksPanel.hasAttribute("hidden")).toBe(true);
+    expect(tasksPanel.hasAttribute("inert")).toBe(true);
+
+    // Untouched required VAS slider blocks validation with inline error and form banner
+    document.getElementById("vssbp").value = "122";
+    document.getElementById("vsdpb").value = "78";
+    document.getElementById("vshr").value = "68";
+    document.getElementById("has_symptoms_option_1").checked = true;
+    document.getElementById("btn-submit-questionnaire").click();
+    expect(state.signatureModalOpen).toBe(false);
+    expect(
+      document
+        .getElementById("field-container-pain_scale")
+        .classList.contains("has-error")
+    ).toBe(true);
+    expect(
+      document.getElementById("questionnaire-form-error")?.textContent
+    ).toContain("Please fix all form errors before signing.");
+
+    // Deliberate 0 selection via pointerdown marks slider touched with Value: 0
+    const painSlider = document.getElementById("pain_scale");
+    painSlider.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    expect(painSlider.getAttribute("data-touched")).toBe("true");
+    expect(
+      document.getElementById("pain_scale_display")?.textContent
+    ).toContain("Value: 0");
+    expect(validateActiveQuestionnaire()).toBe(true);
+
+    // Switching tabs via TabBar flushes the encrypted draft immediately without waiting 1500ms
+    complianceTab.click();
+    await settle();
+
+    expect(state.currentView).toBe("view-compliance");
+    expect(state.activeQuestionnaire).toBeNull();
+    expect(tasksTab.getAttribute("aria-controls")).toBe("view-tasks");
+
+    const flushedDraft = await getDraft("assign_01");
+    expect(flushedDraft).not.toBeNull();
+    expect(flushedDraft.vssbp).toBe("122");
+    expect(flushedDraft.pain_scale).toBe("0");
+
+    tasksTab.click();
+    await settle();
+    expect(
+      document.querySelector("#task-card-assign_01 .btn-start-task")
+        ?.textContent
+    ).toContain("Resume Survey");
+
+    // Reopening restores touched VAS state; explicit discard does NOT re-save draft on leave
+    await startQuestionnaire("assign_01");
+    await settle();
+    expect(
+      document.getElementById("pain_scale")?.getAttribute("data-touched")
+    ).toBe("true");
+    expect(
+      document.getElementById("pain_scale_display")?.textContent
+    ).toContain("Value: 0");
+
+    await confirmCancelQuestionnaire();
+    await settle();
+    expect(await getDraft("assign_01")).toBeNull();
+
+    // Completing & signing submission also leaves view-questionnaire without re-saving a draft
+    await startQuestionnaire("assign_01");
+    await settle();
+    document.getElementById("vssbp").value = "120";
+    document.getElementById("vsdpb").value = "80";
+    document.getElementById("vshr").value = "70";
+    document.getElementById("has_symptoms_option_1").checked = true;
+    const signedSlider = document.getElementById("pain_scale");
+    signedSlider.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
+    );
+    expect(validateActiveQuestionnaire()).toBe(true);
+    document.getElementById("sign-username").value = "subject_001";
+    document.getElementById("sign-password").value = "pass123";
+    await verifyAndSubmitSignature();
+    await settle();
+    expect(await getDraft("assign_01")).toBeNull();
+
+    // Standalone JSDOM fallback when #btn-tab-btn-tasks is absent
+    unmountApp();
+    document.body.innerHTML = `
+      <section id="view-questionnaire" class="portal-view">
+        <h2 id="questionnaire-title">Standalone Survey</h2>
+      </section>
+    `;
+    showView("view-questionnaire");
+    expect(
+      document
+        .getElementById("view-questionnaire")
+        .getAttribute("aria-labelledby")
+    ).toBe("questionnaire-title");
+
+    clearSessionKey("subject_001");
+    await clearAllSubmissions();
   });
 });

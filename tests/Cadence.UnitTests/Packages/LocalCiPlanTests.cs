@@ -566,6 +566,22 @@ public partial class LocalCiPlanTests
     }
 
     [Fact]
+    public void AccessibilityE2eJob_RunsWebWorkflowSuiteWithDemoModeDisabled()
+    {
+        var e2eJob = CiPlan.Jobs.Single(j => j.Key == "accessibility-e2e"); // deid-ignore: ci.yml job key
+        var workflowStep = e2eJob.Steps.Single(s => s.Name == "Run Web Application E2E Workflow Tests");
+        workflowStep.Commands.Select(c => c.Display).Should().Equal("pnpm --filter web test:e2e:workflows");
+        workflowStep.Environment.Should().Contain("CADENCE_TEST_BROWSER", "1")
+            .And.Contain("DEMO_MODE", "false");
+
+        string[] lines = File.ReadAllLines(Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml"));
+        string workflowBlock = ExtractJobStepBlocks(lines, "accessibility-e2e") // deid-ignore: ci.yml job key
+            .Single(b => b.Contains("name: Run Web Application E2E Workflow Tests", StringComparison.Ordinal));
+        workflowBlock.Should().Contain("DEMO_MODE: \"false\"")
+            .And.Contain("run: pnpm --filter web test:e2e:workflows");
+    }
+
+    [Fact]
     public void SetupNodePnpmCache_IsUsedOnlyInJobsThatRunPnpmInstall()
     {
         string workflowsDir = Path.Combine(RepoRoot(), ".github", "workflows");
