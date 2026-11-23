@@ -12,7 +12,7 @@ Shared domain library (folder `engine_core`): aggregate root and state machine b
 - `Cadence.Core.Domain.Supply`: `CgtBarcodeEngine.VerifyCryptoBarcode`, `Isbt128Engine` and `TemperatureZoneClassifier.ClassifyZone` (`TemperatureZone`).
 - `Cadence.Core.Domain.Toxicity`: `LabToxicityGradingEngine` and CTCAE grading models.
 - Time (K-TIME-3, #4784): nothing here reads the wall clock, and the build fails on `DateTime.Now/UtcNow` (`CadenceBanWallClock`). The caller passes the instant: `EvaluateObservation(..., evaluatedAt)` and `EvaluateHysLaw(..., evaluatedAt)`. `AggregateRootBase.CreatedAt` has no default, because the save path stamps it. `AuditLogEntry.Timestamp` is `required`.
-- Python reference sources remain for behaviour the C# port lacks or does not test yet: `operations/engine.py`, `operations/evaluator.py`, `operations/models.py`, `timeline/engine.py` and `timeline/models.py`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
+- Python reference sources remain for behaviour the C# port lacks or does not test yet: `timeline/engine.py` and `timeline/models.py`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Key dependencies
 

@@ -120,44 +120,22 @@
 
     <SignatureCaptureModal
       v-if="modalOp"
-      :is-open="Boolean(modalOp)"
-      :username="signerUsername"
-      :signer-name="signerFullName"
-      signer-role="Data Manager"
-      :reasons="LOCK_SIGNING_REASONS"
-      :action-url="modalActionUrl"
-      :semantic-action="modalSemanticAction"
-      :on-sign="executeSignedLock"
-      @cancel="modalOp = null"
-      @success="modalOp = null"
+      v-bind="signatureModalProps"
+      @cancel="closeModal"
+      @success="closeModal"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import {
-  describeLockError,
-  kernelApi,
-  LOCK_APPLY_ACTION,
-  LOCK_APPLY_SEMANTIC_ACTION,
-  LOCK_RELEASE_SEMANTIC_ACTION,
-  lockReleaseAction,
-  type KernelLock,
-  type KernelLockKind,
-  type KernelLockMeaning,
-  type KernelLockReadiness,
-} from "../../api/kernelApi";
-import { useAuthStore } from "../../stores/auth.js";
+import { computed, ref } from "vue";
+import type { KernelLock, KernelLockKind } from "../../api/kernelApi";
+import type { DirectScopeLockItem } from "../../canvas/kernelLocks";
+import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 
-export interface DirectScopeLockItem {
-  lockRef: string;
-  kind: string;
-}
-
-const LOCK_SIGNING_REASONS = ["Approved", "Responsibility"];
+export type { DirectScopeLockItem } from "../../canvas/kernelLocks";
 
 const props = withDefaults(
   defineProps<{
@@ -177,51 +155,38 @@ const emit = defineEmits<{
   changed: [lock: KernelLock];
 }>();
 
-const authStore = useAuthStore();
 const prefix = computed(() => props.idPrefix);
-
-const canApply = ref(false);
-const canRelease = ref(false);
-const readiness = ref<KernelLockReadiness | null>(null);
 const reason = ref("");
-const busy = ref(false);
-const outcome = ref<{ kind: "ok" | "error"; message: string } | null>(null);
 
-type ModalOperation =
-  | {
-      mode: "apply";
-      lockKind: KernelLockKind;
-      idempotencyKey: string;
-      lockId: string;
-      attestationId: string;
-    }
-  | {
-      mode: "release";
-      lockRef: string;
-      lockKind: string;
-      idempotencyKey: string;
-      assertionId: string;
-      attestationId: string;
-    };
+function handleLockChanged(updated: KernelLock) {
+  reason.value = "";
+  emit("changed", updated);
+}
 
-const modalOp = ref<ModalOperation | null>(null);
-
-const signerUsername = computed(
-  () => authStore?.user?.email || authStore?.user?.username || "data-manager"
-);
-const signerFullName = computed(
-  () =>
-    authStore?.user?.name || authStore?.user?.full_name || signerUsername.value
-);
+const {
+  canApply,
+  canRelease,
+  readiness,
+  isLockBlockedByReadiness,
+  busy,
+  outcome,
+  modalOp,
+  signatureModalProps,
+  openApply: openSignedApply,
+  openRelease: openSignedRelease,
+  closeModal,
+} = useSignedKernelLock({
+  studyRef: () => props.studyRef,
+  scopeRef: () => props.scopeRef,
+  onApplied: handleLockChanged,
+  onReleased: handleLockChanged,
+});
 
 const hasDirectLocked = computed(() =>
   props.directLocks.some((l) => l.kind === "Locked")
 );
 const hasDirectFrozenOrLocked = computed(() =>
   props.directLocks.some((l) => l.kind === "Frozen" || l.kind === "Locked")
-);
-const isLockBlockedByReadiness = computed(
-  () => readiness.value !== null && !readiness.value.ready_for_lock
 );
 const releasableLocks = computed(() =>
   canRelease.value ? props.directLocks : []
@@ -232,152 +197,22 @@ const showControls = computed(
     canApply.value || releasableLocks.value.length > 0 || outcome.value !== null
 );
 
-const modalActionUrl = computed(() => {
-  if (!modalOp.value) return LOCK_APPLY_ACTION;
-  return modalOp.value.mode === "apply"
-    ? LOCK_APPLY_ACTION
-    : lockReleaseAction(modalOp.value.lockRef);
-});
-
-const modalSemanticAction = computed(() =>
-  modalOp.value?.mode === "release"
-    ? LOCK_RELEASE_SEMANTIC_ACTION
-    : LOCK_APPLY_SEMANTIC_ACTION
-);
-
-let authProbeSeq = 0;
-let readinessSeq = 0;
-
-async function reloadReadiness() {
-  const seq = ++readinessSeq;
-  if (
-    !props.studyRef ||
-    !props.scopeRef ||
-    !canApply.value ||
-    typeof kernelApi.getStudyLockReadiness !== "function"
-  ) {
-    readiness.value = null;
-    return;
-  }
-  try {
-    const res = await kernelApi.getStudyLockReadiness(
-      props.studyRef,
-      props.scopeRef
-    );
-    if (seq !== readinessSeq) return;
-    readiness.value = res ?? null;
-  } catch {
-    if (seq === readinessSeq) readiness.value = null;
-  }
-}
-
-watch(
-  [() => props.studyRef, () => props.scopeRef],
-  async ([studyRef]) => {
-    const seq = ++authProbeSeq;
-    readiness.value = null;
-    if (!studyRef || typeof kernelApi.canI !== "function") {
-      canApply.value = false;
-      canRelease.value = false;
-      return;
-    }
-    try {
-      const [applyDec, releaseDec] = await Promise.all([
-        kernelApi.canI("lock.apply", studyRef),
-        kernelApi.canI("lock.release", studyRef),
-      ]);
-      if (seq !== authProbeSeq) return;
-      canApply.value = Boolean(applyDec?.permitted);
-      canRelease.value = Boolean(releaseDec?.permitted);
-      if (canApply.value) {
-        await reloadReadiness();
-      }
-    } catch {
-      if (seq !== authProbeSeq) return;
-      canApply.value = false;
-      canRelease.value = false;
-    }
-  },
-  { immediate: true }
-);
-
 function openApply(lockKind: KernelLockKind) {
-  if (!reason.value.trim() || !props.studyRef) return;
-  if (lockKind === "Locked" && isLockBlockedByReadiness.value) return;
-  outcome.value = null;
-  modalOp.value = {
-    mode: "apply",
-    lockKind,
-    idempotencyKey: globalThis.crypto.randomUUID(),
-    lockId: globalThis.crypto.randomUUID(),
-    attestationId: globalThis.crypto.randomUUID(),
-  };
+  openSignedApply({
+    scopeRef: props.scopeRef,
+    kind: lockKind,
+    reason: reason.value,
+    targetLabel: () => props.scopeLabel,
+  });
 }
 
 function openRelease(lockRef: string, lockKind: string) {
-  if (!reason.value.trim() || !props.studyRef) return;
-  outcome.value = null;
-  modalOp.value = {
-    mode: "release",
+  openSignedRelease({
     lockRef,
     lockKind,
-    idempotencyKey: globalThis.crypto.randomUUID(),
-    assertionId: globalThis.crypto.randomUUID(),
-    attestationId: globalThis.crypto.randomUUID(),
-  };
-}
-
-async function executeSignedLock(sigToken: string, signingReason: string) {
-  const op = modalOp.value;
-  if (!op || !props.studyRef) return { kind: "signed" as const };
-  const meaning: KernelLockMeaning =
-    signingReason === "Responsibility" ? "Responsibility" : "Approved";
-  busy.value = true;
-  try {
-    let updated: KernelLock;
-    if (op.mode === "apply") {
-      updated = await kernelApi.applyLock({
-        studyRef: props.studyRef,
-        scopeRef: props.scopeRef,
-        kind: op.lockKind,
-        meaning,
-        lockId: op.lockId,
-        attestationId: op.attestationId,
-        sigToken,
-        reason: reason.value.trim(),
-        idempotencyKey: op.idempotencyKey,
-      });
-      outcome.value = {
-        kind: "ok",
-        message: `${op.lockKind} applied to ${props.scopeLabel}.`,
-      };
-    } else {
-      updated = await kernelApi.releaseLock({
-        lockRef: op.lockRef,
-        studyRef: props.studyRef,
-        meaning,
-        assertionId: op.assertionId,
-        attestationId: op.attestationId,
-        sigToken,
-        reason: reason.value.trim(),
-        idempotencyKey: op.idempotencyKey,
-      });
-      outcome.value = {
-        kind: "ok",
-        message: `${op.lockKind} released on ${props.scopeLabel}.`,
-      };
-    }
-    reason.value = "";
-    await reloadReadiness();
-    emit("changed", updated);
-    return { kind: "signed" as const };
-  } catch (err) {
-    const message = describeLockError(err);
-    outcome.value = { kind: "error", message };
-    throw new Error(message, { cause: err });
-  } finally {
-    busy.value = false;
-  }
+    reason: reason.value,
+    targetLabel: () => props.scopeLabel,
+  });
 }
 </script>
 
