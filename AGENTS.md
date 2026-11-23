@@ -252,18 +252,17 @@ Never re-add Python code, Python tooling or compatibility shims.
 
 ## Architecture decision records
 
-- New decision: `pnpm cadence scaffold adr "<title>"`, then add it to [docs/adr/index.md](docs/adr/index.md).
-- ADR numbers are unique; `pnpm cadence check adrs` fails on duplicates, missing `# ADR-NNNN:` headings
-  and broken index links.
+- New decision: `pnpm adr:new "<title>" --domain <domain> --req PRD-SYS-001` (or `pnpm cadence scaffold adr "<title>" --domain <domain> --req PRD-SYS-001`); ADRs in `docs/adr/` are discovered directly from disk without editing [docs/adr/index.md](docs/adr/index.md) or [docs/DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md).
+- ADR numbers are unique deterministic date-and-slug hash IDs (with historical IDs preserved); `pnpm cadence check adrs` fails on duplicates, missing `# ADR-NNNN:` headings, invalid domain metadata, invalid `@req:PRD-...` tags, and broken relative links across `docs/adr/*.md`.
 - When a decision is superseded: set the old ADR's status to
-  `Superseded by ADR-XXXX` (linking the new ADR), add a `> [!NOTE]` callout at the top, annotate its index entry with
-  `*(Superseded by ADR-XXXX)*`, and update [ARCHITECTURE.md](ARCHITECTURE.md) and [CONTEXT.md](CONTEXT.md).
+  `Superseded by ADR-XXXX` (linking the new ADR), add a `> [!NOTE]` callout at the top, and update [ARCHITECTURE.md](ARCHITECTURE.md) and [CONTEXT.md](CONTEXT.md).
 
 ## Documentation is part of the change
 
 Every pull request updates the documentation its change affects, in the same PR: the service or
 package README, `ARCHITECTURE.md`, `CONTEXT.md`, `docs/ENVIRONMENT_VARIABLES.md` for new settings, an
-ADR for a new decision, and the [documentation index](docs/DOCUMENTATION_INDEX.md) for new documents.
+ADR for a new decision, and the [documentation index](docs/DOCUMENTATION_INDEX.md) for new curated guides
+(individual entries under `docs/adr/`, `docs/blog/`, `docs/api/`, and `docs/schema/` are discovered from disk).
 The generated RTM and IQ/OQ/PQ report come only from the integration owner's `pnpm cadence gxp snapshot`,
 never from hand edits or a feature branch.
 

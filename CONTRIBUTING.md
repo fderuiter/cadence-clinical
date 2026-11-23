@@ -138,17 +138,17 @@ description.
 
 Every PR updates what its change makes stale, in the same PR:
 
-| If you change…                                                              | Update                                                                                                |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| A service or package's behaviour, endpoints, settings or tests              | Its `README.md`                                                                                       |
-| A setting (environment variable or configuration key)                       | [docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md) and `.env.example`                     |
-| Architecture, service map, security model                                   | [ARCHITECTURE.md](ARCHITECTURE.md)                                                                    |
-| Domain vocabulary                                                           | [CONTEXT.md](CONTEXT.md)                                                                              |
-| A requirement                                                               | [PRD](docs/SDLC/01_Product_Requirements_Document_PRD.md) or [SRS](docs/SRS.md) with its ID            |
-| A significant decision (new dependency, datastore, contract or schema rule) | A new ADR (`pnpm cadence scaffold adr "<title>"`), linked from [docs/adr/index.md](docs/adr/index.md) |
-| Anything that supersedes an ADR                                             | The old ADR's status and the index ([AGENTS.md](AGENTS.md#architecture-decision-records))             |
-| Kernel concepts or invariants                                               | Raise on the kernel epic; the spec changes only through its owners                                    |
-| A new document                                                              | [docs/DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md)                                            |
+| If you change…                                                              | Update                                                                                                              |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| A service or package's behaviour, endpoints, settings or tests              | Its `README.md`                                                                                                     |
+| A setting (environment variable or configuration key)                       | [docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md) and `.env.example`                                   |
+| Architecture, service map, security model                                   | [ARCHITECTURE.md](ARCHITECTURE.md)                                                                                  |
+| Domain vocabulary                                                           | [CONTEXT.md](CONTEXT.md)                                                                                            |
+| A requirement                                                               | [PRD](docs/SDLC/01_Product_Requirements_Document_PRD.md) or [SRS](docs/SRS.md) with its ID                          |
+| A significant decision (new dependency, datastore, contract or schema rule) | A new ADR (`pnpm adr:new "<title>" --domain <domain> --req PRD-SYS-001`), discovered automatically from `docs/adr/` |
+| Anything that supersedes an ADR                                             | The old ADR's status ([AGENTS.md](AGENTS.md#architecture-decision-records))                                         |
+| Kernel concepts or invariants                                               | Raise on the kernel epic; the spec changes only through its owners                                                  |
+| A new curated guide (outside `docs/adr/`, `blog/`, `api/`, `schema/`)       | [docs/DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md)                                                          |
 
 ## 6. Repository hygiene
 

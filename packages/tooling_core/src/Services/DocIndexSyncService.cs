@@ -41,6 +41,28 @@ public static partial class DocIndexSyncService
         "index.md"
     };
 
+    // Individual entries inside these subdirectories are discovered directly from disk by VitePress and dedicated gates;
+    // only their section landing/template pages belong in docs/DOCUMENTATION_INDEX.md.
+    private static readonly string[] DelegatedSubdirectoryPrefixes =
+    [
+        "adr/",
+        "blog/",
+        "api/",
+        "schema/",
+    ];
+
+    private static readonly HashSet<string> DelegatedLandingPages = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "adr/index.md",
+        "adr/TEMPLATE.md",
+        "blog/index.md",
+        "api/index.md",
+        "schema/README.md",
+    };
+
+    [GeneratedRegex(@"\[(?:[^\]]|\\\])*\]\(([^)\r\n]+)\)")]
+    private static partial Regex PrimaryRowLinkRegex();
+
     [GeneratedRegex(@"\]\(([^)\r\n]+)\)")]
     private static partial Regex MarkdownLinkRegex();
 
@@ -153,7 +175,9 @@ public static partial class DocIndexSyncService
         {
             string fileName = Path.GetFileName(file);
             string relPath = Path.GetRelativePath(docsDir, file).Replace('\\', '/');
-            if (ExcludedFiles.Contains(fileName) || StagedSitePages.Contains(relPath))
+            if (ExcludedFiles.Contains(fileName) ||
+                StagedSitePages.Contains(relPath) ||
+                IsDelegatedSubdirectoryEntry(relPath))
             {
                 continue;
             }
@@ -175,6 +199,24 @@ public static partial class DocIndexSyncService
                 ScanDirRecursive(subDir, docsDir, result);
             }
         }
+    }
+
+    private static bool IsDelegatedSubdirectoryEntry(string relPath)
+    {
+        if (DelegatedLandingPages.Contains(relPath))
+        {
+            return false;
+        }
+
+        foreach (string prefix in DelegatedSubdirectoryPrefixes)
+        {
+            if (relPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static HashSet<string> ExtractIndexedTargets(string content)
@@ -409,36 +451,68 @@ public static partial class DocIndexSyncService
 
             if (categoryGroups.TryGetValue(categoryHeader, out var pendingDocs) && pendingDocs.Count > 0)
             {
-                // Find last line starting with '|' in this section
+                int headerLine = -1;
+                int separatorLine = -1;
                 int lastTableLine = -1;
                 bool hasStatusCol = true;
-                for (int i = start; i < end; i++)
+                var existingDataRows = new List<string>();
+
+                for (int i = start + 1; i < end; i++)
                 {
                     string trimmed = lines[i].Trim();
-                    if (trimmed.StartsWith("| Document |") || trimmed.StartsWith("| Location |"))
+                    if (headerLine < 0 && (trimmed.StartsWith("| Document |") || trimmed.StartsWith("| Location |")))
                     {
-                        hasStatusCol = trimmed.Contains("Status");
+                        headerLine = i;
+                        hasStatusCol = trimmed.Contains("Status", StringComparison.Ordinal);
+                        continue;
                     }
-                    if (trimmed.StartsWith('|'))
+
+                    if (headerLine >= 0 && separatorLine < 0 && trimmed.StartsWith('|') && trimmed.Contains("---", StringComparison.Ordinal))
                     {
+                        separatorLine = i;
+                        lastTableLine = i;
+                        continue;
+                    }
+
+                    if (separatorLine >= 0 && trimmed.StartsWith('|'))
+                    {
+                        existingDataRows.Add(lines[i]);
                         lastTableLine = i;
                     }
                 }
 
                 var renderedRows = RenderDocRows(pendingDocs, hasStatusCol);
-                if (lastTableLine >= 0)
+                if (headerLine >= 0 && separatorLine >= 0)
                 {
-                    lines.InsertRange(lastTableLine + 1, renderedRows);
+                    var combinedRows = existingDataRows
+                        .Concat(renderedRows)
+                        .OrderBy(ExtractRowNormalizedSortKey, StringComparer.OrdinalIgnoreCase)
+                        .ThenBy(ExtractRowFullTargetSortKey, StringComparer.OrdinalIgnoreCase)
+                        .ThenBy(r => r, StringComparer.Ordinal)
+                        .ToList();
+
+                    int removeCount = lastTableLine - separatorLine;
+                    if (removeCount > 0)
+                    {
+                        lines.RemoveRange(separatorLine + 1, removeCount);
+                    }
+
+                    lines.InsertRange(separatorLine + 1, combinedRows);
                 }
                 else
                 {
+                    var sortedRendered = renderedRows
+                        .OrderBy(ExtractRowNormalizedSortKey, StringComparer.OrdinalIgnoreCase)
+                        .ThenBy(ExtractRowFullTargetSortKey, StringComparer.OrdinalIgnoreCase)
+                        .ThenBy(r => r, StringComparer.Ordinal)
+                        .ToList();
                     var newTable = new List<string>
                     {
                         "",
                         "| Document | Status | What it is |",
                         "| --- | --- | --- |"
                     };
-                    newTable.AddRange(renderedRows);
+                    newTable.AddRange(sortedRendered);
                     lines.InsertRange(end, newTable);
                 }
 
@@ -447,7 +521,7 @@ public static partial class DocIndexSyncService
         }
 
         // Flush any remaining category groups at end of file
-        foreach (var (cat, docs) in categoryGroups)
+        foreach (var (cat, docs) in categoryGroups.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase))
         {
             if (docs.Count > 0)
             {
@@ -456,17 +530,52 @@ public static partial class DocIndexSyncService
                 lines.Add("");
                 lines.Add("| Document | Status | What it is |");
                 lines.Add("| --- | --- | --- |");
-                lines.AddRange(RenderDocRows(docs, hasStatusCol: true));
+                var sortedRows = RenderDocRows(docs, hasStatusCol: true)
+                    .OrderBy(ExtractRowNormalizedSortKey, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(ExtractRowFullTargetSortKey, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(r => r, StringComparer.Ordinal);
+                lines.AddRange(sortedRows);
             }
         }
 
         return string.Join('\n', lines).TrimEnd() + "\n";
     }
 
+    private static string ExtractRowNormalizedSortKey(string row)
+    {
+        string rawTarget = ExtractFirstLinkTarget(row);
+        int anchorIdx = rawTarget.IndexOf('#', StringComparison.Ordinal);
+        string withoutAnchor = anchorIdx >= 0 ? rawTarget[..anchorIdx] : rawTarget;
+        return NormalizePath(withoutAnchor);
+    }
+
+    private static string ExtractRowFullTargetSortKey(string row) =>
+        NormalizePath(ExtractFirstLinkTarget(row));
+
+    private static string ExtractFirstLinkTarget(string row)
+    {
+        string trimmed = row.Trim();
+        int firstPipe = trimmed.IndexOf('|', StringComparison.Ordinal);
+        int secondPipe = firstPipe >= 0 && firstPipe + 1 < trimmed.Length
+            ? trimmed.IndexOf('|', firstPipe + 1)
+            : -1;
+        string primaryCell = secondPipe > firstPipe
+            ? trimmed[(firstPipe + 1)..secondPipe]
+            : trimmed;
+
+        var match = PrimaryRowLinkRegex().Match(primaryCell);
+        if (!match.Success)
+        {
+            match = PrimaryRowLinkRegex().Match(trimmed);
+        }
+
+        return match.Success ? match.Groups[1].Value.Trim() : trimmed;
+    }
+
     private static List<string> RenderDocRows(List<MarkdownDocInfo> docs, bool hasStatusCol)
     {
         var result = new List<string>();
-        foreach (var doc in docs.OrderBy(d => d.RelativePath, StringComparer.OrdinalIgnoreCase))
+        foreach (var doc in docs.OrderBy(d => NormalizePath(d.RelativePath), StringComparer.OrdinalIgnoreCase))
         {
             string fileContent = File.Exists(doc.FullPath) ? File.ReadAllText(doc.FullPath) : "";
             var (title, desc) = ExtractDocMetadata(doc.FullPath, doc.RelativePath);

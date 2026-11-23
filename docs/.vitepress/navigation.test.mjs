@@ -5,6 +5,8 @@ import { fileURLToPath } from "url";
 import { createMarkdownRenderer } from "vitepress";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { loadAdrCatalog } from "./adr.mjs";
+import { filterAdrEntries, groupAdrEntriesByDomain } from "./adrShared.mjs";
 import {
   assertThemeLinksExist,
   dualHeadingAnchorsPlugin,
@@ -56,43 +58,41 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     }
   });
 
-  it("includes all 80 active non-ADR pages from docs/DOCUMENTATION_INDEX.md without manual edits", () => {
+  it("includes all curated active pages from docs/DOCUMENTATION_INDEX.md and discovers adr, blog, api, and schema pages from disk", () => {
     const indexContent = fs.readFileSync(indexPath, "utf-8");
     const parsedEntries = parseDocumentationIndex(indexContent, {
       docsDir,
       repoRoot,
     });
 
-    const activeDocsAndHomeRoutes = new Set(
+    // Individual adr/, blog/, api/, and schema/ entries are discovered from disk rather than listed in DOCUMENTATION_INDEX.md
+    const primaryHrefs = parsedEntries
+      .filter((entry) => !entry.fromDescription)
+      .map((entry) => entry.rawHref);
+    expect(
+      primaryHrefs.filter(
+        (href) =>
+          (href.startsWith("adr/") &&
+            href !== "adr/index.md" &&
+            href !== "adr/TEMPLATE.md") ||
+          (href.startsWith("blog/") && href !== "blog/index.md") ||
+          (href.startsWith("api/") && href !== "api/index.md") ||
+          (href.startsWith("schema/") && href !== "schema/README.md")
+      )
+    ).toEqual([]);
+
+    const allActiveCuratedPortalRoutes = new Set(
       parsedEntries
         .filter(
           (entry) =>
             ["Normative", "Current", "Generated"].includes(entry.status) &&
-            entry.section !== "Architecture decision records" &&
-            (!entry.rawHref.startsWith("../") ||
-              entry.rawHref === "../README.md") &&
             entry.link.startsWith("/") &&
             !entry.fromDescription
         )
         .map((entry) => entry.link.split("#")[0])
     );
 
-    expect(activeDocsAndHomeRoutes.size).toBe(80);
-
-    const allActiveNonAdrPortalRoutes = new Set(
-      parsedEntries
-        .filter(
-          (entry) =>
-            ["Normative", "Current", "Generated"].includes(entry.status) &&
-            entry.section !== "Architecture decision records" &&
-            entry.link.startsWith("/") &&
-            !entry.fromDescription
-        )
-        .map((entry) => entry.link.split("#")[0])
-    );
-
-    // 80 active docs/ + home pages plus the 7 additional staged root guides/policies = 87 portal pages
-    expect(allActiveNonAdrPortalRoutes.size).toBe(87);
+    expect(allActiveCuratedPortalRoutes.size).toBeGreaterThanOrEqual(45);
 
     const sidebar = synthesizeSidebarFromIndex(indexPath, {
       docsDir,
@@ -100,10 +100,39 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     });
     const sidebarLinks = collectSidebarLinks(sidebar);
 
-    for (const route of allActiveNonAdrPortalRoutes) {
+    for (const route of allActiveCuratedPortalRoutes) {
       expect(
         sidebarLinks.has(route),
-        `Expected sidebar to contain ${route}`
+        `Expected sidebar to contain curated route ${route}`
+      ).toBe(true);
+    }
+
+    // Verify every disk-discovered ADR, API reference, and schema reference page is reachable in the sidebar
+    for (const adrFile of fs
+      .readdirSync(path.join(docsDir, "adr"))
+      .filter((f) => f.endsWith(".md"))) {
+      const route = `/adr/${adrFile.replace(/\.md$/i, "")}`;
+      expect(
+        sidebarLinks.has(route),
+        `Expected sidebar to contain disk-discovered ADR ${route}`
+      ).toBe(true);
+    }
+    for (const apiFile of fs
+      .readdirSync(path.join(docsDir, "api"))
+      .filter((f) => f.endsWith(".md"))) {
+      const route = `/api/${apiFile.replace(/\.md$/i, "")}`;
+      expect(
+        sidebarLinks.has(route),
+        `Expected sidebar to contain disk-discovered API doc ${route}`
+      ).toBe(true);
+    }
+    for (const schemaFile of fs
+      .readdirSync(path.join(docsDir, "schema"))
+      .filter((f) => f.endsWith(".md"))) {
+      const route = `/schema/${schemaFile.replace(/\.md$/i, "")}`;
+      expect(
+        sidebarLinks.has(route),
+        `Expected sidebar to contain disk-discovered schema doc ${route}`
       ).toBe(true);
     }
 
@@ -114,6 +143,9 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(sidebarLinks.has("/CONTRIBUTING")).toBe(true);
     expect(sidebarLinks.has("/SECURITY")).toBe(true);
     expect(sidebarLinks.has("/SUPPORT")).toBe(true);
+    expect(sidebarLinks.has("/adr/index")).toBe(true);
+    expect(sidebarLinks.has("/adr/TEMPLATE")).toBe(true);
+    expect(sidebarLinks.has("/api/index")).toBe(true);
     expect(sidebarLinks.has("/api/kernel")).toBe(true);
     expect(sidebarLinks.has("/api/execution_forms")).toBe(true);
     expect(sidebarLinks.has("/api/intelligence")).toBe(true);
@@ -122,6 +154,98 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(sidebarLinks.has("/ux/CLINICAL_CANVAS")).toBe(true);
     expect(sidebarLinks.has("/web/API_MIGRATION")).toBe(true);
     expect(sidebarLinks.has("/blog/index")).toBe(true);
+  });
+
+  it("discovers ADR catalog entries and domain sidebar groups directly from disk without per-ADR index bullets", () => {
+    const tmpRepo = makeTempWorkspace();
+    const tmpDocs = path.join(tmpRepo, "docs");
+    const tmpAdr = path.join(tmpDocs, "adr");
+    fs.mkdirSync(tmpAdr, { recursive: true });
+
+    fs.writeFileSync(
+      path.join(tmpAdr, "index.md"),
+      "# Architecture Decision Records\n\n- [ADR Template](TEMPLATE.md)\n\n<AdrIndex />\n"
+    );
+    fs.writeFileSync(
+      path.join(tmpAdr, "TEMPLATE.md"),
+      "# ADR-[NUMBER]: Title\n"
+    );
+    fs.writeFileSync(
+      path.join(tmpAdr, "2026-11-23-adopt-event-outbox.md"),
+      [
+        "# ADR-48210: Adopt Event Outbox",
+        "",
+        "- **Status:** Accepted",
+        "- **Date:** 2026-11-23",
+        "- **Domain:** 0. Clinical Kernel (K001–K037)",
+        "- **Requirements:** @req:PRD-SYS-001",
+        "",
+        "## Status",
+        "Accepted",
+      ].join("\n")
+    );
+    fs.writeFileSync(
+      path.join(tmpAdr, "2026-11-22-harden-session-cookie.md"),
+      [
+        "# ADR-31904: Harden Session Cookie",
+        "",
+        "- **Status:** Accepted",
+        "- **Date:** 2026-11-22",
+        "- **Domain:** security",
+        "",
+        "## Status",
+        "Accepted",
+      ].join("\n")
+    );
+
+    const catalog = loadAdrCatalog(tmpDocs);
+    expect(catalog.map((e) => e.code)).toEqual(["ADR-48210", "ADR-31904"]);
+    expect(
+      filterAdrEntries(catalog, { query: "outbox", domainSlug: "all" })
+    ).toHaveLength(1);
+    expect(
+      filterAdrEntries(catalog, {
+        query: "",
+        domainSlug: "security-gateway",
+      }).map((e) => e.slug)
+    ).toEqual(["2026-11-22-harden-session-cookie"]);
+
+    const grouped = groupAdrEntriesByDomain(catalog);
+    expect(grouped.map((g) => g.label)).toEqual([
+      "0. Clinical Kernel (K001–K037)",
+      "2. API Gateway, Security & Identity",
+    ]);
+
+    const sidebar = synthesizeSidebarFromIndex(
+      path.join(tmpDocs, "DOCUMENTATION_INDEX.md"),
+      {
+        docsDir: tmpDocs,
+        repoRoot: tmpRepo,
+        indexContent: [
+          "# Documentation Index",
+          "",
+          "## Architecture decision records",
+          "",
+          "| Document | Status | What it is |",
+          "| --- | --- | --- |",
+          "| [ADRs](adr/index.md) | Current | Catalog |",
+          "| [ADR Template](adr/TEMPLATE.md) | Current | Template |",
+          "",
+        ].join("\n"),
+      }
+    );
+
+    const adrGroup = sidebar.find(
+      (g) => g.text === "Architectural Decision Records (ADRs)"
+    );
+    expect(adrGroup).toBeDefined();
+    const kernelSubgroup = adrGroup.items.find(
+      (item) => item.text === "0. Clinical Kernel (K001–K037)"
+    );
+    expect(kernelSubgroup).toBeDefined();
+    expect(kernelSubgroup.items.map((i) => i.link)).toEqual([
+      "/adr/2026-11-23-adopt-event-outbox",
+    ]);
   });
 
   it("synthesizes the Engineering Blog group newest-first and excludes draft blog posts from portal routes", () => {

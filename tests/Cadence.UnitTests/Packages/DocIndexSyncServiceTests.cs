@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 
 using Cadence.ToolingCore.Services;
 
@@ -44,7 +45,24 @@ public sealed class DocIndexSyncServiceTests : IDisposable
 
         string adrDir = Path.Combine(docsDir, "adr");
         Directory.CreateDirectory(adrDir);
-        File.WriteAllText(Path.Combine(adrDir, "2026-01-01-test.md"), "# Test ADR\nADR content\n");
+        File.WriteAllText(Path.Combine(adrDir, "index.md"), "# ADR Index\nCatalog\n");
+        File.WriteAllText(Path.Combine(adrDir, "TEMPLATE.md"), "# ADR Template\nTemplate\n");
+        File.WriteAllText(Path.Combine(adrDir, "2026-01-01-test.md"), "# ADR-100: Test ADR\nADR content\n");
+
+        string blogDir = Path.Combine(docsDir, "blog");
+        Directory.CreateDirectory(blogDir);
+        File.WriteAllText(Path.Combine(blogDir, "index.md"), "# Engineering Blog\nOverview\n");
+        File.WriteAllText(Path.Combine(blogDir, "2026-11-20-post.md"), "# Blog Post\nPost content\n");
+
+        string apiDir = Path.Combine(docsDir, "api");
+        Directory.CreateDirectory(apiDir);
+        File.WriteAllText(Path.Combine(apiDir, "index.md"), "# REST API Reference\nOverview\n");
+        File.WriteAllText(Path.Combine(apiDir, "ctms.md"), "# ctms API\nGenerated API\n");
+
+        string schemaDir = Path.Combine(docsDir, "schema");
+        Directory.CreateDirectory(schemaDir);
+        File.WriteAllText(Path.Combine(schemaDir, "README.md"), "# Database Schema Reference\nOverview\n");
+        File.WriteAllText(Path.Combine(schemaDir, "ctms.md"), "# ctms database schema\nGenerated schema\n");
 
         string nodeModulesDir = Path.Combine(docsDir, "node_modules");
         Directory.CreateDirectory(nodeModulesDir);
@@ -82,10 +100,14 @@ public sealed class DocIndexSyncServiceTests : IDisposable
 
         var files = DocIndexSyncService.ScanMarkdownFiles(docsDir);
 
-        files.Should().HaveCount(3);
-        files.Should().Contain(f => f.RelativePath == "VALID1.md");
-        files.Should().Contain(f => f.RelativePath == "adr/2026-01-01-test.md");
-        files.Should().Contain(f => f.RelativePath == "migration/index.md");
+        files.Select(f => f.RelativePath).Should().BeEquivalentTo(
+            "VALID1.md",
+            "adr/index.md",
+            "adr/TEMPLATE.md",
+            "api/index.md",
+            "blog/index.md",
+            "migration/index.md",
+            "schema/README.md");
     }
 
     [Fact]
@@ -194,6 +216,47 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         string updatedIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
         updatedIndex.Should().Contain("docb.md");
         updatedIndex.Should().Contain("Doc B");
+    }
+
+    [Fact]
+    public void SyncDocIndex_SortsSectionRowsByNormalizedTargetPath_InsteadOfAppendingAtTail()
+    {
+        string docsDir = Path.Combine(_tempDir, "docs");
+        Directory.CreateDirectory(docsDir);
+
+        string indexContent = """
+            # Documentation Index
+
+            ## Developing and running
+
+            | Document | Status | What it is |
+            | --- | --- | --- |
+            | [Doc C](docc.md) | Current | Description C |
+            | [Doc A](doca.md) | Current | Description A |
+            """;
+
+        File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), indexContent);
+        File.WriteAllText(Path.Combine(docsDir, "doca.md"), "# Doc A\nDescription A\n");
+        File.WriteAllText(Path.Combine(docsDir, "docb.md"), "# Doc B\nDescription B\n");
+        File.WriteAllText(Path.Combine(docsDir, "docc.md"), "# Doc C\nDescription C\n");
+
+        DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
+
+        string updatedIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
+        int posA = updatedIndex.IndexOf("doca.md", StringComparison.Ordinal);
+        int posB = updatedIndex.IndexOf("docb.md", StringComparison.Ordinal);
+        int posC = updatedIndex.IndexOf("docc.md", StringComparison.Ordinal);
+        posA.Should().BeGreaterThan(0);
+        posB.Should().BeGreaterThan(posA);
+        posC.Should().BeGreaterThan(posB);
+    }
+
+    [Fact]
+    public void SyncDocIndex_RepositoryDocumentationIndex_PassesCheckWithoutIndividualDelegatedEntries()
+    {
+        string repoRoot = AdrValidatorService.FindRepoRoot();
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: repoRoot).Should().Be(0);
     }
 
     [Fact]

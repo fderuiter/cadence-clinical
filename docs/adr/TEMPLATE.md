@@ -2,14 +2,16 @@
 
 - **Status:** [ Proposed | Accepted | Deprecated | Superseded by ADR-XXX ]
 - **Date:** YYYY-MM-DD
+- **Domain:** [ 0. Clinical Kernel (K001–K037) | 1. Core Platform & Execution Engine | 2. API Gateway, Security & Identity | 3. Clinical Data Interoperability & Standards | 4. Clinical Operations & Business Modules | 5. Compliance, Audit & Governance | 6. Frontend & Design System | 7. DevOps, Tooling & CI/CD ]
 - **Authors:** @[github-username]
 - **Deciders:** @[reviewer1], @[reviewer2]
+- **Requirements:** `@req:PRD-SYS-001`
 
 ---
 
 ## 1. Context & Problem Statement
 
-_Describe the background, architectural context, and the specific technical or business problem this decision addresses._
+_Describe the background, architectural context, and the specific technical or business problem this decision addresses (`@req:PRD-SYS-001`)._
 
 ## 2. Decision Drivers & Constraints
 
@@ -24,17 +26,17 @@ _List the primary criteria driving this decision (e.g., performance, developer v
 
 - **Overview:** Brief description.
 - **Pros:**
-  - ✅ ...
+  - Advantage 1
 - **Cons:**
-  - ❌ ...
+  - Trade-off 1
 
 ### Option 2: [Name of Option 2 - Selected]
 
 - **Overview:** Brief description.
 - **Pros:**
-  - ✅ ...
+  - Advantage 1
 - **Cons:**
-  - ❌ ...
+  - Trade-off 1
 
 ## 4. Decision Outcome
 

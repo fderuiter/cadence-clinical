@@ -2,6 +2,7 @@ import DefaultTheme from "vitepress/theme";
 import { onMounted, onUnmounted, watch } from "vue";
 import { useRoute } from "vitepress";
 import BlogLayout from "./BlogLayout.vue";
+import AdrIndex from "./components/AdrIndex.vue";
 import BlogIndex from "./components/BlogIndex.vue";
 import "./custom.css";
 
@@ -9,6 +10,7 @@ export default {
   extends: DefaultTheme,
   Layout: BlogLayout,
   enhanceApp({ app }) {
+    app.component("AdrIndex", AdrIndex);
     app.component("BlogIndex", BlogIndex);
   },
   setup() {

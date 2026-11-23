@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 
-import { isDraftBlogPostFile } from "./blog.mjs";
+import { buildAdrSidebarGroupsFromDisk } from "./adr.mjs";
+import { getBlogSidebarItems, isDraftBlogPostFile } from "./blog.mjs";
 import { splitAnchor, toRepoUrl } from "./repoLinks.mjs";
 import rootDocsModule from "./rootDocs.cjs";
 
@@ -31,6 +32,21 @@ function isSeparatorRow(cells) {
 
 function unescapeLabel(label) {
   return label.replace(/\\([[\]|])/g, "$1").trim();
+}
+
+function extractFirstHeadingText(filePath, fallback) {
+  try {
+    const content = fs.readFileSync(filePath, "utf-8");
+    for (const line of content.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("# ")) {
+        return trimmed.slice(2).replace(/`/g, "").trim() || fallback;
+      }
+    }
+  } catch {
+    // Use fallback label if file cannot be read.
+  }
+  return fallback;
 }
 
 /**
@@ -184,71 +200,118 @@ export function parseDocumentationIndex(indexContent, { docsDir, repoRoot }) {
 }
 
 /**
- * Builds domain-grouped sidebar entries for architectural decision records from `docs/adr/index.md`,
- * ensuring any ADR listed in `docs/DOCUMENTATION_INDEX.md` is also reachable.
+ * Builds domain-grouped sidebar entries for architectural decision records directly from `docs/adr/` on disk.
  *
- * @param {string} adrIndexContent
- * @param {Array<{text: string, link: string}>} indexAdrEntries
+ * @param {string} docsDir
+ * @param {Array<{text: string, link: string}>} [indexAdrEntries]
  */
-export function buildAdrSidebarGroups(adrIndexContent, indexAdrEntries = []) {
-  const groups = [];
-  let currentGroup = null;
-  const coveredLinks = new Set(["/adr/index", "/adr/TEMPLATE"]);
+export function buildAdrSidebarGroups(docsDir, indexAdrEntries = []) {
+  const fromDisk =
+    typeof docsDir === "string" && fs.existsSync(path.join(docsDir, "adr"))
+      ? buildAdrSidebarGroupsFromDisk(docsDir)
+      : [];
 
-  if (adrIndexContent) {
-    for (const line of adrIndexContent.split(/\r?\n/)) {
-      const headingMatch = line.match(/^###\s+(.*)/);
-      if (headingMatch) {
-        if (currentGroup && currentGroup.items.length > 0) {
-          groups.push(currentGroup);
-        }
-        currentGroup = {
-          text: headingMatch[1].trim(),
-          collapsed: true,
-          items: [],
-        };
-        continue;
-      }
-
-      const linkMatch = line.match(/^-\s*\[(.*?)\]\((.*?)\)/);
-      if (linkMatch && currentGroup) {
-        const text = linkMatch[1].trim();
-        let filename = linkMatch[2].trim();
-        if (filename.startsWith("docs/adr/")) {
-          filename = filename.slice("docs/adr/".length);
-        }
-        filename = splitAnchor(filename)[0].replace(/\.md$/i, "");
-        const link = `/adr/${filename}`;
-        currentGroup.items.push({ text, link });
-        coveredLinks.add(link);
-      }
-    }
-
-    if (currentGroup && currentGroup.items.length > 0) {
-      groups.push(currentGroup);
-    }
+  if (fromDisk.length > 0) {
+    return fromDisk;
   }
 
-  const uncategorized = dedupeItems(
-    indexAdrEntries
-      .filter((entry) => !coveredLinks.has(splitAnchor(entry.link)[0]))
-      .map((entry) => ({ text: entry.text, link: entry.link }))
+  return dedupeItems(indexAdrEntries);
+}
+
+function discoverBlogItemsFromDisk(docsDir, indexBlogEntries) {
+  const blogDir = path.join(docsDir, "blog");
+  if (!fs.existsSync(blogDir)) {
+    return indexBlogEntries;
+  }
+
+  const hasOverviewOnDisk = fs.existsSync(path.join(blogDir, "index.md"));
+  const diskItems = getBlogSidebarItems(docsDir).filter(
+    (item) => item.link !== "/blog/index" || hasOverviewOnDisk
   );
 
-  if (uncategorized.length > 0) {
-    groups.push({
-      text: "Additional Decision Records",
-      collapsed: true,
-      items: uncategorized,
+  const indexOverview = indexBlogEntries.find(
+    (item) => normalizeRouteKey(item.link) === "/blog/index"
+  );
+  if (indexOverview && diskItems[0]?.link === "/blog/index") {
+    diskItems[0] = { text: indexOverview.text, link: "/blog/index" };
+  }
+
+  return diskItems;
+}
+
+function discoverApiItemsFromDisk(docsDir, indexApiEntries) {
+  const apiDir = path.join(docsDir, "api");
+  if (!fs.existsSync(apiDir)) {
+    return indexApiEntries;
+  }
+
+  const items = [];
+  const indexOverview = indexApiEntries.find(
+    (entry) => normalizeRouteKey(entry.link) === "/api/index"
+  );
+  const overviewPath = path.join(apiDir, "index.md");
+  if (fs.existsSync(overviewPath)) {
+    items.push({
+      text: indexOverview?.text ?? "REST API reference",
+      link: "/api/index",
     });
   }
 
-  const headerItems = [{ text: "ADR Overview & Log", link: "/adr/index" }];
-  if (indexAdrEntries.some((entry) => entry.link === "/adr/TEMPLATE")) {
-    headerItems.push({ text: "ADR Template", link: "/adr/TEMPLATE" });
+  const serviceFiles = fs
+    .readdirSync(apiDir)
+    .filter((file) => file.endsWith(".md") && file.toLowerCase() !== "index.md")
+    .sort((a, b) => a.localeCompare(b));
+
+  for (const file of serviceFiles) {
+    const slug = file.replace(/\.md$/i, "");
+    const fullPath = path.join(apiDir, file);
+    items.push({
+      text: extractFirstHeadingText(fullPath, `${slug} API`),
+      link: `/api/${slug}`,
+    });
   }
 
-  return [...headerItems, ...groups];
+  return [...items, ...indexApiEntries];
+}
+
+function discoverSchemaItemsFromDisk(docsDir, indexSchemaEntries) {
+  const schemaDir = path.join(docsDir, "schema");
+  if (!fs.existsSync(schemaDir)) {
+    return indexSchemaEntries;
+  }
+
+  const items = [];
+  const indexOverview = indexSchemaEntries.find(
+    (entry) => normalizeRouteKey(entry.link) === "/schema/README"
+  );
+  const overviewPath = path.join(schemaDir, "README.md");
+  if (fs.existsSync(overviewPath)) {
+    items.push({
+      text: indexOverview?.text ?? "Database schema",
+      link: "/schema/README",
+    });
+  }
+
+  const moduleFiles = fs
+    .readdirSync(schemaDir)
+    .filter(
+      (file) =>
+        file.endsWith(".md") &&
+        file.toLowerCase() !== "readme.md" &&
+        file.toLowerCase() !== "index.md"
+    )
+    .sort((a, b) => a.localeCompare(b));
+
+  for (const file of moduleFiles) {
+    const slug = file.replace(/\.md$/i, "");
+    const fullPath = path.join(schemaDir, file);
+    items.push({
+      text: extractFirstHeadingText(fullPath, `${slug} database schema`),
+      link: `/schema/${slug}`,
+    });
+  }
+
+  return [...items, ...indexSchemaEntries];
 }
 
 function dedupeItems(items) {
@@ -267,29 +330,23 @@ function normalizeRouteKey(link) {
 }
 
 /**
- * Synthesizes the complete VitePress sidebar from `docs/DOCUMENTATION_INDEX.md`.
+ * Synthesizes the complete VitePress sidebar from `docs/DOCUMENTATION_INDEX.md` plus disk discovery
+ * for `docs/adr/`, `docs/blog/`, `docs/api/`, and `docs/schema/`.
  *
  * @param {string} indexPath
  * @param {{
  *   docsDir?: string,
  *   repoRoot?: string,
- *   adrIndexPath?: string,
  *   indexContent?: string,
- *   adrIndexContent?: string,
  * }} [options]
  */
 export function synthesizeSidebarFromIndex(indexPath, options = {}) {
   const docsDir = options.docsDir ?? path.dirname(indexPath);
   const repoRoot = options.repoRoot ?? path.resolve(docsDir, "..");
-  const adrIndexPath =
-    options.adrIndexPath ?? path.join(docsDir, "adr", "index.md");
 
   const indexContent =
     options.indexContent ??
     (fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf-8") : "");
-  const adrIndexContent =
-    options.adrIndexContent ??
-    (fs.existsSync(adrIndexPath) ? fs.readFileSync(adrIndexPath, "utf-8") : "");
 
   const allEntries = parseDocumentationIndex(indexContent, {
     docsDir,
@@ -300,13 +357,13 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
     { text: "Portal Home", link: "/" },
     { text: "Documentation Index", link: "/DOCUMENTATION_INDEX" },
   ];
-  const blogItems = [];
+  const indexBlogItems = [];
   const kernelItems = [];
   const devItems = [];
   const productItems = [];
   const componentItems = [];
-  const apiItems = [];
-  const schemaItems = [];
+  const indexApiItems = [];
+  const indexSchemaItems = [];
   const gxpStandardsPolicyItems = [];
   const adrEntries = [];
   const baselineItems = [];
@@ -336,12 +393,12 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
     }
 
     if (routeKey.startsWith("/api/")) {
-      apiItems.push(entry);
+      indexApiItems.push(entry);
       continue;
     }
 
     if (routeKey.startsWith("/schema/")) {
-      schemaItems.push(entry);
+      indexSchemaItems.push(entry);
       continue;
     }
 
@@ -356,7 +413,7 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
         break;
       case "Engineering blog":
         if (entry.link.startsWith("/")) {
-          blogItems.push(entry);
+          indexBlogItems.push(entry);
         }
         break;
       case "Kernel and roadmap":
@@ -384,28 +441,10 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
     }
   }
 
-  // Keep the blog overview at the top and sort published dated posts newest-first.
-  blogItems.sort((a, b) => {
-    const aKey = normalizeRouteKey(a.link);
-    const bKey = normalizeRouteKey(b.link);
-    if (aKey === "/blog/index") return -1;
-    if (bKey === "/blog/index") return 1;
-    return bKey.localeCompare(aKey);
-  });
+  const blogItems = discoverBlogItemsFromDisk(docsDir, indexBlogItems);
+  const apiItems = discoverApiItemsFromDisk(docsDir, indexApiItems);
+  const schemaItems = discoverSchemaItemsFromDisk(docsDir, indexSchemaItems);
 
-  // Keep overview pages at the top of generated reference and component sections.
-  apiItems.sort((a, b) => {
-    if (normalizeRouteKey(a.link) === "/api/index") return -1;
-    if (normalizeRouteKey(b.link) === "/api/index") return 1;
-    return 0;
-  });
-  schemaItems.sort((a, b) => {
-    const aIsOverview = normalizeRouteKey(a.link) === "/schema/README";
-    const bIsOverview = normalizeRouteKey(b.link) === "/schema/README";
-    if (aIsOverview && !bIsOverview) return -1;
-    if (!aIsOverview && bIsOverview) return 1;
-    return 0;
-  });
   componentItems.sort((a, b) => {
     if (normalizeRouteKey(a.link) === "/components/index") return -1;
     if (normalizeRouteKey(b.link) === "/components/index") return 1;
@@ -439,7 +478,7 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
   pushGroup("Data Model Reference", schemaItems, true);
   pushGroup("GxP, Standards & Policies", gxpStandardsPolicyItems, true);
 
-  const adrGroups = buildAdrSidebarGroups(adrIndexContent, adrEntries);
+  const adrGroups = buildAdrSidebarGroups(docsDir, adrEntries);
   if (adrGroups.length > 0) {
     sidebar.push({
       text: "Architectural Decision Records (ADRs)",

@@ -37,14 +37,15 @@ public sealed class ScaffoldPostAndBlogGatesTests : IDisposable
     }
 
     [Fact]
-    public void ScaffoldPost_CreatesDatedMarkdownDraftAndUpdatesDocumentationIndex()
+    public void ScaffoldPost_CreatesDatedMarkdownDraftWithoutModifyingDocumentationIndex()
     {
         string docsDir = Path.Combine(_tempDir, "docs");
         Directory.CreateDirectory(docsDir);
-        File.WriteAllText(
-            Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"),
-            "# Documentation Index\n\n## Engineering blog\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Blog](blog/index.md) | Current | Overview |\n");
-        File.WriteAllText(Path.Combine(docsDir, "blog_placeholder.md"), "");
+        Directory.CreateDirectory(Path.Combine(docsDir, "blog"));
+        File.WriteAllText(Path.Combine(docsDir, "blog", "index.md"), "# Engineering Blog\n\nOverview\n");
+        const string initialIndex =
+            "# Documentation Index\n\n## Engineering blog\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Blog](blog/index.md) | Current | Overview |\n";
+        File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), initialIndex);
 
         var clock = new FakeClock(new DateTimeOffset(2026, 11, 20, 14, 30, 0, TimeSpan.Zero));
         int exitCode = ScaffoldCommands.ScaffoldPost(
@@ -70,9 +71,8 @@ public sealed class ScaffoldPostAndBlogGatesTests : IDisposable
         postContent.Should().Contain("draft: true");
         postContent.Should().Contain("# Ship Kernel \"Phase 3\" Milestones!");
 
-        string updatedIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
-        updatedIndex.Should().Contain("blog/2026-11-20-ship-kernel-phase-3-milestones.md");
-        updatedIndex.Should().Contain("How Phase 3 unifies schedule and rule execution.");
+        File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md")).Should().Be(initialIndex);
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
     }
 
     [Fact]

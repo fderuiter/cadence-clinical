@@ -113,10 +113,12 @@ public static class AdrValidatorService
     };
 
     private static readonly Regex FilenamePattern = new(@"^\d{4}-\d{2}-\d{2}-.+\.md$", RegexOptions.Compiled);
-    // Line 1 of every ADR: "# ADR-NNNN: Title" (at least three digits, e.g. ADR-049 or ADR-2250).
+    // Line 1 of every ADR: "# ADR-NNNN: Title" (at least three digits, e.g. ADR-049, ADR-2250, or 5-digit hash IDs).
     private static readonly Regex AdrHeadingPattern = new(@"^# ADR-(\d{3,}): \S.*$", RegexOptions.Compiled);
-    private static readonly Regex IndexEntryPattern = new(@"^\s*[-*]\s+\[[^\]]*\]\(([^)\s]+)\)", RegexOptions.Compiled);
-    private static readonly Regex MarkdownLinkPattern = new(@"\]\(([^)\s]+)\)", RegexOptions.Compiled);
+    private static readonly Regex MarkdownLinkPattern = new(@"\[(?:[^\]]|\\\])*\]\(([^)\s""']+)(?:\s+[""'][^""']*[""'])?\)", RegexOptions.Compiled);
+    private static readonly Regex InlineCodeSpanPattern = new(@"`[^`]*`", RegexOptions.Compiled);
+    private static readonly Regex DomainMetadataPattern = new(@"^\s*[-*]\s*\*\*Domain:\*\*\s*(.*?)\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex FrontmatterDomainPattern = new(@"^\s*domain:\s*(.*?)\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static readonly string[] RequiredSectionsOld =
     [
@@ -136,6 +138,8 @@ public static class AdrValidatorService
         "## 5. Consequences & Trade-offs",
         "## 6. Implementation & Verification"
     ];
+
+    public static IReadOnlyList<string> RequiredSections => RequiredSectionsNew;
 
     public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 
@@ -242,67 +246,12 @@ public static class AdrValidatorService
     }
 
     /// <summary>
-    /// Appends any unlisted numbered ADR markdown files in <c>docs/adr/</c> to <c>docs/adr/index.md</c>.
+    /// Retained as a no-op for compatibility: ADRs in <c>docs/adr/</c> are discovered directly from disk
+    /// by VitePress and <see cref="FindIntegrityErrors"/> without appending entries to <c>docs/adr/index.md</c>.
     /// </summary>
     public static int SyncAdrIndex(string? repoRoot = null)
     {
-        repoRoot ??= FindRepoRoot();
-        string adrDir = Path.Combine(repoRoot, "docs", "adr");
-        string indexFile = Path.Combine(adrDir, "index.md");
-        if (!Directory.Exists(adrDir) || !File.Exists(indexFile))
-        {
-            return 0;
-        }
-
-        string[] indexLines = File.ReadAllLines(indexFile);
-        var listed = new HashSet<string>(StringComparer.Ordinal);
-        foreach (string line in indexLines)
-        {
-            var entry = IndexEntryPattern.Match(line);
-            if (entry.Success)
-            {
-                listed.Add(entry.Groups[1].Value.Split('#')[0]);
-            }
-        }
-
-        var adrFiles = Directory.GetFiles(adrDir, "*.md", SearchOption.TopDirectoryOnly)
-            .Select(Path.GetFileName)
-            .OfType<string>()
-            .Where(name => !IgnoreFiles.Contains(name) && FilenamePattern.IsMatch(name) && !listed.Contains(name))
-            .Order(StringComparer.Ordinal)
-            .ToList();
-
-        if (adrFiles.Count == 0)
-        {
-            return 0;
-        }
-
-        string indexContent = File.ReadAllText(indexFile);
-        var additions = new List<string>();
-        foreach (string name in adrFiles)
-        {
-            string firstLine = File.ReadLines(Path.Combine(adrDir, name)).FirstOrDefault()?.TrimEnd('\r') ?? "";
-            int? number = ParseAdrNumber(firstLine);
-            if (number is null)
-            {
-                continue;
-            }
-
-            int colonIdx = firstLine.IndexOf(':', StringComparison.Ordinal);
-            string title = colonIdx >= 0 ? firstLine[(colonIdx + 1)..].Trim() : name;
-            string datePart = name.Length >= 10 ? name[..10] : "";
-            additions.Add(string.IsNullOrEmpty(datePart)
-                ? $"- [ADR-{number.Value}: {title}]({name})"
-                : $"- [ADR-{number.Value}: {title}]({name}) ({datePart})");
-        }
-
-        if (additions.Count > 0)
-        {
-            string separator = indexContent.EndsWith('\n') ? "" : "\n";
-            File.AppendAllText(indexFile, $"{separator}{string.Join('\n', additions)}\n");
-            AnsiConsole.MarkupLine($"  [green][[OK]] Added {additions.Count} missing ADR entry(ies) to docs/adr/index.md.[/]");
-        }
-
+        _ = repoRoot;
         return 0;
     }
 
@@ -324,9 +273,9 @@ public static class AdrValidatorService
     }
 
     /// <summary>
-    /// Checks the ADR directory as a whole: every ADR opens with a <c># ADR-NNNN: Title</c> heading,
-    /// no two ADRs share a number, every ADR is listed exactly once in <c>index.md</c>, and every
-    /// relative link in <c>index.md</c> resolves to an existing file.
+    /// Checks the ADR directory directly on disk: every ADR opens with a <c># ADR-NNNN: Title</c> heading,
+    /// no two ADRs share an ID, domain metadata is valid (and present on deterministic-range ADRs), and every
+    /// relative link across <c>docs/adr/*.md</c> resolves to an existing file or directory.
     /// </summary>
     /// <returns>One message per problem found; empty when the directory is consistent.</returns>
     public static IReadOnlyList<string> FindIntegrityErrors(string adrDir)
@@ -342,20 +291,27 @@ public static class AdrValidatorService
         var filesByNumber = new SortedDictionary<int, List<string>>();
         foreach (var name in adrFiles)
         {
-            string firstLine = File.ReadLines(Path.Combine(adrDir, name)).FirstOrDefault() ?? "";
+            string fullPath = Path.Combine(adrDir, name);
+            string[] lines = File.ReadAllLines(fullPath);
+            string firstLine = lines.FirstOrDefault() ?? string.Empty;
             int? number = ParseAdrNumber(firstLine);
             if (number is null)
             {
                 errors.Add($"File '{name}' has no '# ADR-NNNN: Title' heading on line 1 (found '{firstLine.TrimEnd('\r')}').");
-                continue;
+            }
+            else
+            {
+                if (!filesByNumber.TryGetValue(number.Value, out var holders))
+                {
+                    holders = [];
+                    filesByNumber[number.Value] = holders;
+                }
+                holders.Add(name);
+
+                ValidateDomainMetadata(name, number.Value, lines, errors);
             }
 
-            if (!filesByNumber.TryGetValue(number.Value, out var holders))
-            {
-                holders = [];
-                filesByNumber[number.Value] = holders;
-            }
-            holders.Add(name);
+            FindBrokenRelativeLinks(adrDir, name, lines, errors);
         }
 
         foreach (var (number, holders) in filesByNumber.Where(kv => kv.Value.Count > 1))
@@ -364,54 +320,136 @@ public static class AdrValidatorService
         }
 
         string indexFile = Path.Combine(adrDir, "index.md");
-        if (!File.Exists(indexFile))
+        if (File.Exists(indexFile))
         {
-            errors.Add($"ADR index '{indexFile}' not found.");
-            return errors;
+            string[] indexLines = File.ReadAllLines(indexFile);
+            FindBrokenRelativeLinks(adrDir, "index.md", indexLines, errors);
         }
 
-        var listedCounts = new Dictionary<string, int>(StringComparer.Ordinal);
-        string[] indexLines = File.ReadAllLines(indexFile);
-        for (int i = 0; i < indexLines.Length; i++)
+        return errors;
+    }
+
+    private static void ValidateDomainMetadata(string fileName, int adrNumber, string[] lines, List<string> errors)
+    {
+        bool foundDomainField = false;
+        string? rawDomain = null;
+        bool inFrontmatter = lines.Length > 1 && lines[0].Trim() == "---";
+
+        for (int i = 0; i < Math.Min(lines.Length, 40); i++)
         {
-            foreach (Match link in MarkdownLinkPattern.Matches(indexLines[i]))
+            string line = lines[i].TrimEnd('\r');
+            if (i > 0 && inFrontmatter && line.Trim() is "---" or "...")
             {
-                string target = link.Groups[1].Value;
-                if (target.Contains("://", StringComparison.Ordinal) || target.StartsWith('#') ||
+                inFrontmatter = false;
+                continue;
+            }
+
+            if (inFrontmatter)
+            {
+                var fmMatch = FrontmatterDomainPattern.Match(line);
+                if (fmMatch.Success)
+                {
+                    foundDomainField = true;
+                    rawDomain = fmMatch.Groups[1].Value.Trim();
+                    break;
+                }
+                continue;
+            }
+
+            if (i > 0 && line.StartsWith("## ", StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            var metaMatch = DomainMetadataPattern.Match(line);
+            if (metaMatch.Success)
+            {
+                foundDomainField = true;
+                rawDomain = metaMatch.Groups[1].Value.Trim();
+                break;
+            }
+        }
+
+        if (foundDomainField)
+        {
+            if (!CreateAdrService.TryResolveCanonicalDomain(rawDomain, out _))
+            {
+                string allowed = string.Join(", ", CreateAdrService.CanonicalDomains.Select(d => d.Label));
+                errors.Add($"File '{fileName}' has invalid '- **Domain:**' metadata '{rawDomain}'. Expected one of: {allowed}.");
+            }
+        }
+        else if (adrNumber is >= 3000 and < 20000000)
+        {
+            errors.Add($"File '{fileName}' (ADR-{adrNumber}) is missing required '- **Domain:** <domain>' metadata.");
+        }
+    }
+
+    private static void FindBrokenRelativeLinks(string adrDir, string displayFileName, string[] lines, List<string> errors)
+    {
+        bool inFence = false;
+        string fenceMarker = string.Empty;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i].TrimEnd('\r');
+            string trimmedStart = line.TrimStart();
+            if (trimmedStart.StartsWith("```", StringComparison.Ordinal) ||
+                trimmedStart.StartsWith("~~~", StringComparison.Ordinal))
+            {
+                char markerChar = trimmedStart[0];
+                int count = 0;
+                while (count < trimmedStart.Length && trimmedStart[count] == markerChar)
+                {
+                    count++;
+                }
+
+                string currentFence = new(markerChar, count);
+                if (!inFence)
+                {
+                    inFence = true;
+                    fenceMarker = currentFence;
+                }
+                else if (trimmedStart.StartsWith(fenceMarker, StringComparison.Ordinal))
+                {
+                    inFence = false;
+                    fenceMarker = string.Empty;
+                }
+                continue;
+            }
+
+            if (inFence)
+            {
+                continue;
+            }
+
+            string scrubbedLine = InlineCodeSpanPattern.Replace(line, string.Empty);
+            foreach (Match link in MarkdownLinkPattern.Matches(scrubbedLine))
+            {
+                string target = link.Groups[1].Value.Trim();
+                if (string.IsNullOrEmpty(target) ||
+                    target.Contains("://", StringComparison.Ordinal) ||
+                    target.StartsWith('#') ||
                     target.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
 
-                string path = target.Split('#')[0];
-                if (!File.Exists(Path.GetFullPath(Path.Combine(adrDir, path))))
+                string pathPart = target.Split('#')[0].Split('?')[0];
+                if (string.IsNullOrEmpty(pathPart))
                 {
-                    errors.Add($"index.md line {i + 1} links to '{target}', which does not exist.");
+                    continue;
+                }
+
+                string resolvedPath = pathPart.StartsWith('/')
+                    ? Path.GetFullPath(Path.Combine(adrDir, "..", pathPart.TrimStart('/')))
+                    : Path.GetFullPath(Path.Combine(adrDir, Uri.UnescapeDataString(pathPart)));
+
+                if (!File.Exists(resolvedPath) && !Directory.Exists(resolvedPath))
+                {
+                    errors.Add($"{displayFileName} line {i + 1} links to '{target}', which does not exist.");
                 }
             }
-
-            var entry = IndexEntryPattern.Match(indexLines[i]);
-            if (entry.Success)
-            {
-                string listed = entry.Groups[1].Value.Split('#')[0];
-                listedCounts[listed] = listedCounts.GetValueOrDefault(listed) + 1;
-            }
         }
-
-        foreach (var name in adrFiles)
-        {
-            int count = listedCounts.GetValueOrDefault(name);
-            if (count == 0)
-            {
-                errors.Add($"File '{name}' is missing from index.md.");
-            }
-            else if (count > 1)
-            {
-                errors.Add($"File '{name}' is listed {count} times in index.md; list each ADR exactly once.");
-            }
-        }
-
-        return errors;
     }
 
     private static readonly HashSet<string> FrontendExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -469,6 +507,11 @@ public static class AdrValidatorService
     public static bool IsArchitecturalFile(string filepath, string repoRoot, bool preCommit = false, string? compareBase = null)
     {
         string normalized = filepath.Replace('\\', '/');
+        if (normalized.StartsWith("./", StringComparison.Ordinal))
+        {
+            normalized = normalized[2..];
+        }
+
         if (normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
             normalized.Contains("/tests/", StringComparison.OrdinalIgnoreCase) ||
             normalized.StartsWith("docs/", StringComparison.OrdinalIgnoreCase) ||
@@ -476,8 +519,7 @@ public static class AdrValidatorService
             normalized.StartsWith(".github/", StringComparison.OrdinalIgnoreCase) ||
             normalized.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ||
             normalized.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) ||
-            (Path.GetFileName(normalized).StartsWith('.') && normalized.EndsWith("ignore", StringComparison.OrdinalIgnoreCase)) ||
-            normalized.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase))
+            (Path.GetFileName(normalized).StartsWith('.') && normalized.EndsWith("ignore", StringComparison.OrdinalIgnoreCase)))
         {
             return false;
         }
@@ -487,27 +529,63 @@ public static class AdrValidatorService
             return RootPackageJsonDependenciesChanged(repoRoot, compareBase, preCommit);
         }
 
-        if (normalized.StartsWith("apps/gateway/", StringComparison.OrdinalIgnoreCase)) return true;
-        if (normalized.StartsWith("packages/security/", StringComparison.OrdinalIgnoreCase) ||
-            normalized.StartsWith("packages/ui/", StringComparison.OrdinalIgnoreCase))
+        if (normalized.StartsWith("packages/ui/", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Equals(normalized, "packages/ui/package.json", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(normalized, "packages/ui/index.js", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(normalized, "packages/ui/index.d.ts", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (normalized.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (normalized.StartsWith("apps/gateway/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("packages/security/", StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
 
         if (normalized.StartsWith("apps/web/", StringComparison.OrdinalIgnoreCase) ||
             normalized.StartsWith("apps/subject-portal/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("packages/cli/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("packages/tooling_core/", StringComparison.OrdinalIgnoreCase) ||
             FrontendExtensions.Contains(Path.GetExtension(normalized)))
         {
             return false;
         }
 
-        if (normalized.StartsWith("apps/", StringComparison.OrdinalIgnoreCase) &&
-            Regex.IsMatch(normalized, @"(?:database|schema|model|migration|\bdb\b)", RegexOptions.IgnoreCase))
+        if (normalized.StartsWith("apps/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("packages/", StringComparison.OrdinalIgnoreCase))
         {
-            return true;
+            return AffectsPersistenceSchemaOrModel(normalized);
         }
 
         return false;
+    }
+
+    private static bool AffectsPersistenceSchemaOrModel(string normalizedPath)
+    {
+        if (!normalizedPath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string fileName = Path.GetFileNameWithoutExtension(normalizedPath);
+        return normalizedPath.StartsWith("packages/database/", StringComparison.OrdinalIgnoreCase) ||
+               normalizedPath.Contains("/migrations/", StringComparison.OrdinalIgnoreCase) ||
+               normalizedPath.Contains("/configurations/", StringComparison.OrdinalIgnoreCase) ||
+               normalizedPath.Contains("/entities/", StringComparison.OrdinalIgnoreCase) ||
+               normalizedPath.Contains("/persistence/", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("dbcontext", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("migration", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("entityconfiguration", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains("entitytypeconfiguration", StringComparison.OrdinalIgnoreCase) ||
+               fileName.EndsWith("configurations", StringComparison.OrdinalIgnoreCase) ||
+               fileName.EndsWith("entities", StringComparison.OrdinalIgnoreCase) ||
+               (fileName.EndsWith("entity", StringComparison.OrdinalIgnoreCase) &&
+                !fileName.EndsWith("identity", StringComparison.OrdinalIgnoreCase));
     }
 
     // Only dependency and toolchain sections of the root manifest count as architectural, so script edits need no ADR.

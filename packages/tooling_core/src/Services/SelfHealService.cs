@@ -53,10 +53,9 @@ public static class SelfHealService
             Console.WriteLine($"✔ Requirement tags verified ({sanitized} Markdown file(s) updated).");
         }
 
-        Console.WriteLine("\n  4. Synchronizing Documentation, CLI, Demo & ADR Indexes...");
+        Console.WriteLine("\n  4. Synchronizing Documentation, CLI, Demo & ADR Validation...");
         if (Directory.Exists(Path.Combine(repoRoot, "docs", "adr")))
         {
-            ok &= AdrValidatorService.SyncAdrIndex(repoRoot) == 0;
             ok &= AdrValidatorService.ValidateAdrs(checkGitDiff: false, repoRoot: repoRoot);
         }
 
