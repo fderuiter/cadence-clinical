@@ -400,8 +400,8 @@ body {
   }
 
   .portal-header {
-    padding: 12px 16px;
-    gap: 10px;
+    padding: 8px 16px;
+    gap: 8px;
   }
 
   .header-branding h1 {
@@ -410,13 +410,13 @@ body {
 
   .portal-container {
     flex-direction: column;
-    padding: 12px 16px;
-    gap: 12px;
+    padding: 8px 16px;
+    gap: 8px;
   }
 
   .portal-navigation {
     width: 100%;
-    gap: 8px;
+    gap: 6px;
   }
 
   .nav-tabs {
@@ -1284,6 +1284,7 @@ body {
   font-weight: 600;
   font-size: 14px;
   opacity: 0;
+  pointer-events: none;
   transform: translateY(20px);
   transition:
     opacity 0.3s ease,

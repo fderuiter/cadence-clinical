@@ -154,9 +154,9 @@ export default defineConfig({
         ...(wantsStagedDemoServer ? [stagedDemoPreviewServer] : []),
         {
           command:
-            "pnpm --filter subject-portal exec vite --host 127.0.0.1 --port 5174 --strictPort",
+            "pnpm --filter subject-portal exec vite --mode demo --host 127.0.0.1 --port 5174 --strictPort",
           url: "http://127.0.0.1:5174/subject-portal/",
-          reuseExistingServer: !process.env.CI,
+          reuseExistingServer: false,
           timeout: 120000,
           env: {
             VITE_API_BASE_URL: "http://127.0.0.1:5174",

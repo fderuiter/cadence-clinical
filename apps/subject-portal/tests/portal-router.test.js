@@ -18,9 +18,11 @@ describe("Subject portal router and stores", () => {
     window.__MOCK_TEST_ENV__ = true;
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({}),
+      json: () => Promise.resolve([]),
     });
     document.body.innerHTML = `<div id="app"></div>`;
+    state.session.isDemoMode = true;
+    state.session.isOfflineMode = true;
     state.currentView = "view-tasks";
     await initializeApp();
     router = getPortalRouter();
@@ -28,6 +30,9 @@ describe("Subject portal router and stores", () => {
   });
 
   beforeEach(async () => {
+    state.session.token = null;
+    state.session.isOfflineMode = true;
+    state.session.isDemoMode = true;
     showView("view-tasks");
     await settle();
   });
@@ -89,12 +94,21 @@ describe("Subject portal router and stores", () => {
   });
 
   it("follows a direct write to state.currentView and redirects unavailable views outside demo mode", async () => {
+    state.session.userId = "subject_001";
+    state.session.token = "jwt_valid_subject_token"; // pragma: allowlist secret
+    state.session.isOfflineMode = false;
     state.session.isDemoMode = false;
+    state.currentView = "view-wallet";
+    await settle();
+    expect(router.currentRoute.value.path).toBe("/wallet");
+    expect(state.currentView).toBe("view-wallet");
+
     state.currentView = "view-consent";
     await settle();
-    expect(router.currentRoute.value.path).toBe("/consent");
+    expect(router.currentRoute.value.path).toBe("/unavailable");
+    expect(state.currentView).toBe("view-unavailable");
 
-    state.currentView = "view-wallet";
+    state.session.token = null;
     await settle();
     expect(router.currentRoute.value.path).toBe("/unavailable");
     expect(state.currentView).toBe("view-unavailable");
