@@ -122,7 +122,7 @@ const handleCancel = () => {
   align-items: flex-start;
   gap: var(--semantic-spacing-md, 16px);
   padding: var(--semantic-spacing-xs, 8px) 0;
-  font-family: var(--semantic-font-family, sans-serif);
+  font-family: var(--semantic-font-family);
 }
 
 .confirmation-body-stack {
@@ -182,7 +182,7 @@ const handleCancel = () => {
   box-sizing: border-box;
   padding: 8px 12px;
   font-size: 14px;
-  font-family: var(--semantic-font-family, sans-serif);
+  font-family: var(--semantic-font-family);
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);

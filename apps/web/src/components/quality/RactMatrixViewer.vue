@@ -1935,7 +1935,7 @@ onMounted(() => {
 }
 
 .kri-code-tag {
-  font-family: var(--font-mono);
+  font-family: var(--semantic-font-mono);
   font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--semantic-color-primary);

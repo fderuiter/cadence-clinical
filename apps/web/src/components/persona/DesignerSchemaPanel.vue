@@ -429,7 +429,7 @@
               <div style="display: flex; align-items: center; gap: 6px">
                 <span
                   :class="['badge', getConfidenceClass(item.confidence_level)]"
-                  style="font-size: 0.7rem"
+                  style="font-size: var(--font-size-2xs)"
                   class="item-confidence"
                 >
                   {{ (item.confidence * 100).toFixed(0) }}% ({{

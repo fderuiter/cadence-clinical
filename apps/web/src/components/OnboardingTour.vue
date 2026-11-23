@@ -582,7 +582,7 @@ onUnmounted(() => {
 
 .btn-tour-disable {
   padding: 6px 8px;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   background: none;
   border: none;

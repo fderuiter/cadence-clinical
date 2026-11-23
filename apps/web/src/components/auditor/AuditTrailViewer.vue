@@ -15,7 +15,7 @@
           <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 4px;
               display: block;
@@ -47,7 +47,7 @@
           <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 4px;
               display: block;
@@ -84,7 +84,7 @@
           <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 4px;
               display: block;
@@ -115,7 +115,7 @@
           <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 4px;
               display: block;
@@ -187,7 +187,7 @@
             <td
               style="
                 padding: 12px 16px;
-                font-family: monospace;
+                font-family: var(--semantic-font-mono);
                 font-size: 12px;
                 color: var(--semantic-color-text-secondary);
               "
@@ -201,7 +201,7 @@
               <span
                 class="badge"
                 :class="getActionBadgeClass(event.action)"
-                style="font-size: 10px"
+                style="font-size: var(--font-size-2xs)"
               >
                 {{ event.action }}
               </span>
@@ -218,7 +218,7 @@
                   background: rgba(0, 123, 255, 0.05);
                   border-left: 3px solid var(--accent);
                   border-radius: 2px;
-                  font-size: 11px;
+                  font-size: var(--font-size-2xs);
                   margin-bottom: 6px;
                   color: var(--semantic-color-text);
                 "
@@ -235,7 +235,7 @@
               >
                 <span
                   class="badge status-approved"
-                  style="font-size: 10px; font-weight: bold"
+                  style="font-size: var(--font-size-2xs); font-weight: bold"
                 >
                   Version: v{{
                     event.version_index !== undefined

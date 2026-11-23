@@ -616,7 +616,7 @@ function completeAndClose() {
 }
 
 .badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
@@ -790,7 +790,7 @@ function completeAndClose() {
 }
 
 .stat-label {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
   font-weight: 600;
 }
@@ -939,7 +939,7 @@ function completeAndClose() {
 }
 
 .detail-val.code {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
 }
 
 .signature-truncate {

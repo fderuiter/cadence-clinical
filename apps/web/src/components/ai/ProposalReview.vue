@@ -615,7 +615,7 @@ watch(() => props.proposalRef, load, { immediate: true });
 }
 
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.85rem;
   overflow-wrap: anywhere;
 }
