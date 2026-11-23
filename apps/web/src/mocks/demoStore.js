@@ -619,6 +619,15 @@ export function createWebDemoStore() {
           current_revision: 1,
           value_changed: false,
           status: "open",
+          origin: "manual",
+          owner_role: "site",
+          assignee: null,
+          priority: "high",
+          opened_at: "2026-08-02T11:00:00Z",
+          status_since: "2026-08-02T11:00:00Z",
+          due_at: "2026-08-16T11:00:00Z",
+          escalated_at: "2026-08-17T00:05:00Z",
+          last_answered_by: null,
           text: "Confirm seated rest duration prior to baseline systolic BP.",
           messages: [
             {
@@ -626,15 +635,114 @@ export function createWebDemoStore() {
               text: "Confirm seated rest duration prior to baseline systolic BP.",
               by: "usr-cra-01",
               at: "2026-08-02T11:00:00Z",
+              reason_for_change: "Source chart audit discrepancy",
+            },
+            {
+              kind: "escalated",
+              text: "14-day SLA reached; escalated to High priority.",
+              by: "svc:execution-edit-checks",
+              at: "2026-08-17T00:05:00Z",
+              reason_for_change: "14-day SLA escalation",
             },
           ],
           raised_by: "usr-cra-01",
           raised_at: "2026-08-02T11:00:00Z",
-          version: 1,
+          version: 2,
           study_id: STUDY_UUID,
           study_site_id: SITE_101_UUID,
           site_code: "SITE-101",
           subject_code: "SUBJ-1001",
+          collection_spec_id: "form-vital-signs",
+          planned_activity_id: "visit-baseline",
+        },
+      ],
+      [
+        "00000000-0000-0000-0000-000000003002", // deid-ignore
+        {
+          query_id: "00000000-0000-0000-0000-000000003002", // deid-ignore
+          form_id: "00000000-0000-0000-0000-000000002002", // deid-ignore
+          enrollment_id: ENROLLMENT_1002_UUID,
+          item_id: "item-diabp",
+          observation_id: OBS_2_UUID,
+          revision: 1,
+          current_revision: 2,
+          value_changed: true,
+          status: "answered",
+          origin: "manual",
+          owner_role: "monitor",
+          assignee: null,
+          priority: "normal",
+          opened_at: "2026-08-04T09:15:00Z",
+          status_since: "2026-08-05T14:20:00Z",
+          due_at: null,
+          escalated_at: null,
+          last_answered_by: "usr-crc-01",
+          text: "Verify baseline diastolic blood pressure against bedside strip.",
+          messages: [
+            {
+              kind: "raised",
+              text: "Verify baseline diastolic blood pressure against bedside strip.",
+              by: "usr-cra-01",
+              at: "2026-08-04T09:15:00Z",
+              reason_for_change: "Routine SDV review",
+            },
+            {
+              kind: "answered",
+              text: "Observation updated to revision 2.",
+              by: "usr-crc-01",
+              at: "2026-08-05T14:20:00Z",
+              reason_for_change: "Corrected from signed vitals flowsheet",
+            },
+          ],
+          raised_by: "usr-cra-01",
+          raised_at: "2026-08-04T09:15:00Z",
+          version: 2,
+          study_id: STUDY_UUID,
+          study_site_id: SITE_102_UUID,
+          site_code: "SITE-102",
+          subject_code: "SUBJ-1002",
+          collection_spec_id: "form-vital-signs",
+          planned_activity_id: "visit-baseline",
+        },
+      ],
+      [
+        "00000000-0000-0000-0000-000000003003", // deid-ignore
+        {
+          query_id: "00000000-0000-0000-0000-000000003003", // deid-ignore
+          form_id: "00000000-0000-0000-0000-000000002002", // deid-ignore
+          enrollment_id: ENROLLMENT_1002_UUID,
+          item_id: "item-hr",
+          observation_id: OBS_3_UUID,
+          revision: 1,
+          current_revision: 1,
+          value_changed: false,
+          status: "open",
+          origin: "system",
+          owner_role: "site",
+          assignee: null,
+          priority: "normal",
+          opened_at: "2026-08-10T08:00:00Z",
+          status_since: "2026-08-10T08:00:00Z",
+          due_at: "2026-08-24T08:00:00Z",
+          escalated_at: null,
+          last_answered_by: null,
+          text: "[RULE-HR-RANGE] Resting heart rate outside expected 50-100 bpm window.",
+          messages: [
+            {
+              kind: "raised",
+              text: "[RULE-HR-RANGE] Resting heart rate outside expected 50-100 bpm window.",
+              by: "svc:execution-edit-checks",
+              at: "2026-08-10T08:00:00Z",
+              reason_for_change: "Post-commit RulePack evaluation",
+            },
+          ],
+          raised_by: "svc:execution-edit-checks",
+          raised_at: "2026-08-10T08:00:00Z",
+          version: 1,
+          study_id: STUDY_UUID,
+          study_site_id: SITE_102_UUID,
+          site_code: "SITE-102",
+          subject_code: "SUBJ-1002",
           collection_spec_id: "form-vital-signs",
           planned_activity_id: "visit-baseline",
         },
@@ -3226,6 +3334,33 @@ export function createWebDemoStore() {
           (q) => String(q.status).toLowerCase() === wanted
         );
       }
+      if (opts.owner) {
+        const wanted = String(opts.owner).trim().toLowerCase();
+        results = results.filter(
+          (q) => String(q.owner_role || "site").toLowerCase() === wanted
+        );
+      }
+      if (opts.origin) {
+        const wanted = String(opts.origin).trim().toLowerCase();
+        results = results.filter(
+          (q) => String(q.origin || "manual").toLowerCase() === wanted
+        );
+      }
+      if (opts.priority) {
+        const wanted = String(opts.priority).trim().toLowerCase();
+        results = results.filter(
+          (q) => String(q.priority || "normal").toLowerCase() === wanted
+        );
+      }
+      if (
+        opts.escalated !== undefined &&
+        opts.escalated !== null &&
+        opts.escalated !== ""
+      ) {
+        const wantedEsc =
+          opts.escalated === true || String(opts.escalated) === "true";
+        results = results.filter((q) => Boolean(q.escalated_at) === wantedEsc);
+      }
       if (opts.site) {
         const site = String(opts.site).trim().toLowerCase();
         results = results.filter(
@@ -3258,7 +3393,7 @@ export function createWebDemoStore() {
       return cloneJson(results);
     },
 
-    raiseQuery(formId, body) {
+    raiseQuery(formId, body, reasonHeader) {
       const form =
         state.forms.get(formId) || state.forms.get(DEFAULT_FORM_UUID);
       let item =
@@ -3269,6 +3404,7 @@ export function createWebDemoStore() {
         form.items[0];
       const idx = nextCounter();
       const now = new Date().toISOString();
+      const dueAt = new Date(Date.now() + 14 * 86400 * 1000).toISOString();
       if (!body?.observation_id && body?.item_id && item && !item.value) {
         const unaskedObsId =
           item.observation_id || makeUuidFromIndex("00006300", idx);
@@ -3298,6 +3434,15 @@ export function createWebDemoStore() {
         current_revision: item?.revision ?? rev,
         value_changed: false,
         status: "open",
+        origin: "manual",
+        owner_role: body?.owner_role || "site",
+        assignee: body?.assignee || null,
+        priority: body?.priority || "normal",
+        opened_at: now,
+        status_since: now,
+        due_at: dueAt,
+        escalated_at: null,
+        last_answered_by: null,
         text,
         messages: [
           {
@@ -3305,6 +3450,7 @@ export function createWebDemoStore() {
             text,
             by: "usr-cra-01",
             at: now,
+            reason_for_change: reasonHeader || text,
           },
         ],
         raised_by: "usr-cra-01",
@@ -3365,16 +3511,49 @@ export function createWebDemoStore() {
         };
       }
       const now = new Date().toISOString();
+      if (
+        action === "close" &&
+        existing.status === "open" &&
+        (existing.origin || "manual") !== "system"
+      ) {
+        return {
+          invalid: true,
+          problem: {
+            title: "Invalid query transition",
+            status: 409,
+            code: "M.Execution.Query.InvalidTransition",
+            detail: "Manual queries must be answered before closure.",
+          },
+        };
+      }
+      const actor = action === "answer" ? "usr-crc-01" : "usr-dm-01";
       const messageText = String(
         body?.text || reason || `Query ${kindMap[action]}.`
       );
       existing.status = nextStatus;
+      existing.status_since = now;
+      if (action === "answer") {
+        existing.owner_role = "monitor";
+        existing.due_at = null;
+        existing.escalated_at = null;
+        existing.last_answered_by = actor;
+      } else if (action === "reopen") {
+        existing.owner_role = "site";
+        existing.due_at = new Date(
+          Date.now() + 14 * 86400 * 1000
+        ).toISOString();
+        existing.escalated_at = null;
+      } else {
+        existing.due_at = null;
+        existing.escalated_at = null;
+      }
       existing.version = Number(existing.version) + 1;
       existing.messages.push({
         kind: kindMap[action],
         text: messageText,
-        by: action === "answer" ? "usr-crc-01" : "usr-dm-01",
+        by: actor,
         at: now,
+        reason_for_change: reason || messageText,
       });
       recordActivity(
         `execution.query.${kindMap[action]}`,
