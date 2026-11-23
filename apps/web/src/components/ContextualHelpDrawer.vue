@@ -4,6 +4,7 @@
     <ClinicalDrawer
       :is-open="knowledgeStore.isOpen"
       :teleport="false"
+      size="sm"
       id="contextual-help-drawer"
       overlay-id="contextual-help-drawer-overlay"
       overlay-class="drawer-overlay"
@@ -13,81 +14,78 @@
       @close="knowledgeStore.closeDrawer()"
     >
       <template #header>
-        <!-- Header -->
-        <div class="drawer-header">
-          <div class="header-main-row">
-            <div class="header-title-group">
-              <span class="header-icon" aria-hidden="true">📖</span>
-              <div>
-                <h3 id="help-drawer-title" class="drawer-title">
-                  Clinical Guidance &amp; SOPs
-                </h3>
-                <div class="context-badges">
-                  <span class="context-badge route-badge" title="Active Route">
-                    📍 {{ knowledgeStore.currentRoute }}
-                  </span>
-                  <span
-                    class="context-badge persona-badge"
-                    title="Active Persona"
-                  >
-                    {{ activePersonaLabel }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="header-actions">
-              <ClinicalIconButton
-                class="btn-icon-toggle"
-                variant="ghost"
-                size="sm"
-                :class="{ active: isSearchOpen }"
-                :aria-pressed="isSearchOpen ? 'true' : 'false'"
-                label="Toggle Search SOPs"
-                title="Toggle Search SOPs"
-                @click="toggleSearch"
-              >
-                🔍
-              </ClinicalIconButton>
-              <ClinicalIconButton
-                class="btn-close"
-                variant="ghost"
-                size="sm"
-                label="Close Help Drawer"
-                @click="knowledgeStore.closeDrawer()"
-              >
-                ✕
-              </ClinicalIconButton>
-            </div>
+        <!-- Compact Single-Row Header -->
+        <header class="drawer-header">
+          <div class="header-title-group">
+            <span class="header-icon" aria-hidden="true">
+              <BookOpen :size="18" aria-hidden="true" />
+            </span>
+            <h3 id="help-drawer-title" class="drawer-title">
+              Clinical Guidance &amp; SOPs
+            </h3>
           </div>
 
-          <!-- Inline Search Bar -->
-          <div v-if="isSearchOpen" class="search-bar-row">
-            <label for="help-search-input" class="sr-only">
-              Search clinical SOPs, guidelines, or topics
-            </label>
-            <input
-              id="help-search-input"
-              ref="searchInputRef"
-              v-model="searchInput"
-              type="text"
-              class="search-input"
-              placeholder="Search SOPs, guidelines, or topics..."
-              @input="onSearchInput"
-            />
+          <div class="header-actions">
             <ClinicalIconButton
-              v-if="searchInput"
-              class="btn-clear-search"
+              class="btn-icon-toggle"
               variant="ghost"
               size="sm"
-              label="Clear SOP search"
-              @click="clearSearch"
+              :class="{ active: isSearchOpen }"
+              :aria-pressed="isSearchOpen ? 'true' : 'false'"
+              label="Toggle Search SOPs"
+              title="Toggle Search SOPs"
+              @click="toggleSearch"
             >
-              ✕
+              <Search :size="16" aria-hidden="true" />
+            </ClinicalIconButton>
+            <ClinicalIconButton
+              class="btn-close"
+              variant="ghost"
+              size="sm"
+              label="Close Help Drawer"
+              @click="knowledgeStore.closeDrawer()"
+            >
+              <X :size="18" aria-hidden="true" />
             </ClinicalIconButton>
           </div>
-        </div>
+        </header>
       </template>
+
+      <!-- Secondary Context Badges & Search Bar inside Scroll Body -->
+      <div class="context-badges">
+        <span class="context-badge route-badge" title="Active Route">
+          <MapPin :size="12" aria-hidden="true" />
+          {{ knowledgeStore.currentRoute }}
+        </span>
+        <span class="context-badge persona-badge" title="Active Persona">
+          {{ activePersonaLabel }}
+        </span>
+      </div>
+
+      <div v-if="isSearchOpen" class="search-bar-row">
+        <label for="help-search-input" class="sr-only">
+          Search clinical SOPs, guidelines, or topics
+        </label>
+        <input
+          id="help-search-input"
+          ref="searchInputRef"
+          v-model="searchInput"
+          type="text"
+          class="search-input"
+          placeholder="Search SOPs, guidelines, or topics..."
+          @input="onSearchInput"
+        />
+        <ClinicalIconButton
+          v-if="searchInput"
+          class="btn-clear-search"
+          variant="ghost"
+          size="sm"
+          label="Clear SOP search"
+          @click="clearSearch"
+        >
+          <X :size="14" aria-hidden="true" />
+        </ClinicalIconButton>
+      </div>
 
       <!-- Body Content -->
       <!-- Loading State -->
@@ -105,7 +103,9 @@
         aria-live="assertive"
       >
         <div class="error-alert-header">
-          <span class="error-alert-icon" aria-hidden="true">⚠️</span>
+          <span class="error-alert-icon" aria-hidden="true">
+            <AlertTriangle :size="16" aria-hidden="true" />
+          </span>
           <h4 class="error-alert-title">
             {{
               knowledgeStore.lastFailedAction?.type === "search"
@@ -122,7 +122,7 @@
             class="btn btn-secondary btn-retry"
             @click="handleRetry"
           >
-            ↻ Retry
+            <RotateCw :size="14" aria-hidden="true" /> Retry
           </button>
         </div>
       </div>
@@ -240,7 +240,9 @@
 
           <!-- Section Anchor Callout -->
           <div v-if="knowledgeStore.activeSectionAnchor" class="anchor-callout">
-            <span class="anchor-icon" aria-hidden="true">🎯</span>
+            <span class="anchor-icon" aria-hidden="true">
+              <Crosshair :size="16" aria-hidden="true" />
+            </span>
             <div class="anchor-text">
               <strong>Spotlight Section:</strong>
               <code>{{ knowledgeStore.activeSectionAnchor }}</code>
@@ -298,9 +300,8 @@
           class="related-section"
         >
           <h5 class="related-title">
-            📚 Related Clinical SOPs ({{
-              knowledgeStore.relatedArticles.length
-            }})
+            <Library :size="14" aria-hidden="true" />
+            Related Clinical SOPs ({{ knowledgeStore.relatedArticles.length }})
           </h5>
           <div class="related-list">
             <button
@@ -334,7 +335,9 @@
 
       <!-- Empty Fallback State -->
       <div v-else class="empty-state">
-        <div class="empty-icon" aria-hidden="true">🔍</div>
+        <div class="empty-icon" aria-hidden="true">
+          <Search :size="32" aria-hidden="true" />
+        </div>
         <h4>No Specific SOP Mapped for This Route</h4>
         <p>
           There is currently no published SOP mapped specifically to
@@ -347,14 +350,14 @@
             class="btn btn-secondary"
             @click="openSearchWithFallback"
           >
-            🔍 Search Knowledge Hub
+            <Search :size="15" aria-hidden="true" /> Search Knowledge Hub
           </button>
           <button
             type="button"
             class="btn btn-secondary"
             @click="openHubRoute('/knowledge')"
           >
-            📚 Open Full SOP Hub
+            <Library :size="15" aria-hidden="true" /> Open Full SOP Hub
           </button>
         </div>
       </div>
@@ -369,7 +372,7 @@
               title="Log Support Ticket pre-populated with current route context"
               @click="handleEscalate"
             >
-              <span class="btn-icon" aria-hidden="true">🎫</span>
+              <Ticket :size="15" aria-hidden="true" />
               Escalate to Support Ticket
             </button>
             <div class="drawer-hub-links">
@@ -379,7 +382,7 @@
                 class="btn-hub-link"
                 @click="openHubRoute('/knowledge')"
               >
-                📚 Browse SOP Hub
+                <Library :size="13" aria-hidden="true" /> Browse SOP Hub
               </button>
               <span class="hub-link-sep" aria-hidden="true">·</span>
               <button
@@ -388,7 +391,7 @@
                 class="btn-hub-link"
                 @click="openHubRoute('/tickets')"
               >
-                🎫 Support Queue
+                <Ticket :size="13" aria-hidden="true" /> Support Queue
               </button>
             </div>
           </div>
@@ -425,6 +428,17 @@ import {
   getCurrentInstance,
 } from "vue";
 import { useRoute } from "vue-router";
+import {
+  AlertTriangle,
+  BookOpen,
+  Crosshair,
+  Library,
+  MapPin,
+  RotateCw,
+  Search,
+  Ticket,
+  X,
+} from "lucide-vue-next";
 import {
   ClinicalDrawer,
   ClinicalIconButton,
@@ -719,30 +733,10 @@ onUnmounted(() => {
 
 <style scoped>
 :deep(.drawer-overlay) {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(15, 23, 42, 0.45);
-  display: flex;
-  justify-content: flex-end;
   z-index: 1050;
-  backdrop-filter: blur(2px);
 }
 
 :deep(.drawer-panel) {
-  background-color: white;
-  width: var(
-    --semantic-drawer-width-sm,
-    var(--drawer-width-sm, min(100vw, 440px))
-  );
-  max-width: 100vw;
-  height: 100vh;
-  box-shadow: -6px 0 28px rgba(0, 0, 0, 0.18);
-  display: flex;
-  flex-direction: column;
-  animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: var(
     --font,
     -apple-system,
@@ -754,60 +748,60 @@ onUnmounted(() => {
   color: var(--primary);
 }
 
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
 .drawer-header {
-  padding: 16px 20px;
+  padding: 8px 16px;
+  min-height: 48px;
   border-bottom: 1px solid var(--border);
   background-color: var(--semantic-color-surface-muted);
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.header-main-row {
-  display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
 }
 
 .header-title-group {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
 }
 
 .header-icon {
-  font-size: 1.5rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent);
 }
 
 .drawer-title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 700;
   color: var(--primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .context-badges {
   display: flex;
   gap: 6px;
-  margin-top: 4px;
   flex-wrap: wrap;
 }
 
 .context-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 4px;
+  max-width: 100%;
+  word-break: break-word;
 }
 
 .route-badge {
@@ -828,18 +822,16 @@ onUnmounted(() => {
   gap: 6px;
 }
 
-.btn-icon-toggle {
+.btn-icon-toggle,
+.btn-close {
+  min-width: 44px;
+  min-height: 44px;
   font-size: 0.95rem;
 }
 
 .btn-icon-toggle.active {
   background-color: var(--semantic-color-surface-header);
   border-color: var(--semantic-color-border-control);
-}
-
-.btn-close {
-  font-size: 1rem;
-  line-height: 1;
 }
 
 .sr-only {
@@ -862,12 +854,13 @@ onUnmounted(() => {
 
 .search-input {
   width: 100%;
-  min-height: 36px;
-  padding: 8px 38px 8px 10px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 44px 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.85rem;
-  background-color: white;
+  font-size: 1rem;
+  background-color: var(--semantic-color-surface);
   color: var(--primary);
   box-sizing: border-box;
 }
@@ -879,16 +872,15 @@ onUnmounted(() => {
 .btn-clear-search {
   position: absolute;
   right: 4px;
-  font-size: 0.85rem;
+  min-width: 36px;
+  min-height: 36px;
 }
 
 :deep(.drawer-body) {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 20px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   background-color: var(--semantic-color-surface);
 }
 
@@ -1161,6 +1153,9 @@ onUnmounted(() => {
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .related-list {
@@ -1345,20 +1340,24 @@ onUnmounted(() => {
 }
 
 .drawer-footer {
-  padding: 14px 20px;
+  width: 100%;
+  padding: 10px 16px;
   border-top: 1px solid var(--border);
   background-color: var(--semantic-color-surface-muted);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+  box-sizing: border-box;
 }
 
 .drawer-footer-primary {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 4px;
+  min-width: 0;
 }
 
 .drawer-hub-links {
@@ -1369,9 +1368,13 @@ onUnmounted(() => {
 }
 
 .btn-hub-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--semantic-control-target-min, 24px);
   background: none;
   border: none;
-  padding: 0;
+  padding: 2px 4px;
   color: var(--semantic-color-interactive-primary);
   font-size: 0.78rem;
   font-weight: 600;
@@ -1388,6 +1391,7 @@ onUnmounted(() => {
 }
 
 .btn {
+  min-height: 44px;
   padding: 8px 14px;
   font-size: 0.84rem;
   font-weight: 600;
@@ -1396,7 +1400,9 @@ onUnmounted(() => {
   transition: all 0.15s;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  box-sizing: border-box;
 }
 
 .btn-secondary {

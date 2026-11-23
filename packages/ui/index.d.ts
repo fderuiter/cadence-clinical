@@ -323,6 +323,8 @@ export const ClinicalDrawer: DefineComponent<
   {
     modelValue?: boolean;
     isOpen?: boolean;
+    open?: boolean;
+    keepMounted?: boolean;
     title?: string;
     subtitle?: string;
     ariaLabel?: string;

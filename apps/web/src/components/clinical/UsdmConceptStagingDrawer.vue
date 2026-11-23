@@ -1,29 +1,20 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="drawer-backdrop"
-    role="presentation"
-    @click.self="closeDrawer"
+  <ClinicalDrawer
+    :model-value="isOpen"
+    :teleport="false"
+    size="lg"
+    overlay-class="drawer-backdrop"
+    panel-class="usdm-concept-staging-drawer"
+    aria-labelledby="drawer-title"
+    @close="closeDrawer"
   >
-    <div
-      ref="drawerRef"
-      class="usdm-concept-staging-drawer card"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="drawer-title"
-      tabindex="-1"
-    >
-      <!-- Drawer Header -->
-      <div class="drawer-header">
-        <div class="header-text">
+    <template #header>
+      <div class="drawer-header-bar">
+        <div class="header-title-wrap">
+          <Database :size="18" class="header-icon" aria-hidden="true" />
           <h3 id="drawer-title" class="drawer-title">
-            📥 USDM Biomedical Concept Staging &amp; Mapping Drawer
+            USDM Biomedical Concept Staging &amp; Mapping Drawer
           </h3>
-          <p class="drawer-subtitle">
-            Interactive concept resolution for USDM v4.0 protocol onboarding.
-            Resolve unmapped tokens via NCIt/CDISC binding, tenant alias
-            creation, or GxP design finding exemptions.
-          </p>
         </div>
         <button
           type="button"
@@ -31,9 +22,17 @@
           aria-label="Close drawer"
           @click="closeDrawer"
         >
-          ✖
+          <X :size="18" aria-hidden="true" />
         </button>
       </div>
+    </template>
+
+    <div class="usdm-drawer-content">
+      <p class="drawer-subtitle">
+        Interactive concept resolution for USDM v4.0 protocol onboarding.
+        Resolve unmapped tokens via NCIt/CDISC binding, tenant alias creation,
+        or GxP design finding exemptions.
+      </p>
 
       <!-- Resolution Progress Meter -->
       <div class="progress-section">
@@ -55,24 +54,31 @@
           v-if="resolvedCount < items.length"
           class="alert alert-warning-inline"
         >
-          ⚠️ Guardrail Active: All USDM lineage nodes require valid concept
-          bindings or explicit design finding exemptions prior to protocol
-          version commit.
+          <AlertTriangle :size="15" class="alert-icon" aria-hidden="true" />
+          <span>
+            Guardrail Active: All USDM lineage nodes require valid concept
+            bindings or explicit design finding exemptions prior to protocol
+            version commit.
+          </span>
         </div>
         <div v-else class="alert alert-success-inline">
-          ✅ All unmapped USDM concept tokens resolved. Ready to hydrate
-          protocol design lineage nodes.
+          <CheckCircle2 :size="15" class="alert-icon" aria-hidden="true" />
+          <span>
+            All unmapped USDM concept tokens resolved. Ready to hydrate protocol
+            design lineage nodes.
+          </span>
         </div>
       </div>
 
       <!-- Filter / Search Control -->
       <div class="filter-bar">
+        <Search :size="16" class="search-input-icon" aria-hidden="true" />
         <input
           v-model="searchQuery"
           type="text"
           aria-label="Filter unmapped concept tokens"
           class="form-control input-search"
-          placeholder="🔍 Filter unmapped concept tokens by code, name, or node ID..."
+          placeholder="Filter unmapped concept tokens by code, name, or node ID..."
         />
       </div>
 
@@ -110,7 +116,8 @@
                 :class="{ active: item.action === 'bind' }"
                 @click="item.action = 'bind'"
               >
-                🔗 Bind Registry Concept
+                <Link2 :size="14" aria-hidden="true" />
+                <span>Bind Registry Concept</span>
               </button>
               <button
                 type="button"
@@ -118,7 +125,8 @@
                 :class="{ active: item.action === 'alias' }"
                 @click="item.action = 'alias'"
               >
-                🏷️ Create Tenant Alias
+                <Tag :size="14" aria-hidden="true" />
+                <span>Create Tenant Alias</span>
               </button>
               <button
                 type="button"
@@ -126,7 +134,8 @@
                 :class="{ active: item.action === 'finding' }"
                 @click="item.action = 'finding'"
               >
-                🛡️ Design Finding Exemption
+                <ShieldCheck :size="14" aria-hidden="true" />
+                <span>Design Finding Exemption</span>
               </button>
             </div>
 
@@ -231,7 +240,8 @@
       <!-- Part 11 Audit Trail Verification -->
       <div class="audit-section">
         <h5 class="audit-title">
-          ✍️ 21 CFR Part 11 Electronic Signature &amp; Audit Trail
+          <FileSignature :size="16" aria-hidden="true" />
+          <span>21 CFR Part 11 Electronic Signature &amp; Audit Trail</span>
         </h5>
         <div class="audit-grid">
           <div class="form-group">
@@ -260,8 +270,9 @@
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Drawer Footer Actions -->
+    <template #footer>
       <div class="drawer-footer">
         <button
           type="button"
@@ -276,16 +287,29 @@
           :disabled="!canConfirm"
           @click="confirmAndApply"
         >
-          ⚡ Confirm Staging Mappings &amp; Hydrate Protocol Design
+          <Zap :size="16" aria-hidden="true" />
+          <span>Confirm Staging Mappings &amp; Hydrate Protocol Design</span>
         </button>
       </div>
-    </div>
-  </div>
+    </template>
+  </ClinicalDrawer>
 </template>
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalDrawer } from "ui";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Database,
+  FileSignature,
+  Link2,
+  Search,
+  ShieldCheck,
+  Tag,
+  X,
+  Zap,
+} from "lucide-vue-next";
 
 const props = defineProps({
   isOpen: {
@@ -313,7 +337,6 @@ const props = defineProps({
 
 const emit = defineEmits(["update:isOpen", "close", "confirm-mappings"]);
 
-const drawerRef = ref(null);
 const searchQuery = ref("");
 const signerUsername = ref("");
 const changeReason = ref("USDM Concept Staging & Mapping Resolution");
@@ -427,11 +450,6 @@ const closeDrawer = () => {
   emit("close");
 };
 
-useFocusTrap(drawerRef, {
-  isOpen: () => props.isOpen,
-  onEscape: closeDrawer,
-});
-
 const confirmAndApply = () => {
   if (!canConfirm.value) return;
 
@@ -461,46 +479,70 @@ const confirmAndApply = () => {
 </script>
 
 <style scoped>
-.drawer-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
-  z-index: 1050;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.usdm-concept-staging-drawer {
-  width: 640px;
-  max-width: 90vw;
-  height: 100vh;
-  background-color: var(--semantic-color-surface);
-  border-left: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  padding: 24px;
-  overflow-y: auto;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
-}
-
-.drawer-header {
+.drawer-header-bar {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 20px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
 
-  border-bottom: 1px solid var(--semantic-color-border);
-  padding-bottom: 16px;
+.header-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.header-icon {
+  flex-shrink: 0;
+  color: var(--semantic-color-primary);
 }
 
 .drawer-title {
-  margin: 0 0 6px 0;
-  font-size: 1.25rem;
+  margin: 0;
+  font-size: 1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--semantic-color-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-close-drawer {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  color: var(--semantic-color-text-secondary);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-close-drawer:hover {
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text);
+}
+
+@media (max-height: 540px) {
+  .btn-close-drawer {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+.usdm-drawer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
 }
 
 .drawer-subtitle {
@@ -510,26 +552,19 @@ const confirmAndApply = () => {
   line-height: 1.4;
 }
 
-.btn-close-drawer {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  color: var(--semantic-color-text-secondary);
-  padding: 4px;
-}
-
 .progress-section {
   background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 20px;
+  padding: 14px;
+  font-variant-numeric: tabular-nums;
 }
 
 .progress-info {
   display: flex;
   justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
   font-size: 0.85rem;
   color: var(--semantic-color-text-body);
   margin-bottom: 8px;
@@ -553,51 +588,70 @@ const confirmAndApply = () => {
   background-color: var(--semantic-color-success);
 }
 
+.alert-warning-inline,
+.alert-success-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.alert-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
 .alert-warning-inline {
   background-color: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
   color: var(--semantic-color-warning-dark);
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 0.8rem;
 }
 
 .alert-success-inline {
   background-color: var(--semantic-color-success-bg-soft);
   border: 1px solid var(--semantic-color-success-border);
   color: var(--semantic-color-success-dark);
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 0.8rem;
 }
 
 .filter-bar {
-  margin-bottom: 16px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--semantic-color-text-secondary);
+  pointer-events: none;
 }
 
 .input-search {
   width: 100%;
-  padding: 8px 12px;
+  min-height: 44px;
+  padding: 8px 12px 8px 36px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 1rem;
+  box-sizing: border-box;
 }
 
 .unmapped-tokens-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  flex: 1;
-  margin-bottom: 24px;
+  gap: 14px;
 }
 
 .token-card {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 8px;
-  padding: 16px;
+  padding: 14px;
   background-color: var(--semantic-color-surface);
-
   transition: border-color 0.2s ease;
+  min-width: 0;
 }
 
 .token-card.resolved {
@@ -608,7 +662,9 @@ const confirmAndApply = () => {
 .token-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: 12px;
 }
 
@@ -617,6 +673,7 @@ const confirmAndApply = () => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .badge-node {
@@ -630,12 +687,14 @@ const confirmAndApply = () => {
 .token-code {
   font-size: 0.9rem;
   color: var(--semantic-color-primary);
-  font-family: monospace;
+  font-family: var(--font-mono, monospace);
+  word-break: break-word;
 }
 
 .token-name {
   font-size: 0.85rem;
   color: var(--semantic-color-text-secondary);
+  word-break: break-word;
 }
 
 .badge-danger {
@@ -660,25 +719,31 @@ const confirmAndApply = () => {
   display: flex;
   gap: 6px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
-  flex: 1;
-  padding: 6px;
-  font-size: 0.75rem;
+  flex: 1 1 150px;
+  min-height: 44px;
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
   border: 1px solid var(--semantic-color-border-control);
   background-color: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-secondary);
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   transition: all 0.2s ease;
 }
 
 .tab-btn.active {
-  background-color: var(--primary);
+  background-color: var(--semantic-color-primary);
   color: var(--semantic-color-text-inverse);
-  border-color: var(--primary);
+  border-color: var(--semantic-color-primary);
 }
 
 .action-panel {
@@ -699,47 +764,65 @@ const confirmAndApply = () => {
 .binding-input-row {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.select-concept,
+.input-alias-code,
+.input-alias-name,
+.textarea-finding,
+.input-signer-id,
+.input-change-reason {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font-size: 1rem;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  box-sizing: border-box;
 }
 
 .select-concept {
-  flex: 1;
-  padding: 6px 10px;
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 4px;
-  font-size: 0.85rem;
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
-.alias-grid {
+.alias-grid,
+.audit-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 8px;
 }
 
-.input-alias-code,
-.input-alias-name {
-  width: 100%;
-  padding: 6px 10px;
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 4px;
-  font-size: 0.85rem;
+.audit-grid {
+  margin-bottom: 0;
 }
 
 .textarea-finding {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 4px;
-  font-size: 0.85rem;
   margin-bottom: 8px;
+}
+
+.btn-bind,
+.btn-create-alias,
+.btn-accept-finding,
+.btn-cancel,
+.btn-confirm-mappings {
+  min-height: 44px;
+  padding: 8px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .audit-section {
   background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 20px;
+  padding: 14px;
 }
 
 .audit-title {
@@ -747,44 +830,53 @@ const confirmAndApply = () => {
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--semantic-color-text-dark);
-}
-
-.audit-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.input-signer-id,
-.input-change-reason {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 4px;
-  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .drawer-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-
-  border-top: 1px solid var(--semantic-color-border);
-  padding-top: 16px;
+  gap: 10px;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
 .btn-confirm-mappings {
   background-color: var(--semantic-color-success);
   border-color: var(--semantic-color-success);
   color: var(--semantic-color-surface);
-  padding: 10px 18px;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 600;
   border-radius: 6px;
+  text-align: center;
 }
 
 .btn-confirm-mappings:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .alias-grid,
+  .audit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .binding-input-row,
+  .drawer-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-bind,
+  .btn-create-alias,
+  .btn-accept-finding,
+  .btn-cancel,
+  .btn-confirm-mappings {
+    width: 100%;
+  }
 }
 </style>

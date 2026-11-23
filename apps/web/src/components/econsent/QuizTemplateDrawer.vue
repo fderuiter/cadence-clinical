@@ -1,30 +1,18 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="drawer-backdrop"
-    role="presentation"
-    @click.self="$emit('close')"
+  <ClinicalDrawer
+    :model-value="isOpen"
+    :teleport="false"
+    size="lg"
+    overlay-class="drawer-backdrop"
+    panel-class="quiz-template-drawer"
+    aria-label="Regulatory Quiz Template Library"
+    @close="$emit('close')"
   >
-    <aside
-      ref="drawerRef"
-      class="quiz-template-drawer"
-      :class="{ open: isOpen }"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Regulatory Quiz Template Library"
-      tabindex="-1"
-    >
-      <!-- Header -->
+    <template #header>
       <div class="drawer-header">
         <div class="drawer-title-group">
-          <span class="drawer-icon" aria-hidden="true">📚</span>
-          <div>
-            <h3 class="drawer-title">Regulatory Quiz Template Library</h3>
-            <p class="drawer-subtitle">
-              Browse, filter, and batch-import pre-approved comprehension check
-              questions
-            </p>
-          </div>
+          <BookOpen :size="18" class="drawer-icon" aria-hidden="true" />
+          <h3 class="drawer-title">Regulatory Quiz Template Library</h3>
         </div>
         <button
           type="button"
@@ -33,9 +21,16 @@
           aria-label="Close Template Library Drawer"
           @click="$emit('close')"
         >
-          ✕
+          <X :size="18" aria-hidden="true" />
         </button>
       </div>
+    </template>
+
+    <div class="drawer-body">
+      <p class="drawer-subtitle">
+        Browse, filter, and batch-import pre-approved comprehension check
+        questions
+      </p>
 
       <!-- Controls: Domain Filter & Search Bar -->
       <div class="drawer-controls">
@@ -60,7 +55,7 @@
             >Search Keywords:</label
           >
           <div class="search-input-wrapper">
-            <span class="search-icon" aria-hidden="true">🔍</span>
+            <Search :size="16" class="search-icon" aria-hidden="true" />
             <input
               id="template-search-input"
               v-model="searchQuery"
@@ -75,7 +70,7 @@
               label="Clear search query"
               @click="searchQuery = ''"
             >
-              ✕
+              <X :size="16" aria-hidden="true" />
             </ClinicalIconButton>
           </div>
         </div>
@@ -105,107 +100,106 @@
         </button>
       </div>
 
-      <!-- Drawer Body: Questions List & Selection -->
-      <div class="drawer-body">
-        <div class="selection-summary-bar">
-          <label class="select-all-label">
-            <input
-              type="checkbox"
-              class="checkbox-select-all"
-              :checked="isAllFilteredSelected && filteredTemplates.length > 0"
-              :disabled="filteredTemplates.length === 0"
-              @change="toggleSelectAll"
-            />
-            <span> Select All Filtered ({{ filteredTemplates.length }}) </span>
-          </label>
-          <span class="selected-count-badge">
-            {{ selectedTemplateIds.length }} Question{{
-              selectedTemplateIds.length === 1 ? "" : "s"
-            }}
-            Selected
-          </span>
-        </div>
+      <div class="selection-summary-bar">
+        <label class="select-all-label">
+          <input
+            type="checkbox"
+            class="checkbox-select-all"
+            :checked="isAllFilteredSelected && filteredTemplates.length > 0"
+            :disabled="filteredTemplates.length === 0"
+            @change="toggleSelectAll"
+          />
+          <span> Select All Filtered ({{ filteredTemplates.length }}) </span>
+        </label>
+        <span class="selected-count-badge">
+          {{ selectedTemplateIds.length }} Question{{
+            selectedTemplateIds.length === 1 ? "" : "s"
+          }}
+          Selected
+        </span>
+      </div>
 
-        <div v-if="filteredTemplates.length === 0" class="no-templates-state">
-          <p class="no-templates-text">
-            No matching quiz templates found for "{{ searchQuery }}"
-            <span v-if="selectedDomain !== 'All'"> in {{ selectedDomain }}</span
-            >.
-          </p>
-          <button
-            type="button"
-            class="btn btn-secondary btn-small"
-            @click="resetFilters"
-          >
-            Clear Filters & Search
-          </button>
-        </div>
+      <div v-if="filteredTemplates.length === 0" class="no-templates-state">
+        <p class="no-templates-text">
+          No matching quiz templates found for "{{ searchQuery }}"
+          <span v-if="selectedDomain !== 'All'"> in {{ selectedDomain }}</span
+          >.
+        </p>
+        <button
+          type="button"
+          class="btn btn-secondary btn-small"
+          @click="resetFilters"
+        >
+          Clear Filters &amp; Search
+        </button>
+      </div>
 
-        <div v-else class="templates-list">
-          <div
-            v-for="tmpl in filteredTemplates"
-            :key="tmpl.id"
-            :class="['template-card card', { selected: isSelected(tmpl.id) }]"
-            role="button"
-            tabindex="0"
-            @click="toggleSelect(tmpl.id)"
-            @keydown.enter="toggleSelect(tmpl.id)"
-            @keydown.space.prevent="toggleSelect(tmpl.id)"
-          >
-            <div class="template-card-header">
-              <label class="checkbox-wrapper">
-                <input
-                  type="checkbox"
-                  class="checkbox-template-select"
-                  :checked="isSelected(tmpl.id)"
-                  @click.stop
-                  @change="toggleSelect(tmpl.id)"
-                />
-                <span class="sr-only">Select question: {{ tmpl.text }}</span>
-              </label>
+      <div v-else class="templates-list">
+        <div
+          v-for="tmpl in filteredTemplates"
+          :key="tmpl.id"
+          :class="['template-card card', { selected: isSelected(tmpl.id) }]"
+          role="button"
+          tabindex="0"
+          @click="toggleSelect(tmpl.id)"
+          @keydown.enter="toggleSelect(tmpl.id)"
+          @keydown.space.prevent="toggleSelect(tmpl.id)"
+        >
+          <div class="template-card-header">
+            <label class="checkbox-wrapper">
+              <input
+                type="checkbox"
+                class="checkbox-template-select"
+                :checked="isSelected(tmpl.id)"
+                @click.stop
+                @change="toggleSelect(tmpl.id)"
+              />
+              <span class="sr-only">Select question: {{ tmpl.text }}</span>
+            </label>
 
-              <span class="domain-badge">{{ tmpl.domain }}</span>
+            <span class="domain-badge">{{ tmpl.domain }}</span>
+          </div>
+
+          <div class="template-card-body">
+            <h5 class="template-question-text">
+              {{ tmpl.text }}
+            </h5>
+
+            <div class="template-options-preview">
+              <div
+                v-for="(opt, optIdx) in tmpl.options"
+                :key="optIdx"
+                :class="[
+                  'preview-option-item',
+                  { 'correct-option': optIdx === tmpl.correctAnswerIndex },
+                ]"
+              >
+                <span class="opt-bullet" aria-hidden="true">
+                  <Check v-if="optIdx === tmpl.correctAnswerIndex" :size="14" />
+                  <template v-else>&bull;</template>
+                </span>
+                <span class="opt-text">{{ opt }}</span>
+                <span
+                  v-if="optIdx === tmpl.correctAnswerIndex"
+                  class="correct-tag"
+                >
+                  (Correct Answer)
+                </span>
+              </div>
             </div>
 
-            <div class="template-card-body">
-              <h5 class="template-question-text">
-                {{ tmpl.text }}
-              </h5>
-
-              <div class="template-options-preview">
-                <div
-                  v-for="(opt, optIdx) in tmpl.options"
-                  :key="optIdx"
-                  :class="[
-                    'preview-option-item',
-                    { 'correct-option': optIdx === tmpl.correctAnswerIndex },
-                  ]"
-                >
-                  <span class="opt-bullet">
-                    {{ optIdx === tmpl.correctAnswerIndex ? "✓" : "•" }}
-                  </span>
-                  <span class="opt-text">{{ opt }}</span>
-                  <span
-                    v-if="optIdx === tmpl.correctAnswerIndex"
-                    class="correct-tag"
-                  >
-                    (Correct Answer)
-                  </span>
-                </div>
-              </div>
-
-              <div v-if="tmpl.hint" class="template-hint-preview">
-                <span class="hint-icon" aria-hidden="true">💡</span>
-                <span class="hint-text"
-                  ><strong>Feedback Hint:</strong> {{ tmpl.hint }}</span
-                >
-              </div>
+            <div v-if="tmpl.hint" class="template-hint-preview">
+              <Lightbulb :size="15" class="hint-icon" aria-hidden="true" />
+              <span class="hint-text"
+                ><strong>Feedback Hint:</strong> {{ tmpl.hint }}</span
+              >
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Drawer Footer -->
+    <template #footer>
       <div class="drawer-footer">
         <button type="button" class="btn btn-secondary" @click="$emit('close')">
           Cancel
@@ -217,16 +211,27 @@
           :disabled="selectedTemplateIds.length === 0"
           @click="confirmBatchImport"
         >
-          📥 Import Selected Questions ({{ selectedTemplateIds.length }})
+          <Download :size="16" aria-hidden="true" />
+          <span
+            >Import Selected Questions ({{ selectedTemplateIds.length }})</span
+          >
         </button>
       </div>
-    </aside>
-  </div>
+    </template>
+  </ClinicalDrawer>
 </template>
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalDrawer, ClinicalIconButton } from "ui";
+import {
+  BookOpen,
+  Check,
+  Download,
+  Lightbulb,
+  Search,
+  X,
+} from "lucide-vue-next";
 import {
   REGULATORY_DOMAINS,
   QUIZ_TEMPLATE_CATALOG,
@@ -241,7 +246,6 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "import"]);
 
-const drawerRef = ref(null);
 const domains = REGULATORY_DOMAINS;
 const catalog = QUIZ_TEMPLATE_CATALOG;
 
@@ -339,11 +343,6 @@ watch(
   }
 );
 
-useFocusTrap(drawerRef, {
-  isOpen: () => props.isOpen,
-  onEscape: () => emit("close"),
-});
-
 defineExpose({
   selectedDomain,
   searchQuery,
@@ -357,61 +356,36 @@ defineExpose({
 </script>
 
 <style scoped>
-.drawer-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(15, 23, 42, 0.4);
-  z-index: 1000;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.quiz-template-drawer {
-  width: 580px;
-  max-width: 90vw;
-  height: 100%;
-  background-color: white;
-  display: flex;
-  flex-direction: column;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
-  animation: slideIn 0.25s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
 .drawer-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-  background-color: var(--neutral-light);
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
 }
 
 .drawer-title-group {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .drawer-icon {
-  font-size: 1.5rem;
+  flex-shrink: 0;
+  color: var(--semantic-color-primary);
 }
 
 .drawer-title {
-  margin: 0 0 4px 0;
-  font-size: 1.15rem;
-  color: var(--neutral-dark);
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--semantic-color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .drawer-subtitle {
@@ -423,24 +397,42 @@ defineExpose({
 .btn-close-drawer {
   background: transparent;
   border: none;
-  font-size: 1.2rem;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .btn-close-drawer:hover {
-  background-color: var(--border);
-  color: var(--neutral-dark);
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text);
 }
 
-.drawer-controls {
-  padding: 16px 20px 10px 20px;
+@media (max-height: 540px) {
+  .btn-close-drawer {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+.drawer-body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background-color: white;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.drawer-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .filter-group,
@@ -453,11 +445,15 @@ defineExpose({
 .control-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--neutral-dark);
+  color: var(--semantic-color-text);
 }
 
-.domain-select {
+.domain-select,
+.input-template-search {
   width: 100%;
+  min-height: 44px;
+  font-size: 1rem;
+  box-sizing: border-box;
 }
 
 .search-input-wrapper {
@@ -469,68 +465,59 @@ defineExpose({
 .search-icon {
   position: absolute;
   left: 10px;
-  font-size: 0.85rem;
   pointer-events: none;
   color: var(--semantic-color-text-secondary);
 }
 
 .input-template-search {
-  padding-left: 32px;
-  padding-right: 28px;
-  width: 100%;
+  padding-left: 34px;
+  padding-right: 44px;
 }
 
 .btn-clear-search {
   position: absolute;
-  right: 8px;
+  right: 2px;
   background: transparent;
   border: none;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  font-size: 0.85rem;
 }
 
 .domain-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 0 20px 12px 20px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
 }
 
 .domain-pill {
-  padding: 4px 10px;
-  font-size: 0.75rem;
+  min-height: 44px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
   font-weight: 600;
-  border-radius: 12px;
+  border-radius: 999px;
   border: 1px solid var(--border);
-  background-color: var(--neutral-light);
-  color: var(--neutral-dark);
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .domain-pill.active {
-  background-color: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-
-.drawer-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-inverse);
+  border-color: var(--semantic-color-primary);
 }
 
 .selection-summary-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   padding: 8px 12px;
-  background-color: var(--neutral-light);
+  background-color: var(--semantic-color-surface-muted);
   border-radius: 6px;
   border: 1px solid var(--border);
   font-size: 0.85rem;
@@ -540,18 +527,24 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 44px;
   font-weight: 600;
   cursor: pointer;
 }
 
+.checkbox-select-all {
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+}
+
 .selected-count-badge {
-  font-weight: bold;
-  color: var(--primary);
+  font-weight: 700;
+  color: var(--semantic-color-primary);
 }
 
 .no-templates-state {
   text-align: center;
-  padding: 30px 10px;
+  padding: 24px 10px;
   color: var(--semantic-color-text-secondary);
   display: flex;
   flex-direction: column;
@@ -574,21 +567,21 @@ defineExpose({
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 14px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
 }
 
 .template-card:hover {
-  border-color: var(--primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-color: var(--semantic-color-primary);
 }
 
 .template-card.selected {
-  border-color: var(--primary);
+  border-color: var(--semantic-color-primary);
   background-color: var(--semantic-color-info-bg-soft);
 }
 
@@ -596,11 +589,15 @@ defineExpose({
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .checkbox-wrapper {
   display: flex;
   align-items: center;
+  min-width: 44px;
+  min-height: 44px;
   cursor: pointer;
 }
 
@@ -624,7 +621,7 @@ defineExpose({
 .template-question-text {
   margin: 0;
   font-size: 0.95rem;
-  color: var(--neutral-dark);
+  color: var(--semantic-color-text);
   line-height: 1.4;
 }
 
@@ -637,8 +634,9 @@ defineExpose({
 
 .preview-option-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
+  flex-wrap: wrap;
   font-size: 0.85rem;
   color: var(--semantic-color-text-secondary);
 }
@@ -649,27 +647,33 @@ defineExpose({
 }
 
 .opt-bullet {
-  font-weight: bold;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
 }
 
 .correct-tag {
   font-size: 0.75rem;
   color: var(--semantic-color-success-dark);
   font-style: italic;
-  margin-left: 4px;
 }
 
 .template-hint-preview {
   margin-top: 4px;
-  padding: 6px 10px;
+  padding: 8px 10px;
   background-color: var(--semantic-color-warning-bg-soft);
   border-left: 3px solid var(--semantic-color-warning-border-strong);
   border-radius: 4px;
   font-size: 0.8rem;
   color: var(--semantic-color-warning-dark);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
+}
+
+.hint-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .sr-only {
@@ -685,11 +689,31 @@ defineExpose({
 }
 
 .drawer-footer {
-  padding: 16px 20px;
-  border-top: 1px solid var(--border);
-  background-color: var(--neutral-light);
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.drawer-footer .btn,
+.no-templates-state .btn {
+  min-height: 44px;
+  padding: 8px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+@media (max-width: 640px) {
+  .drawer-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .drawer-footer .btn {
+    width: 100%;
+  }
 }
 </style>

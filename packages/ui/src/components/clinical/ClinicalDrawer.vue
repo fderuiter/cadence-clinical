@@ -1,7 +1,13 @@
 <script setup>
-import { computed, ref, useAttrs, useId, useSlots } from "vue";
+import { Teleport, computed, h, ref, useAttrs, useId, useSlots } from "vue";
+import { X } from "lucide-vue-next";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
 import { clinicalOverlayProps } from "./sharedProps.js";
+
+const MaybeTeleport = (tpProps, { slots: tpSlots }) =>
+  tpProps.disabled
+    ? tpSlots.default?.()
+    : h(Teleport, { to: tpProps.to }, tpSlots.default?.());
 
 defineOptions({
   inheritAttrs: false,
@@ -19,6 +25,10 @@ const props = defineProps({
   open: {
     type: Boolean,
     default: undefined,
+  },
+  keepMounted: {
+    type: Boolean,
+    default: false,
   },
   title: {
     type: String,
@@ -121,6 +131,12 @@ const onBackdropClick = () => {
   closeDrawer();
 };
 
+const modalStateAttrs = computed(() =>
+  props.keepMounted && !drawerOpen.value
+    ? { "aria-modal": undefined, "aria-hidden": "true", inert: "" }
+    : {}
+);
+
 useFocusTrap(drawerRef, {
   isOpen: drawerOpen,
   escapeDeactivates: () => props.dismissible,
@@ -141,26 +157,29 @@ useFocusTrap(drawerRef, {
 </script>
 
 <template>
-  <Teleport :to="teleportTarget" :disabled="!teleport">
+  <MaybeTeleport :to="teleportTarget" :disabled="!teleport">
     <div
-      v-if="drawerOpen"
+      v-if="drawerOpen || keepMounted"
       :id="overlayId"
       :class="[
         'clinical-drawer-backdrop',
         `position-${position}`,
+        { 'is-closed': !drawerOpen },
         overlayClass,
       ]"
       role="presentation"
+      :aria-hidden="!drawerOpen ? 'true' : undefined"
+      :inert="!drawerOpen || undefined"
       @click.self="onBackdropClick"
     >
       <aside
         :id="id"
         ref="drawerRef"
-        v-bind="attrs"
         :class="[
           'clinical-drawer-panel',
           `size-${size}`,
           `position-${position}`,
+          { open: drawerOpen, 'is-closed': !drawerOpen },
           panelClass,
         ]"
         :role="role"
@@ -168,6 +187,7 @@ useFocusTrap(drawerRef, {
         :aria-labelledby="computedLabelledby"
         :aria-label="computedAriaLabel"
         tabindex="-1"
+        v-bind="{ ...attrs, ...modalStateAttrs }"
       >
         <slot
           v-if="showHeader"
@@ -191,12 +211,10 @@ useFocusTrap(drawerRef, {
               :disabled="!dismissible"
               @click="closeDrawer"
             >
-              ✕
+              <X :size="18" aria-hidden="true" />
             </button>
           </header>
         </slot>
-
-        <slot name="subheader" />
 
         <div :class="['clinical-drawer-body', bodyClass]">
           <slot />
@@ -209,7 +227,7 @@ useFocusTrap(drawerRef, {
 
       <slot name="after-panel" />
     </div>
-  </Teleport>
+  </MaybeTeleport>
 </template>
 
 <style scoped>
@@ -218,11 +236,17 @@ useFocusTrap(drawerRef, {
   inset: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
+  box-sizing: border-box;
   background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(2px);
   z-index: 9999;
   display: flex;
   justify-content: flex-end;
+}
+
+.clinical-drawer-backdrop.is-closed {
+  display: none;
 }
 
 .clinical-drawer-backdrop.position-left {
@@ -231,12 +255,18 @@ useFocusTrap(drawerRef, {
 
 .clinical-drawer-panel {
   height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
   max-width: 100vw;
+  min-width: 0;
+  box-sizing: border-box;
   background: var(--color-surface);
   border-left: 1px solid var(--color-border);
   box-shadow: -8px 0 24px -4px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   animation: clinical-drawer-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -252,11 +282,17 @@ useFocusTrap(drawerRef, {
 }
 
 .size-sm {
-  width: min(100vw, 400px);
+  width: var(
+    --semantic-drawer-width-sm,
+    var(--drawer-width-sm, min(100vw, 440px))
+  );
 }
 
 .size-md {
-  width: min(100vw, 480px);
+  width: var(
+    --semantic-drawer-width-md,
+    var(--drawer-width-md, min(100vw, 480px))
+  );
 }
 
 .size-lg {
@@ -267,7 +303,10 @@ useFocusTrap(drawerRef, {
 }
 
 .size-xl {
-  width: min(100vw, 820px);
+  width: var(
+    --semantic-drawer-width-xl,
+    var(--drawer-width-xl, min(100vw, 920px))
+  );
 }
 
 @keyframes clinical-drawer-slide-in {
@@ -275,7 +314,7 @@ useFocusTrap(drawerRef, {
     transform: translateX(100%);
   }
   to {
-    transform: translateX(0);
+    transform: none;
   }
 }
 
@@ -284,25 +323,28 @@ useFocusTrap(drawerRef, {
     transform: translateX(-100%);
   }
   to {
-    transform: translateX(0);
+    transform: none;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .clinical-drawer-backdrop,
-  .clinical-drawer-panel,
-  .clinical-drawer-close-btn {
-    animation: none;
-    transition: none;
+@keyframes clinical-drawer-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
   }
 }
 
 .clinical-drawer-header {
+  flex-shrink: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 24px;
+  padding: 10px 20px;
+  min-height: 48px;
+  box-sizing: border-box;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface-muted);
 }
@@ -317,23 +359,38 @@ useFocusTrap(drawerRef, {
   font-size: var(--font-size-md, 16px);
   font-weight: 600;
   color: var(--color-text);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .clinical-drawer-subtitle {
-  margin: 4px 0 0 0;
+  margin: 2px 0 0 0;
   font-size: var(--font-size-xs, 12px);
   color: var(--color-text-muted);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .clinical-drawer-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
   background: transparent;
   border: none;
   font-size: 16px;
   color: var(--color-text-muted);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  line-height: 1.2;
+  padding: 6px;
+  border-radius: var(--radius-md, 6px);
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .clinical-drawer-close-btn:hover:not(:disabled) {
@@ -347,15 +404,41 @@ useFocusTrap(drawerRef, {
 }
 
 .clinical-drawer-body {
-  flex: 1;
-  padding: 20px 24px;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  padding: 16px 24px;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 .clinical-drawer-footer {
-  padding: 16px 24px;
+  flex-shrink: 0;
+  padding: 12px 24px;
   border-top: 1px solid var(--color-border);
   background: var(--color-surface-muted);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px), (pointer: coarse) {
+  .clinical-drawer-panel.clinical-drawer-panel
+    :deep(
+      input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+          [type="file"]
+        )
+    ),
+  .clinical-drawer-panel.clinical-drawer-panel :deep(select),
+  .clinical-drawer-panel.clinical-drawer-panel :deep(textarea) {
+    font-size: max(1rem, 16px);
+  }
 }
 
 @media (max-width: 640px) {
@@ -369,6 +452,81 @@ useFocusTrap(drawerRef, {
   .clinical-drawer-footer {
     padding-left: 16px;
     padding-right: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .clinical-drawer-backdrop,
+  .clinical-drawer-backdrop.position-left {
+    align-items: flex-end;
+    justify-content: stretch;
+  }
+
+  .clinical-drawer-panel,
+  .clinical-drawer-panel.position-left {
+    width: 100vw;
+    max-width: 100vw;
+    height: 90vh;
+    height: 90dvh;
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid var(--color-border);
+    border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
+    box-shadow: 0 -8px 24px -4px rgba(0, 0, 0, 0.16);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    animation-name: clinical-drawer-slide-up;
+  }
+}
+
+@media (max-height: 540px) {
+  .clinical-drawer-panel {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .clinical-drawer-header,
+  .clinical-drawer-panel.clinical-drawer-panel > :deep(header:first-child),
+  .clinical-drawer-panel.clinical-drawer-panel
+    > :deep(.drawer-header:first-child),
+  .clinical-drawer-panel.clinical-drawer-panel
+    > :deep(.drawer-header-bar:first-child) {
+    padding-top: 4px;
+    padding-bottom: 4px;
+    min-height: 44px;
+    max-height: 52px;
+    box-sizing: border-box;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .clinical-drawer-subtitle {
+    display: none;
+  }
+
+  .clinical-drawer-body {
+    flex: 1 0 auto;
+    min-height: 140px;
+    overflow-y: visible;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .clinical-drawer-footer {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clinical-drawer-backdrop,
+  .clinical-drawer-panel,
+  .clinical-drawer-panel.position-left,
+  .clinical-drawer-close-btn {
+    animation: none;
+    transition: none;
   }
 }
 </style>

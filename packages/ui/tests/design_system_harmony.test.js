@@ -1027,6 +1027,71 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(drawerVue).toMatch(
         /@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)/
       );
+      expect(drawerVue).toContain("height: 100vh");
+      expect(drawerVue).toContain("height: 100dvh");
+      expect(drawerVue).toMatch(
+        /\.clinical-drawer-body\s*\{[\s\S]*?min-height:\s*0\s*;/
+      );
+      expect(drawerVue).toMatch(/@media\s*\(\s*max-width:\s*480px\s*\)/);
+      expect(drawerVue).toContain("max-height: 90dvh");
+      expect(drawerVue).toMatch(/@media\s*\(\s*max-height:\s*540px\s*\)/);
+      expect(drawerVue).not.toContain('name="subheader"');
+    });
+
+    it("migrates all 13 apps/web *Drawer.vue components onto ClinicalDrawer and shrinks LEGACY_WEB_RAW_MODAL_OVERLAY_ALLOWLIST", () => {
+      const webDrawerFiles = walkFiles(path.join(webSrcDir, "components"), [
+        ".vue",
+      ])
+        .filter((f) => path.basename(f).endsWith("Drawer.vue"))
+        .map((f) => path.relative(webSrcDir, f).split(path.sep).join("/"))
+        .sort();
+
+      expect(webDrawerFiles).toEqual([
+        "components/ContextualHelpDrawer.vue",
+        "components/OnboardingChecklistDrawer.vue",
+        "components/SynonymImportDrawer.vue",
+        "components/UpversioningImpactDrawer.vue",
+        "components/clinical/BulkIpKitReconciliationDrawer.vue",
+        "components/clinical/EhrReconciliationDrawer.vue",
+        "components/clinical/UsdmConceptStagingDrawer.vue",
+        "components/econsent/QuizTemplateDrawer.vue",
+        "components/econsent/ReadabilityDrawer.vue",
+        "components/etmf/BatchUploadDrawer.vue",
+        "components/etmf/ExportJobDrawer.vue",
+        "components/fileshare/ShareDrawer.vue",
+        "components/tickets/TicketDetailDrawer.vue",
+      ]);
+
+      const rawOverlayDivRe =
+        /<(?:div|section|aside)\b[^>]*class=["'][^"']*\b(?:drawer-overlay|drawer-backdrop|modal-backdrop|modal-overlay|item-inspection-overlay|citation-modal-backdrop)\b/i;
+
+      for (const relPath of webDrawerFiles) {
+        const content = fs.readFileSync(path.join(webSrcDir, relPath), "utf-8");
+        expect(
+          content,
+          `${relPath} must render through <ClinicalDrawer`
+        ).toContain("<ClinicalDrawer");
+        const templateOnly =
+          content.match(/<template\b[^>]*>([\s\S]*?)<\/template>/i)?.[1] || "";
+        expect(
+          rawOverlayDivRe.test(templateOnly),
+          `${relPath} must not retain raw drawer/modal overlay containers`
+        ).toBe(false);
+      }
+
+      const eslintConfig = fs.readFileSync(
+        path.join(repoRoot, "eslint.config.mjs"),
+        "utf-8"
+      );
+      expect(eslintConfig).not.toContain(
+        "components/clinical/BulkIpKitReconciliationDrawer.vue"
+      );
+      expect(eslintConfig).not.toContain(
+        "components/clinical/EhrReconciliationDrawer.vue"
+      );
+      expect(eslintConfig).not.toContain(
+        "components/tickets/TicketDetailDrawer.vue"
+      );
     });
 
     it("rejects raw .modal-overlay / .modal-backdrop divs (even with useFocusTrap) and vuejs-accessibility backdrop suppressions via custom-vue/no-raw-overlays in eslint.config.mjs", async () => {
@@ -1092,6 +1157,41 @@ import { useFocusTrap } from "ui";
 const open = ref(true);
 const modalRef = ref(null);
 useFocusTrap(modalRef, { isOpen: open });
+</script>
+`,
+        },
+        {
+          filePath: path.join(
+            webSrcDir,
+            "components/clinical/BulkIpKitReconciliationDrawer.vue"
+          ),
+          code: `<template>
+  <div v-if="open" class="drawer-backdrop" role="presentation" @click.self="open = false">
+    <aside ref="drawerRef" class="drawer-panel" role="dialog" aria-modal="true" aria-label="Raw Drawer">Body</aside>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+const open = ref(true);
+const drawerRef = ref(null);
+useFocusTrap(drawerRef, { isOpen: open });
+</script>
+`,
+        },
+        {
+          filePath: path.join(webSrcDir, "components/ContextualHelpDrawer.vue"),
+          code: `<template>
+  <div v-if="open" class="drawer-overlay" role="presentation" @click.self="open = false">
+    <aside ref="drawerRef" class="drawer-panel" role="dialog" aria-modal="true" aria-label="Raw Help Drawer">Body</aside>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+const open = ref(true);
+const drawerRef = ref(null);
+useFocusTrap(drawerRef, { isOpen: open });
 </script>
 `,
         },

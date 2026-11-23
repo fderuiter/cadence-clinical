@@ -473,16 +473,15 @@ function createDefaultContextualSops(): Record<
       summary:
         "Governs ODM XML and USDM JSON protocol draft imports, Schedule of Activities inspection, and immutable version promotion.",
     }),
-    ...buildCanvasSectionSopEntries("stage=start&section=sites", {
+    ...buildCanvasSectionSopEntries("stage=conduct&section=sites", {
       mappingPrefix: "map-can-sites",
-      stageFallback: "start",
       persona: "super_admin",
       priority: 45,
       articleId: "art-can-sites",
       versionId: "ver-can-111",
       title: "SOP-CAN-111: Study Site Directory, Country Linking & Assignment",
       slug: "sop-can-111-study-sites",
-      tags: ["canvas", "sites", "site-directory", "start"],
+      tags: ["canvas", "sites", "site-directory", "conduct"],
       categoryId: "cat-site-startup",
       categoryName: "Site Startup & Activation",
       authorUserId: "cra_monitor",
@@ -493,6 +492,7 @@ function createDefaultContextualSops(): Record<
     }),
     ...buildCanvasSectionSopEntries("stage=start&section=site-activation", {
       mappingPrefix: "map-can-act",
+      stageFallback: "start",
       persona: "cra_monitor",
       priority: 45,
       articleId: "art-can-act",

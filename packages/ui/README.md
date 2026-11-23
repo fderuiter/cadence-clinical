@@ -31,8 +31,8 @@ in `vite.config.js` are a ratchet floor: raise them when coverage rises, never l
 
 ## Dependencies
 
-- Runtime: peer dependency `vue` (no runtime npm packages bundled into `dist/`).
-- Development: Vite, Vitest with `@vitest/coverage-v8`, `axe-core` (backing `ui/vitest`), TypeScript, `pinia`.
+- Runtime: peer dependencies `vue` and `lucide-vue-next` (no runtime npm packages bundled into `dist/`).
+- Development: Vite, Vitest with `@vitest/coverage-v8`, `axe-core` (backing `ui/vitest`), `lucide-vue-next`, TypeScript, `pinia`.
 
 ## Used by
 
