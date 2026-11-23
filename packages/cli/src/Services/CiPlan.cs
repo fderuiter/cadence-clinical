@@ -92,7 +92,7 @@ public sealed record CiStep(string Job, string Name)
     public string? CoveredBy { get; init; }
 
     /// <summary>
-    /// A program the step needs on <c>PATH</c>. Without it the step fails unless <c>--allow-skip</c> skips it with
+    /// A program the step needs on <c>PATH</c>. Without it the step fails unless <c>--allow-missing-tools</c> skips it with
     /// <see cref="ToolHint"/>.
     /// </summary>
     public string? RequiredTool { get; init; }
@@ -246,7 +246,7 @@ public static class CiPlan
             new("lint-and-static", "Run ShellCheck on shell scripts")
             {
                 RequiredTool = "shellcheck",
-                ToolHint = "install ShellCheck (CI runs 'apt-get install shellcheck')",
+                ToolHint = $"provision shellcheck {CliLinterGateService.ShellcheckVersion} into .cadence/bin via './scripts/setup_wizard.sh --minimal' (or 'pwsh scripts/setup_wizard.ps1 -Minimal', or pass --allow-missing-tools to skip)",
                 Files = CiFileSource.ShellScripts,
                 Commands = [new CiCommand("shellcheck", [])],
             },
@@ -258,7 +258,10 @@ public static class CiPlan
             },
             new("lint-and-static", "Run Markdown validation") { Commands = [NodeCli("check", "markdown")] },
             new("lint-and-static", "Validate web API clients against OpenAPI types") { Commands = [NodeCli("check", "api-clients")] },
-        ]);
+        ])
+        {
+            Needs = ["native-aot-build"],
+        };
 
         var dotnetQuality = new CiJob("dotnet-quality", ".NET Quality & Sentinel Checks",
         [
@@ -299,7 +302,10 @@ public static class CiPlan
             },
             new("docs-build", "Build and stage co-hosted interactive demos") { Commands = [Pnpm("docs:stage-demos")] },
             new("docs-build", "Verify public bundles") { Commands = [NodeCli("check", "public-bundle")] },
-        ]);
+        ])
+        {
+            Needs = ["native-aot-build"],
+        };
 
         var security = new CiJob("security", "Security and Vulnerability Audit",
         [
@@ -332,13 +338,24 @@ public static class CiPlan
                 CoveredBy = QualitySentinels,
                 Commands = [NodeCli("check", "deid")],
             },
-        ]);
+        ])
+        {
+            Needs = ["native-aot-build"],
+        };
 
         var frontend = new CiJob("unit-tests", "Frontend Unit Tests",
         [
             new("unit-tests", "Install Node dependencies") { CoveredBy = StyleNodeInstall, Commands = [Pnpm("install", "--frozen-lockfile")] },
             new("unit-tests", "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
-            new("unit-tests", "Run frontend unit tests") { Always = true, Commands = [Pnpm("-r", "test")] },
+            new("unit-tests", "Run frontend unit tests")
+            {
+                Always = true,
+                Commands =
+                [
+                    Pnpm("-r", "test"),
+                    Pnpm("exec", "vitest", "run", "--config", "vitest.config.mjs"),
+                ],
+            },
         ]);
 
         var dotnetTests = new CiJob("dotnet-tests", ".NET 10 C# xUnit Verification",
@@ -365,7 +382,7 @@ public static class CiPlan
             new("dotnet-tests", "Fail the run when a PostgreSQL test did not execute")
             {
                 // LocalCiRunner checks DatabaseTestEvidence on DefaultResultsDir when NeedsPostgres is set (unless
-                // --allow-skip is passed), standing in for check-database-test-results.sh while also running its self-test.
+                // --allow-db-skip is passed), standing in for check-database-test-results.sh while also running its self-test.
                 NeedsPostgres = true,
                 RequiredTool = "bash",
                 ToolHint = "install bash to run the shell gate self-test; DatabaseTestEvidence already checked the TRX reports",
@@ -436,14 +453,14 @@ public static class CiPlan
             },
         ])
         {
-            Needs = ["unit-tests", "dotnet-tests"],
+            Needs = ["native-aot-build", "unit-tests", "dotnet-tests"],
             NeedsStep = new Dictionary<string, string>
             {
                 ["unit-tests"] = "unit-tests/Run frontend unit tests",
             },
         };
 
-        return [actionlint, lintAndStatic, dotnetQuality, nativeAotBuild, docsBuild, security, frontend, dotnetTests, e2e, compliance];
+        return [actionlint, nativeAotBuild, lintAndStatic, dotnetQuality, docsBuild, security, frontend, dotnetTests, e2e, compliance];
     }
 
     /// <summary>

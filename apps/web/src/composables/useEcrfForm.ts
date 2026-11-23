@@ -20,6 +20,7 @@ import {
   type EcrfForm,
   type EcrfFormItem,
   type EcrfFormPreviewWarning,
+  type EcrfFormSaved,
   type EcrfFormValue,
   type EcrfSignatureMeaning,
   type OpenEcrfForm,
@@ -50,6 +51,13 @@ export interface EcrfUnsavedItem {
   text: string;
   missing: string;
   unit: string | null;
+}
+
+/** Metadata recorded when `saveValues` returns an inline hydrated `FormResponse` in 1 RTT. */
+export interface EcrfHydratedSave {
+  formId: string;
+  version: number;
+  values: EcrfFormSaved["values"];
 }
 
 /** What the screen tells the user after a save. */
@@ -135,6 +143,7 @@ export function useEcrfForm(
   const openError = ref<string | null>(null);
   const saving = ref(false);
   const outcome = ref<EcrfSaveOutcome | null>(null);
+  const lastHydratedSave = ref<EcrfHydratedSave | null>(null);
   const entries = reactive<Record<string, EcrfEntry>>({});
   const itemErrors = reactive<Record<string, string[]>>({});
   const previewWarnings = reactive<Record<string, EcrfFormPreviewWarning[]>>(
@@ -568,6 +577,7 @@ export function useEcrfForm(
       if (request !== loadRequest) return;
       loadedScopeKey = scopedKey(currentScope(), ECRF_FORM_DRAFT_NAMESPACE);
       draftCleared = false;
+      lastHydratedSave.value = null;
       form.value = loaded;
       resetEntries();
       if (restoreFromStorage) {
@@ -745,7 +755,33 @@ export function useEcrfForm(
       });
       pendingSave = null;
       clearDraft(current.form_id);
-      await load(current.form_id);
+      const hydratedForm = (saved as EcrfFormSaved & { form?: EcrfForm | null })
+        .form;
+      if (
+        hydratedForm &&
+        hydratedForm.form_id === current.form_id &&
+        Number(hydratedForm.version) === Number(saved.version)
+      ) {
+        loadRequest++;
+        loadedScopeKey = scopedKey(currentScope(), ECRF_FORM_DRAFT_NAMESPACE);
+        draftCleared = false;
+        const versionChanged =
+          Number(hydratedForm.version) !== Number(current.version);
+        lastHydratedSave.value = versionChanged
+          ? {
+              formId: hydratedForm.form_id,
+              version: Number(hydratedForm.version),
+              values: saved.values,
+            }
+          : null;
+        form.value = hydratedForm;
+        cancelPreview();
+        clearRecord(previewWarnings);
+        resetEntries();
+      } else {
+        lastHydratedSave.value = null;
+        await loadInternal(current.form_id, false);
+      }
       outcome.value = {
         kind: "saved",
         version: Number(saved.version),
@@ -863,6 +899,7 @@ export function useEcrfForm(
   function resetState() {
     loadRequest++;
     loadedScopeKey = null;
+    lastHydratedSave.value = null;
     form.value = null;
     loading.value = false;
     loadError.value = null;
@@ -904,6 +941,7 @@ export function useEcrfForm(
     openError,
     saving,
     outcome,
+    lastHydratedSave,
     signing,
     signOutcome,
     canSign,

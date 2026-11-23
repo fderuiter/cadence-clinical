@@ -1,9 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 
 namespace Cadence.Database.Tenancy;
@@ -17,6 +21,16 @@ public interface ICurrentTenantAccessor
     bool IsSystemSuppressed { get; }
 
     bool HasHttpRequestWithoutTenant { get; }
+
+    bool IsCurrentTenantReadOnly { get; }
+
+    bool IsHttpWriteExemptFromExpiry { get; }
+
+    bool IsHttpProductFamilyExempt { get; }
+
+    IReadOnlyList<string>? CurrentTenantProductFamilies { get; }
+
+    TenantScopingCaps? CurrentTenantScoping { get; }
 }
 
 public interface ITenantScope
@@ -33,6 +47,9 @@ public sealed class CurrentTenantAccessor(
     IHttpContextAccessor? httpContextAccessor = null)
     : ICurrentTenantAccessor, ITenantScope, ITenantAccessVerifier
 {
+    private static readonly string RegulatedExportPolicy =
+        PermissionPolicyProvider.PolicyName("etmf_document:export");
+
     private static readonly AsyncLocal<Guid?> BoundTenantLocal = new();
     private static readonly AsyncLocal<string?> BoundTenantCodeLocal = new();
     private static readonly AsyncLocal<bool> SuppressedLocal = new();
@@ -40,6 +57,70 @@ public sealed class CurrentTenantAccessor(
     private string? _nonHttpFallbackTenantCode;
 
     public bool IsSystemSuppressed => SuppressedLocal.Value;
+
+    public bool IsCurrentTenantReadOnly =>
+        !SuppressedLocal.Value
+        && httpContextAccessor?.HttpContext?.Items[GatewayAuthenticationHandler.PrincipalItemKey] is Principal { TenantReadOnly: true };
+
+    public bool IsHttpWriteExemptFromExpiry
+    {
+        get
+        {
+            Endpoint? endpoint = httpContextAccessor?.HttpContext?.GetEndpoint();
+            if (endpoint is null)
+            {
+                return false;
+            }
+
+            if (endpoint.Metadata.GetMetadata<AllowExpiredTenantWriteMetadata>() is not null)
+            {
+                return true;
+            }
+
+            return endpoint.Metadata
+                .GetOrderedMetadata<IAuthorizeData>()
+                .Any(authorize => string.Equals(authorize.Policy, RegulatedExportPolicy, StringComparison.Ordinal));
+        }
+    }
+
+    public bool IsHttpProductFamilyExempt
+    {
+        get
+        {
+            if (IsHttpWriteExemptFromExpiry)
+            {
+                return true;
+            }
+
+            Endpoint? endpoint = httpContextAccessor?.HttpContext?.GetEndpoint();
+            return endpoint?.Metadata.GetMetadata<IAllowAnonymous>() is not null
+                || endpoint?.Metadata.GetMetadata<AllowBaselineProductFamilyMetadata>() is not null;
+        }
+    }
+
+    public IReadOnlyList<string>? CurrentTenantProductFamilies
+    {
+        get
+        {
+            if (SuppressedLocal.Value)
+            {
+                return null;
+            }
+
+            return httpContextAccessor?.HttpContext?.Items[GatewayAuthenticationHandler.PrincipalItemKey] is Principal
+            {
+                TenantId: { Length: > 0 },
+                ProductFamilies: { } families,
+            }
+                ? families
+                : null;
+        }
+    }
+
+    public TenantScopingCaps? CurrentTenantScoping =>
+        SuppressedLocal.Value
+            ? null
+            : (httpContextAccessor?.HttpContext?.Items[GatewayAuthenticationHandler.PrincipalItemKey] as Principal)?.TenantScoping;
 
     public bool HasHttpRequestWithoutTenant
     {

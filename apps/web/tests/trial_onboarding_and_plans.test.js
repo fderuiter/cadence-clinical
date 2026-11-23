@@ -7,6 +7,10 @@ import {
   describeAssertionError,
   describeKernelError,
   describeLockError,
+  KERNEL_COMMERCIAL_ONBOARDING_CALLER_INVALID,
+  KERNEL_COMMERCIAL_PRODUCT_FAMILY_NOT_ENTITLED,
+  KERNEL_COMMERCIAL_QUOTE_INVALID,
+  KERNEL_COMMERCIAL_SCOPING_CAP_EXCEEDED,
   KERNEL_COMMERCIAL_SCOPING_INVALID,
   KERNEL_SUBSCRIPTION_EXPIRED,
   kernelApi,
@@ -536,5 +540,76 @@ describe("Keycloak self-registration, /plans catalog, and kernel trial bootstrap
       expect(wrapper.html()).not.toContain("4829");
       wrapper.unmount();
     }
+  });
+
+  it("renders signed commercial quote token guidance on PlansView and surfaces quote/scoping/family kernel error codes", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.isDemoMode = false;
+    authStore.user = {
+      id: "4e999999-1111-4444-8888-555555555555",
+      username: "sponsor_admin",
+      tenantId: "TRIAL-QUOTE",
+    };
+    authStore.rawRoles = ["Sponsor Admin"];
+    authStore.applyEntitlements({
+      tenant_ref: "tenant:01960000-0000-7000-8000-000000000031",
+      tenant_id: "01960000-0000-7000-8000-000000000031",
+      subscription_ref: "subscription:01960000-0000-7000-8000-000000000032",
+      tier: "Individual",
+      status: "Expired",
+      started_at: "2026-10-01T00:00:00Z",
+      trial_ends_at: SAMPLE_TRIAL_END_ISO,
+      product_families: ["Blueprint", "Capture"],
+      is_read_only: true,
+      baseline_capabilities: ["audit_trail", "electronic_signatures"],
+      environment_notice: "Pre-release unvalidated environment",
+    });
+
+    await router.push("/plans");
+    await flushPromises();
+    const wrapper = mount(PlansView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    expect(
+      wrapper.find('label[for="input-billing-confirmation"]').text()
+    ).toContain("Signed commercial quote token");
+    expect(
+      wrapper.find("#input-billing-confirmation").attributes("placeholder")
+    ).toContain("qtk1.");
+
+    vi.spyOn(kernelApi, "activateSubscription").mockRejectedValueOnce(
+      new ApiError("Invalid commercial quote token", 403, "Forbidden", {
+        code: KERNEL_COMMERCIAL_QUOTE_INVALID,
+        detail:
+          "Subscription activation requires a verified cryptographic commercial quote token.",
+      })
+    );
+
+    await wrapper.find("#select-study-phase").setValue("Phase II");
+    await wrapper.find("#input-study-duration-months").setValue("12");
+    await wrapper.find("#input-study-countries").setValue("US");
+    await wrapper.find("#input-site-count").setValue("4");
+    await wrapper.find("#input-participant-count").setValue("80");
+    await wrapper.find("#input-active-study-count").setValue("1");
+    await wrapper
+      .find("#input-billing-confirmation")
+      .setValue("forged-unverified-po");
+    await wrapper.find("#form-scoped-activation").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      "Subscription activation requires a verified cryptographic commercial quote token."
+    );
+    expect(KERNEL_COMMERCIAL_SCOPING_CAP_EXCEEDED).toBe(
+      "K.Commercial.ScopingCapExceeded"
+    );
+    expect(KERNEL_COMMERCIAL_ONBOARDING_CALLER_INVALID).toBe(
+      "K.Commercial.OnboardingCallerInvalid"
+    );
+    expect(KERNEL_COMMERCIAL_PRODUCT_FAMILY_NOT_ENTITLED).toBe(
+      "K.Commercial.ProductFamilyNotEntitled"
+    );
+    wrapper.unmount();
   });
 });
