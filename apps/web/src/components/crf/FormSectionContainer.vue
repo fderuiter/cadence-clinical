@@ -54,7 +54,7 @@
           </button>
         </div>
         <button class="btn-add-field btn-add-item" @click="addNewItem">
-          <span>➕</span> Add Field
+          <ClinicalIcon name="plus" :size="16" /> Add Field
         </button>
         <button class="btn-section-toggle" @click="toggleCollapse">
           {{ section.isCollapsed ? "Expand" : "Collapse" }}
@@ -122,6 +122,7 @@
  * and passes viewport alerts downstream to individual CanvasFieldWidgets.
  */
 import { ref, computed, toRaw } from "vue";
+import { ClinicalIcon } from "ui";
 import draggable from "vuedraggable";
 import CanvasFieldWidget from "./CanvasFieldWidget.vue";
 import { useDesignerStore } from "../../stores/designer.js";

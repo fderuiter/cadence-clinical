@@ -14,7 +14,9 @@
       tabindex="-1"
     >
       <div class="modal-header">
-        <div class="modal-header-icon">🎫</div>
+        <div class="modal-header-icon">
+          <ClinicalIcon name="tag" :size="20" />
+        </div>
         <div>
           <h3 id="create-modal-title" class="modal-title">
             Log Clinical Issue / Ticket
@@ -221,7 +223,7 @@
           class="error-banner"
           role="alert"
         >
-          ⚠️ {{ errorMessage }}
+          <ClinicalIcon name="alert-triangle" :size="16" /> {{ errorMessage }}
         </div>
       </div>
 
@@ -242,7 +244,9 @@
           @click="handleSubmit"
         >
           <span v-if="loading" class="spinner" />
-          <span v-else>🚀 Log Issue</span>
+          <span v-else
+            ><ClinicalIcon name="rocket" :size="16" /> Log Issue</span
+          >
         </button>
       </div>
     </div>
@@ -251,7 +255,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, useFocusTrap } from "ui";
 import { describeApiError } from "../../utils/apiErrors.js";
 import { isDemoBuild } from "../../utils/demoMode.js";
 

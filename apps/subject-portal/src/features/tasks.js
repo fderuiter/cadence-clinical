@@ -1,5 +1,5 @@
 // 1. My Tasks: the assigned questionnaires list, its loading and retry.
-import { createSrOnlyActionButton } from "ui";
+import { createSrOnlyActionButton, renderClinicalIconSvg } from "ui";
 import {
   fetchAssignedInstruments,
   fetchAssignments,
@@ -48,7 +48,7 @@ export function renderTasks() {
       container.style.display = "none";
       container.innerHTML = `
         <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
-          <p style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">⚠️ Error loading tasks</p>
+          <p style="font-size: 18px; font-weight: 700; margin-bottom: 6px; display: inline-flex; align-items: center; gap: 8px;">${renderClinicalIconSvg("alert-triangle", { size: 20 })} Error loading tasks</p>
           <p style="font-size: 14px;">We are unable to connect to the study servers right now. Please check your connection and try again.</p>
         </div>
       `;
@@ -91,7 +91,7 @@ export function renderTasks() {
   if (activeTasks.length === 0) {
     container.innerHTML = `
       <div class="card" style="text-align: center; padding: 32px; color: var(--text-muted);">
-        <p style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">🎉 All caught up!</p>
+        <p style="font-size: 18px; font-weight: 700; margin-bottom: 6px; display: inline-flex; align-items: center; gap: 8px;">${renderClinicalIconSvg("check-circle", { size: 20 })} All caught up!</p>
         <p style="font-size: 14px;">You have no pending clinical questionnaires due today.</p>
       </div>
     `;

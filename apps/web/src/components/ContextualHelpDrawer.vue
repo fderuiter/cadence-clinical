@@ -17,14 +17,17 @@
         <div class="drawer-header">
           <div class="header-main-row">
             <div class="header-title-group">
-              <span class="header-icon">📖</span>
+              <span class="header-icon"
+                ><ClinicalIcon name="book-open" :size="20"
+              /></span>
               <div>
                 <h3 id="help-drawer-title" class="drawer-title">
                   Clinical Guidance &amp; SOPs
                 </h3>
                 <div class="context-badges">
                   <span class="context-badge route-badge" title="Active Route">
-                    📍 {{ knowledgeStore.currentRoute }}
+                    <ClinicalIcon name="map-pin" :size="16" />
+                    {{ knowledgeStore.currentRoute }}
                   </span>
                   <span
                     class="context-badge persona-badge"
@@ -43,10 +46,9 @@
                 :aria-pressed="isSearchOpen ? 'true' : 'false'"
                 label="Toggle Search SOPs"
                 title="Toggle Search SOPs"
+                icon="search"
                 @click="toggleSearch"
-              >
-                🔍
-              </ClinicalIconButton>
+              />
               <ClinicalIconButton
                 class="btn-close"
                 label="Close Help Drawer"
@@ -95,7 +97,9 @@
         aria-live="assertive"
       >
         <div class="error-alert-header">
-          <span class="error-alert-icon" aria-hidden="true">⚠️</span>
+          <span class="error-alert-icon" aria-hidden="true"
+            ><ClinicalIcon name="alert-triangle" :size="16"
+          /></span>
           <h4 class="error-alert-title">
             {{
               knowledgeStore.lastFailedAction?.type === "search"
@@ -223,7 +227,9 @@
 
           <!-- Section Anchor Callout -->
           <div v-if="knowledgeStore.activeSectionAnchor" class="anchor-callout">
-            <span class="anchor-icon">🎯</span>
+            <span class="anchor-icon"
+              ><ClinicalIcon name="target" :size="16"
+            /></span>
             <div class="anchor-text">
               <strong>Spotlight Section:</strong>
               <code>{{ knowledgeStore.activeSectionAnchor }}</code>
@@ -275,7 +281,7 @@
           class="related-section"
         >
           <h5 class="related-title">
-            📚 Related Clinical SOPs ({{
+            <ClinicalIcon name="library" :size="16" /> Related Clinical SOPs ({{
               knowledgeStore.relatedArticles.length
             }})
           </h5>
@@ -312,7 +318,7 @@
 
       <!-- Empty Fallback State -->
       <div v-else class="empty-state">
-        <div class="empty-icon">🔍</div>
+        <div class="empty-icon"><ClinicalIcon name="search" :size="20" /></div>
         <h4>No Specific SOP Mapped for This Route</h4>
         <p>
           There is currently no published SOP mapped specifically to
@@ -325,14 +331,14 @@
             class="btn btn-secondary"
             @click="openSearchWithFallback"
           >
-            🔍 Search Knowledge Hub
+            <ClinicalIcon name="search" :size="16" /> Search Knowledge Hub
           </button>
           <button
             type="button"
             class="btn btn-secondary"
             @click="openHubRoute('/knowledge')"
           >
-            📚 Open Full SOP Hub
+            <ClinicalIcon name="library" :size="16" /> Open Full SOP Hub
           </button>
         </div>
       </div>
@@ -347,7 +353,9 @@
               title="Log Support Ticket pre-populated with current route context"
               @click="handleEscalate"
             >
-              <span class="btn-icon">🎫</span>
+              <span class="btn-icon"
+                ><ClinicalIcon name="ticket" :size="16"
+              /></span>
               Escalate to Support Ticket
             </button>
             <div class="drawer-hub-links">
@@ -357,7 +365,7 @@
                 class="btn-hub-link"
                 @click="openHubRoute('/knowledge')"
               >
-                📚 Browse SOP Hub
+                <ClinicalIcon name="library" :size="16" /> Browse SOP Hub
               </button>
               <span class="hub-link-sep" aria-hidden="true">·</span>
               <button
@@ -366,7 +374,7 @@
                 class="btn-hub-link"
                 @click="openHubRoute('/tickets')"
               >
-                🎫 Support Queue
+                <ClinicalIcon name="ticket" :size="16" /> Support Queue
               </button>
             </div>
           </div>
@@ -402,7 +410,12 @@ import {
   getCurrentInstance,
 } from "vue";
 import { useRoute } from "vue-router";
-import { ClinicalDrawer, ClinicalIconButton, useEscapeClose } from "ui";
+import {
+  ClinicalDrawer,
+  ClinicalIcon,
+  ClinicalIconButton,
+  useEscapeClose,
+} from "ui";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
 import { useToastStore } from "../stores/toasts.js";
@@ -435,7 +448,7 @@ const activePersonaLabel = computed(() => {
   const pKey =
     authStore.currentPersona || knowledgeStore.activePersona || "super_admin";
   const p = PERSONA_PRESETS.find((preset) => preset.key === pKey);
-  return p ? p.label.replace(/^.+?\s/, "") : "Super Admin";
+  return p ? p.label : "Super Admin";
 });
 
 function formatTags(tags) {

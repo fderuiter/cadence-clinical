@@ -12,7 +12,7 @@
   >
     <div class="drawer-header">
       <div class="drawer-title">
-        <span class="icon">📖</span>
+        <span class="icon"><ClinicalIcon name="book-open" :size="20" /></span>
         <h3>eConsent Readability Harmonizer</h3>
       </div>
       <button
@@ -80,7 +80,7 @@
           :disabled="loading"
           @click="analyzeText"
         >
-          🔍 Recalculate Scores
+          <ClinicalIcon name="search" :size="16" /> Recalculate Scores
         </button>
         <button
           type="button"
@@ -88,8 +88,13 @@
           :disabled="loading"
           @click="harmonizeWithAI"
         >
-          <span v-if="loading">⏳ Harmonizing...</span>
-          <span v-else>✨ Harmonize with AI (Tier 2)</span>
+          <span v-if="loading"
+            ><ClinicalIcon name="loader" :size="16" /> Harmonizing...</span
+          >
+          <span v-else
+            ><ClinicalIcon name="sparkles" :size="16" /> Harmonize with AI (Tier
+            2)</span
+          >
         </button>
       </div>
 
@@ -198,7 +203,7 @@
 
 <script setup>
 import { ref, watch, onMounted } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, useFocusTrap } from "ui";
 import { econsentService } from "../../api/econsent.js";
 
 const props = defineProps({

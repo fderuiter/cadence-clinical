@@ -16,7 +16,11 @@
       <!-- Header -->
       <div class="drawer-header">
         <div class="header-info">
-          <span class="activity-header-icon">📜</span>
+          <ClinicalIcon
+            name="scroll-text"
+            :size="20"
+            class="activity-header-icon"
+          />
           <div>
             <h3 class="drawer-title">Document Activity Feed</h3>
             <p class="drawer-subtitle" :title="file?.filename || 'Document'">
@@ -93,7 +97,7 @@
 
       <!-- Compliance Notice Banner -->
       <div class="gxp-badge-strip">
-        <span class="gxp-icon">🛡️</span>
+        <ClinicalIcon name="shield-check" :size="16" class="gxp-icon" />
         <span class="gxp-text">
           ICH E6(R2) & 21 CFR Part 11 Inspection-Ready Audit Trail.
           Chronological UTC timeline.
@@ -110,14 +114,14 @@
 
         <!-- Error State -->
         <div v-else-if="error" class="error-state">
-          <span class="error-icon">⚠️</span>
+          <ClinicalIcon name="alert-triangle" :size="20" class="error-icon" />
           <p>{{ error }}</p>
           <button class="retry-btn" @click="loadFeed(1)">Retry</button>
         </div>
 
         <!-- Empty State -->
         <div v-else-if="entries.length === 0" class="empty-state">
-          <span class="empty-icon">📭</span>
+          <ClinicalIcon name="inbox" :size="20" class="empty-icon" />
           <h4>No Activity Events Found</h4>
           <p v-if="hasActiveFilters">
             Try adjusting your filters to see historical events.
@@ -136,7 +140,10 @@
             <!-- Timeline Track Icon -->
             <div class="timeline-marker">
               <span class="marker-icon" :title="entry.event_type">
-                {{ getEventIcon(entry.event_type) }}
+                <ClinicalIcon
+                  :name="getEventIcon(entry.event_type)"
+                  :size="16"
+                />
               </span>
               <div
                 v-if="index < entries.length - 1"
@@ -177,8 +184,12 @@
                   :aria-expanded="isExpanded(index)"
                   @click="toggleExpand(index)"
                 >
+                  <ClinicalIcon
+                    :name="isExpanded(index) ? 'chevron-down' : 'chevron-right'"
+                    :size="16"
+                  />
                   <span>{{
-                    isExpanded(index) ? "▼ Hide Details" : "▶ Show Details"
+                    isExpanded(index) ? "Hide Details" : "Show Details"
                   }}</span>
                 </button>
 
@@ -317,7 +328,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, useFocusTrap } from "ui";
 import { useFileshareStore } from "../../stores/fileshare";
 
 const props = defineProps({
@@ -507,46 +518,46 @@ function getEventIcon(eventType) {
   const norm = (eventType || "").toUpperCase();
   switch (norm) {
     case "FILE_UPLOADED":
-      return "📄";
+      return "file-text";
     case "VERSION_CREATED":
     case "REVISION_UPLOADED":
-      return "🔄";
+      return "refresh-cw";
     case "GRANT_CREATED":
-      return "👥";
+      return "users";
     case "GRANT_REVOKED":
-      return "🚫";
+      return "ban";
     case "GUEST_LINK_CREATED":
-      return "🌐";
+      return "globe";
     case "GUEST_LINK_ACCESSED":
-      return "👁️";
+      return "eye";
     case "GUEST_LINK_REVOKED":
-      return "🔒";
+      return "lock";
     case "SCAN_COMPLETE":
-      return "🛡️";
+      return "shield-check";
     case "SCAN_QUARANTINED":
-      return "⚠️";
+      return "alert-triangle";
     case "CONVERSION_COMPLETE":
-      return "📑";
+      return "bookmark";
     case "HOLD_SET":
-      return "🛑";
+      return "alert-octagon";
     case "HOLD_CLEARED":
-      return "🔓";
+      return "unlock";
     case "DOCUMENT_APPROVED":
     case "FILE_APPROVED":
-      return "✅";
+      return "check-circle";
     case "DOCUMENT_REJECTED":
     case "FILE_REJECTED":
-      return "❌";
+      return "x-circle";
     case "APPROVAL_RESCINDED":
-      return "↩️";
+      return "undo-2";
     case "VIEW_OPEN":
-      return "👁️";
+      return "eye";
     case "PLAY_START":
-      return "▶️";
+      return "play";
     case "PLAY_END":
-      return "⏹️";
+      return "square";
     default:
-      return "📜";
+      return "scroll-text";
   }
 }
 

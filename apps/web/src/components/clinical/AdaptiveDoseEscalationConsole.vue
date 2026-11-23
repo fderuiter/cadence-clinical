@@ -65,7 +65,9 @@
       :class="`banner-${recommendationAction.toLowerCase()}`"
     >
       <div class="banner-icon-col">
-        <span class="action-icon">{{ actionIcon(recommendationAction) }}</span>
+        <span class="action-icon"
+          ><ClinicalIcon :name="actionIcon(recommendationAction)" :size="20"
+        /></span>
       </div>
       <div class="banner-content">
         <div class="action-row">
@@ -384,7 +386,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalModal } from "ui";
+import { ClinicalIcon, ClinicalModal } from "ui";
 import { computed, ref } from "vue";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
@@ -513,19 +515,19 @@ const isFormValid = computed(() => {
 function actionIcon(action: string): string {
   switch (action) {
     case "ESCALATE":
-      return "▲";
+      return "arrow-up";
     case "DE_ESCALATE":
-      return "▼";
+      return "arrow-down";
     case "STAY":
     case "EXPAND_COHORT":
-      return "■";
+      return "minus";
     case "STOP_SAFETY":
-      return "✖";
+      return "x-circle";
     case "STOP_SUCCESS":
     case "MTD_FOUND":
-      return "✔";
+      return "check-circle-2";
     default:
-      return "●";
+      return "circle";
   }
 }
 

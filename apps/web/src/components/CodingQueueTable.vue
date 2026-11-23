@@ -19,14 +19,14 @@
           class="btn btn-primary btn-sm btn-batch-approve"
           @click="openBatchApproveClustersModal(null)"
         >
-          ⚡ Batch Approve Selected Clusters
+          <ClinicalIcon name="zap" :size="16" /> Batch Approve Selected Clusters
         </button>
         <button
           type="button"
           class="btn btn-secondary btn-sm"
           @click="openBatchCodeClustersModal(null)"
         >
-          🏷️ Batch Code Selected Clusters
+          <ClinicalIcon name="tag" :size="16" /> Batch Code Selected Clusters
         </button>
         <button
           type="button"
@@ -57,7 +57,7 @@
           class="btn btn-secondary btn-sm"
           @click="openBatchOverrideModal"
         >
-          🏷️ Batch Code
+          <ClinicalIcon name="tag" :size="16" /> Batch Code
         </button>
         <button
           type="button"
@@ -95,7 +95,7 @@
       class="table-empty-state"
     >
       <EmptyState
-        icon="🩺"
+        icon="stethoscope"
         title="No Coding Assignments Found"
         message="No adverse events or concomitant medications match the active filters or confidence score threshold."
       >
@@ -105,7 +105,7 @@
             class="btn btn-secondary btn-sm btn-reset-filters"
             @click="resetFilters"
           >
-            🔄 Reset Active Filters
+            <ClinicalIcon name="refresh-cw" :size="16" /> Reset Active Filters
           </button>
         </template>
       </EmptyState>
@@ -179,7 +179,8 @@
                 </div>
                 <div class="verbatim-meta">
                   <span class="badge badge-neutral instance-count-badge">
-                    👥 {{ cluster.instance_count }} subject instance{{
+                    <ClinicalIcon name="users" :size="16" />
+                    {{ cluster.instance_count }} subject instance{{
                       cluster.instance_count === 1 ? "" : "s"
                     }}
                   </span>
@@ -187,7 +188,8 @@
                     v-if="cluster.blocked_count > 0"
                     class="badge badge-warning blocked-count-badge"
                   >
-                    ⚠️ {{ cluster.blocked_count }} query / lock blocked
+                    <ClinicalIcon name="alert-triangle" :size="16" />
+                    {{ cluster.blocked_count }} query / lock blocked
                   </span>
                 </div>
               </td>
@@ -233,7 +235,7 @@
                     title="1-Step Batch Approve Cluster"
                     @click="openBatchApproveClustersModal([cluster.id])"
                   >
-                    ⚡ Batch Approve
+                    <ClinicalIcon name="zap" :size="16" /> Batch Approve
                   </button>
                   <button
                     type="button"
@@ -241,7 +243,7 @@
                     title="Batch Code Override"
                     @click="openBatchCodeClustersModal([cluster.id])"
                   >
-                    🏷️ Batch Code
+                    <ClinicalIcon name="tag" :size="16" /> Batch Code
                   </button>
                   <button
                     type="button"
@@ -253,10 +255,15 @@
                     "
                     @click="toggleClusterExpansion(cluster.id)"
                   >
+                    <ClinicalIcon
+                      v-if="expandedClusterId !== cluster.id"
+                      name="eye"
+                      :size="16"
+                    />
                     {{
                       expandedClusterId === cluster.id
-                        ? "▲ Hide"
-                        : "👁️ Instances (" + cluster.instance_count + ")"
+                        ? "Hide"
+                        : "Instances (" + cluster.instance_count + ")"
                     }}
                   </button>
                 </div>
@@ -332,14 +339,15 @@
                               class="btn btn-xs btn-secondary"
                               @click="openBrowser(inst)"
                             >
-                              🔍 Browse
+                              <ClinicalIcon name="search" :size="16" /> Browse
                             </button>
                             <button
                               type="button"
                               class="btn btn-xs btn-warning"
                               @click="promptRaiseQuery(inst)"
                             >
-                              ❓ Query
+                              <ClinicalIcon name="help-circle" :size="16" />
+                              Query
                             </button>
                           </div>
                         </td>
@@ -569,7 +577,7 @@
                   tabindex="-1"
                   @click="openBrowser(item)"
                 >
-                  🔍 Browse
+                  <ClinicalIcon name="search" :size="16" /> Browse
                 </button>
                 <button
                   type="button"
@@ -578,7 +586,7 @@
                   tabindex="-1"
                   @click="promptRaiseQuery(item)"
                 >
-                  ❓ Query
+                  <ClinicalIcon name="help-circle" :size="16" /> Query
                 </button>
               </div>
             </td>
@@ -606,7 +614,8 @@
       >
         <div class="modal-header">
           <h3 id="approve-cluster-modal-title">
-            ⚡ Batch Approve Verbatim Cluster(s)
+            <ClinicalIcon name="zap" :size="16" /> Batch Approve Verbatim
+            Cluster(s)
           </h3>
           <button
             type="button"
@@ -631,7 +640,7 @@
             class="alert-banner alert-warning"
           >
             <span>
-              ⚠️
+              <ClinicalIcon name="alert-triangle" :size="16" />
               <strong>{{ targetClustersSummary.blockedInstances }}</strong>
               instance(s) have active discrepancy queries or lock conflicts and
               will be excluded.
@@ -698,7 +707,8 @@
       >
         <div class="modal-header">
           <h3 id="batch-cluster-modal-title">
-            🏷️ Batch Code Verbatim Cluster(s)
+            <ClinicalIcon name="tag" :size="16" /> Batch Code Verbatim
+            Cluster(s)
           </h3>
           <button
             type="button"
@@ -967,7 +977,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { EmptyState, useFocusTrap } from "ui";
+import { ClinicalIcon, EmptyState, useFocusTrap } from "ui";
 import { useCodingStore } from "../stores/coding";
 import { use2DGrid } from "../composables/use2DGrid";
 import SkeletonLoader from "./common/SkeletonLoader.vue";

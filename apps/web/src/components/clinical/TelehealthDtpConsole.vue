@@ -32,7 +32,10 @@
           :disabled="isLoading"
           @click="refreshData"
         >
-          <span class="icon">🔄</span> Refresh DCT Data
+          <span class="icon"
+            ><ClinicalIcon name="refresh-cw" :size="16"
+          /></span>
+          Refresh DCT Data
         </button>
 
         <button
@@ -40,7 +43,8 @@
           class="btn btn-primary"
           @click="openScheduleSessionModal"
         >
-          <span class="icon">📹</span> Schedule Telehealth Visit
+          <span class="icon"><ClinicalIcon name="video" :size="16" /></span>
+          Schedule Telehealth Visit
         </button>
 
         <button
@@ -48,7 +52,8 @@
           class="btn btn-accent"
           @click="openDispatchDtpModal"
         >
-          <span class="icon">📦</span> Dispatch DTP Courier Kit
+          <span class="icon"><ClinicalIcon name="package" :size="16" /></span>
+          Dispatch DTP Courier Kit
         </button>
 
         <button
@@ -56,7 +61,8 @@
           class="btn btn-warning"
           @click="isReconciliationDrawerOpen = true"
         >
-          <span class="icon">🔍</span> Bulk Kit Reconciliation
+          <span class="icon"><ClinicalIcon name="search" :size="16" /></span>
+          Bulk Kit Reconciliation
         </button>
       </div>
     </header>
@@ -65,7 +71,9 @@
     <section class="metrics-grid" aria-label="DCT Overview Metrics">
       <div class="metric-card">
         <div class="metric-icon-box bg-blue">
-          <span class="metric-icon">📹</span>
+          <span class="metric-icon"
+            ><ClinicalIcon name="video" :size="20"
+          /></span>
         </div>
         <div class="metric-content">
           <span class="metric-label">Telehealth Sessions</span>
@@ -80,7 +88,9 @@
 
       <div class="metric-card">
         <div class="metric-icon-box bg-green">
-          <span class="metric-icon">📝</span>
+          <span class="metric-icon"
+            ><ClinicalIcon name="file-edit" :size="20"
+          /></span>
         </div>
         <div class="metric-content">
           <span class="metric-label">Pediatric Assents / LAR</span>
@@ -93,7 +103,9 @@
 
       <div class="metric-card">
         <div class="metric-icon-box bg-purple">
-          <span class="metric-icon">📦</span>
+          <span class="metric-icon"
+            ><ClinicalIcon name="package" :size="20"
+          /></span>
         </div>
         <div class="metric-content">
           <span class="metric-label">DTP Courier Shipments</span>
@@ -111,7 +123,9 @@
             metrics.temperature_excursion_alerts > 0 ? 'bg-red' : 'bg-green'
           "
         >
-          <span class="metric-icon">🌡️</span>
+          <span class="metric-icon"
+            ><ClinicalIcon name="thermometer" :size="20"
+          /></span>
         </div>
         <div class="metric-content">
           <span class="metric-label">Cold-Chain Excursions</span>
@@ -134,7 +148,8 @@
         :class="['tab-button', { active: activeTab === 'telehealth' }]"
         @click="activeTab = 'telehealth'"
       >
-        📹 Telehealth Consultations &amp; WebRTC ({{ sessions.length }})
+        <ClinicalIcon name="video" :size="16" /> Telehealth Consultations &amp;
+        WebRTC ({{ sessions.length }})
       </button>
 
       <button
@@ -143,7 +158,8 @@
         :class="['tab-button', { active: activeTab === 'assent' }]"
         @click="activeTab = 'assent'"
       >
-        📝 eConsent Co-Viewing &amp; Pediatric Assent ({{ assents.length }})
+        <ClinicalIcon name="file-edit" :size="16" /> eConsent Co-Viewing &amp;
+        Pediatric Assent ({{ assents.length }})
       </button>
 
       <button
@@ -152,7 +168,8 @@
         :class="['tab-button', { active: activeTab === 'dtp' }]"
         @click="activeTab = 'dtp'"
       >
-        📦 Direct-to-Patient (DTP) Cold Chain ({{ shipments.length }})
+        <ClinicalIcon name="package" :size="16" /> Direct-to-Patient (DTP) Cold
+        Chain ({{ shipments.length }})
       </button>
 
       <button
@@ -161,7 +178,8 @@
         :class="['tab-button', { active: activeTab === 'home_health' }]"
         @click="activeTab = 'home_health'"
       >
-        🏡 In-Home Nurse Visits &amp; Mobile eCRF ({{ visits.length }})
+        <ClinicalIcon name="home" :size="16" /> In-Home Nurse Visits &amp;
+        Mobile eCRF ({{ visits.length }})
       </button>
     </nav>
 
@@ -240,7 +258,7 @@
                       s.recording_seal_metadata.part11_certification_statement
                     "
                   >
-                    🔒 Sealed (SHA-256)
+                    <ClinicalIcon name="lock" :size="16" /> Sealed (SHA-256)
                   </span>
                   <span v-else class="text-muted text-sm">Not archived</span>
                 </td>
@@ -250,14 +268,14 @@
                     class="btn btn-secondary btn-xs"
                     @click="openRoomLauncher(s)"
                   >
-                    🎥 Enter Room
+                    <ClinicalIcon name="video" :size="16" /> Enter Room
                   </button>
                   <button
                     type="button"
                     class="btn btn-accent btn-xs"
                     @click="openArchiveModal(s)"
                   >
-                    🔒 Archive Seal
+                    <ClinicalIcon name="lock" :size="16" /> Archive Seal
                   </button>
                 </td>
               </tr>
@@ -299,12 +317,17 @@
                 <span class="badge badge-stream">DTLS-SRTP Encrypted</span>
               </div>
               <div class="video-placeholder">
-                <span class="avatar-large">👤</span>
+                <span class="avatar-large"
+                  ><ClinicalIcon name="user" :size="20"
+                /></span>
                 <p>Participant Stream Connected (1080p @ 30fps)</p>
               </div>
               <div class="video-overlay-bottom">
-                <span>🔊 Audio Active</span>
-                <span>📶 24ms RTT</span>
+                <span
+                  ><ClinicalIcon name="volume-2" :size="16" /> Audio
+                  Active</span
+                >
+                <span><ClinicalIcon name="wifi" :size="16" /> 24ms RTT</span>
               </div>
             </div>
 
@@ -315,7 +338,9 @@
                 >
               </div>
               <div class="video-placeholder small-avatar">
-                <span class="avatar-small">🩺</span>
+                <span class="avatar-small"
+                  ><ClinicalIcon name="stethoscope" :size="20"
+                /></span>
                 <p>Local Camera Active</p>
               </div>
               <div class="video-controls">
@@ -323,23 +348,21 @@
                   class="btn-icon"
                   label="Toggle microphone"
                   title="Toggle Mic"
-                >
-                  🎤
-                </ClinicalIconButton>
+                  icon="mic"
+                />
                 <ClinicalIconButton
                   class="btn-icon"
                   label="Toggle camera"
                   title="Toggle Cam"
-                >
-                  📹
-                </ClinicalIconButton>
+                  icon="video"
+                />
                 <button
                   type="button"
                   class="btn-icon"
                   title="Co-View eConsent"
                   @click="activeTab = 'assent'"
                 >
-                  📄 Co-View
+                  <ClinicalIcon name="file-text" :size="16" /> Co-View
                 </button>
               </div>
             </div>
@@ -358,7 +381,7 @@
               class="btn btn-secondary btn-xs"
               @click="copyToken"
             >
-              📋 Copy Token
+              <ClinicalIcon name="copy" :size="16" /> Copy Token
             </button>
           </div>
         </div>
@@ -539,7 +562,7 @@
                         class="btn btn-secondary btn-xs"
                         @click="verifyAssentSeal(a)"
                       >
-                        🔍 Verify Seal
+                        <ClinicalIcon name="search" :size="16" /> Verify Seal
                       </button>
                     </td>
                   </tr>
@@ -639,21 +662,21 @@
                     class="btn btn-secondary btn-xs"
                     @click="openTelemetryModal(sh)"
                   >
-                    🌡️ Log Temp
+                    <ClinicalIcon name="thermometer" :size="16" /> Log Temp
                   </button>
                   <button
                     type="button"
                     class="btn btn-secondary btn-xs"
                     @click="openHandoffModal(sh)"
                   >
-                    🤝 Handoff
+                    <ClinicalIcon name="handshake" :size="16" /> Handoff
                   </button>
                   <button
                     type="button"
                     class="btn btn-primary btn-xs"
                     @click="openDeliveryModal(sh)"
                   >
-                    ✍️ Deliver
+                    <ClinicalIcon name="pen-tool" :size="16" /> Deliver
                   </button>
                 </td>
               </tr>
@@ -759,14 +782,14 @@
                     class="btn btn-secondary btn-xs"
                     @click="openVisitExecutor(v)"
                   >
-                    🩺 Execute Tasks
+                    <ClinicalIcon name="stethoscope" :size="16" /> Execute Tasks
                   </button>
                   <button
                     type="button"
                     class="btn btn-accent btn-xs"
                     @click="openOfflineSyncModal(v)"
                   >
-                    🔄 Sync Offline
+                    <ClinicalIcon name="refresh-cw" :size="16" /> Sync Offline
                   </button>
                 </td>
               </tr>
@@ -991,7 +1014,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIcon, ClinicalIconButton, useFocusTrap } from "ui";
 import { interopService } from "../../api/interop";
 import { useToastStore } from "../../stores/toasts";
 import { demoNowIso, demoRandomInt } from "../../utils/demoMode.js";

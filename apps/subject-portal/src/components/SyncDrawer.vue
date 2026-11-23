@@ -22,7 +22,13 @@
     tabindex="-1"
   >
     <div class="drawer-header">
-      <h3 id="drawer-title">🔄 Submission Sync Status</h3>
+      <h3
+        id="drawer-title"
+        style="display: inline-flex; align-items: center; gap: 8px"
+      >
+        <ClinicalIcon name="refresh-cw" :size="20" />
+        <span>Submission Sync Status</span>
+      </h3>
       <button
         id="btn-close-sync-drawer"
         type="button"
@@ -147,7 +153,7 @@
 
 <script setup>
 import { ref, watch } from "vue";
-import { getFocusableElements, useFocusTrap } from "ui";
+import { ClinicalIcon, getFocusableElements, useFocusTrap } from "ui";
 
 import {
   COORDINATOR_QUARANTINE_STEPS,

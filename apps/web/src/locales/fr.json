@@ -96,7 +96,7 @@
     "diastolicBpRule": "TA diastolique : Valeur numérique entre 30 et 150 mmHg.",
     "pulseRateRule": "Fréquence cardiaque : Valeur numérique entre 30 et 200 bpm.",
     "queryManagementTitle": "Actions de gestion des demandes :",
-    "queryManagementDesc": "Cliquez sur les indicateurs 💬 / ⚠️ à côté des champs de saisie pour poser, répondre, fermer ou rouvrir des notes de divergence. Toutes les transitions sont enregistrées dans l'audit en temps réel.",
+    "queryManagementDesc": "Cliquez sur les indicateurs de requête à côté des champs de saisie pour poser, répondre, fermer ou rouvrir des notes de divergence. Toutes les transitions sont enregistrées dans l'audit en temps réel.",
     "form": {
       "title": "Formulaire de saisie de données eCRF du sujet",
       "schemaBadge": "Schéma de protocole v{version}",
@@ -109,7 +109,7 @@
       "noSubjects": "Aucun sujet répertorié",
       "trainingGatedTitle": "Formation obligatoire sur le protocole incomplète — Saisie des données bloquée",
       "trainingGatedDesc": "Selon ICH GCP E6(R2) §4 & PRD-TRN-002, le personnel du site doit suivre la formation obligatoire sur l'amendement du protocole avant d'enregistrer ou de signer des entrées eCRF.",
-      "completeTrainingNow": "Suivre la formation maintenant ➡️",
+      "completeTrainingNow": "Suivre la formation maintenant",
       "reconsentGatedTitle": "Amendement de protocole actif (v2.0.0) — Re-consentement requis",
       "reconsentGatedDesc": "Ce sujet doit donner à nouveau son consentement pour la version 2.0.0 du protocole avant que d'autres données de visite puissent être enregistrées (PRD-SUB-007). Tous les champs de saisie sont actuellement verrouillés.",
       "openEconsent": "Ouvrir le formulaire eConsent",

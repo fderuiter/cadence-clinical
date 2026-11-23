@@ -16,7 +16,9 @@
     >
       <div class="drawer-header">
         <div class="header-title-group">
-          <span class="header-icon" aria-hidden="true">📦</span>
+          <span class="header-icon" aria-hidden="true"
+            ><ClinicalIcon name="package" :size="20"
+          /></span>
           <div>
             <h3 class="drawer-title">eTMF Study Binder Export</h3>
             <p class="drawer-subtitle">
@@ -40,7 +42,7 @@
           class="error-box"
           role="alert"
         >
-          ❌ {{ downloadError }}
+          <ClinicalIcon name="x-circle" :size="16" /> {{ downloadError }}
         </div>
         <p
           v-if="!canExport"
@@ -108,8 +110,9 @@
           <div v-if="activeJob.status === 'COMPLETED'" class="completion-box">
             <div class="completion-message">
               <span
-                >✅ Study binder archive is ready for download with complete
-                document index and verification inventory.</span
+                ><ClinicalIcon name="check-circle-2" :size="16" /> Study binder
+                archive is ready for download with complete document index and
+                verification inventory.</span
               >
             </div>
             <button
@@ -123,18 +126,21 @@
               <span v-if="downloadingJobId === activeJob.job_id">
                 Downloading Export Package...
               </span>
-              <span v-else>⬇️ Download Export Package (.zip)</span>
+              <span v-else
+                ><ClinicalIcon name="download" :size="16" /> Download Export
+                Package (.zip)</span
+              >
             </button>
             <p v-if="activeJob.expires_at" class="expiration-notice">
-              ⏱️ Temporary download link expires at
-              {{ formatDate(activeJob.expires_at) }} (24h validity).
+              <ClinicalIcon name="timer" :size="16" /> Temporary download link
+              expires at {{ formatDate(activeJob.expires_at) }} (24h validity).
             </p>
           </div>
 
           <!-- Failure Alert -->
           <div v-else-if="activeJob.status === 'FAILED'" class="error-box">
-            ❌ Background export job failed. Please verify document storage
-            connectivity or retry export.
+            <ClinicalIcon name="x-circle" :size="16" /> Background export job
+            failed. Please verify document storage connectivity or retry export.
           </div>
         </div>
 
@@ -206,7 +212,7 @@
 
 <script setup>
 import { computed, ref } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, useFocusTrap } from "ui";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";

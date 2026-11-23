@@ -58,7 +58,8 @@
           role="status"
           aria-live="polite"
         >
-          ⚠️ {{ validationError }}
+          <ClinicalIcon name="alert-triangle" :size="16" />
+          <span>{{ validationError }}</span>
         </div>
       </div>
       <div class="modal-footer">
@@ -85,7 +86,7 @@
 
 <script setup>
 import { ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, useFocusTrap } from "ui";
 
 const props = defineProps({
   show: {

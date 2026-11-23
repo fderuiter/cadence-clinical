@@ -17,7 +17,8 @@
       <div class="drawer-header">
         <div class="header-text">
           <h3 id="drawer-title" class="drawer-title">
-            📥 USDM Biomedical Concept Staging &amp; Mapping Drawer
+            <ClinicalIcon name="download" :size="20" /> USDM Biomedical Concept
+            Staging &amp; Mapping Drawer
           </h3>
           <p class="drawer-subtitle">
             Interactive concept resolution for USDM v4.0 protocol onboarding.
@@ -31,7 +32,7 @@
           aria-label="Close drawer"
           @click="closeDrawer"
         >
-          ✖
+          <ClinicalIcon name="x" :size="16" />
         </button>
       </div>
 
@@ -55,13 +56,14 @@
           v-if="resolvedCount < items.length"
           class="alert alert-warning-inline"
         >
-          ⚠️ Guardrail Active: All USDM lineage nodes require valid concept
-          bindings or explicit design finding exemptions prior to protocol
-          version commit.
+          <ClinicalIcon name="alert-triangle" :size="16" /> Guardrail Active:
+          All USDM lineage nodes require valid concept bindings or explicit
+          design finding exemptions prior to protocol version commit.
         </div>
         <div v-else class="alert alert-success-inline">
-          ✅ All unmapped USDM concept tokens resolved. Ready to hydrate
-          protocol design lineage nodes.
+          <ClinicalIcon name="check-circle-2" :size="16" /> All unmapped USDM
+          concept tokens resolved. Ready to hydrate protocol design lineage
+          nodes.
         </div>
       </div>
 
@@ -72,7 +74,7 @@
           type="text"
           aria-label="Filter unmapped concept tokens"
           class="form-control input-search"
-          placeholder="🔍 Filter unmapped concept tokens by code, name, or node ID..."
+          placeholder="Filter unmapped concept tokens by code, name, or node ID..."
         />
       </div>
 
@@ -110,7 +112,7 @@
                 :class="{ active: item.action === 'bind' }"
                 @click="item.action = 'bind'"
               >
-                🔗 Bind Registry Concept
+                <ClinicalIcon name="link-2" :size="16" /> Bind Registry Concept
               </button>
               <button
                 type="button"
@@ -118,7 +120,7 @@
                 :class="{ active: item.action === 'alias' }"
                 @click="item.action = 'alias'"
               >
-                🏷️ Create Tenant Alias
+                <ClinicalIcon name="tag" :size="16" /> Create Tenant Alias
               </button>
               <button
                 type="button"
@@ -126,7 +128,8 @@
                 :class="{ active: item.action === 'finding' }"
                 @click="item.action = 'finding'"
               >
-                🛡️ Design Finding Exemption
+                <ClinicalIcon name="shield-check" :size="16" /> Design Finding
+                Exemption
               </button>
             </div>
 
@@ -231,7 +234,8 @@
       <!-- Part 11 Audit Trail Verification -->
       <div class="audit-section">
         <h5 class="audit-title">
-          ✍️ 21 CFR Part 11 Electronic Signature &amp; Audit Trail
+          <ClinicalIcon name="pen-tool" :size="16" /> 21 CFR Part 11 Electronic
+          Signature &amp; Audit Trail
         </h5>
         <div class="audit-grid">
           <div class="form-group">
@@ -276,7 +280,8 @@
           :disabled="!canConfirm"
           @click="confirmAndApply"
         >
-          ⚡ Confirm Staging Mappings &amp; Hydrate Protocol Design
+          <ClinicalIcon name="zap" :size="16" /> Confirm Staging Mappings &amp;
+          Hydrate Protocol Design
         </button>
       </div>
     </div>
@@ -285,7 +290,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, useFocusTrap } from "ui";
 
 const props = defineProps({
   isOpen: {

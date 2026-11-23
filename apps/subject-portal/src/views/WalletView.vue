@@ -93,8 +93,16 @@
           font-size: 14px;
         "
       >
-        <strong style="display: block; margin-bottom: 4px">
-          ⚠️ IRS $600.00 Form W-9 Verification Hold Active
+        <strong
+          style="
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+          "
+        >
+          <ClinicalIcon name="alert-triangle" :size="16" />
+          <span>IRS $600.00 Form W-9 Verification Hold Active</span>
         </strong>
         <span>
           Your year-to-date taxable study compensation ({{
@@ -124,7 +132,8 @@
           font-weight: 600;
         "
       >
-        ℹ️ Year-to-date taxable compensation ({{
+        <ClinicalIcon name="info" :size="16" />
+        Year-to-date taxable compensation ({{
           formatCurrency(wallet.taxableYtd)
         }}) is approaching the $600.00 IRS Form W-9 threshold (current status:
         {{ formatEnumLabel(wallet.w9Status || "NOT_REQUIRED") }}). Submit Form
@@ -265,9 +274,13 @@
             margin: 0 0 4px 0;
             font-size: 16px;
             color: var(--semantic-color-success);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
           "
         >
-          ✅ Balance Payout Dispatched
+          <ClinicalIcon name="check-circle" :size="20" />
+          <span>Balance Payout Dispatched</span>
         </h3>
         <p style="margin: 0; font-size: 14px">
           Transferred
@@ -354,8 +367,16 @@
 
       <!-- Receipt OCR & Expense Claim Card -->
       <div class="card">
-        <h3 style="margin-top: 0">
-          📷 Travel &amp; Meal Receipt Reimbursement
+        <h3
+          style="
+            margin-top: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+          "
+        >
+          <ClinicalIcon name="camera" :size="20" />
+          <span>Travel &amp; Meal Receipt Reimbursement</span>
         </h3>
         <p style="font-size: 14px; color: var(--text-muted)">
           Upload a receipt photo or PDF and we will fill in the merchant, date,
@@ -368,7 +389,7 @@
           input-id="receipt-file-input"
           accept="image/*,application/pdf,.svg"
           described-by="receipt-upload-hint"
-          icon="📷"
+          icon="camera"
           button-label="Upload receipt image for travel reimbursement"
           input-aria-label="Upload receipt image for travel reimbursement"
           :has-selection="Boolean(wallet.expenseForm.receiptImageName)"
@@ -433,9 +454,13 @@
               margin: 0;
               font-weight: 600;
               color: var(--semantic-color-primary-dark);
+              display: inline-flex;
+              align-items: center;
+              gap: 8px;
             "
           >
-            🔍 Reading Receipt Details...
+            <ClinicalIcon name="search" :size="16" />
+            <span>Reading Receipt Details...</span>
           </p>
         </div>
 
@@ -595,11 +620,16 @@
             style="width: 100%; margin-top: 12px"
             @click="handleConfirmReimburse"
           >
-            {{
+            <ClinicalIcon
+              v-if="!wallet.expenseSubmitting"
+              name="rocket"
+              :size="16"
+            />
+            <span>{{
               wallet.expenseSubmitting
                 ? "Submitting Claim..."
-                : "🚀 Confirm & Reimburse"
-            }}
+                : "Confirm & Reimburse"
+            }}</span>
           </button>
         </div>
 
@@ -632,9 +662,13 @@
                 margin: 0 0 6px 0;
                 color: var(--semantic-color-success);
                 font-size: 16px;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
               "
             >
-              ✅ Reimbursement Auto-Approved &amp; Dispatched
+              <ClinicalIcon name="check-circle" :size="16" />
+              <span>Reimbursement Auto-Approved &amp; Dispatched</span>
             </h4>
             <p style="margin: 0 0 8px 0; font-size: 14px">
               Direct ACH reimbursement has been dispatched to your linked payout
@@ -677,9 +711,13 @@
                 margin: 0 0 6px 0;
                 color: var(--semantic-color-warning-text-dark);
                 font-size: 16px;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
               "
             >
-              ⚠️ Expense Claim Held for Manual Review
+              <ClinicalIcon name="alert-triangle" :size="16" />
+              <span>Expense Claim Held for Manual Review</span>
             </h4>
             <p id="pending-review-notes" style="margin: 0; font-size: 14px">
               {{
@@ -1024,7 +1062,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { ClinicalDropzone, useFocusTrap } from "ui";
+import { ClinicalDropzone, ClinicalIcon, useFocusTrap } from "ui";
 
 import {
   closeDisburseModal,

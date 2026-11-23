@@ -33,7 +33,11 @@
           class="blinding-status-pill"
           :class="{ 'unblinded-active': isUnblindedMode }"
         >
-          <span class="status-icon">{{ isUnblindedMode ? "🔓" : "🔒" }}</span>
+          <span class="status-icon"
+            ><ClinicalIcon
+              :name="isUnblindedMode ? 'unlock' : 'lock'"
+              :size="16"
+          /></span>
           <div class="status-info">
             <span class="status-label">{{
               isUnblindedMode
@@ -54,7 +58,10 @@
           :disabled="isLoading"
           @click="loadData"
         >
-          <span class="icon">🔄</span> Refresh
+          <span class="icon"
+            ><ClinicalIcon name="refresh-cw" :size="16"
+          /></span>
+          Refresh
         </button>
 
         <button
@@ -62,7 +69,8 @@
           class="btn btn-primary"
           @click="openNewProgramModal"
         >
-          <span class="icon">➕</span> Author New Program
+          <span class="icon"><ClinicalIcon name="plus" :size="16" /></span>
+          Author New Program
         </button>
       </div>
     </header>
@@ -79,7 +87,8 @@
         :class="['tab-btn', { active: activeTab === 'editor' }]"
         @click="activeTab = 'editor'"
       >
-        💻 Statistical Workspace &amp; Runner
+        <ClinicalIcon name="laptop" :size="16" /> Statistical Workspace &amp;
+        Runner
       </button>
       <button
         role="tab"
@@ -87,7 +96,8 @@
         :class="['tab-btn', { active: activeTab === 'runs' }]"
         @click="activeTab = 'runs'"
       >
-        📜 Execution Runs &amp; Signed Manifests ({{ runs.length }})
+        <ClinicalIcon name="scroll-text" :size="16" /> Execution Runs &amp;
+        Signed Manifests ({{ runs.length }})
       </button>
       <button
         role="tab"
@@ -95,7 +105,8 @@
         :class="['tab-btn', { active: activeTab === 'lockfiles' }]"
         @click="activeTab = 'lockfiles'"
       >
-        📦 Package Lockfiles (uv.lock / renv.lock)
+        <ClinicalIcon name="package" :size="16" /> Package Lockfiles (uv.lock /
+        renv.lock)
       </button>
       <button
         role="tab"
@@ -103,7 +114,8 @@
         :class="['tab-btn', { active: activeTab === 'tokens' }]"
         @click="activeTab = 'tokens'"
       >
-        🔑 Database Lock Authorization Tokens ({{ lockTokens.length }})
+        <ClinicalIcon name="key-round" :size="16" /> Database Lock Authorization
+        Tokens ({{ lockTokens.length }})
       </button>
     </nav>
 
@@ -145,14 +157,14 @@
                 :class="['lang-btn', { active: currentLanguage === 'PYTHON' }]"
                 @click="switchLanguage('PYTHON')"
               >
-                🐍 Python 3.14
+                <ClinicalIcon name="code" :size="16" /> Python 3.14
               </button>
               <button
                 type="button"
                 :class="['lang-btn', { active: currentLanguage === 'R' }]"
                 @click="switchLanguage('R')"
               >
-                📊 R 4.4.2
+                <ClinicalIcon name="bar-chart-3" :size="16" /> R 4.4.2
               </button>
             </div>
 
@@ -220,7 +232,8 @@
           <div class="code-editor-wrapper">
             <div class="editor-toolbar">
               <span class="editor-filename"
-                >📝 {{ scriptName || "untitled_analysis.py" }}</span
+                ><ClinicalIcon name="file-edit" :size="16" />
+                {{ scriptName || "untitled_analysis.py" }}</span
               >
               <span v-if="computedCodeHash" class="code-digest-preview"
                 >SHA-256:
@@ -244,7 +257,7 @@
               :disabled="isSaving"
               @click="saveProgramDraft"
             >
-              💾 Save Program Definition
+              <ClinicalIcon name="save" :size="16" /> Save Program Definition
             </button>
             <span class="text-muted text-xs"
               >Immutable SHA-256 seal will be signed on execution dispatch</span
@@ -335,9 +348,9 @@
                   </option>
                 </select>
                 <p class="token-warning">
-                  ⚠️ 21 CFR Part 11 Rule: Unblinded analysis requires active
-                  database lock token authorization with cryptographic
-                  signature.
+                  <ClinicalIcon name="alert-triangle" :size="16" /> 21 CFR Part
+                  11 Rule: Unblinded analysis requires active database lock
+                  token authorization with cryptographic signature.
                 </p>
               </div>
             </div>
@@ -376,9 +389,13 @@
                 @click="dispatchExecution"
               >
                 <span v-if="isExecuting" class="spinner"
-                  >⏳ Executing Sandbox Run...</span
+                  ><ClinicalIcon name="loader" :size="16" /> Executing Sandbox
+                  Run...</span
                 >
-                <span v-else>🚀 Run Statistical Analysis in Sandbox</span>
+                <span v-else
+                  ><ClinicalIcon name="rocket" :size="16" /> Run Statistical
+                  Analysis in Sandbox</span
+                >
               </button>
             </div>
 
@@ -479,7 +496,7 @@
                 </td>
                 <td>
                   <span v-if="run.is_unblinded_run" class="badge-unblind-tag"
-                    >🔓 UNBLINDED</span
+                    ><ClinicalIcon name="unlock" :size="16" /> UNBLINDED</span
                   >
                   <span v-else class="badge-blinded-tag">BLINDED</span>
                 </td>
@@ -496,7 +513,8 @@
                 </td>
                 <td class="cell-digest">
                   <span class="digest-pill" :title="run.manifest_sha256_seal">
-                    🛡️ {{ run.manifest_sha256_seal.slice(0, 14) }}...
+                    <ClinicalIcon name="shield-check" :size="16" />
+                    {{ run.manifest_sha256_seal.slice(0, 14) }}...
                   </span>
                 </td>
                 <td class="cell-date">
@@ -589,7 +607,8 @@
           <!-- Electronic Signature Block -->
           <div class="sig-block-card">
             <h4 class="sig-title">
-              ✍️ 21 CFR Part 11 Electronic Signature Block
+              <ClinicalIcon name="pen-tool" :size="16" /> 21 CFR Part 11
+              Electronic Signature Block
             </h4>
             <div class="sig-grid">
               <div class="sig-item">
@@ -628,7 +647,8 @@
           <!-- Generated Output Artifacts -->
           <div class="artifacts-section">
             <h4 class="section-title">
-              📊 Output Artifacts (Tables, Listings, Figures)
+              <ClinicalIcon name="bar-chart-3" :size="16" /> Output Artifacts
+              (Tables, Listings, Figures)
             </h4>
             <div
               v-if="selectedRunDetail.output_artifacts.length > 0"
@@ -640,9 +660,11 @@
                 class="artifact-card"
               >
                 <div class="art-header">
-                  <span class="art-icon">{{
-                    getArtifactIcon(art.artifact_type)
-                  }}</span>
+                  <span class="art-icon"
+                    ><ClinicalIcon
+                      :name="getArtifactIcon(art.artifact_type)"
+                      :size="16"
+                  /></span>
                   <div class="art-meta">
                     <span class="art-name">{{ art.name }}</span>
                     <span class="art-sub"
@@ -667,7 +689,8 @@
           <!-- Captured Stdout & Stderr -->
           <div class="logs-section">
             <h4 class="section-title">
-              🖥️ Execution Console Output (Stdout / Stderr)
+              <ClinicalIcon name="monitor" :size="16" /> Execution Console
+              Output (Stdout / Stderr)
             </h4>
             <div class="console-box">
               <div class="console-header-bar">
@@ -740,7 +763,8 @@
                 :disabled="isValidatingLock"
                 @click="assertLockfileIntegrity"
               >
-                🛡️ Validate Lockfile Integrity
+                <ClinicalIcon name="shield-check" :size="16" /> Validate
+                Lockfile Integrity
               </button>
               <button
                 type="button"
@@ -795,7 +819,13 @@
                       class="pkg-qual"
                       :class="pkg.is_qualified ? 'qual-yes' : 'qual-no'"
                     >
-                      {{ pkg.is_qualified ? "✅ GxP Qualified" : "⚠️ Custom" }}
+                      <ClinicalIcon
+                        :name="
+                          pkg.is_qualified ? 'check-circle-2' : 'alert-triangle'
+                        "
+                        :size="16"
+                      />
+                      {{ pkg.is_qualified ? "GxP Qualified" : "Custom" }}
                     </span>
                   </div>
                 </div>
@@ -822,7 +852,8 @@
             class="btn btn-primary"
             @click="openIssueTokenModal"
           >
-            🔑 Issue New Authorization Token
+            <ClinicalIcon name="key-round" :size="16" /> Issue New Authorization
+            Token
           </button>
         </div>
 
@@ -848,7 +879,10 @@
                   <code>{{ tok.token_id }}</code>
                 </td>
                 <td>
-                  <span class="lock-ref">🔒 {{ tok.lock_id }}</span>
+                  <span class="lock-ref"
+                    ><ClinicalIcon name="lock" :size="16" />
+                    {{ tok.lock_id }}</span
+                  >
                 </td>
                 <td>
                   <span class="milestone-badge">{{ tok.milestone }}</span>
@@ -880,7 +914,8 @@
                 </td>
                 <td class="cell-digest">
                   <span class="digest-pill" :title="tok.signature_hash">
-                    🔑 {{ tok.signature_hash.slice(0, 14) }}...
+                    <ClinicalIcon name="key-round" :size="16" />
+                    {{ tok.signature_hash.slice(0, 14) }}...
                   </span>
                 </td>
                 <td>
@@ -1001,7 +1036,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalIconButton, ClinicalModal } from "ui";
+import { ClinicalIcon, ClinicalIconButton, ClinicalModal } from "ui";
 import { ref, computed, onMounted } from "vue";
 import { statisticalComputingService } from "../../api/statisticalComputing";
 import { apiClient } from "../../api/apiClient";
@@ -1479,10 +1514,10 @@ function isTokenExpired(expiresAtStr: string) {
 }
 
 function getArtifactIcon(type: string) {
-  if (type === "TABLE") return "📊";
-  if (type === "FIGURE") return "📈";
-  if (type === "LISTING") return "📜";
-  return "📁";
+  if (type === "TABLE") return "bar-chart-3";
+  if (type === "FIGURE") return "trending-up";
+  if (type === "LISTING") return "scroll-text";
+  return "folder";
 }
 
 function formatDate(isoStr: string) {

@@ -4,7 +4,8 @@
     <div class="qc-queue-header">
       <div>
         <h3 style="margin: 0; font-size: 16px; font-weight: 700">
-          🛡️ CRA Quality Control Review Queue
+          <ClinicalIcon name="shield-check" :size="20" /> CRA Quality Control
+          Review Queue
         </h3>
         <p
           style="
@@ -24,7 +25,7 @@
           style="font-size: 12px"
           @click="loadQueue"
         >
-          🔄 Refresh Queue
+          <ClinicalIcon name="refresh-cw" :size="16" /> Refresh Queue
         </button>
         <button
           class="btn btn-primary btn-sm btn-batch-accept"
@@ -61,7 +62,7 @@
       class="qc-error-banner"
       role="alert"
     >
-      ❌ {{ queueError }}
+      <ClinicalIcon name="x-circle" :size="16" /> {{ queueError }}
     </div>
 
     <!-- Selection / Filter Ribbon -->
@@ -128,7 +129,7 @@
           color: var(--semantic-color-text-secondary);
         "
       >
-        <span style="font-size: 32px" aria-hidden="true">🔒</span>
+        <span aria-hidden="true"><ClinicalIcon name="lock" :size="20" /></span>
         <p style="margin: 8px 0 0 0; font-size: 14px; font-weight: 600">
           Study or Site Scope Assignment Required
         </p>
@@ -145,7 +146,7 @@
           color: var(--semantic-color-text-secondary);
         "
       >
-        <span style="font-size: 32px">✅</span>
+        <span><ClinicalIcon name="check-circle-2" :size="20" /></span>
         <p style="margin: 8px 0 0 0; font-size: 14px; font-weight: 600">
           No staged documents pending Quality Control review
         </p>
@@ -251,7 +252,7 @@
                   class="badge status-hold"
                   style="font-size: 10px"
                 >
-                  ⚠️ {{ note }}
+                  <ClinicalIcon name="alert-triangle" :size="16" /> {{ note }}
                 </span>
               </div>
               <span v-else class="text-muted" style="font-size: 11px"
@@ -265,9 +266,9 @@
                 style="font-size: 11px; padding: 4px 8px"
                 @click="openInspectionModal(item)"
               >
-                <span aria-hidden="true">📋 </span>Inspect &amp; Edit<span
-                  class="sr-only"
-                >
+                <span aria-hidden="true"
+                  ><ClinicalIcon name="clipboard-list" :size="16" /> </span
+                >Inspect &amp; Edit<span class="sr-only">
                   {{ item.filename || item.document_id }}</span
                 >
               </button>
@@ -567,7 +568,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, useFocusTrap } from "ui";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";

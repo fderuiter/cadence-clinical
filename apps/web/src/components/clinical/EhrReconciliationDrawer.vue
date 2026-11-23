@@ -63,7 +63,7 @@
             :disabled="isLoading"
             @click="fetchCandidates"
           >
-            🔄 Refresh
+            <ClinicalIcon name="refresh-cw" :size="16" /> Refresh
           </button>
         </div>
       </div>
@@ -120,7 +120,7 @@
             title="Select all pending items with confidence score >= 90%"
             @click="selectHighConfidence"
           >
-            ⚡ Select High Confidence (≥90%)
+            <ClinicalIcon name="zap" :size="16" /> Select High Confidence (≥90%)
           </button>
           <button
             type="button"
@@ -210,7 +210,7 @@
           class="state-container empty-state"
         >
           <EmptyState
-            icon="📋"
+            icon="clipboard-list"
             title="No Candidate Records Found"
             message="No EHR source data items match the current filters or need reconciliation."
           >
@@ -220,7 +220,8 @@
                 class="btn btn-primary btn-sm btn-refresh-candidates"
                 @click="fetchCandidates"
               >
-                🔄 Refresh EHR Ingestion
+                <ClinicalIcon name="refresh-cw" :size="16" /> Refresh EHR
+                Ingestion
               </button>
               <button
                 v-if="
@@ -277,6 +278,10 @@
                     `pill-${item.discrepancy_type.toLowerCase()}`,
                   ]"
                 >
+                  <ClinicalIcon
+                    :name="discrepancyIcon(item.discrepancy_type)"
+                    :size="16"
+                  />
                   {{ formatDiscrepancy(item.discrepancy_type) }}
                 </span>
                 <span
@@ -295,7 +300,10 @@
               <!-- LEFT PANE: Ingested EHR Source Data -->
               <div class="split-pane ehr-pane">
                 <div class="pane-header">
-                  <span class="pane-title">🏥 Candidate EHR Source Data</span>
+                  <span class="pane-title"
+                    ><ClinicalIcon name="building-2" :size="16" /> Candidate EHR
+                    Source Data</span
+                  >
                   <span class="source-badge">{{ item.ehr_system_id }}</span>
                 </div>
                 <div class="data-row-primary">
@@ -333,7 +341,10 @@
               <!-- RIGHT PANE: Current eCRF Field in EDC -->
               <div class="split-pane ecrf-pane">
                 <div class="pane-header">
-                  <span class="pane-title">📝 Current eCRF Target Field</span>
+                  <span class="pane-title"
+                    ><ClinicalIcon name="file-edit" :size="16" /> Current eCRF
+                    Target Field</span
+                  >
                   <span class="form-badge">{{ item.target_domain }} Form</span>
                 </div>
                 <div class="data-row-primary">
@@ -394,10 +405,14 @@
                 >
               </div>
               <div v-if="item.electronic_signature" class="esign-badge">
-                ✍️ 21 CFR Part 11 eSigned
+                <ClinicalIcon name="pen-tool" :size="16" /> 21 CFR Part 11
+                eSigned
               </div>
               <div v-if="item.clinical_query_id" class="query-badge">
-                ❓ Query #{{ item.clinical_query_id.substring(0, 8) }} Open
+                <ClinicalIcon name="help-circle" :size="16" /> Query #{{
+                  item.clinical_query_id.substring(0, 8)
+                }}
+                Open
               </div>
             </div>
 
@@ -431,7 +446,10 @@
                   :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
                   @click="openQueryModal(item)"
                 >
-                  <span class="icon">❓</span> Raise Query
+                  <span class="icon"
+                    ><ClinicalIcon name="help-circle" :size="16"
+                  /></span>
+                  Raise Query
                 </button>
               </div>
 
@@ -441,7 +459,7 @@
                 class="btn btn-link-provenance"
                 @click="openProvenanceModal(item)"
               >
-                🔍 Inspect Provenance
+                <ClinicalIcon name="search" :size="16" /> Inspect Provenance
               </button>
             </footer>
           </article>
@@ -744,7 +762,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { EmptyState, useFocusTrap } from "ui";
+import { ClinicalIcon, EmptyState, useFocusTrap } from "ui";
 import { interopService } from "../../api/interop";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 
@@ -1184,18 +1202,35 @@ function formatDate(dt?: string): string {
   }
 }
 
+function discrepancyIcon(disc: string): string {
+  switch (disc) {
+    case "NEW_FIELD":
+      return "sparkles";
+    case "EXACT_MATCH":
+      return "check";
+    case "VALUE_MISMATCH":
+      return "alert-triangle";
+    case "UNIT_MISMATCH":
+      return "refresh-cw";
+    case "DATE_MISMATCH":
+      return "calendar";
+    default:
+      return "info";
+  }
+}
+
 function formatDiscrepancy(disc: string): string {
   switch (disc) {
     case "NEW_FIELD":
-      return "✨ New Field";
+      return "New Field";
     case "EXACT_MATCH":
-      return "✓ Matches eCRF";
+      return "Matches eCRF";
     case "VALUE_MISMATCH":
-      return "⚠️ Value Conflict";
+      return "Value Conflict";
     case "UNIT_MISMATCH":
-      return "🔄 Unit Mismatch";
+      return "Unit Mismatch";
     case "DATE_MISMATCH":
-      return "📅 Date Mismatch";
+      return "Date Mismatch";
     case "NOT_COMPARED":
       return "Not compared with eCRF";
     default:

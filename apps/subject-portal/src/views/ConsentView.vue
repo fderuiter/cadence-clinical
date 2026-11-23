@@ -130,7 +130,8 @@
         style="margin-bottom: 24px"
       >
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <span>🧠</span> Step 1: Quick Understanding Check
+          <ClinicalIcon name="brain" :size="20" />
+          <span>Step 1: Quick Understanding Check</span>
         </h3>
         <p
           style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
@@ -175,7 +176,8 @@
       <!-- Camera Identity Check Section -->
       <div id="consent-liveness-card" class="card" style="margin-bottom: 24px">
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <span>📹</span> Step 2: Quick Camera Check
+          <ClinicalIcon name="video" :size="20" />
+          <span>Step 2: Quick Camera Check</span>
         </h3>
         <p
           style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
@@ -213,7 +215,9 @@
             margin-bottom: 16px;
           "
         >
-          <div style="font-size: 32px; margin-bottom: 8px">📷</div>
+          <div style="margin-bottom: 8px" aria-hidden="true">
+            <ClinicalIcon name="camera" :size="20" />
+          </div>
           <p style="margin: 0; font-size: 14px; font-weight: 500">
             Camera Ready for Quick Check
           </p>
@@ -253,7 +257,8 @@
       <!-- Signature Section -->
       <div id="consent-signature-card" class="card" style="margin-bottom: 24px">
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <span>✍️</span> Step 3: Electronic Signature
+          <ClinicalIcon name="pen-tool" :size="20" />
+          <span>Step 3: Electronic Signature</span>
         </h3>
         <p
           style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
@@ -278,6 +283,7 @@
 
 <script setup>
 import { computed } from "vue";
+import { ClinicalIcon } from "ui";
 import { isScreenAvailable } from "../router/availability.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";

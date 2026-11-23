@@ -22,7 +22,8 @@
               }"
               @click="setViewport('desktop')"
             >
-              🖥️ <span>Desktop (12-Col)</span>
+              <ClinicalIcon name="monitor" :size="16" />
+              <span>Desktop (12-Col)</span>
             </button>
             <button
               class="btn-viewport btn-viewport-tablet"
@@ -32,7 +33,8 @@
               }"
               @click="setViewport('tablet')"
             >
-              📟 <span>Tablet (8-Col)</span>
+              <ClinicalIcon name="tablet" :size="16" />
+              <span>Tablet (8-Col)</span>
             </button>
             <button
               class="btn-viewport btn-viewport-mobile"
@@ -42,14 +44,16 @@
               }"
               @click="setViewport('mobile')"
             >
-              📱 <span>Mobile (4-Col)</span>
+              <ClinicalIcon name="smartphone" :size="16" />
+              <span>Mobile (4-Col)</span>
             </button>
             <button
               class="btn-viewport btn-viewport-simulation btn-simulation-mode"
               :class="{ active: isSimulationMode }"
               @click="toggleSimulationMode"
             >
-              🧪 <span>Simulation Mode</span>
+              <ClinicalIcon name="flask-conical" :size="16" />
+              <span>Simulation Mode</span>
             </button>
           </div>
 
@@ -103,7 +107,9 @@
           :style="{ maxWidth: canvasMaxWidthStyle, margin: '0 auto' }"
         >
           <div class="simulation-banner">
-            <span class="simulation-icon">🧪</span>
+            <span class="simulation-icon"
+              ><ClinicalIcon name="flask-conical" :size="20"
+            /></span>
             <div>
               <strong>Rule Simulation Mode Active</strong>
               <p>
@@ -136,7 +142,8 @@
           </div>
 
           <div v-if="layoutWarnings.length === 0" class="warnings-box-clean">
-            <span>✅</span> No layout warnings for this viewport.
+            <ClinicalIcon name="check-circle-2" :size="16" /> No layout warnings
+            for this viewport.
           </div>
 
           <div
@@ -455,8 +462,8 @@
                 font-weight: 600;
               "
             >
-              ❌ Compilation blocked: active layout warnings must be resolved or
-              explicitly dismissed!
+              <ClinicalIcon name="x-circle" :size="16" /> Compilation blocked:
+              active layout warnings must be resolved or explicitly dismissed!
             </div>
             <div
               v-if="compilationStatus === 'success'"
@@ -471,8 +478,8 @@
                 font-weight: 600;
               "
             >
-              ✅ Compilation successful: form compiled to valid CDISC USDM
-              structure!
+              <ClinicalIcon name="check-circle-2" :size="16" /> Compilation
+              successful: form compiled to valid CDISC USDM structure!
             </div>
           </div>
         </div>
@@ -502,6 +509,7 @@
  * width validation, property inspector synchronizations, and compiler quality gating rules.
  */
 import { computed, ref, reactive } from "vue";
+import { ClinicalIcon } from "ui";
 import draggable from "vuedraggable";
 import FormSectionContainer from "./FormSectionContainer.vue";
 import HeadlessFormRenderer from "./HeadlessFormRenderer.vue";

@@ -64,7 +64,7 @@
             :disabled="isLoadingInventory"
             @click="loadInventory"
           >
-            🔄 Refresh Inventory
+            <ClinicalIcon name="refresh-cw" :size="16" /> Refresh Inventory
           </button>
         </div>
       </div>
@@ -74,8 +74,10 @@
         <div class="scanner-card">
           <div class="scanner-header">
             <label for="barcode-scanner-input" class="scanner-label">
-              <span class="scanner-icon">📷</span> Multi-Barcode Scanner Buffer
-              Input
+              <span class="scanner-icon"
+                ><ClinicalIcon name="camera" :size="16"
+              /></span>
+              Multi-Barcode Scanner Buffer Input
             </label>
             <span class="focus-indicator badge badge-active"
               >Auto-Focus Active</span
@@ -113,7 +115,9 @@
           class="alert-banner alert-warning"
           role="alert"
         >
-          <span class="alert-icon">⚠️</span>
+          <span class="alert-icon"
+            ><ClinicalIcon name="alert-triangle" :size="16"
+          /></span>
           <span class="alert-text">{{ warningMessage }}</span>
           <button
             type="button"
@@ -189,7 +193,9 @@
       <!-- Main Drawer Body: Scanned Kits Buffer Table -->
       <div class="drawer-body">
         <div v-if="scannedItems.length === 0" class="empty-state-box">
-          <div class="empty-icon">📦</div>
+          <div class="empty-icon">
+            <ClinicalIcon name="package" :size="20" />
+          </div>
           <h3>Scan Buffer Empty</h3>
           <p>
             Scan kit barcodes with an optical scanner or enter kit numbers
@@ -303,14 +309,15 @@
                   <span
                     v-if="item.hasLotMismatch"
                     class="status-flag flag-warning"
-                    >⚠️ Lot Mismatch</span
+                    ><ClinicalIcon name="alert-triangle" :size="16" /> Lot
+                    Mismatch</span
                   >
                   <span
                     v-else-if="
                       item.disposition === 'QUARANTINED_FOR_DESTRUCTION'
                     "
                     class="status-flag flag-quarantine"
-                    >🔒 Quarantined</span
+                    ><ClinicalIcon name="lock" :size="16" /> Quarantined</span
                   >
                   <span v-else class="status-flag flag-valid">✓ Valid</span>
                 </td>
@@ -333,7 +340,8 @@
         <section v-if="scannedItems.length > 0" class="esign-section">
           <div class="esign-card">
             <h4 class="esign-title">
-              ✍️ 21 CFR Part 11 Electronic Signature &amp; Audit Rationale
+              <ClinicalIcon name="pen-tool" :size="16" /> 21 CFR Part 11
+              Electronic Signature &amp; Audit Rationale
             </h4>
             <div class="esign-form-grid">
               <div class="form-group">
@@ -406,9 +414,12 @@
             "
             @click="submitBatchReconciliation"
           >
-            <span v-if="isSubmitting" class="spinner">⏳</span>
+            <span v-if="isSubmitting" class="spinner"
+              ><ClinicalIcon name="loader" :size="16"
+            /></span>
             <span v-else
-              >🔒 Commit Batch Reconciliation ({{ scannedItems.length }})</span
+              ><ClinicalIcon name="lock" :size="16" /> Commit Batch
+              Reconciliation ({{ scannedItems.length }})</span
             >
           </button>
         </div>
@@ -430,7 +441,10 @@
           tabindex="-1"
         >
           <header class="cert-modal-header">
-            <div class="cert-badge">📜 21 CFR Part 11 Digital Certificate</div>
+            <div class="cert-badge">
+              <ClinicalIcon name="scroll-text" :size="16" /> 21 CFR Part 11
+              Digital Certificate
+            </div>
             <h3 id="cert-modal-title" class="cert-modal-title">
               Digital IP Kit Reconciliation Certificate
             </h3>
@@ -489,7 +503,7 @@
                   :key="kit"
                   class="cert-kit-chip mono"
                 >
-                  📦 {{ kit }}
+                  <ClinicalIcon name="package" :size="16" /> {{ kit }}
                 </span>
               </div>
             </div>
@@ -508,7 +522,7 @@
               class="btn btn-secondary"
               @click="printCertificate"
             >
-              🖨️ Print Certificate
+              <ClinicalIcon name="printer" :size="16" /> Print Certificate
             </button>
             <button
               type="button"
@@ -526,7 +540,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIcon, ClinicalIconButton, useFocusTrap } from "ui";
 
 export interface ScannedKitBufferItem {
   kitNumber: string;

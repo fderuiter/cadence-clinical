@@ -20,10 +20,14 @@
               class="badge badge-phi"
               :class="{ 'phi-active': phiMaskEnabled }"
             >
+              <ClinicalIcon
+                :name="phiMaskEnabled ? 'shield-check' : 'alert-triangle'"
+                :size="16"
+              />
               {{
                 phiMaskEnabled
-                  ? "🛡️ IN-FLIGHT PHI MASKING: ACTIVE"
-                  : "⚠️ UNMASKED VIEW"
+                  ? "IN-FLIGHT PHI MASKING: ACTIVE"
+                  : "UNMASKED VIEW"
               }}
             </span>
           </div>
@@ -154,7 +158,8 @@
         :class="['tab-btn', { active: activeMainTab === 'dossiers' }]"
         @click="activeMainTab = 'dossiers'"
       >
-        📑 Event Dossiers &amp; Blinded Review ({{ dossiers.length }})
+        <ClinicalIcon name="files" :size="16" /> Event Dossiers &amp; Blinded
+        Review ({{ dossiers.length }})
       </button>
       <button
         role="tab"
@@ -162,7 +167,8 @@
         :class="['tab-btn', { active: activeMainTab === 'chair_tiebreaker' }]"
         @click="activeMainTab = 'chair_tiebreaker'"
       >
-        ⚖️ Chair Tie-Breaker &amp; Consensus Panel
+        <ClinicalIcon name="scale" :size="16" /> Chair Tie-Breaker &amp;
+        Consensus Panel
         <span v-if="discordantCount > 0" class="badge-count">{{
           discordantCount
         }}</span>
@@ -173,7 +179,8 @@
         :class="['tab-btn', { active: activeMainTab === 'charter_quorum' }]"
         @click="activeMainTab = 'charter_quorum'"
       >
-        📜 Charter Governance &amp; Quorum Tracker
+        <ClinicalIcon name="scroll-text" :size="16" /> Charter Governance &amp;
+        Quorum Tracker
       </button>
       <button
         role="tab"
@@ -181,7 +188,8 @@
         :class="['tab-btn', { active: activeMainTab === 'sdtm_ce' }]"
         @click="activeMainTab = 'sdtm_ce'"
       >
-        📊 CDISC SDTM CE &amp; EDC Casebook Sync
+        <ClinicalIcon name="bar-chart-3" :size="16" /> CDISC SDTM CE &amp; EDC
+        Casebook Sync
       </button>
     </nav>
 
@@ -276,8 +284,8 @@
                   v-if="item.is_discordant"
                   class="dot dot-alert"
                   title="Discordance Detected"
-                  >⚠️</span
-                >
+                  ><ClinicalIcon name="alert-triangle" :size="16"
+                /></span>
                 <span
                   v-if="
                     item.workflow_status === 'FINALIZED_CONCORDANT' ||
@@ -350,7 +358,7 @@
                 class="btn btn-secondary"
                 @click="activeMainTab = 'chair_tiebreaker'"
               >
-                ⚖️ Open Adjudication Panel
+                <ClinicalIcon name="scale" :size="16" /> Open Adjudication Panel
               </button>
             </div>
           </div>
@@ -360,7 +368,9 @@
             v-if="activeDossier.is_discordant"
             class="alert-banner alert-discordance"
           >
-            <div class="alert-icon">⚠️</div>
+            <div class="alert-icon">
+              <ClinicalIcon name="alert-triangle" :size="20" />
+            </div>
             <div class="alert-content">
               <h4 class="alert-title">
                 DISCORDANCE DETECTED &mdash; Escalated to Committee Chair
@@ -384,7 +394,9 @@
             "
             class="alert-banner alert-consensus"
           >
-            <div class="alert-icon">✅</div>
+            <div class="alert-icon">
+              <ClinicalIcon name="check-circle-2" :size="20" />
+            </div>
             <div class="alert-content">
               <h4 class="alert-title">CONCORDANT CONSENSUS FINALIZED</h4>
               <p class="alert-desc">
@@ -406,7 +418,8 @@
             <div class="section-card">
               <div class="section-header">
                 <h4 class="section-title">
-                  🏥 Medical Narrative &amp; Hospital Discharge Summary
+                  <ClinicalIcon name="building-2" :size="16" /> Medical
+                  Narrative &amp; Hospital Discharge Summary
                 </h4>
                 <span class="phi-badge">PHI SCRUBBED</span>
               </div>
@@ -430,7 +443,8 @@
             <div class="section-card">
               <div class="section-header">
                 <h4 class="section-title">
-                  🧪 Pertinent Laboratory Panels &amp; Biomarkers
+                  <ClinicalIcon name="flask-conical" :size="16" /> Pertinent
+                  Laboratory Panels &amp; Biomarkers
                 </h4>
                 <span class="count-tag"
                   >{{ activeDossier.lab_panels?.length || 0 }} Analytes</span
@@ -502,7 +516,8 @@
             <div class="section-card">
               <div class="section-header">
                 <h4 class="section-title">
-                  🫀 12-Lead Electrocardiogram (ECG) Findings
+                  <ClinicalIcon name="heart-pulse" :size="16" /> 12-Lead
+                  Electrocardiogram (ECG) Findings
                 </h4>
                 <span class="count-tag"
                   >{{ activeDossier.ecg_records?.length || 0 }} Tracings</span
@@ -569,7 +584,8 @@
             <div class="section-card">
               <div class="section-header">
                 <h4 class="section-title">
-                  📁 Diagnostic Imaging &amp; Specialty Attachments
+                  <ClinicalIcon name="folder" :size="16" /> Diagnostic Imaging
+                  &amp; Specialty Attachments
                 </h4>
                 <span class="count-tag"
                   >{{
@@ -584,7 +600,9 @@
                   :key="att.attachment_id"
                   class="attachment-item"
                 >
-                  <div class="att-icon">📄</div>
+                  <div class="att-icon">
+                    <ClinicalIcon name="file-text" :size="20" />
+                  </div>
                   <div class="att-info">
                     <h5 class="att-title">
                       {{ att.title }} ({{ att.document_type }})
@@ -606,7 +624,7 @@
                       class="btn btn-sm btn-secondary"
                       @click="viewAttachment(att)"
                     >
-                      👁️ View Document
+                      <ClinicalIcon name="eye" :size="16" /> View Document
                     </button>
                   </div>
                 </div>
@@ -623,7 +641,8 @@
             <div class="section-card assessment-workbench">
               <div class="section-header">
                 <h4 class="section-title">
-                  🧑‍⚕️ Blinded Reader Assessments &amp; Criteria Verification
+                  <ClinicalIcon name="user-check" :size="16" /> Blinded Reader
+                  Assessments &amp; Criteria Verification
                 </h4>
                 <span class="badge badge-charter">2+1 INDEPENDENT REVIEW</span>
               </div>
@@ -715,12 +734,15 @@
                         class="btn btn-primary"
                         @click="openReaderForm('READER_1')"
                       >
-                        ✍️ Complete Reader 1 Assessment
+                        <ClinicalIcon name="pen-tool" :size="16" /> Complete
+                        Reader 1 Assessment
                       </button>
                     </div>
                   </div>
                   <div v-else class="blinded-placeholder">
-                    <span class="lock-icon">🔒</span>
+                    <span class="lock-icon"
+                      ><ClinicalIcon name="lock" :size="20"
+                    /></span>
                     <p>
                       Reader 1 assessment is blinded from peer reviewer until
                       consensus.
@@ -814,12 +836,15 @@
                         class="btn btn-primary"
                         @click="openReaderForm('READER_2')"
                       >
-                        ✍️ Complete Reader 2 Assessment
+                        <ClinicalIcon name="pen-tool" :size="16" /> Complete
+                        Reader 2 Assessment
                       </button>
                     </div>
                   </div>
                   <div v-else class="blinded-placeholder">
-                    <span class="lock-icon">🔒</span>
+                    <span class="lock-icon"
+                      ><ClinicalIcon name="lock" :size="20"
+                    /></span>
                     <p>
                       Reader 2 assessment is blinded from peer reviewer until
                       consensus.
@@ -1026,7 +1051,10 @@
             <!-- 21 CFR Part 11 Electronic Signature Block -->
             <div class="esign-block">
               <div class="esign-header">
-                <h5>🔐 21 CFR Part 11 Electronic Signature Authentication</h5>
+                <h5>
+                  <ClinicalIcon name="key-round" :size="16" /> 21 CFR Part 11
+                  Electronic Signature Authentication
+                </h5>
                 <span class="badge badge-regulatory"
                   >MANDATORY STEP-UP SIGN-OFF</span
                 >
@@ -1058,7 +1086,8 @@
                 :disabled="isSubmitting"
                 @click="submitChairAdjudication"
               >
-                🖋️ Sign &amp; Finalize Tie-Breaker Adjudication
+                <ClinicalIcon name="pen-tool" :size="16" /> Sign &amp; Finalize
+                Tie-Breaker Adjudication
               </button>
             </div>
           </div>
@@ -1169,10 +1198,14 @@
                   isQuorumMet ? 'quorum-passed' : 'quorum-failed',
                 ]"
               >
+                <ClinicalIcon
+                  :name="isQuorumMet ? 'check-circle-2' : 'x-circle'"
+                  :size="16"
+                />
                 {{
                   isQuorumMet
-                    ? "✅ MEETING QUORUM ACHIEVED"
-                    : "❌ INSUFFICIENT QUORUM &mdash; Meeting Cannot Proceed"
+                    ? "MEETING QUORUM ACHIEVED"
+                    : "INSUFFICIENT QUORUM — Meeting Cannot Proceed"
                 }}
               </div>
             </div>
@@ -1195,7 +1228,8 @@
               :disabled="!isQuorumMet || isSubmitting"
               @click="recordMeetingSession"
             >
-              📝 Record Quorum &amp; Cryptographically Seal Minutes
+              <ClinicalIcon name="file-edit" :size="16" /> Record Quorum &amp;
+              Cryptographically Seal Minutes
             </button>
           </div>
         </div>
@@ -1217,10 +1251,10 @@
           </div>
           <div class="header-actions">
             <button class="btn btn-secondary" @click="compileSdtmCe">
-              🔄 Re-Compile SDTM CE
+              <ClinicalIcon name="refresh-cw" :size="16" /> Re-Compile SDTM CE
             </button>
             <button class="btn btn-primary" @click="exportSdtmJson">
-              💾 Export Dataset-JSON
+              <ClinicalIcon name="save" :size="16" /> Export Dataset-JSON
             </button>
           </div>
         </div>
@@ -1271,7 +1305,10 @@
                 <td>{{ ce.CESTDTC }}</td>
                 <td><span class="status-pill success">FINALIZED</span></td>
                 <td>
-                  <span class="sync-badge">✅ SYNCED</span>
+                  <span class="sync-badge"
+                    ><ClinicalIcon name="check-circle-2" :size="16" />
+                    SYNCED</span
+                  >
                 </td>
               </tr>
               <tr v-if="!sdtmCeRecords.length">
@@ -1409,6 +1446,7 @@
 import { ref, computed, onMounted } from "vue";
 import {
   buildStepUpVerificationPayload,
+  ClinicalIcon,
   ClinicalModal,
   SEMANTIC_ACTIONS,
 } from "ui";

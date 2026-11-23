@@ -14,7 +14,9 @@
       tabindex="-1"
     >
       <div class="modal-header">
-        <div class="modal-header-icon">✍️</div>
+        <div class="modal-header-icon">
+          <ClinicalIcon name="pen-tool" :size="20" />
+        </div>
         <div>
           <h3 id="sign-modal-title" class="modal-title">
             21 CFR Part 11 Electronic Signature
@@ -144,7 +146,7 @@
         </div>
 
         <div v-if="errorMessage" class="error-banner" role="alert">
-          ⚠️ {{ errorMessage }}
+          <ClinicalIcon name="alert-triangle" :size="16" /> {{ errorMessage }}
         </div>
       </div>
 
@@ -164,7 +166,10 @@
           @click="handleSign"
         >
           <span v-if="loading" class="spinner" aria-hidden="true" />
-          <span v-else>✍️ Sign &amp; Authorize</span>
+          <span v-else
+            ><ClinicalIcon name="pen-tool" :size="16" /> Sign &amp;
+            Authorize</span
+          >
         </button>
       </div>
     </div>
@@ -173,7 +178,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, useFocusTrap } from "ui";
 import { ticketsApi } from "../../api/ticketsApi";
 import { useAuthStore } from "../../stores/auth";
 import { describeApiError } from "../../utils/apiErrors.js";

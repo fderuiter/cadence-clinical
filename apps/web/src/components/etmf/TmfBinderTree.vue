@@ -9,11 +9,10 @@
         :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
         @click="exportFullBinder"
       >
-        <span aria-hidden="true">📦</span> Export Complete Study Binder<span
-          class="sr-only"
-        >
-          (eTMF)</span
-        >
+        <span aria-hidden="true"
+          ><ClinicalIcon name="package" :size="16"
+        /></span>
+        Export Complete Study Binder<span class="sr-only"> (eTMF)</span>
       </button>
       <p
         v-if="!canExport"
@@ -75,8 +74,14 @@
           @click="clickZone(zone)"
           @focus="activeFocusedNodeId = zone.id"
         >
-          <span class="toggle-icon">{{ isExpanded(zone.id) ? "▼" : "▶" }}</span>
-          <span class="folder-icon">📂</span>
+          <span class="toggle-icon"
+            ><ClinicalIcon
+              :name="isExpanded(zone.id) ? 'chevron-down' : 'chevron-right'"
+              :size="16"
+          /></span>
+          <span class="folder-icon"
+            ><ClinicalIcon name="folder-open" :size="16"
+          /></span>
           <span class="zone-label">Zone {{ zone.code }}:</span>
           <span class="node-name">{{ zone.name }}</span>
           <span
@@ -95,7 +100,7 @@
             :aria-label="'Export Zone ' + zone.code + ' documents'"
             @click.stop="exportZone(zone)"
           >
-            📥
+            <ClinicalIcon name="download" :size="16" />
           </button>
         </div>
 
@@ -122,10 +127,16 @@
               @click="clickSection(section)"
               @focus="activeFocusedNodeId = section.id"
             >
-              <span class="toggle-icon">{{
-                isExpanded(section.id) ? "▼" : "▶"
-              }}</span>
-              <span class="folder-icon">📁</span>
+              <span class="toggle-icon"
+                ><ClinicalIcon
+                  :name="
+                    isExpanded(section.id) ? 'chevron-down' : 'chevron-right'
+                  "
+                  :size="16"
+              /></span>
+              <span class="folder-icon"
+                ><ClinicalIcon name="folder" :size="16"
+              /></span>
               <span class="section-label">Section {{ section.code }}:</span>
               <span class="node-name">{{ section.name }}</span>
               <span
@@ -146,7 +157,7 @@
                 :aria-label="'Export Section ' + section.code + ' documents'"
                 @click.stop="exportSection(section)"
               >
-                📥
+                <ClinicalIcon name="download" :size="16" />
               </button>
             </div>
 
@@ -170,7 +181,9 @@
                 @focus="activeFocusedNodeId = artifact.id"
               >
                 <div class="node-header artifact-header">
-                  <span class="file-icon">📄</span>
+                  <span class="file-icon"
+                    ><ClinicalIcon name="file-text" :size="16"
+                  /></span>
                   <span class="artifact-code">[{{ artifact.code }}]</span>
                   <span class="node-name">{{ artifact.name }}</span>
                   <span
@@ -191,6 +204,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
+import { ClinicalIcon } from "ui";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";
 import { useToastStore } from "../../stores/toasts.js";

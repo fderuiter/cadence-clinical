@@ -96,7 +96,9 @@
               @drop.prevent="handleDrop"
             >
               <div class="dropzone-content">
-                <span class="dropzone-icon">📁</span>
+                <span class="dropzone-icon"
+                  ><ClinicalIcon name="folder" :size="20"
+                /></span>
                 <p class="dropzone-title">
                   Drag &amp; Drop DICOM Study Folder or ZIP Archive
                 </p>
@@ -111,14 +113,15 @@
                     class="btn btn-secondary"
                     @click="triggerFolderSelect"
                   >
-                    📂 Select Folder
+                    <ClinicalIcon name="folder-open" :size="16" /> Select Folder
                   </button>
                   <button
                     type="button"
                     class="btn btn-secondary"
                     @click="triggerFileSelect"
                   >
-                    📦 Select Files / ZIP
+                    <ClinicalIcon name="package" :size="16" /> Select Files /
+                    ZIP
                   </button>
                 </div>
 
@@ -171,7 +174,9 @@
 
               <!-- Non-DICOM Alert -->
               <div v-if="nonDicomList.length > 0" class="non-dicom-alert">
-                <span class="alert-icon">⚠️</span>
+                <span class="alert-icon"
+                  ><ClinicalIcon name="alert-triangle" :size="16"
+                /></span>
                 <div class="alert-text">
                   <strong>Non-DICOM Files Detected:</strong> The following
                   {{ nonDicomList.length }} file(s) will be automatically
@@ -194,7 +199,9 @@
 
           <!-- Step 2: Uploading / Processing State -->
           <div v-if="isUploading" class="uploading-state-card">
-            <div class="spinner-icon">🔄</div>
+            <div class="spinner-icon">
+              <ClinicalIcon name="refresh-cw" :size="20" />
+            </div>
             <h4 class="uploading-title">
               Streaming &amp; De-identifying DICOM Batch...
             </h4>
@@ -214,7 +221,9 @@
           <!-- Step 3: Success Certificate Summary -->
           <div v-if="ingestionResult" class="certificate-summary-card">
             <div class="cert-banner">
-              <span class="cert-icon">🔒</span>
+              <span class="cert-icon"
+                ><ClinicalIcon name="lock" :size="20"
+              /></span>
               <div>
                 <h4 class="cert-title">
                   PS 3.15 De-Identification Certificate Issued
@@ -298,7 +307,9 @@
 
           <!-- Error Alert -->
           <div v-if="errorMessage" class="error-alert-box">
-            <span class="error-icon">❌</span>
+            <span class="error-icon"
+              ><ClinicalIcon name="x-circle" :size="16"
+            /></span>
             <span>{{ errorMessage }}</span>
           </div>
         </div>
@@ -341,7 +352,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, useFocusTrap } from "ui";
 
 const props = defineProps({
   isOpen: { type: Boolean, default: false },

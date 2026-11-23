@@ -17,7 +17,9 @@
         class="site-contact-link site-contact-phone touch-target-interactive"
         :aria-label="phoneAriaLabel"
       >
-        <span aria-hidden="true">📞</span>
+        <span aria-hidden="true">
+          <ClinicalIcon name="phone" :size="16" />
+        </span>
         <span>{{ phoneVisibleLabel }}</span>
       </a>
       <a
@@ -25,7 +27,9 @@
         class="site-contact-link site-contact-email touch-target-interactive"
         :aria-label="emailAriaLabel"
       >
-        <span aria-hidden="true">✉️</span>
+        <span aria-hidden="true">
+          <ClinicalIcon name="mail" :size="16" />
+        </span>
         <span>{{ emailVisibleLabel }}</span>
       </a>
     </div>
@@ -34,6 +38,7 @@
 
 <script setup>
 import { computed } from "vue";
+import { ClinicalIcon } from "ui";
 
 import { getSiteSupportContact } from "../features/site-support.js";
 import { useUiStore } from "../stores/ui.js";

@@ -1,5 +1,5 @@
 // 4. My Inbox: notifications, reminders and their acknowledgement.
-import { createSrOnlyActionButton } from "ui";
+import { createSrOnlyActionButton, renderClinicalIconSvg } from "ui";
 import {
   dispatchApi,
   fetchNotifications,
@@ -39,7 +39,7 @@ export function renderInbox() {
       container.style.display = "none";
       container.innerHTML = `
         <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
-          <p style="font-size: 16px; font-weight: 700;">⚠️ Error loading notifications</p>
+          <p style="font-size: 16px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">${renderClinicalIconSvg("alert-triangle", { size: 16 })} Error loading notifications</p>
         </div>
       `;
     }

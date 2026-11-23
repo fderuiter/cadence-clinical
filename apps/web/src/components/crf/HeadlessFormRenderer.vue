@@ -14,7 +14,7 @@
           :class="{ active: currentViewport === 'desktop_edc' }"
           @click="currentViewport = 'desktop_edc'"
         >
-          🖥️ Desktop EDC
+          <ClinicalIcon name="monitor" :size="16" /> Desktop EDC
         </button>
         <button
           type="button"
@@ -22,7 +22,7 @@
           :class="{ active: currentViewport === 'mobile_epro' }"
           @click="currentViewport = 'mobile_epro'"
         >
-          📱 Mobile ePRO
+          <ClinicalIcon name="smartphone" :size="16" /> Mobile ePRO
         </button>
         <button
           type="button"
@@ -30,7 +30,7 @@
           :class="{ active: currentViewport === 'tablet_esource' }"
           @click="currentViewport = 'tablet_esource'"
         >
-          📋 Tablet eSource
+          <ClinicalIcon name="tablet" :size="16" /> Tablet eSource
         </button>
       </div>
     </div>
@@ -126,7 +126,8 @@
                 v-if="fieldErrors[widget.variable_id]"
                 class="field-error-message"
               >
-                ⚠️ {{ fieldErrors[widget.variable_id] }}
+                <ClinicalIcon name="alert-triangle" :size="16" />
+                {{ fieldErrors[widget.variable_id] }}
               </div>
             </div>
           </div>
@@ -145,6 +146,7 @@
 
 <script setup>
 import { computed, ref, reactive, watch, onMounted } from "vue";
+import { ClinicalIcon } from "ui";
 import { evaluateAST, renderFormFromJSON } from "../../evaluator.js";
 import MedicalAutocodeWidget from "./widgets/MedicalAutocodeWidget.vue";
 import BodyMapWidget from "./widgets/BodyMapWidget.vue";

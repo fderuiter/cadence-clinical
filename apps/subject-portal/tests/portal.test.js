@@ -45,7 +45,7 @@ beforeEach(async () => {
             <div class="card sync-queue-panel" id="sync-queue-panel" style="margin-top: 24px;">
               <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--semantic-color-border); padding-bottom: 12px; margin-bottom: 12px;">
                 <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
-                  <span>🔄</span> Offline Sync Queue
+                  Offline Sync Queue
                 </h3>
                 <button type="button" id="btn-sync-now" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;">Sync Now</button>
               </div>

@@ -14,7 +14,11 @@
         class="sync-status-badge"
         :class="{ synced: isSynced, unlinked: !isSynced }"
       >
-        <span class="status-icon">{{ isSynced ? "🔗" : "🔓" }}</span>
+        <ClinicalIcon
+          :name="isSynced ? 'link' : 'unlock'"
+          :size="16"
+          class="status-icon"
+        />
         <span class="status-text">{{
           isSynced ? "Crosshairs & Scroll Linked" : "Independent Control"
         }}</span>
@@ -66,7 +70,7 @@
           title="Toggle Synchronized MPR Crosshairs"
           @click="isCrosshairEnabled = !isCrosshairEnabled"
         >
-          <span class="btn-icon">🎯</span> Crosshairs
+          <ClinicalIcon name="target" :size="16" class="btn-icon" /> Crosshairs
         </button>
 
         <button
@@ -76,7 +80,8 @@
           title="Invert Grayscale Color Map"
           @click="isInverted = !isInverted"
         >
-          <span class="btn-icon">🌓</span> Invert
+          <ClinicalIcon name="sliders-horizontal" :size="16" class="btn-icon" />
+          Invert
         </button>
 
         <button
@@ -85,7 +90,7 @@
           title="Reset Zoom & Pan"
           @click="resetView"
         >
-          <span class="btn-icon">🔄</span> Reset
+          <ClinicalIcon name="refresh-cw" :size="16" class="btn-icon" /> Reset
         </button>
       </div>
 
@@ -97,7 +102,12 @@
           :title="isCinePlaying ? 'Pause Cine Playback' : 'Play Cine Loop'"
           @click="toggleCine"
         >
-          <span class="btn-icon">{{ isCinePlaying ? "⏸️" : "▶️" }}</span> Cine
+          <ClinicalIcon
+            :name="isCinePlaying ? 'pause' : 'play'"
+            :size="16"
+            class="btn-icon"
+          />
+          Cine
         </button>
         <span class="cine-speed-label">{{ cineFps }} fps</span>
       </div>
@@ -229,6 +239,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ClinicalIcon } from "ui";
 
 const props = defineProps({
   seriesUid: {
@@ -635,7 +646,7 @@ function renderViewport(canvas, plane, sliceVal) {
       // Contour overlay label
       ctx.fillStyle = "#38bdf8";
       ctx.font = "bold 11px sans-serif";
-      const labelText = `🤖 ${annot.lesion_id || "TL" + (idx + 1)}: ${annot.longest_diameter_mm}mm (AI)`;
+      const labelText = `AI ${annot.lesion_id || "TL" + (idx + 1)}: ${annot.longest_diameter_mm}mm (AI)`;
       ctx.fillText(labelText, annot.points[0].x, annot.points[0].y - 8);
     } else if (annot.points && annot.points.length === 2) {
       ctx.lineWidth = 2;

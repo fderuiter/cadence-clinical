@@ -58,7 +58,8 @@ describe("Subject portal router and stores", () => {
 
     const emojiPattern = /\p{Extended_Pictographic}/u;
     for (const tab of tabs) {
-      expect(["function", "object"]).toContain(typeof tab.icon);
+      expect(typeof tab.icon).toBe("string");
+      expect(emojiPattern.test(tab.icon)).toBe(false);
       expect(emojiPattern.test(tab.label)).toBe(false);
     }
 

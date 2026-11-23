@@ -22,7 +22,8 @@
             id="synonym-drawer-title"
             class="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2"
           >
-            <span>📥</span> Bulk Synonym Dictionary Import
+            <ClinicalIcon name="download" :size="16" /> Bulk Synonym Dictionary
+            Import
           </h2>
           <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Ingest MedDRA and WHODrug verbatim synonym dictionaries with
@@ -53,7 +54,7 @@
           "
           @click="activeTab = 'import'"
         >
-          📁 Import New Rules
+          <ClinicalIcon name="folder" :size="16" /> Import New Rules
         </button>
         <button
           type="button"
@@ -65,7 +66,7 @@
           "
           @click="switchToHistoryTab"
         >
-          📜 Audit History
+          <ClinicalIcon name="scroll-text" :size="16" /> Audit History
         </button>
         <button
           type="button"
@@ -77,7 +78,9 @@
           "
           @click="switchToRulesTab"
         >
-          ⚡ Active Rules ({{ codingStore.synonymRules.length }})
+          <ClinicalIcon name="zap" :size="16" /> Active Rules ({{
+            codingStore.synonymRules.length
+          }})
         </button>
       </div>
 
@@ -89,7 +92,7 @@
           class="access-restricted-banner rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300"
         >
           <div class="font-bold flex items-center gap-1.5 text-sm">
-            <span>⚠️</span> Access Restricted
+            <ClinicalIcon name="alert-triangle" :size="16" /> Access Restricted
           </div>
           <p class="mt-1">
             Bulk synonym dictionary import requires
@@ -168,7 +171,7 @@
               accept=".csv,.xlsx"
               :disabled="!isAuthorized || codingStore.synonymImportLoading"
               :has-selection="!!selectedFile"
-              :icon="selectedFile ? '📄' : '📤'"
+              :icon="selectedFile ? 'file-text' : 'upload'"
               :button-label="
                 selectedFile
                   ? 'Replace Synonym File'
@@ -222,10 +225,15 @@
                 "
                 @click="runPreflightValidation"
               >
+                <ClinicalIcon
+                  v-if="!codingStore.synonymImportLoading"
+                  name="search"
+                  :size="16"
+                />
                 {{
                   codingStore.synonymImportLoading
                     ? "Validating File..."
-                    : "🔍 Run Pre-flight Validation"
+                    : "Run Pre-flight Validation"
                 }}
               </button>
             </div>
@@ -237,7 +245,7 @@
             class="rounded-lg border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300"
           >
             <div class="font-bold flex items-center gap-1.5">
-              <span>🛑</span> Import Error
+              <ClinicalIcon name="octagon-alert" :size="16" /> Import Error
             </div>
             <p class="mt-1">
               {{ codingStore.synonymImportError }}
@@ -263,10 +271,12 @@
                     : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
                 "
               >
+                <ClinicalIcon
+                  :name="report.canImport ? 'check-circle-2' : 'x-circle'"
+                  :size="16"
+                />
                 {{
-                  report.canImport
-                    ? "✅ Pre-flight Passed"
-                    : "❌ Validation Failed"
+                  report.canImport ? "Pre-flight Passed" : "Validation Failed"
                 }}
               </span>
             </div>
@@ -411,10 +421,15 @@
                   "
                   @click="executeImport"
                 >
+                  <ClinicalIcon
+                    v-if="!codingStore.synonymImportLoading"
+                    name="rocket"
+                    :size="16"
+                  />
                   {{
                     codingStore.synonymImportLoading
                       ? "Ingesting Synonym Rules..."
-                      : `🚀 Confirm & Ingest ${report.validCount} Valid Rules`
+                      : `Confirm & Ingest ${report.validCount} Valid Rules`
                   }}
                 </button>
               </div>
@@ -439,7 +454,7 @@
                 )
               "
             >
-              🔄 Refresh
+              <ClinicalIcon name="refresh-cw" :size="16" /> Refresh
             </button>
           </div>
 
@@ -552,7 +567,7 @@
               class="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
               @click="codingStore.fetchActiveSynonymRules(studyId)"
             >
-              🔄 Refresh Rules
+              <ClinicalIcon name="refresh-cw" :size="16" /> Refresh Rules
             </button>
           </div>
 
@@ -651,7 +666,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { ClinicalDropzone, useFocusTrap } from "ui";
+import { ClinicalDropzone, ClinicalIcon, useFocusTrap } from "ui";
 import { useConfirmDialog } from "../composables/useConfirmDialog.js";
 import { useCodingStore } from "../stores/coding.js";
 import { useAuthStore } from "../stores/auth.js";

@@ -17,7 +17,8 @@
           :class="{ active: activePersona === 'READER_1' }"
           @click="switchPersona('READER_1')"
         >
-          <span class="role-icon">👤</span> Reader 1 (Blinded)
+          <ClinicalIcon name="user" :size="16" class="role-icon" /> Reader 1
+          (Blinded)
         </button>
         <button
           type="button"
@@ -25,7 +26,8 @@
           :class="{ active: activePersona === 'READER_2' }"
           @click="switchPersona('READER_2')"
         >
-          <span class="role-icon">👤</span> Reader 2 (Blinded)
+          <ClinicalIcon name="user" :size="16" class="role-icon" /> Reader 2
+          (Blinded)
         </button>
         <button
           type="button"
@@ -33,7 +35,8 @@
           :class="{ active: activePersona === 'CHAIR' }"
           @click="switchPersona('CHAIR')"
         >
-          <span class="role-icon">⚖️</span> Adjudication Chair
+          <ClinicalIcon name="scale" :size="16" class="role-icon" />
+          Adjudication Chair
         </button>
       </div>
     </div>
@@ -47,7 +50,7 @@
     >
       <!-- Blinding Enclosure Notice -->
       <div class="blinding-alert-box">
-        <div class="alert-icon">🔒</div>
+        <div class="alert-icon"><ClinicalIcon name="lock" :size="16" /></div>
         <div class="alert-content">
           <div class="alert-title">
             Blinded Independent Review Protocol Active
@@ -219,7 +222,8 @@
             class="btn-submit-read"
             @click="submitReaderRead"
           >
-            <span class="btn-icon">📤</span> Submit Blinded
+            <ClinicalIcon name="upload" :size="16" class="btn-icon" /> Submit
+            Blinded
             {{ activePersona === "READER_1" ? "Reader 1" : "Reader 2" }}
             Assessment
           </button>
@@ -229,7 +233,8 @@
             class="btn-retract-read"
             @click="retractReaderRead"
           >
-            <span class="btn-icon">✏️</span> Edit Assessment (Unlock)
+            <ClinicalIcon name="pencil" :size="16" class="btn-icon" /> Edit
+            Assessment (Unlock)
           </button>
         </div>
       </div>
@@ -251,9 +256,16 @@
         "
       >
         <div class="banner-icon">
-          {{
-            isDiscordant ? "⚠️" : workflowStatus === "ADJUDICATED" ? "✅" : "🤝"
-          }}
+          <ClinicalIcon
+            :name="
+              isDiscordant
+                ? 'alert-triangle'
+                : workflowStatus === 'ADJUDICATED'
+                  ? 'check-circle'
+                  : 'handshake'
+            "
+            :size="20"
+          />
         </div>
         <div class="banner-info">
           <div class="banner-headline">
@@ -434,8 +446,8 @@
             :disabled="!adjudicationRationale.trim()"
             @click="isSignoffModalOpen = true"
           >
-            <span class="btn-icon">✍️</span> Execute 21 CFR Part 11 Adjudication
-            Sign-Off
+            <ClinicalIcon name="pen-tool" :size="16" class="btn-icon" /> Execute
+            21 CFR Part 11 Adjudication Sign-Off
           </button>
 
           <div v-else class="post-adjudication-actions">
@@ -444,14 +456,16 @@
               class="btn-export-edc"
               @click="isEdcModalOpen = true"
             >
-              <span class="btn-icon">📋</span> View EDC eCRF Binding
+              <ClinicalIcon name="clipboard-list" :size="16" class="btn-icon" />
+              View EDC eCRF Binding
             </button>
             <button
               type="button"
               class="btn-export-sdtm"
               @click="isSdtmModalOpen = true"
             >
-              <span class="btn-icon">📊</span> Export CDISC SDTM TU/TR/RS
+              <ClinicalIcon name="bar-chart-3" :size="16" class="btn-icon" />
+              Export CDISC SDTM TU/TR/RS
             </button>
           </div>
         </div>
@@ -631,7 +645,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIcon, ClinicalIconButton, useFocusTrap } from "ui";
 
 const props = defineProps({
   subjectId: {

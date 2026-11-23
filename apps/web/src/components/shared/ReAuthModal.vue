@@ -17,7 +17,9 @@
     >
       <div class="modal-header">
         <h3 id="reauth-modal-title">
-          <span class="lock-icon" aria-hidden="true">🔐</span>
+          <span class="lock-icon" aria-hidden="true">
+            <ClinicalIcon name="lock" :size="20" />
+          </span>
           {{ title }}
         </h3>
         <button
@@ -120,7 +122,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { ModalErrorAlert, useFocusTrap } from "ui";
+import { ClinicalIcon, ModalErrorAlert, useFocusTrap } from "ui";
 
 const props = defineProps({
   isOpen: {

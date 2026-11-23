@@ -65,7 +65,7 @@
           title="Seed standard TransCelerate default matrix"
           @click="seedDefaults"
         >
-          <span class="btn-icon">⚡</span> Seed Defaults
+          <ClinicalIcon name="zap" :size="16" class="btn-icon" /> Seed Defaults
         </button>
         <button
           class="ract-btn ract-btn-secondary"
@@ -73,7 +73,7 @@
           title="Compute weighted Site Risk Index across sites"
           @click="computeSiteRiskProfiles"
         >
-          <span class="btn-icon">🎯</span> Compute SRI
+          <ClinicalIcon name="target" :size="16" class="btn-icon" /> Compute SRI
         </button>
         <button
           class="ract-btn ract-btn-secondary"
@@ -81,7 +81,8 @@
           title="Compile Part 11 signed Centralized Monitoring Dossier"
           @click="openDossierModal"
         >
-          <span class="btn-icon">📄</span> Inspection Dossier
+          <ClinicalIcon name="file-text" :size="16" class="btn-icon" />
+          Inspection Dossier
         </button>
         <button
           class="ract-btn ract-btn-primary"
@@ -89,7 +90,8 @@
           title="Define new protocol risk factor"
           @click="openAddModal"
         >
-          <span class="btn-icon">➕</span> Add Risk Factor
+          <ClinicalIcon name="plus" :size="16" class="btn-icon" /> Add Risk
+          Factor
         </button>
       </div>
     </header>
@@ -103,7 +105,9 @@
         :class="{ 'kpi-card-active': selectedCategory === 'ALL' }"
         @click="selectedCategory = 'ALL'"
       >
-        <div class="kpi-icon icon-total">📊</div>
+        <div class="kpi-icon icon-total">
+          <ClinicalIcon name="bar-chart-3" :size="20" />
+        </div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ totalRiskFactors }}
@@ -113,7 +117,9 @@
       </div>
 
       <div class="kpi-card kpi-card-danger">
-        <div class="kpi-icon icon-high">🚨</div>
+        <div class="kpi-icon icon-high">
+          <ClinicalIcon name="siren" :size="20" />
+        </div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ highRiskCount }}
@@ -123,7 +129,9 @@
       </div>
 
       <div class="kpi-card kpi-card-warning">
-        <div class="kpi-icon icon-med">⚠️</div>
+        <div class="kpi-icon icon-med">
+          <ClinicalIcon name="alert-triangle" :size="20" />
+        </div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ mediumRiskCount }}
@@ -133,7 +141,9 @@
       </div>
 
       <div class="kpi-card kpi-card-success">
-        <div class="kpi-icon icon-low">✅</div>
+        <div class="kpi-icon icon-low">
+          <ClinicalIcon name="check-circle" :size="20" />
+        </div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ lowRiskCount }}
@@ -143,7 +153,9 @@
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-icon icon-kri">🔗</div>
+        <div class="kpi-icon icon-kri">
+          <ClinicalIcon name="link" :size="20" />
+        </div>
         <div class="kpi-content">
           <div class="kpi-value">{{ linkedKriCoverage }}%</div>
           <div class="kpi-label">Automated KRI Coverage</div>
@@ -158,7 +170,8 @@
         :class="{ active: selectedCategory === 'ALL' }"
         @click="selectedCategory = 'ALL'"
       >
-        <span class="tab-icon">🌐</span> All Categories ({{ totalRiskFactors }})
+        <ClinicalIcon name="globe" :size="16" class="tab-icon" /> All Categories
+        ({{ totalRiskFactors }})
       </button>
       <button
         v-for="cat in categoryList"
@@ -167,9 +180,8 @@
         :class="{ active: selectedCategory === cat.key }"
         @click="selectedCategory = cat.key"
       >
-        <span class="tab-icon">{{ cat.icon }}</span> {{ cat.name }} ({{
-          getCategoryCount(cat.key)
-        }})
+        <ClinicalIcon :name="cat.icon" :size="16" class="tab-icon" />
+        {{ cat.name }} ({{ getCategoryCount(cat.key) }})
       </button>
     </div>
 
@@ -181,14 +193,16 @@
           :class="{ active: activeViewMode === 'matrix' }"
           @click="activeViewMode = 'matrix'"
         >
-          📋 Interactive RACT Risk Matrix
+          <ClinicalIcon name="clipboard-list" :size="16" /> Interactive RACT
+          Risk Matrix
         </button>
         <button
           class="sub-tab-btn"
           :class="{ active: activeViewMode === 'sri' }"
           @click="activeViewMode = 'sri'"
         >
-          🎯 Site Risk Index (SRI) &amp; Percentiles ({{ siteProfiles.length }}
+          <ClinicalIcon name="target" :size="16" /> Site Risk Index (SRI) &amp;
+          Percentiles ({{ siteProfiles.length }}
           Sites)
         </button>
         <button
@@ -196,7 +210,8 @@
           :class="{ active: activeViewMode === 'kri' }"
           @click="activeViewMode = 'kri'"
         >
-          📈 KRI Threshold Definitions
+          <ClinicalIcon name="trending-up" :size="16" /> KRI Threshold
+          Definitions
         </button>
       </div>
 
@@ -214,14 +229,17 @@
     <!-- MODE 1: Interactive RACT Risk Matrix Grid -->
     <section v-if="activeViewMode === 'matrix'" class="matrix-section">
       <div v-if="filteredFactors.length === 0" class="empty-state-card">
-        <div class="empty-icon">📋</div>
+        <div class="empty-icon">
+          <ClinicalIcon name="clipboard-list" :size="20" />
+        </div>
         <h3>No Protocol Risk Factors Found</h3>
         <p>
           No risk factors match the current filter or category. Seed standard
           TransCelerate defaults to initialize the matrix.
         </p>
         <button class="ract-btn ract-btn-primary" @click="seedDefaults">
-          ⚡ Seed Standard TransCelerate RACT Defaults
+          <ClinicalIcon name="zap" :size="16" /> Seed Standard TransCelerate
+          RACT Defaults
         </button>
       </div>
 
@@ -321,18 +339,16 @@
                   class="action-btn"
                   title="Edit risk factor"
                   :label="`Edit risk factor ${factor.risk_topic || factor.category || factor.id}`"
+                  icon="pencil"
                   @click="openEditModal(factor)"
-                >
-                  ✏️
-                </ClinicalIconButton>
+                />
                 <ClinicalIconButton
                   class="action-btn action-btn-danger"
                   title="Delete risk factor"
                   :label="`Delete risk factor ${factor.risk_topic || factor.category || factor.id}`"
+                  icon="trash-2"
                   @click="deleteFactor(factor.id)"
-                >
-                  🗑️
-                </ClinicalIconButton>
+                />
               </td>
             </tr>
           </tbody>
@@ -358,12 +374,14 @@
             class="ract-btn ract-btn-primary ract-btn-sm"
             @click="computeSiteRiskProfiles"
           >
-            ⚡ Recalculate SRI Rankings
+            <ClinicalIcon name="zap" :size="16" /> Recalculate SRI Rankings
           </button>
         </div>
 
         <div v-if="siteProfiles.length === 0" class="empty-state-card">
-          <div class="empty-icon">🎯</div>
+          <div class="empty-icon">
+            <ClinicalIcon name="target" :size="20" />
+          </div>
           <h3>No Site Risk Profiles Computed</h3>
           <p>
             Execute batch SRI calculation to rank clinical investigational sites
@@ -373,7 +391,7 @@
             class="ract-btn ract-btn-primary"
             @click="computeSiteRiskProfiles"
           >
-            🎯 Compute Site Risk Profiles
+            <ClinicalIcon name="target" :size="16" /> Compute Site Risk Profiles
           </button>
         </div>
 
@@ -798,14 +816,17 @@
           :disabled="!dossierSigner.name || !dossierSigner.role || isLoading"
           @click="compileDossier"
         >
-          🔒 Compile &amp; Cryptographically Sign Dossier
+          <ClinicalIcon name="lock" :size="16" /> Compile &amp;
+          Cryptographically Sign Dossier
         </button>
       </div>
 
       <!-- Compiled Dossier Preview -->
       <div v-else class="dossier-view">
         <div class="dossier-seal-banner">
-          <div class="seal-icon">🛡️</div>
+          <div class="seal-icon">
+            <ClinicalIcon name="shield-check" :size="20" />
+          </div>
           <div class="seal-details">
             <div class="seal-title">
               {{ compiledDossier.dossier_name }}
@@ -906,7 +927,7 @@
 <script setup lang="ts">
 import { encodeChangeReason } from "../../api/changeReason";
 import { ref, computed, onMounted } from "vue";
-import { ClinicalIconButton, ClinicalModal } from "ui";
+import { ClinicalIcon, ClinicalIconButton, ClinicalModal } from "ui";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
 
 interface RACTFactor {
@@ -1000,12 +1021,12 @@ const dossierSigner = ref({
 });
 
 const categoryList = [
-  { key: "SAFETY", name: "Safety", icon: "🛡️" },
-  { key: "CONSENT", name: "Consent", icon: "✍️" },
-  { key: "STUDY_CONDUCT", name: "Study Conduct", icon: "📋" },
-  { key: "DATA_INTEGRITY", name: "Data Integrity", icon: "🔍" },
-  { key: "IP_MANAGEMENT", name: "IP Management", icon: "💊" },
-  { key: "TECHNOLOGY", name: "Technology", icon: "💻" },
+  { key: "SAFETY", name: "Safety", icon: "shield-check" },
+  { key: "CONSENT", name: "Consent", icon: "pen-tool" },
+  { key: "STUDY_CONDUCT", name: "Study Conduct", icon: "clipboard-list" },
+  { key: "DATA_INTEGRITY", name: "Data Integrity", icon: "search" },
+  { key: "IP_MANAGEMENT", name: "IP Management", icon: "pill" },
+  { key: "TECHNOLOGY", name: "Technology", icon: "monitor" },
 ];
 
 // Computed

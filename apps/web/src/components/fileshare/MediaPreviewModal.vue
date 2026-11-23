@@ -13,7 +13,9 @@
       <div class="modal-header">
         <div class="header-details">
           <h3>
-            <span class="secure-icon" aria-hidden="true">🔒</span>
+            <span class="secure-icon" aria-hidden="true"
+              ><ClinicalIcon name="lock" :size="16"
+            /></span>
             Secure Regulated Viewer — {{ fileRecord?.filename }}
           </h3>
           <p class="gxp-tracking-subtitle">
@@ -31,7 +33,9 @@
             data-testid="rendition-badge"
             title="Automatic PDF Rendition generated for regulated preview"
           >
-            <span class="badge-icon">📄</span>
+            <span class="badge-icon"
+              ><ClinicalIcon name="file-text" :size="16"
+            /></span>
             <span class="badge-label">PDF Rendition</span>
           </div>
           <div
@@ -40,7 +44,9 @@
             data-testid="converting-badge"
             title="Converting Office document to PDF rendition in background"
           >
-            <span class="badge-icon">🔄</span>
+            <span class="badge-icon"
+              ><ClinicalIcon name="refresh-cw" :size="16"
+            /></span>
             <span class="badge-label">Converting...</span>
           </div>
           <div
@@ -48,7 +54,9 @@
             class="approval-badge approved-pill"
             data-testid="approved-badge"
           >
-            <span class="badge-icon">✅</span>
+            <span class="badge-icon"
+              ><ClinicalIcon name="check-circle-2" :size="16"
+            /></span>
             <span class="badge-label">Approved</span>
             <span v-if="fileRecord?.approved_by" class="badge-signer font-mono"
               >by {{ fileRecord.approved_by }}</span
@@ -61,7 +69,7 @@
             title="Approve this document with 21 CFR Part 11 Electronic Signature"
             @click="openReAuthModal"
           >
-            ✍️ Approve this document
+            <ClinicalIcon name="pen-tool" :size="16" /> Approve this document
           </button>
           <button
             v-if="canDownload"
@@ -70,7 +78,7 @@
             :aria-label="'Download ' + fileRecord?.filename"
             @click="handleDownload"
           >
-            📥 Download
+            <ClinicalIcon name="download" :size="16" /> Download
           </button>
           <button
             class="close-modal-btn"
@@ -174,7 +182,10 @@
           <div class="meta-section border-top">
             <h4>Security Context</h4>
             <div class="manifest-card signed">
-              <p class="sign-status">🛡️ PROTECTED VIEW ENFORCED</p>
+              <p class="sign-status">
+                <ClinicalIcon name="shield-check" :size="16" /> PROTECTED VIEW
+                ENFORCED
+              </p>
               <p class="signer-meta">
                 Viewer: <strong>{{ currentUserId }}</strong>
               </p>
@@ -199,7 +210,9 @@
           >
             <h4>Document Approval</h4>
             <div class="manifest-card approved">
-              <p class="sign-status text-success font-bold">✅ Approved</p>
+              <p class="sign-status text-success font-bold">
+                <ClinicalIcon name="check-circle-2" :size="16" /> Approved
+              </p>
               <p v-if="fileRecord?.approved_by" class="signer-meta">
                 Signer:
                 <strong class="font-mono">{{ fileRecord.approved_by }}</strong>
@@ -266,8 +279,8 @@
                 role="alert"
               >
                 <span class="processing-icon warning-icon" aria-hidden="true"
-                  >⏱️</span
-                >
+                  ><ClinicalIcon name="timer" :size="20"
+                /></span>
                 <h4 class="processing-title">
                   Video processing is taking longer than expected — try again
                   later
@@ -280,7 +293,7 @@
                   class="btn btn-sm btn-outline-light"
                   @click="retryTranscodeCheck"
                 >
-                  🔄 Check Again
+                  <ClinicalIcon name="refresh-cw" :size="16" /> Check Again
                 </button>
               </div>
 
@@ -291,8 +304,8 @@
                 role="alert"
               >
                 <span class="processing-icon error-icon" aria-hidden="true"
-                  >⚠️</span
-                >
+                  ><ClinicalIcon name="alert-triangle" :size="20"
+                /></span>
                 <h4 class="processing-title">Video Transcoding Failed</h4>
                 <p class="processing-subtitle font-mono">
                   {{
@@ -304,7 +317,7 @@
                   class="btn btn-sm btn-outline-light"
                   @click="retryTranscodeCheck"
                 >
-                  🔄 Retry
+                  <ClinicalIcon name="refresh-cw" :size="16" /> Retry
                 </button>
               </div>
 
@@ -318,7 +331,9 @@
                   data-testid="audit-error-overlay"
                 >
                   <div class="audit-alert-card">
-                    <span class="alert-icon" aria-hidden="true">⚠️</span>
+                    <span class="alert-icon" aria-hidden="true"
+                      ><ClinicalIcon name="alert-triangle" :size="20"
+                    /></span>
                     <h4 class="alert-title">Audit Telemetry Interrupted</h4>
                     <p class="alert-message">
                       21 CFR Part 11 compliance requires verified audit trail
@@ -330,7 +345,8 @@
                       data-testid="retry-audit-btn"
                       @click="retryAuditConnection"
                     >
-                      🔄 Retry Audit Connection
+                      <ClinicalIcon name="refresh-cw" :size="16" /> Retry Audit
+                      Connection
                     </button>
                   </div>
                 </div>
@@ -377,7 +393,8 @@
               </div>
 
               <div class="media-meta-badge">
-                🎬 Regulated Video Stream ({{ fileRecord?.filename }})
+                <ClinicalIcon name="video" :size="16" /> Regulated Video Stream
+                ({{ fileRecord?.filename }})
                 <span
                   v-if="selectedQualityLabel && transcodeStatus === 'READY'"
                   class="quality-badge font-mono"
@@ -392,7 +409,9 @@
               class="media-player-container audio-container"
             >
               <div class="audio-player-card">
-                <div class="audio-icon-display">🎙️</div>
+                <div class="audio-icon-display">
+                  <ClinicalIcon name="mic" :size="20" />
+                </div>
                 <h4 class="audio-filename">
                   {{ fileRecord?.filename }}
                 </h4>
@@ -516,7 +535,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, useFocusTrap } from "ui";
 import { fileshareService } from "../../api/fileshare";
 import { useAuthStore } from "../../stores/auth";
 import {

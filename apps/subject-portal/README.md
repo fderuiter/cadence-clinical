@@ -57,5 +57,5 @@ Run from the repository root with pnpm:
 
 ## Dependencies
 
-- Runtime: `vue`, `vue-router`, `pinia`, `lucide-vue-next` and the workspace packages [ui](../../packages/ui/README.md) and [usdm-schemas](../../packages/usdm-schemas/README.md); `keycloak-js` is loaded on demand.
+- Runtime: `vue`, `vue-router`, `pinia` and the workspace packages [ui](../../packages/ui/README.md) and [usdm-schemas](../../packages/usdm-schemas/README.md); `keycloak-js` is loaded on demand.
 - Development: Vite, Vitest, Playwright with `@axe-core/playwright`, MSW, `fake-indexeddb`, `jsdom`.

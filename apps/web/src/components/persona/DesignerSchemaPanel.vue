@@ -127,10 +127,15 @@
           :disabled="importingDraft || store.ingestionLoading"
           @click="onChooseFileClick"
         >
+          <ClinicalIcon
+            v-if="!(importingDraft || store.ingestionLoading)"
+            name="folder"
+            :size="16"
+          />
           {{
             importingDraft || store.ingestionLoading
               ? "Importing Protocol…"
-              : "📁 Select ODM XML or USDM JSON"
+              : "Select ODM XML or USDM JSON"
           }}
         </button>
         <div
@@ -444,7 +449,8 @@
                   title="Source Reference"
                   class="item-citation"
                 >
-                  📖 {{ item.source_citation }}
+                  <ClinicalIcon name="book-open" :size="16" />
+                  {{ item.source_citation }}
                 </span>
               </div>
             </div>
@@ -606,14 +612,14 @@
                   style="padding: 2px 8px; font-size: 0.75rem"
                   @click="$emit('accept-item', item.id)"
                 >
-                  ✔️ Accept
+                  <ClinicalIcon name="check" :size="16" /> Accept
                 </button>
                 <button
                   class="btn btn-sm edit-btn"
                   style="padding: 2px 8px; font-size: 0.75rem"
                   @click="$emit('start-edit-item', item)"
                 >
-                  ✏️ Edit
+                  <ClinicalIcon name="pencil" :size="16" /> Edit
                 </button>
                 <button
                   class="btn btn-sm reject-btn"
@@ -625,7 +631,7 @@
                   "
                   @click="$emit('start-reject-item', item.id)"
                 >
-                  ❌ Reject
+                  <ClinicalIcon name="x-circle" :size="16" /> Reject
                 </button>
               </div>
             </div>
@@ -677,10 +683,16 @@
               "
               class="remaining-reviews-text"
             >
+              <ClinicalIcon
+                :name="
+                  unreviewedCount === 0 ? 'check-circle' : 'alert-triangle'
+                "
+                :size="16"
+              />
               {{
                 unreviewedCount === 0
-                  ? "✅ All items reviewed. Ready to promote."
-                  : `⚠️ ${unreviewedCount} items remaining to be reviewed.`
+                  ? "All items reviewed. Ready to promote."
+                  : `${unreviewedCount} items remaining to be reviewed.`
               }}
             </span>
             <button
@@ -694,7 +706,8 @@
               "
               @click="$emit('promote-candidate')"
             >
-              🚀 Promote Reviewed Candidate
+              <ClinicalIcon name="rocket" :size="16" /> Promote Reviewed
+              Candidate
             </button>
           </div>
         </div>
@@ -719,6 +732,7 @@
 
 <script setup>
 import { onMounted, ref, watch } from "vue";
+import { ClinicalIcon } from "ui";
 
 const fileInputRef = ref(null);
 

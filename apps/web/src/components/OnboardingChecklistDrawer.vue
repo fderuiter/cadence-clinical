@@ -16,7 +16,9 @@
         <div class="drawer-header">
           <div class="header-main-row">
             <div class="header-title-group">
-              <span class="header-icon">🚀</span>
+              <span class="header-icon"
+                ><ClinicalIcon name="rocket" :size="20"
+              /></span>
               <div>
                 <h3 id="checklist-drawer-title" class="drawer-title">
                   Workspace Setup Checklist
@@ -64,7 +66,8 @@
               v-if="onboardingStore.isChecklistComplete"
               class="complete-banner"
             >
-              🎉 All setup milestones completed! Study configuration ready.
+              <ClinicalIcon name="check-circle-2" :size="16" /> All setup
+              milestones completed! Study configuration ready.
             </div>
           </div>
         </div>
@@ -113,7 +116,7 @@
               :aria-label="'Go to Task — ' + task.title"
               @click="navigateToTask(task)"
             >
-              Go to Task ↗
+              Go to Task <ClinicalIcon name="arrow-up-right" :size="16" />
             </button>
           </div>
         </div>
@@ -164,7 +167,7 @@
 <script setup>
 import { computed } from "vue";
 import { useRouter } from "vue-router";
-import { ClinicalDrawer, useEscapeClose } from "ui";
+import { ClinicalDrawer, ClinicalIcon, useEscapeClose } from "ui";
 import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,

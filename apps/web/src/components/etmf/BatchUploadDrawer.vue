@@ -16,7 +16,7 @@
     >
       <div class="drawer-header">
         <div style="display: flex; align-items: center; gap: 10px">
-          <span style="font-size: 24px">📤</span>
+          <span><ClinicalIcon name="upload" :size="20" /></span>
           <div>
             <h3
               id="batch-drawer-title"
@@ -63,7 +63,7 @@
           class="alert alert-error"
           style="margin-bottom: 16px"
         >
-          ⚠️ {{ batchError }}
+          <ClinicalIcon name="alert-triangle" :size="16" /> {{ batchError }}
         </div>
 
         <!-- Drag & Drop Dropzone -->
@@ -72,7 +72,7 @@
           multiple
           accept=".pdf,.doc,.docx,.txt"
           :disabled="isProcessing"
-          icon="📁"
+          icon="folder"
           prompt-text="Drop files here or browse to upload"
           hint-text="Supports PDF, DOCX, TXT • Max 50 files • 100 MB per file • 500 MB per batch"
           button-label="Browse files to upload"
@@ -219,11 +219,12 @@
                       style="font-size: 10px; padding: 2px 6px"
                       @click="inspectItem(item)"
                     >
-                      <span aria-hidden="true">📋 </span>Inspect<span
-                        class="sr-only"
-                      >
-                        {{ item.file.name }}</span
-                      >
+                      <span aria-hidden="true"
+                        ><ClinicalIcon
+                          name="clipboard-list"
+                          :size="16"
+                        /> </span
+                      >Inspect<span class="sr-only"> {{ item.file.name }}</span>
                     </button>
                     <ClinicalIconButton
                       v-if="!isProcessing && item.status === 'PENDING'"
@@ -279,7 +280,8 @@
           :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
           @click="startBatchUpload"
         >
-          🚀 Start Batch AI Auto-Classification &amp; Staging
+          <ClinicalIcon name="rocket" :size="16" /> Start Batch AI
+          Auto-Classification &amp; Staging
         </button>
       </div>
     </div>
@@ -404,7 +406,12 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalDropzone, ClinicalIconButton, useFocusTrap } from "ui";
+import {
+  ClinicalDropzone,
+  ClinicalIcon,
+  ClinicalIconButton,
+  useFocusTrap,
+} from "ui";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";

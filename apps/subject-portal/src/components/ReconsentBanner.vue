@@ -28,7 +28,9 @@
         min-width: 0;
       "
     >
-      <span style="font-size: 24px">⚠️</span>
+      <span aria-hidden="true" style="display: inline-flex; flex-shrink: 0">
+        <ClinicalIcon name="alert-triangle" :size="20" />
+      </span>
       <div style="min-width: 0">
         <h3
           style="
@@ -66,6 +68,7 @@
 </template>
 
 <script setup>
+import { ClinicalIcon } from "ui";
 import { openReconsentModal } from "../features/reconsent.js";
 import { useConsentStore } from "../stores/consent.js";
 

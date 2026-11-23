@@ -12,7 +12,8 @@
     >
       <div>
         <h3 style="font-weight: bold; margin: 0; color: var(--primary)">
-          🗺️ Interactive Arm-Aware Gantt Pathway Visualizer
+          <ClinicalIcon name="map" :size="20" /> Interactive Arm-Aware Gantt
+          Pathway Visualizer
         </h3>
         <p
           style="
@@ -345,7 +346,7 @@
                 font-weight="bold"
                 fill="var(--semantic-color-pink-text)"
               >
-                🔀 {{ truncate(cross.label || "Crossover", 18) }}
+                {{ truncate(cross.label || "Crossover", 18) }}
               </text>
             </g>
           </g>
@@ -360,7 +361,7 @@
       size="md"
       backdrop-class="gantt-modal-backdrop"
       dialog-class="gantt-modal-content card"
-      title="⚙️ Edit Encounter Timing Property"
+      title="Edit Encounter Timing Property"
       @close="closeModal"
     >
       <div
@@ -600,7 +601,7 @@
           "
           @click="saveTiming"
         >
-          💾 Save Changes
+          <ClinicalIcon name="save" :size="16" /> Save Changes
         </button>
       </template>
     </ClinicalModal>
@@ -608,7 +609,7 @@
 </template>
 
 <script setup>
-import { ClinicalModal } from "ui";
+import { ClinicalIcon, ClinicalModal } from "ui";
 import { ref, computed, reactive } from "vue";
 import { useClinicalStore } from "../../stores/clinical";
 import { useToastStore } from "../../stores/toasts.js";

@@ -63,7 +63,8 @@
         :title="$t('econsent.editor.insertTable')"
         @click="insertTable"
       >
-        📊 {{ $t("econsent.editor.table") }}
+        <ClinicalIcon name="bar-chart-3" :size="16" />
+        {{ $t("econsent.editor.table") }}
       </button>
       <button
         type="button"
@@ -71,7 +72,8 @@
         :title="$t('econsent.editor.insertImage')"
         @click="insertImage"
       >
-        🖼️ {{ $t("econsent.editor.image") }}
+        <ClinicalIcon name="image" :size="16" />
+        {{ $t("econsent.editor.image") }}
       </button>
       <button
         type="button"
@@ -79,7 +81,8 @@
         :title="$t('econsent.editor.annotateGlossary')"
         @click="promptGlossary"
       >
-        🏷️ {{ $t("econsent.editor.glossaryTerm") }}
+        <ClinicalIcon name="tag" :size="16" />
+        {{ $t("econsent.editor.glossaryTerm") }}
       </button>
       <button
         type="button"
@@ -87,7 +90,8 @@
         :title="$t('econsent.editor.readabilityHarmonizerTitle')"
         @click="showReadabilityDrawer = true"
       >
-        📖 {{ $t("econsent.editor.readabilityHarmonizer") }}
+        <ClinicalIcon name="book-open" :size="16" />
+        {{ $t("econsent.editor.readabilityHarmonizer") }}
       </button>
     </div>
 
@@ -180,7 +184,7 @@
 </template>
 
 <script setup>
-import { ClinicalModal } from "ui";
+import { ClinicalIcon, ClinicalModal } from "ui";
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
 import { useToastStore } from "../../stores/toasts.js";

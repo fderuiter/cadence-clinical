@@ -12,7 +12,8 @@
           ><strong>{{ totalAssignedCells }}</strong> Scheduled Activities</span
         >
         <span v-if="selectedRangeCellCount > 0" class="stat-badge range-badge">
-          ⚡ <strong>{{ selectedRangeCellCount }}</strong> Cells Selected
+          <ClinicalIcon name="zap" :size="16" />
+          <strong>{{ selectedRangeCellCount }}</strong> Cells Selected
         </span>
       </div>
       <div class="toolbar-actions">
@@ -45,7 +46,7 @@
             showAddVisit = false;
           "
         >
-          📋 Clone Procedure Group
+          <ClinicalIcon name="copy" :size="16" /> Clone Procedure Group
         </button>
       </div>
     </div>
@@ -194,7 +195,7 @@
         class="btn btn-primary btn-sm btn-execute-clone"
         @click="executeProcedureGroupCloning"
       >
-        ⚡ Clone Group to Target Arm
+        <ClinicalIcon name="zap" :size="16" /> Clone Group to Target Arm
       </button>
       <button
         type="button"
@@ -326,6 +327,7 @@
 
 <script setup>
 import { computed, ref, watch, onUnmounted } from "vue";
+import { ClinicalIcon } from "ui";
 
 const props = defineProps({
   activities: {

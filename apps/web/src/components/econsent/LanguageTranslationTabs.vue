@@ -1,9 +1,10 @@
 <template>
   <div class="language-translation-tabs-container card">
     <div class="tabs-header">
-      <span class="tabs-label"
-        >🌍 {{ $t("econsent.translationTabs.headerLabel") }}</span
-      >
+      <span class="tabs-label">
+        <ClinicalIcon name="globe" :size="16" />
+        <span>{{ $t("econsent.translationTabs.headerLabel") }}</span>
+      </span>
       <div ref="tabsListRef" class="tabs-list" role="tablist">
         <button
           v-for="lang in availableLanguages"
@@ -18,9 +19,8 @@
           ]"
           @click="selectLanguage(lang.code)"
         >
-          <span class="flag-icon">{{ lang.flag }}</span>
           <span class="lang-name">{{ lang.name }}</span>
-          <span class="lang-code-badge">{{ lang.code.toUpperCase() }}</span>
+          <span class="lang-code-badge">{{ lang.region }}</span>
         </button>
       </div>
     </div>
@@ -51,6 +51,7 @@
 
 <script setup>
 import { computed, ref } from "vue";
+import { ClinicalIcon } from "ui";
 import { useEconsentStore } from "../../stores/econsent.js";
 import { useRovingTabindex } from "../../composables/useRovingTabindex.js";
 import { setGlobalLocale } from "../../i18n/index.js";
@@ -59,10 +60,10 @@ const econsentStore = useEconsentStore();
 const tabsListRef = ref(null);
 
 const availableLanguages = [
-  { code: "en", name: "English", flag: "🇬🇧" },
-  { code: "es", name: "Spanish", flag: "🇪🇸" },
-  { code: "fr", name: "French", flag: "🇫🇷" },
-  { code: "de", name: "German", flag: "🇩🇪" },
+  { code: "en", name: "English", region: "EN-GB" },
+  { code: "es", name: "Spanish", region: "ES" },
+  { code: "fr", name: "French", region: "FR" },
+  { code: "de", name: "German", region: "DE" },
 ];
 
 const onSelectTab = (index) => {
@@ -117,6 +118,9 @@ const selectLanguage = (langCode) => {
 }
 
 .tabs-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 600;
   font-size: 0.9rem;
   color: var(--neutral-dark);

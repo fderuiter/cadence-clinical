@@ -17,7 +17,9 @@
       <!-- Header -->
       <div class="drawer-header">
         <div class="drawer-title-group">
-          <span class="drawer-icon" aria-hidden="true">📚</span>
+          <span class="drawer-icon" aria-hidden="true"
+            ><ClinicalIcon name="library" :size="20"
+          /></span>
           <div>
             <h3 class="drawer-title">Regulatory Quiz Template Library</h3>
             <p class="drawer-subtitle">
@@ -60,7 +62,9 @@
             >Search Keywords:</label
           >
           <div class="search-input-wrapper">
-            <span class="search-icon" aria-hidden="true">🔍</span>
+            <span class="search-icon" aria-hidden="true"
+              ><ClinicalIcon name="search" :size="16"
+            /></span>
             <input
               id="template-search-input"
               v-model="searchQuery"
@@ -195,7 +199,9 @@
               </div>
 
               <div v-if="tmpl.hint" class="template-hint-preview">
-                <span class="hint-icon" aria-hidden="true">💡</span>
+                <span class="hint-icon" aria-hidden="true"
+                  ><ClinicalIcon name="lightbulb" :size="16"
+                /></span>
                 <span class="hint-text"
                   ><strong>Feedback Hint:</strong> {{ tmpl.hint }}</span
                 >
@@ -217,7 +223,8 @@
           :disabled="selectedTemplateIds.length === 0"
           @click="confirmBatchImport"
         >
-          📥 Import Selected Questions ({{ selectedTemplateIds.length }})
+          <ClinicalIcon name="download" :size="16" /> Import Selected Questions
+          ({{ selectedTemplateIds.length }})
         </button>
       </div>
     </aside>
@@ -226,7 +233,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIcon, ClinicalIconButton, useFocusTrap } from "ui";
 import {
   REGULATORY_DOMAINS,
   QUIZ_TEMPLATE_CATALOG,

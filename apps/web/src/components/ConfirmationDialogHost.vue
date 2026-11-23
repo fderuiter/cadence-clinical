@@ -22,14 +22,18 @@
         <span
           v-if="store.activeRequest.variant === 'danger'"
           class="dialog-icon icon-danger"
-          >⚠️</span
         >
+          <ClinicalIcon name="alert-triangle" :size="20" />
+        </span>
         <span
           v-else-if="store.activeRequest.variant === 'warning'"
           class="dialog-icon icon-warning"
-          >⚡</span
         >
-        <span v-else class="dialog-icon icon-info">ℹ️</span>
+          <ClinicalIcon name="zap" :size="20" />
+        </span>
+        <span v-else class="dialog-icon icon-info">
+          <ClinicalIcon name="info" :size="20" />
+        </span>
       </div>
       <div class="confirmation-body-stack">
         <p v-if="store.activeRequest.message" class="confirmation-message">
@@ -97,7 +101,7 @@
 
 <script setup>
 import { ref } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalIcon, ClinicalModal } from "ui";
 import { useConfirmStore } from "../stores/confirm.js";
 
 const store = useConfirmStore();

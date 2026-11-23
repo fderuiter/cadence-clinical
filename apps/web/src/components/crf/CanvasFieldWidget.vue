@@ -227,7 +227,10 @@
             color: var(--semantic-color-text-secondary);
           "
         >
-          <span>📁 Attachment Upload Area</span>
+          <span
+            ><ClinicalIcon name="folder" :size="16" /> Attachment Upload
+            Area</span
+          >
         </div>
       </template>
 
@@ -331,7 +334,7 @@
         gap: 6px;
       "
     >
-      <span>⚠️</span>
+      <span><ClinicalIcon name="alert-triangle" :size="16" /></span>
       <span style="font-weight: 600">{{ warningMessage }}</span>
     </div>
   </div>
@@ -345,6 +348,7 @@
  * Handles selection, duplication, deletion, property inspection, and live responsive width alerts.
  */
 import { computed } from "vue";
+import { ClinicalIcon } from "ui";
 import { useDesignerStore } from "../../stores/designer.js";
 import { vKeyboardClick } from "../../directives/keyboardClick.js";
 

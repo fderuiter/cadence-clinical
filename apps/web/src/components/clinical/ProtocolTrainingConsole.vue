@@ -11,11 +11,11 @@
             class="badge"
             :class="isGated ? 'badge-locked' : 'badge-unlocked'"
           >
-            {{
-              isGated
-                ? "🔒 Qualification Pending"
-                : "🟢 Qualification Completed"
-            }}
+            <ClinicalIcon
+              :name="isGated ? 'lock' : 'check-circle-2'"
+              :size="16"
+            />
+            {{ isGated ? "Qualification Pending" : "Qualification Completed" }}
           </span>
         </div>
         <h2 class="console-title">
@@ -34,7 +34,10 @@
           :disabled="loading"
           @click="refreshData"
         >
-          <span class="btn-icon" aria-hidden="true">🔄</span> Refresh
+          <span class="btn-icon" aria-hidden="true"
+            ><ClinicalIcon name="refresh-cw" :size="16"
+          /></span>
+          Refresh
         </button>
       </div>
     </div>
@@ -116,14 +119,16 @@
           :class="{ active: activeTab === 'modules' }"
           @click="activeTab = 'modules'"
         >
-          📖 Procedural Modules ({{ activeCurriculum.modules?.length || 0 }})
+          <ClinicalIcon name="book-open" :size="16" /> Procedural Modules ({{
+            activeCurriculum.modules?.length || 0
+          }})
         </button>
         <button
           class="tab-btn"
           :class="{ active: activeTab === 'batch' }"
           @click="activeTab = 'batch'"
         >
-          👥 Batch Assignments
+          <ClinicalIcon name="users" :size="16" /> Batch Assignments
         </button>
         <button
           class="tab-btn"
@@ -133,7 +138,7 @@
             activeTab = 'delegations';
           "
         >
-          ✍️ Delegation Bulk Sign-Off
+          <ClinicalIcon name="pen-tool" :size="16" /> Delegation Bulk Sign-Off
         </button>
       </div>
 
@@ -195,7 +200,7 @@
                 :disabled="selectedModuleIndex <= 0"
                 @click="selectModule(selectedModuleIndex - 1)"
               >
-                ⬅️ Previous Section
+                <ClinicalIcon name="arrow-left" :size="16" /> Previous Section
               </button>
               <button
                 v-if="
@@ -205,7 +210,7 @@
                 class="btn btn-primary"
                 @click="selectModule(selectedModuleIndex + 1)"
               >
-                Next Section ➡️
+                Next Section <ClinicalIcon name="arrow-right" :size="16" />
               </button>
             </div>
           </div>
@@ -308,7 +313,8 @@
                 sites &times; {{ batchForm.selectedRoles.length }} roles)</span
               >
               <span v-if="computedBatchCount > 200" class="badge badge-error"
-                >⚠️ Exceeds 200 Synchronous Limit</span
+                ><ClinicalIcon name="alert-triangle" :size="16" /> Exceeds 200
+                Synchronous Limit</span
               >
             </div>
             <button
@@ -324,7 +330,10 @@
               "
               @click="showBatchModal = true"
             >
-              <span>Execute Batch Assignment 🚀</span>
+              <span
+                >Execute Batch Assignment
+                <ClinicalIcon name="rocket" :size="16"
+              /></span>
             </button>
           </div>
 
@@ -408,7 +417,7 @@
               </p>
             </div>
             <button class="btn btn-secondary btn-sm" @click="loadDelegations">
-              🔄 Refresh Log
+              <ClinicalIcon name="refresh-cw" :size="16" /> Refresh Log
             </button>
           </div>
 
@@ -518,7 +527,8 @@
               "
               @click="showBulkSignModal = true"
             >
-              ✍️ Execute Part 11 Bulk Signature
+              <ClinicalIcon name="pen-tool" :size="16" /> Execute Part 11 Bulk
+              Signature
             </button>
           </div>
 
@@ -528,7 +538,9 @@
             class="bulk-sign-result alert-banner success-banner"
           >
             <div class="banner-content">
-              <span class="banner-icon">✅</span>
+              <span class="banner-icon"
+                ><ClinicalIcon name="check-circle-2" :size="20"
+              /></span>
               <div>
                 <strong>Bulk Delegation Sign-Off Executed Successfully</strong
                 ><br />
@@ -593,7 +605,9 @@
           @click="handleExecuteBatchAssign"
         >
           <span v-if="submittingBatch">Deploying Batch...</span>
-          <span v-else>Confirm &amp; Deploy Batch 🚀</span>
+          <span v-else
+            >Confirm &amp; Deploy Batch <ClinicalIcon name="rocket" :size="16"
+          /></span>
         </button>
       </template>
     </ClinicalModal>
@@ -677,7 +691,10 @@
           @click="handleExecuteBulkSignOff"
         >
           <span v-if="submittingBulkSign">Executing Part 11 Signature...</span>
-          <span v-else>Confirm &amp; Execute Signature ✍️</span>
+          <span v-else
+            >Confirm &amp; Execute Signature
+            <ClinicalIcon name="pen-tool" :size="16"
+          /></span>
         </button>
       </template>
     </ClinicalModal>
@@ -685,7 +702,7 @@
 </template>
 
 <script setup>
-import { ClinicalModal } from "ui";
+import { ClinicalIcon, ClinicalModal } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { soaClient } from "../../api/soaClient";
 import { trainingApi } from "../../api/training";

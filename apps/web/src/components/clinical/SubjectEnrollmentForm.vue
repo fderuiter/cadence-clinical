@@ -3,7 +3,8 @@
     <div class="card-header">
       <div class="card-title-row">
         <h3 class="card-title">
-          <span>🩺</span> Subject Registration &amp; Screening
+          <ClinicalIcon name="stethoscope" :size="20" /> Subject Registration
+          &amp; Screening
         </h3>
         <span v-if="screeningStatus" class="badge" :class="screeningBadgeClass">
           {{ screeningStatus }}
@@ -122,7 +123,9 @@
       >
         <div class="screening-header-row">
           <div class="screening-outcome-title">
-            <span class="outcome-icon">{{ outcomeIcon }}</span>
+            <span class="outcome-icon"
+              ><ClinicalIcon :name="outcomeIcon" :size="16"
+            /></span>
             <span class="outcome-text">{{ outcomeSummaryText }}</span>
           </div>
           <span class="badge" :class="screeningBadgeClass">
@@ -184,7 +187,9 @@
           @click="handleScreenClick"
         >
           <span v-if="isScreening">Evaluating...</span>
-          <span v-else>🔍 Check Eligibility</span>
+          <span v-else
+            ><ClinicalIcon name="search" :size="16" /> Check Eligibility</span
+          >
         </button>
 
         <button
@@ -193,7 +198,9 @@
           :disabled="!canEnroll || disabled || isEnrolling"
         >
           <span v-if="isEnrolling">Registering...</span>
-          <span v-else>➕ Enroll Subject</span>
+          <span v-else
+            ><ClinicalIcon name="plus" :size="16" /> Enroll Subject</span
+          >
         </button>
       </div>
     </form>
@@ -202,7 +209,7 @@
 
 <script setup>
 import { reactive, computed } from "vue";
-import { ClinicalInput, validateField } from "ui";
+import { ClinicalIcon, ClinicalInput, validateField } from "ui";
 
 const props = defineProps({
   canEnroll: {
@@ -359,10 +366,10 @@ const screeningBadgeClass = computed(() => {
 });
 
 const outcomeIcon = computed(() => {
-  if (!props.screeningResult) return "ℹ️";
-  if (props.screeningResult.eligible === true) return "✅";
-  if (props.screeningResult.eligible === false) return "🚫";
-  return "⚠️";
+  if (!props.screeningResult) return "info";
+  if (props.screeningResult.eligible === true) return "check-circle-2";
+  if (props.screeningResult.eligible === false) return "ban";
+  return "alert-triangle";
 });
 
 const outcomeSummaryText = computed(() => {

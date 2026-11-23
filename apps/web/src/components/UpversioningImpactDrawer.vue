@@ -77,10 +77,15 @@
               "
               @click="runAnalysis"
             >
+              <ClinicalIcon
+                v-if="!codingStore.impactAnalysis.isLoading"
+                name="rocket"
+                :size="16"
+              />
               {{
                 codingStore.impactAnalysis.isLoading
                   ? "Evaluating Dictionary Delta..."
-                  : "🚀 Run Impact Analysis"
+                  : "Run Impact Analysis"
               }}
             </button>
           </div>
@@ -225,7 +230,9 @@
 
         <!-- Initial Placeholder State -->
         <div v-else class="initial-placeholder-state">
-          <div class="placeholder-icon">📊</div>
+          <div class="placeholder-icon">
+            <ClinicalIcon name="bar-chart-3" :size="20" />
+          </div>
           <h4>Ready for Impact Analysis</h4>
           <p>
             Select a target dictionary and version above and click "Run Impact
@@ -246,7 +253,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ModalErrorAlert, useFocusTrap } from "ui";
+import { ClinicalIcon, ModalErrorAlert, useFocusTrap } from "ui";
 import { useCodingStore } from "../stores/coding";
 
 const codingStore = useCodingStore();

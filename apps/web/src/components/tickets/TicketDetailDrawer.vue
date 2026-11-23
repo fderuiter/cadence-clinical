@@ -38,7 +38,7 @@
             {{ formatStatus(ticket.status) }}
           </span>
           <span v-if="ticket.signature_token" class="badge badge-signed">
-            ✍️ Part 11 Signed
+            <ClinicalIcon name="pen-tool" :size="16" /> Part 11 Signed
           </span>
         </div>
 
@@ -52,7 +52,7 @@
           :class="slaBannerClass"
         >
           <div class="sla-banner-left">
-            <span class="sla-icon">{{ slaIcon }}</span>
+            <ClinicalIcon :name="slaIcon" :size="16" class="sla-icon" />
             <span class="sla-text">{{ slaStatusText }}</span>
           </div>
           <div class="sla-progress-track">
@@ -77,8 +77,8 @@
       <!-- Action Bar -->
       <div class="drawer-actions">
         <div v-if="isSigned" class="signed-lock-notice">
-          🔒 Locked under 21 CFR Part 11 — Ticket record and notes are
-          immutable.
+          <ClinicalIcon name="lock" :size="16" /> Locked under 21 CFR Part 11 —
+          Ticket record and notes are immutable.
         </div>
         <div v-else-if="canMutateTicket" class="action-btn-group">
           <button
@@ -87,7 +87,7 @@
             :disabled="actionLoading"
             @click="transitionTicket('IN_PROGRESS')"
           >
-            ▶ Start Work
+            <ClinicalIcon name="play" :size="16" /> Start Work
           </button>
           <button
             v-if="ticket.status === 'IN_PROGRESS'"
@@ -95,7 +95,7 @@
             :disabled="actionLoading"
             @click="transitionTicket('WAITING_ON_SITE')"
           >
-            ⏸ Pause (Wait Site)
+            <ClinicalIcon name="pause" :size="16" /> Pause (Wait Site)
           </button>
           <button
             v-if="ticket.status === 'IN_PROGRESS'"
@@ -103,7 +103,7 @@
             :disabled="actionLoading"
             @click="transitionTicket('WAITING_ON_SPONSOR')"
           >
-            ⏸ Pause (Wait Sponsor)
+            <ClinicalIcon name="pause" :size="16" /> Pause (Wait Sponsor)
           </button>
           <button
             v-if="
@@ -114,7 +114,7 @@
             :disabled="actionLoading"
             @click="transitionTicket('IN_PROGRESS')"
           >
-            ▶ Resume Work
+            <ClinicalIcon name="play" :size="16" /> Resume Work
           </button>
           <button
             v-if="
@@ -135,7 +135,7 @@
             :disabled="actionLoading"
             @click="transitionTicket('CLOSED')"
           >
-            🔒 Final Close
+            <ClinicalIcon name="lock" :size="16" /> Final Close
           </button>
           <input
             v-if="ticket.status !== 'CLOSED'"
@@ -148,8 +148,8 @@
           />
         </div>
         <div v-else class="signed-lock-notice">
-          👁️ Read-only view — Status transitions require operational staff
-          access.
+          <ClinicalIcon name="eye" :size="16" /> Read-only view — Status
+          transitions require operational staff access.
         </div>
 
         <button
@@ -158,7 +158,7 @@
           class="btn btn-sm btn-sign"
           @click="isSignModalOpen = true"
         >
-          ✍️ Part 11 eSign
+          <ClinicalIcon name="pen-tool" :size="16" /> Part 11 eSign
         </button>
       </div>
 
@@ -249,14 +249,17 @@
           :class="{ active: activeTab === 'overview' }"
           @click="activeTab = 'overview'"
         >
-          📋 Overview &amp; Context
+          <ClinicalIcon name="clipboard-list" :size="16" /> Overview &amp;
+          Context
         </button>
         <button
           class="tab-item"
           :class="{ active: activeTab === 'discussion' }"
           @click="activeTab = 'discussion'"
         >
-          💬 Discussion ({{ visibleComments.length }})
+          <ClinicalIcon name="message-square" :size="16" /> Discussion ({{
+            visibleComments.length
+          }})
         </button>
         <button
           v-if="demoBuild"
@@ -264,21 +267,23 @@
           :class="{ active: activeTab === 'attachments' }"
           @click="activeTab = 'attachments'"
         >
-          📎 Evidence ({{ attachments.length }})
+          <ClinicalIcon name="paperclip" :size="16" /> Evidence ({{
+            attachments.length
+          }})
         </button>
         <button
           class="tab-item"
           :class="{ active: activeTab === 'signatures' }"
           @click="activeTab = 'signatures'"
         >
-          ✍️ eSignatures
+          <ClinicalIcon name="pen-tool" :size="16" /> eSignatures
         </button>
         <button
           class="tab-item"
           :class="{ active: activeTab === 'audit' }"
           @click="activeTab = 'audit'"
         >
-          🔒 Audit Trail
+          <ClinicalIcon name="lock" :size="16" /> Audit Trail
         </button>
       </div>
 
@@ -334,7 +339,7 @@
           <div v-if="aiTriage" class="section-card ai-triage-card">
             <div class="ai-card-header">
               <div class="ai-card-title-group">
-                <span class="ai-robot-icon">🤖</span>
+                <ClinicalIcon name="bot" :size="20" class="ai-robot-icon" />
                 <h4 class="card-title ai-title">
                   Grounded Protocol RAG Triage
                 </h4>
@@ -347,10 +352,18 @@
                     : 'badge-ai-failclosed'
                 "
               >
+                <ClinicalIcon
+                  :name="
+                    aiTriage.rag_status === 'DRAFT_AVAILABLE'
+                      ? 'target'
+                      : 'alert-triangle'
+                  "
+                  :size="16"
+                />
                 {{
                   aiTriage.rag_status === "DRAFT_AVAILABLE"
-                    ? `🎯 ${Math.round(aiTriage.faithfulness_score * 100)}% Faithfulness (Grounded)`
-                    : "⚠️ Routed to Human Queue (< 85% Confidence)"
+                    ? `${Math.round(aiTriage.faithfulness_score * 100)}% Faithfulness (Grounded)`
+                    : "Routed to Human Queue (< 85% Confidence)"
                 }}
               </span>
             </div>
@@ -375,7 +388,7 @@
                   title="Open protocol document viewer at referenced page"
                   @click="openCitationViewer(cit)"
                 >
-                  📖
+                  <ClinicalIcon name="book-open" :size="16" />
                   {{
                     cit.citation_marker ||
                     `Protocol ${cit.protocol_version} §${cit.section_number || "General"} p.${cit.page_number}`
@@ -388,7 +401,8 @@
                   class="btn btn-sm btn-secondary"
                   @click="applyAiDraftToComment"
                 >
-                  💬 Use Draft as Public Comment
+                  <ClinicalIcon name="message-square" :size="16" /> Use Draft as
+                  Public Comment
                 </button>
               </div>
             </div>
@@ -401,7 +415,8 @@
                 }}
               </p>
               <div class="human-routed-badge">
-                👤 Assigned Queue: <strong>Data Manager Review</strong>
+                <ClinicalIcon name="user" :size="16" /> Assigned Queue:
+                <strong>Data Manager Review</strong>
               </div>
             </div>
           </div>
@@ -459,7 +474,8 @@
               :class="{ active: commentFilter === 'PUBLIC' }"
               @click="commentFilter = 'PUBLIC'"
             >
-              🌐 Public (Site &amp; Sponsor)
+              <ClinicalIcon name="globe" :size="16" /> Public (Site &amp;
+              Sponsor)
             </button>
             <button
               v-if="canViewInternalSponsorNotes"
@@ -467,7 +483,7 @@
               :class="{ active: commentFilter === 'INTERNAL_SPONSOR' }"
               @click="commentFilter = 'INTERNAL_SPONSOR'"
             >
-              🔒 Internal Sponsor Only
+              <ClinicalIcon name="lock" :size="16" /> Internal Sponsor Only
             </button>
           </div>
 
@@ -492,10 +508,16 @@
                       : 'badge-public'
                   "
                 >
+                  <ClinicalIcon
+                    :name="
+                      c.visibility === 'INTERNAL_SPONSOR' ? 'lock' : 'globe'
+                    "
+                    :size="16"
+                  />
                   {{
                     c.visibility === "INTERNAL_SPONSOR"
-                      ? "🔒 Internal Note"
-                      : "🌐 Public"
+                      ? "Internal Note"
+                      : "Public"
                   }}
                 </span>
                 <span class="comment-time">{{ formatDate(c.created_at) }}</span>
@@ -518,7 +540,10 @@
                   type="radio"
                   value="PUBLIC"
                 />
-                <span>🌐 Public (Site Visible)</span>
+                <span
+                  ><ClinicalIcon name="globe" :size="16" /> Public (Site
+                  Visible)</span
+                >
               </label>
               <label v-if="canViewInternalSponsorNotes" class="radio-label">
                 <input
@@ -526,7 +551,10 @@
                   type="radio"
                   value="INTERNAL_SPONSOR"
                 />
-                <span>🔒 Internal Sponsor Note</span>
+                <span
+                  ><ClinicalIcon name="lock" :size="16" /> Internal Sponsor
+                  Note</span
+                >
               </label>
             </div>
             <textarea
@@ -597,7 +625,7 @@
                 "
                 @click="uploadAttachment"
               >
-                📎 Attach Evidence
+                <ClinicalIcon name="paperclip" :size="16" /> Attach Evidence
               </button>
             </div>
           </div>
@@ -608,7 +636,9 @@
               :key="att.id"
               class="attachment-card"
             >
-              <div class="attachment-icon">📄</div>
+              <div class="attachment-icon">
+                <ClinicalIcon name="file-text" :size="20" />
+              </div>
               <div class="attachment-details">
                 <div class="attachment-filename">
                   {{ att.filename }}
@@ -625,14 +655,15 @@
               </div>
               <div class="attachment-badges">
                 <span v-if="att.deid_scrubbed" class="badge badge-deid"
-                  >🛡️ DEID Verified</span
+                  ><ClinicalIcon name="shield-check" :size="16" /> DEID
+                  Verified</span
                 >
               </div>
             </div>
 
             <div v-if="attachments.length === 0" class="empty-placeholder">
               <EmptyState
-                icon="📎"
+                icon="paperclip"
                 title="No Evidence Attached"
                 message="No evidence files have been attached to this ticket yet."
               />
@@ -644,7 +675,11 @@
         <div v-if="activeTab === 'signatures'" class="tab-pane">
           <div v-if="ticket.signature_token" class="signature-record-card">
             <div class="sig-card-header">
-              <span class="sig-seal-icon">🛡️</span>
+              <ClinicalIcon
+                name="shield-check"
+                :size="20"
+                class="sig-seal-icon"
+              />
               <div>
                 <h4 class="sig-card-title">
                   Authoritative 21 CFR Part 11 Electronic Signature
@@ -690,7 +725,8 @@
               class="btn btn-primary btn-sign-action"
               @click="isSignModalOpen = true"
             >
-              ✍️ Sign &amp; Authorize Ticket
+              <ClinicalIcon name="pen-tool" :size="16" /> Sign &amp; Authorize
+              Ticket
             </button>
             <p v-else class="sig-prereq-hint">
               {{
@@ -733,7 +769,7 @@
             </template>
             <template v-else>
               <EmptyState
-                icon="🔒"
+                icon="lock"
                 title="No Audit Entries Found"
                 message="No GxP 21 CFR Part 11 audit trail events have been recorded for this ticket."
               />
@@ -775,7 +811,8 @@
             >
           </div>
           <h3 id="citation-viewer-title" class="citation-modal-title">
-            📖 {{ activeCitation.section_title || "Study Protocol Reference" }}
+            <ClinicalIcon name="book-open" :size="16" />
+            {{ activeCitation.section_title || "Study Protocol Reference" }}
           </h3>
           <button
             type="button"
@@ -840,7 +877,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
-import { EmptyState, useFocusTrap } from "ui";
+import { ClinicalIcon, EmptyState, useFocusTrap } from "ui";
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import { useAuthStore, normalizeRole } from "../../stores/auth";
@@ -1081,11 +1118,11 @@ const slaProgressClass = computed(() => {
 });
 
 const slaIcon = computed(() => {
-  if (props.ticket.sla_breached) return "🚨";
+  if (props.ticket.sla_breached) return "siren";
   if (props.ticket.sla_amber_warned || slaElapsedPercent.value >= 75)
-    return "⚠️";
-  if (props.ticket.status?.startsWith("WAITING_")) return "⏸";
-  return "⏱";
+    return "alert-triangle";
+  if (props.ticket.status?.startsWith("WAITING_")) return "pause";
+  return "timer";
 });
 
 const slaStatusText = computed(() => {

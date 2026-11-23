@@ -20,7 +20,7 @@
             :class="['mode-tab-btn', { active: activeMode === 'authoring' }]"
             @click="setMode('authoring')"
           >
-            ✏️ Authoring Mode
+            <ClinicalIcon name="pencil" :size="16" /> Authoring Mode
           </button>
           <button
             type="button"
@@ -29,7 +29,7 @@
             :class="['mode-tab-btn', { active: activeMode === 'interactive' }]"
             @click="setMode('interactive')"
           >
-            🎯 Interactive Assessment
+            <ClinicalIcon name="target" :size="16" /> Interactive Assessment
           </button>
         </div>
 
@@ -137,7 +137,7 @@
               class="btn btn-secondary btn-small"
               @click="addOption(qIndex)"
             >
-              ➕ Add Option Choice
+              <ClinicalIcon name="plus" :size="16" /> Add Option Choice
             </button>
           </div>
 
@@ -161,14 +161,15 @@
           class="btn btn-primary btn-add-question"
           @click="addQuestion"
         >
-          ➕ Add Quiz Question
+          <ClinicalIcon name="plus" :size="16" /> Add Quiz Question
         </button>
         <button
           type="button"
           class="btn btn-secondary btn-import-template"
           @click="openTemplateDrawer"
         >
-          📚 Import from Template Library
+          <ClinicalIcon name="library" :size="16" /> Import from Template
+          Library
         </button>
       </div>
 
@@ -201,7 +202,12 @@
         aria-live="polite"
       >
         <div class="result-icon">
-          {{ evaluationResult.passed ? "🎉" : "⚠️" }}
+          <ClinicalIcon
+            :name="
+              evaluationResult.passed ? 'check-circle-2' : 'alert-triangle'
+            "
+            :size="20"
+          />
         </div>
         <div class="result-details">
           <h4 class="result-title">
@@ -295,7 +301,9 @@
               "
               class="instant-hint-box"
             >
-              <span class="hint-icon">💡</span>
+              <span class="hint-icon"
+                ><ClinicalIcon name="lightbulb" :size="16"
+              /></span>
               <span class="hint-text"
                 ><strong>Feedback Hint:</strong> {{ q.hint }}</span
               >
@@ -311,7 +319,7 @@
           class="btn btn-secondary btn-reset-quiz"
           @click="resetAssessment"
         >
-          🔄 Reset Answers
+          <ClinicalIcon name="refresh-cw" :size="16" /> Reset Answers
         </button>
 
         <button
@@ -319,7 +327,8 @@
           class="btn btn-primary btn-submit-answers"
           @click="submitAssessment"
         >
-          ✅ Check Answers & Evaluate
+          <ClinicalIcon name="check-circle-2" :size="16" /> Check Answers &
+          Evaluate
         </button>
 
         <button
@@ -329,7 +338,7 @@
           class="btn btn-success btn-proceed-signature"
           @click="proceedToSignature"
         >
-          ✍️ Proceed to eSignature
+          <ClinicalIcon name="pen-tool" :size="16" /> Proceed to eSignature
         </button>
       </div>
     </div>
@@ -338,7 +347,7 @@
 
 <script setup>
 import { ref, reactive } from "vue";
-import { ClinicalIconButton } from "ui";
+import { ClinicalIcon, ClinicalIconButton } from "ui";
 import { useEconsentStore } from "../../stores/econsent.js";
 import QuizTemplateDrawer from "./QuizTemplateDrawer.vue";
 

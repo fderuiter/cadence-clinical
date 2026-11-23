@@ -329,7 +329,8 @@
                     :key="iIdx"
                     class="ingredient-chip"
                   >
-                    🧪 {{ ing.ingredient_name }} ({{ ing.ingredient_code }})
+                    <ClinicalIcon name="flask-conical" :size="16" />
+                    {{ ing.ingredient_name }} ({{ ing.ingredient_code }})
                   </span>
                 </div>
                 <div v-else class="text-muted-notice">
@@ -377,7 +378,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, useFocusTrap } from "ui";
 import { useCodingStore } from "../stores/coding";
 
 const codingStore = useCodingStore();

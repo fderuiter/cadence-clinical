@@ -16,7 +16,9 @@
       <!-- Drawer Header -->
       <div class="drawer-header">
         <div class="header-info">
-          <span class="share-header-icon">🔗</span>
+          <span class="share-header-icon"
+            ><ClinicalIcon name="link-2" :size="20"
+          /></span>
           <div>
             <h3 class="drawer-title">
               {{
@@ -44,7 +46,7 @@
           :class="{ active: activeTab === 'internal' }"
           @click="activeTab = 'internal'"
         >
-          👥 Internal Share
+          <ClinicalIcon name="users" :size="16" /> Internal Share
         </button>
         <button
           v-if="!isBulk"
@@ -52,7 +54,7 @@
           :class="{ active: activeTab === 'guest' }"
           @click="activeTab = 'guest'"
         >
-          🌐 External Guest Link
+          <ClinicalIcon name="globe" :size="16" /> External Guest Link
         </button>
         <button
           v-if="!isBulk"
@@ -60,7 +62,9 @@
           :class="{ active: activeTab === 'active_grants' }"
           @click="activeTab = 'active_grants'"
         >
-          🛡️ Active Grants ({{ activeGrantsList.length }})
+          <ClinicalIcon name="shield-check" :size="16" /> Active Grants ({{
+            activeGrantsList.length
+          }})
         </button>
       </div>
 
@@ -138,25 +142,25 @@
                 required
               >
                 <option value="view">
-                  👁️ View (Read-Only Watermarked Preview)
+                  View (Read-Only Watermarked Preview)
                 </option>
                 <option value="comment">
-                  💬 Comment (Review & Annotation)
+                  Comment (Review &amp; Annotation)
                 </option>
                 <option value="download">
-                  📥 Download (Direct Binary Access)
+                  Download (Direct Binary Access)
                 </option>
                 <option value="upload_revision">
-                  📤 Upload Revision (New Version Drafting)
+                  Upload Revision (New Version Drafting)
                 </option>
                 <option value="reshare">
-                  🔁 Reshare (Sub-Delegation Authority)
+                  Reshare (Sub-Delegation Authority)
                 </option>
                 <option value="approve">
-                  ✅ Approve (Sign-off & Regulatory Acceptance)
+                  Approve (Sign-off &amp; Regulatory Acceptance)
                 </option>
                 <option value="expire_revoke">
-                  🔒 Admin / Expire-Revoke (Full Delegation Authority)
+                  Admin / Expire-Revoke (Full Delegation Authority)
                 </option>
               </select>
             </div>
@@ -197,7 +201,8 @@
             </div>
 
             <div v-if="submitSuccessMsg" class="success-alert">
-              ✅ {{ submitSuccessMsg }}
+              <ClinicalIcon name="check-circle-2" :size="16" />
+              {{ submitSuccessMsg }}
             </div>
 
             <!-- Submit Button -->
@@ -217,7 +222,9 @@
                 "
               >
                 <span v-if="isSubmitting">Delegating...</span>
-                <span v-else>🔒 Grant Access</span>
+                <span v-else
+                  ><ClinicalIcon name="lock" :size="16" /> Grant Access</span
+                >
               </button>
             </div>
           </form>
@@ -226,7 +233,10 @@
         <!-- TAB 2: External Guest Link Generator -->
         <div v-else-if="activeTab === 'guest'" class="tab-content">
           <div class="guest-info-banner">
-            <strong>🌐 Public Protected Guest Links:</strong>
+            <strong
+              ><ClinicalIcon name="globe" :size="16" /> Public Protected Guest
+              Links:</strong
+            >
             Generates a signed, time-limited URL for external reviewers (e.g.
             CRO partners, external IRBs). Access is strictly read-only and
             logged to the GxP audit ledger.
@@ -278,7 +288,10 @@
                 :disabled="isSubmitting || !guestReason.trim()"
               >
                 <span v-if="isSubmitting">Generating...</span>
-                <span v-else>🔗 Generate Guest Link</span>
+                <span v-else
+                  ><ClinicalIcon name="link-2" :size="16" /> Generate Guest
+                  Link</span
+                >
               </button>
             </div>
           </form>
@@ -304,7 +317,8 @@
                 class="btn btn-primary btn-copy-link"
                 @click="copyGuestUrl"
               >
-                {{ isCopied ? "✓ Copied!" : "📋 Copy Link" }}
+                <ClinicalIcon :name="isCopied ? 'check' : 'copy'" :size="16" />
+                {{ isCopied ? "Copied!" : "Copy Link" }}
               </button>
             </div>
             <p class="gxp-link-meta">
@@ -419,7 +433,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, useFocusTrap } from "ui";
 import { useFileshareStore } from "../../stores/fileshare";
 
 const props = defineProps({

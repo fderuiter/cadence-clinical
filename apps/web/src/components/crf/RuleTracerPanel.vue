@@ -2,7 +2,9 @@
   <div class="rule-tracer-panel">
     <div class="tracer-header">
       <div class="tracer-title">
-        <span class="tracer-icon">🔍</span>
+        <span class="tracer-icon"
+          ><ClinicalIcon name="search" :size="16"
+        /></span>
         <h3>Live Rule Execution Tracer</h3>
       </div>
       <span
@@ -37,7 +39,7 @@
             title="Reset Simulation State"
             @click="resetSimulation"
           >
-            🔄 Reset
+            <ClinicalIcon name="refresh-cw" :size="16" /> Reset
           </button>
         </div>
       </div>
@@ -46,8 +48,8 @@
     <!-- Rules Execution List -->
     <div class="rules-list-container">
       <div v-if="activeRules.length === 0" class="empty-rules-box">
-        <span>ℹ️</span> No active skip-logic or constraint edit check rules on
-        this form.
+        <ClinicalIcon name="info" :size="16" /> No active skip-logic or
+        constraint edit check rules on this form.
       </div>
 
       <div
@@ -118,6 +120,7 @@
 
 <script setup>
 import { computed, ref, reactive } from "vue";
+import { ClinicalIcon } from "ui";
 import { traceASTEvaluation } from "../../evaluator.js";
 import AstNodeTraceViewer from "./AstNodeTraceViewer.vue";
 

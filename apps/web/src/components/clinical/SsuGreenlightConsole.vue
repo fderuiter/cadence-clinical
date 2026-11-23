@@ -7,14 +7,17 @@
         :class="{ active: viewMode === 'matrix' }"
         @click="switchToMatrixView"
       >
-        📊 Country Multi-Site Activation Matrix
+        <ClinicalIcon name="bar-chart-3" :size="16" /> Country Multi-Site
+        Activation Matrix
       </button>
       <button
         class="view-tab-btn"
         :class="{ active: viewMode === 'single' }"
         @click="switchToSingleView"
       >
-        🔎 Single Site Detail Console ({{ activeSiteId }})
+        <ClinicalIcon name="search" :size="16" /> Single Site Detail Console ({{
+          activeSiteId
+        }})
       </button>
     </div>
 
@@ -118,7 +121,8 @@
             :disabled="loading"
             @click="fetchCountryMatrix"
           >
-            <span class="btn-icon">🔄</span> Refresh Matrix
+            <ClinicalIcon name="refresh-cw" :size="16" class="btn-icon" />
+            Refresh Matrix
           </button>
           <button
             class="btn btn-primary btn-batch-certify"
@@ -126,7 +130,8 @@
             :title="!canCertify ? GREENLIGHT_CERTIFY_ROLE_REASON : undefined"
             @click="openBatchCertifyModal"
           >
-            <span class="btn-icon">🛡️</span> Batch Certify Country Sites
+            <ClinicalIcon name="shield-check" :size="16" class="btn-icon" />
+            Batch Certify Country Sites
             <span v-if="selectedSiteIds.size > 0" class="btn-counter-badge">
               {{ selectedSiteIds.size }}
             </span>
@@ -150,7 +155,7 @@
         class="alert alert-danger"
         role="alert"
       >
-        <span class="alert-icon">⚠️</span>
+        <ClinicalIcon name="alert-triangle" :size="16" class="alert-icon" />
         <div>
           <strong>Couldn't load country readiness matrix:</strong>
           {{ matrixErrorMessage }}
@@ -179,14 +184,16 @@
             class="select-input"
             @change="fetchCountryMatrix"
           >
-            <option value="US">🇺🇸 United States (FDA 1572 + IRB)</option>
+            <option value="US">[US] United States (FDA 1572 + IRB)</option>
             <option value="DE">
-              🇩🇪 Germany (EU CTR Part I/II + Ethikkommission)
+              [DE] Germany (EU CTR Part I/II + Ethikkommission)
             </option>
-            <option value="EU">🇪🇺 European Union (EU CTR + EC)</option>
-            <option value="JP">🇯🇵 Japan (PMDA Notification + IRB)</option>
-            <option value="GB">🇬🇧 United Kingdom (MHRA + HRA REC)</option>
-            <option value="GLOBAL">🌐 Global Default (ICH GCP E6 R2)</option>
+            <option value="EU">[EU] European Union (EU CTR + EC)</option>
+            <option value="JP">[JP] Japan (PMDA Notification + IRB)</option>
+            <option value="GB">[GB] United Kingdom (MHRA + HRA REC)</option>
+            <option value="GLOBAL">
+              [GLOBAL] Global Default (ICH GCP E6 R2)
+            </option>
           </select>
         </div>
 
@@ -268,14 +275,19 @@
           :title="!canCertify ? GREENLIGHT_CERTIFY_ROLE_REASON : undefined"
           @click="openBatchCertifyModal"
         >
-          <span class="btn-icon">🛡️</span> Batch Certify Country Sites
+          <span class="btn-icon"
+            ><ClinicalIcon name="shield-check" :size="16"
+          /></span>
+          Batch Certify Country Sites
         </button>
       </div>
 
       <!-- Batch Success Banner -->
       <div v-if="batchSuccessData" class="batch-success-banner">
         <div class="banner-header">
-          <span class="banner-icon">🎉</span>
+          <span class="banner-icon"
+            ><ClinicalIcon name="check-circle-2" :size="20"
+          /></span>
           <div>
             <h4>Batch Greenlight Certification Successfully Processed!</h4>
             <p>
@@ -298,10 +310,9 @@
             class="btn-icon-only"
             label="Dismiss batch greenlight certification banner"
             title="Dismiss"
+            icon="x"
             @click="batchSuccessData = null"
-          >
-            ✖
-          </ClinicalIconButton>
+          />
         </div>
         <div class="banner-tokens-list">
           <div
@@ -381,7 +392,8 @@
                   <span class="site-id-badge">{{ site.site_id }}</span>
                   <span class="site-name-text">{{ site.site_name }}</span>
                   <span class="site-jurisdiction-tag"
-                    >📍 {{ site.country_code }}</span
+                    ><ClinicalIcon name="map-pin" :size="16" />
+                    {{ site.country_code }}</span
                   >
                 </div>
               </td>
@@ -398,7 +410,7 @@
                       (site.facet_regulatory_irb ? 'PASSED' : 'ACTION REQ')
                     "
                   >
-                    ⚖️ Reg/IRB
+                    <ClinicalIcon name="scale" :size="16" /> Reg/IRB
                   </span>
                   <span
                     class="facet-pill"
@@ -408,7 +420,7 @@
                       (site.facet_cta_budget ? 'PASSED' : 'ACTION REQ')
                     "
                   >
-                    📝 CTA
+                    <ClinicalIcon name="file-edit" :size="16" /> CTA
                   </span>
                   <span
                     class="facet-pill"
@@ -420,7 +432,7 @@
                       (site.facet_eisf_baseline ? 'PASSED' : 'ACTION REQ')
                     "
                   >
-                    📁 eISF
+                    <ClinicalIcon name="folder" :size="16" /> eISF
                   </span>
                   <span
                     class="facet-pill"
@@ -430,7 +442,7 @@
                       (site.facet_doa_log ? 'PASSED' : 'ACTION REQ')
                     "
                   >
-                    👥 DOA
+                    <ClinicalIcon name="users" :size="16" /> DOA
                   </span>
                   <span
                     class="facet-pill"
@@ -442,7 +454,7 @@
                       (site.facet_staff_training ? 'PASSED' : 'ACTION REQ')
                     "
                   >
-                    🎓 Train
+                    <ClinicalIcon name="graduation-cap" :size="16" /> Train
                   </span>
                   <span
                     class="facet-pill"
@@ -452,7 +464,7 @@
                       (site.facet_ip_release ? 'PASSED' : 'ACTION REQ')
                     "
                   >
-                    💊 IP
+                    <ClinicalIcon name="pill" :size="16" /> IP
                   </span>
                 </div>
               </td>
@@ -472,7 +484,8 @@
                     class="exception-warning"
                     :title="site.unfulfilled_reasons.join('\n')"
                   >
-                    ⚠️ {{ site.unfulfilled_reasons.length }} Missing
+                    <ClinicalIcon name="alert-triangle" :size="16" />
+                    {{ site.unfulfilled_reasons.length }} Missing
                   </span>
                 </div>
               </td>
@@ -483,22 +496,24 @@
                     v-if="site.overall_status === 'APPROVED'"
                     class="status-chip chip-approved"
                   >
-                    🟢 Greenlight Certified
+                    <ClinicalIcon name="check-circle-2" :size="16" /> Greenlight
+                    Certified
                   </span>
                   <span
                     v-else-if="site.overall_status === 'OVERRIDDEN'"
                     class="status-chip chip-overridden"
                   >
-                    ⚡ GxP Overridden
+                    <ClinicalIcon name="zap" :size="16" /> GxP Overridden
                   </span>
                   <span
                     v-else-if="site.is_compliant"
                     class="status-chip chip-compliant"
                   >
-                    ✅ 100% Compliant (Ready)
+                    <ClinicalIcon name="check-circle-2" :size="16" /> 100%
+                    Compliant (Ready)
                   </span>
                   <span v-else class="status-chip chip-blocked">
-                    🚫 Non-Compliant
+                    <ClinicalIcon name="ban" :size="16" /> Non-Compliant
                   </span>
 
                   <div v-if="site.greenlight_token" class="token-mini-preview">
@@ -517,7 +532,7 @@
                   title="Inspect 6-Facet Scorecard and Essential Documents"
                   @click="inspectSiteDetail(site)"
                 >
-                  🔎 Inspect Site
+                  <ClinicalIcon name="search" :size="16" /> Inspect Site
                 </button>
               </td>
             </tr>
@@ -541,7 +556,9 @@
         title="21 CFR Part 11 Country-Level Batch Greenlight Certification"
       >
         <div v-if="batchErrorMessage" class="alert alert-danger" role="alert">
-          <span class="alert-icon">⚠️</span>
+          <span class="alert-icon"
+            ><ClinicalIcon name="alert-triangle" :size="16"
+          /></span>
           <div>
             <strong>Batch Certification Rejected:</strong>
             {{ batchErrorMessage }}
@@ -549,7 +566,9 @@
         </div>
 
         <div class="alert alert-info">
-          <span class="alert-icon">🛡️</span>
+          <span class="alert-icon"
+            ><ClinicalIcon name="shield-check" :size="16"
+          /></span>
           <div>
             <strong>Legal Certification Scope:</strong>
             You are applying a single 21 CFR Part 11 compliant electronic
@@ -665,6 +684,7 @@
               class="badge"
               :class="isGreenlighted ? 'badge-approved' : 'badge-pending'"
             >
+              <ClinicalIcon :name="greenlightStatusBadgeIcon" :size="16" />
               {{ greenlightStatusBadgeText }}
             </span>
           </div>
@@ -683,14 +703,16 @@
             :disabled="loading"
             @click="refreshAll"
           >
-            <span class="btn-icon">🔄</span> Refresh
+            <ClinicalIcon name="refresh-cw" :size="16" class="btn-icon" />
+            Refresh
           </button>
           <button
             id="btn-ssu-upload-doc"
             class="btn btn-primary"
             @click="showUploadDocModal = true"
           >
-            <span class="btn-icon">📄</span> Upload Document
+            <ClinicalIcon name="file-text" :size="16" class="btn-icon" /> Upload
+            Document
           </button>
           <button
             id="btn-ssu-certify-single"
@@ -699,7 +721,8 @@
             :title="!canCertify ? GREENLIGHT_CERTIFY_ROLE_REASON : undefined"
             @click="openCertifyModal"
           >
-            <span class="btn-icon">🛡️</span> Certify Greenlight
+            <ClinicalIcon name="shield-check" :size="16" class="btn-icon" />
+            Certify Greenlight
           </button>
         </div>
       </div>
@@ -719,7 +742,7 @@
         class="alert alert-danger"
         role="alert"
       >
-        <span class="alert-icon">⚠️</span>
+        <ClinicalIcon name="alert-triangle" :size="16" class="alert-icon" />
         <div>
           <strong>Couldn't load site greenlight status:</strong>
           {{ gateErrorMessage }}
@@ -760,13 +783,15 @@
             class="select-input"
             @change="onJurisdictionChange"
           >
-            <option value="US">🇺🇸 United States (FDA 1572 + IRB)</option>
+            <option value="US">[US] United States (FDA 1572 + IRB)</option>
             <option value="EU">
-              🇪🇺 European Union (EU CTR Part I/II + EC)
+              [EU] European Union (EU CTR Part I/II + EC)
             </option>
-            <option value="JP">🇯🇵 Japan (PMDA Notification + IRB)</option>
-            <option value="GB">🇬🇧 United Kingdom (MHRA + HRA REC)</option>
-            <option value="GLOBAL">🌐 Global Default (ICH GCP E6 R2)</option>
+            <option value="JP">[JP] Japan (PMDA Notification + IRB)</option>
+            <option value="GB">[GB] United Kingdom (MHRA + HRA REC)</option>
+            <option value="GLOBAL">
+              [GLOBAL] Global Default (ICH GCP E6 R2)
+            </option>
           </select>
         </div>
 
@@ -781,10 +806,9 @@
             class="btn-icon-only"
             label="Copy HMAC-SHA256 greenlight token"
             title="Copy Token"
+            icon="copy"
             @click="copyToken"
-          >
-            📋
-          </ClinicalIconButton>
+          />
         </div>
       </div>
 
@@ -818,7 +842,9 @@
             }"
           >
             <div class="facet-header">
-              <span class="facet-icon">⚖️</span>
+              <span class="facet-icon"
+                ><ClinicalIcon name="scale" :size="16"
+              /></span>
               <div class="facet-titles">
                 <span class="facet-name">Regulatory &amp; IRB / Ethics</span>
                 <span class="facet-rule-tag"
@@ -847,7 +873,9 @@
             }"
           >
             <div class="facet-header">
-              <span class="facet-icon">📝</span>
+              <span class="facet-icon"
+                ><ClinicalIcon name="file-edit" :size="16"
+              /></span>
               <div class="facet-titles">
                 <span class="facet-name">CTA &amp; Budget Schedule</span>
                 <span class="facet-rule-tag">Legal &amp; Financial</span>
@@ -873,7 +901,9 @@
             }"
           >
             <div class="facet-header">
-              <span class="facet-icon">📁</span>
+              <span class="facet-icon"
+                ><ClinicalIcon name="folder" :size="16"
+              /></span>
               <div class="facet-titles">
                 <span class="facet-name">eISF Baseline Documents</span>
                 <span class="facet-rule-tag">Essential Records</span>
@@ -901,7 +931,9 @@
             }"
           >
             <div class="facet-header">
-              <span class="facet-icon">👥</span>
+              <span class="facet-icon"
+                ><ClinicalIcon name="users" :size="16"
+              /></span>
               <div class="facet-titles">
                 <span class="facet-name"
                   >Delegation of Authority (DOA) Log</span
@@ -929,7 +961,9 @@
             }"
           >
             <div class="facet-header">
-              <span class="facet-icon">🎓</span>
+              <span class="facet-icon"
+                ><ClinicalIcon name="graduation-cap" :size="16"
+              /></span>
               <div class="facet-titles">
                 <span class="facet-name"
                   >Protocol &amp; GCP Staff Training</span
@@ -959,7 +993,9 @@
             }"
           >
             <div class="facet-header">
-              <span class="facet-icon">💊</span>
+              <span class="facet-icon"
+                ><ClinicalIcon name="pill" :size="16"
+              /></span>
               <div class="facet-titles">
                 <span class="facet-name">IP Depot Greenlight Release</span>
                 <span class="facet-rule-tag">Supply Chain</span>
@@ -988,7 +1024,9 @@
         title="21 CFR Part 11 Single-Site Greenlight Certification"
       >
         <div v-if="certifyErrorMessage" class="alert alert-danger" role="alert">
-          <span class="alert-icon">⚠️</span>
+          <span class="alert-icon"
+            ><ClinicalIcon name="alert-triangle" :size="16"
+          /></span>
           <div>
             <strong>Certification Rejected:</strong>
             {{ certifyErrorMessage }}
@@ -1055,7 +1093,7 @@
 </template>
 
 <script setup>
-import { ClinicalIconButton, ClinicalModal } from "ui";
+import { ClinicalIcon, ClinicalIconButton, ClinicalModal } from "ui";
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ctmsApi } from "../../api/ctmsApi";
 import { etmfService } from "../../api/etmf";
@@ -1323,11 +1361,18 @@ const isGreenlighted = computed(() => {
   return status === "APPROVED" || status === "OVERRIDDEN";
 });
 
+const greenlightStatusBadgeIcon = computed(() => {
+  const status = gateData.value?.overall_status?.toUpperCase();
+  if (status === "APPROVED") return "check-circle-2";
+  if (status === "OVERRIDDEN") return "zap";
+  return "lock";
+});
+
 const greenlightStatusBadgeText = computed(() => {
   const status = gateData.value?.overall_status?.toUpperCase();
-  if (status === "APPROVED") return "🟢 Greenlight Certified";
-  if (status === "OVERRIDDEN") return "⚡ GxP Overridden";
-  return "🔒 Execution Gated (Pending Startup)";
+  if (status === "APPROVED") return "Greenlight Certified";
+  if (status === "OVERRIDDEN") return "GxP Overridden";
+  return "Execution Gated (Pending Startup)";
 });
 
 const passedFacetsCount = computed(() => {
