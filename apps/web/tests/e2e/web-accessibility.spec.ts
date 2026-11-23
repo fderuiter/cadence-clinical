@@ -497,4 +497,169 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
       await page.screenshot({ path: "/tmp/clinical-toast-host.png" });
     }
   });
+
+  test("WCAG 2.1 SC 1.4.10 320x640 reflow keeps scrollWidth <= 320 and card bounds unclipped across Plans, Unavailable, Login, and Forbidden", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+
+    async function expectPageWithin320(label: string) {
+      const scrollWidth = await page.evaluate(
+        () => document.documentElement.scrollWidth
+      );
+      expect(
+        scrollWidth,
+        `Expected documentElement.scrollWidth <= 320 on ${label}, got ${scrollWidth}`
+      ).toBeLessThanOrEqual(320);
+    }
+
+    async function expectAllCardsWithin320(selector: string, label: string) {
+      const items = page.locator(selector);
+      const count = await items.count();
+      expect(
+        count,
+        `Expected >= 1 card for ${selector} on ${label}`
+      ).toBeGreaterThan(0);
+      for (let i = 0; i < count; i++) {
+        const box = await items.nth(i).boundingBox();
+        expect(box, `Missing boundingBox for ${selector}[${i}]`).not.toBeNull();
+        expect(
+          box!.x,
+          `Left bound clipped for ${selector}[${i}] on ${label}`
+        ).toBeGreaterThanOrEqual(-0.5);
+        expect(
+          box!.x + box!.width,
+          `Right bound overflows 320px for ${selector}[${i}] on ${label}`
+        ).toBeLessThanOrEqual(320.5);
+      }
+    }
+
+    // 1. PlansView.vue (.plans-tiers-grid, .scoping-grid, .guarantees-grid, .families-grid, .benchmark-grid)
+    await gotoHashRoute(page, "/plans");
+    await expect(page.locator(".plans-view")).toBeVisible();
+    await expectPageWithin320("PlansView (/plans)");
+    await expectAllCardsWithin320(".plans-tiers-grid > *", "PlansView tiers");
+    await expectAllCardsWithin320(".scoping-grid > *", "PlansView scoping");
+    await expectAllCardsWithin320(
+      ".guarantees-grid > *",
+      "PlansView guarantees"
+    );
+    await expectAllCardsWithin320(".families-grid > *", "PlansView families");
+    await expectAllCardsWithin320(".benchmark-grid > *", "PlansView benchmark");
+    await expectNoWcagViolations(page, "PlansView at 320x640");
+
+    // 2. UnavailableView.vue
+    await gotoHashRoute(page, "/unavailable?screen=safety");
+    await expect(page.locator("#section-unavailable")).toBeVisible();
+    await expectPageWithin320("UnavailableView (/unavailable?screen=safety)");
+    await expectAllCardsWithin320(
+      ".unavailable-card, .unavailable-info-card",
+      "UnavailableView cards"
+    );
+    await expectNoWcagViolations(page, "UnavailableView at 320x640");
+
+    // 3. ForbiddenView.vue
+    await gotoHashRoute(page, "/forbidden");
+    await expect(page.locator("#section-forbidden")).toBeVisible();
+    await expectPageWithin320("ForbiddenView (/forbidden)");
+    await expectNoWcagViolations(page, "ForbiddenView at 320x640");
+
+    // 4. LoginView.vue (active session + signed-out prompt)
+    await gotoHashRoute(page, "/login");
+    await expect(page.locator("#section-login")).toBeVisible();
+    await expectPageWithin320("LoginView (authenticated)");
+    await expectNoWcagViolations(page, "LoginView (authenticated) at 320x640");
+
+    const logoutBtn = page.locator("#section-login .btn-logout");
+    if (await logoutBtn.isVisible().catch(() => false)) {
+      await logoutBtn.click();
+      await expect(page.locator(".btn-login-demo")).toBeVisible();
+      await expectPageWithin320("LoginView (signed-out)");
+      await expectNoWcagViolations(page, "LoginView (signed-out) at 320x640");
+    }
+  });
+
+  test("WCAG 2.1 SC 1.4.10 320x640 reflow keeps scrollWidth <= 320 across StudyCanvasView, ParticipantsSection, ParticipantRecord SHA-256, and ProtocolVersionsSection", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+
+    async function expectPageWithin320(label: string) {
+      const scrollWidth = await page.evaluate(
+        () => document.documentElement.scrollWidth
+      );
+      expect(
+        scrollWidth,
+        `Expected documentElement.scrollWidth <= 320 on ${label}, got ${scrollWidth}`
+      ).toBeLessThanOrEqual(320);
+    }
+
+    // 1. StudyCanvasView.vue (/studies directory + #create-study-file sr-only width <= 1px)
+    await gotoHashRoute(page, "/studies");
+    await expect(page.locator("#study-canvas")).toBeVisible();
+    const createStudyFile = page.locator("#create-study-file");
+    if ((await createStudyFile.count()) > 0) {
+      const fileWidth = await createStudyFile.evaluate(
+        (el) => el.getBoundingClientRect().width
+      );
+      expect(fileWidth).toBeLessThanOrEqual(1.5);
+    }
+    await expectPageWithin320("StudyCanvasView (/studies)");
+    await expectNoWcagViolations(page, "StudyCanvasView (/studies) at 320x640");
+
+    const demoStudyCode = "DEMO-01";
+
+    // 2. ParticipantsSection.vue (#participants-site + .scrollable-table-wrapper)
+    await gotoHashRoute(
+      page,
+      `/studies/${encodeURIComponent(demoStudyCode)}?stage=conduct&section=participants`
+    );
+    await expect(page.locator("#participants-section")).toBeVisible();
+    const siteInput = page.locator("#participants-site");
+    await expect(siteInput).toBeVisible();
+    const siteBox = await siteInput.boundingBox();
+    expect(siteBox).not.toBeNull();
+    expect(siteBox!.x + siteBox!.width).toBeLessThanOrEqual(320.5);
+
+    await expect(
+      page.locator("#participants-section .scrollable-table-wrapper")
+    ).toBeVisible();
+    await expectPageWithin320("ParticipantsSection");
+    await expectNoWcagViolations(page, "ParticipantsSection at 320x640");
+
+    // 3. ParticipantRecord.vue (64-char casebookOutcome.sha256 wrapping)
+    const firstParticipantBtn = page
+      .locator(".participants-table tbody button.row-select")
+      .first();
+    await expect(firstParticipantBtn).toBeVisible();
+    await firstParticipantBtn.click();
+    const openRecordLink = page.locator("#inspector-open-record");
+    await expect(openRecordLink).toBeVisible();
+    await openRecordLink.click();
+
+    await expect(page.locator("#participant-record")).toBeVisible();
+    const exportCasebookBtn = page.locator("#btn-export-casebook");
+    await expect(exportCasebookBtn).toBeVisible();
+    await exportCasebookBtn.click();
+    const shaCode = page.locator('[data-testid="participant-casebook-sha256"]');
+    await expect(shaCode).toBeVisible();
+    const shaBox = await shaCode.boundingBox();
+    expect(shaBox).not.toBeNull();
+    expect(shaBox!.x).toBeGreaterThanOrEqual(-0.5);
+    expect(shaBox!.x + shaBox!.width).toBeLessThanOrEqual(320.5);
+    await expectPageWithin320("ParticipantRecord (with SHA-256 digest)");
+    await expectNoWcagViolations(page, "ParticipantRecord at 320x640");
+
+    // 4. ProtocolVersionsSection.vue (.scrollable-table-wrapper)
+    await gotoHashRoute(
+      page,
+      `/studies/${encodeURIComponent(demoStudyCode)}?stage=design&section=protocol-versions`
+    );
+    await expect(page.locator("#protocol-versions-section")).toBeVisible();
+    await expect(
+      page.locator("#protocol-versions-section .scrollable-table-wrapper")
+    ).toBeVisible();
+    await expectPageWithin320("ProtocolVersionsSection");
+    await expectNoWcagViolations(page, "ProtocolVersionsSection at 320x640");
+  });
 });
