@@ -185,7 +185,7 @@ describe("ADR-2360 Memory-Only PIN Encryption Key & Per-User Isolation", () => {
     await expect(decryptAESGCM(encryptedWithA, keyUserB)).rejects.toThrow();
 
     await initSessionKey("pin-user-A", "user_test_01");
-    await saveDraft("shared_assign", { secret: "only_user_a" });
+    await saveDraft("shared_assign", { secret: "only_user_a" }); // pragma: allowlist secret
 
     await initSessionKey("pin-user-B", "user_test_02");
     expect(await getDraft("shared_assign")).toBeNull();
