@@ -104,6 +104,7 @@ public static partial class SubjectEndpoints
 
         group.MapPost("/", CreateSubjectAsync)
             .WithName("CreateSubject")
+            .WithSummary("Registers a new trial subject in screening state with AES-GCM encrypted demographics.")
             .Produces<SubjectResponse>(StatusCodes.Status201Created)
             .ProducesValidationProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -112,6 +113,7 @@ public static partial class SubjectEndpoints
 
         group.MapPost("/{subjectId}/consent", RecordSubjectConsentAsync)
             .WithName("RecordSubjectConsent")
+            .WithSummary("Records informed consent version attestation for a trial subject.")
             .Produces<SubjectConsentResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -140,12 +142,14 @@ public static partial class SubjectEndpoints
 
         group.MapPatch("/{subjectId}/state", AdvanceSubjectStateAsync)
             .WithName("UpdateSubjectState")
+            .WithSummary("Advances a trial subject's enrollment lifecycle state with Part 11 change justification.")
             .Produces<SubjectResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
+            .WithChangeReasonHeader(required: true)
             .AddEndpointFilter<ValidationFilter<SubjectStateUpdateRequest>>()
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
@@ -158,6 +162,7 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
+            .WithChangeReasonHeader(required: true)
             .AddEndpointFilter<ValidationFilter<SubjectSiteAssignmentRequest>>()
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
@@ -179,6 +184,7 @@ public static partial class SubjectEndpoints
 
         group.MapGet("/{subjectId}", GetSubjectDetailAsync)
             .WithName("GetSubjectDetail")
+            .WithSummary("Retrieves a trial subject's enrollment record, consent history, and role-blinded allocation details.")
             .Produces<SubjectDetailResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -186,17 +192,23 @@ public static partial class SubjectEndpoints
 
         group.MapPut("/{subjectId}/demographics", UpdateSubjectDemographicsAsync)
             .WithName("UpdateSubjectDemographics")
+            .WithSummary("Updates encrypted subject demographic attributes with Part 11 change justification.")
             .Produces<SubjectResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
+            .WithChangeReasonHeader(required: true)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapDelete("/{subjectId}/demographics", DeleteSubjectDemographicsAsync)
             .WithName("DeleteSubjectDemographics")
+            .WithSummary("Redacts stored subject demographic attributes under GDPR/privacy erasure with Part 11 audit trail.")
+            .Produces<SubjectResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
+            .WithChangeReasonHeader(required: true)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;

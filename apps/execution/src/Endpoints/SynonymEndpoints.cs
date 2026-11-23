@@ -31,28 +31,47 @@ public static class SynonymEndpoints
         group.MapPost("/validate", ValidateSynonymFileAsync)
             .WithName("ValidateSynonymFile")
             .WithSummary("Pre-flight validation report for bulk synonym dictionary CSV/XLSX file.")
+            .Produces<PreflightValidationReportResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .DisableAntiforgery()
             .RequirePermission("medical_coding:manage_synonyms").RequireCallerStudyScope();
 
         group.MapPost("/import", ImportSynonymFileAsync)
             .WithName("ImportSynonymFile")
             .WithSummary("Ingest validated synonym dictionary rules into persistent store with GxP audit lineage.")
+            .Produces<BulkImportExecutionResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .WithChangeReasonHeader(
+                required: false,
+                description: "21 CFR Part 11 reason for change when not supplied as multipart form field reason_for_change.")
             .DisableAntiforgery()
             .RequirePermission("medical_coding:manage_synonyms").RequireCallerStudyScope();
 
         group.MapGet("/", GetActiveSynonymRulesAsync)
             .WithName("GetActiveSynonymRules")
             .WithSummary("Retrieve active synonym rules for study auto-coding engine.")
+            .Produces<IReadOnlyList<SynonymRuleResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("medical_coding:read").RequireCallerStudyScope();
 
         group.MapGet("/jobs", GetSynonymImportJobsAsync)
             .WithName("GetSynonymImportJobs")
             .WithSummary("Retrieve GxP audit ledger of bulk synonym import jobs.")
+            .Produces<IReadOnlyList<BulkSynonymImportJobResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("medical_coding:read").RequireCallerStudyScope();
 
         group.MapDelete("/{id:guid}", DeactivateSynonymRuleAsync)
             .WithName("DeactivateSynonymRule")
             .WithSummary("Deactivate an active synonym rule.")
+            .Produces<SynonymDeactivateResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .WithChangeReasonHeader(
+                required: false,
+                description: "Optional 21 CFR Part 11 reason for deactivating the synonym rule (overrides query parameter reason_for_change when omitted).")
             .RequirePermission("medical_coding:manage_synonyms").RequireCallerStudyScope();
 
         return group;
@@ -304,3 +323,7 @@ public static class SynonymEndpoints
             r.Equals("SPONSOR_DESIGNER", StringComparison.OrdinalIgnoreCase));
     }
 }
+
+public sealed record SynonymDeactivateResponse(
+    string Message,
+    Guid Id);

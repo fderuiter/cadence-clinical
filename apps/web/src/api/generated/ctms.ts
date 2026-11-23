@@ -757,7 +757,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/pdf": string;
+        };
       };
       /** @description Forbidden */
       403: {
@@ -816,7 +818,10 @@ export interface operations {
   ScheduleMonitoringVisit: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Optional 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -858,7 +863,10 @@ export interface operations {
   CompleteMonitoringVisit: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Optional 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         visit_id: string;
       };
@@ -911,7 +919,10 @@ export interface operations {
   SignOffMonitoringVisit: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         visit_id: string;
       };
@@ -1215,6 +1226,7 @@ export interface operations {
         country_code?: string;
       };
       header?: {
+        /** @description Optional 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
         "X-Change-Reason"?: string;
       };
       path: {
@@ -1307,6 +1319,7 @@ export interface operations {
     parameters: {
       query?: never;
       header?: {
+        /** @description Optional 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
         "X-Change-Reason"?: string;
       };
       path?: never;
@@ -1586,7 +1599,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/pdf": string;
+        };
       };
       /** @description Forbidden */
       403: {

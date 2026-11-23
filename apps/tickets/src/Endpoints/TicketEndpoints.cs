@@ -224,15 +224,18 @@ public static partial class TicketEndpoints
 
         group.MapPost("", CreateTicketAsync)
             .WithName("CreateTicket")
+            .WithSummary("Creates a GxP support or operational issue ticket with SLA targets and hash-chained audit entry.")
             .Produces<TicketResponseDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("tickets:create")
+            .WithChangeReasonHeader(required: true)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapGet("", ListTicketsAsync)
             .WithName("ListTickets")
+            .WithSummary("Lists operational tickets filtered by study, site, status, priority, or queue.")
             .Produces<IReadOnlyList<TicketResponseDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -240,6 +243,7 @@ public static partial class TicketEndpoints
 
         group.MapGet("/{ticket_id}", GetTicketAsync)
             .WithName("GetTicket")
+            .WithSummary("Retrieves a single operational ticket by ID or reference code.")
             .Produces<TicketResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -248,6 +252,7 @@ public static partial class TicketEndpoints
 
         group.MapPatch("/{ticket_id}", UpdateTicketAsync)
             .WithName("UpdateTicket")
+            .WithSummary("Updates mutable ticket fields with optimistic concurrency and Part 11 change reason.")
             .Produces<TicketResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -255,10 +260,12 @@ public static partial class TicketEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("tickets:create")
+            .WithChangeReasonHeader(required: true)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapGet("/{ticket_id}/comments", ListTicketCommentsAsync)
             .WithName("ListTicketComments")
+            .WithSummary("Lists role-filtered public and sponsor-internal comments on a ticket.")
             .Produces<IReadOnlyList<TicketCommentResponseDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -267,6 +274,7 @@ public static partial class TicketEndpoints
 
         group.MapPost("/{ticket_id}/comments", CreateTicketCommentAsync)
             .WithName("CreateTicketComment")
+            .WithSummary("Appends a visibility-scoped comment to an operational ticket.")
             .Produces<TicketCommentResponseDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -274,10 +282,12 @@ public static partial class TicketEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("tickets:comment")
+            .WithChangeReasonHeader(required: true)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/{ticket_id}/transitions", TransitionTicketAsync)
             .WithName("TransitionTicket")
+            .WithSummary("Transitions a ticket across workflow states and updates SLA pause timers.")
             .Produces<TicketResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -285,10 +295,12 @@ public static partial class TicketEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("tickets:transition")
+            .WithChangeReasonHeader(required: true)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/{ticket_id}/sign", SignTicketAsync)
             .WithName("SignTicket")
+            .WithSummary("Applies a 21 CFR Part 11 step-up electronic signature to close or attest a GxP ticket.")
             .Produces<TicketResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -297,10 +309,12 @@ public static partial class TicketEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("tickets:sign")
             .RequireElectronicSignature(SignTicketSemanticAction, SignTicketActionFor)
+            .WithChangeReasonHeader(required: true)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapGet("/{ticket_id}/audit-trail", GetTicketAuditTrailAsync)
             .WithName("GetTicketAuditTrail")
+            .WithSummary("Retrieves the hash-chained GxP audit trail for an operational ticket.")
             .Produces<IReadOnlyList<TicketAuditEntryDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)

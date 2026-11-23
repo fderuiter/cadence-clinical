@@ -30,6 +30,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Applies an eTMF site-activation document completeness webhook to the execution compliance cache. */
     post: operations["EtmfCompletenessWebhook"];
     delete?: never;
     options?: never;
@@ -46,6 +47,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Evaluates eTMF readiness and activates a clinical trial site for subject enrollment. */
     post: operations["ActivateSite"];
     delete?: never;
     options?: never;
@@ -60,6 +62,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves the current eTMF document completeness and activation gate status for a site. */
     get: operations["GetSiteComplianceStatus"];
     put?: never;
     post?: never;
@@ -79,6 +82,7 @@ export interface paths {
     /** Lists one page of a study's subjects in enrollment order. */
     get: operations["ListSubjects"];
     put?: never;
+    /** Registers a new trial subject in screening state with AES-GCM encrypted demographics. */
     post: operations["CreateSubject"];
     delete?: never;
     options?: never;
@@ -95,6 +99,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Records informed consent version attestation for a trial subject. */
     post: operations["RecordSubjectConsent"];
     delete?: never;
     options?: never;
@@ -115,6 +120,7 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
+    /** Advances a trial subject's enrollment lifecycle state with Part 11 change justification. */
     patch: operations["UpdateSubjectState"];
     trace?: never;
   };
@@ -159,6 +165,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves a trial subject's enrollment record, consent history, and role-blinded allocation details. */
     get: operations["GetSubjectDetail"];
     put?: never;
     post?: never;
@@ -176,8 +183,10 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
+    /** Updates encrypted subject demographic attributes with Part 11 change justification. */
     put: operations["UpdateSubjectDemographics"];
     post?: never;
+    /** Redacts stored subject demographic attributes under GDPR/privacy erasure with Part 11 audit trail. */
     delete: operations["DeleteSubjectDemographics"];
     options?: never;
     head?: never;
@@ -444,6 +453,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Records the CEC chair's step-up e-signed clinical endpoint adjudication decision on a dossier. */
     post: operations["ChairAdjudicateDossier"];
     delete?: never;
     options?: never;
@@ -458,6 +468,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves a Clinical Endpoint Adjudication Committee dossier and reviewer votes by dossier ID. */
     get: operations["GetCecDossierById"];
     put?: never;
     post?: never;
@@ -476,28 +487,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Execution_CgtApheresisCreateRequest"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Initializes a cell and gene therapy chain of custody at apheresis collection with ISBT-128 DIN validation. */
+    post: operations["InitializeCgtApheresis"];
     delete?: never;
     options?: never;
     head?: never;
@@ -513,28 +504,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Execution_CgtMilestoneCreateRequest"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Records a tamper-evident manufacturing or cold-chain logistics milestone on a CGT chain of custody. */
+    post: operations["RecordCgtMilestone"];
     delete?: never;
     options?: never;
     head?: never;
@@ -550,28 +521,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Execution_CgtManufacturingBindRequest"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Binds a finished autologous manufacturing lot and SEC/expiry metadata to a chain of custody. */
+    post: operations["BindCgtManufacturingBatch"];
     delete?: never;
     options?: never;
     head?: never;
@@ -587,28 +538,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Execution_CgtBedsideVerificationRequest"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Performs dual-operator bedside barcode verification prior to cell therapy infusion. */
+    post: operations["VerifyCgtBedside"];
     delete?: never;
     options?: never;
     head?: never;
@@ -624,28 +555,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Execution_CgtInfusionExecuteRequest"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Records autologous cell therapy administration following verified bedside identity match. */
+    post: operations["ExecuteCgtInfusion"];
     delete?: never;
     options?: never;
     head?: never;
@@ -661,28 +572,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Execution_CgtVialReturnReconciliationRequest"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Logs post-infusion CGT bag or vial return accountability reconciliation. */
+    post: operations["LogCgtVialReturn"];
     delete?: never;
     options?: never;
     head?: never;
@@ -698,28 +589,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Execution_CgtDestructionCertificateCreateRequest"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Generates a dual-witness CGT biohazard destruction certificate. */
+    post: operations["CreateCgtDestructionCertificate"];
     delete?: never;
     options?: never;
     head?: never;
@@ -735,28 +606,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Execution_CgtBarcodeVerifyRequest"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Parses and validates an ISBT-128 or GS1 CGT label barcode within the caller's clinical scope. */
+    post: operations["VerifyCgtBarcode"];
     delete?: never;
     options?: never;
     head?: never;
@@ -770,27 +621,8 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          studyId: string;
-          subjectId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Retrieves end-to-end vein-to-vein CGT chain-of-custody traceability for a study subject. */
+    get: operations["GetCgtFullTraceability"];
     put?: never;
     post?: never;
     delete?: never;
@@ -806,26 +638,8 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          studyId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Lists CGT biohazard destruction certificates for a study within the caller's site scope. */
+    get: operations["ListCgtDestructionCertificates"];
     put?: never;
     post?: never;
     delete?: never;
@@ -841,26 +655,8 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          studyId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Lists CGT vial and bag return accountability reconciliations for a study. */
+    get: operations["ListCgtVialReconciliations"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1117,28 +913,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Execution_IpKitScanValidateRequest"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Validates a scanned investigational product kit GS1 barcode against site inventory. */
+    post: operations["ValidateIpKitBarcodeScan"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1154,28 +930,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Execution_IpKitBatchReconciliationRequest"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Reconciles a batch of investigational product kits and issues an accountability certificate. */
+    post: operations["ReconcileIpKitBatch"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1189,26 +945,8 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          certificateId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Retrieves a signed investigational product kit accountability certificate by identifier. */
+    get: operations["GetIpKitCertificate"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1224,27 +962,8 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          studyId: string;
-          siteId: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Lists investigational product kit inventory and disposition statuses for a clinical site. */
+    get: operations["GetSiteIpKitInventory"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1262,28 +981,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Execution_SeedInventoryRequest"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    /** Seeds sponsor investigational product kit inventory records for a clinical site. */
+    post: operations["SeedSiteIpKitInventory"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1298,6 +997,10 @@ export interface components {
       status: null | string;
       service: null | string;
       engine: null | string;
+    };
+    Execution_BulkImportExecutionResponse: {
+      job: components["schemas"]["Execution_BulkSynonymImportJobResponse"];
+      imported_rules: components["schemas"]["Execution_SynonymRuleResponse"][];
     };
     Execution_BulkLabRangeDryRunResponse: {
       is_success: boolean;
@@ -1370,6 +1073,27 @@ export interface components {
       errors: string[];
       warnings: string[];
     };
+    Execution_BulkSynonymImportJobResponse: {
+      /** Format: uuid */
+      id: string;
+      scope: string;
+      study_id: null | string;
+      file_name: string;
+      file_hash: string;
+      /** Format: int32 */
+      total_rows: number | string;
+      /** Format: int32 */
+      valid_rows: number | string;
+      /** Format: int32 */
+      duplicate_rows: number | string;
+      /** Format: int32 */
+      invalid_rows: number | string;
+      status: string;
+      created_by: string;
+      /** Format: date-time */
+      created_at: string;
+      reason_for_change: string;
+    };
     Execution_CecDossier: {
       event_id?: string;
       study_id?: string;
@@ -1424,6 +1148,16 @@ export interface components {
       expected_din?: null | string;
       expected_batch_id?: null | string;
     };
+    Execution_CgtBarcodeVerifyResponse: {
+      is_valid: boolean;
+      failure_reason: null | string;
+      barcode_id: null | string;
+      study_id: null | string;
+      site_id: null | string;
+      subject_id: null | string;
+      din: null | string;
+      batch_id: null | string;
+    };
     Execution_CgtBedsideVerificationRequest: {
       study_id: string;
       site_id: string;
@@ -1444,6 +1178,50 @@ export interface components {
       /** @default  */
       secondary_signature_token: string;
       notes?: null | string;
+    };
+    Execution_CgtBedsideVerificationResponse: {
+      /** Format: uuid */
+      verification_id: string;
+      study_id: string;
+      site_id: string;
+      subject_id: string;
+      din: string;
+      batch_id: null | string;
+      patient_wristband_id: string;
+      primary_verifier_id: string;
+      secondary_verifier_id: string;
+      unlock_token: string;
+      /** Format: date-time */
+      verified_at: string;
+      is_match: boolean;
+      status: string;
+    };
+    Execution_CgtChainOfCustodyResponse: {
+      /** Format: uuid */
+      id: string;
+      study_id: string;
+      site_id: string;
+      subject_id: string;
+      din: string;
+      batch_id: null | string;
+      collection_site_id: null | string;
+      manufacturing_facility_id: null | string;
+      status: string;
+      current_stage: string;
+      /** Format: int32 */
+      cryo_temp_excursion_count: number | string;
+      /** Format: double */
+      lowest_temp_celsius: null | number | string;
+      unlock_token: null | string;
+      /** Format: date-time */
+      harvested_at: null | string;
+      /** Format: date-time */
+      infused_at: null | string;
+      /** Format: date-time */
+      reconciled_at: null | string;
+      /** Format: date-time */
+      created_at: string;
+      created_by: string;
     };
     Execution_CgtDestructionCertificateCreateRequest: {
       study_id: string;
@@ -1477,6 +1255,46 @@ export interface components {
       /** Format: uuid */
       coc_id?: null | string;
       notes?: null | string;
+    };
+    Execution_CgtDestructionCertificateResponse: {
+      /** Format: uuid */
+      id: string;
+      certificate_number: string;
+      study_id: string;
+      site_id: string;
+      /** Format: uuid */
+      chain_of_custody_id: null | string;
+      subject_id: null | string;
+      din: null | string;
+      lot_number: string;
+      kit_numbers: string[];
+      vial_identifiers: string[];
+      /** Format: int32 */
+      quantity_destroyed: number | string;
+      unit_of_measure: string;
+      /** Format: double */
+      residual_volume_ml: null | number | string;
+      destruction_reason: string;
+      destruction_method: string;
+      destruction_facility: string;
+      /** Format: date-time */
+      destruction_timestamp: string;
+      witness_1_id: string;
+      witness_2_id: string;
+      cryptographic_seal: string;
+      status: string;
+      notes: null | string;
+    };
+    Execution_CgtFullTraceabilityResponse: {
+      chain_of_custody:
+        null | components["schemas"]["Execution_CgtChainOfCustodyResponse"];
+      milestones: components["schemas"]["Execution_CgtMilestoneResponse"][];
+      bedside_verification:
+        | null
+        | components["schemas"]["Execution_CgtBedsideVerificationResponse"];
+      destruction_certificate:
+        | null
+        | components["schemas"]["Execution_CgtDestructionCertificateResponse"];
     };
     Execution_CgtInfusionExecuteRequest: {
       study_id: string;
@@ -1537,6 +1355,35 @@ export interface components {
       dry_shipper_id?: null | string;
       notes?: null | string;
     };
+    Execution_CgtMilestoneResponse: {
+      /** Format: uuid */
+      id: string;
+      study_id: string;
+      /** Format: uuid */
+      chain_of_custody_id: string;
+      stage: string;
+      milestone_type: string;
+      /** Format: date-time */
+      timestamp: string;
+      location_name: null | string;
+      facility_id: null | string;
+      /** Format: double */
+      latitude: null | number | string;
+      /** Format: double */
+      longitude: null | number | string;
+      /** Format: double */
+      temperature_celsius: null | number | string;
+      temperature_status: null | string;
+      custodian_id: null | string;
+      custodian_name: null | string;
+      custodian_role: null | string;
+      carrier: null | string;
+      tracking_number: null | string;
+      seal_intact: boolean;
+      seal_id: null | string;
+      dry_shipper_id: null | string;
+      notes: null | string;
+    };
     Execution_CgtVialReturnReconciliationRequest: {
       study_id: string;
       site_id: string;
@@ -1562,6 +1409,31 @@ export interface components {
       residual_volume_ml?: null | number | string;
       logged_by?: null | string;
       notes?: null | string;
+    };
+    Execution_CgtVialReturnReconciliationResponse: {
+      /** Format: uuid */
+      id: string;
+      study_id: string;
+      site_id: string;
+      subject_id: string;
+      kit_number: string;
+      vial_identifier: string;
+      /** Format: int32 */
+      returned_quantity: number | string;
+      /** Format: int32 */
+      intact_vials: number | string;
+      /** Format: int32 */
+      used_vials: number | string;
+      /** Format: double */
+      residual_volume_ml: null | number | string;
+      /** Format: double */
+      adherence_percentage: number | string;
+      disposition: string;
+      logged_by: string;
+      /** Format: date-time */
+      logged_at: string;
+      certificate_id: null | string;
+      notes: null | string;
     };
     Execution_ChairAdjudicateRequest: {
       final_classification: string;
@@ -1840,6 +1712,14 @@ export interface components {
         [key: string]: string[];
       };
     };
+    Execution_InvalidRowDetailResponse: {
+      /** Format: int32 */
+      row_number: number | string;
+      verbatim_text: string;
+      dictionary_type: string;
+      target_code: string;
+      error_reason: string;
+    };
     Execution_IpKitBatchReconciliationRequest: {
       study_id: string;
       site_id: string;
@@ -1848,6 +1728,31 @@ export interface components {
       notes?: null | string;
       /** @default Batch IP kit reconciliation */
       reason_for_change: string;
+    };
+    Execution_IpKitCertificateResponse: {
+      certificate_id: string;
+      batch_id: string;
+      batch_number: string;
+      study_id: string;
+      site_id: string;
+      issued_by: string;
+      /** Format: date-time */
+      issued_at: string;
+      kit_numbers: string[];
+      digital_signature: string;
+    };
+    Execution_IpKitInventoryResponse: {
+      kit_number: string;
+      study_id: string;
+      site_id: string;
+      lot_number: string;
+      /** Format: date-time */
+      expiration_date: string;
+      status: string;
+      /** Format: double */
+      residual_volume_ml?: null | number | string;
+      /** Format: double */
+      residual_volume_percentage?: null | number | string;
     };
     Execution_IpKitItemReconcileRequest: {
       kit_number: string;
@@ -1861,11 +1766,48 @@ export interface components {
       disposition_reason: string;
       notes?: null | string;
     };
+    Execution_IpKitItemResponse: {
+      kit_number: string;
+      lot_number: string;
+      expected_lot_number: string;
+      /** Format: double */
+      residual_volume_ml: null | number | string;
+      /** Format: double */
+      residual_volume_percentage: null | number | string;
+      disposition: string;
+      disposition_reason: string;
+      is_quarantined: boolean;
+    };
+    Execution_IpKitReconciliationBatchResponse: {
+      batch_id: string;
+      batch_number: string;
+      study_id: string;
+      site_id: string;
+      processed_by: string;
+      /** Format: date-time */
+      processed_at: string;
+      /** Format: int32 */
+      total_kits: number | string;
+      /** Format: int32 */
+      quarantined_kits: number | string;
+      certificate_id: string;
+      items: components["schemas"]["Execution_IpKitItemResponse"][];
+      certificate: components["schemas"]["Execution_IpKitCertificateResponse"];
+    };
     Execution_IpKitScanValidateRequest: {
       kit_number: string;
       study_id: string;
       site_id: string;
       scanned_lot_number?: null | string;
+    };
+    Execution_IpKitScanValidateResponse: {
+      kit_number: string;
+      expected_lot_number: string;
+      scanned_lot_number: null | string;
+      is_lot_match: boolean;
+      is_valid: boolean;
+      status: string;
+      message: string;
     };
     Execution_IpKitSeedItem: {
       kit_number: string;
@@ -2017,6 +1959,18 @@ export interface components {
       software_version: null | string;
       is_valid: boolean;
       validation_errors: string[];
+    };
+    Execution_PreflightValidationReportResponse: {
+      /** Format: int32 */
+      total_rows: number | string;
+      /** Format: int32 */
+      valid_count: number | string;
+      /** Format: int32 */
+      duplicate_count: number | string;
+      /** Format: int32 */
+      invalid_count: number | string;
+      invalid_rows: components["schemas"]["Execution_InvalidRowDetailResponse"][];
+      can_import: boolean;
     };
     Execution_ProblemDetails: {
       type?: null | string;
@@ -2258,6 +2212,30 @@ export interface components {
       active_protocol_version: string;
       /** Format: int32 */
       enrollment_index: number | string;
+    };
+    Execution_SynonymDeactivateResponse: {
+      message: string;
+      /** Format: uuid */
+      id: string;
+    };
+    Execution_SynonymRuleResponse: {
+      /** Format: uuid */
+      id: string;
+      scope: string;
+      study_id: null | string;
+      verbatim_text: string;
+      dictionary_type: string;
+      dictionary_version: string;
+      target_code: string;
+      target_term: string;
+      target_level: null | string;
+      status: string;
+      /** Format: uuid */
+      import_job_id: string;
+      created_by: string;
+      /** Format: date-time */
+      created_at: string;
+      reason_for_change: string;
     };
     Execution_UdiParseRequest: {
       raw_barcode: string;
@@ -2575,7 +2553,10 @@ export interface operations {
   UpdateSubjectState: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         subjectId: string;
       };
@@ -2637,7 +2618,10 @@ export interface operations {
   AssignSubjectSite: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         subjectId: string;
       };
@@ -2780,7 +2764,10 @@ export interface operations {
   UpdateSubjectDemographics: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         subjectId: string;
       };
@@ -2833,7 +2820,10 @@ export interface operations {
   DeleteSubjectDemographics: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         subjectId: string;
       };
@@ -2841,8 +2831,26 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_SubjectResponse"];
+        };
+      };
       /** @description Forbidden */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -2895,7 +2903,10 @@ export interface operations {
   DraftRandomizationScheme: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -2937,7 +2948,12 @@ export interface operations {
   ApproveRandomizationScheme: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         schemeId: string;
       };
@@ -2995,7 +3011,12 @@ export interface operations {
   RandomizeSubject: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         subjectId: string;
       };
@@ -3108,7 +3129,12 @@ export interface operations {
   ActionStagedAeReview: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         review_id: string;
       };
@@ -3237,7 +3263,10 @@ export interface operations {
   CreateReferenceRange: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -3319,7 +3348,10 @@ export interface operations {
   UpdateReferenceRange: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         id: string;
       };
@@ -3363,7 +3395,10 @@ export interface operations {
   DeleteReferenceRange: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         id: string;
       };
@@ -3441,7 +3476,10 @@ export interface operations {
   CommitLabRangeImport: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -3613,7 +3651,10 @@ export interface operations {
   ChairAdjudicateDossier: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path: {
         id: string;
       };
@@ -3721,6 +3762,436 @@ export interface operations {
       };
     };
   };
+  InitializeCgtApheresis: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CgtApheresisCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CgtChainOfCustodyResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  RecordCgtMilestone: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CgtMilestoneCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CgtChainOfCustodyResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  BindCgtManufacturingBatch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CgtManufacturingBindRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CgtChainOfCustodyResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  VerifyCgtBedside: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CgtBedsideVerificationRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CgtBedsideVerificationResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ExecuteCgtInfusion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CgtInfusionExecuteRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CgtChainOfCustodyResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  LogCgtVialReturn: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CgtVialReturnReconciliationRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CgtVialReturnReconciliationResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  CreateCgtDestructionCertificate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CgtDestructionCertificateCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CgtDestructionCertificateResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  VerifyCgtBarcode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CgtBarcodeVerifyRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CgtBarcodeVerifyResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetCgtFullTraceability: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        studyId: string;
+        subjectId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CgtFullTraceabilityResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListCgtDestructionCertificates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        studyId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CgtDestructionCertificateResponse"][];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListCgtVialReconciliations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        studyId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CgtVialReturnReconciliationResponse"][];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
   ValidateSynonymFile: {
     parameters: {
       query?: never;
@@ -3735,14 +4206,37 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Execution_PreflightValidationReportResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
       };
     };
   };
   ImportSynonymFile: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description 21 CFR Part 11 reason for change when not supplied as multipart form field reason_for_change. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -3753,7 +4247,27 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Execution_BulkImportExecutionResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
       };
     };
   };
@@ -3774,7 +4288,18 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Execution_SynonymRuleResponse"][];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
       };
     };
   };
@@ -3795,14 +4320,28 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Execution_BulkSynonymImportJobResponse"][];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
       };
     };
   };
   DeactivateSynonymRule: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Optional 21 CFR Part 11 reason for deactivating the synonym rule (overrides query parameter reason_for_change when omitted). */
+        "X-Change-Reason"?: string;
+      };
       path: {
         id: string;
       };
@@ -3815,7 +4354,27 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Execution_SynonymDeactivateResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
       };
     };
   };
@@ -4249,6 +4808,186 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_DeviceInvestigationSummaryResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ValidateIpKitBarcodeScan: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_IpKitScanValidateRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_IpKitScanValidateResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ReconcileIpKitBatch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_IpKitBatchReconciliationRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_IpKitReconciliationBatchResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetIpKitCertificate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        certificateId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_IpKitCertificateResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetSiteIpKitInventory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        studyId: string;
+        siteId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_IpKitInventoryResponse"][];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  SeedSiteIpKitInventory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_SeedInventoryRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_IpKitInventoryResponse"][];
         };
       };
       /** @description Forbidden */

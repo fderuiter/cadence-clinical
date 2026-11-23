@@ -101,6 +101,7 @@ public static class RuleBatchEndpoints
         })
         .WithName("BatchValidateRules")
         .WithSummary("Executes study-wide parallel batch compilation and validation across pinned edit check rule packs.")
+        .WithDescription("Validates inline or study-pinned rule packs and retains asynchronous job reports in the volatile in-memory BatchJobStore.")
         .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
         .RequirePermission(DesignerPermissions.CompileProtocol);
 
@@ -133,6 +134,7 @@ public static class RuleBatchEndpoints
         })
         .WithName("GetBatchValidationJob")
         .WithSummary("Retrieves the aggregated report for an asynchronous batch validation job.")
+        .WithDescription("Scaffold service endpoint: reads batch validation reports from the volatile in-memory BatchJobStore.")
         .RequirePermission(DesignerPermissions.CompileProtocol);
 
         api.MapPost("/amendment-regression", async Task<Results<Ok<AmendmentRegressionReport>, ProblemHttpResult>> (
@@ -177,6 +179,7 @@ public static class RuleBatchEndpoints
         })
         .WithName("AmendmentRegression")
         .WithSummary("Compares baseline and target rule pack versions during protocol amendments to highlight rule diffs and broken dependencies.")
+        .WithDescription("Compares inline or study-pinned baseline and target rule pack versions without persisting amendment history.")
         .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
         .RequirePermission(DesignerPermissions.CompileProtocol);
     }

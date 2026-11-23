@@ -794,7 +794,12 @@ export interface operations {
   ExecutionOpenForm: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -921,7 +926,12 @@ export interface operations {
   ExecutionSaveFormValues: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         formId: string;
       };
@@ -1190,7 +1200,12 @@ export interface operations {
       query?: {
         study_id?: string;
       };
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -1326,7 +1341,12 @@ export interface operations {
   ExecutionRaiseFormQuery: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         formId: string;
       };
@@ -1415,7 +1435,12 @@ export interface operations {
   ExecutionAnswerFormQuery: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         formId: string;
         queryId: string;
@@ -1496,7 +1521,12 @@ export interface operations {
   ExecutionReopenFormQuery: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         formId: string;
         queryId: string;
@@ -1577,7 +1607,12 @@ export interface operations {
   ExecutionCloseFormQuery: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         formId: string;
         queryId: string;
@@ -1658,7 +1693,12 @@ export interface operations {
   ExecutionCancelFormQuery: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         formId: string;
         queryId: string;
@@ -1739,7 +1779,14 @@ export interface operations {
   ExecutionSignForm: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         formId: string;
       };

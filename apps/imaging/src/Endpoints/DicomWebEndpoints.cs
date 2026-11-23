@@ -29,6 +29,7 @@ public static class DicomWebEndpoints
 
         group.MapPost("/studies", StoreInstancesAsync)
             .WithName("StowRsStoreInstances")
+            .WithSummary("Ingests a DICOM instance via STOW-RS with PS3.15 de-identification and SHA-256 certificate generation.")
             .RequirePermission("imaging_study:upload").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<IngestionResult>(StatusCodes.Status201Created)
@@ -37,6 +38,7 @@ public static class DicomWebEndpoints
 
         group.MapPost("/studies/batch", StoreBatchInstancesAsync)
             .WithName("BatchIngestStudyFolder")
+            .WithSummary("Ingests a multi-file DICOM study folder in batch with PS3.15 de-identification.")
             .RequirePermission("imaging_study:upload").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<BatchIngestionResult>(StatusCodes.Status201Created)
@@ -46,6 +48,7 @@ public static class DicomWebEndpoints
 
         group.MapGet("/studies/{studyUid}", GetStudyByUidAsync)
             .WithName("WadoRsGetStudy")
+            .WithSummary("Retrieves WADO-RS study, series, and de-identified instance metadata by Study Instance UID.")
             .RequirePermission("imaging_study:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<ImagingStudyEnvelope>(StatusCodes.Status200OK)
@@ -53,6 +56,7 @@ public static class DicomWebEndpoints
 
         group.MapGet("/studies/{studyUid}/series/{seriesUid}/instances/{instanceUid}/frames/{frameList}", GetInstanceFramesAsync)
             .WithName("WadoRsGetInstanceFrames")
+            .WithSummary("Streams WADO-RS binary pixel frame bytes for a de-identified DICOM instance.")
             .RequirePermission("imaging_study:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
@@ -60,6 +64,7 @@ public static class DicomWebEndpoints
 
         group.MapGet("/certificates/{certificateId}", GetCertificateByIdAsync)
             .WithName("GetDeidCertificate")
+            .WithSummary("Retrieves a DICOM PS3.15 de-identification audit certificate by certificate ID.")
             .RequirePermission("imaging_study:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<CertificateResponse>(StatusCodes.Status200OK)

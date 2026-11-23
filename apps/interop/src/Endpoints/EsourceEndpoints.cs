@@ -41,12 +41,14 @@ public static class EsourceEndpoints
         // Hospital EHR Endpoint Configuration
         group.MapGet("/endpoints", ListEhrEndpointsAsync)
             .WithName("ListEhrEndpoints")
+            .WithSummary("Lists registered hospital SMART on FHIR endpoints.")
             .RequirePermission("esource_endpoint:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrEndpointListResponse>(StatusCodes.Status200OK);
 
         group.MapPost("/endpoints", RegisterEhrEndpointAsync)
             .WithName("RegisterEhrEndpoint")
+            .WithSummary("Registers a hospital SMART on FHIR endpoint configuration and server-side signing key reference.")
             .RequirePermission("esource_endpoint:configure").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrEndpointRecord>(StatusCodes.Status201Created)
@@ -55,6 +57,7 @@ public static class EsourceEndpoints
         // SMART Backend Services Assertion Endpoints
         group.MapPost("/smart/assertion", GenerateClientAssertionAsync)
             .WithName("GenerateClientAssertion")
+            .WithSummary("Signs a SMART Backend Services OAuth 2.0 JWT client assertion for a registered EHR endpoint.")
             .RequirePermission("esource_endpoint:configure").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<SmartAssertionResponse>(StatusCodes.Status200OK)
@@ -64,6 +67,7 @@ public static class EsourceEndpoints
 
         group.MapPost("/smart/verify", VerifyClientAssertionAsync)
             .WithName("VerifyClientAssertion")
+            .WithSummary("Verifies a SMART Backend Services client assertion JWT signature, audience, and lifetime.")
             .RequirePermission("esource_endpoint:configure").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<SmartVerifyResponse>(StatusCodes.Status200OK)
@@ -74,6 +78,8 @@ public static class EsourceEndpoints
         // Polling & Ingestion
         group.MapPost("/poll", PollHospitalEhrAsync)
             .WithName("PollHospitalEhr")
+            .WithSummary("Polls a hospital EHR endpoint for eSource observations (returns 501 Not Implemented; ingest FHIR bundles via POST /ingest).")
+            .WithDescription("HTTP 501 Not Implemented stub: live outbound SMART on FHIR EHR polling is not wired, so this route validates study/site scope and returns RFC 7807 ProblemDetails (501) without synthesizing candidate records.")
             .RequirePermission("esource_candidate:ingest").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status501NotImplemented)
@@ -81,6 +87,7 @@ public static class EsourceEndpoints
 
         group.MapPost("/ingest", IngestFhirBundleAsync)
             .WithName("IngestFhirBundle")
+            .WithSummary("Maps an exported HL7 FHIR Observation bundle into side-by-side eSource reconciliation candidates.")
             .RequirePermission("esource_candidate:ingest").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<FhirBundleIngestResponse>(StatusCodes.Status200OK)
@@ -90,12 +97,14 @@ public static class EsourceEndpoints
         // Candidates for Drawer
         group.MapGet("/candidates", ListCandidatesAsync)
             .WithName("ListCandidates")
+            .WithSummary("Lists eSource reconciliation candidates filtered by study, site, subject, domain, or status.")
             .RequirePermission("esource_candidate:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrCandidateListResponse>(StatusCodes.Status200OK);
 
         group.MapGet("/candidates/{candidate_id}", GetCandidateByIdAsync)
             .WithName("GetCandidate")
+            .WithSummary("Retrieves a single eSource reconciliation candidate record by ID.")
             .RequirePermission("esource_candidate:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrCandidateItemDto>(StatusCodes.Status200OK)
@@ -104,6 +113,7 @@ public static class EsourceEndpoints
         // Reconciliation 1-Click Actions
         group.MapPost("/reconcile/accept", AcceptCandidateAsync)
             .WithName("AcceptCandidate")
+            .WithSummary("Accepts and commits a hospital eSource candidate value into the eCRF with Part 11 audit trail.")
             .RequirePermission("esource_candidate:reconcile").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileActionResponse>(StatusCodes.Status200OK)
@@ -112,6 +122,7 @@ public static class EsourceEndpoints
 
         group.MapPost("/reconcile/batch-accept", BatchAcceptCandidatesAsync)
             .WithName("BatchAcceptCandidates")
+            .WithSummary("Batch-accepts up to 100 hospital eSource candidate values atomically into the eCRF.")
             .RequirePermission("esource_candidate:reconcile").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileBatchActionResponse>(StatusCodes.Status200OK)
@@ -120,6 +131,7 @@ public static class EsourceEndpoints
 
         group.MapPost("/reconcile/reject", RejectCandidateAsync)
             .WithName("RejectCandidate")
+            .WithSummary("Rejects an eSource candidate value with mandatory GxP clinical rationale.")
             .RequirePermission("esource_candidate:reconcile").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileActionResponse>(StatusCodes.Status200OK)
@@ -128,6 +140,7 @@ public static class EsourceEndpoints
 
         group.MapPost("/reconcile/batch-reject", BatchRejectCandidatesAsync)
             .WithName("BatchRejectCandidates")
+            .WithSummary("Batch-rejects up to 100 eSource candidate values with mandatory GxP clinical rationale.")
             .RequirePermission("esource_candidate:reconcile").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileBatchActionResponse>(StatusCodes.Status200OK)
@@ -136,6 +149,7 @@ public static class EsourceEndpoints
 
         group.MapPost("/reconcile/query", RaiseClinicalQueryAsync)
             .WithName("RaiseClinicalQuery")
+            .WithSummary("Raises a clinical discrepancy query from an eSource reconciliation candidate.")
             .RequirePermission("esource_candidate:query").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileActionResponse>(StatusCodes.Status200OK)
@@ -145,6 +159,7 @@ public static class EsourceEndpoints
         // Provenance & Audit Trail
         group.MapGet("/provenance/{candidate_id}", GetProvenanceAuditAsync)
             .WithName("GetProvenanceAudit")
+            .WithSummary("Retrieves FHIR resource provenance and reconciliation audit lineage for an eSource candidate.")
             .RequirePermission("esource_candidate:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrProvenanceResponse>(StatusCodes.Status200OK)

@@ -614,6 +614,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](adr/2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) | Current | - Status: Accepted |
 | [ADR-2648: Restrict CTMS Delegation of Authority Sign-Off Permissions to Principal Investigator Roles](adr/2026-11-23-restrict-ctms-doa-sign-off-to-pi-roles.md) | Current | - Status: Accepted |
 | [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](adr/2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) | Current | - Status: Accepted |
+| [ADR-2553: Schema-Linked Static API Reference, Enriched OpenAPI 3.1 Contracts, and Gateway Contract Export](adr/2026-11-23-schema-linked-api-reference-and-gateway-openapi-contract.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
@@ -645,6 +646,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [execution_forms API](api/execution_forms.md) | Generated | Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [execution API](api/execution.md) | Generated | Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [fileshare API](api/fileshare.md) | Generated | Generated from `docs/openapi/fileshare_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
+| [gateway API](api/gateway.md) | Generated | Generated from `docs/openapi/gateway_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [imaging API](api/imaging.md) | Generated | Generated from `docs/openapi/imaging_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [intelligence API](api/intelligence.md) | Generated | Generated from `docs/openapi/intelligence_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [interop API](api/interop.md) | Generated | Generated from `docs/openapi/interop_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
@@ -777,7 +779,9 @@ this index (`docs/.vitepress/sidebar.mjs`), and the root guides (`README.md`, `A
 `CONTEXT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md` and `LICENSE`) are staged into `docs/` (with
 `README.md` at `docs/README.md`) so local search indexes them and links to them stay inside the portal.
 
-Write relative links and heading anchors as you would for GitHub. On the site, links to unindexed files
-outside `docs/`, to non-Markdown files or to folders without an `index.md` open on GitHub
-(`docs/.vitepress/repoLinks.mjs`), while headings emit both VitePress and GitHub slugs. Any link to a
+Write relative links and heading anchors as you would for GitHub. On the site, top-level OpenAPI contracts
+(`docs/openapi/*_openapi.json` and `cdisc_openapi.json`) are published at `/openapi/*.json` as downloadable
+static assets, while links to unindexed files outside `docs/`, to other non-Markdown files (including
+`docs/openapi/legacy/`) or to folders without an `index.md` open on GitHub
+(`docs/.vitepress/repoLinks.mjs`), and headings emit both VitePress and GitHub slugs. Any link to a
 missing page or missing `#anchor` fragment, including in the nav and sidebar, fails the build.

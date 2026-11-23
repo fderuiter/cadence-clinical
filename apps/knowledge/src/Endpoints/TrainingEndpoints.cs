@@ -145,12 +145,14 @@ public static class TrainingEndpoints
 
         group.MapGet("/curricula", ListCurriculaAsync)
             .WithName("ListCurricula")
+            .WithSummary("Lists active study training curricula visible within the caller's study scope.")
             .RequirePermission("training_log:read").RequireCallerStudyScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<List<TrainingCurriculumDto>>(StatusCodes.Status200OK);
 
         group.MapGet("/curricula/{curriculum_id}", GetCurriculumAsync)
             .WithName("GetCurriculum")
+            .WithSummary("Retrieves a study training curriculum by curriculum ID.")
             .RequirePermission("training_log:read").RequireCallerStudyScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<TrainingCurriculumDto>(StatusCodes.Status200OK)
@@ -158,6 +160,7 @@ public static class TrainingEndpoints
 
         group.MapPost("/curricula/batch-assign", BatchAssignCurriculumAsync)
             .WithName("BatchAssignCurriculum")
+            .WithSummary("Assigns a training curriculum to a batch of study staff members.")
             .RequirePermission("training_curriculum:assign").RequireCallerStudyScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<BatchAssignmentResponse>(StatusCodes.Status201Created)
@@ -168,12 +171,14 @@ public static class TrainingEndpoints
 
         group.MapGet("/assignments", ListAssignmentsAsync)
             .WithName("ListAssignments")
+            .WithSummary("Lists study training curriculum assignments filtered by study, site, or assignee.")
             .RequirePermission("training_log:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<List<TrainingAssignmentDto>>(StatusCodes.Status200OK);
 
         group.MapGet("/assignments/{assignment_id}", GetAssignmentDetailAsync)
             .WithName("GetAssignmentDetail")
+            .WithSummary("Retrieves a training assignment and completion status by assignment ID.")
             .RequirePermission("training_log:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<TrainingAssignmentDto>(StatusCodes.Status200OK)
@@ -181,12 +186,14 @@ public static class TrainingEndpoints
 
         group.MapGet("/delegations", ListDelegationsAsync)
             .WithName("ListDelegations")
+            .WithSummary("Lists site delegation-of-authority records and PI sign-off status.")
             .RequirePermission("delegation_log:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<List<DelegationSummaryDto>>(StatusCodes.Status200OK);
 
         group.MapPost("/delegations/bulk-signoff", BulkSignOffDelegationsAsync)
             .WithName("BulkSignOffDelegations")
+            .WithSummary("Applies a batch-bound 21 CFR Part 11 Principal Investigator electronic signature across site delegations.")
             .RequirePermission("delegation_log:sign").RequireCallerStudyAndSiteScope()
             .RequireElectronicSignature(DelegationSignOffBinding)
             .Produces<BulkDelegationSignOffResponse>(StatusCodes.Status200OK)

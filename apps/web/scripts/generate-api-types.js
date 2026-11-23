@@ -46,9 +46,49 @@ const HEADER =
   " * Do not edit; run `pnpm --filter web generate:api` after regenerating the spec.\n" +
   " */\n\n";
 
+function relaxHeaderParametersForOpenApiFetch(spec) {
+  if (!spec || typeof spec.paths !== "object" || spec.paths === null) {
+    return spec;
+  }
+  const httpMethods = [
+    "get",
+    "put",
+    "post",
+    "delete",
+    "options",
+    "head",
+    "patch",
+    "trace",
+  ];
+  for (const pathItem of Object.values(spec.paths)) {
+    if (!pathItem || typeof pathItem !== "object") continue;
+    if (Array.isArray(pathItem.parameters)) {
+      for (const param of pathItem.parameters) {
+        if (param && param.in === "header" && param.required) {
+          param.required = false;
+        }
+      }
+    }
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || !Array.isArray(operation.parameters)) continue;
+      for (const param of operation.parameters) {
+        // Regulated GxP headers (X-Sig-Token, Idempotency-Key, X-Change-Reason) remain required: true
+        // in docs/openapi/*.json, while web API clients pass them via openapi-fetch's top-level `headers` option.
+        if (param && param.in === "header" && param.required) {
+          param.required = false;
+        }
+      }
+    }
+  }
+  return spec;
+}
+
 export async function renderServiceTypes(service, specDir = SPEC_DIR) {
   const specPath = path.join(specDir, `${service}${SPEC_SUFFIX}`);
-  const spec = JSON.parse(fs.readFileSync(specPath, "utf8"));
+  const spec = relaxHeaderParametersForOpenApiFetch(
+    JSON.parse(fs.readFileSync(specPath, "utf8"))
+  );
   const ast = await openapiTS(spec);
   const source = HEADER.replace("{service}", service) + astToString(ast);
   const config = (await prettier.resolveConfig(WEB_DIR)) ?? {};

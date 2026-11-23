@@ -235,7 +235,43 @@ public static class CadenceSecurityServiceCollectionExtensions
     /// </summary>
     public static TBuilder RequireChangeJustification<TBuilder>(this TBuilder builder) where TBuilder : IEndpointConventionBuilder
     {
-        return builder.RequireAuthorization("RequireChangeJustification");
+        return builder
+            .RequireAuthorization("RequireChangeJustification")
+            .WithChangeReasonHeader(required: true);
+    }
+
+    /// <summary>
+    /// Attaches OpenAPI header parameter metadata for <c>X-Change-Reason</c> (21 CFR Part 11 / ADR-2495).
+    /// </summary>
+    public static TBuilder WithChangeReasonHeader<TBuilder>(
+        this TBuilder builder,
+        bool required = true,
+        string? description = null)
+        where TBuilder : IEndpointConventionBuilder
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        string effectiveDescription = description
+            ?? (required
+                ? "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8."
+                : "Optional 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8.");
+        return builder.WithMetadata(new EndpointHeaderMetadata(GatewayHeaders.ChangeReason, required, effectiveDescription));
+    }
+
+    /// <summary>
+    /// Attaches OpenAPI header parameter metadata for <c>Idempotency-Key</c>.
+    /// </summary>
+    public static TBuilder WithIdempotencyKeyHeader<TBuilder>(
+        this TBuilder builder,
+        bool required = true,
+        string? description = null)
+        where TBuilder : IEndpointConventionBuilder
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        string effectiveDescription = description
+            ?? (required
+                ? "Caller-supplied command idempotency key (1-255 chars) preventing duplicate clinical writes on retry."
+                : "Optional caller-supplied idempotency key (max 255 chars) ensuring safe request replay.");
+        return builder.WithMetadata(new EndpointHeaderMetadata("Idempotency-Key", required, effectiveDescription, MaxLength: 255));
     }
 
     /// <summary>

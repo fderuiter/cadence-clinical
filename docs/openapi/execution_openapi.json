@@ -28,6 +28,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -36,6 +40,7 @@
         "tags": [
           "SiteCompliance"
         ],
+        "summary": "Applies an eTMF site-activation document completeness webhook to the execution compliance cache.",
         "operationId": "EtmfCompletenessWebhook",
         "requestBody": {
           "content": {
@@ -78,7 +83,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "site_compliance:etmf_sync"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/sites/{siteId}/activate": {
@@ -86,6 +106,7 @@
         "tags": [
           "SiteCompliance"
         ],
+        "summary": "Evaluates eTMF readiness and activates a clinical trial site for subject enrollment.",
         "operationId": "ActivateSite",
         "parameters": [
           {
@@ -138,7 +159,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "site_compliance:activate"
+        ],
+        "x-cadence-scopes": [
+          "RouteSite:siteId"
+        ]
       }
     },
     "/api/v1/execution/sites/{siteId}/compliance-status": {
@@ -146,6 +182,7 @@
         "tags": [
           "SiteCompliance"
         ],
+        "summary": "Retrieves the current eTMF document completeness and activation gate status for a site.",
         "operationId": "GetSiteComplianceStatus",
         "parameters": [
           {
@@ -209,7 +246,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "site_compliance:read"
+        ],
+        "x-cadence-scopes": [
+          "RouteSite:siteId"
+        ]
       }
     },
     "/api/v1/execution/subjects": {
@@ -217,6 +269,7 @@
         "tags": [
           "Subjects"
         ],
+        "summary": "Registers a new trial subject in screening state with AES-GCM encrypted demographics.",
         "operationId": "CreateSubject",
         "requestBody": {
           "content": {
@@ -259,7 +312,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "subject_enrollment:create"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       },
       "get": {
         "tags": [
@@ -352,7 +420,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "subject_enrollment:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/subjects/{subjectId}/consent": {
@@ -360,6 +443,7 @@
         "tags": [
           "Subjects"
         ],
+        "summary": "Records informed consent version attestation for a trial subject.",
         "operationId": "RecordSubjectConsent",
         "parameters": [
           {
@@ -422,7 +506,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "subject_enrollment:update"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/subjects/{subjectId}/state": {
@@ -430,6 +529,7 @@
         "tags": [
           "Subjects"
         ],
+        "summary": "Advances a trial subject\u0027s enrollment lifecycle state with Part 11 change justification.",
         "operationId": "UpdateSubjectState",
         "parameters": [
           {
@@ -437,6 +537,16 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -502,7 +612,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "subject_enrollment:update"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/subjects/{subjectId}/site": {
@@ -518,6 +643,16 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -583,7 +718,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "subject_enrollment:update"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/subjects/counts": {
@@ -640,7 +790,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "subject_enrollment:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/subjects/{subjectId}": {
@@ -648,6 +813,7 @@
         "tags": [
           "Subjects"
         ],
+        "summary": "Retrieves a trial subject\u0027s enrollment record, consent history, and role-blinded allocation details.",
         "operationId": "GetSubjectDetail",
         "parameters": [
           {
@@ -690,7 +856,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "subject_enrollment:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/subjects/{subjectId}/demographics": {
@@ -698,6 +879,7 @@
         "tags": [
           "Subjects"
         ],
+        "summary": "Updates encrypted subject demographic attributes with Part 11 change justification.",
         "operationId": "UpdateSubjectDemographics",
         "parameters": [
           {
@@ -705,6 +887,16 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -760,12 +952,28 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "subject_enrollment:update"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       },
       "delete": {
         "tags": [
           "Subjects"
         ],
+        "summary": "Redacts stored subject demographic attributes under GDPR/privacy erasure with Part 11 audit trail.",
         "operationId": "DeleteSubjectDemographics",
         "parameters": [
           {
@@ -775,9 +983,29 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_SubjectResponse"
+                }
+              }
+            }
+          },
           "403": {
             "description": "Forbidden",
             "content": {
@@ -787,8 +1015,33 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "subject_enrollment:update"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/randomization/schemes": {
@@ -798,6 +1051,18 @@
         ],
         "summary": "Drafts the study\u0027s next randomisation scheme version.",
         "operationId": "DraftRandomizationScheme",
+        "parameters": [
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -839,7 +1104,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "randomization_scheme:draft"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       },
       "get": {
         "tags": [
@@ -890,7 +1170,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "randomization_scheme:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/randomization/schemes/{schemeId}/approve": {
@@ -908,6 +1203,26 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
             }
           }
         ],
@@ -962,7 +1277,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "randomization_scheme:approve"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/subjects/{subjectId}/randomize": {
@@ -978,6 +1308,26 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -1053,7 +1403,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "subject_enrollment:randomize"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/labs/toxicity/review-queue": {
@@ -1121,7 +1486,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_toxicity_review:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/labs/toxicity/review/{review_id}/action": {
@@ -1138,6 +1518,26 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -1193,7 +1593,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_toxicity_review:review"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/labs/toxicity/evaluate": {
@@ -1245,7 +1660,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_range:alert"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/lab-ranges": {
@@ -1309,7 +1739,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_range:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       },
       "post": {
         "tags": [
@@ -1317,6 +1762,18 @@
         ],
         "summary": "Create laboratory reference range",
         "operationId": "CreateReferenceRange",
+        "parameters": [
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1358,7 +1815,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_range:create"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/lab-ranges/{id}": {
@@ -1410,7 +1882,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_range:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       },
       "put": {
         "tags": [
@@ -1426,6 +1913,16 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
             }
           }
         ],
@@ -1470,7 +1967,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_range:update"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       },
       "delete": {
         "tags": [
@@ -1486,6 +1998,16 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
             }
           }
         ],
@@ -1518,7 +2040,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_range:delete"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/labs/import/dry-run": {
@@ -1559,7 +2096,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_range_import:preview"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/labs/import/commit": {
@@ -1569,6 +2121,18 @@
         ],
         "summary": "Commit validated bulk lab ranges into persistent store with Part 11 audit logging",
         "operationId": "CommitLabRangeImport",
+        "parameters": [
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -1600,7 +2164,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_range_import:commit"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/labs/batch-status": {
@@ -1650,7 +2229,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_range_import:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/labs/batch-status/{id}": {
@@ -1702,7 +2296,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_range_import:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/labs/convert-unit": {
@@ -1743,7 +2352,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_range:read"
+        ],
+        "x-cadence-scopes": [
+          "Tenant"
+        ]
       }
     },
     "/api/v1/execution/labs/loinc-catalog": {
@@ -1774,14 +2398,30 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "lab_range:read"
+        ],
+        "x-cadence-scopes": [
+          "Tenant"
+        ]
       }
     },
     "/api/v1/execution/cec/dossiers/{id}/chair-adjudicate": {
       "post": {
         "tags": [
-          "CecEndpoints"
+          "CEC Adjudication"
         ],
+        "summary": "Records the CEC chair\u0027s step-up e-signed clinical endpoint adjudication decision on a dossier.",
         "operationId": "ChairAdjudicateDossier",
         "parameters": [
           {
@@ -1789,6 +2429,16 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -1864,14 +2514,30 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "cec_adjudication:adjudicate"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/cec/dossiers/{id}": {
       "get": {
         "tags": [
-          "CecEndpoints"
+          "CEC Adjudication"
         ],
+        "summary": "Retrieves a Clinical Endpoint Adjudication Committee dossier and reviewer votes by dossier ID.",
         "operationId": "GetCecDossierById",
         "parameters": [
           {
@@ -1914,7 +2580,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "cec_adjudication:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/rtsm/cgt/apheresis": {
@@ -1922,6 +2603,8 @@
         "tags": [
           "CGT"
         ],
+        "summary": "Initializes a cell and gene therapy chain of custody at apheresis collection with ISBT-128 DIN validation.",
+        "operationId": "InitializeCgtApheresis",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1934,9 +2617,51 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CgtChainOfCustodyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "cgt_chain_of_custody:write"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/rtsm/cgt/milestone": {
@@ -1944,6 +2669,8 @@
         "tags": [
           "CGT"
         ],
+        "summary": "Records a tamper-evident manufacturing or cold-chain logistics milestone on a CGT chain of custody.",
+        "operationId": "RecordCgtMilestone",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1956,9 +2683,51 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CgtChainOfCustodyResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "cgt_chain_of_custody:write"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/rtsm/cgt/manufacturing-bind": {
@@ -1966,6 +2735,8 @@
         "tags": [
           "CGT"
         ],
+        "summary": "Binds a finished autologous manufacturing lot and SEC/expiry metadata to a chain of custody.",
+        "operationId": "BindCgtManufacturingBatch",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1978,9 +2749,51 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CgtChainOfCustodyResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "cgt_chain_of_custody:write"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/rtsm/cgt/bedside-verify": {
@@ -1988,6 +2801,8 @@
         "tags": [
           "CGT"
         ],
+        "summary": "Performs dual-operator bedside barcode verification prior to cell therapy infusion.",
+        "operationId": "VerifyCgtBedside",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2000,9 +2815,61 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CgtBedsideVerificationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "cgt_chain_of_custody:write"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/rtsm/cgt/infuse": {
@@ -2010,6 +2877,8 @@
         "tags": [
           "CGT"
         ],
+        "summary": "Records autologous cell therapy administration following verified bedside identity match.",
+        "operationId": "ExecuteCgtInfusion",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2022,9 +2891,61 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CgtChainOfCustodyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "cgt_chain_of_custody:write"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/rtsm/cgt/returns": {
@@ -2032,6 +2953,8 @@
         "tags": [
           "CGT"
         ],
+        "summary": "Logs post-infusion CGT bag or vial return accountability reconciliation.",
+        "operationId": "LogCgtVialReturn",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2044,9 +2967,41 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CgtVialReturnReconciliationResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "cgt_chain_of_custody:write"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/rtsm/cgt/destruction-certificate": {
@@ -2054,6 +3009,8 @@
         "tags": [
           "CGT"
         ],
+        "summary": "Generates a dual-witness CGT biohazard destruction certificate.",
+        "operationId": "CreateCgtDestructionCertificate",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2066,9 +3023,51 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CgtDestructionCertificateResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "cgt_chain_of_custody:write"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/rtsm/cgt/verify-barcode": {
@@ -2076,6 +3075,8 @@
         "tags": [
           "CGT"
         ],
+        "summary": "Parses and validates an ISBT-128 or GS1 CGT label barcode within the caller\u0027s clinical scope.",
+        "operationId": "VerifyCgtBarcode",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2088,9 +3089,41 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CgtBarcodeVerifyResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "cgt_chain_of_custody:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/rtsm/cgt/chain-of-custody/{studyId}/{subjectId}": {
@@ -2098,6 +3131,8 @@
         "tags": [
           "CGT"
         ],
+        "summary": "Retrieves end-to-end vein-to-vein CGT chain-of-custody traceability for a study subject.",
+        "operationId": "GetCgtFullTraceability",
         "parameters": [
           {
             "name": "studyId",
@@ -2118,9 +3153,41 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CgtFullTraceabilityResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "cgt_chain_of_custody:read"
+        ],
+        "x-cadence-scopes": [
+          "RouteStudy:studyId"
+        ]
       }
     },
     "/api/v1/execution/rtsm/cgt/certificates/{studyId}": {
@@ -2128,6 +3195,8 @@
         "tags": [
           "CGT"
         ],
+        "summary": "Lists CGT biohazard destruction certificates for a study within the caller\u0027s site scope.",
+        "operationId": "ListCgtDestructionCertificates",
         "parameters": [
           {
             "name": "studyId",
@@ -2140,9 +3209,44 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_CgtDestructionCertificateResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "cgt_chain_of_custody:read"
+        ],
+        "x-cadence-scopes": [
+          "RouteStudy:studyId"
+        ]
       }
     },
     "/api/v1/execution/rtsm/cgt/reconciliations/{studyId}": {
@@ -2150,6 +3254,8 @@
         "tags": [
           "CGT"
         ],
+        "summary": "Lists CGT vial and bag return accountability reconciliations for a study.",
+        "operationId": "ListCgtVialReconciliations",
         "parameters": [
           {
             "name": "studyId",
@@ -2162,9 +3268,44 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_CgtVialReturnReconciliationResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "cgt_chain_of_custody:read"
+        ],
+        "x-cadence-scopes": [
+          "RouteStudy:studyId"
+        ]
       }
     },
     "/api/v1/execution/coding/synonyms/validate": {
@@ -2176,9 +3317,51 @@
         "operationId": "ValidateSynonymFile",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_PreflightValidationReportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "medical_coding:manage_synonyms"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/coding/synonyms/import": {
@@ -2188,11 +3371,63 @@
         ],
         "summary": "Ingest validated synonym dictionary rules into persistent store with GxP audit lineage.",
         "operationId": "ImportSynonymFile",
+        "parameters": [
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "21 CFR Part 11 reason for change when not supplied as multipart form field reason_for_change.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_BulkImportExecutionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "medical_coding:manage_synonyms"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/coding/synonyms": {
@@ -2220,9 +3455,44 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_SynonymRuleResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "medical_coding:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/coding/synonyms/jobs": {
@@ -2250,9 +3520,44 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_BulkSynonymImportJobResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "medical_coding:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/coding/synonyms/{id}": {
@@ -2271,13 +3576,63 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Optional 21 CFR Part 11 reason for deactivating the synonym rule (overrides query parameter reason_for_change when omitted).",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_SynonymDeactivateResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "medical_coding:manage_synonyms"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/execution/devices/parse-udi": {
@@ -2329,7 +3684,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "device_accountability:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/devices/inventory": {
@@ -2384,7 +3754,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "device_accountability:register"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       },
       "get": {
         "tags": [
@@ -2472,7 +3857,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "device_accountability:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/devices/dispense": {
@@ -2544,7 +3944,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "device_accountability:dispense"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/devices/deficiencies": {
@@ -2596,7 +4011,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "device_accountability:report_deficiency"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       },
       "get": {
         "tags": [
@@ -2652,7 +4082,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "device_accountability:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/devices/deficiencies/{deficiency_id}": {
@@ -2703,7 +4148,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "device_accountability:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/devices/quarantine": {
@@ -2744,7 +4204,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "device_accountability:quarantine"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       },
       "get": {
         "tags": [
@@ -2800,7 +4275,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "device_accountability:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/devices/quarantine/release": {
@@ -2851,7 +4341,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "device_accountability:release"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/devices/investigation-summary": {
@@ -2892,7 +4397,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "device_accountability:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/rtsm/kits/validate-scan": {
@@ -2900,6 +4420,8 @@
         "tags": [
           "IP Kit Reconciliation"
         ],
+        "summary": "Validates a scanned investigational product kit GS1 barcode against site inventory.",
+        "operationId": "ValidateIpKitBarcodeScan",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2912,9 +4434,41 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_IpKitScanValidateResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "rtsm_supply:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/rtsm/kits/reconcile-batch": {
@@ -2922,6 +4476,8 @@
         "tags": [
           "IP Kit Reconciliation"
         ],
+        "summary": "Reconciles a batch of investigational product kits and issues an accountability certificate.",
+        "operationId": "ReconcileIpKitBatch",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2934,9 +4490,51 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_IpKitReconciliationBatchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "rtsm_supply:write"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/rtsm/kits/certificates/{certificateId}": {
@@ -2944,6 +4542,8 @@
         "tags": [
           "IP Kit Reconciliation"
         ],
+        "summary": "Retrieves a signed investigational product kit accountability certificate by identifier.",
+        "operationId": "GetIpKitCertificate",
         "parameters": [
           {
             "name": "certificateId",
@@ -2956,9 +4556,51 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_IpKitCertificateResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "rtsm_supply:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}": {
@@ -2966,6 +4608,8 @@
         "tags": [
           "IP Kit Reconciliation"
         ],
+        "summary": "Lists investigational product kit inventory and disposition statuses for a clinical site.",
+        "operationId": "GetSiteIpKitInventory",
         "parameters": [
           {
             "name": "studyId",
@@ -2986,9 +4630,45 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_IpKitInventoryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "rtsm_supply:read"
+        ],
+        "x-cadence-scopes": [
+          "RouteStudy:studyId",
+          "RouteSite:siteId"
+        ]
       }
     },
     "/api/v1/execution/rtsm/kits/seed-inventory": {
@@ -2996,6 +4676,8 @@
         "tags": [
           "IP Kit Reconciliation"
         ],
+        "summary": "Seeds sponsor investigational product kit inventory records for a clinical site.",
+        "operationId": "SeedSiteIpKitInventory",
         "requestBody": {
           "content": {
             "application/json": {
@@ -3008,9 +4690,44 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_IpKitInventoryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ip_kit_inventory:seed"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     }
   },
@@ -3041,6 +4758,24 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Execution_BulkImportExecutionResponse": {
+        "required": [
+          "job",
+          "imported_rules"
+        ],
+        "type": "object",
+        "properties": {
+          "job": {
+            "$ref": "#/components/schemas/Execution_BulkSynonymImportJobResponse"
+          },
+          "imported_rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_SynonymRuleResponse"
+            }
           }
         }
       },
@@ -3373,6 +5108,90 @@
           }
         }
       },
+      "Execution_BulkSynonymImportJobResponse": {
+        "required": [
+          "id",
+          "scope",
+          "study_id",
+          "file_name",
+          "file_hash",
+          "total_rows",
+          "valid_rows",
+          "duplicate_rows",
+          "invalid_rows",
+          "status",
+          "created_by",
+          "created_at",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "file_name": {
+            "type": "string"
+          },
+          "file_hash": {
+            "type": "string"
+          },
+          "total_rows": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "valid_rows": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "duplicate_rows": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "invalid_rows": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "status": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason_for_change": {
+            "type": "string"
+          }
+        }
+      },
       "Execution_CecDossier": {
         "type": "object",
         "properties": {
@@ -3603,6 +5422,66 @@
           }
         }
       },
+      "Execution_CgtBarcodeVerifyResponse": {
+        "required": [
+          "is_valid",
+          "failure_reason",
+          "barcode_id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "din",
+          "batch_id"
+        ],
+        "type": "object",
+        "properties": {
+          "is_valid": {
+            "type": "boolean"
+          },
+          "failure_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "barcode_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "din": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "batch_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Execution_CgtBedsideVerificationRequest": {
         "required": [
           "study_id",
@@ -3684,6 +5563,186 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Execution_CgtBedsideVerificationResponse": {
+        "required": [
+          "verification_id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "din",
+          "batch_id",
+          "patient_wristband_id",
+          "primary_verifier_id",
+          "secondary_verifier_id",
+          "unlock_token",
+          "verified_at",
+          "is_match",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "verification_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "din": {
+            "type": "string"
+          },
+          "batch_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "patient_wristband_id": {
+            "type": "string"
+          },
+          "primary_verifier_id": {
+            "type": "string"
+          },
+          "secondary_verifier_id": {
+            "type": "string"
+          },
+          "unlock_token": {
+            "type": "string"
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "is_match": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "Execution_CgtChainOfCustodyResponse": {
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "din",
+          "batch_id",
+          "collection_site_id",
+          "manufacturing_facility_id",
+          "status",
+          "current_stage",
+          "cryo_temp_excursion_count",
+          "lowest_temp_celsius",
+          "unlock_token",
+          "harvested_at",
+          "infused_at",
+          "reconciled_at",
+          "created_at",
+          "created_by"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "din": {
+            "type": "string"
+          },
+          "batch_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "collection_site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "manufacturing_facility_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "current_stage": {
+            "type": "string"
+          },
+          "cryo_temp_excursion_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lowest_temp_celsius": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unlock_token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "harvested_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "infused_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "reconciled_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
           }
         }
       },
@@ -3811,6 +5870,180 @@
             "type": [
               "null",
               "string"
+            ]
+          }
+        }
+      },
+      "Execution_CgtDestructionCertificateResponse": {
+        "required": [
+          "id",
+          "certificate_number",
+          "study_id",
+          "site_id",
+          "chain_of_custody_id",
+          "subject_id",
+          "din",
+          "lot_number",
+          "kit_numbers",
+          "vial_identifiers",
+          "quantity_destroyed",
+          "unit_of_measure",
+          "residual_volume_ml",
+          "destruction_reason",
+          "destruction_method",
+          "destruction_facility",
+          "destruction_timestamp",
+          "witness_1_id",
+          "witness_2_id",
+          "cryptographic_seal",
+          "status",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "certificate_number": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "chain_of_custody_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "din": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "kit_numbers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vial_identifiers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "quantity_destroyed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unit_of_measure": {
+            "type": "string"
+          },
+          "residual_volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "destruction_reason": {
+            "type": "string"
+          },
+          "destruction_method": {
+            "type": "string"
+          },
+          "destruction_facility": {
+            "type": "string"
+          },
+          "destruction_timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "witness_1_id": {
+            "type": "string"
+          },
+          "witness_2_id": {
+            "type": "string"
+          },
+          "cryptographic_seal": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_CgtFullTraceabilityResponse": {
+        "required": [
+          "chain_of_custody",
+          "milestones",
+          "bedside_verification",
+          "destruction_certificate"
+        ],
+        "type": "object",
+        "properties": {
+          "chain_of_custody": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Execution_CgtChainOfCustodyResponse"
+              }
+            ]
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_CgtMilestoneResponse"
+            }
+          },
+          "bedside_verification": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Execution_CgtBedsideVerificationResponse"
+              }
+            ]
+          },
+          "destruction_certificate": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Execution_CgtDestructionCertificateResponse"
+              }
             ]
           }
         }
@@ -4058,6 +6291,151 @@
           }
         }
       },
+      "Execution_CgtMilestoneResponse": {
+        "required": [
+          "id",
+          "study_id",
+          "chain_of_custody_id",
+          "stage",
+          "milestone_type",
+          "timestamp",
+          "location_name",
+          "facility_id",
+          "latitude",
+          "longitude",
+          "temperature_celsius",
+          "temperature_status",
+          "custodian_id",
+          "custodian_name",
+          "custodian_role",
+          "carrier",
+          "tracking_number",
+          "seal_intact",
+          "seal_id",
+          "dry_shipper_id",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "chain_of_custody_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "milestone_type": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "location_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "facility_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "latitude": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "longitude": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "temperature_celsius": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "temperature_status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "custodian_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "custodian_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "custodian_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "carrier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tracking_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "seal_intact": {
+            "type": "boolean"
+          },
+          "seal_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dry_shipper_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Execution_CgtVialReturnReconciliationRequest": {
         "required": [
           "study_id",
@@ -4120,6 +6498,111 @@
             "format": "double"
           },
           "logged_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_CgtVialReturnReconciliationResponse": {
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "kit_number",
+          "vial_identifier",
+          "returned_quantity",
+          "intact_vials",
+          "used_vials",
+          "residual_volume_ml",
+          "adherence_percentage",
+          "disposition",
+          "logged_by",
+          "logged_at",
+          "certificate_id",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "kit_number": {
+            "type": "string"
+          },
+          "vial_identifier": {
+            "type": "string"
+          },
+          "returned_quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "intact_vials": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "used_vials": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "residual_volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "adherence_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "disposition": {
+            "type": "string"
+          },
+          "logged_by": {
+            "type": "string"
+          },
+          "logged_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "certificate_id": {
             "type": [
               "null",
               "string"
@@ -5279,6 +7762,38 @@
           }
         }
       },
+      "Execution_InvalidRowDetailResponse": {
+        "required": [
+          "row_number",
+          "verbatim_text",
+          "dictionary_type",
+          "target_code",
+          "error_reason"
+        ],
+        "type": "object",
+        "properties": {
+          "row_number": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "verbatim_text": {
+            "type": "string"
+          },
+          "dictionary_type": {
+            "type": "string"
+          },
+          "target_code": {
+            "type": "string"
+          },
+          "error_reason": {
+            "type": "string"
+          }
+        }
+      },
       "Execution_IpKitBatchReconciliationRequest": {
         "required": [
           "study_id",
@@ -5314,6 +7829,103 @@
           "reason_for_change": {
             "type": "string",
             "default": "Batch IP kit reconciliation"
+          }
+        }
+      },
+      "Execution_IpKitCertificateResponse": {
+        "required": [
+          "certificate_id",
+          "batch_id",
+          "batch_number",
+          "study_id",
+          "site_id",
+          "issued_by",
+          "issued_at",
+          "kit_numbers",
+          "digital_signature"
+        ],
+        "type": "object",
+        "properties": {
+          "certificate_id": {
+            "type": "string"
+          },
+          "batch_id": {
+            "type": "string"
+          },
+          "batch_number": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "issued_by": {
+            "type": "string"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "kit_numbers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "digital_signature": {
+            "type": "string"
+          }
+        }
+      },
+      "Execution_IpKitInventoryResponse": {
+        "required": [
+          "kit_number",
+          "study_id",
+          "site_id",
+          "lot_number",
+          "expiration_date",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "kit_number": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "expiration_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "residual_volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "residual_volume_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -5370,6 +7982,122 @@
           }
         }
       },
+      "Execution_IpKitItemResponse": {
+        "required": [
+          "kit_number",
+          "lot_number",
+          "expected_lot_number",
+          "residual_volume_ml",
+          "residual_volume_percentage",
+          "disposition",
+          "disposition_reason",
+          "is_quarantined"
+        ],
+        "type": "object",
+        "properties": {
+          "kit_number": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "expected_lot_number": {
+            "type": "string"
+          },
+          "residual_volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "residual_volume_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "disposition": {
+            "type": "string"
+          },
+          "disposition_reason": {
+            "type": "string"
+          },
+          "is_quarantined": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Execution_IpKitReconciliationBatchResponse": {
+        "required": [
+          "batch_id",
+          "batch_number",
+          "study_id",
+          "site_id",
+          "processed_by",
+          "processed_at",
+          "total_kits",
+          "quarantined_kits",
+          "certificate_id",
+          "items",
+          "certificate"
+        ],
+        "type": "object",
+        "properties": {
+          "batch_id": {
+            "type": "string"
+          },
+          "batch_number": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "processed_by": {
+            "type": "string"
+          },
+          "processed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "total_kits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quarantined_kits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "certificate_id": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_IpKitItemResponse"
+            }
+          },
+          "certificate": {
+            "$ref": "#/components/schemas/Execution_IpKitCertificateResponse"
+          }
+        }
+      },
       "Execution_IpKitScanValidateRequest": {
         "required": [
           "kit_number",
@@ -5392,6 +8120,44 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Execution_IpKitScanValidateResponse": {
+        "required": [
+          "kit_number",
+          "expected_lot_number",
+          "scanned_lot_number",
+          "is_lot_match",
+          "is_valid",
+          "status",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "kit_number": {
+            "type": "string"
+          },
+          "expected_lot_number": {
+            "type": "string"
+          },
+          "scanned_lot_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_lot_match": {
+            "type": "boolean"
+          },
+          "is_valid": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
           }
         }
       },
@@ -6042,6 +8808,60 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Execution_PreflightValidationReportResponse": {
+        "required": [
+          "total_rows",
+          "valid_count",
+          "duplicate_count",
+          "invalid_count",
+          "invalid_rows",
+          "can_import"
+        ],
+        "type": "object",
+        "properties": {
+          "total_rows": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "valid_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "duplicate_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "invalid_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "invalid_rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_InvalidRowDetailResponse"
+            }
+          },
+          "can_import": {
+            "type": "boolean"
           }
         }
       },
@@ -7092,6 +9912,94 @@
           }
         }
       },
+      "Execution_SynonymDeactivateResponse": {
+        "required": [
+          "message",
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "Execution_SynonymRuleResponse": {
+        "required": [
+          "id",
+          "scope",
+          "study_id",
+          "verbatim_text",
+          "dictionary_type",
+          "dictionary_version",
+          "target_code",
+          "target_term",
+          "target_level",
+          "status",
+          "import_job_id",
+          "created_by",
+          "created_at",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "verbatim_text": {
+            "type": "string"
+          },
+          "dictionary_type": {
+            "type": "string"
+          },
+          "dictionary_version": {
+            "type": "string"
+          },
+          "target_code": {
+            "type": "string"
+          },
+          "target_term": {
+            "type": "string"
+          },
+          "target_level": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "import_job_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason_for_change": {
+            "type": "string"
+          }
+        }
+      },
       "Execution_UdiParseRequest": {
         "required": [
           "raw_barcode"
@@ -7184,6 +10092,14 @@
           }
         }
       }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
     }
   },
   "tags": [
@@ -7209,7 +10125,7 @@
       "name": "Laboratory Import \u0026 Catalog"
     },
     {
-      "name": "CecEndpoints"
+      "name": "CEC Adjudication"
     },
     {
       "name": "CGT"

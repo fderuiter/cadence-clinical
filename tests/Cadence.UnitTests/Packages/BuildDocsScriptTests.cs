@@ -315,6 +315,31 @@ public sealed class BuildDocsScriptTests : IDisposable
     }
 
     [Fact]
+    public void BuildDocs_PublishesTopLevelOpenApiSpecsToDist_ExcludesLegacy_AndLeavesNoStagedFilesInDocs()
+    {
+        string openApiDir = Directory.CreateDirectory(Path.Combine(_fixtureRoot, "docs", "openapi")).FullName;
+        string legacyDir = Directory.CreateDirectory(Path.Combine(openApiDir, "legacy")).FullName;
+        File.WriteAllText(Path.Combine(openApiDir, "gateway_openapi.json"), """{"openapi":"3.1.1"}""");
+        File.WriteAllText(Path.Combine(openApiDir, "kernel_openapi.json"), """{"openapi":"3.1.1"}""");
+        File.WriteAllText(Path.Combine(openApiDir, "cdisc_openapi.json"), """{"openapi":"3.1.0"}""");
+        File.WriteAllText(Path.Combine(openApiDir, "README.md"), "# OpenAPI\n");
+        File.WriteAllText(Path.Combine(legacyDir, "cdisc_openapi.json"), """{"openapi":"3.0.0"}""");
+
+        var result = RunBuildDocs();
+        result.ExitCode.Should().Be(0, result.Output);
+
+        string distOpenApiDir = Path.Combine(_fixtureRoot, "docs", ".vitepress", "dist", "openapi");
+        File.Exists(Path.Combine(distOpenApiDir, "gateway_openapi.json")).Should().BeTrue();
+        File.Exists(Path.Combine(distOpenApiDir, "kernel_openapi.json")).Should().BeTrue();
+        File.Exists(Path.Combine(distOpenApiDir, "cdisc_openapi.json")).Should().BeTrue();
+        File.Exists(Path.Combine(distOpenApiDir, "README.md")).Should().BeFalse();
+        Directory.Exists(Path.Combine(distOpenApiDir, "legacy")).Should().BeFalse();
+        Directory.Exists(Path.Combine(_fixtureRoot, "docs", "public")).Should().BeFalse();
+
+        AssertTrackedDocsUnchangedAndTempDocsCleaned();
+    }
+
+    [Fact]
     public void BuildDocs_DevMode_StagesAllEightRootDocs_IsolatesSecrets_AndCleansUpOnExit()
     {
         StageAllEightRootSourceFiles();

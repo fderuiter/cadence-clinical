@@ -1178,6 +1178,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/ai/mcp": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Executes stateless Streamable HTTP Model Context Protocol (MCP) JSON-RPC 2.0 requests for governed read-only clinical tools.
+     * @description Stateless Streamable HTTP MCP transport (ADR-2633 §4.8) accepting JSON-RPC 2.0 requests (initialize, notifications/initialized, ping, tools/list, tools/call) and answering with application/json or text/event-stream envelopes. Requires a gateway-verified OIDC BearerAuth token (SignedInCaller): every tool executes as the signed-in caller acting through agent:mcp over KernelToolNames.McpProfile, masked in place for both caller and agent (K-AUTH-4, ADR-2471), with zero write capabilities. Subject-partitioned fixed-window gateway rate limiting applies (GATEWAY_RATE_LIMIT_PER_MINUTE, default 600 requests/minute per authenticated sub; 429 Too Many Requests with Retry-After).
+     */
+    post: operations["IntelligenceMcpStreamableHttp"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1380,6 +1400,128 @@ export interface components {
       asserted_at: string;
       asserted_by: string;
     };
+    Kernel_KernelCasebookAttestationView: {
+      ref: string;
+      target_ref: string;
+      meaning: string;
+      signer_id: string;
+      /** Format: date-time */
+      authenticated_at: string;
+      method: string;
+      /** Format: date-time */
+      signed_at: string;
+      target_content_hash: string;
+      reason: string;
+    };
+    Kernel_KernelCasebookFormView: {
+      ref: string;
+      collection_spec_id: string;
+      title: string;
+      planned_activity_id: null | string;
+      planned_activity_name: null | string;
+      /** Format: date-time */
+      collected_at: null | string;
+      /** Format: date-time */
+      opened_at: null | string;
+      opened_by: null | string;
+      content_hash: null | string;
+      masked: boolean;
+      mask: null | string;
+    };
+    Kernel_KernelCasebookObservationView: {
+      ref: string;
+      collection_instance_ref: null | string;
+      collection_spec_id: null | string;
+      item_id: null | string;
+      concept_ref: string;
+      concept_code: string;
+      concept_label: string;
+      /** Format: date-time */
+      observed_at: null | string;
+      /** Format: int32 */
+      current_revision: null | number | string;
+      value_kind: string;
+      display_value: string;
+      /** Format: double */
+      numeric_value: null | number | string;
+      unit: null | string;
+      effective_lock: null | string;
+      masked: boolean;
+      mask: null | string;
+      revisions: components["schemas"]["Kernel_KernelCasebookRevisionView"][];
+    };
+    Kernel_KernelCasebookQueryView: {
+      ref: string;
+      kind: string;
+      target_ref: string;
+      text: null | string;
+      asserted_by: null | string;
+      /** Format: date-time */
+      asserted_at: string;
+      reason_for_change: null | string;
+      closed: boolean;
+      /** Format: date-time */
+      closed_at: null | string;
+      /** Format: int32 */
+      revision?: null | number | string;
+    };
+    Kernel_KernelCasebookResponse: {
+      producer: string;
+      /** Format: date-time */
+      generated_at: string;
+      requested_by: string;
+      /** Format: date-time */
+      valid_at: string;
+      /** Format: date-time */
+      known_at: string;
+      casebook_digest_sha256: string;
+      study_ref: string;
+      study_code: string;
+      study_title: string;
+      site_ref: string;
+      site_code: string;
+      enrollment_ref: string;
+      subject_code: string;
+      enrollment_status: null | string;
+      masked: boolean;
+      mask: null | string;
+      forms: components["schemas"]["Kernel_KernelCasebookFormView"][];
+      observations: components["schemas"]["Kernel_KernelCasebookObservationView"][];
+      queries: components["schemas"]["Kernel_KernelCasebookQueryView"][];
+      verifications: components["schemas"]["Kernel_KernelCasebookVerificationView"][];
+      locks: components["schemas"]["Kernel_KernelLockResponse"][];
+      attestations: components["schemas"]["Kernel_KernelCasebookAttestationView"][];
+      audit_trail: components["schemas"]["Kernel_ObservationAuditView"][];
+    };
+    Kernel_KernelCasebookRevisionView: {
+      /** Format: int32 */
+      revision: number | string;
+      value_kind: string;
+      display_value: string;
+      /** Format: double */
+      numeric_value: null | number | string;
+      unit: null | string;
+      reason_for_change: null | string;
+      recorded_by: null | string;
+      /** Format: date-time */
+      recorded_at: string;
+      /** Format: date-time */
+      superseded_at: null | string;
+      superseded: boolean;
+    };
+    Kernel_KernelCasebookVerificationView: {
+      ref: string;
+      observation_ref: string;
+      /** Format: int32 */
+      revision: null | number | string;
+      verified_by: null | string;
+      /** Format: date-time */
+      verified_at: string;
+      reason_for_change: null | string;
+      retracted: boolean;
+      /** Format: date-time */
+      retracted_at: null | string;
+    };
     Kernel_KernelChangeEffectivityStatusRequest: {
       status: null | string;
       evidence_artifact_version_refs?: null | string[];
@@ -1435,6 +1577,30 @@ export interface components {
       link_sandbox_site: boolean;
       initial_site_ref?: null | string;
       initial_site_code?: null | string;
+    };
+    Kernel_KernelDatasetJsonAsOf: {
+      /** Format: date-time */
+      valid_at: string;
+      /** Format: date-time */
+      known_at: string;
+      lock_filter: string;
+    };
+    Kernel_KernelDatasetJsonExportResponse: {
+      /** Format: date-time */
+      datasetJSONCreationDateTime: string;
+      datasetJSONVersion: string;
+      fileOID: string;
+      originator: string;
+      sourceSystem: components["schemas"]["Kernel_KernelDatasetJsonSourceSystem"];
+      studyOID: string;
+      metaDataVersionOID: string;
+      metaDataRef: string;
+      asOf: components["schemas"]["Kernel_KernelDatasetJsonAsOf"];
+      itemGroupData: Record<string, never>;
+    };
+    Kernel_KernelDatasetJsonSourceSystem: {
+      name: string;
+      version: string;
     };
     Kernel_KernelDecisionResponse: {
       capability: string;
@@ -2332,6 +2498,51 @@ export interface components {
     };
     Kernel_MatrixGapKind: number;
     Kernel_MatrixGapSeverity: number;
+    /** @description JSON-RPC 2.0 error object returned when protocol parsing or method dispatch fails. */
+    Kernel_McpJsonRpcError: {
+      /** Format: int32 */
+      code: number;
+      message: string;
+      data?: null | Record<string, never>;
+    };
+    /** @description JSON-RPC 2.0 request or notification message sent over the Streamable HTTP MCP transport. */
+    Kernel_McpJsonRpcRequest: {
+      /**
+       * @description JSON-RPC protocol version (must be "2.0").
+       * @enum {string}
+       */
+      jsonrpc: "2.0";
+      /** @description Caller request correlation identifier (omitted on notifications such as notifications/initialized). */
+      id?: null | number | string;
+      /**
+       * @description MCP JSON-RPC method name.
+       * @enum {string}
+       */
+      method:
+        | "initialize"
+        | "notifications/initialized"
+        | "ping"
+        | "tools/list"
+        | "tools/call";
+      /** @description Method parameters (for tools/call, conforms to McpToolCallParams). */
+      params?: null | Record<string, never>;
+    };
+    /** @description JSON-RPC 2.0 response envelope carrying governed read-only tool metadata or ToolResultEnvelope content. */
+    Kernel_McpJsonRpcResponse: {
+      /** @enum {string} */
+      jsonrpc: "2.0";
+      id: null | number | string;
+      /** @description Method result payload (InitializeResult, ListToolsResult, or CallToolResult with ToolResultEnvelope). */
+      result?: null | Record<string, never>;
+      error?: components["schemas"]["Kernel_McpJsonRpcError"];
+    };
+    /** @description Parameters for a JSON-RPC 2.0 tools/call invocation against KernelToolNames.McpProfile. */
+    Kernel_McpToolCallParams: {
+      /** @description Registered read-only tool identifier in KernelToolNames.McpProfile. */
+      name: string;
+      /** @description Tool-specific JSON arguments validated against the tool's InputSchema. */
+      arguments?: Record<string, never>;
+    };
     Kernel_NextAction: {
       description: string;
       capability?: null | string;
@@ -3320,7 +3531,10 @@ export interface operations {
         valid_at?: string;
         known_at?: string;
       };
-      header?: never;
+      header?: {
+        /** @description Optional caller-supplied idempotency key recorded on the ExportStudySnapshot audit command; when omitted, the kernel generates a deterministic v7 export key. */
+        "Idempotency-Key"?: string;
+      };
       path: {
         studyRef: string;
       };
@@ -3333,7 +3547,12 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelDatasetJsonExportResponse"];
+          "text/csv": string;
+          "application/xml": string;
+          "application/zip": string;
+        };
       };
       /** @description Bad Request */
       400: {
@@ -3372,7 +3591,10 @@ export interface operations {
         valid_at?: string;
         known_at?: string;
       };
-      header?: never;
+      header?: {
+        /** @description Optional caller-supplied idempotency key recorded on the ExportEnrollmentCasebook audit command; when omitted, the kernel generates a deterministic v7 export key. */
+        "Idempotency-Key"?: string;
+      };
       path: {
         enrollmentRef: string;
       };
@@ -3385,7 +3607,12 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelCasebookResponse"];
+          "application/xml": string;
+          "text/html": string;
+          "application/pdf": string;
+        };
       };
       /** @description Bad Request */
       400: {
@@ -3550,7 +3777,12 @@ export interface operations {
   KernelCreateStudy: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -3669,7 +3901,12 @@ export interface operations {
   KernelCreateOrganization: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -3790,7 +4027,12 @@ export interface operations {
   KernelCreateSite: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -3921,7 +4163,12 @@ export interface operations {
   KernelLinkSiteToStudy: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         studyRef: string;
       };
@@ -4080,7 +4327,12 @@ export interface operations {
   KernelImportProtocolDraft: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         studyRef: string;
       };
@@ -4179,7 +4431,12 @@ export interface operations {
   KernelSubmitProtocolVersionForReview: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         versionRef: string;
       };
@@ -4255,7 +4512,12 @@ export interface operations {
   KernelReturnProtocolVersionToDraft: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         versionRef: string;
       };
@@ -4331,7 +4593,14 @@ export interface operations {
   KernelApproveProtocolVersion: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         versionRef: string;
       };
@@ -4462,7 +4731,12 @@ export interface operations {
   KernelRegisterStudyArtifact: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         studyRef: string;
       };
@@ -4592,7 +4866,12 @@ export interface operations {
   KernelDeclareEffectivity: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         versionRef: string;
       };
@@ -4674,7 +4953,12 @@ export interface operations {
   KernelChangeEffectivityStatus: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         effectivityRef: string;
       };
@@ -4756,7 +5040,12 @@ export interface operations {
   KernelActivateStudySite: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         studySiteRef: string;
       };
@@ -4881,7 +5170,12 @@ export interface operations {
   KernelRecordObservation: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -4968,7 +5262,12 @@ export interface operations {
   KernelCorrectObservation: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         observationRef: string;
       };
@@ -5057,7 +5356,12 @@ export interface operations {
   KernelVerifyObservation: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         observationRef: string;
       };
@@ -5146,7 +5450,12 @@ export interface operations {
   KernelRetractAssertion: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         assertionRef: string;
       };
@@ -5235,7 +5544,12 @@ export interface operations {
   KernelScreenEnrollment: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -5322,7 +5636,14 @@ export interface operations {
   KernelApplyLock: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -5400,7 +5721,14 @@ export interface operations {
   KernelReleaseLock: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         lockRef: string;
       };
@@ -5687,7 +6015,12 @@ export interface operations {
   KernelRejectProposal: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         proposalRef: string;
       };
@@ -5871,7 +6204,14 @@ export interface operations {
   KernelApproveLibraryItem: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         itemRef: string;
       };
@@ -5953,7 +6293,12 @@ export interface operations {
   KernelDeclareStudyRulePacks: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         studyRef: string;
       };
@@ -6140,7 +6485,12 @@ export interface operations {
   KernelInvestigateValidationFinding: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         findingRef: string;
       };
@@ -6216,7 +6566,12 @@ export interface operations {
   KernelClassifyValidationFinding: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         findingRef: string;
       };
@@ -6297,7 +6652,14 @@ export interface operations {
   KernelAcceptValidationFinding: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         findingRef: string;
       };
@@ -6378,7 +6740,14 @@ export interface operations {
   KernelExplainValidationFinding: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         findingRef: string;
       };
@@ -6459,7 +6828,12 @@ export interface operations {
   KernelReopenValidationFinding: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         findingRef: string;
       };
@@ -6595,7 +6969,12 @@ export interface operations {
   KernelDefineWorkQueue: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -6740,7 +7119,12 @@ export interface operations {
   KernelUpgradeSubscriptionTier: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -6818,7 +7202,12 @@ export interface operations {
   KernelActivateSubscription: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -6896,7 +7285,12 @@ export interface operations {
   KernelBootstrapTrialWorkspace: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -6972,6 +7366,75 @@ export interface operations {
       };
       /** @description Bad Gateway. Kernel errors: `K.Commercial.IdentityProviderSyncFailed`. */
       502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  IntelligenceMcpStreamableHttp: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description JSON-RPC 2.0 MCP message (initialize, ping, tools/list, tools/call, or notification). */
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_McpJsonRpcRequest"];
+      };
+    };
+    responses: {
+      /** @description JSON-RPC 2.0 MCP response envelope (application/json or text/event-stream). */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_McpJsonRpcResponse"];
+          "text/event-stream": string;
+        };
+      };
+      /** @description Accepted JSON-RPC 2.0 client notification with no response body. */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Malformed JSON-RPC 2.0 payload or unsupported Streamable HTTP MCP transport headers. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Missing or invalid gateway-verified OIDC BearerAuth credentials. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Caller is denied by gateway authorization or auditor/tenant guardrails. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Caller exceeded the per-subject gateway fixed-window rate limit (includes Retry-After header). */
+      429: {
         headers: {
           [name: string]: unknown;
         };

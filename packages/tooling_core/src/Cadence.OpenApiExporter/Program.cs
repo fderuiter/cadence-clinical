@@ -5,6 +5,7 @@ extern alias eisf;
 extern alias etmf;
 extern alias execution;
 extern alias fileshare;
+extern alias gateway;
 extern alias imaging;
 extern alias interop;
 extern alias kernel;
@@ -94,7 +95,7 @@ public static class Program
             new("tickets", ToSchemaPrefix("tickets"), typeof(tickets::Cadence.Apps.Tickets.Program), Path.Combine(repoRoot, "apps", "tickets", "src")),
             new("execution", ToSchemaPrefix("execution"), typeof(execution::Cadence.Apps.Execution.Program), Path.Combine(repoRoot, "apps", "execution", "src")),
             new("designer", ToSchemaPrefix("designer"), typeof(designer::Cadence.Apps.Designer.Program), Path.Combine(repoRoot, "apps", "designer", "src")),
-            // The gateway is a YARP reverse proxy with no endpoints of its own and does not map an OpenAPI document.
+            new("gateway", ToSchemaPrefix("gateway"), typeof(gateway::Cadence.Apps.Gateway.Program), Path.Combine(repoRoot, "apps", "gateway", "src")),
         };
 
         var selectedStandalone = targetServices.Count > 0
@@ -202,6 +203,7 @@ public static class Program
             .UseContentRoot(contentRoot)
             .UseSetting("GATEWAY_SECRET", Convert.ToHexString(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("OIDC_AUTHORITY", "http://localhost/realms/openapi-export")
+            .UseSetting("OIDC_REQUIRE_HTTPS_METADATA", "false")
             .UseSetting("POSTGRES_CONNECTION_STRING", "Host=localhost;Database=cadence_openapi_export")
             .UseSetting("DemographicsEncryption:KeyBase64", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("RANDOMIZATION_ALLOCATION_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
@@ -404,6 +406,7 @@ public static class Program
     {
         var aggregatedPaths = new JsonObject();
         var aggregatedSchemas = new JsonObject();
+        var aggregatedSecuritySchemes = new JsonObject();
 
         string fallbackDir = Path.Combine(repoRoot, "docs", "openapi");
 
@@ -480,17 +483,40 @@ public static class Program
                 }
             }
 
-            // Merge schemas
-            if (doc["components"] is JsonObject components && components["schemas"] is JsonObject schemas)
+            // Merge schemas and security schemes
+            if (doc["components"] is JsonObject components)
             {
-                foreach (var schemaKv in schemas)
+                if (components["schemas"] is JsonObject schemas)
                 {
-                    if (!aggregatedSchemas.ContainsKey(schemaKv.Key))
+                    foreach (var schemaKv in schemas)
                     {
-                        aggregatedSchemas[schemaKv.Key] = schemaKv.Value?.DeepClone();
+                        if (!aggregatedSchemas.ContainsKey(schemaKv.Key))
+                        {
+                            aggregatedSchemas[schemaKv.Key] = schemaKv.Value?.DeepClone();
+                        }
+                    }
+                }
+
+                if (components["securitySchemes"] is JsonObject securitySchemes)
+                {
+                    foreach (var schemeKv in securitySchemes)
+                    {
+                        if (!aggregatedSecuritySchemes.ContainsKey(schemeKv.Key))
+                        {
+                            aggregatedSecuritySchemes[schemeKv.Key] = schemeKv.Value?.DeepClone();
+                        }
                     }
                 }
             }
+        }
+
+        var aggregatedComponents = new JsonObject
+        {
+            ["schemas"] = aggregatedSchemas,
+        };
+        if (aggregatedSecuritySchemes.Count > 0)
+        {
+            aggregatedComponents["securitySchemes"] = aggregatedSecuritySchemes;
         }
 
         var aggregatedSpec = new JsonObject
@@ -506,20 +532,17 @@ public static class Program
             {
                 new JsonObject
                 {
-                    ["url"] = "https://api.ccrsoft.com/api/v1",
+                    ["url"] = "https://api.ccrsoft.com",
                     ["description"] = "Production API Gateway"
                 },
                 new JsonObject
                 {
-                    ["url"] = "http://localhost:8000/api/v1",
+                    ["url"] = "http://localhost:8000",
                     ["description"] = "Local Dev Gateway Proxy"
                 }
             },
             ["paths"] = aggregatedPaths,
-            ["components"] = new JsonObject
-            {
-                ["schemas"] = aggregatedSchemas
-            }
+            ["components"] = aggregatedComponents
         };
 
         return aggregatedSpec;

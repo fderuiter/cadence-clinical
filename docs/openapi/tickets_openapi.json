@@ -28,6 +28,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -49,6 +53,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -57,7 +65,20 @@
         "tags": [
           "Tickets"
         ],
+        "summary": "Creates a GxP support or operational issue ticket with SLA targets and hash-chained audit entry.",
         "operationId": "CreateTicket",
+        "parameters": [
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -109,12 +130,28 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "tickets:create"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       },
       "get": {
         "tags": [
           "Tickets"
         ],
+        "summary": "Lists operational tickets filtered by study, site, status, priority, or queue.",
         "operationId": "ListTickets",
         "parameters": [
           {
@@ -232,7 +269,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "tickets:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/tickets/{ticket_id}": {
@@ -240,6 +292,7 @@
         "tags": [
           "Tickets"
         ],
+        "summary": "Retrieves a single operational ticket by ID or reference code.",
         "operationId": "GetTicket",
         "parameters": [
           {
@@ -312,12 +365,28 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "tickets:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       },
       "patch": {
         "tags": [
           "Tickets"
         ],
+        "summary": "Updates mutable ticket fields with optimistic concurrency and Part 11 change reason.",
         "operationId": "UpdateTicket",
         "parameters": [
           {
@@ -325,6 +394,16 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -400,7 +479,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "tickets:create"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/tickets/{ticket_id}/comments": {
@@ -408,6 +502,7 @@
         "tags": [
           "Tickets"
         ],
+        "summary": "Lists role-filtered public and sponsor-internal comments on a ticket.",
         "operationId": "ListTicketComments",
         "parameters": [
           {
@@ -463,12 +558,28 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "tickets:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       },
       "post": {
         "tags": [
           "Tickets"
         ],
+        "summary": "Appends a visibility-scoped comment to an operational ticket.",
         "operationId": "CreateTicketComment",
         "parameters": [
           {
@@ -476,6 +587,16 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -551,7 +672,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "tickets:comment"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/tickets/{ticket_id}/transitions": {
@@ -559,6 +695,7 @@
         "tags": [
           "Tickets"
         ],
+        "summary": "Transitions a ticket across workflow states and updates SLA pause timers.",
         "operationId": "TransitionTicket",
         "parameters": [
           {
@@ -566,6 +703,16 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -641,7 +788,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "tickets:transition"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/tickets/{ticket_id}/sign": {
@@ -649,6 +811,7 @@
         "tags": [
           "Tickets"
         ],
+        "summary": "Applies a 21 CFR Part 11 step-up electronic signature to close or attest a GxP ticket.",
         "operationId": "SignTicket",
         "parameters": [
           {
@@ -656,6 +819,26 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -731,7 +914,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "tickets:sign"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/tickets/{ticket_id}/audit-trail": {
@@ -739,6 +937,7 @@
         "tags": [
           "Tickets"
         ],
+        "summary": "Retrieves the hash-chained GxP audit trail for an operational ticket.",
         "operationId": "GetTicketAuditTrail",
         "parameters": [
           {
@@ -794,7 +993,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "tickets:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     }
   },
@@ -1420,6 +1634,14 @@
             "format": "int32"
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   },

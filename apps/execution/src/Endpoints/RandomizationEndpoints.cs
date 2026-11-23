@@ -48,6 +48,7 @@ public static class RandomizationEndpoints
             .ProducesValidationProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("randomization_scheme:draft").RequireCallerStudyScope()
+            .WithChangeReasonHeader(required: true)
             .AddEndpointFilter<ValidationFilter<RandomizationSchemeDraftRequest>>()
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
@@ -61,6 +62,7 @@ public static class RandomizationEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("randomization_scheme:approve").RequireCallerStudyScope()
             .RequireElectronicSignature(ApproveSchemeSemanticAction, ApproveSchemeActionFor)
+            .WithChangeReasonHeader(required: true)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         schemes.MapGet("/", ListSchemesAsync)
@@ -83,6 +85,7 @@ public static class RandomizationEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("subject_enrollment:randomize").RequireCallerStudyScope()
             .RequireElectronicSignature(RandomizeSubjectSemanticAction, RandomizeSubjectActionFor)
+            .WithChangeReasonHeader(required: true)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;

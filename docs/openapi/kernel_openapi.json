@@ -28,6 +28,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -49,6 +53,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -121,6 +129,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -196,6 +213,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -271,6 +297,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -336,6 +371,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -406,6 +450,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -493,6 +546,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -578,6 +640,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -653,6 +724,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -724,6 +804,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -796,6 +885,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -903,6 +1001,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -1003,6 +1110,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -1102,6 +1218,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -1217,6 +1342,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -1274,11 +1408,43 @@
               "type": "string",
               "format": "date-time"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional caller-supplied idempotency key recorded on the ExportStudySnapshot audit command; when omitted, the kernel generates a deterministic v7 export key.",
+            "schema": {
+              "maxLength": 255,
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelDatasetJsonExportResponse"
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
@@ -1310,6 +1476,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -1360,11 +1535,43 @@
               "type": "string",
               "format": "date-time"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional caller-supplied idempotency key recorded on the ExportEnrollmentCasebook audit command; when omitted, the kernel generates a deterministic v7 export key.",
+            "schema": {
+              "maxLength": 255,
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelCasebookResponse"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
@@ -1396,6 +1603,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -1478,6 +1694,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -1547,6 +1772,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -1581,6 +1815,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       },
       "post": {
@@ -1589,6 +1832,29 @@
         ],
         "summary": "Registers a new study in the caller\u0027s tenant with a signed reason for change (study.register) and optional one-step site link.",
         "operationId": "KernelCreateStudy",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1676,6 +1942,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -1811,6 +2086,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       },
       "post": {
@@ -1819,6 +2103,29 @@
         ],
         "summary": "Registers an organization such as a site institution or sponsor in the caller\u0027s tenant (organization.register).",
         "operationId": "KernelCreateOrganization",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1906,6 +2213,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -2020,6 +2336,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       },
       "post": {
@@ -2028,6 +2353,29 @@
         ],
         "summary": "Registers an investigational site under a site institution in the caller\u0027s tenant (site.register).",
         "operationId": "KernelCreateSite",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2115,6 +2463,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -2269,6 +2626,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       },
       "post": {
@@ -2283,6 +2649,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -2374,6 +2761,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -2482,6 +2878,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -2543,6 +2948,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -2559,6 +2973,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -2670,6 +3105,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -2769,6 +3213,27 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2843,6 +3308,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -2912,6 +3386,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -2988,6 +3483,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -3049,6 +3553,37 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -3140,6 +3675,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -3286,6 +3830,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       },
       "post": {
@@ -3300,6 +3853,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -3391,6 +3965,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -3513,6 +4096,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -3529,6 +4121,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -3621,6 +4234,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -3702,6 +4324,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -3794,6 +4437,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -3873,6 +4525,27 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3946,6 +4619,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -4057,6 +4739,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -4067,6 +4758,29 @@
         ],
         "summary": "Records an observation for the participant of an enrollment (observation.record).",
         "operationId": "KernelRecordObservation",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -4159,6 +4873,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -4236,6 +4959,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -4332,6 +5076,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -4409,6 +5162,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -4505,6 +5279,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -4574,6 +5357,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -4670,6 +5474,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -4737,6 +5550,29 @@
         ],
         "summary": "Registers a pseudonymous participant when needed and starts a screening enrollment at a study site (participant.screen).",
         "operationId": "KernelScreenEnrollment",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -4829,6 +5665,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -4904,6 +5749,39 @@
         ],
         "summary": "Applies a Frozen or Locked assertion to a study, study site, enrollment, form instance or observation (lock.apply).",
         "operationId": "KernelApplyLock",
+        "parameters": [
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -4985,6 +5863,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "allow_expired_tenant_write": true
         },
         "x-kernel-errors": [
           {
@@ -5077,6 +5965,37 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -5166,6 +6085,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "allow_expired_tenant_write": true
         },
         "x-kernel-errors": [
           {
@@ -5324,6 +6253,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -5392,6 +6330,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -5476,6 +6423,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -5537,6 +6493,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -5553,6 +6518,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -5628,6 +6614,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -5739,6 +6734,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -5819,6 +6823,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -5852,6 +6865,37 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -5943,6 +6987,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -6043,6 +7096,27 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -6132,6 +7206,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -6294,6 +7377,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -6355,6 +7447,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -6371,6 +7472,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -6447,6 +7569,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -6508,6 +7639,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -6600,6 +7752,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -6661,6 +7822,37 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -6752,6 +7944,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -6856,6 +8057,37 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -6945,6 +8177,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -7049,6 +8290,27 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -7122,6 +8384,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -7262,6 +8533,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.WorkQueue.QueryInvalid",
@@ -7279,6 +8559,29 @@
         ],
         "summary": "Defines the next version of a capability-keyed work queue in the caller\u0027s tenant (work_queue.define).",
         "operationId": "KernelDefineWorkQueue",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -7350,6 +8653,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -7450,6 +8762,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -7492,6 +8813,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         }
       }
     },
@@ -7503,6 +8833,29 @@
         "summary": "Switches the tenant\u0027s commercial evaluation tier in place while preserving trial countdown and clinical records.",
         "description": "Requires caller Idempotency-Key and signed X-Change-Reason headers. Updates enabled product families on an active Trialing or Active subscription in one atomic transaction without activating billing or extending the original 30-day trial window.",
         "operationId": "KernelUpgradeSubscriptionTier",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -7585,6 +8938,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -7649,6 +9011,29 @@
         "summary": "Activates a Trialing or Expired commercial subscription after validating study scoping and a verified quote token.",
         "description": "Requires caller Idempotency-Key and signed X-Change-Reason headers, study scoping parameters, and a verified cryptographic commercial quote token (or CommercialOperators.BillingOperator) before transitioning a Trialing or Expired workspace to Active in one atomic transaction.",
         "operationId": "KernelActivateSubscription",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -7731,6 +9116,16 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "allow_expired_tenant_write": true
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -7803,6 +9198,29 @@
         "summary": "Provisions an isolated self-service trial workspace for an unbound authenticated OIDC caller.",
         "description": "Mapped outside KernelTenantFilter for signed-in callers without an active tenant_id claim, study/site scope, or clinical realm roles. Requires caller Idempotency-Key and signed X-Change-Reason headers.",
         "operationId": "KernelBootstrapTrialWorkspace",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -7900,6 +9318,15 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller"
         },
         "x-kernel-errors": [
           {
@@ -8035,6 +9462,102 @@
             "status": 502
           }
         ]
+      }
+    },
+    "/api/v1/ai/mcp": {
+      "post": {
+        "tags": [
+          "Intelligence"
+        ],
+        "summary": "Executes stateless Streamable HTTP Model Context Protocol (MCP) JSON-RPC 2.0 requests for governed read-only clinical tools.",
+        "description": "Stateless Streamable HTTP MCP transport (ADR-2633 \u00A74.8) accepting JSON-RPC 2.0 requests (initialize, notifications/initialized, ping, tools/list, tools/call) and answering with application/json or text/event-stream envelopes. Requires a gateway-verified OIDC BearerAuth token (SignedInCaller): every tool executes as the signed-in caller acting through agent:mcp over KernelToolNames.McpProfile, masked in place for both caller and agent (K-AUTH-4, ADR-2471), with zero write capabilities. Subject-partitioned fixed-window gateway rate limiting applies (GATEWAY_RATE_LIMIT_PER_MINUTE, default 600 requests/minute per authenticated sub; 429 Too Many Requests with Retry-After).",
+        "operationId": "IntelligenceMcpStreamableHttp",
+        "requestBody": {
+          "description": "JSON-RPC 2.0 MCP message (initialize, ping, tools/list, tools/call, or notification).",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_McpJsonRpcRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC 2.0 MCP response envelope (application/json or text/event-stream).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_McpJsonRpcResponse"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "Server-Sent Events stream of JSON-RPC 2.0 MCP messages."
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted JSON-RPC 2.0 client notification with no response body."
+          },
+          "400": {
+            "description": "Malformed JSON-RPC 2.0 payload or unsupported Streamable HTTP MCP transport headers.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid gateway-verified OIDC BearerAuth credentials.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is denied by gateway authorization or auditor/tenant guardrails.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Caller exceeded the per-subject gateway fixed-window rate limit (includes Retry-After header).",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Read-only agent tools: every read runs as the signed-in caller, masked for both the caller and the agent, and no tool writes."
+        },
+        "x-cadence-scopes": [
+          "Tenant"
+        ],
+        "x-cadence-rate-limit": "600 requests/minute per authenticated subject (GATEWAY_RATE_LIMIT_PER_MINUTE fixed window; answers 429 with Retry-After)"
       }
     }
   },
@@ -8861,6 +10384,560 @@
           }
         }
       },
+      "Kernel_KernelCasebookAttestationView": {
+        "required": [
+          "ref",
+          "target_ref",
+          "meaning",
+          "signer_id",
+          "authenticated_at",
+          "method",
+          "signed_at",
+          "target_content_hash",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "target_ref": {
+            "type": "string"
+          },
+          "meaning": {
+            "type": "string"
+          },
+          "signer_id": {
+            "type": "string"
+          },
+          "authenticated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "method": {
+            "type": "string"
+          },
+          "signed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "target_content_hash": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelCasebookFormView": {
+        "required": [
+          "ref",
+          "collection_spec_id",
+          "title",
+          "planned_activity_id",
+          "planned_activity_name",
+          "collected_at",
+          "opened_at",
+          "opened_by",
+          "content_hash",
+          "masked",
+          "mask"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "collection_spec_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "planned_activity_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "planned_activity_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "collected_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "opened_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "opened_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "masked": {
+            "type": "boolean"
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelCasebookObservationView": {
+        "required": [
+          "ref",
+          "collection_instance_ref",
+          "collection_spec_id",
+          "item_id",
+          "concept_ref",
+          "concept_code",
+          "concept_label",
+          "observed_at",
+          "current_revision",
+          "value_kind",
+          "display_value",
+          "numeric_value",
+          "unit",
+          "effective_lock",
+          "masked",
+          "mask",
+          "revisions"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "collection_instance_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "collection_spec_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "item_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "concept_ref": {
+            "type": "string"
+          },
+          "concept_code": {
+            "type": "string"
+          },
+          "concept_label": {
+            "type": "string"
+          },
+          "observed_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "current_revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "value_kind": {
+            "type": "string"
+          },
+          "display_value": {
+            "type": "string"
+          },
+          "numeric_value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "effective_lock": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "masked": {
+            "type": "boolean"
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "revisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelCasebookRevisionView"
+            }
+          }
+        }
+      },
+      "Kernel_KernelCasebookQueryView": {
+        "required": [
+          "ref",
+          "kind",
+          "target_ref",
+          "text",
+          "asserted_by",
+          "asserted_at",
+          "reason_for_change",
+          "closed",
+          "closed_at"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "target_ref": {
+            "type": "string"
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "asserted_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "asserted_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "closed": {
+            "type": "boolean"
+          },
+          "closed_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Kernel_KernelCasebookResponse": {
+        "required": [
+          "producer",
+          "generated_at",
+          "requested_by",
+          "valid_at",
+          "known_at",
+          "casebook_digest_sha256",
+          "study_ref",
+          "study_code",
+          "study_title",
+          "site_ref",
+          "site_code",
+          "enrollment_ref",
+          "subject_code",
+          "enrollment_status",
+          "masked",
+          "mask",
+          "forms",
+          "observations",
+          "queries",
+          "verifications",
+          "locks",
+          "attestations",
+          "audit_trail"
+        ],
+        "type": "object",
+        "properties": {
+          "producer": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requested_by": {
+            "type": "string"
+          },
+          "valid_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "known_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "casebook_digest_sha256": {
+            "type": "string"
+          },
+          "study_ref": {
+            "type": "string"
+          },
+          "study_code": {
+            "type": "string"
+          },
+          "study_title": {
+            "type": "string"
+          },
+          "site_ref": {
+            "type": "string"
+          },
+          "site_code": {
+            "type": "string"
+          },
+          "enrollment_ref": {
+            "type": "string"
+          },
+          "subject_code": {
+            "type": "string"
+          },
+          "enrollment_status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "masked": {
+            "type": "boolean"
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "forms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelCasebookFormView"
+            }
+          },
+          "observations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelCasebookObservationView"
+            }
+          },
+          "queries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelCasebookQueryView"
+            }
+          },
+          "verifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelCasebookVerificationView"
+            }
+          },
+          "locks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelLockResponse"
+            }
+          },
+          "attestations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelCasebookAttestationView"
+            }
+          },
+          "audit_trail": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ObservationAuditView"
+            }
+          }
+        }
+      },
+      "Kernel_KernelCasebookRevisionView": {
+        "required": [
+          "revision",
+          "value_kind",
+          "display_value",
+          "numeric_value",
+          "unit",
+          "reason_for_change",
+          "recorded_by",
+          "recorded_at",
+          "superseded_at",
+          "superseded"
+        ],
+        "type": "object",
+        "properties": {
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "value_kind": {
+            "type": "string"
+          },
+          "display_value": {
+            "type": "string"
+          },
+          "numeric_value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "recorded_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "superseded_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "superseded": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Kernel_KernelCasebookVerificationView": {
+        "required": [
+          "ref",
+          "observation_ref",
+          "revision",
+          "verified_by",
+          "verified_at",
+          "reason_for_change",
+          "retracted",
+          "retracted_at"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "observation_ref": {
+            "type": "string"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "verified_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "retracted": {
+            "type": "boolean"
+          },
+          "retracted_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "Kernel_KernelChangeEffectivityStatusRequest": {
         "required": [
           "status"
@@ -9112,6 +11189,90 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Kernel_KernelDatasetJsonAsOf": {
+        "required": [
+          "valid_at",
+          "known_at",
+          "lock_filter"
+        ],
+        "type": "object",
+        "properties": {
+          "valid_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "known_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lock_filter": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelDatasetJsonExportResponse": {
+        "required": [
+          "datasetJSONCreationDateTime",
+          "datasetJSONVersion",
+          "fileOID",
+          "originator",
+          "sourceSystem",
+          "studyOID",
+          "metaDataVersionOID",
+          "metaDataRef",
+          "asOf",
+          "itemGroupData"
+        ],
+        "type": "object",
+        "properties": {
+          "datasetJSONCreationDateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "datasetJSONVersion": {
+            "type": "string"
+          },
+          "fileOID": {
+            "type": "string"
+          },
+          "originator": {
+            "type": "string"
+          },
+          "sourceSystem": {
+            "$ref": "#/components/schemas/Kernel_KernelDatasetJsonSourceSystem"
+          },
+          "studyOID": {
+            "type": "string"
+          },
+          "metaDataVersionOID": {
+            "type": "string"
+          },
+          "metaDataRef": {
+            "type": "string"
+          },
+          "asOf": {
+            "$ref": "#/components/schemas/Kernel_KernelDatasetJsonAsOf"
+          },
+          "itemGroupData": {
+            "type": "object"
+          }
+        }
+      },
+      "Kernel_KernelDatasetJsonSourceSystem": {
+        "required": [
+          "name",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
           }
         }
       },
@@ -13208,6 +15369,122 @@
       "Kernel_MatrixGapSeverity": {
         "type": "integer"
       },
+      "Kernel_McpJsonRpcError": {
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": [
+              "null",
+              "object"
+            ]
+          }
+        },
+        "description": "JSON-RPC 2.0 error object returned when protocol parsing or method dispatch fails."
+      },
+      "Kernel_McpJsonRpcRequest": {
+        "required": [
+          "jsonrpc",
+          "method"
+        ],
+        "type": "object",
+        "properties": {
+          "jsonrpc": {
+            "enum": [
+              "2.0"
+            ],
+            "type": "string",
+            "description": "JSON-RPC protocol version (must be \u00222.0\u0022)."
+          },
+          "id": {
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Caller request correlation identifier (omitted on notifications such as notifications/initialized)."
+          },
+          "method": {
+            "enum": [
+              "initialize",
+              "notifications/initialized",
+              "ping",
+              "tools/list",
+              "tools/call"
+            ],
+            "type": "string",
+            "description": "MCP JSON-RPC method name."
+          },
+          "params": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "description": "Method parameters (for tools/call, conforms to McpToolCallParams)."
+          }
+        },
+        "description": "JSON-RPC 2.0 request or notification message sent over the Streamable HTTP MCP transport."
+      },
+      "Kernel_McpJsonRpcResponse": {
+        "required": [
+          "jsonrpc",
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "jsonrpc": {
+            "enum": [
+              "2.0"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          },
+          "result": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "description": "Method result payload (InitializeResult, ListToolsResult, or CallToolResult with ToolResultEnvelope)."
+          },
+          "error": {
+            "$ref": "#/components/schemas/Kernel_McpJsonRpcError"
+          }
+        },
+        "description": "JSON-RPC 2.0 response envelope carrying governed read-only tool metadata or ToolResultEnvelope content."
+      },
+      "Kernel_McpToolCallParams": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Registered read-only tool identifier in KernelToolNames.McpProfile."
+          },
+          "arguments": {
+            "type": "object",
+            "description": "Tool-specific JSON arguments validated against the tool\u0027s InputSchema."
+          }
+        },
+        "description": "Parameters for a JSON-RPC 2.0 tools/call invocation against KernelToolNames.McpProfile."
+      },
       "Kernel_NextAction": {
         "required": [
           "description"
@@ -13765,6 +16042,14 @@
           }
         }
       }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
     }
   },
   "tags": [
@@ -13794,6 +16079,10 @@
     },
     {
       "name": "Kernel work queues"
+    },
+    {
+      "name": "Intelligence",
+      "description": "Governed Streamable HTTP MCP server for read-only clinical agent tools (ADR-2633)."
     }
   ]
 }

@@ -5,6 +5,7 @@ import { isDraftBlogPostFile } from "./blog.mjs";
 import {
   EXCLUDED_PORTAL_DOCS,
   isExcludedPortalDocFile,
+  isPublishedOpenApiSpecPath,
   splitAnchor,
   toRepoUrl,
   vitepressSlugify,
@@ -108,6 +109,9 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
     }
 
     if (exists && !/\.(md|html)$/i.test(absolute)) {
+      if (isPublishedOpenApiSpecPath(relToDocs)) {
+        return `/${relToDocs}${anchor}`;
+      }
       return toRepoUrl(href, docsDir, docsDir, repoRoot);
     }
 
@@ -435,6 +439,52 @@ function makeGroup(text, rawItems, collapsed) {
   return group;
 }
 
+const CONTRACT_MATURITY_OVERRIDES = new Map([
+  ["gateway", "Active"],
+  ["intelligence", "Active"],
+  ["execution_forms", "Active"],
+]);
+
+/**
+ * Reads `packages/topology/src/ServiceTopology.cs` to resolve `Active` vs `Scaffold`
+ * maturity for every OpenAPI contract page under `/api/<contract>`.
+ *
+ * @param {string} repoRoot
+ * @returns {Map<string, "Active" | "Scaffold">}
+ */
+export function loadServiceContractMaturity(repoRoot) {
+  const maturityMap = new Map(CONTRACT_MATURITY_OVERRIDES);
+  const topologyPath = path.join(
+    repoRoot,
+    "packages",
+    "topology",
+    "src",
+    "ServiceTopology.cs"
+  );
+  if (!fs.existsSync(topologyPath)) {
+    return maturityMap;
+  }
+
+  const source = fs.readFileSync(topologyPath, "utf-8");
+  const entryRegex = /new\(\s*"([a-z0-9_]+)"\s*,[\s\S]*?\)(?=\s*(?:,|\];))/g;
+  for (const match of source.matchAll(entryRegex)) {
+    const name = match[1];
+    const isScaffold = /Maturity:\s*ServiceMaturity\.Scaffold\b/.test(match[0]);
+    maturityMap.set(name, isScaffold ? "Scaffold" : "Active");
+  }
+  return maturityMap;
+}
+
+function formatMaturityBadge(maturity) {
+  if (maturity === "Scaffold") {
+    return '<span class="VPBadge warning">Scaffold</span>';
+  }
+  if (maturity === "Active") {
+    return '<span class="VPBadge tip">Active</span>';
+  }
+  return "";
+}
+
 /**
  * Synthesizes a route-keyed VitePress sidebar map (`Record<string, SidebarGroup[]>`)
  * from `docs/DOCUMENTATION_INDEX.md` so each section renders only its own navigation menu.
@@ -453,6 +503,8 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
   const repoRoot = options.repoRoot ?? path.resolve(docsDir, "..");
   const adrIndexPath =
     options.adrIndexPath ?? path.join(docsDir, "adr", "index.md");
+  const contractMaturity =
+    options.contractMaturity ?? loadServiceContractMaturity(repoRoot);
 
   const indexContent =
     options.indexContent ??
@@ -531,7 +583,15 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
     }
 
     if (routeKey.startsWith("/api/")) {
-      apiItems.push(entry);
+      if (routeKey !== "/api/index") {
+        const contractName = routeKey.slice("/api/".length);
+        const badge = formatMaturityBadge(contractMaturity.get(contractName));
+        apiItems.push(
+          badge ? { ...entry, text: `${entry.text} ${badge}` } : entry
+        );
+      } else {
+        apiItems.push(entry);
+      }
       continue;
     }
 
@@ -605,9 +665,11 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
 
   // Keep overview pages at the top of generated reference and component sections.
   apiItems.sort((a, b) => {
-    if (normalizeRouteKey(a.link) === "/api/index") return -1;
-    if (normalizeRouteKey(b.link) === "/api/index") return 1;
-    return 0;
+    const aKey = normalizeRouteKey(a.link);
+    const bKey = normalizeRouteKey(b.link);
+    if (aKey === "/api/index") return -1;
+    if (bKey === "/api/index") return 1;
+    return aKey.localeCompare(bKey);
   });
   schemaItems.sort((a, b) => {
     const aIsOverview = normalizeRouteKey(a.link) === "/schema/README";

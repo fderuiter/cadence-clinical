@@ -11,13 +11,16 @@ import {
 } from "./blog.mjs";
 import {
   EXCLUDED_PORTAL_DOCS,
+  PUBLISHED_OPENAPI_ROUTE_RE,
   assertThemeLinksExist,
   dualHeadingAnchorsPlugin,
   mermaidFencePlugin,
+  publishOpenApiSpecs,
   repoLinksPlugin,
 } from "./repoLinks.mjs";
 import {
   buildPortalSearchCatalog,
+  loadServiceContractMaturity,
   synthesizeSidebarFromIndex,
 } from "./sidebar.mjs";
 
@@ -112,9 +115,12 @@ const config = defineConfig({
   transformHtml(code) {
     return injectHashedPortalCsp(code);
   },
-  // Links VitePress cannot serve are pointed at GitHub by repoLinksPlugin; co-hosted demo subpaths are staged
-  // into dist/demo and dist/subject-portal after VitePress compiles, while any other dead link or anchor fails the build.
-  ignoreDeadLinks: [/^\/(demo|subject-portal)(\/|$)/],
+  // Links VitePress cannot serve are pointed at GitHub by repoLinksPlugin; co-hosted demo subpaths and
+  // top-level OpenAPI contracts are published into dist/demo, dist/subject-portal, and dist/openapi, while any other dead link fails the build.
+  ignoreDeadLinks: [
+    /^\/(demo|subject-portal)(\/|$)/,
+    PUBLISHED_OPENAPI_ROUTE_RE,
+  ],
   markdown: {
     config(md) {
       md.use(mermaidFencePlugin);
@@ -132,6 +138,7 @@ const config = defineConfig({
   },
   async buildEnd(siteConfig) {
     writeRssFeed(siteConfig);
+    publishOpenApiSpecs(docsDir, siteConfig.outDir);
   },
   themeConfig: {
     search: {
@@ -179,6 +186,7 @@ const config = defineConfig({
     sidebar: synthesizeSidebarFromIndex(indexPath, {
       docsDir,
       repoRoot,
+      contractMaturity: loadServiceContractMaturity(repoRoot),
     }),
   },
 });

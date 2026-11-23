@@ -28,6 +28,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -37,6 +41,7 @@
           "Cadence.Apps.Designer"
         ],
         "summary": "Executes study-wide parallel batch compilation and validation across pinned edit check rule packs.",
+        "description": "Validates inline or study-pinned rule packs and retains asynchronous job reports in the volatile in-memory BatchJobStore.",
         "operationId": "BatchValidateRules",
         "parameters": [
           {
@@ -85,7 +90,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "study_design:create"
+        ],
+        "x-cadence-scopes": [
+          "RouteStudy:id"
+        ]
       }
     },
     "/api/v1/studies/{id}/rules/batch-validate/{jobId}": {
@@ -94,6 +114,7 @@
           "Cadence.Apps.Designer"
         ],
         "summary": "Retrieves the aggregated report for an asynchronous batch validation job.",
+        "description": "Scaffold service endpoint: reads batch validation reports from the volatile in-memory BatchJobStore.",
         "operationId": "GetBatchValidationJob",
         "parameters": [
           {
@@ -127,7 +148,22 @@
           "404": {
             "description": "Not Found"
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "study_design:create"
+        ],
+        "x-cadence-scopes": [
+          "RouteStudy:id"
+        ]
       }
     },
     "/api/v1/studies/{id}/rules/amendment-regression": {
@@ -136,6 +172,7 @@
           "Cadence.Apps.Designer"
         ],
         "summary": "Compares baseline and target rule pack versions during protocol amendments to highlight rule diffs and broken dependencies.",
+        "description": "Compares inline or study-pinned baseline and target rule pack versions without persisting amendment history.",
         "operationId": "AmendmentRegression",
         "parameters": [
           {
@@ -184,7 +221,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "study_design:create"
+        ],
+        "x-cadence-scopes": [
+          "RouteStudy:id"
+        ]
       }
     },
     "/api/v1/studies": {
@@ -193,6 +245,7 @@
           "Cadence.Apps.Designer"
         ],
         "summary": "Lists active CDISC USDM study protocol definitions.",
+        "description": "Scaffold placeholder returning an empty study list; persistent CDISC USDM study governance is served by the Clinical Kernel (/api/v1/kernel/studies).",
         "operationId": "ListStudies",
         "responses": {
           "200": {
@@ -208,7 +261,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "study_design:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/protocols/compile": {
@@ -217,6 +285,7 @@
           "Cadence.Apps.Designer"
         ],
         "summary": "Compiles CDISC USDM protocol JSON into DDF IR and EDC runtime schemas.",
+        "description": "Stateless CDISC USDM compiler endpoint (Scaffold service maturity); compiles supplied USDM JSON in memory without persisting study definitions.",
         "operationId": "CompileProtocol",
         "requestBody": {
           "content": {
@@ -269,7 +338,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "study_design:create"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     }
   },
@@ -1027,6 +1111,14 @@
             "format": "int32"
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   },

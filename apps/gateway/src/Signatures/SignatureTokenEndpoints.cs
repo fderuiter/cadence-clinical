@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -54,13 +55,21 @@ public static partial class SignatureTokenEndpoints
     public static IEndpointRouteBuilder MapSignatureTokenEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapPost(Path, IssueSignatureTokenAsync)
+            .WithTags("Electronic Signatures")
             .WithName("IssueSignatureToken")
             .WithSummary("Re-authenticates the signer and issues a single-use e-signature token for one action.")
+            .WithDescription(
+                "21 CFR 11.200(a)(1) step-up credential check: verifies the signed-in caller's password (and optional TOTP) "
+                + "against Keycloak and returns a single-use 60-second X-Sig-Token bound to one canonical API path and semantic action.")
             .RequireRateLimiting(RateLimitPolicy)
+            .WithChangeReasonHeader(
+                required: false,
+                description: "Optional reason-for-change header validated by GatewayIdentityForwarding (printable ASCII or RFC 8187 UTF-8''); malformed values return 400 Bad Request.")
             .Produces<SignatureTokenResponse>()
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         return app;
     }

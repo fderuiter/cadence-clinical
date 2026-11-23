@@ -31,10 +31,12 @@ public static class CecEndpoints
 
     public static IEndpointRouteBuilder MapCecEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/api/v1/execution/cec/dossiers");
+        var group = routes.MapGroup("/api/v1/execution/cec/dossiers")
+            .WithTags("CEC Adjudication");
 
         group.MapPost("/{id}/chair-adjudicate", ChairAdjudicateAsync)
             .WithName("ChairAdjudicateDossier")
+            .WithSummary("Records the CEC chair's step-up e-signed clinical endpoint adjudication decision on a dossier.")
             .Produces<ChairAdjudicationResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -46,6 +48,7 @@ public static class CecEndpoints
 
         group.MapGet("/{id}", GetDossierByIdAsync)
             .WithName("GetCecDossierById")
+            .WithSummary("Retrieves a Clinical Endpoint Adjudication Committee dossier and reviewer votes by dossier ID.")
             .Produces<CecDossier>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)

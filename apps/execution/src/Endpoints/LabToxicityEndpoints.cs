@@ -50,6 +50,7 @@ public static class LabToxicityEndpoints
             .Produces<StagedAdverseEventActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .WithChangeReasonHeader(required: true)
             .AddEndpointFilter<ChangeReasonHeaderFilter>()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("lab_toxicity_review:review").RequireCallerStudyScope()

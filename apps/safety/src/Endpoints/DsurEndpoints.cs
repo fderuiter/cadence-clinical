@@ -80,21 +80,41 @@ public static class DsurEndpoints
         // Alias routes for periodic-reports endpoint path conventions
         group.MapPost("/periodic-reports/compile", CompileDsurAsync)
             .WithName("CompilePeriodicReport")
+            .WithSummary("Compiles an aggregate periodic safety report with patient-years exposure and MedDRA cross-tabulation.")
+            .Produces<PeriodicSafetyReportRecord>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission(SafetyPermission).RequireCallerStudyScope();
 
         MapApprove(group.MapPost("/periodic-reports/{id}/approve", ApproveDsurAsync)
-            .WithName("ApprovePeriodicReport"));
+            .WithName("ApprovePeriodicReport")
+            .WithSummary("Signs and locks a periodic safety report with a step-up signature token and reason for change."));
 
         group.MapPut("/periodic-reports/{id}", UpdateDsurAsync)
             .WithName("UpdatePeriodicReport")
+            .WithSummary("Updates a draft periodic safety report record; returns 409 Conflict when locked.")
+            .Produces<PeriodicSafetyReportRecord>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission(SafetyPermission).RequireCallerStudyScope();
 
         group.MapGet("/periodic-reports/{id}", GetDsurByIdAsync)
             .WithName("GetPeriodicReportById")
+            .WithSummary("Retrieves a periodic safety report record by identifier.")
+            .Produces<PeriodicSafetyReportRecord>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(ReadPermission).RequireCallerStudyScope();
 
         group.MapGet("/periodic-reports", ListDsurReportsAsync)
             .WithName("ListPeriodicReports")
+            .WithSummary("Lists periodic safety report records within the caller's study scope.")
+            .Produces<PeriodicSafetyReportRecord[]>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission(ReadPermission).RequireCallerStudyScope();
 
         return group;

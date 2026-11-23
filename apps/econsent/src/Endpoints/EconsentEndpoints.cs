@@ -87,18 +87,21 @@ public static class EconsentEndpoints
 
         group.MapPost("/{template_id}/versions/{version_index}/publish", PublishTemplateVersionedAsync)
             .WithName("PublishTemplateVersioned")
+            .WithSummary("Publishes a specific eConsent template version and records whether participant re-consent is required.")
             .RequirePermission("econsent_template:publish").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<PublishTemplateResponse>(StatusCodes.Status200OK);
 
         group.MapPost("/{template_id}/publish", PublishTemplateAsync)
             .WithName("PublishTemplate")
+            .WithSummary("Publishes the next version of an eConsent template for the specified protocol version.")
             .RequirePermission("econsent_template:publish").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<PublishTemplateResponse>(StatusCodes.Status200OK);
 
         group.MapPost("/{template_id}/versions/{version_index}/capture-consent", CaptureConsentAsync)
             .WithName("CaptureConsentVersioned")
+            .WithSummary("Captures a participant's 21 CFR Part 11 electronic consent signature against a versioned template.")
             .RequirePermission("econsent_consent:capture").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<CaptureConsentResponse>(StatusCodes.Status200OK)
@@ -108,6 +111,7 @@ public static class EconsentEndpoints
 
         group.MapPost("/{template_id}/capture-consent", CaptureConsentLegacyAsync)
             .WithName("CaptureConsentLegacy")
+            .WithSummary("Captures a participant's 21 CFR Part 11 electronic consent signature against the latest published template.")
             .RequirePermission("econsent_consent:capture").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<CaptureConsentResponse>(StatusCodes.Status200OK)

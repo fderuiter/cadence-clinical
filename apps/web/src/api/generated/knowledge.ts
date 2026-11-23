@@ -45,6 +45,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Resolves persona-filtered contextual SOP guidance for the active workspace route. */
     get: operations["ResolveContextualHelp"];
     put?: never;
     post?: never;
@@ -61,6 +62,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Lists knowledge base SOP categories visible to the caller's clinical persona. */
     get: operations["ListKnowledgeCategories"];
     put?: never;
     post?: never;
@@ -77,6 +79,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Searches and lists published SOP knowledge base articles. */
     get: operations["ListKnowledgeArticles"];
     put?: never;
     post?: never;
@@ -93,6 +96,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves a published SOP knowledge base article by article ID. */
     get: operations["GetKnowledgeArticle"];
     put?: never;
     post?: never;
@@ -109,6 +113,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Lists immutable version snapshots for a knowledge base article. */
     get: operations["ListKnowledgeArticleVersions"];
     put?: never;
     post?: never;
@@ -125,6 +130,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves the 21 CFR Part 11 hash-chained audit log for a knowledge base article. */
     get: operations["GetKnowledgeArticleAuditLog"];
     put?: never;
     post?: never;
@@ -141,6 +147,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Lists active study training curricula visible within the caller's study scope. */
     get: operations["ListCurricula"];
     put?: never;
     post?: never;
@@ -157,6 +164,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves a study training curriculum by curriculum ID. */
     get: operations["GetCurriculum"];
     put?: never;
     post?: never;
@@ -175,6 +183,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Assigns a training curriculum to a batch of study staff members. */
     post: operations["BatchAssignCurriculum"];
     delete?: never;
     options?: never;
@@ -189,6 +198,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Lists study training curriculum assignments filtered by study, site, or assignee. */
     get: operations["ListAssignments"];
     put?: never;
     post?: never;
@@ -205,6 +215,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves a training assignment and completion status by assignment ID. */
     get: operations["GetAssignmentDetail"];
     put?: never;
     post?: never;
@@ -221,6 +232,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Lists site delegation-of-authority records and PI sign-off status. */
     get: operations["ListDelegations"];
     put?: never;
     post?: never;
@@ -239,6 +251,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Applies a batch-bound 21 CFR Part 11 Principal Investigator electronic signature across site delegations. */
     post: operations["BulkSignOffDelegations"];
     delete?: never;
     options?: never;
@@ -914,7 +927,10 @@ export interface operations {
   BulkSignOffDelegations: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path?: never;
       cookie?: never;
     };

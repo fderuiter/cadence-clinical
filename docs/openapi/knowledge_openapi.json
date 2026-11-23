@@ -28,6 +28,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -49,6 +53,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -57,6 +65,7 @@
         "tags": [
           "Knowledge"
         ],
+        "summary": "Resolves persona-filtered contextual SOP guidance for the active workspace route.",
         "operationId": "ResolveContextualHelp",
         "parameters": [
           {
@@ -85,7 +94,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "knowledge:read"
+        ],
+        "x-cadence-scopes": [
+          "Tenant"
+        ]
       }
     },
     "/api/v1/knowledge/categories": {
@@ -93,6 +117,7 @@
         "tags": [
           "Knowledge"
         ],
+        "summary": "Lists knowledge base SOP categories visible to the caller\u0027s clinical persona.",
         "operationId": "ListKnowledgeCategories",
         "parameters": [
           {
@@ -117,7 +142,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "knowledge:read"
+        ],
+        "x-cadence-scopes": [
+          "Tenant"
+        ]
       }
     },
     "/api/v1/knowledge/articles": {
@@ -125,6 +165,7 @@
         "tags": [
           "Knowledge"
         ],
+        "summary": "Searches and lists published SOP knowledge base articles.",
         "operationId": "ListKnowledgeArticles",
         "parameters": [
           {
@@ -170,7 +211,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "knowledge:read"
+        ],
+        "x-cadence-scopes": [
+          "Tenant"
+        ]
       }
     },
     "/api/v1/knowledge/articles/{article_id}": {
@@ -178,6 +234,7 @@
         "tags": [
           "Knowledge"
         ],
+        "summary": "Retrieves a published SOP knowledge base article by article ID.",
         "operationId": "GetKnowledgeArticle",
         "parameters": [
           {
@@ -210,7 +267,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "knowledge:read"
+        ],
+        "x-cadence-scopes": [
+          "Tenant"
+        ]
       }
     },
     "/api/v1/knowledge/articles/{article_id}/versions": {
@@ -218,6 +290,7 @@
         "tags": [
           "Knowledge"
         ],
+        "summary": "Lists immutable version snapshots for a knowledge base article.",
         "operationId": "ListKnowledgeArticleVersions",
         "parameters": [
           {
@@ -253,7 +326,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "knowledge:read"
+        ],
+        "x-cadence-scopes": [
+          "Tenant"
+        ]
       }
     },
     "/api/v1/knowledge/articles/{article_id}/audit-log": {
@@ -261,6 +349,7 @@
         "tags": [
           "Knowledge"
         ],
+        "summary": "Retrieves the 21 CFR Part 11 hash-chained audit log for a knowledge base article.",
         "operationId": "GetKnowledgeArticleAuditLog",
         "parameters": [
           {
@@ -296,7 +385,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "knowledge:read"
+        ],
+        "x-cadence-scopes": [
+          "Tenant"
+        ]
       }
     },
     "/api/v1/training/curricula": {
@@ -304,6 +408,7 @@
         "tags": [
           "Study Training \u0026 Gating"
         ],
+        "summary": "Lists active study training curricula visible within the caller\u0027s study scope.",
         "operationId": "ListCurricula",
         "parameters": [
           {
@@ -345,7 +450,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "training_log:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/training/curricula/{curriculum_id}": {
@@ -353,6 +473,7 @@
         "tags": [
           "Study Training \u0026 Gating"
         ],
+        "summary": "Retrieves a study training curriculum by curriculum ID.",
         "operationId": "GetCurriculum",
         "parameters": [
           {
@@ -395,7 +516,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "training_log:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/training/curricula/batch-assign": {
@@ -403,6 +539,7 @@
         "tags": [
           "Study Training \u0026 Gating"
         ],
+        "summary": "Assigns a training curriculum to a batch of study staff members.",
         "operationId": "BatchAssignCurriculum",
         "requestBody": {
           "content": {
@@ -475,7 +612,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "training_curriculum:assign"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/training/assignments": {
@@ -483,6 +635,7 @@
         "tags": [
           "Study Training \u0026 Gating"
         ],
+        "summary": "Lists study training curriculum assignments filtered by study, site, or assignee.",
         "operationId": "ListAssignments",
         "parameters": [
           {
@@ -538,7 +691,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "training_log:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/training/assignments/{assignment_id}": {
@@ -546,6 +714,7 @@
         "tags": [
           "Study Training \u0026 Gating"
         ],
+        "summary": "Retrieves a training assignment and completion status by assignment ID.",
         "operationId": "GetAssignmentDetail",
         "parameters": [
           {
@@ -588,7 +757,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "training_log:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/training/delegations": {
@@ -596,6 +780,7 @@
         "tags": [
           "Study Training \u0026 Gating"
         ],
+        "summary": "Lists site delegation-of-authority records and PI sign-off status.",
         "operationId": "ListDelegations",
         "parameters": [
           {
@@ -660,7 +845,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "delegation_log:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/training/delegations/bulk-signoff": {
@@ -668,7 +868,20 @@
         "tags": [
           "Study Training \u0026 Gating"
         ],
+        "summary": "Applies a batch-bound 21 CFR Part 11 Principal Investigator electronic signature across site delegations.",
         "operationId": "BulkSignOffDelegations",
+        "parameters": [
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -730,7 +943,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "delegation_log:sign"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     }
   },
@@ -1629,6 +1857,14 @@
             "format": "date-time"
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   },

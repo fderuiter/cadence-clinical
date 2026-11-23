@@ -384,3 +384,73 @@
   border-radius: 8px;
   color: var(--vp-c-text-2);
 }
+
+/* API Reference Maturity Badges & Collapsible Operation/Schema Blocks */
+.VPBadge {
+  display: inline-block;
+  margin-left: 4px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 0 8px;
+  line-height: 18px;
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.VPBadge.tip {
+  border-color: var(--vp-badge-tip-border, transparent);
+  color: var(--vp-badge-tip-text, var(--vp-c-brand-1));
+  background-color: var(--vp-badge-tip-bg, var(--vp-c-brand-soft));
+}
+
+.VPBadge.warning {
+  border-color: var(--vp-badge-warning-border, transparent);
+  color: var(--vp-badge-warning-text, var(--vp-c-warning-1));
+  background-color: var(--vp-badge-warning-bg, var(--vp-c-warning-soft));
+}
+
+.VPBadge.danger {
+  border-color: var(--vp-badge-danger-border, transparent);
+  color: var(--vp-badge-danger-text, var(--vp-c-danger-1));
+  background-color: var(--vp-badge-danger-bg, var(--vp-c-danger-soft));
+}
+
+.VPBadge.info {
+  border-color: var(--vp-badge-info-border, transparent);
+  color: var(--vp-badge-info-text, var(--vp-c-text-2));
+  background-color: var(--vp-badge-info-bg, var(--vp-c-default-soft));
+}
+
+.VPSidebarItem .text .VPBadge {
+  margin-left: 6px;
+  padding: 0 6px;
+  line-height: 16px;
+  font-size: 10px;
+}
+
+.api-operation-details,
+.api-schema-details {
+  margin: 12px 0 20px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  background-color: var(--vp-c-bg-soft);
+  padding: 0 16px;
+}
+
+.api-operation-details > summary,
+.api-schema-details > summary {
+  cursor: pointer;
+  padding: 10px 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--vp-c-text-1);
+  user-select: none;
+}
+
+.api-operation-details[open] > summary,
+.api-schema-details[open] > summary {
+  border-bottom: 1px solid var(--vp-c-divider);
+  margin-bottom: 12px;
+}

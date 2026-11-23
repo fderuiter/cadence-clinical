@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -186,6 +187,8 @@ public static partial class CadenceTelemetryExtensions
         {
             builder.Services.AddCadenceOpenApiDocument(KernelOpenApiDocument, includeUngrouped: true);
         }
+
+        builder.Services.PostConfigureAll<OpenApiOptions>(CadenceOpenApiTransformers.Configure);
 
         return builder;
     }

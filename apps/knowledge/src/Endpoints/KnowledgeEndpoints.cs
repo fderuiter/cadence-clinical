@@ -112,33 +112,39 @@ public static class KnowledgeEndpoints
 
         group.MapGet("/contextual-help", ResolveContextualHelpAsync)
             .WithName("ResolveContextualHelp")
+            .WithSummary("Resolves persona-filtered contextual SOP guidance for the active workspace route.")
             .Produces<ContextualHelpResponseDto>(StatusCodes.Status200OK)
             .RequirePermission("knowledge:read");
 
         group.MapGet("/categories", ListCategoriesAsync)
             .WithName("ListKnowledgeCategories")
+            .WithSummary("Lists knowledge base SOP categories visible to the caller's clinical persona.")
             .Produces<IReadOnlyList<KnowledgeCategoryDto>>(StatusCodes.Status200OK)
             .RequirePermission("knowledge:read");
 
         group.MapGet("/articles", ListArticlesAsync)
             .WithName("ListKnowledgeArticles")
+            .WithSummary("Searches and lists published SOP knowledge base articles.")
             .Produces<IReadOnlyList<KnowledgeArticleDto>>(StatusCodes.Status200OK)
             .RequirePermission("knowledge:read");
 
         group.MapGet("/articles/{article_id}", GetArticleAsync)
             .WithName("GetKnowledgeArticle")
+            .WithSummary("Retrieves a published SOP knowledge base article by article ID.")
             .Produces<KnowledgeArticleDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission("knowledge:read");
 
         group.MapGet("/articles/{article_id}/versions", ListArticleVersionsAsync)
             .WithName("ListKnowledgeArticleVersions")
+            .WithSummary("Lists immutable version snapshots for a knowledge base article.")
             .Produces<IReadOnlyList<KnowledgeArticleVersionDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission("knowledge:read");
 
         group.MapGet("/articles/{article_id}/audit-log", GetArticleAuditLogAsync)
             .WithName("GetKnowledgeArticleAuditLog")
+            .WithSummary("Retrieves the 21 CFR Part 11 hash-chained audit log for a knowledge base article.")
             .Produces<IReadOnlyList<KnowledgeArticleAuditEntryDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission("knowledge:read");

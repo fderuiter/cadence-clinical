@@ -68,6 +68,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Matches fixed patterns, reads and writes no record, and filters recommendations by the caller\u0027s signed roles."
         }
       }
     },
@@ -106,6 +116,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -148,6 +168,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -172,6 +202,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -182,6 +222,29 @@
         ],
         "summary": "Stores an evaluation run record after checking it against its task configuration version, set, criteria and case results (evaluation_run.record, ADR-2634).",
         "operationId": "AiRecordEvaluationRun",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -253,6 +316,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -353,6 +426,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -411,6 +494,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -438,6 +531,27 @@
               "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
             }
           }
         ],
@@ -512,6 +626,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -606,6 +730,27 @@
               "type": "integer",
               "format": "int32"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -669,6 +814,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -735,6 +890,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -751,6 +916,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -816,6 +1002,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -905,6 +1101,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Anti-spoof facial liveness verification generates short-lived HMAC signed tokens for consent capture."
         },
         "x-kernel-errors": [
           {
@@ -1702,6 +1908,14 @@
             "type": "string"
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   },

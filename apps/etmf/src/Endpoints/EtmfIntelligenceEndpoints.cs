@@ -13,6 +13,7 @@ using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Apps.Etmf.Services;
 using Cadence.Apps.Etmf.Workers;
+using Cadence.Kernel;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
@@ -31,27 +32,134 @@ public static class EtmfIntelligenceEndpoints
 {
     public static void MapEtmfEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/api/v1/etmf");
+        var group = routes.MapGroup("/api/v1/etmf")
+            .WithTags("eTMF Operations & Intelligence");
 
         // Every route names its permission (ADR-2510, ADR-2516). A study id in a body or on a stored document is checked
         // against the caller's signed study assignments, and lists are narrowed to them (#5361).
-        group.MapPost("/intelligence/classify", ClassifyDocument).RequirePermission("etmf_document:tag").RequireCallerStudyScope();
-        group.MapPost("/intelligence/stage-qc", StageQcDocument).RequirePermission("etmf_document:create").RequireCallerStudyAndSiteScope();
-        group.MapGet("/intelligence/qc-queue", GetQcQueue).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
-        group.MapPost("/intelligence/qc-review/{doc_id}", ReviewQcDocument).RequirePermission("etmf_document:transition_clinical_qc").RequireCallerStudyAndSiteScope();
+        group.MapPost("/intelligence/classify", ClassifyDocument)
+            .WithName("ClassifyEtmfDocument")
+            .WithSummary("Classifies a clinical document against the DIA TMF Reference Model v3.2 taxonomy.")
+            .Produces<DocumentIntelligenceReport>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("etmf_document:tag").RequireCallerStudyScope();
 
-        group.MapGet("/documents", GetDocuments).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
-        group.MapGet("/documents/{document_id}", GetDocumentById).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
-        group.MapGet("/documents/{document_id}/content", DownloadDocumentContent).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
-        group.MapPost("/documents/{document_id}/submit-qc", SubmitDocumentForQc).RequirePermission("etmf_document:create").RequireCallerStudyAndSiteScope();
-        group.MapPatch("/documents/{document_id}/taxonomy", UpdateDocumentTaxonomy).RequirePermission("etmf_document:tag").RequireCallerStudyAndSiteScope();
-        group.MapPost("/documents/export", ExportDocuments).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
-        group.MapGet("/export-jobs/{job_id}", GetExportJob).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
-        group.MapGet("/export-jobs/{job_id}/download", DownloadExportJob).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
-        group.MapGet("/export-jobs", ListExportJobs).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
+        group.MapPost("/intelligence/stage-qc", StageQcDocument)
+            .WithName("StageEtmfDocumentForQc")
+            .WithSummary("Uploads, classifies, and stages a trial document into the CRA Technical QC queue.")
+            .Produces<CraqcStagingItem>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .WithChangeReasonHeader(required: false)
+            .RequirePermission("etmf_document:create").RequireCallerStudyAndSiteScope();
 
-        group.MapPost("/ingest", IngestDocument).RequirePermission("etmf_document:create").RequireCallerStudyAndSiteScope();
-        group.MapGet("/taxonomy", GetTaxonomy).RequirePermission("etmf_taxonomy:read").RequireCallerStudyScope();
+        group.MapGet("/intelligence/qc-queue", GetQcQueue)
+            .WithName("ListEtmfQcQueue")
+            .WithSummary("Lists trial documents currently staged in TECHNICAL_QC for CRA review.")
+            .Produces<List<CraqcStagingItem>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
+
+        group.MapPost("/intelligence/qc-review/{doc_id}", ReviewQcDocument)
+            .WithName("ReviewEtmfQcDocument")
+            .WithSummary("Executes a CRA Technical QC decision (ACCEPT, OVERRIDE, or REJECT) on a staged document.")
+            .Produces<TmfDocument>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .WithChangeReasonHeader(required: false)
+            .RequirePermission("etmf_document:transition_clinical_qc").RequireCallerStudyAndSiteScope();
+
+        group.MapGet("/documents", GetDocuments)
+            .WithName("ListEtmfDocuments")
+            .WithSummary("Lists eTMF documents filtered by study, site, or DIA TMF zone.")
+            .Produces<List<TmfDocument>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
+
+        group.MapGet("/documents/{document_id}", GetDocumentById)
+            .WithName("GetEtmfDocumentById")
+            .WithSummary("Retrieves an eTMF document metadata record by document ID.")
+            .Produces<TmfDocument>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
+
+        group.MapGet("/documents/{document_id}/content", DownloadDocumentContent)
+            .WithName("DownloadEtmfDocumentContent")
+            .WithSummary("Streams SHA-256 integrity-verified binary content for an eTMF document.")
+            .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
+
+        group.MapPost("/documents/{document_id}/submit-qc", SubmitDocumentForQc)
+            .WithName("SubmitEtmfDocumentForQc")
+            .WithSummary("Submits a DRAFT eTMF document into TECHNICAL_QC for classification review.")
+            .Produces<TmfDocument>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .WithChangeReasonHeader(required: false)
+            .RequirePermission("etmf_document:create").RequireCallerStudyAndSiteScope();
+
+        group.MapPatch("/documents/{document_id}/taxonomy", UpdateDocumentTaxonomy)
+            .WithName("UpdateEtmfDocumentTaxonomy")
+            .WithSummary("Updates the DIA TMF zone, section, and artifact classification of an eTMF document.")
+            .Produces<TmfDocument>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .WithChangeReasonHeader(required: false)
+            .RequirePermission("etmf_document:tag").RequireCallerStudyAndSiteScope();
+
+        group.MapPost("/documents/export", ExportDocuments)
+            .WithName("ExportEtmfDocuments")
+            .WithSummary("Streams a synchronous study binder ZIP archive or enqueues an asynchronous bulk export job.")
+            .Produces(StatusCodes.Status200OK, contentType: "application/zip")
+            .Produces<EtmfExportJobAcceptedResponse>(StatusCodes.Status202Accepted)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
+
+        group.MapGet("/export-jobs/{job_id}", GetExportJob)
+            .WithName("GetEtmfExportJob")
+            .WithSummary("Retrieves progress and download metadata for a background eTMF binder export job.")
+            .Produces<EtmfExportJobStatusDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
+
+        group.MapGet("/export-jobs/{job_id}/download", DownloadExportJob)
+            .WithName("DownloadEtmfExportJob")
+            .WithSummary("Downloads the completed study binder ZIP archive for an eTMF export job.")
+            .Produces(StatusCodes.Status200OK, contentType: "application/zip")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status410Gone)
+            .RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
+
+        group.MapGet("/export-jobs", ListExportJobs)
+            .WithName("ListEtmfExportJobs")
+            .WithSummary("Lists eTMF study binder export jobs visible to the caller.")
+            .Produces<List<EtmfExportJobStatusDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
+
+        group.MapPost("/ingest", IngestDocument)
+            .WithName("IngestEtmfDocument")
+            .WithSummary("Ingests a new draft eTMF document with SHA-256 checksum and revision lineage.")
+            .Produces<TmfDocument>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .WithChangeReasonHeader(required: false)
+            .RequirePermission("etmf_document:create").RequireCallerStudyAndSiteScope();
+
+        group.MapGet("/taxonomy", GetTaxonomy)
+            .WithName("GetEtmfTaxonomy")
+            .WithSummary("Returns the supported DIA TMF Reference Model v3.2 zone, section, and artifact catalog.")
+            .Produces<List<EtmfTaxonomyEntryDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("etmf_taxonomy:read").RequireCallerStudyScope();
     }
 
     /// <summary>The signed caller's user id; the gateway scheme always sets one on an admitted request.</summary>
@@ -1501,5 +1609,42 @@ public record ExportDocumentsRequest(
     [property: JsonPropertyName("section")] string? Section = null,
     [property: JsonPropertyName("artifact_code")] string? ArtifactCode = null,
     [property: JsonPropertyName("is_full_binder")] bool IsFullBinder = false
+);
+
+public record EtmfTaxonomyEntryDto(
+    [property: JsonPropertyName("zone")] int Zone,
+    [property: JsonPropertyName("zone_name")] string ZoneName,
+    [property: JsonPropertyName("section")] string Section,
+    [property: JsonPropertyName("section_name")] string SectionName,
+    [property: JsonPropertyName("artifact_code")] string ArtifactCode,
+    [property: JsonPropertyName("artifact_name")] string ArtifactName
+);
+
+public record EtmfExportJobStatusDto(
+    [property: JsonPropertyName("job_id")] string JobId,
+    [property: JsonPropertyName("study_id")] StudyId StudyId,
+    [property: JsonPropertyName("requested_by")] string RequestedBy,
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("progress_percentage")] double ProgressPercentage,
+    [property: JsonPropertyName("total_documents")] int TotalDocuments,
+    [property: JsonPropertyName("processed_documents")] int ProcessedDocuments,
+    [property: JsonPropertyName("download_url")] string? DownloadUrl,
+    [property: JsonPropertyName("expires_at")] DateTimeOffset? ExpiresAt,
+    [property: JsonPropertyName("created_at")] DateTime CreatedAt
+);
+
+public record EtmfExportJobAcceptedResponse(
+    [property: JsonPropertyName("job_id")] string JobId,
+    [property: JsonPropertyName("study_id")] StudyId StudyId,
+    [property: JsonPropertyName("requested_by")] string RequestedBy,
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("progress_percentage")] double ProgressPercentage,
+    [property: JsonPropertyName("total_documents")] int TotalDocuments,
+    [property: JsonPropertyName("processed_documents")] int ProcessedDocuments,
+    [property: JsonPropertyName("download_url")] string? DownloadUrl,
+    [property: JsonPropertyName("expires_at")] DateTimeOffset? ExpiresAt,
+    [property: JsonPropertyName("created_at")] DateTime CreatedAt,
+    [property: JsonPropertyName("status_url")] string StatusUrl,
+    [property: JsonPropertyName("message")] string Message
 );
 

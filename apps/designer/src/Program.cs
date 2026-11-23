@@ -33,6 +33,7 @@ var api = app.MapGroup("/api/v1/studies");
 api.MapGet("/", () => TypedResults.Ok(Array.Empty<string>()))
     .WithName("ListStudies")
     .WithSummary("Lists active CDISC USDM study protocol definitions.")
+    .WithDescription("Scaffold placeholder returning an empty study list; persistent CDISC USDM study governance is served by the Clinical Kernel (/api/v1/kernel/studies).")
     .RequirePermission("study_design:read").RequireCallerStudyScope();
 
 var protocols = app.MapGroup("/api/v1/protocols");
@@ -83,6 +84,7 @@ protocols.MapPost("/compile", Results<Ok<DDFCompilationResult>, ProblemHttpResul
 })
 .WithName("CompileProtocol")
 .WithSummary("Compiles CDISC USDM protocol JSON into DDF IR and EDC runtime schemas.")
+.WithDescription("Stateless CDISC USDM compiler endpoint (Scaffold service maturity); compiles supplied USDM JSON in memory without persisting study definitions.")
 .ProducesProblem(StatusCodes.Status400BadRequest)
 .ProducesProblem(StatusCodes.Status403Forbidden)
 .ProducesProblem(StatusCodes.Status422UnprocessableEntity)

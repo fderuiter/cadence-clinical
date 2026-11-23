@@ -501,6 +501,54 @@ function cleanupStagedRootDocs() {
   }
 }
 
+const PUBLISHED_OPENAPI_SPEC_FILE_RE =
+  /^(?:[a-z0-9_]+_openapi|cdisc_openapi)\.json$/i;
+
+/**
+ * Copies top-level `docs/openapi/*_openapi.json` and `cdisc_openapi.json` contracts
+ * (excluding `docs/openapi/legacy/`) into `docs/.vitepress/dist/openapi/` without
+ * creating temporary staged files inside tracked `docs/` directories.
+ *
+ * @param {string} [docsDir=docsRoot]
+ * @param {string} [distDir=path.join(docsRoot, ".vitepress", "dist")]
+ * @returns {string[]} Published file names.
+ */
+function publishOpenApiAssets(
+  docsDir = docsRoot,
+  distDir = path.join(docsDir, ".vitepress", "dist")
+) {
+  const openApiSrcDir = path.join(docsDir, "openapi");
+  if (!fs.existsSync(openApiSrcDir)) {
+    return [];
+  }
+
+  const specFiles = fs
+    .readdirSync(openApiSrcDir, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isFile() && PUBLISHED_OPENAPI_SPEC_FILE_RE.test(entry.name)
+    )
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  if (specFiles.length === 0) {
+    return [];
+  }
+
+  const openApiOutDir = path.join(distDir, "openapi");
+  fs.mkdirSync(openApiOutDir, { recursive: true });
+  for (const fileName of specFiles) {
+    fs.copyFileSync(
+      path.join(openApiSrcDir, fileName),
+      path.join(openApiOutDir, fileName)
+    );
+  }
+  console.log(
+    `Published ${specFiles.length} OpenAPI contract(s) to ${path.relative(repoRoot, openApiOutDir)}`
+  );
+  return specFiles;
+}
+
 function runDevServer(extraArgs) {
   runPreflightChecks();
   prepareRootDocs();
@@ -591,6 +639,7 @@ if (require.main !== module) {
     rewriteLinks,
     buildRtmEnv,
     buildVitePressEnv,
+    publishOpenApiAssets,
     VITEPRESS_ENV_ALLOWLIST,
   };
 } else {
@@ -635,6 +684,7 @@ if (require.main !== module) {
         `${pnpmCmd} exec vitepress build docs`,
         buildVitePressEnv(process.env)
       );
+      publishOpenApiAssets();
 
       console.log("--- Docs Build Completed Successfully! ---");
     } catch (error) {

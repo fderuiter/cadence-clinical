@@ -537,7 +537,12 @@ export interface operations {
   AiRecordEvaluationRun: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -662,7 +667,12 @@ export interface operations {
   AiQualifyTask: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         key: string;
         version: number;
@@ -734,7 +744,12 @@ export interface operations {
   AiSuspendTask: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         key: string;
         version: number;
@@ -822,7 +837,12 @@ export interface operations {
   AiSetControl: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. */
+        "Idempotency-Key"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         scope: string;
       };
