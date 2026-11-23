@@ -73,13 +73,23 @@ export function useEcrfSignatures(options: {
     return null;
   });
 
+  const itemsById = computed(() => {
+    const byId = new Map<string, EcrfFormItem>();
+    for (const item of items.value) {
+      if (!byId.has(item.item_id)) {
+        byId.set(item.item_id, item);
+      }
+    }
+    return byId;
+  });
+
   function currentOf(itemId: string): EcrfFormItem | undefined {
-    return items.value.find((i) => i.item_id === itemId);
+    return itemsById.value.get(itemId);
   }
 
   function currentValueText(itemId: string): string {
-    const value = currentOf(itemId)?.value;
-    return value ? formatObservationValue(value) : "No value";
+    const current = currentOf(itemId);
+    return current?.value ? formatObservationValue(current.value) : "No value";
   }
 
   function changedSince(signed: EcrfFormSignedValue): boolean {
