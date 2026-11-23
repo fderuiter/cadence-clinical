@@ -56,7 +56,7 @@
           <router-link
             v-if="showSupportNav"
             id="nav-support"
-            to="/tickets"
+            :to="supportPath"
             class="primary-nav-link"
             :class="{ active: isSupportRoute }"
             :aria-current="isSupportRoute ? 'page' : undefined"
@@ -66,7 +66,7 @@
           <router-link
             v-if="showKnowledgeNav"
             id="nav-knowledge"
-            to="/knowledge"
+            :to="knowledgePath"
             class="primary-nav-link"
             :class="{ active: isKnowledgeRoute }"
             :aria-current="isKnowledgeRoute ? 'page' : undefined"
@@ -242,7 +242,7 @@
         </router-link>
         <router-link
           v-if="showSupportNav"
-          to="/tickets"
+          :to="supportPath"
           class="mobile-nav-link"
           @click="isMobileMenuOpen = false"
         >
@@ -250,7 +250,7 @@
         </router-link>
         <router-link
           v-if="showKnowledgeNav"
-          to="/knowledge"
+          :to="knowledgePath"
           class="mobile-nav-link"
           @click="isMobileMenuOpen = false"
         >
@@ -296,6 +296,20 @@
       </router-link>
     </div>
 
+    <ClinicalContextBar
+      v-if="showContextBar"
+      id="shell-context-bar"
+      aria-label="Clinical context"
+      studies-to="/studies"
+      :study-code="workspaceScope.studyCode"
+      :study-to="contextStudyTo"
+      :site-code="workspaceScope.siteId"
+      :site-to="contextSiteTo"
+      :participant-code="workspaceScope.subjectCode"
+      :participant-to="contextParticipantTo"
+      :current-label="contextCurrentLabel"
+    />
+
     <main
       id="main-content"
       class="shell-main"
@@ -332,7 +346,7 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import { ClinicalContextBar, SignOutConfirmModal, useSignOutGuard } from "ui";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -342,6 +356,8 @@ import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import {
   buildDataCollectionPath,
+  buildScopedWorkflowPath,
+  buildStudiesWorkspacePath,
   canAccessDataCollection,
   canAccessKnowledgeHub,
   canAccessSupportHub,
@@ -386,12 +402,14 @@ const normalizedRoles = computed(() => authStore.normalizedRoles || []);
 const workspaceScope = computed(() =>
   resolveActiveWorkspaceScope(route, canvasStore)
 );
-const activeStudyCode = computed(() => workspaceScope.value.studyCode);
 
 const studiesPath = computed(() =>
-  activeStudyCode.value
-    ? `/studies/${encodeURIComponent(activeStudyCode.value)}`
-    : "/studies"
+  buildStudiesWorkspacePath({
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.siteId,
+    subjectCode: workspaceScope.value.subjectCode,
+    participantRef: workspaceScope.value.participantRef,
+  })
 );
 
 const dataCollectionPath = computed(() =>
@@ -411,6 +429,21 @@ const siteReadinessPath = computed(() =>
   resolveSiteReadinessPath(normalizedRoles.value, {
     studyCode: workspaceScope.value.studyCode,
     siteId: workspaceScope.value.siteId,
+    subjectCode: workspaceScope.value.subjectCode,
+  })
+);
+const supportPath = computed(() =>
+  buildScopedWorkflowPath("/tickets", {
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.siteId,
+    subjectCode: workspaceScope.value.subjectCode,
+  })
+);
+const knowledgePath = computed(() =>
+  buildScopedWorkflowPath("/knowledge", {
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.siteId,
+    subjectCode: workspaceScope.value.subjectCode,
   })
 );
 const showSupportNav = computed(() =>
@@ -419,6 +452,124 @@ const showSupportNav = computed(() =>
 const showKnowledgeNav = computed(() =>
   canAccessKnowledgeHub(normalizedRoles.value)
 );
+
+const NON_WORKFLOW_ROUTE_NAMES = new Set([
+  "landing",
+  "home",
+  "overview",
+  "login",
+  "plans",
+  "trial-onboarding",
+  "forbidden",
+  "unavailable",
+]);
+const NON_WORKFLOW_PATHS = new Set([
+  "/",
+  "/overview",
+  "/login",
+  "/plans",
+  "/onboarding/trial",
+  "/forbidden",
+  "/unavailable",
+]);
+const WORKFLOW_CONTEXT_LABELS = Object.freeze({
+  ecrf: "Data collection",
+  observation: "Observation",
+  ctms: "Site readiness",
+  ssu: "Site startup",
+  etmf: "Regulatory documents",
+  documents: "Controlled documents",
+  training: "Protocol training",
+  tickets: "Support",
+  knowledge: "Knowledge",
+  mdr: "Protocol design",
+  digitization: "Protocol digitization",
+  "icf-builder": "Informed consent",
+  "econsent-authoring": "Consent authoring",
+  "amendment-diff": "Protocol amendments",
+  imaging: "Medical imaging",
+  devices: "Medical devices",
+  "device-investigation": "Device investigation",
+  adjudication: "Endpoint adjudication",
+  cec: "Endpoint adjudication",
+  audit: "Audit ledger",
+  auditor: "Inspection review",
+  rules: "Validation rules",
+  coding: "Medical coding",
+  lakehouse: "Clinical analytics",
+  sensors: "Connected sensors",
+  labs: "Laboratory governance",
+  dct: "Decentralized visits",
+  safety: "Safety review",
+  quality: "Quality management",
+  notifications: "Notifications",
+  "participant-wallet": "Participant reimbursements",
+  "lay-summaries": "Plain-language summaries",
+});
+
+const showContextBar = computed(() => {
+  if (!authStore.isAuthenticated || isStudiesRoute.value) {
+    return false;
+  }
+  const routeName = String(route?.name || "");
+  const routePath = String(route?.path || "");
+  if (
+    NON_WORKFLOW_ROUTE_NAMES.has(routeName) ||
+    NON_WORKFLOW_PATHS.has(routePath)
+  ) {
+    return false;
+  }
+  return Boolean(routeName || routePath);
+});
+
+const contextCurrentLabel = computed(() => {
+  const routeName = String(route?.name || "");
+  if (WORKFLOW_CONTEXT_LABELS[routeName]) {
+    return WORKFLOW_CONTEXT_LABELS[routeName];
+  }
+  const routePath = String(route?.path || "").replace(/^\//, "");
+  return WORKFLOW_CONTEXT_LABELS[routePath] || "";
+});
+
+const contextStudyTo = computed(() =>
+  workspaceScope.value.studyCode
+    ? `/studies/${encodeURIComponent(workspaceScope.value.studyCode)}`
+    : ""
+);
+
+const contextSiteTo = computed(() => {
+  const studyCode = workspaceScope.value.studyCode;
+  const siteId = workspaceScope.value.siteId;
+  if (!siteId) return "";
+  if (!studyCode) return `/studies?site=${encodeURIComponent(siteId)}`;
+  return {
+    path: `/studies/${encodeURIComponent(studyCode)}`,
+    query: {
+      stage: "conduct",
+      section: "participants",
+      site: siteId,
+    },
+  };
+});
+
+const contextParticipantTo = computed(() => {
+  const studyCode = workspaceScope.value.studyCode;
+  const siteId = workspaceScope.value.siteId;
+  const participant =
+    workspaceScope.value.participantRef || workspaceScope.value.subjectCode;
+  if (!participant) return "";
+  if (!studyCode) {
+    return `/studies?participant=${encodeURIComponent(participant)}`;
+  }
+  return {
+    path: `/studies/${encodeURIComponent(studyCode)}`,
+    query: {
+      stage: "conduct",
+      ...(siteId ? { site: siteId } : {}),
+      participant,
+    },
+  };
+});
 
 const isStudiesRoute = computed(
   () =>
@@ -898,6 +1049,61 @@ onUnmounted(() => {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+@media (min-width: 768px) and (max-width: 1280px) {
+  .app-header {
+    padding: 6px 14px;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .header-left {
+    gap: 10px;
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+
+  .primary-nav {
+    gap: 4px;
+  }
+
+  .primary-nav-link {
+    padding: 5px 8px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+
+  .header-controls {
+    gap: 6px;
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+
+  .persona-label,
+  .palette-kbd {
+    display: none;
+  }
+
+  .persona-select {
+    max-width: 140px;
+    padding: 4px 6px;
+    font-size: 0.78rem;
+  }
+
+  .shell-control-btn,
+  .command-palette-trigger {
+    padding: 5px 8px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .user-badge {
+    max-width: 96px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 860px) {

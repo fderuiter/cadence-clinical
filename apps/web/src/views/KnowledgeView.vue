@@ -177,6 +177,39 @@
             <option v-if="demoBuild" value="ARCHIVED">Archived</option>
           </select>
         </div>
+
+        <div class="sidebar-filter-section">
+          <label for="knowledge-study-filter" class="filter-label">
+            Study Scope
+          </label>
+          <input
+            id="knowledge-study-filter"
+            v-model="scopeStudyId"
+            type="text"
+            class="form-control form-select-sm knowledge-scope-input"
+            placeholder="All studies"
+          />
+          <label for="knowledge-site-filter" class="filter-label">
+            Site Scope
+          </label>
+          <input
+            id="knowledge-site-filter"
+            v-model="scopeSiteId"
+            type="text"
+            class="form-control form-select-sm knowledge-scope-input"
+            placeholder="All sites"
+          />
+          <label for="knowledge-subject-filter" class="filter-label">
+            Participant Scope
+          </label>
+          <input
+            id="knowledge-subject-filter"
+            v-model="scopeSubjectId"
+            type="text"
+            class="form-control form-select-sm knowledge-scope-input"
+            placeholder="All participants"
+          />
+        </div>
       </aside>
 
       <!-- Column 2: Article Directory & Search List -->
@@ -1060,7 +1093,13 @@ import {
   DEFAULT_CATEGORIES,
   DEFAULT_MOCK_ARTICLES,
 } from "../api/knowledge.js";
+import {
+  readRouteScopeQuery,
+  replaceRouteQueryParams,
+  resolveRouteAndRouter,
+} from "../composables/useRouteScopeSync";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
+import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 
@@ -1072,7 +1111,10 @@ export default {
   },
   setup() {
     const authStore = useAuthStore();
+    const scopeStore = useClinicalScopeStore();
     const toastStore = useToastStore();
+    const { route, router } = resolveRouteAndRouter();
+    const initialRouteScope = readRouteScopeQuery(route);
 
     // Data State: bundled sample SOPs only in a demo build; otherwise the list comes from the server (#4523).
     const demoBuild = isDemoBuild();
@@ -1087,6 +1129,21 @@ export default {
     const activeStatusFilter = ref("ALL");
     const activeReaderTab = ref("content");
     const loading = ref(false);
+    const scopeStudyId = ref(initialRouteScope.studyId);
+    const scopeSiteId = ref(initialRouteScope.siteId);
+    const scopeSubjectId = ref(initialRouteScope.subjectId);
+
+    if (route?.query) {
+      if (initialRouteScope.studyId) {
+        scopeStore.activeStudyId = initialRouteScope.studyId;
+      }
+      if (initialRouteScope.siteId) {
+        scopeStore.activeSiteId = initialRouteScope.siteId;
+      }
+      if (initialRouteScope.subjectId) {
+        scopeStore.activeSubjectId = initialRouteScope.subjectId;
+      }
+    }
 
     // Version & Audit Log Lists for Tab Viewers
     const versionsList = ref([]);
@@ -1221,6 +1278,14 @@ export default {
           const matchTags = tags.some((t) => t.toLowerCase().includes(q));
           return matchTitle || matchSlug || matchBody || matchTags;
         });
+      }
+
+      // Clinical study scope filter when articles carry an explicit study_id
+      const scopedStudy = scopeStudyId.value.trim().toLowerCase();
+      if (scopedStudy) {
+        list = list.filter(
+          (a) => !a.study_id || a.study_id.toLowerCase() === scopedStudy
+        );
       }
 
       return list;
@@ -1709,6 +1774,43 @@ export default {
 
     // Watchers
     watch(
+      () => [
+        route?.query?.studyId,
+        route?.query?.siteId,
+        route?.query?.site,
+        route?.query?.subjectId,
+        route?.query?.participant,
+      ],
+      () => {
+        if (!route?.query) return;
+        const nextScope = readRouteScopeQuery(route);
+        scopeStudyId.value = nextScope.studyId;
+        scopeSiteId.value = nextScope.siteId;
+        scopeSubjectId.value = nextScope.subjectId;
+        scopeStore.activeStudyId = nextScope.studyId;
+        scopeStore.activeSiteId = nextScope.siteId;
+        scopeStore.activeSubjectId = nextScope.subjectId;
+      }
+    );
+
+    watch(
+      [scopeStudyId, scopeSiteId, scopeSubjectId],
+      ([nextStudy, nextSite, nextSubject]) => {
+        const trimmedStudy = nextStudy.trim();
+        const trimmedSite = nextSite.trim();
+        const trimmedSubject = nextSubject.trim();
+        scopeStore.activeStudyId = trimmedStudy;
+        scopeStore.activeSiteId = trimmedSite;
+        scopeStore.activeSubjectId = trimmedSubject;
+        void replaceRouteQueryParams(router, route, {
+          studyId: trimmedStudy || null,
+          siteId: trimmedSite || null,
+          subjectId: trimmedSubject || null,
+        });
+      }
+    );
+
+    watch(
       () => activePersonaKey.value,
       async () => {
         if (!demoBuild) {
@@ -1746,6 +1848,9 @@ export default {
       versionsLoading,
       auditLogList,
       auditLoading,
+      scopeStudyId,
+      scopeSiteId,
+      scopeSubjectId,
 
       // Modals & Forms
       isCreateArticleModalOpen,
@@ -2088,6 +2193,10 @@ export default {
   color: var(--neutral-dark);
   text-transform: uppercase;
   letter-spacing: 0.02em;
+}
+
+.knowledge-scope-input {
+  font-family: var(--font-mono);
 }
 
 /* Column 2: Article Directory Panel */

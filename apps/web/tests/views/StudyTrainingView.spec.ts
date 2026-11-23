@@ -72,4 +72,24 @@ describe("StudyTrainingView.vue", () => {
       "training_curriculum:assign"
     );
   });
+
+  it("passes siteId prop to training assignments and delegations when embedded in Clinical Canvas", async () => {
+    const wrapper = mount(StudyTrainingView, {
+      props: { studyId: "CAD-101", siteId: "SITE-101" },
+    });
+    await flushPromises();
+
+    expect(trainingApi.listAssignments).toHaveBeenCalledWith(
+      expect.objectContaining({
+        study_id: "CAD-101",
+        site_id: "SITE-101",
+      })
+    );
+    expect(trainingApi.listDelegations).toHaveBeenCalledWith({
+      study_id: "CAD-101",
+      site_id: "SITE-101",
+    });
+    expect(wrapper.find("#training-site-filter").exists()).toBe(false);
+    wrapper.unmount();
+  });
 });

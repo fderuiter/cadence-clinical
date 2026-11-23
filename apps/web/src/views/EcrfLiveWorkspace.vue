@@ -224,10 +224,14 @@ function routeQuery(name) {
 }
 
 const routeStudyId = ref(routeQuery("studyId") ?? "");
-const routeSubjectId = ref(routeQuery("subjectId") ?? "");
+const routeSubjectId = ref(
+  routeQuery("subjectId") ?? routeQuery("participant") ?? ""
+);
 const routeEnrollmentId = ref(routeQuery("enrollmentId") ?? "");
 
-const selectedSubjectId = ref(routeSubjectId.value || "");
+const selectedSubjectId = ref(
+  routeSubjectId.value || scopeStore.activeSubjectId || ""
+);
 const resolvedEnrollmentId = ref(routeEnrollmentId.value);
 const enrollmentStatusMessage = ref("");
 const selectionChangedFromInitial = ref(false);
@@ -476,7 +480,13 @@ watch(
     selectedSubjectId,
     () => selectedSubject.value?.siteId ?? "",
   ],
-  ([nextStudy, nextSubject], [prevStudy, prevSubject]) => {
+  ([nextStudy, nextSubject, nextSubjectSite], [prevStudy, prevSubject]) => {
+    if (nextSubject !== scopeStore.activeSubjectId) {
+      scopeStore.activeSubjectId = nextSubject;
+    }
+    if (nextSubjectSite && nextSubjectSite !== scopeStore.activeSiteId) {
+      scopeStore.activeSiteId = nextSubjectSite;
+    }
     if (
       prevStudy !== undefined &&
       (nextStudy !== prevStudy || nextSubject !== prevSubject)
@@ -495,8 +505,8 @@ watch(
 watch(
   [
     () => routeQuery("studyId") ?? "",
-    () => routeQuery("siteId") ?? "",
-    () => routeQuery("subjectId") ?? "",
+    () => routeQuery("siteId") ?? routeQuery("site") ?? "",
+    () => routeQuery("subjectId") ?? routeQuery("participant") ?? "",
     () => routeQuery("enrollmentId") ?? "",
   ],
   async (
@@ -516,23 +526,21 @@ watch(
     routeEnrollmentId.value = nextEnrollment;
     selectionChangedFromInitial.value = false;
 
-    if (nextSite) {
-      scopeStore.activeSiteId = nextSite;
-    }
+    scopeStore.activeSiteId = nextSite;
     const studyChanged = Boolean(
       nextStudy && nextStudy !== scopeStore.activeStudyId
     );
-    if (nextStudy) {
+    if (nextStudy || prevStudy) {
       scopeStore.activeStudyId = nextStudy;
     }
-    if (nextSubject) {
-      scopeStore.activeSubjectId = nextSubject;
-      selectedSubjectId.value = nextSubject;
-    }
-    if (studyChanged) {
+    scopeStore.activeSubjectId = nextSubject;
+    selectedSubjectId.value = nextSubject;
+    if (studyChanged && nextStudy) {
       await scopeStore.loadSubjects(nextStudy);
     }
-    selectListedSubject();
+    if (nextSubject || studyChanged) {
+      selectListedSubject();
+    }
     await resolveSelectedEnrollment();
   }
 );

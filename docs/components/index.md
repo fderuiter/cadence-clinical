@@ -13,10 +13,11 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 22 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 23 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
 | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| `ClinicalContextBar`                       | Accessible clinical scope breadcrumb landmark linking Studies, study, site, participant, and current workflow                 | `navigation`, `list`, `link`      |
 | [`ClinicalDataTable`](./data-table.md)     | Accessible, sortable, paginated clinical dataset table with row selection and tabular numerals                                | `table`, `region`, `columnheader` |
 | [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap and backdrop blur                                                                     | `dialog`, `aria-modal="true"`     |
 | [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer with reactive focus containment                                                                  | `dialog`, `aria-modal="true"`     |

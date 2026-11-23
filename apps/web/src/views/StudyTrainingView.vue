@@ -15,6 +15,26 @@
         </p>
       </div>
       <div class="protocol-filter-group">
+        <template v-if="!props.studyId">
+          <label for="training-study-filter">Study:</label>
+          <input
+            id="training-study-filter"
+            v-model="standaloneStudyFilter"
+            type="text"
+            class="protocol-filter-input font-mono"
+            placeholder="All studies (e.g. CADENCE-101)"
+            @change="applyStandaloneScope"
+          />
+          <label for="training-site-filter">Site:</label>
+          <input
+            id="training-site-filter"
+            v-model="standaloneSiteFilter"
+            type="text"
+            class="protocol-filter-input font-mono"
+            placeholder="All sites (e.g. SITE-101)"
+            @change="applyStandaloneScope"
+          />
+        </template>
         <label for="training-protocol-filter">Protocol Version:</label>
         <input
           id="training-protocol-filter"
@@ -22,7 +42,7 @@
           type="text"
           class="protocol-filter-input"
           placeholder="All versions (e.g. 2.0)"
-          @change="loadMetrics"
+          @change="applyStandaloneScope"
         />
       </div>
     </div>
@@ -76,6 +96,7 @@
     <div class="console-wrapper">
       <ProtocolTrainingConsole
         :study-id="effectiveStudyId"
+        :site-id="effectiveSiteId"
         :protocol-version="effectiveProtocolVersion"
       />
     </div>
@@ -84,13 +105,22 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
 import ProtocolTrainingConsole from "../components/clinical/ProtocolTrainingConsole.vue";
 import { trainingApi } from "../api/training";
+import {
+  readRouteScopeQuery,
+  replaceRouteQueryParams,
+  resolveRouteAndRouter,
+} from "../composables/useRouteScopeSync";
+import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useToastStore } from "../stores/toasts.js";
 
 const props = defineProps({
   studyId: {
+    type: String,
+    default: "",
+  },
+  siteId: {
     type: String,
     default: "",
   },
@@ -100,17 +130,51 @@ const props = defineProps({
   },
 });
 
-const route = useRoute();
+const { route, router } = resolveRouteAndRouter();
+const scopeStore = useClinicalScopeStore();
+const initialRouteScope = readRouteScopeQuery(route);
+
 const activeCurriculaCount = ref(0);
 const completedQualificationsCount = ref(0);
 const pendingGatedCount = ref(0);
 const loadError = ref("");
+const standaloneStudyFilter = ref(
+  props.studyId ||
+    initialRouteScope.studyId ||
+    (!props.studyId && route ? scopeStore.activeStudyId : "")
+);
+const standaloneSiteFilter = ref(
+  props.siteId ||
+    initialRouteScope.siteId ||
+    (!props.studyId && route ? scopeStore.activeSiteId : "")
+);
 const protocolVersionFilter = ref(
   props.protocolVersion || String(route?.query?.protocolVersion || "")
 );
 
+if (!props.studyId && route?.query) {
+  if (initialRouteScope.studyId) {
+    scopeStore.activeStudyId = initialRouteScope.studyId;
+  }
+  if (initialRouteScope.siteId) {
+    scopeStore.activeSiteId = initialRouteScope.siteId;
+  }
+  if (initialRouteScope.subjectId) {
+    scopeStore.activeSubjectId = initialRouteScope.subjectId;
+  }
+}
+
 const effectiveStudyId = computed(
-  () => props.studyId || String(route?.query?.studyId || "")
+  () =>
+    props.studyId ||
+    standaloneStudyFilter.value.trim() ||
+    String(route?.query?.studyId || "")
+);
+const effectiveSiteId = computed(
+  () =>
+    props.siteId ||
+    standaloneSiteFilter.value.trim() ||
+    String(route?.query?.siteId || route?.query?.site || "")
 );
 const effectiveProtocolVersion = computed(
   () =>
@@ -118,6 +182,26 @@ const effectiveProtocolVersion = computed(
     props.protocolVersion ||
     String(route?.query?.protocolVersion || "")
 );
+
+function syncStandaloneRouteScope() {
+  if (props.studyId) return;
+  const nextStudy = standaloneStudyFilter.value.trim();
+  const nextSite = standaloneSiteFilter.value.trim();
+  const nextProtocol = protocolVersionFilter.value.trim();
+  scopeStore.activeStudyId = nextStudy;
+  scopeStore.activeSiteId = nextSite;
+  void replaceRouteQueryParams(router, route, {
+    studyId: nextStudy || null,
+    siteId: nextSite || null,
+    subjectId: scopeStore.activeSubjectId || null,
+    protocolVersion: nextProtocol || null,
+  });
+}
+
+function applyStandaloneScope() {
+  syncStandaloneRouteScope();
+  void loadMetrics();
+}
 
 async function loadMetrics() {
   loadError.value = "";
@@ -132,6 +216,7 @@ async function loadMetrics() {
     const assignmentQuery = {};
     if (effectiveStudyId.value)
       assignmentQuery.study_id = effectiveStudyId.value;
+    if (effectiveSiteId.value) assignmentQuery.site_id = effectiveSiteId.value;
 
     const [curricula, assignments] = await Promise.all([
       trainingApi.listCurricula(curriculaQuery),
@@ -161,7 +246,34 @@ async function loadMetrics() {
   }
 }
 
-watch([effectiveStudyId, effectiveProtocolVersion], () => {
+watch(
+  () => [
+    route?.query?.studyId,
+    route?.query?.siteId,
+    route?.query?.site,
+    route?.query?.subjectId,
+    route?.query?.participant,
+    route?.query?.protocolVersion,
+  ],
+  () => {
+    if (props.studyId || !route?.query) return;
+    const nextScope = readRouteScopeQuery(route);
+    standaloneStudyFilter.value = nextScope.studyId;
+    standaloneSiteFilter.value = nextScope.siteId;
+    scopeStore.activeStudyId = nextScope.studyId;
+    scopeStore.activeSiteId = nextScope.siteId;
+    scopeStore.activeSubjectId = nextScope.subjectId;
+    const nextPv =
+      typeof route.query.protocolVersion === "string"
+        ? route.query.protocolVersion
+        : "";
+    if (nextPv !== protocolVersionFilter.value) {
+      protocolVersionFilter.value = nextPv;
+    }
+  }
+);
+
+watch([effectiveStudyId, effectiveSiteId, effectiveProtocolVersion], () => {
   loadMetrics();
 });
 
@@ -182,6 +294,19 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.protocol-filter-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
 }
 
 .header-badge-row {

@@ -356,6 +356,21 @@ function onFormClosed() {
 const selectedSubjectId = ref(store.activeSubjectId || "SUBJ-001");
 const selectedVisitId = ref("Screening");
 
+watch(selectedSubjectId, (next) => {
+  if (next && next !== store.activeSubjectId) {
+    store.activeSubjectId = next;
+  }
+});
+
+watch(
+  () => store.activeSubjectId,
+  (next) => {
+    if (next && next !== selectedSubjectId.value) {
+      selectedSubjectId.value = next;
+    }
+  }
+);
+
 const currentStudyId = computed(
   () =>
     store.activeStudyId ||

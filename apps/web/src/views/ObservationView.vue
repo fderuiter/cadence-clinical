@@ -213,10 +213,14 @@ import {
   sameObservationValue,
   type ExpectedItemSpec,
 } from "../api/observationValue";
+import { getActivePinia } from "pinia";
 import {
   collectionInstanceId,
   collectionInstanceRef,
+  formatNodeRef,
   observationNodeRef,
+  parseNodeRef,
+  tryNodeRef,
 } from "../canvas/nodeRef";
 import { canCorrectObservations } from "../canvas/authority";
 import { toDirectScopeLocks } from "../canvas/kernelLocks";
@@ -310,7 +314,15 @@ const effectiveReturnTo = computed<RouteLocationRaw | null>(() => {
     const sectionVal = queryString("section");
     const isDataWorklist =
       sectionVal === "queries" || sectionVal === "validation";
-    const siteVal = queryString("site") || queryString("siteId");
+    const siteVal =
+      queryString("site") || queryString("siteId") || resolvedSiteLabel.value;
+    const participantVal = resolveCanonicalParticipantParam(
+      studyFromContext,
+      queryString("participant") ||
+        queryString("subjectId") ||
+        queryString("subject") ||
+        resolvedParticipantLabel.value
+    );
     return {
       name: "study",
       params: { studyCode: studyFromContext },
@@ -318,6 +330,7 @@ const effectiveReturnTo = computed<RouteLocationRaw | null>(() => {
         stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
         ...(isDataWorklist ? { section: sectionVal } : {}),
         ...(siteVal ? { site: siteVal } : {}),
+        ...(participantVal ? { participant: participantVal } : {}),
         ...(formRef ? { form: formRef } : {}),
         ...(rawItem ? { item: rawItem } : {}),
       },
@@ -332,8 +345,11 @@ const effectiveReturnTo = computed<RouteLocationRaw | null>(() => {
       },
     };
   }
+  if (activeRouter.hasRoute("studies")) {
+    return { name: "studies" };
+  }
   if (activeRouter.hasRoute("study")) {
-    return { name: "study" };
+    return "/studies";
   }
   return "/";
 });
@@ -440,6 +456,46 @@ async function onReason(reason: string) {
 }
 
 let redirectRequest = 0;
+const resolvedSiteLabel = ref("");
+const resolvedParticipantLabel = ref("");
+
+function resolveCanonicalParticipantParam(
+  studyCodeValue: string,
+  rawCandidate: string
+): string {
+  const candidate = rawCandidate.trim();
+  if (!candidate) return "";
+  const parsed = parseNodeRef(candidate);
+  if (parsed?.kind === "participant") {
+    return formatNodeRef(parsed);
+  }
+  const stateRoot = getActivePinia()?.state.value as
+    | {
+        studyCanvas?: {
+          studyCode?: string;
+          knownParticipants?: Record<
+            string,
+            { id?: string; subject_id?: string; study_id?: string }
+          >;
+        };
+      }
+    | undefined;
+  const knownParticipants = stateRoot?.studyCanvas?.knownParticipants;
+  if (knownParticipants) {
+    const matched = Object.values(knownParticipants).find(
+      (item) =>
+        item?.subject_id === candidate &&
+        (!item.study_id ||
+          item.study_id === studyCodeValue ||
+          stateRoot?.studyCanvas?.studyCode === studyCodeValue)
+    );
+    const node = matched?.id ? tryNodeRef("participant", matched.id) : null;
+    if (node) {
+      return formatNodeRef(node);
+    }
+  }
+  return candidate;
+}
 
 watch(
   observation,
@@ -476,8 +532,29 @@ watch(
         (s) => s.level === "enrollment" && s.mask === null
       );
       if (!studyStep?.label || !enrollmentStep) return;
+      const canonicalStudyCode = studyStep.label.split(" — ")[0].trim();
       const siteStep = steps.find(
-        (s) => s.level === "study_site" && s.mask === null && s.label
+        (s) =>
+          (s.level === "study_site" || s.level === "site") &&
+          s.mask === null &&
+          s.label
+      );
+      const canonicalSiteLabel = siteStep?.label
+        ? siteStep.label.split(" — ")[0].trim()
+        : "";
+      const siteVal =
+        canonicalSiteLabel || queryString("site") || queryString("siteId");
+      resolvedSiteLabel.value = siteVal || "";
+      resolvedParticipantLabel.value = enrollmentStep.label || "";
+      const participantCandidate =
+        queryString("participant") ||
+        queryString("subjectId") ||
+        queryString("subject") ||
+        enrollmentStep.label ||
+        "";
+      const participantVal = resolveCanonicalParticipantParam(
+        canonicalStudyCode,
+        participantCandidate
       );
       const rawForm = queryString("form") || queryString("formId");
       const formRef = rawForm
@@ -490,11 +567,12 @@ watch(
       const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
       await activeRouter.replace({
         name: "study",
-        params: { studyCode: studyStep.label },
+        params: { studyCode: canonicalStudyCode },
         query: {
           stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
           ...(isDataWorklist ? { section: sectionVal } : {}),
-          ...(siteStep?.label ? { site: siteStep.label } : {}),
+          ...(siteVal ? { site: siteVal } : {}),
+          ...(participantVal ? { participant: participantVal } : {}),
           ...(formRef ? { form: formRef } : {}),
           ...(rawItem ? { item: rawItem } : {}),
           observation: canonicalRef,
