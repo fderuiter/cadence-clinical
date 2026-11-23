@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 
 using Cadence.Cli.Services;
+using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
@@ -23,21 +25,52 @@ public sealed class RulesetServiceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_root))
+        if (!Directory.Exists(_root))
         {
-            Directory.Delete(_root, recursive: true);
+            return;
         }
+
+        foreach (var file in new DirectoryInfo(_root).EnumerateFiles("*", SearchOption.AllDirectories))
+        {
+            file.Attributes = FileAttributes.Normal;
+        }
+
+        Directory.Delete(_root, recursive: true);
     }
 
     [Fact]
     public void Validate_OnRepositoryRoot_Passes()
     {
+        string repoRoot = FindRepositoryRoot();
         using var writer = new StringWriter();
 
-        int exitCode = RulesetService.Validate(FindRepositoryRoot(), writer);
+        int exitCode = RulesetService.Validate(repoRoot, writer);
 
         exitCode.Should().Be(0, writer.ToString());
         writer.ToString().Should().Contain("Validated 3 declarative rulesets");
+
+        foreach (string branchFile in new[] { "main.json", "release_branches.json" })
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, ".github", "rulesets", branchFile)));
+            var bypassActors = doc.RootElement.GetProperty("bypass_actors");
+            bypassActors.GetArrayLength().Should().BeGreaterThan(0);
+            foreach (var actor in bypassActors.EnumerateArray())
+            {
+                actor.GetProperty("actor_id").GetInt64().Should().Be(RulesetService.RepositoryAdminRoleId);
+                actor.GetProperty("actor_type").GetString().Should().Be("RepositoryRole");
+                actor.GetProperty("bypass_mode").GetString().Should().Be("pull_request");
+            }
+        }
+
+        using var tagDoc = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, ".github", "rulesets", "version_tags.json")));
+        var tagBypassActors = tagDoc.RootElement.GetProperty("bypass_actors");
+        tagBypassActors.GetArrayLength().Should().BeGreaterThan(0);
+        foreach (var actor in tagBypassActors.EnumerateArray())
+        {
+            actor.GetProperty("actor_id").GetInt64().Should().Be(RulesetService.RepositoryAdminRoleId);
+            actor.GetProperty("actor_type").GetString().Should().Be("RepositoryRole");
+            actor.GetProperty("bypass_mode").GetString().Should().Be("always");
+        }
     }
 
     [Fact]
@@ -339,10 +372,10 @@ public sealed class RulesetServiceTests : IDisposable
     {
         Directory.Delete(Path.Combine(_root, ".github", "rulesets"), recursive: true);
 
-        using var validWriter = new StringWriter();
-        RulesetService.Validate(_root, validWriter)
+        using var missingDirWriter = new StringWriter();
+        RulesetService.Validate(_root, missingDirWriter)
             .Should().Be(1, "cadence check rulesets must fail closed when .github/rulesets is absent");
-        validWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
+        missingDirWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
 
         using var syncWriter = new StringWriter();
         RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: syncWriter)
@@ -353,7 +386,133 @@ public sealed class RulesetServiceTests : IDisposable
         using var brokenCiWriter = new StringWriter();
         RulesetService.Validate(_root, brokenCiWriter).Should().Be(1);
         brokenCiWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.")
-            .And.Contain("compliance");
+            .And.Contain("compliance", "CI Gate coverage must still run unconditionally when .github/rulesets is missing");
+
+        Directory.CreateDirectory(Path.Combine(_root, ".github", "rulesets"));
+        using var emptyDirWriter = new StringWriter();
+        RulesetService.Validate(_root, emptyDirWriter).Should().Be(1);
+        emptyDirWriter.ToString().Should().Contain("No '*.json' ruleset files found in '.github/rulesets'.")
+            .And.Contain("compliance", "CI Gate coverage must still run unconditionally when .github/rulesets is empty");
+    }
+
+    [Fact]
+    public void Validate_AllowsPullRequestAdminBypassMode_AndRejectsInvalidBranchBypassActors()
+    {
+        WriteMainRulesetWithBypassActors("""[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }]""");
+        using (var okWriter = new StringWriter())
+        {
+            RulesetService.Validate(_root, okWriter).Should().Be(0, okWriter.ToString());
+        }
+
+        foreach (string invalidModeActors in new[]
+        {
+            """[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }]""",
+            """[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "exempt" }]""",
+            """[{ "actor_id": 5, "actor_type": "RepositoryRole" }]""",
+        })
+        {
+            WriteMainRulesetWithBypassActors(invalidModeActors);
+            using var errWriter = new StringWriter();
+
+            RulesetService.Validate(_root, errWriter).Should().Be(1, $"branch bypass_actors '{invalidModeActors}' must fail closed");
+            errWriter.ToString().Should().Contain("bypass_mode").And.Contain("pull_request");
+        }
+
+        foreach (string nonAdminActors in new[]
+        {
+            """[{ "actor_id": 2, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }]""",
+            """[{ "actor_id": 5, "actor_type": "Team", "bypass_mode": "pull_request" }]""",
+        })
+        {
+            WriteMainRulesetWithBypassActors(nonAdminActors);
+            using var errWriter = new StringWriter();
+
+            RulesetService.Validate(_root, errWriter).Should().Be(1, $"non-admin branch bypass_actors '{nonAdminActors}' must fail closed");
+            errWriter.ToString().Should().Contain("repository admins");
+        }
+    }
+
+    [Fact]
+    public void Validate_FailsWhenNonVersionTagRulesetConfiguresBypassActors()
+    {
+        SeedValidFixture();
+        Write(".github/rulesets/release_tags.json", """
+            {
+              "name": "release-tags-protection",
+              "target": "tag",
+              "enforcement": "active",
+              "bypass_actors": [{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }],
+              "conditions": { "ref_name": { "include": ["refs/tags/rc-*"], "exclude": [] } },
+              "rules": [{ "type": "deletion" }, { "type": "non_fast_forward" }]
+            }
+            """);
+        using var extraTagWriter = new StringWriter();
+        RulesetService.Validate(_root, extraTagWriter).Should().Be(1);
+        extraTagWriter.ToString().Should().Contain("release_tags.json").And.Contain("bypass_actors");
+    }
+
+    [Fact]
+    public void Validate_InPreCommitMode_ReadsStagedIndexBlobs_AndRejectsStagedDeletionsBypassViolationsAndCiGateDrift()
+    {
+        WriteMainRulesetWithBypassActors("""[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }]""");
+        InitGitRepositoryAndCommitAll();
+
+        // 1. Stage single-file deletion (`git rm --cached`) while leaving valid working-tree file on disk.
+        RunGit("rm", "--cached", "-q", ".github/rulesets/main.json");
+        File.Exists(Path.Combine(_root, ".github", "rulesets", "main.json")).Should().BeTrue();
+        using (var reader = GitIndexReader.TryOpen(_root))
+        using (var writer = new StringWriter())
+        {
+            reader.Should().NotBeNull();
+            RulesetService.Validate(_root, writer, preCommit: true, indexReader: reader).Should().Be(1);
+            writer.ToString().Should().Contain("Required ruleset file '.github/rulesets/main.json' is missing.");
+        }
+
+        QualityGateOrchestrator.RunQualityGates(gateName: "rulesets", preCommit: true, repoRoot: _root)
+            .Should().Be(1, "pnpm cadence check --pre-commit must fail closed on staged ruleset deletions");
+
+        // 2. Stage deletion of all ruleset files while leaving valid working-tree copies on disk.
+        RunGit("rm", "--cached", "-q", ".github/rulesets/release_branches.json", ".github/rulesets/version_tags.json");
+        using (var reader = GitIndexReader.TryOpen(_root))
+        using (var writer = new StringWriter())
+        {
+            RulesetService.Validate(_root, writer, preCommit: true, indexReader: reader).Should().Be(1);
+            writer.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
+        }
+
+        // Restore staged rulesets and verify pre-commit passes.
+        RunGit("checkout", "HEAD", "--", ".github/rulesets");
+        QualityGateOrchestrator.RunQualityGates(gateName: "rulesets", preCommit: true, repoRoot: _root)
+            .Should().Be(0);
+
+        // 3. Stage bypass_mode: "always" in the index, then overwrite working-tree file with valid "pull_request".
+        WriteMainRulesetWithBypassActors("""[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }]""");
+        RunGit("add", ".github/rulesets/main.json");
+        WriteMainRulesetWithBypassActors("""[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }]""");
+
+        using (var reader = GitIndexReader.TryOpen(_root))
+        using (var writer = new StringWriter())
+        {
+            RulesetService.Validate(_root, writer, preCommit: true, indexReader: reader).Should().Be(1);
+            writer.ToString().Should().Contain("bypass_mode").And.Contain("always");
+        }
+
+        // 4. Stage valid ruleset, then stage broken CI Gate workflow while keeping working-tree ci.yml valid.
+        RunGit("add", ".github/rulesets/main.json");
+        WriteCiWorkflow(ciGateNeeds: "[unit-tests]", ciGateIf: "always()", checkComplianceResult: false);
+        RunGit("add", ".github/workflows/ci.yml");
+        WriteCiWorkflow(ciGateNeeds: "[unit-tests, container-security, compliance]", ciGateIf: "always()", checkComplianceResult: true);
+
+        using (var reader = GitIndexReader.TryOpen(_root))
+        using (var writer = new StringWriter())
+        {
+            RulesetService.Validate(_root, writer, preCommit: true, indexReader: reader).Should().Be(1);
+            writer.ToString().Should().Contain("compliance");
+        }
+
+        RunGit("add", ".github/workflows/ci.yml");
+        QualityGateOrchestrator.RunQualityGates(gateName: "rulesets", preCommit: true, repoRoot: _root)
+            .Should().Be(0);
     }
 
     [Fact]
@@ -706,6 +865,77 @@ public sealed class RulesetServiceTests : IDisposable
                 if: github.event_name == 'push' && github.ref == 'refs/heads/main'
                 uses: ./.github/workflows/deploy-docs.yml
             """);
+    }
+
+    private void WriteMainRulesetWithBypassActors(string bypassActorsJson)
+    {
+        Write(".github/rulesets/main.json", $$"""
+            {
+              "name": "main-branch-protection",
+              "target": "branch",
+              "enforcement": "active",
+              "bypass_actors": {{bypassActorsJson}},
+              "conditions": { "ref_name": { "include": ["refs/heads/main"], "exclude": [] } },
+              "rules": [
+                { "type": "deletion" },
+                { "type": "non_fast_forward" },
+                { "type": "pull_request", "parameters": { "required_approving_review_count": 1, "require_code_owner_review": true } },
+                {
+                  "type": "required_status_checks",
+                  "parameters": {
+                    "strict_required_status_checks_policy": true,
+                    "required_status_checks": [
+                      { "context": "CI Gate", "integration_id": {{RulesetService.GitHubActionsIntegrationId}} },
+                      { "context": "Check for Merge Conflicts", "integration_id": {{RulesetService.GitHubActionsIntegrationId}} }
+                    ]
+                  }
+                },
+                {
+                  "type": "merge_queue",
+                  "parameters": {
+                    "check_response_timeout_minutes": 60,
+                    "grouping_strategy": "ALLGREEN",
+                    "max_entries_to_build": 5,
+                    "max_entries_to_merge": 5,
+                    "merge_method": "SQUASH",
+                    "min_entries_to_merge": 1,
+                    "min_entries_to_merge_wait_minutes": 5
+                  }
+                }
+              ]
+            }
+            """);
+    }
+
+    private void InitGitRepositoryAndCommitAll()
+    {
+        RunGit("init", "-q", "-b", "main");
+        RunGit("config", "user.email", "tests@cadence.example");
+        RunGit("config", "user.name", "Cadence Tests");
+        RunGit("config", "commit.gpgsign", "false");
+        RunGit("add", ".");
+        RunGit("commit", "-q", "-m", "seed rulesets and workflows");
+    }
+
+    private void RunGit(params string[] args)
+    {
+        var psi = new ProcessStartInfo("git")
+        {
+            WorkingDirectory = _root,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        foreach (string arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var process = Process.Start(psi)!;
+        string stderr = process.StandardError.ReadToEnd();
+        _ = process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        process.ExitCode.Should().Be(0, $"git {string.Join(' ', args)} failed: {stderr}");
     }
 
     private void Write(string relativePath, string content)

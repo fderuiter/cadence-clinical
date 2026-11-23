@@ -79,8 +79,10 @@ not AOT-safe fails `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Releas
 - `tests/Cadence.UnitTests/Packages/BaselineRatchetServiceTests.cs`: the `baseline-ratchet` gate
   (`Services/BaselineRatchetService.cs`): uncommitted working-tree growth fails, commit growth fails without a per-file `Baseline-Growth: <path> - <reason>` trailer on the commit that grew it, and shrinks and reorders pass.
 - `tests/Cadence.UnitTests/Packages/RulesetServiceTests.cs`: the `rulesets` gate and `cadence rulesets` reconciliation
-  command (`Services/RulesetService.cs`), covering strict status checks, `CI Gate` upstream job coverage, workflow
-  parity, `--dry-run`, and fail-closed `gh api` sync.
+  command (`Services/RulesetService.cs`), covering `pull_request`-only branch bypasses, release-admin-only signed `v*`
+  tag rulesets, `merge_queue` policy, strict status checks, unconditional `CI Gate` upstream job coverage,
+  `pull_request` / `merge_group` workflow parity, staged `GitIndexReader` pre-commit checks, `--profile` payload
+  projection, `--dry-run`, and fail-closed `gh api` sync.
 - `tests/Cadence.UnitTests/Packages/ScaffoldPostAndBlogGatesTests.cs`: `cadence scaffold post` (`Commands/ScaffoldCommands.cs`),
   documentation index auto-registration, and VitePress theme `.vue` boundary validation.
 - `tests/Cadence.UnitTests/Packages/CliConsoleTests.cs`: plain output when there is no terminal (`Services/CliConsole.cs`),

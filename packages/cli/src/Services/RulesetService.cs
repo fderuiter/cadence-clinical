@@ -8,6 +8,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
+using Cadence.ToolingCore.Services;
+
 namespace Cadence.Cli.Services;
 
 /// <summary>
@@ -101,7 +103,7 @@ public static partial class RulesetService
         IReadOnlyList<StatusCheckEntry> RequiredStatusChecks,
         MergeQueueConfig? MergeQueue)
     {
-        /// <summary>True when at least one bypass actor is configured on the ruleset.</summary>
+        /// <summary>True when at least one <c>bypass_actors</c> entry is configured on the ruleset.</summary>
         public bool HasBypassActors => BypassActors.Count > 0;
     }
 
@@ -139,41 +141,38 @@ public static partial class RulesetService
     }
 
     /// <summary>
-    /// Validates declarative <c>.github/rulesets/*.json</c>, <c>pull_request</c> bypass limits, <c>merge_queue</c> policy,
-    /// strict status check policy, <c>CI Gate</c> upstream job coverage, and <c>pull_request</c> / <c>merge_group</c>
-    /// workflow parity. Returns <c>0</c> when valid and <c>1</c> when any check fails.
+    /// Validates declarative <c>.github/rulesets/*.json</c>, <c>pull_request</c>-only branch bypass actors,
+    /// release-admin-only signed <c>v*</c> tag rulesets, <c>merge_queue</c> policy, strict status check policy,
+    /// <c>CI Gate</c> upstream job coverage, and <c>pull_request</c> / <c>merge_group</c> workflow parity. Reads staged
+    /// Git index blobs when <paramref name="indexReader"/> or <paramref name="preCommit"/> is active. Returns <c>0</c>
+    /// when valid and <c>1</c> when any check fails.
     /// </summary>
-    public static int Validate(string? repoRoot = null, TextWriter? output = null)
+    public static int Validate(
+        string? repoRoot = null,
+        TextWriter? output = null,
+        bool preCommit = false,
+        GitIndexReader? indexReader = null)
     {
         repoRoot ??= QualityGateOrchestrator.FindRepoRoot();
         output ??= Console.Out;
 
-        var errors = new List<string>();
-        var definitions = LoadAndValidateRulesetFiles(repoRoot, errors, requireRulesetsDirectory: true);
-        var workflowJobs = LoadAndValidateWorkflows(repoRoot, errors);
-
-        if (workflowJobs.Count > 0)
+        GitIndexReader? ownedReader = null;
+        GitIndexReader? reader = indexReader
+            ?? GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, null, out ownedReader);
+        using (ownedReader)
         {
-            if (definitions.Count > 0)
+            var errors = new List<string>();
+            var definitions = ValidateCore(repoRoot, reader, errors);
+
+            if (errors.Count > 0)
             {
-                ValidateWorkflowParity(definitions, workflowJobs, errors);
+                WriteErrors(errors, output);
+                return 1;
             }
 
-            ValidateCiGateCoverage(workflowJobs, errors);
+            output.WriteLine($"{Tag} ✔ Validated {definitions.Count} declarative rulesets and CI Gate / merge_group workflow parity.");
+            return 0;
         }
-
-        if (errors.Count > 0)
-        {
-            foreach (string error in errors)
-            {
-                output.WriteLine($"{Tag} [ERROR] {error}");
-            }
-
-            return 1;
-        }
-
-        output.WriteLine($"{Tag} ✔ Validated {definitions.Count} declarative rulesets and CI Gate / merge_group workflow parity.");
-        return 0;
     }
 
     /// <summary>
@@ -203,25 +202,11 @@ public static partial class RulesetService
         }
 
         var errors = new List<string>();
-        var definitions = LoadAndValidateRulesetFiles(repoRoot, errors, requireRulesetsDirectory: true);
-        var workflowJobs = LoadAndValidateWorkflows(repoRoot, errors);
-        if (workflowJobs.Count > 0)
-        {
-            if (definitions.Count > 0)
-            {
-                ValidateWorkflowParity(definitions, workflowJobs, errors);
-            }
-
-            ValidateCiGateCoverage(workflowJobs, errors);
-        }
+        var definitions = ValidateCore(repoRoot, reader: null, errors);
 
         if (errors.Count > 0)
         {
-            foreach (string error in errors)
-            {
-                output.WriteLine($"{Tag} [ERROR] {error}");
-            }
-
+            WriteErrors(errors, output);
             return 1;
         }
 
@@ -239,6 +224,35 @@ public static partial class RulesetService
         }
 
         return ApplyRulesetsViaGhApi(repoRoot, repo, normalizedProfile, definitions, runner, output);
+    }
+
+    private static List<RulesetDefinition> ValidateCore(
+        string repoRoot,
+        GitIndexReader? reader,
+        List<string> errors)
+    {
+        var definitions = LoadAndValidateRulesetFiles(repoRoot, reader, errors);
+        var workflowJobs = LoadAndValidateWorkflows(repoRoot, reader, errors);
+
+        if (workflowJobs.Count > 0)
+        {
+            if (definitions.Count > 0)
+            {
+                ValidateWorkflowParity(definitions, workflowJobs, errors);
+            }
+
+            ValidateCiGateCoverage(workflowJobs, errors);
+        }
+
+        return definitions;
+    }
+
+    private static void WriteErrors(IReadOnlyList<string> errors, TextWriter output)
+    {
+        foreach (string error in errors)
+        {
+            output.WriteLine($"{Tag} [ERROR] {error}");
+        }
     }
 
     /// <summary>Extracts <c>owner/repo</c> from a GitHub remote URL or <c>owner/repo</c> identifier.</summary>
@@ -539,43 +553,57 @@ public static partial class RulesetService
 
     private static List<RulesetDefinition> LoadAndValidateRulesetFiles(
         string repoRoot,
-        List<string> errors,
-        bool requireRulesetsDirectory)
+        GitIndexReader? reader,
+        List<string> errors)
     {
         var definitions = new List<RulesetDefinition>();
         string rulesetsDir = Path.Combine(repoRoot, ".github", "rulesets");
-        if (!Directory.Exists(rulesetsDir))
-        {
-            if (requireRulesetsDirectory)
-            {
-                errors.Add("Directory '.github/rulesets' does not exist.");
-            }
+        bool useIndex = reader is { HasAuthoritativeIndex: true };
 
+        bool dirExists = useIndex
+            ? reader!.DirectoryExists(".github/rulesets")
+            : Directory.Exists(rulesetsDir);
+        if (!dirExists)
+        {
+            errors.Add("Directory '.github/rulesets' does not exist.");
             return definitions;
         }
 
         foreach (string requiredFile in RequiredRulesetFiles)
         {
-            if (!File.Exists(Path.Combine(rulesetsDir, requiredFile)))
+            string relRequired = $".github/rulesets/{requiredFile}";
+            bool fileExists = useIndex
+                ? reader!.FileExists(relRequired)
+                : File.Exists(Path.Combine(rulesetsDir, requiredFile));
+            if (!fileExists)
             {
-                errors.Add($"Required ruleset file '.github/rulesets/{requiredFile}' is missing.");
+                errors.Add($"Required ruleset file '{relRequired}' is missing.");
             }
         }
 
-        string[] files = Directory.GetFiles(rulesetsDir, "*.json", SearchOption.TopDirectoryOnly)
-            .Order(StringComparer.Ordinal)
-            .ToArray();
+        string[] fileNames = useIndex
+            ? reader!.Paths
+                .Where(IsRulesetJsonPath)
+                .Select(p => Path.GetFileName(p))
+                .Where(n => !string.IsNullOrEmpty(n))
+                .Order(StringComparer.Ordinal)
+                .ToArray()
+            : Directory.GetFiles(rulesetsDir, "*.json", SearchOption.TopDirectoryOnly)
+                .Select(p => Path.GetFileName(p))
+                .Order(StringComparer.Ordinal)
+                .ToArray();
 
-        if (files.Length == 0)
+        if (fileNames.Length == 0)
         {
             errors.Add("No '*.json' ruleset files found in '.github/rulesets'.");
             return definitions;
         }
 
         var seenNames = new HashSet<string>(StringComparer.Ordinal);
-        foreach (string fullPath in files)
+        foreach (string fileName in fileNames)
         {
-            var parsed = ParseSingleRulesetFile(fullPath, errors);
+            string fullPath = Path.Combine(rulesetsDir, fileName);
+            var parsed = ParseSingleRulesetFile(fileName, fullPath, useIndex ? reader : null, errors);
             if (parsed is null)
             {
                 continue;
@@ -593,17 +621,55 @@ public static partial class RulesetService
         return definitions;
     }
 
-    private static RulesetDefinition? ParseSingleRulesetFile(string fullPath, List<string> errors)
+    private static bool IsRulesetJsonPath(string relativePath)
     {
-        string fileName = Path.GetFileName(fullPath);
+        const string prefix = ".github/rulesets/";
+        if (!relativePath.StartsWith(prefix, StringComparison.Ordinal)
+            || !relativePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        ReadOnlySpan<char> remainder = relativePath.AsSpan(prefix.Length);
+        return remainder.Length > ".json".Length && !remainder.Contains('/');
+    }
+
+    private static RulesetDefinition? ParseSingleRulesetFile(
+        string fileName,
+        string fullPath,
+        GitIndexReader? reader,
+        List<string> errors)
+    {
         string prefix = $".github/rulesets/{fileName}";
+
+        string jsonText;
+        if (reader is not null)
+        {
+            if (!reader.TryReadText(prefix, out jsonText))
+            {
+                errors.Add($"{prefix}: could not read staged ruleset blob.");
+                return null;
+            }
+        }
+        else
+        {
+            try
+            {
+                jsonText = File.ReadAllText(fullPath);
+            }
+            catch (IOException ex)
+            {
+                errors.Add($"{prefix}: invalid JSON ({ex.Message}).");
+                return null;
+            }
+        }
 
         JsonDocument doc;
         try
         {
-            doc = JsonDocument.Parse(File.ReadAllText(fullPath));
+            doc = JsonDocument.Parse(jsonText);
         }
-        catch (Exception ex) when (ex is JsonException or IOException)
+        catch (JsonException ex)
         {
             errors.Add($"{prefix}: invalid JSON ({ex.Message}).");
             return null;
@@ -688,7 +754,10 @@ public static partial class RulesetService
         }
     }
 
-    private static List<BypassActorEntry> ReadBypassActors(JsonElement root, string prefix, List<string> errors)
+    private static List<BypassActorEntry> ReadBypassActors(
+        JsonElement root,
+        string prefix,
+        List<string> errors)
     {
         var actors = new List<BypassActorEntry>();
         if (!root.TryGetProperty("bypass_actors", out JsonElement bypassEl))
@@ -702,19 +771,30 @@ public static partial class RulesetService
             return actors;
         }
 
-        foreach (JsonElement actor in bypassEl.EnumerateArray())
+        foreach (JsonElement actorEl in bypassEl.EnumerateArray())
         {
-            if (actor.ValueKind != JsonValueKind.Object)
+            if (actorEl.ValueKind != JsonValueKind.Object)
             {
                 errors.Add($"{prefix}: every entry in 'bypass_actors' must be an object.");
+                actors.Add(new BypassActorEntry(null, "", "<invalid>"));
                 continue;
             }
 
-            long? actorId = actor.TryGetProperty("actor_id", out JsonElement idEl) && idEl.TryGetInt64(out long parsedId)
-                ? parsedId
-                : null;
-            string actorType = GetStringProperty(actor, "actor_type") ?? string.Empty;
-            string bypassMode = GetStringProperty(actor, "bypass_mode") ?? string.Empty;
+            long? actorId = null;
+            if (actorEl.TryGetProperty("actor_id", out JsonElement idEl) && idEl.ValueKind != JsonValueKind.Null)
+            {
+                if (idEl.TryGetInt64(out long parsedId))
+                {
+                    actorId = parsedId;
+                }
+                else
+                {
+                    errors.Add($"{prefix}: 'bypass_actors.actor_id' must be an integer.");
+                }
+            }
+
+            string actorType = GetStringProperty(actorEl, "actor_type") ?? "";
+            string bypassMode = GetStringProperty(actorEl, "bypass_mode") ?? "";
             actors.Add(new BypassActorEntry(actorId, actorType, bypassMode));
         }
 
@@ -743,6 +823,7 @@ public static partial class RulesetService
         obj.TryGetProperty(propertyName, out JsonElement prop) && prop.TryGetInt32(out int value)
             ? value
             : null;
+
     private static void ReadStatusChecksRule(
         JsonElement rule,
         string prefix,
@@ -827,13 +908,18 @@ public static partial class RulesetService
             return;
         }
 
-        ValidateOptionalAdminBypassActors(def, prefix, errors);
-
         if (def.Target == "branch")
         {
             ValidateBranchRuleset(def, prefix, errors);
         }
-        else if (def.Target != "tag")
+        else if (def.Target == "tag")
+        {
+            if (def.HasBypassActors)
+            {
+                errors.Add($"{prefix}: tag ruleset must not configure 'bypass_actors'.");
+            }
+        }
+        else
         {
             errors.Add($"{prefix}: 'target' must be 'branch' or 'tag' (found '{def.Target}').");
         }
@@ -871,36 +957,25 @@ public static partial class RulesetService
         }
     }
 
-    private static void ValidateOptionalAdminBypassActors(RulesetDefinition def, string prefix, List<string> errors)
-    {
-        foreach (var actor in def.BypassActors)
-        {
-            if (actor.ActorId != RepositoryAdminRoleId
-                || actor.ActorType != "RepositoryRole"
-                || actor.BypassMode is not ("always" or "pull_request"))
-            {
-                errors.Add($"{prefix}: 'bypass_actors' may only grant repository admins (actor_type 'RepositoryRole', actor_id {RepositoryAdminRoleId}, bypass_mode 'always' or 'pull_request').");
-            }
-        }
-    }
-
     private static void ValidateBranchRuleset(RulesetDefinition def, string prefix, List<string> errors)
     {
         foreach (var actor in def.BypassActors)
         {
-            if (actor.ActorId is null or <= 0 || string.IsNullOrWhiteSpace(actor.ActorType))
+            if (string.IsNullOrWhiteSpace(actor.ActorType))
             {
-                errors.Add($"{prefix}: every entry in 'bypass_actors' must specify a positive 'actor_id' and non-empty 'actor_type'.");
+                errors.Add($"{prefix}: branch ruleset 'bypass_actors' entry is missing 'actor_type'.");
+            }
+            else if (actor.ActorId != RepositoryAdminRoleId || actor.ActorType != "RepositoryRole")
+            {
+                errors.Add($"{prefix}: branch ruleset 'bypass_actors' may only grant repository admins (actor_type 'RepositoryRole', actor_id {RepositoryAdminRoleId}, bypass_mode '{PullRequestOnlyBypassMode}').");
             }
 
             if (actor.BypassMode != PullRequestOnlyBypassMode)
             {
-                string foundMode = string.IsNullOrWhiteSpace(actor.BypassMode) ? "(empty)" : actor.BypassMode;
-                errors.Add(
-                    $"{prefix}: branch 'bypass_actors' must restrict 'bypass_mode' to '{PullRequestOnlyBypassMode}' (pull_request_only) and must not allow '{foundMode}' bypasses.");
+                string actualMode = string.IsNullOrWhiteSpace(actor.BypassMode) ? "<missing>" : actor.BypassMode;
+                errors.Add($"{prefix}: branch ruleset 'bypass_actors' must restrict 'bypass_mode' to '{PullRequestOnlyBypassMode}' (found '{actualMode}').");
             }
         }
-
         if (!def.RuleTypes.Contains("pull_request", StringComparer.Ordinal))
         {
             errors.Add($"{prefix}: branch ruleset must include a 'pull_request' rule.");
@@ -1006,20 +1081,51 @@ public static partial class RulesetService
         }
     }
 
-    private static List<WorkflowJobInfo> LoadAndValidateWorkflows(string repoRoot, List<string> errors)
+    private static List<WorkflowJobInfo> LoadAndValidateWorkflows(
+        string repoRoot,
+        GitIndexReader? reader,
+        List<string> errors)
     {
         var allJobs = new List<WorkflowJobInfo>();
         string workflowsDir = Path.Combine(repoRoot, ".github", "workflows");
-        if (!Directory.Exists(workflowsDir))
+        bool useIndex = reader is { HasAuthoritativeIndex: true };
+
+        bool dirExists = useIndex
+            ? reader!.DirectoryExists(".github/workflows")
+            : Directory.Exists(workflowsDir);
+        if (!dirExists)
         {
             errors.Add("Directory '.github/workflows' does not exist.");
             return allJobs;
         }
 
-        string ciPath = Path.Combine(workflowsDir, "ci.yml");
-        if (!File.Exists(ciPath))
+        bool ciExists = useIndex
+            ? reader!.FileExists(".github/workflows/ci.yml")
+            : File.Exists(Path.Combine(workflowsDir, "ci.yml"));
+        if (!ciExists)
         {
             errors.Add("Required workflow '.github/workflows/ci.yml' is missing.");
+        }
+
+        if (useIndex)
+        {
+            string[] stagedWorkflowPaths = reader!.Paths
+                .Where(IsWorkflowYamlPath)
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+
+            foreach (string relPath in stagedWorkflowPaths)
+            {
+                if (!reader.TryReadLines(relPath, out string[] lines))
+                {
+                    errors.Add($"{relPath}: could not read staged workflow blob.");
+                    continue;
+                }
+
+                allJobs.AddRange(ParseWorkflowJobs(Path.GetFileName(relPath), lines));
+            }
+
+            return allJobs;
         }
 
         string[] workflowFiles = Directory.GetFiles(workflowsDir, "*.yml", SearchOption.TopDirectoryOnly)
@@ -1033,6 +1139,24 @@ public static partial class RulesetService
         }
 
         return allJobs;
+    }
+
+    private static bool IsWorkflowYamlPath(string relativePath)
+    {
+        const string prefix = ".github/workflows/";
+        if (!relativePath.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        ReadOnlySpan<char> remainder = relativePath.AsSpan(prefix.Length);
+        if (remainder.IsEmpty || remainder.Contains('/'))
+        {
+            return false;
+        }
+
+        return remainder.EndsWith(".yml", StringComparison.OrdinalIgnoreCase)
+            || remainder.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void ValidateWorkflowParity(
