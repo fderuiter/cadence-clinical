@@ -17,7 +17,7 @@
     <PackageVersion Include="Microsoft.Extensions.Options" Version="$(DotNetServicingVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="$(DotNetServicingVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="$(DotNetServicingVersion)" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.0.18" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="3.2.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OpenTelemetryInstrumentationVersion)" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryInstrumentationVersion)" />
@@ -45,7 +45,7 @@
     <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="$(MassTransitVersion)" />
 
     <!-- CLI & Developer Experience -->
-    <PackageVersion Include="Spectre.Console" Version="0.49.1" />
+    <PackageVersion Include="Spectre.Console" Version="0.57.2" />
     <PackageVersion Include="System.CommandLine" Version="2.0.12" />
 
     <!-- Validation & Security -->
@@ -64,10 +64,10 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.2" />
     <PackageVersion Include="FluentAssertions" Version="8.11.0" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.3.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="coverlet.collector" Version="10.1.1" />
-    <PackageVersion Include="TngTech.ArchUnitNET.xUnit" Version="0.13.4" />
+    <PackageVersion Include="TngTech.ArchUnitNET.xUnit" Version="0.13.5" />
 
     <!-- AI model port and providers (ADR-2630; keep Microsoft.Extensions.AI.* aligned on 10.x for net10.0) -->
     <PackageVersion Include="Anthropic" Version="13.12.0" />
@@ -93,7 +93,7 @@
     <!-- Analyzers & Code Quality -->
     <!-- Stay on Microsoft.CodeAnalysis.NetAnalyzers 9.0.0 while targeting net10.0; 11.0.100 targets .NET 11 (#5949, ADR-2233, ADR-2527). -->
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.6.0.109712" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.37.0.15768" />
     <!-- #4784 K-TIME-3: bans direct wall-clock reads (see BannedSymbols.txt); referenced solution-wide in root Directory.Build.props. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
   </ItemGroup>
