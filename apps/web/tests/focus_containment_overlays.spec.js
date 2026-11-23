@@ -160,15 +160,6 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
         },
       ],
     });
-    vi.spyOn(knowledgeService, "searchArticles").mockResolvedValue([
-      {
-        id: "sop-search-1",
-        title: "SOP-201: SAE Reporting",
-        category: "Safety",
-        summary: "Report within 24 hours",
-        body_markdown: "SAE guidance",
-      },
-    ]);
 
     const helpTrigger = document.createElement("button");
     helpTrigger.id = "help-trigger-btn";
