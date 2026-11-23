@@ -167,6 +167,46 @@ public sealed class KeycloakRealmTenantTests
             "the Principal Investigator remains blinded by default and sees arms only after emergency unblinding");
     }
 
+    [Fact]
+    public void Realm_UserProfileLocksTenantStudyAndSiteAttributesToAdminEditOnly()
+    {
+        var provider = Realm()
+            .GetProperty("components")
+            .GetProperty("org.keycloak.userprofile.UserProfileProvider")
+            .EnumerateArray()
+            .Single();
+
+        string rawConfig = provider
+            .GetProperty("config")
+            .GetProperty("kc.user.profile.config")[0]
+            .GetString()!;
+
+        using var profileDoc = JsonDocument.Parse(rawConfig);
+        var root = profileDoc.RootElement;
+
+        if (root.TryGetProperty("unmanagedAttributePolicy", out var unmanaged))
+        {
+            unmanaged.GetString().Should().NotBe("ENABLED");
+        }
+
+        var attrsByName = root.GetProperty("attributes")
+            .EnumerateArray()
+            .ToDictionary(a => a.GetProperty("name").GetString()!, a => a);
+
+        foreach (string protectedAttr in new[] { "tenant_id", "study_ids", "site_id", "unblinded_access" })
+        {
+            attrsByName.Should().ContainKey(protectedAttr);
+            var editRoles = attrsByName[protectedAttr]
+                .GetProperty("permissions")
+                .GetProperty("edit")
+                .EnumerateArray()
+                .Select(e => e.GetString())
+                .ToList();
+            editRoles.Should().Equal("admin");
+            editRoles.Should().NotContain("user");
+        }
+    }
+
     private static string[] AttributeValues(JsonElement attributes, string name) =>
         [.. attributes.GetProperty(name).EnumerateArray().Select(v => v.GetString()!)];
 
