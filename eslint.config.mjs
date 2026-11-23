@@ -1112,7 +1112,7 @@ const noMisusedAiTokensRule = {
     type: "problem",
     docs: {
       description:
-        "Reserve --semantic-color-ai* and --color-ai* exclusively for governed AI provenance components and packages/ui/tokens.css definitions (UX-8 / ADR-2635 / ADR-2651).",
+        "Reserve --semantic-color-ai* and --color-ai* exclusively for governed AI provenance components and packages/ui/tokens.css definitions (UX-8 / ADR-2635 / ADR-2652).",
       category: "Best Practices",
     },
     messages: {

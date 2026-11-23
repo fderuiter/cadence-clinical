@@ -1,4 +1,4 @@
-# ADR-2651: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity
+# ADR-2652: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -24,7 +24,7 @@
 
 - **Overview:** Raise `.clinical-badge` in `packages/ui/tokens.css` to `0.75rem` with `tabular-nums` and add paired light/dark modifiers (`.clinical-badge--draft`, `--verified`, `--queried`, `--frozen`, `--signed`, `--locked`, `--warning`, `--error`); hoist shared `.clinical-visit-matrix`, `.clinical-soa-matrix`, and `.clinical-lookup-container` rules into `packages/ui/tokens.css`; scope CRF designer rules into `CrfAuthoringCanvas.vue`, `FormSectionContainer.vue`, and `CanvasFieldWidget.vue`; delete `.app-header`, `.modal*`, `.btn-close`, `.badge`, and all `!important` declarations from `apps/web/src/style.css`; migrate all non-AI `--semantic-color-ai*` usages to semantic error, warning, info, primary, or categorical tokens (pairing `RulesView.vue` `AI_ASSISTED` queries with `AiLabel.vue`); and enforce `custom-vue/no-misused-ai-tokens` in `eslint.config.mjs` plus `design_system_harmony.test.js`.
 - **Pros:**
-  - Stops global CSS leaks onto shared modal, drawer, and shell components while keeping the 22 Vue component exports in `packages/ui` and `apps/subject-portal` untouched.
+  - Stops global CSS leaks onto shared modal, drawer, and shell components while keeping the 23 Vue component exports in `packages/ui` and `apps/subject-portal` untouched.
   - Guarantees `>= 4.5:1` light and dark contrast across every GxP status badge and migrated clinical view, and blocks future `--semantic-color-ai*` drift at lint and test time.
 - **Cons:**
   - Remaining legacy non-`ClinicalModal` Vue dialogs that previously relied on global `.modal` rules declare explicit `<style scoped>` modal rules until migrated onto `ClinicalModal`.
