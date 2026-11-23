@@ -10,6 +10,7 @@ using Cadence.Apps.Knowledge.Endpoints;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
+using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
@@ -236,7 +237,7 @@ public class TrainingEndpointsTests
         siteCaller.Request.Headers["X-Change-Reason"] = "Completed reading protocol v4.0 modules";
         var gatewayOptions = new StaticOptionsMonitor<GatewayAuthenticationOptions>(new GatewayAuthenticationOptions
         {
-            GatewaySecret = "test-gateway-secret-32-chars-long-12345",
+            GatewaySecret = TestSecurityContext.GatewaySecret,
         });
 
         var completeRes = await Invoke(
