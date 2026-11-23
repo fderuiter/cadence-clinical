@@ -7,6 +7,7 @@ import { useEcrfDrafts } from "../src/composables/useEcrfDrafts.js";
 import EcrfView from "../src/views/EcrfView.vue";
 import EcrfFormPanel from "../src/components/ecrf/EcrfFormPanel.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
+import ConfirmationDialogHost from "../src/components/ConfirmationDialogHost.vue";
 import { useClinicalStore } from "../src/stores/clinical.js";
 import { useAuthStore } from "../src/stores/auth.js";
 import { useConfirmStore } from "../src/stores/confirm.js";
@@ -311,6 +312,59 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       expect(confirmStore.activeRequest?.title).toBe("Unsaved eCRF Changes");
       confirmStore.resolveConfirm();
       expect(await leaveAllowedPromise).toBeUndefined();
+    });
+
+    it("focuses .btn-cancel by default in ConfirmationDialogHost on dirty eCRF leave so activating focused button keeps user on form", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      const store = useClinicalStore();
+      store.subjects = [{ id: "SUBJ-001", status: "ENROLLED" }];
+      store.ecrfFields = [
+        { id: "vssbp", label: "Systolic BP", type: "number" },
+      ];
+
+      const viewWrapper = mount(EcrfView, {
+        global: {
+          plugins: [pinia, i18n],
+          stubs: {
+            StudySubjectsBar: true,
+            SubjectEnrollmentForm: true,
+            EcrfFormPanel: true,
+            DesignerSchemaPanel: true,
+            ReasonModal: true,
+            EhrReconciliationDrawer: true,
+            "router-link": true,
+          },
+        },
+      });
+      const hostWrapper = mount(ConfirmationDialogHost, {
+        global: { plugins: [pinia] },
+        attachTo: document.body,
+      });
+
+      try {
+        await nextTick();
+        store.formValues.vssbp = "138";
+        await nextTick();
+
+        const leavePromise = routeLeaveHandler();
+        await nextTick();
+        await nextTick();
+
+        const dialogPanel = document.querySelector(".clinical-modal-dialog");
+        expect(dialogPanel?.getAttribute("aria-describedby")).toBe(
+          "confirm-dialog-message"
+        );
+        expect(document.activeElement?.classList.contains("btn-cancel")).toBe(
+          true
+        );
+
+        // Activating the default-focused Cancel button keeps the user on the form
+        document.activeElement.click();
+        expect(await leavePromise).toBe(false);
+      } finally {
+        hostWrapper.unmount();
+        viewWrapper.unmount();
+      }
     });
 
     function mountSampleForm() {

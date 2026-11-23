@@ -170,7 +170,9 @@ const isElementInertOrHidden = (el, container) => {
   while (node && node !== container) {
     if (
       node.inert ||
-      (typeof node.hasAttribute === "function" && node.hasAttribute("inert")) ||
+      node.hidden === true ||
+      (typeof node.hasAttribute === "function" &&
+        (node.hasAttribute("inert") || node.hasAttribute("hidden"))) ||
       (typeof node.getAttribute === "function" &&
         node.getAttribute("aria-hidden") === "true")
     ) {
@@ -187,8 +189,10 @@ const isElementInertOrHidden = (el, container) => {
   if (container) {
     if (
       container.inert ||
+      container.hidden === true ||
       (typeof container.hasAttribute === "function" &&
-        container.hasAttribute("inert")) ||
+        (container.hasAttribute("inert") ||
+          container.hasAttribute("hidden"))) ||
       (typeof container.getAttribute === "function" &&
         container.getAttribute("aria-hidden") === "true")
     ) {
@@ -222,6 +226,118 @@ export function getFocusableElements(container) {
     (el) => !isElementInertOrHidden(el, container)
   );
 }
+
+const collectExemptRoots = (root, container, out) => {
+  if (!root || !root.children) return;
+  for (const child of Array.from(root.children)) {
+    if (!child || NON_CONTENT_TAGS.has(child.tagName)) continue;
+    if (container && (child === container || container.contains(child))) {
+      continue;
+    }
+    if (isExemptLiveElement(child)) {
+      if (!isElementInertOrHidden(child, null)) {
+        out.push(child);
+      }
+      continue;
+    }
+    collectExemptRoots(child, container, out);
+  }
+};
+
+const getExemptFocusableElements = (container) => {
+  if (typeof document === "undefined" || !document.body) {
+    return [];
+  }
+  const exemptRoots = [];
+  collectExemptRoots(document.body, container, exemptRoots);
+  const seen = new Set();
+  const focusables = [];
+  for (const root of exemptRoots) {
+    for (const el of getFocusableElements(root)) {
+      if (!seen.has(el) && !isElementInertOrHidden(el, null)) {
+        seen.add(el);
+        focusables.push(el);
+      }
+    }
+  }
+  return focusables;
+};
+
+const findElementInSubtree = (root, predicate) => {
+  if (!root || !root.children) return null;
+  for (const child of Array.from(root.children)) {
+    if (!child || NON_CONTENT_TAGS.has(child.tagName)) continue;
+    if (predicate(child)) return child;
+    const nested = findElementInSubtree(child, predicate);
+    if (nested) return nested;
+  }
+  return null;
+};
+
+const resolveVisibleRestoreFallback = (staleTarget) => {
+  if (typeof document === "undefined" || !document.body) return null;
+
+  // 1. If staleTarget lived inside a collapsed region with an ID (e.g. #mobile-nav-menu),
+  // prefer its visible controller button ([aria-controls="<id>"]).
+  let ancestor = staleTarget || null;
+  while (ancestor && ancestor !== document.body) {
+    const ancestorId =
+      typeof ancestor.getAttribute === "function"
+        ? ancestor.getAttribute("id")
+        : ancestor.id || null;
+    if (ancestorId) {
+      const controller = findElementInSubtree(
+        document.body,
+        (el) =>
+          typeof el.getAttribute === "function" &&
+          el.getAttribute("aria-controls") === ancestorId &&
+          typeof el.focus === "function" &&
+          !isElementInertOrHidden(el, null)
+      );
+      if (controller) return controller;
+    }
+    ancestor = ancestor.parentElement;
+  }
+
+  // 2. Prefer visible shell navigation/palette triggers before falling back to main content.
+  for (const fallbackId of ["btn-open-palette", "btn-mobile-menu-toggle"]) {
+    const btn = findElementInSubtree(
+      document.body,
+      (el) =>
+        typeof el.getAttribute === "function" &&
+        el.getAttribute("id") === fallbackId &&
+        typeof el.focus === "function" &&
+        !isElementInertOrHidden(el, null)
+    );
+    if (btn) return btn;
+  }
+
+  // 3. Fall back to visible #main-content / <main> / [role="main"].
+  const mainLandmark = findElementInSubtree(document.body, (el) => {
+    if (typeof el.focus !== "function" || isElementInertOrHidden(el, null)) {
+      return false;
+    }
+    const id =
+      typeof el.getAttribute === "function" ? el.getAttribute("id") : el.id;
+    const role =
+      typeof el.getAttribute === "function" ? el.getAttribute("role") : null;
+    return id === "main-content" || el.tagName === "MAIN" || role === "main";
+  });
+  if (mainLandmark) {
+    if (
+      typeof mainLandmark.hasAttribute === "function" &&
+      !mainLandmark.hasAttribute("tabindex") &&
+      typeof mainLandmark.setAttribute === "function"
+    ) {
+      mainLandmark.setAttribute("tabindex", "-1");
+    }
+    return mainLandmark;
+  }
+
+  // 4. Last resort: first visible focusable element in document.body.
+  const bodyFocusables = getFocusableElements(document.body);
+  return bodyFocusables.length > 0 ? bodyFocusables[0] : null;
+};
 
 const pruneDisconnectedTraps = () => {
   if (
@@ -261,6 +377,63 @@ export function setTopEscapeOrderGetter(fn) {
   getTopEscapeEntryOrder = typeof fn === "function" ? fn : () => 0;
 }
 
+export function getTopActiveModalContainer() {
+  pruneDisconnectedTraps();
+  const hasBody =
+    typeof document !== "undefined" &&
+    Boolean(document.body) &&
+    typeof document.body.contains === "function";
+  for (let i = activeTrapStack.length - 1; i >= 0; i--) {
+    const trap = activeTrapStack[i];
+    if (!trap.getModal()) continue;
+    const candidate = trap.getContainer();
+    if (!candidate || candidate === document?.body) continue;
+    if (hasBody && !document.body.contains(candidate)) continue;
+    return candidate;
+  }
+  return null;
+}
+
+export function hasActiveModalFocusTrap(options = {}) {
+  pruneDisconnectedTraps();
+  const { excludeId = null, excludeElement = null } = options || {};
+  const hasBody =
+    typeof document !== "undefined" &&
+    Boolean(document.body) &&
+    typeof document.body.contains === "function";
+
+  for (let i = activeTrapStack.length - 1; i >= 0; i--) {
+    const trap = activeTrapStack[i];
+    if (!trap.getModal()) continue;
+    const candidate = trap.getContainer();
+    if (!candidate || candidate === document?.body) continue;
+    if (hasBody && !document.body.contains(candidate)) continue;
+    if (
+      excludeElement &&
+      (candidate === excludeElement ||
+        (typeof candidate.contains === "function" &&
+          candidate.contains(excludeElement)))
+    ) {
+      continue;
+    }
+    if (excludeId) {
+      const candidateId =
+        typeof candidate.getAttribute === "function"
+          ? candidate.getAttribute("id")
+          : candidate.id;
+      if (candidateId === excludeId) continue;
+      if (
+        typeof candidate.querySelector === "function" &&
+        candidate.querySelector(`#${excludeId}`)
+      ) {
+        continue;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
 export function getTopActiveTrapEscapeInfo() {
   pruneDisconnectedTraps();
   if (activeTrapStack.length === 0) {
@@ -289,8 +462,10 @@ export function trapTabFocus(e, container) {
     return false;
   }
   handledEvents.add(e);
-  const focusableElements = getFocusableElements(container);
-  if (focusableElements.length === 0) {
+  const containerFocusables = getFocusableElements(container);
+  const exemptFocusables = getExemptFocusableElements(container);
+
+  if (containerFocusables.length === 0 && exemptFocusables.length === 0) {
     e.preventDefault();
     if (typeof container.focus === "function") {
       container.focus();
@@ -298,19 +473,55 @@ export function trapTabFocus(e, container) {
     return true;
   }
 
-  const firstEl = focusableElements[0];
-  const lastEl = focusableElements[focusableElements.length - 1];
   const activeEl =
     typeof document !== "undefined" ? document.activeElement : null;
 
-  if (e.shiftKey) {
-    if (activeEl === firstEl || !container.contains(activeEl)) {
+  if (exemptFocusables.length === 0) {
+    const firstEl = containerFocusables[0];
+    const lastEl = containerFocusables[containerFocusables.length - 1];
+    if (e.shiftKey) {
+      if (activeEl === firstEl || !container.contains(activeEl)) {
+        e.preventDefault();
+        lastEl.focus();
+      }
+    } else if (activeEl === lastEl || !container.contains(activeEl)) {
       e.preventDefault();
-      lastEl.focus();
+      firstEl.focus();
     }
-  } else if (activeEl === lastEl || !container.contains(activeEl)) {
+    return true;
+  }
+
+  const firstContainerEl = containerFocusables[0] || null;
+  const lastContainerEl =
+    containerFocusables[containerFocusables.length - 1] || null;
+  const firstExemptEl = exemptFocusables[0];
+  const lastExemptEl = exemptFocusables[exemptFocusables.length - 1];
+  const exemptIdx = exemptFocusables.indexOf(activeEl);
+  const inContainer = Boolean(activeEl && container.contains(activeEl));
+
+  if (e.shiftKey) {
+    if (exemptIdx > 0) {
+      e.preventDefault();
+      exemptFocusables[exemptIdx - 1].focus();
+    } else if (exemptIdx === 0) {
+      e.preventDefault();
+      (lastContainerEl || lastExemptEl).focus();
+    } else if (activeEl === firstContainerEl || !inContainer) {
+      e.preventDefault();
+      lastExemptEl.focus();
+    }
+  } else if (exemptIdx !== -1 && exemptIdx < exemptFocusables.length - 1) {
     e.preventDefault();
-    firstEl.focus();
+    exemptFocusables[exemptIdx + 1].focus();
+  } else if (exemptIdx === exemptFocusables.length - 1) {
+    e.preventDefault();
+    (firstContainerEl || firstExemptEl).focus();
+  } else if (activeEl === lastContainerEl) {
+    e.preventDefault();
+    firstExemptEl.focus();
+  } else if (!inContainer) {
+    e.preventDefault();
+    (firstContainerEl || firstExemptEl).focus();
   }
   return true;
 }
@@ -569,12 +780,32 @@ export function useFocusTrap(
           ? options.restoreFocus()
           : null;
       const targetToFocus = customRestore || previousActiveElement;
+      let restored = false;
+
       if (
         targetToFocus &&
+        targetToFocus !== document.body &&
         typeof targetToFocus.focus === "function" &&
-        document.contains(targetToFocus)
+        document.contains(targetToFocus) &&
+        !isElementInertOrHidden(targetToFocus, null)
       ) {
         targetToFocus.focus();
+        restored = document.activeElement === targetToFocus;
+      }
+
+      if (!restored) {
+        if (activeTrapStack.length > 0) {
+          const remainingTop =
+            activeTrapStack[activeTrapStack.length - 1]?.getContainer?.();
+          if (remainingTop) {
+            focusIntoContainer(remainingTop);
+          }
+        } else {
+          const fallbackTarget = resolveVisibleRestoreFallback(targetToFocus);
+          if (fallbackTarget && typeof fallbackTarget.focus === "function") {
+            fallbackTarget.focus();
+          }
+        }
       }
     }
     previousActiveElement = null;

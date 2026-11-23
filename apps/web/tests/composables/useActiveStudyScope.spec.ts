@@ -1,4 +1,4 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import { DOMWrapper, flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -128,7 +128,8 @@ describe("useActiveStudyScope bidirectional navigation", () => {
     });
     await flushPromises();
 
-    const optionsText = palette.text();
+    const body = new DOMWrapper(document.body);
+    const optionsText = body.find("#canvas-palette").text();
     expect(optionsText).toContain("Trial documents");
     expect(optionsText).toContain("Study training");
     expect(optionsText).toContain("Orientation");
@@ -143,8 +144,8 @@ describe("useActiveStudyScope bidirectional navigation", () => {
     ] as const) {
       await palette.setProps({ isOpen: true });
       await flushPromises();
-      const btn = palette
-        .findAll("button, [role='option']")
+      const btn = body
+        .findAll("#canvas-palette button, #canvas-palette [role='option']")
         .find((el) => el.text().includes(labelText));
       expect(btn).toBeDefined();
       await btn!.trigger("click");
@@ -179,8 +180,8 @@ describe("useActiveStudyScope bidirectional navigation", () => {
     // Navigating back to Studies via CommandPaletteOverlay opens /studies/CADENCE-303
     await palette.setProps({ isOpen: true });
     await flushPromises();
-    const studiesOption = palette
-      .findAll("button, [role='option']")
+    const studiesOption = body
+      .findAll("#canvas-palette button, #canvas-palette [role='option']")
       .find((el) => el.text().includes("Studies"));
     expect(studiesOption).toBeDefined();
     await studiesOption!.trigger("click");

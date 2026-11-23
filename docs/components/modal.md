@@ -4,21 +4,22 @@ The `ClinicalModal` and `ClinicalDrawer` primitives render accessible modal over
 
 ## ClinicalModal Props
 
-| Prop                                        | Type                  | Default                    | Description                                                                   |
-| :------------------------------------------ | :-------------------- | :------------------------- | :---------------------------------------------------------------------------- |
-| `modelValue` / `open` / `isOpen`            | `Boolean`             | `false`                    | Controls open/close visibility across `v-model` and prop bindings.            |
-| `title`                                     | `String`              | `'Clinical Action Dialog'` | Dialog header title and programmatic accessible name (`aria-labelledby`).     |
-| `size`                                      | `String`              | `'md'`                     | Dialog width (`sm`, `md`, `lg`, `xl`).                                        |
-| `role`                                      | `String`              | `'dialog'`                 | Dialog ARIA role (`dialog`, `alertdialog`).                                   |
-| `dismissible`                               | `Boolean`             | `true`                     | When `false`, locks `Escape`, close button, and backdrop dismissal.           |
-| `closeOnBackdrop`                           | `Boolean`             | `true`                     | Whether clicking the backdrop dismisses an unlocked modal.                    |
-| `overlayId`                                 | `String`              | `undefined`                | Optional `id` attribute applied to the `.clinical-modal-backdrop` container.  |
-| `ariaLabel` / `ariaLabelledby`              | `String`              | `undefined`                | Explicit accessible name or heading ID override when `showHeader` is `false`. |
-| `showHeader` / `showFooter`                 | `Boolean`             | `true`                     | Toggles built-in header or footer chrome when custom slot markup is used.     |
-| `headerClass` / `bodyClass` / `footerClass` | `String`              | `''`                       | Optional custom CSS classes appended to header, body, or footer containers.   |
-| `initialFocus`                              | `String \| Object`    | `null`                     | Optional CSS selector, ref, or getter for initial focus target on open.       |
-| `restoreFocus`                              | `Boolean \| Function` | `true`                     | Restores focus to the triggering element on close.                            |
-| `teleport`                                  | `Boolean`             | `true`                     | Teleports the overlay to `document.body` when `true`.                         |
+| Prop                                        | Type                  | Default                    | Description                                                                                                        |
+| :------------------------------------------ | :-------------------- | :------------------------- | :----------------------------------------------------------------------------------------------------------------- |
+| `modelValue` / `open` / `isOpen`            | `Boolean`             | `false`                    | Controls open/close visibility across `v-model` and prop bindings.                                                 |
+| `title`                                     | `String`              | `'Clinical Action Dialog'` | Dialog header title and programmatic accessible name (`aria-labelledby`).                                          |
+| `size`                                      | `String`              | `'md'`                     | Dialog width (`sm`, `md`, `lg`, `xl`).                                                                             |
+| `role`                                      | `String`              | `'dialog'`                 | Dialog ARIA role (`dialog`, `alertdialog`).                                                                        |
+| `dismissible`                               | `Boolean`             | `true`                     | When `false`, locks `Escape`, close button, and backdrop dismissal.                                                |
+| `closeOnBackdrop`                           | `Boolean`             | `true`                     | Whether clicking the backdrop dismisses an unlocked modal.                                                         |
+| `overlayId`                                 | `String`              | `undefined`                | Optional `id` attribute applied to the `.clinical-modal-backdrop` container.                                       |
+| `ariaLabel` / `ariaLabelledby`              | `String`              | `undefined`                | Explicit accessible name or heading ID override when `showHeader` is `false`.                                      |
+| `ariaDescribedby`                           | `String`              | `undefined`                | Optional element ID(s) describing the dialog (`aria-describedby`), e.g. for `role="alertdialog"` warning messages. |
+| `showHeader` / `showFooter`                 | `Boolean`             | `true`                     | Toggles built-in header or footer chrome when custom slot markup is used.                                          |
+| `headerClass` / `bodyClass` / `footerClass` | `String`              | `''`                       | Optional custom CSS classes appended to header, body, or footer containers.                                        |
+| `initialFocus`                              | `String \| Object`    | `null`                     | Optional CSS selector, ref, or getter for initial focus target on open.                                            |
+| `restoreFocus`                              | `Boolean \| Function` | `true`                     | Restores focus to the triggering element (or a visible shell/main fallback if hidden or detached) on close.        |
+| `teleport`                                  | `Boolean`             | `true`                     | Teleports the overlay to `document.body` when `true`.                                                              |
 
 ## ClinicalDrawer Props
 
@@ -31,11 +32,12 @@ The `ClinicalModal` and `ClinicalDrawer` primitives render accessible modal over
 | `dismissible`     | `Boolean` | `true`    | Locks `Escape`, close button, and backdrop dismissal when `false`.       |
 | `teleport`        | `Boolean` | `true`    | Teleports the drawer overlay to `document.body` when `true`.             |
 
-## Overlay Composables (`useFocusTrap`, `trapTabFocus` & `useEscapeClose`)
+## Overlay Composables (`useFocusTrap`, `hasActiveModalFocusTrap`, `trapTabFocus` & `useEscapeClose`)
 
-- **`useFocusTrap(targetRef, options)`**: Dynamically activates focus containment whenever conditional (`v-if`) or persistent (`isOpen`) overlays open, traps `Tab` / `Shift+Tab` inside the topmost active overlay, marks background page siblings `inert` and `aria-hidden="true"` while keeping `[data-focus-trap-exempt="true"]` live alert hosts audible and visible, skips `Escape` events with `defaultPrevented === true` when unlocked, and restores focus before unmounting.
-- **`trapTabFocus(event, container)`**: Imperative helper (paired with `getFocusableElements(container)`) for standalone non-Vue DOM dialogs such as `#portal-sign-modal`, wrapping `Tab` / `Shift+Tab` within `container` while deduplicating `KeyboardEvent` instances via a `WeakSet` across `window` and `document` listeners.
-- **`useEscapeClose(onClose, options)`**: Registers non-trapped inline popovers or anchored tour steps on a shared LIFO stack so pressing `Escape` dismisses only the topmost unlocked overlay.
+- **`useFocusTrap(targetRef, options)`**: Dynamically activates focus containment whenever conditional (`v-if`) or persistent (`isOpen`) overlays open, traps `Tab` / `Shift+Tab` inside the topmost active overlay while bridging focus into interactive controls inside `[data-focus-trap-exempt="true"]` regions (such as `ClinicalToastHost`), marks background page siblings `inert` and `aria-hidden="true"` while keeping `[data-focus-trap-exempt="true"]` live alert hosts audible and visible, skips `Escape` events with `defaultPrevented === true` when unlocked, and restores focus to the trigger or a visible fallback (`[aria-controls]` controller, `#btn-open-palette`, `#btn-mobile-menu-toggle`, or `#main-content` / `<main>`) before unmounting.
+- **`hasActiveModalFocusTrap(options)` / `getTopActiveModalContainer()`**: Read-only stack introspection helpers allowing global shell shortcuts (such as `Ctrl+K` / `Cmd+K` in `AppShell.vue` and `StudyCanvasView.vue`) to detect active modal/drawer traps (with optional `excludeId` / `excludeElement` filters) and avoid opening occluded overlays behind active dialogs.
+- **`trapTabFocus(event, container)`**: Imperative helper (paired with `getFocusableElements(container)`) wrapping `Tab` / `Shift+Tab` across `container` and any focusable controls inside `[data-focus-trap-exempt="true"]` live-alert hosts while deduplicating `KeyboardEvent` instances via a `WeakSet` across `window` and `document` listeners.
+- **`useEscapeClose(onClose, options)`**: Registers non-trapped inline popovers or navigation menus on a shared LIFO stack so pressing `Escape` dismisses only the topmost unlocked overlay.
 
 ## Usage Example
 

@@ -8,6 +8,9 @@ import {
   FileUploadModal,
   AiSuggestionDrawer,
   useFocusTrap,
+  hasActiveModalFocusTrap,
+  getTopActiveModalContainer,
+  trapTabFocus,
   useEscapeClose,
   getFocusableElements,
 } from "../index.js";
@@ -646,6 +649,159 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     const tabEvt = dom.dispatchKey("Tab");
     expect(tabEvt.defaultPrevented).toBe(true);
     expect(dom.doc.activeElement).toBe(emptyModal);
+  });
+
+  it("exposes hasActiveModalFocusTrap and getTopActiveModalContainer with excludeId and excludeElement filtering", async () => {
+    expect(hasActiveModalFocusTrap()).toBe(false);
+    expect(getTopActiveModalContainer()).toBeNull();
+
+    const paletteDialog = dom.body.appendChild(
+      new MockElement("div", { id: "canvas-palette", tabindex: "-1" })
+    );
+    paletteDialog.appendChild(
+      new MockElement("input", { id: "canvas-palette-input", type: "text" })
+    );
+    const modalDialog = dom.body.appendChild(
+      new MockElement("div", { id: "confirm-modal", tabindex: "-1" })
+    );
+    modalDialog.appendChild(new MockElement("button", { id: "btn-cancel" }));
+
+    const paletteOpen = ref(false);
+    const modalOpen = ref(false);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(paletteDialog), { isOpen: paletteOpen });
+      useFocusTrap(ref(modalDialog), { isOpen: modalOpen });
+    });
+
+    paletteOpen.value = true;
+    await nextTick();
+    expect(hasActiveModalFocusTrap()).toBe(true);
+    expect(hasActiveModalFocusTrap({ excludeId: "canvas-palette" })).toBe(
+      false
+    );
+    expect(hasActiveModalFocusTrap({ excludeElement: paletteDialog })).toBe(
+      false
+    );
+    expect(getTopActiveModalContainer()).toBe(paletteDialog);
+
+    modalOpen.value = true;
+    await nextTick();
+    expect(hasActiveModalFocusTrap({ excludeId: "canvas-palette" })).toBe(true);
+    expect(getTopActiveModalContainer()).toBe(modalDialog);
+  });
+
+  it("bridges forward Tab and reverse Shift+Tab across modal controls and [data-focus-trap-exempt='true'] toast buttons", async () => {
+    const appShell = dom.body.appendChild(
+      new MockElement("div", { id: "app" })
+    );
+    appShell.appendChild(new MockElement("button", { id: "bg-btn" }));
+
+    const toastHost = dom.body.appendChild(
+      new MockElement("div", {
+        class: "toast-host",
+        "data-focus-trap-exempt": "true",
+      })
+    );
+    const toastAction = toastHost.appendChild(
+      new MockElement("button", { id: "toast-action" })
+    );
+    const toastDismiss = toastHost.appendChild(
+      new MockElement("button", { id: "toast-dismiss" })
+    );
+
+    const modal = dom.body.appendChild(
+      new MockElement("div", { id: "active-modal", tabindex: "-1" })
+    );
+    const cancelBtn = modal.appendChild(
+      new MockElement("button", { id: "modal-cancel" })
+    );
+    const confirmBtn = modal.appendChild(
+      new MockElement("button", { id: "modal-confirm" })
+    );
+
+    const isOpen = ref(true);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(modal), { isOpen });
+    });
+    await nextTick();
+
+    expect(dom.doc.activeElement).toBe(cancelBtn);
+
+    // Tab from last modal control bridges into first exempt toast button
+    confirmBtn.focus();
+    dom.dispatchKey("Tab");
+    expect(dom.doc.activeElement).toBe(toastAction);
+
+    // Tab advances within exempt toast buttons
+    dom.dispatchKey("Tab");
+    expect(dom.doc.activeElement).toBe(toastDismiss);
+
+    // Tab from last exempt toast button wraps back to first modal control
+    dom.dispatchKey("Tab");
+    expect(dom.doc.activeElement).toBe(cancelBtn);
+
+    // Shift+Tab from first modal control wraps to last exempt toast button
+    dom.dispatchKey("Tab", { shiftKey: true });
+    expect(dom.doc.activeElement).toBe(toastDismiss);
+
+    // Shift+Tab steps backward through exempt toast buttons and back into modal
+    dom.dispatchKey("Tab", { shiftKey: true });
+    expect(dom.doc.activeElement).toBe(toastAction);
+    dom.dispatchKey("Tab", { shiftKey: true });
+    expect(dom.doc.activeElement).toBe(confirmBtn);
+  });
+
+  it("restores focus to visible controller or #main-content instead of document.body when trigger hides or detaches", async () => {
+    const mobileToggle = dom.body.appendChild(
+      new MockElement("button", {
+        id: "btn-mobile-menu-toggle",
+        "aria-controls": "mobile-nav-menu",
+      })
+    );
+    const mobileMenu = dom.body.appendChild(
+      new MockElement("nav", { id: "mobile-nav-menu" })
+    );
+    const mobileLink = mobileMenu.appendChild(
+      new MockElement("a", { id: "mobile-link", href: "/studies" })
+    );
+    const mainLandmark = dom.body.appendChild(
+      new MockElement("main", { id: "main-content" })
+    );
+    const confirmModal = dom.body.appendChild(
+      new MockElement("div", { id: "leave-confirm", tabindex: "-1" })
+    );
+    confirmModal.appendChild(new MockElement("button", { id: "stay-on-form" }));
+
+    const isOpen = ref(false);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(confirmModal), { isOpen });
+    });
+
+    // 1. Trigger inside #mobile-nav-menu hides via hidden attribute before dialog closes -> restores #btn-mobile-menu-toggle
+    mobileLink.focus();
+    isOpen.value = true;
+    await nextTick();
+    mobileMenu.setAttribute("hidden", "");
+    isOpen.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(mobileToggle);
+
+    // 2. Detached trigger with hidden toggle -> falls back to #main-content with tabindex="-1"
+    mobileToggle.style.display = "none";
+    const detachedBtn = new MockElement("button", { id: "detached-item" });
+    dom.doc.activeElement = detachedBtn;
+    isOpen.value = true;
+    await nextTick();
+    isOpen.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(mainLandmark);
+    expect(mainLandmark.getAttribute("tabindex")).toBe("-1");
   });
 
   it("defines prefers-reduced-motion rules in tokens.css while keeping default tokens intact", () => {

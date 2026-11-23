@@ -37,6 +37,10 @@ const props = defineProps({
     type: String,
     default: undefined,
   },
+  ariaDescribedby: {
+    type: String,
+    default: undefined,
+  },
   id: {
     type: String,
     default: undefined,
@@ -121,6 +125,12 @@ const computedAriaLabel = computed(() => {
   return undefined;
 });
 
+const computedDescribedby = computed(() => {
+  if (props.ariaDescribedby) return props.ariaDescribedby;
+  if (attrs["aria-describedby"]) return String(attrs["aria-describedby"]);
+  return undefined;
+});
+
 const closeModal = () => {
   if (!props.dismissible) return;
   emit("update:modelValue", false);
@@ -161,6 +171,7 @@ useFocusTrap(dialogRef, {
         aria-modal="true"
         :aria-labelledby="computedLabelledby"
         :aria-label="computedAriaLabel"
+        :aria-describedby="computedDescribedby"
         tabindex="-1"
       >
         <div v-if="showHeader" :class="['modal-header', headerClass]">

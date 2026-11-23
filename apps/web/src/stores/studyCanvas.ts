@@ -59,6 +59,15 @@ const sortByEnrollment = (
     (a, b) => toCount(a.enrollment_index) - toCount(b.enrollment_index)
   );
 
+function isNotFoundError(err: unknown): boolean {
+  return Boolean(
+    err &&
+    typeof err === "object" &&
+    "status" in err &&
+    Number((err as { status?: unknown }).status) === 404
+  );
+}
+
 function detailToSummary(
   detail: SubjectDetail | null | undefined
 ): SubjectSummary | null {
@@ -164,6 +173,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     paletteTotal: 0,
     paletteLoaded: false,
     paletteLoading: false,
+    paletteError: null as string | null,
     unfilteredLoadedCount: 0,
     /** Every participant read for this study by id, so a selection survives changing the list's filter. */
     knownParticipants: {} as Record<string, SubjectSummary>,
@@ -354,6 +364,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       }
 
       this.paletteLoading = true;
+      this.paletteError = null;
       const run = (async () => {
         try {
           const page = await fetchStudyPage(studyId, epoch, 0);
@@ -367,8 +378,17 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
             page.items.length
           );
           this.paletteLoaded = true;
+          this.paletteError = null;
           return true;
-        } catch {
+        } catch (err) {
+          if (
+            epoch === lookupEpoch &&
+            this.studyCode === studyId &&
+            !isNotFoundError(err)
+          ) {
+            this.paletteError =
+              err instanceof Error ? err.message : String(err);
+          }
           return false;
         } finally {
           if (epoch === lookupEpoch && this.studyCode === studyId) {
@@ -552,7 +572,15 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
                 filterSiteId = detail.site_id || undefined;
                 filterStatus = detail.status || undefined;
               }
-            } catch {
+            } catch (err) {
+              if (
+                epoch === lookupEpoch &&
+                this.studyCode === studyId &&
+                !isNotFoundError(err)
+              ) {
+                this.paletteError =
+                  err instanceof Error ? err.message : String(err);
+              }
               return null;
             }
           }
@@ -607,7 +635,15 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
               return null;
             }
           }
-        } catch {
+        } catch (err) {
+          if (
+            epoch === lookupEpoch &&
+            this.studyCode === studyId &&
+            !isNotFoundError(err)
+          ) {
+            this.paletteError =
+              err instanceof Error ? err.message : String(err);
+          }
           return null;
         } finally {
           inFlightByCode.delete(key);
