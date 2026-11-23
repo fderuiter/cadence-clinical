@@ -1081,10 +1081,16 @@ const props = withDefaults(
     canManageRules: boolean;
     canRunValidation?: boolean;
     canTriageFindings?: boolean;
+    site?: string;
+    participant?: string;
+    node?: string;
   }>(),
   {
     canRunValidation: undefined,
     canTriageFindings: undefined,
+    site: "",
+    participant: "",
+    node: "",
   }
 );
 
@@ -2299,6 +2305,20 @@ async function inspectFinding(findingRef: string) {
   }
 }
 
+function scopedFindingBaseQuery(): Record<string, string> {
+  const query: Record<string, string> = {
+    stage: "data",
+    section: "validation",
+  };
+  const site = props.site?.trim() || "";
+  const participant = props.participant?.trim() || "";
+  const node = props.node?.trim() || "";
+  if (site) query.site = site;
+  if (participant) query.participant = participant;
+  if (node) query.node = node;
+  return query;
+}
+
 function findingFormLocationOrDefault(
   finding: KernelValidationFinding
 ): RouteLocationRaw {
@@ -2306,6 +2326,7 @@ function findingFormLocationOrDefault(
     findingFormLocation(finding) ?? {
       name: "study",
       params: { studyCode: props.studyCode },
+      query: scopedFindingBaseQuery(),
     }
   );
 }
@@ -2472,6 +2493,7 @@ async function submitFindingAction() {
 function findingFormLocation(
   finding: KernelValidationFinding
 ): RouteLocationRaw | null {
+  const baseQuery = scopedFindingBaseQuery();
   if (
     finding.target_kind === "DatasetRecord" ||
     finding.target_kind === "Record"
@@ -2482,8 +2504,7 @@ function findingFormLocation(
       name: "study",
       params: { studyCode: props.studyCode },
       query: {
-        stage: "data",
-        section: "validation",
+        ...baseQuery,
         form: formRef,
         ...(finding.variable ? { item: finding.variable } : {}),
       },
@@ -2496,8 +2517,7 @@ function findingFormLocation(
       name: "study",
       params: { studyCode: props.studyCode },
       query: {
-        stage: "data",
-        section: "validation",
+        ...baseQuery,
         observation: obsRef,
       },
     };

@@ -33150,6 +33150,10 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "masked": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -38384,6 +38388,10 @@
           },
           "reason_for_change": {
             "type": "string"
+          },
+          "masked": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
