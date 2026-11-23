@@ -325,15 +325,15 @@ const insertTable = () => {
   const tableHtml = `
     <table class="editor-table" style="width: 100%; border-collapse: collapse; margin: 12px 0;">
       <thead>
-        <tr style="background-color: #f1f5f9;">
-          <th style="border: 1px solid #cbd5e1; padding: 8px;">Header 1</th>
-          <th style="border: 1px solid #cbd5e1; padding: 8px;">Header 2</th>
+        <tr style="background-color: var(--semantic-color-surface-header); color: var(--semantic-color-text);">
+          <th style="border: 1px solid var(--semantic-color-border-muted); padding: 8px;">Header 1</th>
+          <th style="border: 1px solid var(--semantic-color-border-muted); padding: 8px;">Header 2</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td style="border: 1px solid #cbd5e1; padding: 8px;">Cell 1</td>
-          <td style="border: 1px solid #cbd5e1; padding: 8px;">Cell 2</td>
+          <td style="border: 1px solid var(--semantic-color-border-muted); padding: 8px;">Cell 1</td>
+          <td style="border: 1px solid var(--semantic-color-border-muted); padding: 8px;">Cell 2</td>
         </tr>
       </tbody>
     </table>
@@ -533,7 +533,7 @@ const hidePopover = () => {
   flex-direction: column;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   padding: 16px;
 }
 
@@ -573,7 +573,8 @@ const hidePopover = () => {
 .toolbar-btn {
   padding: 6px 12px;
   font-size: 0.85rem;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   border: 1px solid var(--border);
   border-radius: 4px;
   cursor: pointer;
@@ -613,7 +614,7 @@ const hidePopover = () => {
 
 .editor-canvas:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Modal styles */
@@ -623,7 +624,7 @@ const hidePopover = () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: var(--semantic-color-backdrop-soft);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -635,7 +636,7 @@ const hidePopover = () => {
   max-width: 450px;
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
 }
 
 .selected-text-preview {
@@ -675,12 +676,12 @@ const hidePopover = () => {
 .glossary-popover {
   position: absolute;
   background-color: var(--semantic-color-surface-elevated);
-  color: white;
+  color: var(--semantic-color-text-inverse);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.8rem;
   max-width: 280px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   z-index: 1050;
   pointer-events: none;
 }

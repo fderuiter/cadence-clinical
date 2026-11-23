@@ -439,7 +439,7 @@ function handleTreeKeyDown(e) {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .search-input {

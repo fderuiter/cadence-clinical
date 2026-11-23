@@ -977,7 +977,7 @@ function onResetSimulation() {
   padding: 16px 20px;
   border-radius: 12px;
   border: 1px solid var(--semantic-color-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .canvas-header-info h2 {
@@ -1031,7 +1031,7 @@ function onResetSimulation() {
 .btn-viewport.active {
   background-color: var(--semantic-color-primary);
   color: var(--semantic-color-text-on-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-sm);
 }
 
 .form-schema-badge {
@@ -1058,7 +1058,7 @@ function onResetSimulation() {
   border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-sm);
   transition: max-width 0.3s ease;
   margin: 0 auto;
   min-height: 400px;
@@ -1076,7 +1076,7 @@ function onResetSimulation() {
   border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 20px;

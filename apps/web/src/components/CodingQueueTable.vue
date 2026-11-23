@@ -1523,7 +1523,7 @@ async function acceptAllSuggestions() {
   gap: 8px;
   font-weight: 600;
   font-size: 0.9rem;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .batch-buttons {
@@ -1533,9 +1533,9 @@ async function acceptAllSuggestions() {
 }
 
 .btn-batch-approve {
-  background-color: var(--semantic-color-success);
+  background-color: var(--semantic-color-success-interactive);
   border-color: var(--semantic-color-success);
-  color: white;
+  color: var(--semantic-color-text-on-solid);
 }
 
 .btn-batch-approve:hover {
@@ -1580,7 +1580,7 @@ async function acceptAllSuggestions() {
 
 .cluster-verbatim-text {
   font-size: 0.95rem;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .cluster-instances-drawer-row {
@@ -1592,7 +1592,7 @@ async function acceptAllSuggestions() {
 }
 
 .instances-drawer-container {
-  background: white;
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 14px;
@@ -1608,7 +1608,7 @@ async function acceptAllSuggestions() {
 .drawer-header h4 {
   margin: 0;
   font-size: 0.9rem;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .instances-subtable {
@@ -1655,7 +1655,7 @@ async function acceptAllSuggestions() {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-backdrop);
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;

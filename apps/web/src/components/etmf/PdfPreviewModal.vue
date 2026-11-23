@@ -482,7 +482,7 @@ function formatDate(dateStr) {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.75);
+  background: var(--semantic-color-backdrop-strong);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -632,7 +632,7 @@ function formatDate(dateStr) {
 .manifest-card.unsigned {
   background-color: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .sign-status {
@@ -671,9 +671,7 @@ function formatDate(dateStr) {
   min-height: 800px;
   background-color: var(--semantic-color-surface);
   border-radius: var(--radius-sm, 4px);
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-md);
 }
 
 .watermark-overlay-container {

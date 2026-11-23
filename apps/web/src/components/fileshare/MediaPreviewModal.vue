@@ -1101,7 +1101,7 @@ function getStatusClass(status) {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.75);
+  background: var(--semantic-color-backdrop-strong);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -1139,7 +1139,7 @@ function getStatusClass(status) {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1375,7 +1375,7 @@ function getStatusClass(status) {
   background-color: var(--semantic-color-black);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
 }
 
 .video-player-wrapper {
@@ -1398,9 +1398,9 @@ function getStatusClass(status) {
   top: 12px;
   right: 12px;
   z-index: 20;
-  background: rgba(15, 23, 42, 0.85);
+  background: var(--semantic-color-backdrop-strong);
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--semantic-color-inverse-tint-strong);
   border-radius: 6px;
   padding: 4px 8px;
   display: flex;
@@ -1457,7 +1457,7 @@ function getStatusClass(status) {
 .spinner-circle {
   width: 44px;
   height: 44px;
-  border: 3px solid rgba(255, 255, 255, 0.15);
+  border: 3px solid var(--semantic-color-inverse-tint-strong);
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -1531,7 +1531,7 @@ function getStatusClass(status) {
   padding: 32px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-md);
 }
 
 .audio-player-card {
@@ -1557,7 +1557,7 @@ function getStatusClass(status) {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .audio-duration-meta {
@@ -1577,7 +1577,7 @@ function getStatusClass(status) {
   padding: 16px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
 .preview-image-element {
@@ -1592,7 +1592,7 @@ function getStatusClass(status) {
   width: 100%;
   background-color: var(--semantic-color-surface);
   border-radius: 4px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-xl);
   padding: 40px;
   box-sizing: border-box;
   min-height: 700px;
@@ -1669,7 +1669,7 @@ function getStatusClass(status) {
   right: 0;
   bottom: 0;
   z-index: 50;
-  background: rgba(15, 23, 42, 0.92);
+  background: var(--semantic-color-backdrop-strong);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
@@ -1686,7 +1686,7 @@ function getStatusClass(status) {
   max-width: 440px;
   text-align: center;
   color: var(--semantic-color-text-inverse);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-xl);
 }
 
 .audit-alert-card .alert-icon {

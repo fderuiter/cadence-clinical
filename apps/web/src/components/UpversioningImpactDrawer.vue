@@ -316,21 +316,21 @@ useFocusTrap(drawerRef, {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-backdrop);
   display: flex;
   justify-content: flex-end;
   z-index: 1060;
 }
 
 .drawer-panel {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   width: var(
     --semantic-drawer-width-lg,
     var(--drawer-width-lg, min(100vw, 640px))
   );
   max-width: 100vw;
   height: 100vh;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-drawer-left);
   display: flex;
   flex-direction: column;
   animation: slideInRight 0.25s ease-out;
@@ -357,7 +357,7 @@ useFocusTrap(drawerRef, {
 .header-titles h3 {
   margin: 0;
   font-size: 1.2rem;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .header-titles p {
@@ -396,7 +396,7 @@ useFocusTrap(drawerRef, {
 .config-card h4 {
   margin: 0;
   font-size: 0.95rem;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .config-grid {
@@ -437,7 +437,7 @@ useFocusTrap(drawerRef, {
 .results-summary-header h4 {
   margin: 0;
   font-size: 1.05rem;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .metrics-grid {
@@ -453,7 +453,7 @@ useFocusTrap(drawerRef, {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
 }
 
 .metric-unchanged {
@@ -476,7 +476,7 @@ useFocusTrap(drawerRef, {
   font-size: 1.8rem;
   font-weight: 800;
   line-height: 1;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .metric-label {
@@ -492,7 +492,7 @@ useFocusTrap(drawerRef, {
 
 .delta-bar-card,
 .recommendations-card {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
@@ -505,7 +505,7 @@ useFocusTrap(drawerRef, {
 .recommendations-card h5 {
   margin: 0;
   font-size: 0.9rem;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .delta-bar {
@@ -570,7 +570,7 @@ useFocusTrap(drawerRef, {
 }
 
 .rec-list li strong {
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .initial-placeholder-state,
@@ -606,7 +606,7 @@ useFocusTrap(drawerRef, {
 .drawer-input-label {
   font-size: 0.84rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   letter-spacing: 0.01em;
 }
 
@@ -617,8 +617,8 @@ useFocusTrap(drawerRef, {
   border-radius: 6px;
   font-size: 0.9rem;
   font-family: inherit;
-  background-color: white;
-  color: var(--primary);
+  background-color: var(--semantic-color-surface);
+  color: var(--text-main);
   transition: border-color 0.15s ease-in-out;
 }
 

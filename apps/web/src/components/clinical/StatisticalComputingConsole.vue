@@ -1614,7 +1614,7 @@ onMounted(() => {
 
 .badge-sandbox {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .badge-warn {
@@ -1634,7 +1634,7 @@ onMounted(() => {
 
 .badge-expired {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .badge-revoked {
@@ -2094,7 +2094,7 @@ onMounted(() => {
 
 .pill-timeout {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .manifest-seal-row {
@@ -2386,7 +2386,7 @@ onMounted(() => {
   margin: 0;
   padding: 14px;
   background: var(--semantic-color-surface-inverse);
-  color: var(--semantic-color-border);
+  color: var(--semantic-color-text-inverse-muted);
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.5;
@@ -2476,7 +2476,7 @@ onMounted(() => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;

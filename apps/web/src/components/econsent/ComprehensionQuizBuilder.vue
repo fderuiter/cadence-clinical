@@ -475,7 +475,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   padding: 20px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -532,9 +532,9 @@ defineExpose({
 }
 
 .mode-tab-btn.active {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   color: var(--primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .threshold-control {
@@ -612,7 +612,7 @@ defineExpose({
 
 .question-item-header h4 {
   margin: 0;
-  color: var(--primary);
+  color: var(--text-main);
   font-size: 0.95rem;
 }
 
@@ -794,7 +794,7 @@ defineExpose({
 }
 
 .q-number {
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .assessment-options-list {
@@ -808,7 +808,7 @@ defineExpose({
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
@@ -870,7 +870,7 @@ defineExpose({
   align-items: center;
   background-color: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -887,8 +887,8 @@ defineExpose({
 }
 
 .btn-success {
-  background-color: var(--semantic-color-success);
-  color: white;
+  background-color: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
   border: none;
 }
 

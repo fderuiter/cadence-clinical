@@ -414,7 +414,7 @@ function onKeydown(event: KeyboardEvent) {
   justify-content: center;
   align-items: flex-start;
   padding: 12vh 16px 16px;
-  background: rgb(15 23 42 / 40%);
+  background: var(--semantic-color-backdrop);
 }
 
 .palette {
@@ -422,7 +422,7 @@ function onKeydown(event: KeyboardEvent) {
   background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 20px 50px rgb(15 23 42 / 25%);
+  box-shadow: var(--shadow-xl);
   overflow: hidden;
 }
 

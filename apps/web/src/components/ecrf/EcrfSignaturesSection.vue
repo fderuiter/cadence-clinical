@@ -266,7 +266,7 @@ const {
 }
 .ecrf-signature-state--superseded {
   background-color: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .ecrf-signed-values {
   margin-top: 6px;

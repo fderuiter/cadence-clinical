@@ -264,7 +264,7 @@ const addCriterion = () => {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .criteria-table {
@@ -283,7 +283,7 @@ const addCriterion = () => {
 .criteria-table th {
   background-color: var(--semantic-color-surface-muted);
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .col-type {

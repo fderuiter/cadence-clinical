@@ -2108,7 +2108,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 20px;
   width: 100%;
-  color: var(--primary);
+  color: var(--text-main);
   font-family: var(
     --font,
     -apple-system,
@@ -2128,7 +2128,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   gap: 20px;
   flex-wrap: wrap;
 }
@@ -2157,8 +2157,9 @@ onMounted(() => {
 }
 
 .badge-regulatory {
-  background-color: var(--semantic-color-purple-bg);
-  color: var(--semantic-color-purple-text);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
 .badge-gxp {
@@ -2340,7 +2341,7 @@ onMounted(() => {
 
 .kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-md);
 }
 
 .kpi-card-alert {
@@ -2405,7 +2406,7 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .pane-header-row {
@@ -2482,7 +2483,7 @@ onMounted(() => {
 }
 
 .cell-site-id {
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
 }
 
 .sub-stat {
@@ -2941,7 +2942,7 @@ onMounted(() => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2954,7 +2955,7 @@ onMounted(() => {
   border-radius: 12px;
   max-width: 600px;
   width: 100%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -3071,7 +3072,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .finding-card-critical,
@@ -3140,7 +3141,7 @@ onMounted(() => {
 .comparison-connector {
   font-size: 0.72rem;
   font-weight: 800;
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
   text-align: center;
 }
 

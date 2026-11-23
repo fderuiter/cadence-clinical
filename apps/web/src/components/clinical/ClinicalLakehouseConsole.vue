@@ -1024,7 +1024,7 @@ onMounted(() => {
 
 .badge-gxp {
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .badge-milestone {
@@ -1411,7 +1411,7 @@ onMounted(() => {
 
 .badge-blinded {
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -1572,7 +1572,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.5);
+  background-color: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1585,7 +1585,7 @@ onMounted(() => {
   border-radius: 8px;
   width: 100%;
   max-width: 540px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
 }

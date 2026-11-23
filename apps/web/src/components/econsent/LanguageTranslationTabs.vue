@@ -103,7 +103,7 @@ const selectLanguage = (langCode) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   padding: 12px 16px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -154,7 +154,7 @@ const selectLanguage = (langCode) => {
   background-color: var(--semantic-color-info-bg);
   border-color: var(--accent);
   color: var(--primary);
-  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.1);
+  box-shadow: var(--shadow-sm);
   font-weight: 600;
 }
 
@@ -164,7 +164,7 @@ const selectLanguage = (langCode) => {
 
 .lang-code-badge {
   font-size: 0.7rem;
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--semantic-color-surface-header);
   padding: 1px 4px;
   border-radius: 3px;
   color: var(--semantic-color-text-secondary);

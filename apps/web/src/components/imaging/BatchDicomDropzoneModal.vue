@@ -576,7 +576,7 @@ function completeAndClose() {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.75);
+  background-color: var(--semantic-color-backdrop-strong);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -588,9 +588,7 @@ function completeAndClose() {
 .modal-card {
   background-color: var(--semantic-color-surface);
   border-radius: 12px;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.2),
-    0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-xl);
   width: 100%;
   max-width: 680px;
   max-height: 90vh;
@@ -624,9 +622,9 @@ function completeAndClose() {
 }
 
 .badge-gxp {
-  background-color: rgba(56, 189, 248, 0.2);
+  background-color: var(--semantic-color-inverse-tint);
   color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  border: 1px solid var(--semantic-color-inverse-tint-strong);
 }
 
 .badge-info {
@@ -811,7 +809,7 @@ function completeAndClose() {
   display: flex;
   gap: 10px;
   font-size: 0.78rem;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .non-dicom-file-list {
@@ -876,7 +874,7 @@ function completeAndClose() {
 .progress-text {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
 }
 
 .certificate-summary-card {
@@ -951,7 +949,7 @@ function completeAndClose() {
 
 .skipped-report-box {
   font-size: 0.75rem;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   background-color: var(--semantic-color-warning-bg-soft);
   padding: 8px 12px;
   border-radius: 6px;
@@ -996,7 +994,7 @@ function completeAndClose() {
 
 .btn-primary {
   background-color: var(--semantic-color-primary);
-  color: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -1014,8 +1012,8 @@ function completeAndClose() {
 }
 
 .btn-success {
-  background-color: var(--semantic-color-success);
-  color: var(--semantic-color-text-inverse);
+  background-color: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .btn-success:hover {

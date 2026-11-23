@@ -2853,7 +2853,7 @@ onMounted(() => {
   padding: 1.25rem 1.5rem;
   border-radius: 8px;
   border: 1px solid var(--semantic-color-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .title-group {
@@ -2866,11 +2866,12 @@ onMounted(() => {
   font-size: 0.7rem;
   text-transform: uppercase;
   font-weight: 700;
-  color: var(--semantic-color-primary);
-  background-color: var(--semantic-color-primary-light);
+  color: var(--semantic-badge-regulatory-text);
+  background-color: var(--semantic-badge-regulatory-bg);
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   width: fit-content;
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
 .console-title {
@@ -3038,7 +3039,7 @@ onMounted(() => {
 }
 .status-pill.warning {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .status-pill.danger {
   background: var(--semantic-color-error-bg);
@@ -3066,7 +3067,7 @@ onMounted(() => {
 }
 .grade-badge.grade-2 {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .grade-badge.grade-3 {
   background: var(--semantic-color-error-bg);
@@ -3162,7 +3163,7 @@ onMounted(() => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3174,7 +3175,7 @@ onMounted(() => {
   border-radius: 8px;
   width: 540px;
   max-width: 90vw;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
 }
@@ -3240,7 +3241,7 @@ onMounted(() => {
 .kpi-value {
   font-size: 1.35rem;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .kpi-sub {
@@ -3270,7 +3271,7 @@ onMounted(() => {
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .chart-legend {

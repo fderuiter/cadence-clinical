@@ -80,9 +80,9 @@ function handleAction(toast) {
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--neutral-light);
-  color: var(--primary);
+  color: var(--text-main);
   font-family: var(--font);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+  box-shadow: var(--shadow-md);
 }
 .toast-error {
   border-color: var(--error);

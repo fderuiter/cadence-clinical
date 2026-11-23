@@ -302,7 +302,7 @@ function formatDate(dt) {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.5);
+  background-color: var(--semantic-color-backdrop);
   backdrop-filter: blur(2px);
   z-index: 1050;
   display: flex;
@@ -314,7 +314,7 @@ function formatDate(dt) {
   max-width: 90vw;
   height: 100%;
   background: var(--semantic-color-surface);
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-drawer-left);
   display: flex;
   flex-direction: column;
   overflow: hidden;

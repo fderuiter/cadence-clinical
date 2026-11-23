@@ -1625,7 +1625,7 @@ onMounted(() => {
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
   border: 1px solid var(--semantic-color-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .view-mode-bar {
@@ -1651,7 +1651,7 @@ onMounted(() => {
   background: var(--semantic-color-interactive-primary);
   color: var(--semantic-color-surface);
   border-color: var(--semantic-color-interactive-primary);
-  box-shadow: 0 2px 4px rgba(29, 78, 216, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 .console-header {
@@ -1686,12 +1686,13 @@ onMounted(() => {
 
 .badge-gxp {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .badge-regulatory {
-  background: var(--semantic-color-indigo-bg);
-  color: var(--semantic-color-indigo-text);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
 .badge-standard {
@@ -1737,7 +1738,7 @@ onMounted(() => {
   margin: 0;
   padding: 8px 12px;
   font-size: 0.85rem;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   background: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
   border-radius: 6px;
@@ -1967,7 +1968,7 @@ onMounted(() => {
 
 .site-jurisdiction-tag {
   font-size: 0.75rem;
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
   font-weight: 600;
 }
 
@@ -2091,7 +2092,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--semantic-color-backdrop);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -2107,7 +2108,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-xl);
 }
 
 .modal-lg {
@@ -2172,7 +2173,7 @@ onMounted(() => {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .form-row {

@@ -1238,7 +1238,7 @@ function formatResolutionAction(act?: string): string {
   position: fixed;
   inset: 0;
   max-width: 100vw;
-  background-color: rgba(15, 23, 42, 0.65);
+  background-color: var(--semantic-color-backdrop);
   backdrop-filter: blur(3px);
   display: flex;
   justify-content: flex-end;
@@ -1256,7 +1256,7 @@ function formatResolutionAction(act?: string): string {
   max-width: 100vw;
   height: 100vh;
   background-color: var(--semantic-color-surface);
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-drawer-left);
   display: flex;
   flex-direction: column;
   animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1563,7 +1563,7 @@ function formatResolutionAction(act?: string): string {
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1573,7 +1573,7 @@ function formatResolutionAction(act?: string): string {
 }
 
 .reconciliation-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
 .reconciliation-card.status-accepted {
@@ -1620,7 +1620,7 @@ function formatResolutionAction(act?: string): string {
 .variable-tag {
   font-weight: 700;
   font-size: 0.85rem;
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
 }
 
 .test-name {
@@ -1690,8 +1690,9 @@ function formatResolutionAction(act?: string): string {
 }
 
 .status-queried {
-  background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-text-dark);
+  background-color: var(--semantic-badge-queried-bg);
+  color: var(--semantic-badge-queried-text);
+  border: 1px solid var(--semantic-badge-queried-border);
 }
 
 /* Split Screen Grid */
@@ -1835,7 +1836,7 @@ function formatResolutionAction(act?: string): string {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--semantic-color-surface);
   border: 1px solid currentColor;
 }
 
@@ -1879,7 +1880,7 @@ function formatResolutionAction(act?: string): string {
 
 .btn-primary {
   background-color: var(--semantic-color-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .btn-secondary {
@@ -1888,35 +1889,35 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-danger {
-  background-color: var(--semantic-color-error);
-  color: var(--semantic-color-surface);
+  background-color: var(--semantic-color-error-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .btn-accept {
-  background-color: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background-color: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .btn-accept:hover:not(:disabled) {
-  background-color: var(--semantic-color-success);
+  background-color: var(--semantic-color-success-accent);
 }
 
 .btn-reject {
   background-color: var(--semantic-color-warning-action);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .btn-reject:hover:not(:disabled) {
-  background-color: var(--semantic-color-warning-action);
+  background-color: var(--semantic-color-warning-dark);
 }
 
 .btn-query {
-  background-color: var(--semantic-color-accent);
-  color: var(--semantic-color-surface);
+  background-color: var(--semantic-color-primary-dark);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .btn-query:hover:not(:disabled) {
-  background-color: var(--semantic-color-accent);
+  background-color: var(--semantic-color-primary);
 }
 
 .btn-link-provenance {
@@ -1937,7 +1938,7 @@ function formatResolutionAction(act?: string): string {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1950,7 +1951,7 @@ function formatResolutionAction(act?: string): string {
   border-radius: 8px;
   width: 520px;
   max-width: 90vw;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2249,7 +2250,7 @@ function formatResolutionAction(act?: string): string {
   background-color: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-text-inverse);
   border-bottom: 2px solid var(--semantic-color-text-dark);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
   animation: slideDown 0.2s ease-out;
 }
 
@@ -2263,7 +2264,7 @@ function formatResolutionAction(act?: string): string {
 
 .batch-count-badge {
   background-color: var(--semantic-color-primary);
-  color: var(--semantic-color-text);
+  color: var(--semantic-color-text-on-primary);
   font-weight: 700;
   border-radius: 12px;
   padding: 2px 8px;
@@ -2277,8 +2278,8 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-success {
-  background-color: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background-color: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
   border: none;
   padding: 6px 14px;
   border-radius: 6px;
@@ -2288,12 +2289,12 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-success:hover:not(:disabled) {
-  background-color: var(--semantic-color-success);
+  background-color: var(--semantic-color-success-accent);
 }
 
 .btn-danger {
-  background-color: var(--semantic-color-error);
-  color: var(--semantic-color-surface);
+  background-color: var(--semantic-color-error-interactive);
+  color: var(--semantic-color-text-on-solid);
   border: none;
   padding: 6px 14px;
   border-radius: 6px;
@@ -2303,13 +2304,13 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: var(--semantic-color-error);
+  background-color: var(--semantic-color-error-interactive-hover);
 }
 
 .btn-ghost {
   background: transparent;
-  border: 1px solid var(--semantic-color-border-control);
-  color: var(--semantic-color-text-secondary);
+  border: 1px solid var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse-muted);
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -2317,8 +2318,8 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-ghost:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--semantic-color-surface);
+  background-color: var(--semantic-color-inverse-tint);
+  color: var(--semantic-color-text-inverse);
 }
 
 .card-selection-check {

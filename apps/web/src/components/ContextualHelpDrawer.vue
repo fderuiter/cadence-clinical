@@ -580,7 +580,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.45);
+  background-color: var(--semantic-color-backdrop);
   display: flex;
   justify-content: flex-end;
   z-index: 1050;
@@ -588,14 +588,14 @@ onUnmounted(() => {
 }
 
 :deep(.drawer-panel) {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   width: var(
     --semantic-drawer-width-sm,
     var(--drawer-width-sm, min(100vw, 440px))
   );
   max-width: 100vw;
   height: 100vh;
-  box-shadow: -6px 0 28px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow-drawer-left);
   display: flex;
   flex-direction: column;
   animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1);
@@ -607,7 +607,7 @@ onUnmounted(() => {
     Roboto,
     sans-serif
   );
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 @keyframes slideInRight {
@@ -649,7 +649,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .context-badges {
@@ -726,8 +726,8 @@ onUnmounted(() => {
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.85rem;
-  background-color: white;
-  color: var(--primary);
+  background-color: var(--semantic-color-surface);
+  color: var(--text-main);
   box-sizing: border-box;
 }
 
@@ -779,7 +779,7 @@ onUnmounted(() => {
 
 .empty-state h4 {
   margin: 0;
-  color: var(--primary);
+  color: var(--text-main);
   font-size: 0.98rem;
 }
 
@@ -844,7 +844,7 @@ onUnmounted(() => {
   border-radius: 8px;
   padding: 16px;
   background-color: var(--semantic-color-surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -889,7 +889,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 1.08rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   line-height: 1.35;
 }
 
@@ -922,7 +922,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 0.78rem;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .anchor-icon {
@@ -930,7 +930,7 @@ onUnmounted(() => {
 }
 
 .anchor-text code {
-  background-color: rgba(255, 255, 255, 0.6);
+  background-color: var(--semantic-color-surface-glass);
   padding: 2px 4px;
   border-radius: 3px;
   font-family: monospace;
@@ -977,7 +977,7 @@ onUnmounted(() => {
 .sop-body :deep(h2),
 .sop-body :deep(h3),
 .sop-body :deep(h4) {
-  color: var(--primary);
+  color: var(--text-main);
   margin: 12px 0 6px 0;
   font-weight: 700;
 }
@@ -1054,7 +1054,7 @@ onUnmounted(() => {
 .related-card:focus-visible {
   background-color: var(--semantic-color-surface);
   border-color: var(--accent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .related-card:focus-visible,
@@ -1073,7 +1073,7 @@ onUnmounted(() => {
 .related-card-title {
   font-size: 0.84rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .badge-version-sm {
@@ -1122,7 +1122,7 @@ onUnmounted(() => {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px 12px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   cursor: pointer;
   transition: all 0.15s;
   display: flex;
@@ -1151,7 +1151,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 0.86rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .empty-search {

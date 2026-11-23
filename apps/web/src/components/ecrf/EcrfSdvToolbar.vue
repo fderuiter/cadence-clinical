@@ -234,7 +234,7 @@ const ancestorFormLocks = computed<CoveringScopeLockItem[]>(() =>
   font-weight: 600;
 }
 .ecrf-form-incomplete {
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .ecrf-form-locks {
   background-color: var(--semantic-color-surface-header);

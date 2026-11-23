@@ -67,7 +67,7 @@ main {
   background: var(--semantic-color-surface);
   border-radius: 12px;
   border: 1px solid var(--border);
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  box-shadow: var(--shadow-sm);
   padding: 24px;
 }
 
@@ -137,7 +137,7 @@ main {
   border: 1px solid var(--border);
   border-radius: 8px;
   background-color: var(--semantic-color-surface);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.05);
+  box-shadow: var(--shadow-md);
 }
 
 .query-panel-header {
@@ -212,14 +212,14 @@ main {
 }
 
 .btn-close-query {
-  background-color: var(--success);
-  color: var(--semantic-color-surface);
+  background-color: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
   margin-right: 8px;
 }
 
 .btn-reopen-query {
-  background-color: var(--warning);
-  color: var(--semantic-color-surface);
+  background-color: var(--semantic-color-warning-action);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .query-status-badge {
@@ -233,16 +233,16 @@ main {
 
 .badge-open,
 .query-status-open {
-  background-color: var(--semantic-color-warning-border);
-  color: var(--semantic-color-warning-text);
-  border: 1px solid var(--semantic-color-warning-border-strong);
+  background-color: var(--semantic-badge-queried-bg);
+  color: var(--semantic-badge-queried-text);
+  border: 1px solid var(--semantic-badge-queried-border);
 }
 
 .badge-reopened,
 .query-status-reopened {
-  background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
-  border: 1px solid var(--semantic-color-warning-border-strong);
+  background-color: var(--semantic-badge-warning-bg);
+  color: var(--semantic-badge-warning-text);
+  border: 1px solid var(--semantic-badge-warning-border);
 }
 
 .badge-answered,
@@ -327,10 +327,7 @@ a.skip-link.skip-link:focus-visible,
   font-weight: 700;
   z-index: 10000;
   text-decoration: none;
-  box-shadow:
-    0 0 0 2px var(--semantic-color-text-on-solid),
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-lg);
 }
 
 /* Shared Stat Cards & Document Preview Watermark Utilities */
@@ -342,7 +339,7 @@ a.skip-link.skip-link:focus-visible,
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .stat-icon {

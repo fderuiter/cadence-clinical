@@ -169,7 +169,7 @@
             <span
               style="
                 font-weight: 700;
-                color: var(--semantic-color-warning-dark);
+                color: var(--semantic-color-warning-text);
                 margin-left: 4px;
               "
               >{{ openQueriesCount }}</span
@@ -372,7 +372,7 @@
                       background-color: var(
                         --semantic-color-success-interactive
                       );
-                      color: var(--semantic-color-surface);
+                      color: var(--semantic-color-text-on-solid);
                     "
                     @click="openCloseQueryModal(field)"
                   >
@@ -441,7 +441,7 @@
           class="btn btn-primary"
           style="
             background-color: var(--semantic-color-warning-dark);
-            color: var(--semantic-color-surface);
+            color: var(--semantic-color-text-on-solid);
           "
           @click="confirmRaiseQuery"
         >
@@ -905,18 +905,18 @@ function confirmCloseQuery() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--semantic-color-backdrop);
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
 
 .modal {
-  background: white;
+  background: var(--semantic-color-surface);
   border-radius: 8px;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
   color: var(--semantic-color-text-dark);
 }
@@ -926,7 +926,7 @@ function confirmCloseQuery() {
   border-bottom: 1px solid var(--semantic-color-border);
   font-weight: 600;
   font-size: 15px;
-  color: white;
+  color: var(--semantic-color-text);
 }
 
 .modal-body {

@@ -403,7 +403,11 @@
           <!-- Predicted Classification Panel -->
           <div class="info-card">
             <h5
-              style="margin: 0 0 8px 0; font-size: 12px; color: var(--primary)"
+              style="
+                margin: 0 0 8px 0;
+                font-size: 12px;
+                color: var(--text-main);
+              "
             >
               Predicted Taxonomy
             </h5>
@@ -446,7 +450,11 @@
           <!-- Override Taxonomy Panel -->
           <div class="info-card">
             <h5
-              style="margin: 0 0 8px 0; font-size: 12px; color: var(--primary)"
+              style="
+                margin: 0 0 8px 0;
+                font-size: 12px;
+                color: var(--text-main);
+              "
             >
               Override Taxonomy Tag
             </h5>
@@ -774,7 +782,7 @@ onMounted(() => {
   flex-direction: column;
   background: var(--semantic-color-surface);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -791,7 +799,7 @@ onMounted(() => {
   font-size: 12px;
   background: var(--semantic-color-warning-bg-soft);
   border-bottom: 1px solid var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .qc-error-banner {
@@ -837,7 +845,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--semantic-color-backdrop-soft);
   z-index: 1200;
   display: flex;
   align-items: center;
@@ -850,7 +858,7 @@ onMounted(() => {
   background: var(--semantic-color-surface);
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .qc-modal-lg {
