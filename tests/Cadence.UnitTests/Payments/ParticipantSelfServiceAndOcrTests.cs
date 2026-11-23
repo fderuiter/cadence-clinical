@@ -179,7 +179,8 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
         result.Status.Should().Be("PENDING_REVIEW");
         result.AutoApproved.Should().BeFalse();
         result.DisbursementReference.Should().BeNull();
-        result.ReviewNotes.Should().Contain("below 90% auto-approval requirement");
+        result.ReviewNotes.Should().Contain("could not read every detail on the receipt photo clearly");
+        result.ReviewNotes.Should().NotContain("0.90");
     }
 
     [Fact]

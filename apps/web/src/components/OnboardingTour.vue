@@ -142,13 +142,16 @@ const currentStepConfig = computed(
 const totalSteps = computed(() => onboardingStore.totalSteps || 1);
 
 const effectiveRoles = computed(() => {
-  if (authStore.rawRoles?.length > 0) {
-    return authStore.normalizedRoles || [];
-  }
-  const personaKey =
+  const roles = authStore.normalizedRoles || [];
+  const key =
     authStore.currentPersona || onboardingStore.currentPersona || "super_admin";
-  const preset = PERSONA_PRESETS.find((p) => p.key === personaKey);
-  return preset ? [...preset.requires] : ["sponsor_admin"];
+  const preset = PERSONA_PRESETS.find((p) => p.key === key);
+  if (preset && key !== "super_admin" && roles.includes("sponsor_admin")) {
+    return preset.requires;
+  }
+  return authStore.rawRoles?.length
+    ? roles
+    : preset?.requires || ["sponsor_admin"];
 });
 
 function canNavigateToTourRoute(routeName) {
@@ -437,8 +440,8 @@ watch(
 );
 
 watch(
-  () => authStore.currentPersona,
-  async (newPersona, oldPersona) => {
+  () => [authStore.currentPersona, (authStore.normalizedRoles || []).join(",")],
+  async ([newPersona], [oldPersona] = []) => {
     if (newPersona && (oldPersona !== undefined || !onboardingStore.isActive)) {
       onboardingStore.loadPersonaState(newPersona);
       await syncStepRoute();

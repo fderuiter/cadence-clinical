@@ -71,6 +71,7 @@
             border-radius: 4px;
             border: 1px solid var(--border);
           "
+          @change="onRoleTesterChange"
         >
           <option value="site_investigator">{{ $t("ecrf.roleCrc") }}</option>
           <option value="cra">{{ $t("ecrf.roleCra") }}</option>
@@ -85,11 +86,7 @@
       <!-- Left Column: Persona Walkthrough in Demo Builds -->
       <div class="ecrf-form-column" style="flex: 1 1 580px; min-width: 0">
         <SubjectEnrollmentForm
-          :can-enroll="
-            authStore.isCrc ||
-            activeUserRole === 'site_investigator' ||
-            activeUserRole === 'crc'
-          "
+          :can-enroll="canEnrollSubjects"
           :screening-result="screeningResult"
           :is-enrolling="isEnrolling"
           @enroll="onSubjectEnroll"
@@ -104,16 +101,8 @@
             routeQuery('plannedActivityId') ?? routeQuery('visitId')
           "
           :highlight-item-id="routeQuery('itemId')"
-          :can-manage-queries="
-            authStore.isAuthenticated
-              ? canManageQueries(authStore)
-              : activeUserRole === 'cra'
-          "
-          :can-verify-source="
-            authStore.isAuthenticated
-              ? canVerifySource(authStore)
-              : activeUserRole === 'cra'
-          "
+          :can-manage-queries="canManageFieldQueries"
+          :can-verify-source="canVerifyFieldSource"
           @dirty-change="formPanelDirty = $event"
           @form-loaded="emit('form-loaded', $event)"
           @closed="onFormClosed"
@@ -128,11 +117,14 @@
           v-model:paper-icf-date="paperIcfDate"
           v-model:paper-icf-note="paperIcfNote"
           :store="store"
+          :can-enroll="canEnrollSubjects"
+          :can-edit-form="canEditFormValues"
+          :can-manage-queries="canManageFieldQueries"
           :is-reconsent-gated="isReconsentGated"
           :reconsent-submitting="reconsentSubmitting"
           :lookup-statuses="lookupStatuses"
           :get-validation-error="getValidationError"
-          :is-cra-user="isCraUser"
+          :is-cra-user="canVerifyFieldSource"
           :sdv-states="sdvStates"
           :get-sdv-key="getSdvKey"
           :dirty-fields="dirtyFields"
@@ -252,7 +244,7 @@
     </div>
 
     <!-- Full-Width Bottom Section: Study Designer Persona Component -->
-    <div style="margin-top: 24px">
+    <div v-if="showDesignerSchemaPanel" style="margin-top: 24px">
       <DesignerSchemaPanel
         v-model:import-change-reason="schema.importChangeReason"
         v-model:selected-template-ids="schema.selectedTemplateIds"
@@ -307,7 +299,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { validateField, debounce } from "ui";
 import { useClinicalStore } from "../../stores/clinical";
@@ -440,6 +432,27 @@ function onSubjectScreen() {
 
 const demoRole = ref("site_investigator");
 
+watch(
+  () => authStore.currentPersona,
+  (persona) => {
+    if (!authStore.isAuthenticated) return;
+    demoRole.value = persona === "cra_monitor" ? "cra" : "site_investigator";
+  },
+  { immediate: true }
+);
+
+function onRoleTesterChange() {
+  if (
+    authStore.isAuthenticated &&
+    authStore.isDemoMode &&
+    !authStore.accessToken
+  ) {
+    authStore.switchPersona(
+      demoRole.value === "cra" ? "cra_monitor" : "site_crc"
+    );
+  }
+}
+
 const activeUserRole = computed(() => {
   if (authStore.isAuthenticated) {
     const roles = authStore.normalizedRoles || [];
@@ -450,6 +463,39 @@ const activeUserRole = computed(() => {
   }
   return demoRole.value;
 });
+
+const canEnrollSubjects = computed(() => {
+  if (authStore.isAuthenticated) {
+    return Boolean(authStore.isCrc);
+  }
+  return (
+    activeUserRole.value === "site_investigator" ||
+    activeUserRole.value === "crc"
+  );
+});
+
+const canEditFormValues = computed(() => {
+  if (authStore.isAuthenticated) {
+    return Boolean(authStore.isCrc || authStore.hasRole("sponsor_admin"));
+  }
+  return true;
+});
+
+const canManageFieldQueries = computed(() =>
+  authStore.isAuthenticated
+    ? canManageQueries(authStore)
+    : activeUserRole.value === "cra"
+);
+
+const canVerifyFieldSource = computed(() =>
+  authStore.isAuthenticated
+    ? canVerifySource(authStore)
+    : activeUserRole.value === "cra"
+);
+
+const showDesignerSchemaPanel = computed(
+  () => !authStore.isAuthenticated || Boolean(authStore.canManageWorkspaceSites)
+);
 
 const {
   isReconsentGated,
@@ -467,7 +513,6 @@ const {
 const {
   sdvStates,
   pendingSdvToggle,
-  isCraUser,
   handleSdvToggle: composableHandleSdvToggle,
   handleVerificationInvalidationOnEdit,
 } = useVerification(activeUserRole);
@@ -639,7 +684,25 @@ function selectListedSubject() {
   loadEcrfSession();
 }
 
+function handleDemoReset() {
+  for (const key of Object.keys(ecrfSessions)) {
+    delete ecrfSessions[key];
+  }
+  for (const key of Object.keys(sdvStates)) {
+    delete sdvStates[key];
+  }
+  screeningResult.value = null;
+  pendingValueChange.value = null;
+  pendingSdvToggle.value = null;
+  showReasonModal.value = false;
+  clearDraft();
+  selectedSubjectId.value = store.subjects[0]?.id ?? "SUBJ-001";
+  selectedVisitId.value = "Screening";
+  loadEcrfSession();
+}
+
 onMounted(() => {
+  window.addEventListener("cadence:demo-reset", handleDemoReset);
   if (route && route.query) {
     if (route.query.studyId) {
       const incomingStudy = String(route.query.studyId).trim();
@@ -675,6 +738,10 @@ onMounted(() => {
     }
   }
   selectListedSubject();
+});
+
+onUnmounted(() => {
+  window.removeEventListener("cadence:demo-reset", handleDemoReset);
 });
 
 function getValidationError(field) {
