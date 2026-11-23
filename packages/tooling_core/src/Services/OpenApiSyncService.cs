@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -318,40 +317,7 @@ public static class OpenApiSyncService
             exporterArgs.Add(string.Join(",", targetServices));
         }
 
-        var invocation = ExporterBinaryResolver.ResolveInvocation(repoRoot, ExporterProject, exporterArgs);
-        var psi = new ProcessStartInfo(invocation.FileName)
-        {
-            WorkingDirectory = repoRoot,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-        foreach (string arg in invocation.Arguments)
-        {
-            psi.ArgumentList.Add(arg);
-        }
-
-        using var process = Process.Start(psi);
-        if (process == null)
-        {
-            Console.WriteLine("[ERROR] Could not start 'dotnet' for the OpenAPI exporter.");
-            return false;
-        }
-
-        var stderrTask = process.StandardError.ReadToEndAsync();
-        string stdout = process.StandardOutput.ReadToEnd();
-        process.WaitForExit();
-        string stderr = stderrTask.GetAwaiter().GetResult();
-
-        if (process.ExitCode != 0)
-        {
-            Console.WriteLine($"[ERROR] The OpenAPI exporter failed with exit code {process.ExitCode}:");
-            Console.WriteLine(stdout);
-            Console.WriteLine(stderr);
-            return false;
-        }
-
-        return true;
+        return ExporterBinaryResolver.RunExporter(repoRoot, ExporterProject, exporterArgs, "OpenAPI exporter");
     }
 
     private static string FindRepoRoot()

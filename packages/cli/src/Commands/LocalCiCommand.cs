@@ -13,8 +13,8 @@ using Spectre.Console;
 namespace Cadence.Cli.Commands;
 
 /// <summary>
-/// <c>cadence ci</c>: runs the jobs of <c>.github/workflows/ci.yml</c> on this machine (#5017), because GitHub Actions
-/// does not run jobs for this repository until 2027.
+/// <c>cadence ci</c>: mirrors the pull-request jobs of <c>.github/workflows/ci.yml</c> locally (#5017) so contributors
+/// can verify full workflow parity before pushing to GitHub Actions.
 /// </summary>
 public static class LocalCiCommand
 {

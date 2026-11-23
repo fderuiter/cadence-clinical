@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -159,46 +158,12 @@ public static class SchemaDocGeneratorService
             .ToList();
     }
 
-    private static bool RunExporter(string repoRoot, string exportDir)
-    {
-        var invocation = ExporterBinaryResolver.ResolveInvocation(
+    private static bool RunExporter(string repoRoot, string exportDir) =>
+        ExporterBinaryResolver.RunExporter(
             repoRoot,
             ExporterProject,
-            ["--output-dir", exportDir]);
-        var psi = new ProcessStartInfo(invocation.FileName)
-        {
-            WorkingDirectory = repoRoot,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-        foreach (string arg in invocation.Arguments)
-        {
-            psi.ArgumentList.Add(arg);
-        }
-
-        using var process = Process.Start(psi);
-        if (process == null)
-        {
-            Console.WriteLine("[ERROR] Could not start 'dotnet' for the schema documentation exporter.");
-            return false;
-        }
-
-        var stderrTask = process.StandardError.ReadToEndAsync();
-        string stdout = process.StandardOutput.ReadToEnd();
-        process.WaitForExit();
-        string stderr = stderrTask.GetAwaiter().GetResult();
-
-        if (process.ExitCode != 0)
-        {
-            Console.WriteLine($"[ERROR] The schema documentation exporter failed with exit code {process.ExitCode}:");
-            Console.WriteLine(stdout);
-            Console.WriteLine(stderr);
-            return false;
-        }
-
-        return true;
-    }
+            ["--output-dir", exportDir],
+            "schema documentation exporter");
 
     private static string FindRepoRoot()
     {

@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Xml.Linq;
 
 namespace Cadence.ToolingCore.Services;
 
 public static class PreCommitOpenApiService
 {
     private const string OpenApiExporterProject = "packages/tooling_core/src/Cadence.OpenApiExporter/Cadence.OpenApiExporter.csproj";
+
     /// <summary>
     /// The <c>openapi</c> gate. When <paramref name="targetFiles"/> is provided or <paramref name="quick"/> is <c>true</c>,
     /// exports specs only for affected services and skips service host startup when no C# backend contracts are touched.
@@ -55,7 +57,7 @@ public static class PreCommitOpenApiService
                 .ToList();
 
             string scopeLabel = useIndexScope ? "staged" : "targeted";
-            var (shouldExport, targetServices, hasCsharpFiles) = AnalyzeBackendContractChanges(existingFiles);
+            var (shouldExport, targetServices, hasCsharpFiles) = AnalyzeBackendContractChanges(existingFiles, repoRoot, reader);
             if (!hasCsharpFiles)
             {
                 Console.WriteLine($"No {scopeLabel} C# backend changes detected. Skipping service startup (lightweight docs check)...");
@@ -74,7 +76,7 @@ public static class PreCommitOpenApiService
             }
             else
             {
-                Console.WriteLine($"{char.ToUpperInvariant(scopeLabel[0])}{scopeLabel[1..]} C# changes detected in shared packages/solution files. Triggering multi-service OpenAPI export...");
+                Console.WriteLine($"{char.ToUpperInvariant(scopeLabel[0])}{scopeLabel[1..]} global MSBuild/solution changes detected. Triggering full 17-service OpenAPI export...");
             }
 
             if (useIndexScope)
@@ -103,29 +105,94 @@ public static class PreCommitOpenApiService
         }
     }
 
-    public static (bool ShouldExport, List<string>? TargetServices, bool HasCsharpFiles) AnalyzeBackendContractChanges(IEnumerable<string> files)
+    public static (bool ShouldExport, List<string>? TargetServices, bool HasCsharpFiles) AnalyzeBackendContractChanges(
+        IEnumerable<string> files,
+        string? repoRoot = null,
+        GitIndexReader? indexReader = null)
     {
-        var csharpFiles = files.Where(IsCsharpFile).ToList();
-        if (csharpFiles.Count == 0)
+        var backendFiles = files.Where(IsCsharpFile).ToList();
+        if (backendFiles.Count == 0)
         {
             return (false, null, false);
         }
 
-        if (csharpFiles.Any(IsSharedOrSolutionFile))
+        if (backendFiles.Any(IsGlobalOpenApiBuildFile))
         {
             return (true, null, true);
         }
 
-        var detectedServices = csharpFiles
-            .Select(ResolveServiceFromPath)
-            .Where(s => !string.IsNullOrEmpty(s))
-            .Select(s => s!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        string effectiveRepoRoot = Path.GetFullPath(repoRoot ?? FindRepoRoot());
+        var allProjects = DiscoverAllProjects(effectiveRepoRoot, indexReader);
+        var reverseRefs = BuildReverseProjectReferenceGraph(effectiveRepoRoot, allProjects, indexReader);
 
-        return detectedServices.Count > 0
-            ? (true, detectedServices, true)
-            : (false, null, true);
+        StringComparer pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        var seedProjects = new HashSet<string>(pathComparer);
+        var detectedServices = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (string file in backendFiles)
+        {
+            string? normalized = GitIndexReader.TryNormalizeRelativePath(effectiveRepoRoot, file);
+            string candidate = string.IsNullOrEmpty(normalized) ? file.Replace('\\', '/') : normalized;
+            string? nearestCsproj = FindNearestCsprojInSet(effectiveRepoRoot, candidate, allProjects);
+            if (!string.IsNullOrEmpty(nearestCsproj))
+            {
+                seedProjects.Add(nearestCsproj);
+                continue;
+            }
+
+            string? fallbackService = ResolveServiceFromPath(candidate);
+            if (!string.IsNullOrEmpty(fallbackService))
+            {
+                detectedServices.Add(fallbackService);
+            }
+        }
+
+        var visited = new HashSet<string>(pathComparer);
+        var queue = new Queue<string>();
+        foreach (string seed in seedProjects)
+        {
+            if (visited.Add(seed))
+            {
+                queue.Enqueue(seed);
+            }
+        }
+
+        while (queue.Count > 0)
+        {
+            string currentProject = queue.Dequeue();
+            string? service = ResolveServiceFromPath(currentProject);
+            if (!string.IsNullOrEmpty(service))
+            {
+                detectedServices.Add(service);
+            }
+
+            if (!reverseRefs.TryGetValue(currentProject, out List<string>? dependents))
+            {
+                continue;
+            }
+
+            bool currentIsKernelModule = IsKernelHostedModuleProject(currentProject);
+            foreach (string dependent in dependents)
+            {
+                if (currentIsKernelModule && IsKernelHostProject(dependent))
+                {
+                    continue;
+                }
+
+                if (visited.Add(dependent))
+                {
+                    queue.Enqueue(dependent);
+                }
+            }
+        }
+
+        if (detectedServices.Count == 0)
+        {
+            return (false, null, true);
+        }
+
+        var orderedServices = detectedServices.OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToList();
+        return (true, orderedServices, true);
     }
 
     public static bool AffectsEfCoreSchema(string file)
@@ -279,8 +346,24 @@ public static class PreCommitOpenApiService
             : null;
     }
 
+    public static bool IsGlobalOpenApiBuildFile(string file)
+    {
+        string normalized = file.Replace('\\', '/');
+        string fileName = Path.GetFileName(normalized);
+        return string.Equals(fileName, "Cadence.sln", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(fileName, "global.json", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(fileName, "Directory.Build.props", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(fileName, "Directory.Build.targets", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(fileName, "Directory.Packages.props", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsCsharpFile(string file)
     {
+        if (IsGlobalOpenApiBuildFile(file))
+        {
+            return true;
+        }
+
         string normalized = file.Replace('\\', '/');
         return normalized.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
                normalized.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase) ||
@@ -289,32 +372,187 @@ public static class PreCommitOpenApiService
                normalized.EndsWith(".targets", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsSharedOrSolutionFile(string file)
+    private static bool IsKernelHostedModuleProject(string relativeCsproj) =>
+        IsKernelHostedModuleService(ResolveServiceFromPath(relativeCsproj) ?? string.Empty);
+
+    private static bool IsKernelHostProject(string relativeCsproj) =>
+        string.Equals(ResolveServiceFromPath(relativeCsproj), "kernel", StringComparison.OrdinalIgnoreCase);
+
+    private static HashSet<string> DiscoverAllProjects(string fullRepoRoot, GitIndexReader? indexReader)
     {
-        string normalized = file.Replace('\\', '/');
+        StringComparer comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        var projects = new HashSet<string>(comparer);
 
-        if (normalized.StartsWith("packages/cli/", StringComparison.OrdinalIgnoreCase) ||
-            normalized.StartsWith("packages/tooling_core/", StringComparison.OrdinalIgnoreCase))
+        if (indexReader is { HasAuthoritativeIndex: true })
         {
-            return false;
+            foreach (string path in indexReader.Paths)
+            {
+                if (path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
+                {
+                    projects.Add(path.Replace('\\', '/'));
+                }
+            }
+
+            if (projects.Count > 0)
+            {
+                return projects;
+            }
         }
 
-        if (normalized.StartsWith("packages/", StringComparison.OrdinalIgnoreCase) ||
-            normalized.StartsWith("apps/apphost/", StringComparison.OrdinalIgnoreCase) ||
-            normalized.StartsWith("apps/gateway/", StringComparison.OrdinalIgnoreCase))
+        if (!Directory.Exists(fullRepoRoot))
+        {
+            return projects;
+        }
+
+        var pendingDirs = new Stack<string>();
+        pendingDirs.Push(fullRepoRoot);
+        while (pendingDirs.Count > 0)
+        {
+            string currentDir = pendingDirs.Pop();
+            foreach (string csproj in Directory.EnumerateFiles(currentDir, "*.csproj"))
+            {
+                projects.Add(Path.GetRelativePath(fullRepoRoot, csproj).Replace('\\', '/'));
+            }
+
+            foreach (string subDir in Directory.EnumerateDirectories(currentDir))
+            {
+                string name = Path.GetFileName(subDir);
+                if (name.StartsWith('.') ||
+                    string.Equals(name, "bin", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(name, "obj", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(name, "node_modules", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                pendingDirs.Push(subDir);
+            }
+        }
+
+        return projects;
+    }
+
+    private static Dictionary<string, List<string>> BuildReverseProjectReferenceGraph(
+        string fullRepoRoot,
+        HashSet<string> allProjects,
+        GitIndexReader? indexReader)
+    {
+        StringComparer comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        var reverse = new Dictionary<string, List<string>>(comparer);
+
+        foreach (string project in allProjects)
+        {
+            if (!TryReadProjectText(fullRepoRoot, project, indexReader, out string xml))
+            {
+                continue;
+            }
+
+            XDocument doc;
+            try
+            {
+                doc = XDocument.Parse(xml, LoadOptions.None);
+            }
+            catch (System.Xml.XmlException)
+            {
+                continue;
+            }
+
+            string projectDir = Path.GetDirectoryName(project)?.Replace('\\', '/') ?? string.Empty;
+            foreach (XElement element in doc.Descendants())
+            {
+                if (!string.Equals(element.Name.LocalName, "ProjectReference", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string? include = element.Attribute("Include")?.Value;
+                if (string.IsNullOrWhiteSpace(include))
+                {
+                    continue;
+                }
+
+                string normalizedInclude = include.Replace('\\', '/');
+                string combined = string.IsNullOrEmpty(projectDir)
+                    ? normalizedInclude
+                    : $"{projectDir}/{normalizedInclude}";
+                string? targetProject = GitIndexReader.TryNormalizeRelativePath(fullRepoRoot, combined);
+                if (string.IsNullOrEmpty(targetProject) || !targetProject.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (!reverse.TryGetValue(targetProject, out List<string>? dependents))
+                {
+                    dependents = [];
+                    reverse[targetProject] = dependents;
+                }
+
+                dependents.Add(project);
+            }
+        }
+
+        return reverse;
+    }
+
+    private static bool TryReadProjectText(
+        string fullRepoRoot,
+        string relativeCsproj,
+        GitIndexReader? indexReader,
+        out string xml)
+    {
+        if (indexReader is { HasAuthoritativeIndex: true } && indexReader.TryReadText(relativeCsproj, out xml))
         {
             return true;
         }
 
-        if (!normalized.Contains('/') ||
-            normalized.EndsWith(".sln", StringComparison.OrdinalIgnoreCase) ||
-            normalized.EndsWith("Directory.Build.props", StringComparison.OrdinalIgnoreCase) ||
-            normalized.EndsWith("Directory.Packages.props", StringComparison.OrdinalIgnoreCase))
+        string diskPath = Path.Combine(fullRepoRoot, relativeCsproj);
+        if (File.Exists(diskPath))
         {
+            xml = File.ReadAllText(diskPath);
             return true;
         }
 
+        xml = string.Empty;
         return false;
+    }
+
+    private static string? FindNearestCsprojInSet(string fullRepoRoot, string relativeFile, HashSet<string> allProjects)
+    {
+        if (relativeFile.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase) && allProjects.Contains(relativeFile))
+        {
+            return relativeFile;
+        }
+
+        string? dir = Path.GetDirectoryName(relativeFile)?.Replace('\\', '/');
+        while (!string.IsNullOrEmpty(dir))
+        {
+            string prefix = dir + "/";
+            string? singleMatch = null;
+            int count = 0;
+            foreach (string proj in allProjects)
+            {
+                if (proj.StartsWith(prefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) &&
+                    proj.IndexOf('/', prefix.Length) < 0)
+                {
+                    singleMatch = proj;
+                    count++;
+                    if (count > 1)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if (count == 1)
+            {
+                return singleMatch;
+            }
+
+            int lastSlash = dir.LastIndexOf('/');
+            dir = lastSlash > 0 ? dir[..lastSlash] : null;
+        }
+
+        return FindNearestCsproj(fullRepoRoot, relativeFile)?.Replace('\\', '/');
     }
 
     public static string? ResolveServiceFromPath(string file)

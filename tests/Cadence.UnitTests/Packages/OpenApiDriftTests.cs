@@ -182,7 +182,9 @@ public sealed class OpenApiDriftTests : IDisposable
     public void AnalyzeBackendContractChanges_WhenTargetingSingleServiceProgramCs_SelectsOnlyThatService()
     {
         var (shouldExport, targetServices, hasCsharpFiles) =
-            PreCommitOpenApiService.AnalyzeBackendContractChanges(["apps/tickets/src/Program.cs"]);
+            PreCommitOpenApiService.AnalyzeBackendContractChanges(
+                ["apps/tickets/src/Program.cs"],
+                PreCommitOpenApiService.FindRepoRoot());
 
         hasCsharpFiles.Should().BeTrue();
         shouldExport.Should().BeTrue();
@@ -255,5 +257,86 @@ public sealed class OpenApiDriftTests : IDisposable
             .Should().Equal("/api/v1/ctms/sites", "/api/v1/tickets");
         aggregatedForward["components"]!["schemas"]!.AsObject().Select(kv => kv.Key)
             .Should().Equal("Ctms_SiteDto", "Tickets_TicketDto");
+    }
+
+    [Fact]
+    public void ExporterBuildFreshness_SkipsBuildOnlyWhenCompiledOutputsPostdateAllTransitiveProjectInputs()
+    {
+        string repoDir = Directory.CreateDirectory(Path.Combine(_root, "freshness-repo")).FullName;
+        var sourceTime = new DateTime(2026, 6, 1, 10, 0, 0, DateTimeKind.Utc);
+        var binaryTime = new DateTime(2026, 6, 1, 10, 5, 0, DateTimeKind.Utc);
+        var editedTime = new DateTime(2026, 6, 1, 10, 10, 0, DateTimeKind.Utc);
+
+        string globalJson = WriteTimestampedFile(repoDir, "global.json", "{}\n", sourceTime);
+        string dirProps = WriteTimestampedFile(repoDir, "Directory.Build.props", "<Project />\n", sourceTime);
+        WriteTimestampedFile(repoDir, "docs/shared.sql", "SELECT 1;\n", sourceTime);
+
+        string libProject = WriteTimestampedFile(
+            repoDir,
+            "packages/lib/Cadence.SampleLib.csproj",
+            """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>net10.0</TargetFramework>
+              </PropertyGroup>
+              <ItemGroup>
+                <EmbeddedResource Include="..\..\docs\shared.sql" />
+              </ItemGroup>
+            </Project>
+            """,
+            sourceTime);
+        string libSource = WriteTimestampedFile(repoDir, "packages/lib/Model.cs", "namespace SampleLib; public sealed class Model {}\n", sourceTime);
+        WriteTimestampedFile(repoDir, "packages/lib/obj/project.assets.json", "{}\n", sourceTime);
+
+        string exporterProject = WriteTimestampedFile(
+            repoDir,
+            "packages/exporter/Cadence.SampleExporter.csproj",
+            """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <OutputType>Exe</OutputType>
+                <TargetFramework>net10.0</TargetFramework>
+              </PropertyGroup>
+              <ItemGroup>
+                <ProjectReference Include="..\lib\Cadence.SampleLib.csproj" />
+              </ItemGroup>
+            </Project>
+            """,
+            sourceTime);
+        WriteTimestampedFile(repoDir, "packages/exporter/Program.cs", "Console.WriteLine(\"ok\");\n", sourceTime);
+
+        ExporterBuildFreshness.CanSkipBuild(repoDir, exporterProject).Should().BeFalse("exporter binaries and restore assets do not exist yet");
+
+        WriteTimestampedFile(repoDir, "packages/exporter/obj/project.assets.json", "{}\n", sourceTime);
+        WriteTimestampedFile(repoDir, "packages/exporter/bin/Debug/net10.0/Cadence.SampleExporter.dll", "dll", binaryTime);
+        WriteTimestampedFile(repoDir, "packages/exporter/bin/Debug/net10.0/Cadence.SampleExporter.deps.json", "{}", binaryTime);
+        WriteTimestampedFile(repoDir, "packages/exporter/bin/Debug/net10.0/Cadence.SampleExporter.runtimeconfig.json", "{}", binaryTime);
+
+        ExporterBuildFreshness.CanSkipBuild(repoDir, exporterProject).Should().BeTrue("compiled exporter outputs postdate all closure inputs");
+
+        File.SetLastWriteTimeUtc(libSource, editedTime);
+        ExporterBuildFreshness.CanSkipBuild(repoDir, exporterProject).Should().BeFalse("editing a transitive ProjectReference .cs file invalidates --no-build");
+        File.SetLastWriteTimeUtc(libSource, sourceTime);
+        ExporterBuildFreshness.CanSkipBuild(repoDir, exporterProject).Should().BeTrue();
+
+        File.SetLastWriteTimeUtc(Path.Combine(repoDir, "docs/shared.sql"), editedTime);
+        ExporterBuildFreshness.CanSkipBuild(repoDir, exporterProject).Should().BeFalse("editing an external EmbeddedResource invalidates --no-build");
+        File.SetLastWriteTimeUtc(Path.Combine(repoDir, "docs/shared.sql"), sourceTime);
+
+        File.SetLastWriteTimeUtc(dirProps, binaryTime);
+        ExporterBuildFreshness.CanSkipBuild(repoDir, exporterProject).Should().BeFalse("equal timestamp on Directory.Build.props must conservatively rebuild");
+        File.SetLastWriteTimeUtc(dirProps, sourceTime);
+        File.SetLastWriteTimeUtc(globalJson, sourceTime);
+        File.SetLastWriteTimeUtc(libProject, sourceTime);
+        ExporterBuildFreshness.CanSkipBuild(repoDir, exporterProject).Should().BeTrue();
+    }
+
+    private static string WriteTimestampedFile(string rootDir, string relativePath, string content, DateTime lastWriteUtc)
+    {
+        string fullPath = Path.Combine(rootDir, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        File.WriteAllText(fullPath, content);
+        File.SetLastWriteTimeUtc(fullPath, lastWriteUtc);
+        return fullPath;
     }
 }

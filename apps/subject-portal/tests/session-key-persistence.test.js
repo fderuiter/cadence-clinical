@@ -109,7 +109,8 @@ describe("ADR-2360 Memory-Only PIN Encryption Key & Per-User Isolation", () => {
     state.pinSetup.pin = "246810";
     state.pinSetup.confirmPin = "246810";
     await handlePINSetupSubmit();
-    expect(getInMemorySessionKey()).toBeInstanceOf(Uint8Array);
+    expect(getInMemorySessionKey()?.extractable).toBe(false);
+    expect(getInMemorySessionKey()?.algorithm?.name).toBe("AES-GCM");
 
     // Simulate full browser reload offline: wipe memory
     clearInMemoryKey();

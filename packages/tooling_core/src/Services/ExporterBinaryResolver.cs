@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
@@ -19,6 +20,7 @@ public static class ExporterBinaryResolver
 
     private static readonly string[] RootMsBuildFiles =
     [
+        "Cadence.sln",
         "Directory.Build.props",
         "Directory.Build.targets",
         "Directory.Packages.props",
@@ -80,6 +82,57 @@ public static class ExporterBinaryResolver
         };
         fallbackArgs.AddRange(exporterArguments);
         return new ExporterInvocation("dotnet", fallbackArgs, ReusedPrebuilt: false, PrebuiltDllPath: null);
+    }
+
+    public static bool RunExporter(
+        string repoRoot,
+        string exporterProjectRelativePath,
+        IReadOnlyList<string> exporterArguments,
+        string exporterDisplayName)
+    {
+        ExporterInvocation invocation = ResolveInvocation(repoRoot, exporterProjectRelativePath, exporterArguments);
+        return ExecuteProcess(repoRoot, invocation.FileName, invocation.Arguments, exporterDisplayName);
+    }
+
+    internal static bool ExecuteProcess(
+        string workingDirectory,
+        string fileName,
+        IReadOnlyList<string> arguments,
+        string exporterDisplayName)
+    {
+        var psi = new ProcessStartInfo(fileName)
+        {
+            WorkingDirectory = workingDirectory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        foreach (string arg in arguments)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var process = Process.Start(psi);
+        if (process is null)
+        {
+            Console.WriteLine($"[ERROR] Could not start '{fileName}' for the {exporterDisplayName}.");
+            return false;
+        }
+
+        var stderrTask = process.StandardError.ReadToEndAsync();
+        string stdout = process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        string stderr = stderrTask.GetAwaiter().GetResult();
+
+        if (process.ExitCode != 0)
+        {
+            Console.WriteLine($"[ERROR] The {exporterDisplayName} failed with exit code {process.ExitCode}:");
+            Console.WriteLine(stdout);
+            Console.WriteLine(stderr);
+            return false;
+        }
+
+        return true;
     }
 
     public static bool TryFindFreshExporterDll(
@@ -188,12 +241,12 @@ public static class ExporterBinaryResolver
         IReadOnlyList<ClosureProjectMetadata> closureMetadata,
         InputTimestamps inputs)
     {
-        if (latestRootConfigWriteUtc > exporterWriteUtc)
+        if (latestRootConfigWriteUtc >= exporterWriteUtc)
         {
             return false;
         }
 
-        if (inputs.LatestAncestorConfigWriteUtc > exporterWriteUtc)
+        if (inputs.LatestAncestorConfigWriteUtc >= exporterWriteUtc)
         {
             return false;
         }
@@ -202,6 +255,11 @@ public static class ExporterBinaryResolver
         {
             foreach (ClosureProjectMetadata project in closureMetadata)
             {
+                if (project.MissingExternalItem)
+                {
+                    return false;
+                }
+
                 string projectDll = Path.Combine(binDir, $"{project.AssemblyName}.dll");
                 if (!File.Exists(projectDll))
                 {
@@ -209,17 +267,22 @@ public static class ExporterBinaryResolver
                 }
 
                 DateTime projectDllWriteUtc = File.GetLastWriteTimeUtc(projectDll);
+                if (project.LatestExternalItemWriteUtc >= projectDllWriteUtc)
+                {
+                    return false;
+                }
+
                 if (inputs.LatestByClosureProject.TryGetValue(project.RelativeProjectDir, out DateTime latestProjectInputUtc) &&
-                    latestProjectInputUtc > projectDllWriteUtc)
+                    latestProjectInputUtc >= projectDllWriteUtc)
                 {
                     return false;
                 }
             }
 
-            return inputs.LatestUnmappedInputWriteUtc <= maxDllWriteUtc;
+            return inputs.LatestUnmappedInputWriteUtc < maxDllWriteUtc;
         }
 
-        return inputs.LatestUnmappedInputWriteUtc <= exporterWriteUtc;
+        return inputs.LatestUnmappedInputWriteUtc < exporterWriteUtc;
     }
 
     private static DateTime GetLatestRootConfigWriteTimeUtc(string fullRepoRoot)
@@ -251,13 +314,76 @@ public static class ExporterBinaryResolver
             string fullCsproj = Path.Combine(fullRepoRoot, relCsproj);
             string relDir = Path.GetDirectoryName(relCsproj)?.Replace('\\', '/') ?? string.Empty;
             string assemblyName = ReadAssemblyName(fullCsproj);
-            list.Add(new ClosureProjectMetadata(relDir, assemblyName));
+            (bool missingExternalItem, DateTime latestExternalItemUtc) = ScanExternalProjectItems(fullRepoRoot, fullCsproj);
+            list.Add(new ClosureProjectMetadata(relDir, assemblyName, missingExternalItem, latestExternalItemUtc));
         }
 
         // Order longest directory prefix first so nested projects (e.g. packages/tooling_core/src/Cadence.OpenApiExporter
         // inside packages/tooling_core/src) bind to their most specific owning project.
         list.Sort(static (a, b) => b.RelativeProjectDir.Length.CompareTo(a.RelativeProjectDir.Length));
         return list;
+    }
+
+    private static (bool MissingExternalItem, DateTime LatestExternalItemWriteUtc) ScanExternalProjectItems(
+        string fullRepoRoot,
+        string fullCsprojPath)
+    {
+        string? projectDir = Path.GetDirectoryName(fullCsprojPath);
+        if (string.IsNullOrEmpty(projectDir) || !File.Exists(fullCsprojPath))
+        {
+            return (true, DateTime.MaxValue);
+        }
+
+        StringComparison pathComparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        try
+        {
+            XDocument doc = XDocument.Load(fullCsprojPath, LoadOptions.None);
+            DateTime latest = DateTime.MinValue;
+
+            foreach (XElement element in doc.Descendants())
+            {
+                if (!string.Equals(element.Name.LocalName, "EmbeddedResource", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(element.Name.LocalName, "Content", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(element.Name.LocalName, "Compile", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string? include = element.Attribute("Include")?.Value;
+                if (string.IsNullOrWhiteSpace(include) ||
+                    include.Contains('*', StringComparison.Ordinal) ||
+                    include.Contains("$(", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                string candidate = Path.GetFullPath(Path.Combine(projectDir, include.Replace('\\', Path.DirectorySeparatorChar)));
+                if (!candidate.StartsWith(fullRepoRoot, pathComparison))
+                {
+                    continue;
+                }
+
+                if (!File.Exists(candidate))
+                {
+                    return (true, DateTime.MaxValue);
+                }
+
+                DateTime writeUtc = File.GetLastWriteTimeUtc(candidate);
+                if (writeUtc > latest)
+                {
+                    latest = writeUtc;
+                }
+            }
+
+            return (false, latest);
+        }
+        catch
+        {
+            return (true, DateTime.MaxValue);
+        }
     }
 
     private static InputTimestamps ScanSourceTreeInputs(
@@ -420,7 +546,11 @@ public static class ExporterBinaryResolver
         return fallback;
     }
 
-    private sealed record ClosureProjectMetadata(string RelativeProjectDir, string AssemblyName);
+    private sealed record ClosureProjectMetadata(
+        string RelativeProjectDir,
+        string AssemblyName,
+        bool MissingExternalItem,
+        DateTime LatestExternalItemWriteUtc);
 
     private sealed record InputTimestamps(
         Dictionary<string, DateTime> LatestByClosureProject,
