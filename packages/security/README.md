@@ -15,10 +15,9 @@ signatures and audit digests shared by every Cadence service.
 - Authentication, identity headers and required settings are described in ADR-2250
   (`docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md`) and
   `apps/gateway/README.md`.
-- Python reference sources remain for behaviour the C# port lacks or does not test yet: `auditor_token.py`,
-  `cert_store.py`, `crypto_verifier.py`, `fail_fast.py`, `permissions.py`, `rbac.py` and `signing.py`. They are not
-  the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each
-  needs before it goes.
+- Python reference sources remain for behaviour the C# port lacks or does not test yet: `cert_store.py`,
+  `crypto_verifier.py`, `fail_fast.py`, `rbac.py` and `signing.py`. They are not the implementation;
+  [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ---
 
