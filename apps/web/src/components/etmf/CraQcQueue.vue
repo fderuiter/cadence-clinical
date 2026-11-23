@@ -20,6 +20,8 @@
 
       <div style="display: flex; gap: 8px">
         <button
+          id="btn-refresh-qc-queue"
+          type="button"
           class="btn btn-secondary btn-sm btn-refresh-qc"
           style="font-size: 12px"
           @click="loadQueue"
@@ -603,6 +605,7 @@ const inspectModalRef = ref(null);
 
 useFocusTrap(batchModalRef, {
   isOpen: () => showBatchModal.value,
+  fallbackFocus: "#btn-refresh-qc-queue",
   onEscape: () => {
     showBatchModal.value = false;
   },
@@ -610,6 +613,7 @@ useFocusTrap(batchModalRef, {
 
 useFocusTrap(inspectModalRef, {
   isOpen: () => Boolean(inspectedItem.value),
+  fallbackFocus: "#btn-refresh-qc-queue",
   onEscape: () => {
     inspectedItem.value = null;
   },

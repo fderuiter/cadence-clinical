@@ -124,6 +124,37 @@ export const ClinicalQueryFlag: DefineComponent<
   any
 >;
 
+export interface ClinicalTabItem {
+  id: string | number;
+  label: string;
+  badge?: string | number | null;
+  disabled?: boolean;
+  buttonId?: string;
+  panelId?: string;
+  buttonClass?: string | any[] | Record<string, boolean>;
+  title?: string;
+  dataTestid?: string;
+}
+
+export const ClinicalTabs: DefineComponent<
+  {
+    modelValue: string | number;
+    tabs: ClinicalTabItem[];
+    ariaLabel?: string;
+    ariaLabelledby?: string;
+    orientation?: "horizontal" | "vertical";
+    id?: string;
+    idPrefix?: string;
+    listClass?: string | any[] | Record<string, boolean>;
+    tabClass?: string | any[] | Record<string, boolean>;
+    activeTabClass?: string;
+    manual?: boolean;
+    keepAlivePanels?: boolean;
+  },
+  {},
+  any
+>;
+
 export const ClinicalIconButton: DefineComponent<
   {
     label: string;
@@ -242,7 +273,16 @@ export const ClinicalModal: DefineComponent<
       | (() => HTMLElement | null)
       | string
       | null;
-    restoreFocus?: boolean | (() => HTMLElement | null);
+    restoreFocus?:
+      | boolean
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string;
+    fallbackFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
     teleport?: boolean | string;
     id?: string;
     overlayId?: string;
@@ -283,7 +323,16 @@ export const ClinicalDrawer: DefineComponent<
       | (() => HTMLElement | null)
       | string
       | null;
-    restoreFocus?: boolean | (() => HTMLElement | null);
+    restoreFocus?:
+      | boolean
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string;
+    fallbackFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
     closeLabel?: string;
     showHeader?: boolean;
   },
@@ -390,7 +439,16 @@ export interface FocusTrapOptions {
   escapeDeactivates?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   initialFocus?:
     import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null) | string;
-  restoreFocus?: boolean | (() => HTMLElement | null);
+  restoreFocus?:
+    | boolean
+    | import("vue").Ref<HTMLElement | null>
+    | (() => HTMLElement | null)
+    | string;
+  fallbackFocus?:
+    | import("vue").Ref<HTMLElement | null>
+    | (() => HTMLElement | null)
+    | string
+    | null;
 }
 
 export function useFocusTrap(

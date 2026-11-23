@@ -21,26 +21,14 @@
       </aside>
       <main class="document-content-area">
         <div class="etmf-workspace-bar">
-          <div class="etmf-tab-group">
-            <button
-              id="btn-etmf-tab-binder"
-              type="button"
-              class="etmf-tab-btn"
-              :class="{ active: activeWorkspaceTab === 'binder' }"
-              @click="activeWorkspaceTab = 'binder'"
-            >
-              📁 Binder Documents
-            </button>
-            <button
-              id="btn-etmf-tab-qc-queue"
-              type="button"
-              class="etmf-tab-btn"
-              :class="{ active: activeWorkspaceTab === 'qc-queue' }"
-              @click="activeWorkspaceTab = 'qc-queue'"
-            >
-              🛡️ Clinical QC Queue
-            </button>
-          </div>
+          <ClinicalTabs
+            v-model="activeWorkspaceTab"
+            :tabs="etmfWorkspaceTabs"
+            aria-label="eTMF workspace views"
+            id-prefix="etmf-workspace"
+            list-class="etmf-tab-group"
+            tab-class="etmf-tab-btn"
+          />
 
           <!-- Standalone /etmf Study & Site Scope Selector -->
           <form
@@ -115,13 +103,26 @@
           <span>{{ etmfStore.scopeForbiddenGuidance }}</span>
         </div>
 
-        <DocumentGrid
+        <div
           v-if="activeWorkspaceTab === 'binder'"
-          :documents="etmfStore.documents"
-          @preview="handlePreviewDocument"
-          @inspect="handleInspectDocument"
-        />
-        <CraQcQueue v-else />
+          id="etmf-workspace-panel-binder"
+          role="tabpanel"
+          aria-labelledby="btn-etmf-tab-binder"
+        >
+          <DocumentGrid
+            :documents="etmfStore.documents"
+            @preview="handlePreviewDocument"
+            @inspect="handleInspectDocument"
+          />
+        </div>
+        <div
+          v-else
+          id="etmf-workspace-panel-qc-queue"
+          role="tabpanel"
+          aria-labelledby="btn-etmf-tab-qc-queue"
+        >
+          <CraQcQueue />
+        </div>
       </main>
     </template>
 
@@ -473,7 +474,7 @@
 </template>
 
 <script setup>
-import { ClinicalDrawer } from "ui";
+import { ClinicalDrawer, ClinicalTabs } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import * as VueRouter from "vue-router";
 import { kernelApi } from "../api/kernelApi";
@@ -519,6 +520,20 @@ const router =
   typeof VueRouter.useRouter === "function" ? VueRouter.useRouter() : null;
 
 const activeWorkspaceTab = ref("binder");
+const etmfWorkspaceTabs = [
+  {
+    id: "binder",
+    label: "Binder Documents",
+    buttonId: "btn-etmf-tab-binder",
+    panelId: "etmf-workspace-panel-binder",
+  },
+  {
+    id: "qc-queue",
+    label: "Clinical QC Queue",
+    buttonId: "btn-etmf-tab-qc-queue",
+    panelId: "etmf-workspace-panel-qc-queue",
+  },
+];
 const selectedDoc = ref(null);
 const inspectedDoc = ref(null);
 const qcAcceptReason = ref(

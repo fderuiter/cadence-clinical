@@ -448,6 +448,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) (2026-11-19)
 - [ADR-2551: Share Session Resilience, Draft-Safe Sign-Out, and Part 11 Signature Primitives](2026-11-20-share-session-logout-and-signature-primitives.md) (2026-11-20)
 - [ADR-2650: Consolidate Shared UI CSS Aliases, Focus Resets, and Table Numerals](2026-11-22-consolidate-shared-ui-css-aliases-and-table-numerals.md) (2026-11-22)
+- [ADR-2651: Shared `ClinicalTabs`, Stack-Aware Focus Fallbacks, and Hub Accessibility AST Gates](2026-11-23-clinical-tabs-focus-fallbacks-and-hub-a11y-gates.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 

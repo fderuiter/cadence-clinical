@@ -157,170 +157,15 @@
     </div>
 
     <!-- Reactive Tabs Header -->
-    <div
+    <ClinicalTabs
       v-if="!sectionMode"
-      class="tabs-container"
-      style="
-        display: flex;
-        gap: 16px;
-        margin-bottom: 24px;
-        border-bottom: 2px solid var(--semantic-color-border);
-        padding-bottom: 8px;
-      "
-    >
-      <button
-        id="tab-operations"
-        class="tab-btn clinical-tab"
-        :class="{ active: activeTab === 'operations' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'operations'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
-        @click="activeTab = 'operations'"
-      >
-        Core Operations
-      </button>
-      <button
-        id="tab-monitoring"
-        class="tab-btn clinical-tab"
-        :class="{ active: activeTab === 'monitoring' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'monitoring'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
-        @click="activeTab = 'monitoring'"
-      >
-        CRA Monitoring &amp; SDV
-      </button>
-      <button
-        id="tab-delegation"
-        class="tab-btn clinical-tab"
-        :class="{ active: activeTab === 'delegation' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'delegation'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
-        @click="activeTab = 'delegation'"
-      >
-        Delegation Matrix
-      </button>
-      <button
-        v-if="demoBuild"
-        id="tab-financials"
-        class="tab-btn clinical-tab"
-        :class="{ active: activeTab === 'financials' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'financials'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
-        @click="activeTab = 'financials'"
-      >
-        Financials &amp; Contracts
-      </button>
-      <button
-        id="tab-startup"
-        class="tab-btn clinical-tab"
-        :class="{ active: activeTab === 'startup' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'startup'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
-        @click="activeTab = 'startup'"
-      >
-        Study Startup &amp; Greenlight
-      </button>
-      <button
-        v-if="demoBuild"
-        id="tab-rtsm"
-        class="tab-btn clinical-tab"
-        :class="{ active: activeTab === 'rtsm' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'rtsm'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
-        @click="activeTab = 'rtsm'"
-      >
-        💊 RTSM &amp; Dose Escalation
-      </button>
-    </div>
+      v-model="activeTab"
+      :tabs="demoWorkspaceTabs"
+      aria-label="CTMS operational workspaces"
+      id-prefix="ctms-demo"
+      list-class="tabs-container"
+      tab-class="tab-btn"
+    />
 
     <!-- Active Filter/Scope Info -->
     <div
@@ -455,6 +300,9 @@
         sectionMode === 'monitoring' ||
         (!sectionMode && activeTab === 'operations')
       "
+      :id="!sectionMode ? 'ctms-demo-panel-operations' : undefined"
+      :role="!sectionMode ? 'tabpanel' : undefined"
+      :aria-labelledby="!sectionMode ? 'tab-operations' : undefined"
     >
       <div
         v-if="operationsLoadError"
@@ -892,7 +740,12 @@
     </div>
 
     <!-- Tab 2: CRA Monitoring & SDV Console -->
-    <div v-if="!sectionMode && activeTab === 'monitoring'">
+    <div
+      v-if="!sectionMode && activeTab === 'monitoring'"
+      id="ctms-demo-panel-monitoring"
+      role="tabpanel"
+      aria-labelledby="tab-monitoring"
+    >
       <CraVerificationConsole
         :standalone="true"
         :study-id="studyId"
@@ -901,7 +754,12 @@
     </div>
 
     <!-- Tab 3: Delegation Matrix -->
-    <div v-if="!sectionMode && activeTab === 'delegation'">
+    <div
+      v-if="!sectionMode && activeTab === 'delegation'"
+      id="ctms-demo-panel-delegation"
+      role="tabpanel"
+      aria-labelledby="tab-delegation"
+    >
       <div class="card">
         <div
           class="card-title"
@@ -1158,7 +1016,12 @@
     </div>
 
     <!-- Tab 4: Financials & Fee Matrix Engine -->
-    <div v-if="demoBuild && !sectionMode && activeTab === 'financials'">
+    <div
+      v-if="demoBuild && !sectionMode && activeTab === 'financials'"
+      id="ctms-demo-panel-financials"
+      role="tabpanel"
+      aria-labelledby="tab-financials"
+    >
       <!-- Grant Contract Header & Multi-Tier Template Selector -->
       <div class="card" style="margin-bottom: 20px">
         <div
@@ -2609,9 +2472,8 @@
         <input id="del-start-date" v-model="delStartDate" type="date" />
       </div>
 
-      <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label>Delegated Duty Task Codes</label>
+      <fieldset class="form-group form-fieldset">
+        <legend class="form-legend">Delegated Duty Task Codes</legend>
         <div
           style="
             display: flex;
@@ -2641,7 +2503,7 @@
             >)
           </label>
         </div>
-      </div>
+      </fieldset>
 
       <div class="form-group">
         <label for="del-reason"
@@ -2851,7 +2713,7 @@
               class="btn btn-cancel btn-sm"
               @click="removeVisitFinding(idx)"
             >
-              Remove
+              Remove<span class="sr-only"> finding {{ idx + 1 }}</span>
             </button>
           </div>
         </div>
@@ -3013,6 +2875,9 @@
     <!-- Startup & Greenlight Tab Content -->
     <div
       v-if="!sectionMode && activeTab === 'startup'"
+      id="ctms-demo-panel-startup"
+      role="tabpanel"
+      aria-labelledby="tab-startup"
       style="margin-top: 20px"
     >
       <SsuGreenlightConsole :study-id="studyId" :site-id="siteId" />
@@ -3021,6 +2886,9 @@
     <!-- RTSM & Dose Escalation Tab Content -->
     <div
       v-if="demoBuild && !sectionMode && activeTab === 'rtsm'"
+      id="ctms-demo-panel-rtsm"
+      role="tabpanel"
+      aria-labelledby="tab-rtsm"
       style="margin-top: 20px; display: flex; flex-direction: column; gap: 24px"
     >
       <div
@@ -3081,6 +2949,7 @@ import { useRoute } from "vue-router";
 import {
   buildStepUpVerificationPayload,
   ClinicalModal,
+  ClinicalTabs,
   SEMANTIC_ACTIONS,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
 } from "ui";
@@ -3123,6 +2992,52 @@ const store = useClinicalStore();
 const authStore = useAuthStore();
 const route = useRoute();
 const demoBuild = isDemoBuild();
+
+const demoWorkspaceTabs = computed(() => {
+  const tabs = [
+    {
+      id: "operations",
+      label: "Core Operations",
+      buttonId: "tab-operations",
+      panelId: "ctms-demo-panel-operations",
+    },
+    {
+      id: "monitoring",
+      label: "CRA Monitoring & SDV",
+      buttonId: "tab-monitoring",
+      panelId: "ctms-demo-panel-monitoring",
+    },
+    {
+      id: "delegation",
+      label: "Delegation Matrix",
+      buttonId: "tab-delegation",
+      panelId: "ctms-demo-panel-delegation",
+    },
+  ];
+  if (demoBuild) {
+    tabs.push({
+      id: "financials",
+      label: "Financials & Contracts",
+      buttonId: "tab-financials",
+      panelId: "ctms-demo-panel-financials",
+    });
+  }
+  tabs.push({
+    id: "startup",
+    label: "Study Startup & Greenlight",
+    buttonId: "tab-startup",
+    panelId: "ctms-demo-panel-startup",
+  });
+  if (demoBuild) {
+    tabs.push({
+      id: "rtsm",
+      label: "RTSM & Dose Escalation",
+      buttonId: "tab-rtsm",
+      panelId: "ctms-demo-panel-rtsm",
+    });
+  }
+  return tabs;
+});
 const isIpKitReconciliationDrawerOpen = ref(false);
 
 const initialQueryStudy =
@@ -3268,6 +3183,19 @@ const activeTab = ref(
     ? "startup"
     : "operations"
 );
+
+watch([() => route?.path, () => route?.query?.tab], ([nextPath, nextTab]) => {
+  if (nextPath === "/ssu" || nextTab === "startup") {
+    activeTab.value = "startup";
+  } else if (
+    typeof nextTab === "string" &&
+    demoWorkspaceTabs.value.some((t) => t.id === nextTab)
+  ) {
+    activeTab.value = nextTab;
+  } else if (nextPath === "/ctms" && activeTab.value === "startup") {
+    activeTab.value = "operations";
+  }
+});
 
 // Core Operations state
 const milestones = ref([]);
@@ -4707,6 +4635,46 @@ textarea {
 
 .tab-btn:hover {
   background: var(--semantic-color-surface-header);
+}
+
+.tabs-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--semantic-color-border);
+  padding-bottom: 8px;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--semantic-color-text-secondary);
+  border-bottom: 3px solid transparent;
+}
+
+.tab-btn.active {
+  border-bottom-color: var(--semantic-color-primary-dark);
+  color: var(--semantic-color-primary-dark);
+}
+
+.form-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0 0 12px 0;
+  min-width: 0;
+}
+
+.form-legend {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--semantic-color-text-body);
+  margin-bottom: 4px;
 }
 
 .doa-load-error {
