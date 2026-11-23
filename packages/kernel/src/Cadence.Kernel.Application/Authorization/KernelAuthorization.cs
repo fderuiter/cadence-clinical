@@ -9,6 +9,7 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 
@@ -28,7 +29,8 @@ public sealed partial class KernelAuthorization(
     ICurrentActor currentActor,
     KernelCommandCatalog catalog,
     IClock clock,
-    ILogger<KernelAuthorization> logger) : IAuthorizer, IAuthorizationProbe
+    ILogger<KernelAuthorization> logger,
+    IProtocolVersionReader? versionReader = null) : IAuthorizer, IAuthorizationProbe
 {
     /// <summary>Condition code reported when a command type declares no capability.</summary>
     public const string CapabilityDeclaredCondition = "capability.declared";
@@ -60,6 +62,11 @@ public sealed partial class KernelAuthorization(
             return AuthorizationDecision.Deny(
                 $"{commandName} names no {entry.ResourceKind}.",
                 EvaluatedCondition.Unsatisfied(ResourceNamedCondition, $"Name the {entry.ResourceKind} to act on"));
+        }
+
+        if (command is ImportProtocolDraft importDraft)
+        {
+            return await AuthorizeImportProtocolDraftAsync(actor, importDraft, cancellationToken).ConfigureAwait(false);
         }
 
         var decision = await DecideAsync(actor, command.TenantId, entry.Capability, resource, cancellationToken).ConfigureAwait(false);
@@ -126,6 +133,77 @@ public sealed partial class KernelAuthorization(
         }
 
         return commands;
+    }
+
+    private async ValueTask<AuthorizationDecision> AuthorizeImportProtocolDraftAsync(
+        Actor actor,
+        ImportProtocolDraft command,
+        CancellationToken cancellationToken)
+    {
+        var required = new List<(Capability Capability, NodeRef Resource)>();
+        switch (command.Mode)
+        {
+            case ProtocolDraftImportMode.CreateDraft:
+                required.Add((new Capability("protocol.draft", VerbClass.Propose), NodeRef.For(command.StudyId)));
+                break;
+
+            case ProtocolDraftImportMode.ReopenInReview:
+                required.Add((new Capability("protocol.return_to_draft", VerbClass.Approve), NodeRef.For(command.TargetVersionId)));
+                required.Add((new Capability("protocol.revise_draft", VerbClass.Propose), NodeRef.For(command.TargetVersionId)));
+                break;
+
+            case ProtocolDraftImportMode.UpdateExisting:
+                {
+                    if (versionReader is not null)
+                    {
+                        var current = await versionReader.GetAsync(command.TenantId, command.TargetVersionId, cancellationToken).ConfigureAwait(false);
+                        if (current?.Status == ProtocolVersionStatus.InReview)
+                        {
+                            required.Add((new Capability("protocol.return_to_draft", VerbClass.Approve), NodeRef.For(command.TargetVersionId)));
+                        }
+                    }
+
+                    required.Add((new Capability("protocol.revise_draft", VerbClass.Propose), NodeRef.For(command.TargetVersionId)));
+                    break;
+                }
+
+            case ProtocolDraftImportMode.ForkApproved:
+                {
+                    var parentNode = command.ParentVersionId is { IsEmpty: false } parentId
+                        ? NodeRef.For(parentId)
+                        : NodeRef.For(command.StudyId);
+                    required.Add((new Capability("protocol.amend", VerbClass.Propose), parentNode));
+                    required.Add((new Capability("protocol.revise_draft", VerbClass.Propose), parentNode));
+                    break;
+                }
+
+            default:
+                required.Add((new Capability("protocol.draft", VerbClass.Propose), NodeRef.For(command.StudyId)));
+                break;
+        }
+
+        if (command.StagedConcepts is { Count: > 0 })
+        {
+            required.Add((new Capability("concept.define", VerbClass.Execute), NodeRef.For(command.TenantId)));
+        }
+
+        var satisfiedConditions = new List<EvaluatedCondition>();
+        AuthorizationDecision? lastPermit = null;
+        foreach (var (capability, resource) in required)
+        {
+            var step = await DecideAsync(actor, command.TenantId, capability, resource, cancellationToken).ConfigureAwait(false);
+            if (!step.Permitted)
+            {
+                return step;
+            }
+
+            lastPermit = step;
+            satisfiedConditions.AddRange(step.Conditions);
+        }
+
+        return AuthorizationDecision.Permit(
+            lastPermit?.Reason ?? "Granted.",
+            [.. satisfiedConditions.Distinct()]);
     }
 
     private async ValueTask<AuthorizationDecision> DecideAsync(

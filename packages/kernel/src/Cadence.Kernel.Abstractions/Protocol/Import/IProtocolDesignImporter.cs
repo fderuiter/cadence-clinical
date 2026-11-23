@@ -71,15 +71,17 @@ public delegate ValueTask<ProtocolConceptResolution> ProtocolConceptResolver(
 /// <param name="FileName">Original file name of the uploaded document, when present.</param>
 /// <param name="Format">Requested import format, or <see cref="ProtocolImportFormat.Auto"/>.</param>
 /// <param name="TemplateIds">Selected bundled template identifiers to import, when assembling from library templates.</param>
-/// <param name="BaseDesign">Existing draft design to merge forms into when revising or appending forms, or null for a fresh draft.</param>
+/// <param name="BaseDesign">Existing draft design to merge into or preserve non-form sections from, or null for a fresh draft.</param>
 /// <param name="FallbackTitle">Study title used when the imported forms do not carry a protocol title.</param>
+/// <param name="ReplaceForms">True to replace existing <see cref="ProtocolDesign.CollectionSpecs"/> while preserving non-form sections.</param>
 public sealed record ProtocolDesignImportRequest(
     byte[]? RawBytes = null,
     string? FileName = null,
     ProtocolImportFormat Format = ProtocolImportFormat.Auto,
     IReadOnlyList<string>? TemplateIds = null,
     ProtocolDesign? BaseDesign = null,
-    string? FallbackTitle = null);
+    string? FallbackTitle = null,
+    bool ReplaceForms = false);
 
 /// <summary>Compiled <c>RulePack</c> library item payload produced during ODM v1.3.2 protocol import.</summary>
 /// <param name="Key">Stable library item key derived from the protocol metadata.</param>

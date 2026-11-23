@@ -29,6 +29,8 @@ namespace Cadence.Ddf;
 /// <param name="PayloadTooLarge">True when the XML payload exceeded <see cref="IProtocolDesignImporter.MaxPayloadBytes"/>.</param>
 /// <param name="Rules">Compiled collection-stage edit-check rules extracted from ODM <c>RangeCheck</c> and <c>ConditionDef</c> elements.</param>
 /// <param name="StudyOid">OID attribute on the imported ODM <c>Study</c> element, when present.</param>
+/// <param name="Epochs">Ordered study epochs derived from ODM <c>StudyEventDef</c> schedule definitions.</param>
+/// <param name="PlannedActivities">Ordered planned visit activities derived from ODM <c>Protocol</c>, <c>StudyEventRef</c>, <c>StudyEventDef</c>, and <c>FormRef</c> elements.</param>
 public sealed record OdmImportResult(
     string? Title,
     IReadOnlyList<CollectionSpec> CollectionSpecs,
@@ -36,7 +38,9 @@ public sealed record OdmImportResult(
     IReadOnlyList<ProtocolImportNote> Notes,
     bool PayloadTooLarge = false,
     IReadOnlyList<Rule>? Rules = null,
-    string? StudyOid = null)
+    string? StudyOid = null,
+    IReadOnlyList<Epoch>? Epochs = null,
+    IReadOnlyList<PlannedActivity>? PlannedActivities = null)
 {
     /// <summary>True when one or more forms were imported without validation problems.</summary>
     public bool IsSuccess => Problems.Count == 0 && !PayloadTooLarge && CollectionSpecs.Count > 0;
@@ -258,6 +262,54 @@ public static partial class OdmDesignImporter
         var itemDefs = ParseByOid(mdv, "ItemDef", problems);
         var itemGroupDefs = ParseByOid(mdv, "ItemGroupDef", problems);
         var conditionDefs = ParseByOid(mdv, "ConditionDef", problems);
+        var studyEventDefs = ParseByOid(mdv, "StudyEventDef", problems);
+        foreach (var (eventOid, eventDef) in studyEventDefs)
+        {
+            ValidateYesNoAttribute(eventDef, "Repeating", $"StudyEventDef '{eventOid}'", problems);
+        }
+
+        var scheduledEvents = new List<(string EventOid, XElement EventDef)>();
+        var seenScheduledEventOids = new HashSet<string>(StringComparer.Ordinal);
+        if (Child(mdv, "Protocol") is { } protocolScheduleEl)
+        {
+            var orderedEventRefs = OrderRefs(Children(protocolScheduleEl, "StudyEventRef"), "Protocol", "StudyEventRef", problems);
+            foreach (var eventRef in orderedEventRefs)
+            {
+                var eventOid = Attr(eventRef, "StudyEventOID");
+                if (string.IsNullOrWhiteSpace(eventOid))
+                {
+                    problems.Add("<Protocol> has a <StudyEventRef> without a StudyEventOID attribute.");
+                    continue;
+                }
+
+                ValidateYesNoAttribute(eventRef, "Mandatory", $"Protocol StudyEventRef '{eventOid}'", problems);
+                if (!studyEventDefs.TryGetValue(eventOid, out var eventDef))
+                {
+                    problems.Add($"<Protocol> references StudyEventOID '{eventOid}', which does not exist in <MetaDataVersion>.");
+                    continue;
+                }
+
+                if (seenScheduledEventOids.Add(eventOid))
+                {
+                    scheduledEvents.Add((eventOid, eventDef));
+                }
+            }
+        }
+
+        if (scheduledEvents.Count == 0 && studyEventDefs.Count > 0 && problems.Count == 0)
+        {
+            foreach (var eventDef in Children(mdv, "StudyEventDef"))
+            {
+                var eventOid = Attr(eventDef, "OID");
+                if (!string.IsNullOrWhiteSpace(eventOid)
+                    && studyEventDefs.ContainsKey(eventOid)
+                    && seenScheduledEventOids.Add(eventOid))
+                {
+                    scheduledEvents.Add((eventOid, eventDef));
+                }
+            }
+        }
+
         var formDefs = Children(mdv, "FormDef").ToList();
         if (formDefs.Count == 0)
         {
@@ -278,30 +330,15 @@ public static partial class OdmDesignImporter
 
         var studyOid = Attr(study, "OID");
         var formConditionOids = new Dictionary<string, string>(StringComparer.Ordinal);
-        if (Child(mdv, "Protocol") is { } protocolEl)
+        foreach (var (_, eventDef) in scheduledEvents)
         {
-            foreach (var eventRef in Children(protocolEl, "StudyEventRef"))
+            foreach (var formRef in Children(eventDef, "FormRef"))
             {
-                var eventOid = Attr(eventRef, "StudyEventOID");
-                if (string.IsNullOrWhiteSpace(eventOid))
+                var fOid = Attr(formRef, "FormOID");
+                var cOid = Attr(formRef, "CollectionExceptionConditionOID");
+                if (!string.IsNullOrWhiteSpace(fOid) && !string.IsNullOrWhiteSpace(cOid))
                 {
-                    continue;
-                }
-
-                var eventDef = Children(mdv, "StudyEventDef").FirstOrDefault(e => string.Equals(Attr(e, "OID"), eventOid, StringComparison.Ordinal));
-                if (eventDef is null)
-                {
-                    continue;
-                }
-
-                foreach (var formRef in Children(eventDef, "FormRef"))
-                {
-                    var fOid = Attr(formRef, "FormOID");
-                    var cOid = Attr(formRef, "CollectionExceptionConditionOID");
-                    if (!string.IsNullOrWhiteSpace(fOid) && !string.IsNullOrWhiteSpace(cOid))
-                    {
-                        formConditionOids[fOid] = cOid;
-                    }
+                    formConditionOids.TryAdd(fOid, cOid);
                 }
             }
         }
@@ -434,6 +471,66 @@ public static partial class OdmDesignImporter
             specs.Add(new CollectionSpec(formId, formName, items));
         }
 
+        var epochs = new List<Epoch>();
+        var plannedActivities = new List<PlannedActivity>();
+        var epochIdByKey = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (eventOid, eventDef) in scheduledEvents)
+        {
+            var eventName = FirstNonBlank(
+                Attr(eventDef, "Name"),
+                TranslatedText(Child(eventDef, "Description")),
+                eventOid)!;
+
+            if (string.Equals(Attr(eventDef, "Repeating"), "Yes", StringComparison.OrdinalIgnoreCase))
+            {
+                notes.Add(new ProtocolImportNote(
+                    eventOid,
+                    $"StudyEvent '{eventName}' declares Repeating='Yes'; multiple visit instances may occur per participant."));
+            }
+
+            var orderedFormRefs = OrderRefs(Children(eventDef, "FormRef"), eventOid, "FormRef", problems);
+            var activityFormIds = new List<string>(orderedFormRefs.Count);
+            var seenActivityFormIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var formRef in orderedFormRefs)
+            {
+                var refFormOid = Attr(formRef, "FormOID");
+                if (string.IsNullOrWhiteSpace(refFormOid))
+                {
+                    problems.Add($"StudyEvent '{eventOid}' has a <FormRef> without a FormOID attribute.");
+                    continue;
+                }
+
+                ValidateYesNoAttribute(formRef, "Mandatory", $"StudyEvent '{eventOid}' FormRef '{refFormOid}'", problems);
+                if (!formIdByOid.TryGetValue(refFormOid, out var mappedFormId))
+                {
+                    problems.Add($"StudyEvent '{eventOid}' references FormOID '{refFormOid}', which does not exist in <MetaDataVersion>.");
+                    continue;
+                }
+
+                if (seenActivityFormIds.Add(mappedFormId))
+                {
+                    activityFormIds.Add(mappedFormId);
+                }
+            }
+
+            var (epochKey, rawEpochId, epochName) = ResolveOdmEpoch(eventDef);
+            if (!epochIdByKey.TryGetValue(epochKey, out var epochId))
+            {
+                epochId = AllocateUniqueElementId(rawEpochId, "Epoch", usedIds);
+                epochIdByKey[epochKey] = epochId;
+                epochs.Add(new Epoch(epochId, epochName, epochs.Count + 1));
+            }
+
+            var activityId = AllocateUniqueElementId(eventOid, "Activity", usedIds);
+            plannedActivities.Add(new PlannedActivity(
+                activityId,
+                eventName,
+                epochId,
+                [ActivityLocation.Site],
+                activityFormIds));
+        }
+
         if (problems.Count > 0)
         {
             return new OdmImportResult(studyTitle, [], problems, DeduplicateNotes(notes), StudyOid: studyOid);
@@ -450,7 +547,36 @@ public static partial class OdmDesignImporter
 
         return problems.Count > 0
             ? new OdmImportResult(studyTitle, [], problems, DeduplicateNotes(notes), StudyOid: studyOid)
-            : new OdmImportResult(studyTitle, specs, [], DeduplicateNotes(notes), Rules: compiledRules, StudyOid: studyOid);
+            : new OdmImportResult(
+                studyTitle,
+                specs,
+                [],
+                DeduplicateNotes(notes),
+                Rules: compiledRules,
+                StudyOid: studyOid,
+                Epochs: epochs,
+                PlannedActivities: plannedActivities);
+    }
+
+    private static (string Key, string RawId, string Name) ResolveOdmEpoch(XElement eventDef)
+    {
+        if (Attr(eventDef, "Category") is { Length: > 0 } category)
+        {
+            return ($"category:{category}", $"Epoch.{SanitizeElementId(category, "epoch")}", category);
+        }
+
+        var eventType = Attr(eventDef, "Type");
+        if (string.Equals(eventType, "Unscheduled", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("type:unscheduled", "Epoch.unscheduled", "Unscheduled");
+        }
+
+        if (string.Equals(eventType, "Common", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("type:common", "Epoch.common", "Common");
+        }
+
+        return ("type:scheduled", "Epoch.scheduled", "Scheduled");
     }
 
     private static async Task<CollectionItem?> BuildItemAsync(

@@ -12548,7 +12548,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Protocol.AmendmentInvalid\u0060, \u0060K.Protocol.AmendmentNotAllowed\u0060, \u0060K.Protocol.ContentInvalid\u0060, \u0060K.Protocol.ContentRequired\u0060, \u0060K.Standards.LibraryItemInvalid\u0060.",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Knowledge.ConceptLabelRequired\u0060, \u0060K.Knowledge.ExternalCodeMismatch\u0060, \u0060K.Protocol.AmendmentInvalid\u0060, \u0060K.Protocol.AmendmentNotAllowed\u0060, \u0060K.Protocol.ContentInvalid\u0060, \u0060K.Protocol.ContentRequired\u0060, \u0060K.Standards.LibraryItemInvalid\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -12617,6 +12617,14 @@
           },
           {
             "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Knowledge.ConceptLabelRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Knowledge.ExternalCodeMismatch",
             "status": 422
           },
           {
@@ -33034,6 +33042,18 @@
           "replace_forms": {
             "type": "boolean",
             "default": false
+          },
+          "amendment_classification": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "transition_policy": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -34105,6 +34125,40 @@
           }
         }
       },
+      "Kernel_KernelProtocolAmendmentResponse": {
+        "required": [
+          "intent",
+          "rationale",
+          "classification",
+          "summary_of_changes",
+          "impacted_elements",
+          "transition_policy"
+        ],
+        "type": "object",
+        "properties": {
+          "intent": {
+            "type": "string"
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "classification": {
+            "type": "string"
+          },
+          "summary_of_changes": {
+            "type": "string"
+          },
+          "impacted_elements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "transition_policy": {
+            "type": "string"
+          }
+        }
+      },
       "Kernel_KernelProtocolDraftSummaryResponse": {
         "required": [
           "version",
@@ -34157,6 +34211,16 @@
               },
               {
                 "$ref": "#/components/schemas/Kernel_KernelImportedRulePackSummaryResponse"
+              }
+            ]
+          },
+          "amendment": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelProtocolAmendmentResponse"
               }
             ]
           }

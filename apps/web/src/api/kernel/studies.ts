@@ -1,8 +1,6 @@
-import { getBearerToken } from "../authorization.js";
 import { encodeChangeReason } from "../changeReason";
-import { ApiError, getBaseUrl, unwrapResponse } from "../client";
+import { unwrapResponse } from "../client";
 import {
-  describeKernelError,
   kernelClient,
   windowQuery,
   type KernelLineageWindow,
@@ -44,6 +42,8 @@ export type KernelProtocolImportNote =
   KernelSchemas["Kernel_KernelProtocolImportNoteResponse"];
 export type KernelImportedRulePackSummary =
   KernelSchemas["Kernel_KernelImportedRulePackSummaryResponse"];
+export type KernelProtocolAmendment =
+  KernelSchemas["Kernel_KernelProtocolAmendmentResponse"];
 
 export interface KernelCreateStudyRequest {
   code: string;
@@ -94,6 +94,8 @@ export interface KernelProtocolImportRequest {
   format?: string | null;
   templateIds?: string[];
   replaceForms?: boolean;
+  amendmentClassification?: string | null;
+  transitionPolicy?: string | null;
   reason: string;
   idempotencyKey: string;
 }
@@ -262,80 +264,11 @@ export const kernelStudiesApi = {
    * Synchronously imports an ODM v1.3.2 XML file, USDM v4 JSON file, or bundled CDISC Library eCRF templates
    * to create or revise a study's protocol draft (POST /api/v1/kernel/studies/{studyRef}/protocol-imports).
    */
-  async importProtocolDraft({
-    studyRef,
-    file,
-    content,
-    fileName,
-    format,
-    templateIds,
-    replaceForms = false,
-    reason,
-    idempotencyKey,
-  }: KernelProtocolImportRequest): Promise<KernelProtocolDraftSummary> {
-    if (file) {
-      const baseUrl = getBaseUrl().replace(/\/+$/, "");
-      const url = `${baseUrl}/api/v1/kernel/studies/${encodeURIComponent(studyRef)}/protocol-imports`;
-      const formData = new FormData();
-      formData.append("file", file);
-      if (templateIds && templateIds.length > 0) {
-        for (const tplId of templateIds) {
-          formData.append("template_ids", tplId);
-        }
-      }
-      if (replaceForms) {
-        formData.append("replace_forms", "true");
-      }
-
-      const headers: Record<string, string> = {
-        "X-Change-Reason": encodeChangeReason(reason),
-        "Idempotency-Key": idempotencyKey,
-      };
-      const token = await getBearerToken();
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const response = await globalThis.fetch(url, {
-        method: "POST",
-        headers,
-        body: formData,
-      });
-      if (!response.ok) {
-        const errData = await response.json().catch(() => null);
-        const tempError = new ApiError(
-          `Import failed with status ${response.status}`,
-          response.status,
-          response.statusText,
-          errData
-        );
-        throw new ApiError(
-          describeKernelError(tempError),
-          response.status,
-          response.statusText,
-          errData
-        );
-      }
-      return (await response.json()) as KernelProtocolDraftSummary;
-    }
-
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/studies/{studyRef}/protocol-imports", {
-        params: { path: { studyRef } },
-        body: {
-          content: content ?? null,
-          file_name: fileName ?? null,
-          format: format ?? null,
-          template_ids:
-            templateIds && templateIds.length > 0 ? templateIds : null,
-          replace_forms: replaceForms,
-        },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
-      })
-    );
+  async importProtocolDraft(
+    request: KernelProtocolImportRequest
+  ): Promise<KernelProtocolDraftSummary> {
+    const { executeProtocolDraftImport } = await import("./protocolImport");
+    return executeProtocolDraftImport(request);
   },
 
   /** A study's protocol versions, newest first, without content. */

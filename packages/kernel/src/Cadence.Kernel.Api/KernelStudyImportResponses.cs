@@ -234,12 +234,16 @@ public sealed record KernelProtocolTemplateResponse(
 /// <param name="Content">Raw ODM v1.3.2 XML or USDM v4 JSON text, when sending JSON instead of multipart upload.</param>
 /// <param name="TemplateIds">Selected bundled CDISC Library template identifiers.</param>
 /// <param name="ReplaceForms">True to replace existing draft forms instead of merging into an existing draft.</param>
+/// <param name="AmendmentClassification">Optional amendment classification (<c>Substantial</c>, <c>NonSubstantial</c>, or <c>UrgentSafetyMeasure</c>) when importing onto or forking an amended protocol version.</param>
+/// <param name="TransitionPolicy">Optional participant transition policy (<c>NewParticipantsOnly</c>, <c>RequiresReconsent</c>, <c>Automatic</c>, or <c>ByCohort</c>) when importing onto or forking an amended protocol version.</param>
 public sealed record KernelImportProtocolJsonRequest(
     string? Format = null,
     string? FileName = null,
     string? Content = null,
     IReadOnlyList<string>? TemplateIds = null,
-    bool ReplaceForms = false);
+    bool ReplaceForms = false,
+    string? AmendmentClassification = null,
+    string? TransitionPolicy = null);
 
 /// <summary>Readable import note attached to a protocol draft summary.</summary>
 /// <param name="Source">Source element, OID, or path in the imported file.</param>
@@ -344,6 +348,31 @@ public sealed record KernelImportedRulePackSummaryResponse(
             GovernanceStatus.Draft.ToString());
 }
 
+/// <summary>Protocol amendment details attached to a forked protocol version.</summary>
+/// <param name="Intent">Short statement of why the amendment exists.</param>
+/// <param name="Rationale">Clinical or operational reasoning.</param>
+/// <param name="Classification">Regulatory weight (<c>Substantial</c>, <c>NonSubstantial</c>, or <c>UrgentSafetyMeasure</c>).</param>
+/// <param name="SummaryOfChanges">Human-readable description of what changed.</param>
+/// <param name="ImpactedElements">Protocol element identifiers touched by this amendment.</param>
+/// <param name="TransitionPolicy">Participant transition policy (<c>NewParticipantsOnly</c>, <c>RequiresReconsent</c>, <c>Automatic</c>, or <c>ByCohort</c>).</param>
+public sealed record KernelProtocolAmendmentResponse(
+    string Intent,
+    string Rationale,
+    string Classification,
+    string SummaryOfChanges,
+    IReadOnlyList<string> ImpactedElements,
+    string TransitionPolicy)
+{
+    internal static KernelProtocolAmendmentResponse From(ProtocolAmendment amendment) =>
+        new(
+            amendment.Intent,
+            amendment.Rationale,
+            amendment.Classification.ToString(),
+            amendment.SummaryOfChanges,
+            amendment.ImpactedElements,
+            amendment.TransitionPolicy.ToString());
+}
+
 /// <summary>Viewable protocol draft summary with forms, ordered items, and readable import notes.</summary>
 /// <param name="Version">Protocol version metadata.</param>
 /// <param name="Title">Protocol design title.</param>
@@ -352,6 +381,7 @@ public sealed record KernelImportedRulePackSummaryResponse(
 /// <param name="Forms">Forms and their ordered items.</param>
 /// <param name="ImportNotes">Readable import notes recorded during ODM/USDM import.</param>
 /// <param name="ImportedRulePack">Drafted rule-pack library item when the imported ODM file contained range checks or conditions.</param>
+/// <param name="Amendment">Amendment metadata when the protocol version is a forked amendment.</param>
 public sealed record KernelProtocolDraftSummaryResponse(
     KernelProtocolVersionResponse Version,
     string Title,
@@ -359,13 +389,15 @@ public sealed record KernelProtocolDraftSummaryResponse(
     int ItemCount,
     IReadOnlyList<KernelProtocolFormSummaryResponse> Forms,
     IReadOnlyList<KernelProtocolImportNoteResponse> ImportNotes,
-    KernelImportedRulePackSummaryResponse? ImportedRulePack = null)
+    KernelImportedRulePackSummaryResponse? ImportedRulePack = null,
+    KernelProtocolAmendmentResponse? Amendment = null)
 {
     internal static KernelProtocolDraftSummaryResponse From(
         ProtocolVersionSummary version,
         ProtocolDesign? design,
         IReadOnlyDictionary<ConceptRef, string> conceptLabels,
-        KernelImportedRulePackSummaryResponse? importedRulePack = null)
+        KernelImportedRulePackSummaryResponse? importedRulePack = null,
+        ProtocolAmendment? amendment = null)
     {
         var specs = design?.CollectionSpecs ?? [];
         var forms = specs
@@ -381,6 +413,7 @@ public sealed record KernelProtocolDraftSummaryResponse(
             forms.Sum(f => f.ItemCount),
             forms,
             notes,
-            importedRulePack);
+            importedRulePack,
+            amendment is not null ? KernelProtocolAmendmentResponse.From(amendment) : null);
     }
 }

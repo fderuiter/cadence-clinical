@@ -224,7 +224,26 @@ public sealed class KernelCommandPipeline(
     /// </summary>
     internal static string ComputeRequestHash(ICommand command, Type commandType, ProposalId? proposal = null)
     {
-        var payload = commandType.FullName + "\n" + JsonSerializer.Serialize(command, commandType, JsonOptions);
+        string serializedPayload;
+        if (command is ImportProtocolDraft { RequestFingerprint: { Length: > 0 } } importDraft)
+        {
+            serializedPayload = JsonSerializer.Serialize(
+                new
+                {
+                    importDraft.TenantId,
+                    importDraft.StudyId,
+                    importDraft.RequestFingerprint,
+                    importDraft.IdempotencyKey,
+                    importDraft.ReasonForChange,
+                },
+                JsonOptions);
+        }
+        else
+        {
+            serializedPayload = JsonSerializer.Serialize(command, commandType, JsonOptions);
+        }
+
+        var payload = commandType.FullName + "\n" + serializedPayload;
         if (proposal is { } executed)
         {
             payload += "\nproposal:" + executed;
@@ -335,6 +354,7 @@ public sealed class KernelCommandPipeline(
             or ApproveProtocolVersion
             or WithdrawProtocolVersion
             or ForkProtocolVersion
+            or ImportProtocolDraft
             or RegisterCodeSystem
             or ImportCodeSystemVersion
             or DefineConcept
