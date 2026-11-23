@@ -1,18 +1,46 @@
-import { describe, expect, it, vi } from "vitest";
-import { mount } from "@vue/test-utils";
-import EntityLink from "../src/components/clinical/EntityLink.vue";
-import ClinicalExplanation from "../src/components/clinical/ClinicalExplanation.vue";
-import ClinicalGatedAction from "../src/components/clinical/ClinicalGatedAction.vue";
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createApp, nextTick } from "vue";
 import {
+  ClinicalExplanation,
+  ClinicalGatedAction,
+  EntityLink,
   openEntityPeek,
   parseNodeRef,
   registerEntityPeekHandler,
   stripRawPermissionTokens,
-} from "../src/utils/entityPeekRegistry.js";
+} from "../index.js";
+import { toBeAccessible } from "../accessibility-matcher.js";
+
+expect.extend({ toBeAccessible });
+
+const mountedApps = [];
+
+function mountComponent(component, props = {}) {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const app = createApp(component, props);
+  app.mount(host);
+  mountedApps.push({ app, host });
+  return host;
+}
+
+afterEach(() => {
+  while (mountedApps.length > 0) {
+    const { app, host } = mountedApps.pop();
+    app.unmount();
+    host.remove();
+  }
+});
 
 describe("ClinicalExplanation, ClinicalGatedAction, and EntityLink primitives", () => {
-  it("parses standard and K-EXP-2 masked NodeRefs without leaking hidden IDs", () => {
-    const visible = parseNodeRef("qualification:4f891a20-1234-4abc-9def-000000000001@2");
+  it("parses standard, unversioned, empty, raw, and K-EXP-2 masked NodeRefs without leaking hidden IDs", () => {
+    expect(parseNodeRef("").kindLabel).toBe("Record");
+    expect(parseNodeRef("plain-code").displayLabel).toBe("plain-code");
+
+    const visible = parseNodeRef(
+      "qualification:4f891a20-1234-4abc-9def-000000000001@2"
+    );
     expect(visible.masked).toBe(false);
     expect(visible.kind).toBe("qualification");
     expect(visible.version).toBe(2);
@@ -21,12 +49,17 @@ describe("ClinicalExplanation, ClinicalGatedAction, and EntityLink primitives", 
     expect(masked.masked).toBe(true);
     expect(masked.maskReason).toBe("NotPermitted");
     expect(masked.id).toBeNull();
+    expect(openEntityPeek("")).toBe(false);
     expect(openEntityPeek("masked:study_site:NotPermitted")).toBe(false);
+    expect(openEntityPeek("study_site:SITE-101")).toBe(false);
   });
 
   it("strips raw permission tokens from legacy denial strings", () => {
+    expect(stripRawPermissionTokens("")).toBe("");
     expect(
-      stripRawPermissionTokens("Site activation requires Sponsor authority (site_compliance:activate).")
+      stripRawPermissionTokens(
+        "Site activation requires Sponsor authority (site_compliance:activate)."
+      )
     ).toBe("Site activation requires Sponsor authority.");
   });
 
@@ -34,52 +67,114 @@ describe("ClinicalExplanation, ClinicalGatedAction, and EntityLink primitives", 
     const spy = vi.fn();
     const unregister = registerEntityPeekHandler(spy);
 
-    const activeWrapper = mount(EntityLink, {
-      props: { nodeRef: "assertion:11111111-2222-3333-4444-555555555555@1", label: "Site Lock" },
+    const activeHost = mountComponent(EntityLink, {
+      nodeRef: "assertion:11111111-2222-3333-4444-555555555555@1",
+      label: "Site Lock",
     });
-    await activeWrapper.find("button").trigger("click");
+    activeHost.querySelector("button").click();
+    await nextTick();
     expect(spy).toHaveBeenCalledTimes(1);
+    await expect(activeHost).toBeAccessible();
 
-    const maskedWrapper = mount(EntityLink, {
-      props: { nodeRef: "masked:enrollment:Blinded" },
+    const maskedHost = mountComponent(EntityLink, {
+      nodeRef: "masked:enrollment:Blinded",
     });
-    expect(maskedWrapper.find("button").exists()).toBe(false);
-    expect(maskedWrapper.text()).toContain("Blinded treatment record");
+    expect(maskedHost.querySelector("button")).toBeNull();
+    expect(maskedHost.textContent).toContain("Blinded treatment record");
     unregister();
   });
 
-  it("renders ClinicalExplanation and ClinicalGatedAction with met/unmet conditions and NextAction targets", async () => {
-    const wrapper = mount(ClinicalGatedAction, {
-      props: {
-        permitted: false,
-        label: "Activate Site",
-        reason: "Missing IRB approval (site_compliance:activate)",
-        explanation: {
-          claim: "Clinical Research Coordinators cannot activate clinical sites.",
-          producer: "security.rbac",
-          conditions: [
-            {
-              code: "rbac.role_permission",
-              met: false,
-              description: "Assign a Sponsor Data Manager role to activate clinical sites.",
-              evidence: [],
-            },
-          ],
-          next_actions: [
-            {
-              description: "Request role assignment from your study administrator.",
-              capability: "site_compliance:activate",
-              target: "study_site:SITE-101",
-            },
-          ],
-        },
+  it("renders ClinicalExplanation steps, met/unmet conditions, and ClinicalGatedAction states", async () => {
+    const spy = vi.fn();
+    const unregister = registerEntityPeekHandler(spy);
+
+    const permittedHost = mountComponent(ClinicalGatedAction, {
+      permitted: true,
+      label: "Sign Form",
+      onAction: spy,
+    });
+    permittedHost.querySelector(".clinical-gated-action__fallback-btn").click();
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    const host = mountComponent(ClinicalGatedAction, {
+      permitted: false,
+      label: "Activate Site",
+      reason: "Missing IRB approval (site_compliance:activate)",
+      explanation: {
+        subject: "study_site:SITE-101",
+        claim: "Clinical Research Coordinators cannot activate clinical sites.",
+        producer: "security.rbac",
+        steps: [
+          {
+            statement: "Checked active site startup grant.",
+            evidence: ["grant:22222222-3333-4444-5555-666666666666"],
+          },
+        ],
+        conditions: [
+          {
+            code: "grant.active",
+            met: true,
+            description: "Study coordinator membership is active.",
+            evidence: ["grant:22222222-3333-4444-5555-666666666666"],
+          },
+          {
+            code: "rbac.role_permission",
+            met: false,
+            description:
+              "Assign a Sponsor Data Manager role to activate clinical sites.",
+            evidence: [],
+          },
+        ],
+        next_actions: [
+          {
+            description:
+              "Request role assignment from your study administrator.",
+            capability: "site_compliance:activate",
+            target: "study_site:SITE-101",
+          },
+        ],
       },
     });
 
-    expect(wrapper.find(".clinical-gated-action__fallback-btn").attributes("disabled")).toBeDefined();
-    expect(wrapper.text()).not.toContain("site_compliance:activate");
-    await wrapper.find(".clinical-gated-action__why-btn").trigger("click");
-    expect(wrapper.findComponent(ClinicalExplanation).exists()).toBe(true);
-    expect(wrapper.text()).toContain("Clinical Research Coordinators cannot activate clinical sites.");
+    const fallbackBtn = host.querySelector(
+      ".clinical-gated-action__fallback-btn"
+    );
+    expect(fallbackBtn.hasAttribute("disabled")).toBe(true);
+    expect(host.textContent).not.toContain("site_compliance:activate");
+
+    host.querySelector(".clinical-gated-action__why-btn").click();
+    await nextTick();
+    expect(host.querySelector(".clinical-explanation")).not.toBeNull();
+    expect(host.textContent).toContain(
+      "Clinical Research Coordinators cannot activate clinical sites."
+    );
+    await expect(host).toBeAccessible();
+
+    const fullExpHost = mountComponent(ClinicalExplanation, {
+      code: "K.Authorization.Denied",
+      explanation: {
+        subject: "study_site:SITE-101",
+        claim: "Blocked by missing training.",
+        steps: [
+          {
+            statement: "Evaluated protocol v2 qualification requirement.",
+            evidence: [
+              "qualification_requirement:33333333-4444-5555-6666-777777777777",
+            ],
+          },
+        ],
+        conditions: [],
+        nextActions: [
+          {
+            description: "Complete protocol v2 training.",
+            target:
+              "qualification_requirement:33333333-4444-5555-6666-777777777777",
+          },
+        ],
+      },
+    });
+    expect(fullExpHost.textContent).toContain("Rule evaluation steps (1)");
+    await expect(fullExpHost).toBeAccessible();
+    unregister();
   });
 });

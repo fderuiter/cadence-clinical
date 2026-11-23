@@ -598,7 +598,10 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2605: Signed Gateway Entitlements and Bitemporal Subscriptions](adr/2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md) | Current | - Status: Accepted |
 | [ADR-2625: Bitemporal FormQuery Aggregate, Separation of Duties, and SLA Escalation](adr/2026-11-22-bitemporal-form-query-aggregate-and-provenance.md) | Current | - Status: Accepted |
 | [ADR-2650: Consolidate Shared UI CSS Aliases, Focus Resets, and Table Numerals](adr/2026-11-22-consolidate-shared-ui-css-aliases-and-table-numerals.md) | Current | - Status: Accepted |
+| [ADR-2651: Shared ClinicalContextBar and Canonical URL Scope Codec](adr/2026-11-22-shared-clinical-context-bar-and-url-scope-codec.md) | Current | - Status: Accepted |
+| [ADR-2652: Inline Explanation Primitives and RBAC Problem Details](adr/2026-11-22-inline-explanation-primitives-and-rbac-problem-details.md) | Current | - Status: Accepted |
 | [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](adr/2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) | Current | - Status: Accepted |
+| [ADR-2646: Standardize 24px Target Tokens and Dual Focus Rings](adr/2026-11-22-standardize-24px-target-tokens-and-dual-focus-rings.md) | Current | - Status: Accepted |
 | [ADR-2536: Unify 18-Module Migration Tooling, Fail-Closed Metadata Verification, and Count-Free Schema Docs](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md) | Current | - Status: Accepted |
 | [ADR-2537: Split UI Vitest Accessibility Matcher and Enforce Staged Demo Bundle Budgets](adr/2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md) | Current | - Status: Accepted |
 
@@ -768,4 +771,3 @@ Write relative links and heading anchors as you would for GitHub. On the site, l
 outside `docs/`, to non-Markdown files or to folders without an `index.md` open on GitHub
 (`docs/.vitepress/repoLinks.mjs`), while headings emit both VitePress and GitHub slugs. Any link to a
 missing page or missing `#anchor` fragment, including in the nav and sidebar, fails the build.
-- [ADR-2660: Inline Explanation Primitives and RBAC Problem Details](adr/2026-11-22-inline-explanation-primitives-and-rbac-problem-details.md)

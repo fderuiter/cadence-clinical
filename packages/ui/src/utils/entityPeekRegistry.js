@@ -112,7 +112,8 @@ export function stripRawPermissionTokens(text) {
     return "";
   }
   return text
-    .replace(/\(\s*[a-z0-9_]+[:.][a-z0-9_*]+\s*\)/gi, "")
+    .replace(/\s*\(\s*[a-z0-9_]+[:.][a-z0-9_*]+\s*\)/gi, "")
+    .replace(/\s+([.,;!?])/g, "$1")
     .replace(/\s{2,}/g, " ")
     .trim();
 }

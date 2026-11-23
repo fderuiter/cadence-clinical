@@ -4,7 +4,10 @@ import {
   getActivePinia,
   setActivePinia,
 } from "pinia";
-import { describeApiError } from "../utils/apiErrors.js";
+import {
+  describeApiError,
+  extractProblemExplanation,
+} from "../utils/apiErrors.js";
 
 let nextId = 1;
 
@@ -15,7 +18,14 @@ let nextId = 1;
 const rawUseToastStore = defineStore("toasts", {
   state: () => ({ toasts: [] }),
   actions: {
-    push({ tone = "error", title, message, action = null, timeoutMs = 8000 }) {
+    push({
+      tone = "error",
+      title,
+      message,
+      action = null,
+      targets = null,
+      timeoutMs = 8000,
+    }) {
       const id = nextId++;
       const normalizedAction =
         action &&
@@ -26,12 +36,22 @@ const rawUseToastStore = defineStore("toasts", {
         action.to.trim()
           ? { label: action.label.trim(), to: action.to.trim() }
           : null;
+      const normalizedTargets = Array.isArray(targets)
+        ? targets
+            .filter((t) => t && typeof t.target === "string" && t.target.trim())
+            .map((t) => ({
+              target: t.target.trim(),
+              description:
+                typeof t.description === "string" ? t.description.trim() : "",
+            }))
+        : [];
       this.toasts.push({
         id,
         tone,
         title,
         message,
         action: normalizedAction,
+        targets: normalizedTargets,
       });
       if (timeoutMs > 0 && typeof window !== "undefined") {
         window.setTimeout(() => this.dismiss(id), timeoutMs);
@@ -44,10 +64,12 @@ const rawUseToastStore = defineStore("toasts", {
     /** Reports a failed API call: `title` says what failed, the message comes from the error. */
     apiError(title, err) {
       console.error(`${title}:`, err);
+      const exp = extractProblemExplanation(err);
       return this.push({
         tone: "error",
         title,
         message: describeApiError(err),
+        targets: exp?.nextActions ?? [],
         timeoutMs: 0,
       });
     },

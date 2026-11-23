@@ -94,13 +94,25 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
   );
 
   const signerUsername = computed(
-    () => authStore?.user?.email || authStore?.user?.username || "data-manager"
+    () =>
+      authStore?.identity?.username ||
+      authStore?.user?.username ||
+      authStore?.user?.email ||
+      "data-manager"
   );
   const signerFullName = computed(() => {
+    const identity = authStore?.identity ?? authStore?.user;
     const user = authStore?.user as
       | (typeof authStore.user & { name?: string; full_name?: string })
       | null
       | undefined;
+    if (identity) {
+      const fullName = [identity.firstName, identity.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      if (fullName) return fullName;
+    }
     return user?.name || user?.full_name || signerUsername.value;
   });
 
@@ -169,6 +181,8 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     if (!targetStudyRef || typeof kernelApi.canI !== "function") {
       canApply.value = false;
       canRelease.value = false;
+      canApplyExplanation.value = null;
+      canReleaseExplanation.value = null;
       resetReadiness();
       return;
     }
@@ -180,6 +194,11 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
       if (seq !== authProbeSeq) return;
       canApply.value = Boolean(applyDec?.permitted);
       canRelease.value = Boolean(releaseDec?.permitted);
+      canApplyExplanation.value =
+        (applyDec?.explanation as Record<string, unknown> | undefined) ?? null;
+      canReleaseExplanation.value =
+        (releaseDec?.explanation as Record<string, unknown> | undefined) ??
+        null;
       if (!canApply.value) {
         resetReadiness();
       }
@@ -187,6 +206,8 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
       if (seq !== authProbeSeq) return;
       canApply.value = false;
       canRelease.value = false;
+      canApplyExplanation.value = null;
+      canReleaseExplanation.value = null;
       resetReadiness();
     }
   }
@@ -253,9 +274,7 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
   async function executeSign(sigToken: string, signingReason: string) {
     const op = modalOp.value;
     const currentStudyRef = options.studyRef();
-    if (!op || !currentStudyRef) return {
-    canApplyExplanation,
-    canReleaseExplanation, kind: "signed" as const };
+    if (!op || !currentStudyRef) return { kind: "signed" as const };
     const meaning: KernelLockMeaning =
       signingReason === "Responsibility" ? "Responsibility" : "Approved";
     busy.value = true;
@@ -329,6 +348,8 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     LOCK_SIGNING_REASONS,
     canApply,
     canRelease,
+    canApplyExplanation,
+    canReleaseExplanation,
     readiness,
     readinessLoading,
     isLockBlockedByReadiness,

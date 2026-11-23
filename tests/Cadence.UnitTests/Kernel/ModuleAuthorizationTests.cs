@@ -83,7 +83,7 @@ public sealed class ModuleAuthorizationTests
             .AddCadenceModule("probe_module", typeof(AnnotateStudy).Assembly)
             .AddCadenceModule("execution", typeof(AssertionExtensions).Assembly, openApiDocument: "execution_forms");
 
-        using var provider = services.BuildServiceProvider();
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
         var registrations = provider.GetServices<CadenceModuleRegistration>();
         registrations.Should().SatisfyRespectively(
             first => first.EffectiveOpenApiDocument.Should().Be("probe_module"),

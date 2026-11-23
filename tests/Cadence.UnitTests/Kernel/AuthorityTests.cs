@@ -450,7 +450,7 @@ public sealed class AuthorityTests
         noGrant.Reason.Should().NotContain(personId.Value.ToString("D"));
         noGrant.Reason.Should().StartWith("The signed-in user holds no grant");
         noGrant.Conditions.Should().ContainSingle()
-            .Which.Evidence.Should().Equal(NodeRef.For(personId));
+            .Which.Evidence.Should().Equal(SiteA1Ref, NodeRef.For(personId));
     }
 
     /// <summary>

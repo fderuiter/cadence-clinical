@@ -20,8 +20,13 @@
           :aria-describedby="!permitted ? explanationDomId : undefined"
           @click="permitted && $emit('action')"
         >
-          <Lock v-if="!permitted" :size="16" :stroke-width="1.75" aria-hidden="true" />
-          <span>{ label }</span>
+          <Lock
+            v-if="!permitted"
+            :size="16"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <span>{{ label }}</span>
         </button>
       </slot>
 
@@ -34,9 +39,19 @@
         @click="expanded = !expanded"
       >
         <Lock :size="16" :stroke-width="1.75" aria-hidden="true" />
-        <span>{ whyButtonLabel }</span>
-        <ChevronDown v-if="expanded" :size="16" :stroke-width="1.75" aria-hidden="true" />
-        <ChevronRight v-else :size="16" :stroke-width="1.75" aria-hidden="true" />
+        <span>{{ whyButtonLabel }}</span>
+        <ChevronDown
+          v-if="expanded"
+          :size="16"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
+        <ChevronRight
+          v-else
+          :size="16"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
       </button>
     </div>
 
@@ -106,7 +121,11 @@ const explanationDomId = `clinical-gated-exp-${nextInstanceId}`;
 const expanded = ref(props.defaultExpanded);
 
 const cleanReason = computed(() =>
-  stripRawPermissionTokens(props.reason || props.explanation?.claim || "This clinical action is currently unavailable.")
+  stripRawPermissionTokens(
+    props.reason ||
+      props.explanation?.claim ||
+      "This clinical action is currently unavailable."
+  )
 );
 
 const whyButtonLabel = computed(() => props.whyLabel || "Why blocked");
@@ -139,7 +158,7 @@ const hasExplanation = computed(
   min-height: 2.75rem;
   padding: 0.375rem 0.75rem;
   border-radius: 0.375rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-control);
   background: transparent;
   color: var(--color-text);
   font-family: var(--font-sans);

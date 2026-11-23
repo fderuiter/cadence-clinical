@@ -17,12 +17,13 @@
     <PackageVersion Include="Microsoft.Extensions.Options" Version="$(DotNetServicingVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="$(DotNetServicingVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="$(DotNetServicingVersion)" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.0.18" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="3.2.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OpenTelemetryInstrumentationVersion)" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryInstrumentationVersion)" />
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.19.1-beta.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OpenTelemetryVersion)" />
+    <!-- OpenTelemetry.Instrumentation.Runtime skipped 1.20.2 (1.20.1 -> 1.21.0); pin to $(OpenTelemetryVersion) to avoid NU1603/CADDEP001. -->
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="$(DotNetServicingVersion)" />
 
@@ -61,10 +62,10 @@
     <!-- Testing Infrastructure -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
     <PackageVersion Include="xunit.v3" Version="1.1.0" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="FluentAssertions" Version="8.11.0" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.3.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="coverlet.collector" Version="10.1.1" />
     <PackageVersion Include="TngTech.ArchUnitNET.xUnit" Version="0.13.5" />
@@ -93,6 +94,7 @@
     <!-- Analyzers & Code Quality -->
     <!-- Stay on Microsoft.CodeAnalysis.NetAnalyzers 9.0.0 while targeting net10.0; 11.0.100 targets .NET 11 (#5949, ADR-2233, ADR-2527). -->
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
+    <!-- Stay on SonarAnalyzer.CSharp 10.6.0.109712 until new 10.37+ security-hotspot and nullability rules (S5332, S6444, S8969) are baselined (#6030). -->
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.6.0.109712" />
     <!-- #4784 K-TIME-3: bans direct wall-clock reads (see BannedSymbols.txt); referenced solution-wide in root Directory.Build.props. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />

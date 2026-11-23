@@ -34,6 +34,24 @@ export const ConfidenceBadge: DefineComponent<
   any
 >;
 
+export const ClinicalContextBar: DefineComponent<
+  {
+    studiesLabel?: string;
+    studiesTo?: string | Record<string, any>;
+    studyCode?: string;
+    studyTo?: string | Record<string, any>;
+    siteCode?: string;
+    siteLabelPrefix?: string;
+    siteTo?: string | Record<string, any>;
+    participantCode?: string;
+    participantTo?: string | Record<string, any>;
+    currentLabel?: string;
+    ariaLabel?: string;
+  },
+  {},
+  any
+>;
+
 export const AiSuggestionDrawer: DefineComponent<
   {
     modelValue?: boolean;
@@ -700,9 +718,18 @@ export function createOidcSessionCoordinator(options?: {
 }): OidcSessionCoordinator;
 
 export const EntityLink: import("vue").DefineComponent<Record<string, any>>;
-export const ClinicalExplanation: import("vue").DefineComponent<Record<string, any>>;
-export const ClinicalGatedAction: import("vue").DefineComponent<Record<string, any>>;
+export const ClinicalExplanation: import("vue").DefineComponent<
+  Record<string, any>
+>;
+export const ClinicalGatedAction: import("vue").DefineComponent<
+  Record<string, any>
+>;
 export function parseNodeRef(raw: string): Record<string, any>;
 export function stripRawPermissionTokens(text: string): string;
-export function registerEntityPeekHandler(handler: (payload: Record<string, any>) => void): () => void;
-export function openEntityPeek(nodeRef: string, context?: Record<string, any>): boolean;
+export function registerEntityPeekHandler(
+  handler: (payload: Record<string, any>) => void
+): () => void;
+export function openEntityPeek(
+  nodeRef: string,
+  context?: Record<string, any>
+): boolean;

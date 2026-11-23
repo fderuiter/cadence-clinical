@@ -73,6 +73,10 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  docked: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "update:isOpen", "close"]);
@@ -121,8 +125,10 @@ const onBackdropClick = () => {
   closeDrawer();
 };
 
+const trapActive = computed(() => drawerOpen.value && !props.docked);
+
 useFocusTrap(drawerRef, {
-  isOpen: drawerOpen,
+  isOpen: trapActive,
   escapeDeactivates: () => props.dismissible,
   initialFocus: () => props.initialFocus,
   restoreFocus: props.restoreFocus,
@@ -138,6 +144,7 @@ useFocusTrap(drawerRef, {
       :class="[
         'clinical-drawer-backdrop',
         `position-${position}`,
+        { 'is-docked': docked },
         overlayClass,
       ]"
       role="presentation"
@@ -151,6 +158,7 @@ useFocusTrap(drawerRef, {
           'clinical-drawer-panel',
           `size-${size}`,
           `position-${position}`,
+          { 'is-docked': docked },
           panelClass,
         ]"
         :role="role"
@@ -227,8 +235,11 @@ useFocusTrap(drawerRef, {
   box-shadow: -8px 0 24px -4px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
-  outline: none;
   animation: clinical-drawer-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.clinical-drawer-panel:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .clinical-drawer-panel.position-left {
@@ -301,8 +312,7 @@ useFocusTrap(drawerRef, {
 
 .clinical-drawer-title {
   margin: 0;
-  font-docked: { type: Boolean, default: false },
-  size: var(--font-size-md, 16px);
+  font-size: var(--font-size-md, 16px);
   font-weight: 600;
   color: var(--color-text);
 }
@@ -360,11 +370,31 @@ useFocusTrap(drawerRef, {
   }
 }
 
+@media (min-width: 1280px) {
+  .clinical-drawer-backdrop.is-docked {
+    background: transparent;
+    backdrop-filter: none;
+    pointer-events: none;
+  }
+
+  .clinical-drawer-panel.is-docked {
+    pointer-events: auto;
+  }
+}
+
 @media (max-width: 480px) {
-  .clinical-drawer {
+  .clinical-drawer-backdrop {
+    align-items: flex-end;
+  }
+
+  .clinical-drawer-panel {
     width: 100vw;
     max-width: 100vw;
+    height: auto;
     max-height: 90dvh;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid var(--color-border);
   }
 }
 </style>

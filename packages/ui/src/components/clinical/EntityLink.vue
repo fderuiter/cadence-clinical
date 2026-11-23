@@ -5,8 +5,13 @@
     :data-node-kind="parsed.kind"
     :data-mask-reason="parsed.maskReason"
   >
-    <EyeOff :size="16" :stroke-width="1.75" aria-hidden="true" class="entity-link__icon" />
-    <span class="entity-link__label">{ label || parsed.displayLabel }</span>
+    <EyeOff
+      :size="16"
+      :stroke-width="1.75"
+      aria-hidden="true"
+      class="entity-link__icon"
+    />
+    <span class="entity-link__label">{{ label || parsed.displayLabel }}</span>
   </span>
   <button
     v-else
@@ -18,16 +23,26 @@
     :aria-label="`Inspect ${resolvedLabel}`"
     @click="handleClick"
   >
-    <ExternalLink :size="16" :stroke-width="1.75" aria-hidden="true" class="entity-link__icon" />
-    <span class="entity-link__label">{ resolvedLabel }</span>
-    <span v-if="showRefCode" class="entity-link__code">{ parsed.shortRef }</span>
+    <ExternalLink
+      :size="16"
+      :stroke-width="1.75"
+      aria-hidden="true"
+      class="entity-link__icon"
+    />
+    <span class="entity-link__label">{{ resolvedLabel }}</span>
+    <span v-if="showRefCode" class="entity-link__code">{{
+      parsed.shortRef
+    }}</span>
   </button>
 </template>
 
 <script setup>
 import { computed } from "vue";
 import { ExternalLink, EyeOff } from "lucide-vue-next";
-import { openEntityPeek, parseNodeRef } from "../../utils/entityPeekRegistry.js";
+import {
+  openEntityPeek,
+  parseNodeRef,
+} from "../../utils/entityPeekRegistry.js";
 
 const props = defineProps({
   nodeRef: {
@@ -53,7 +68,10 @@ const emit = defineEmits(["peek", "select"]);
 const parsed = computed(() => parseNodeRef(props.nodeRef));
 const resolvedLabel = computed(() => props.label || parsed.value.displayLabel);
 const showRefCode = computed(
-  () => props.showCode && Boolean(parsed.value.shortRef) && parsed.value.shortRef !== resolvedLabel.value
+  () =>
+    props.showCode &&
+    Boolean(parsed.value.shortRef) &&
+    parsed.value.shortRef !== resolvedLabel.value
 );
 
 function handleClick(event) {
@@ -96,6 +114,7 @@ function handleClick(event) {
 }
 
 .entity-link--interactive {
+  border-color: var(--color-border-control);
   cursor: pointer;
   transition: border-color 120ms ease;
 }
@@ -103,7 +122,6 @@ function handleClick(event) {
 .entity-link--interactive:hover,
 .entity-link--interactive:focus-visible {
   border-color: var(--color-primary);
-  outline: none;
 }
 
 .entity-link--masked {

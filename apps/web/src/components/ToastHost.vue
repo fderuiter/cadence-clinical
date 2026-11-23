@@ -18,6 +18,16 @@
         <span v-if="toast.message" class="toast-message">{{
           toast.message
         }}</span>
+        <div v-if="toast.targets?.length" class="toast-targets">
+          <EntityLink
+            v-for="(item, idx) in toast.targets"
+            :key="`${item.target}-${idx}`"
+            :node-ref="item.target"
+            :label="item.description || undefined"
+            compact
+            @peek="toastStore.dismiss(toast.id)"
+          />
+        </div>
         <button
           v-if="toast.action?.label && toast.action?.to"
           type="button"
@@ -107,6 +117,12 @@ function handleAction(toast) {
   font-size: 0.85rem;
   color: var(--semantic-color-text-muted);
   word-break: break-word;
+}
+.toast-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
 }
 .toast-action {
   align-self: flex-start;

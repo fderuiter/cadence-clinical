@@ -6,17 +6,32 @@
     aria-live="polite"
   >
     <div class="clinical-explanation__header">
-      <ShieldAlert :size="16" :stroke-width="1.75" aria-hidden="true" class="clinical-explanation__lead-icon" />
-      <p class="clinical-explanation__claim">{ displayClaim }</p>
-      <span v-if="metaBadge" class="clinical-explanation__badge">{ metaBadge }</span>
+      <ShieldAlert
+        :size="16"
+        :stroke-width="1.75"
+        aria-hidden="true"
+        class="clinical-explanation__lead-icon"
+      />
+      <p class="clinical-explanation__claim">{{ displayClaim }}</p>
+      <span v-if="metaBadge" class="clinical-explanation__badge">{{
+        metaBadge
+      }}</span>
     </div>
 
     <div v-if="subjectRef" class="clinical-explanation__subject">
       <span class="clinical-explanation__caption">Governing record:</span>
-      <EntityLink :node-ref="subjectRef" compact @peek="$emit('peek', $event)" />
+      <EntityLink
+        :node-ref="subjectRef"
+        compact
+        @peek="$emit('peek', $event)"
+      />
     </div>
 
-    <ul v-if="conditionsList.length > 0" class="clinical-explanation__conditions" aria-label="Evaluated conditions">
+    <ul
+      v-if="conditionsList.length > 0"
+      class="clinical-explanation__conditions"
+      aria-label="Evaluated conditions"
+    >
       <li
         v-for="(cond, idx) in conditionsList"
         :key="`${cond.code || 'cond'}-${idx}`"
@@ -39,10 +54,15 @@
         />
         <div class="clinical-explanation__condition-body">
           <span class="clinical-explanation__condition-status">
-            { cond.met ? "Met:" : "Required:" }
+            {{ cond.met ? "Met:" : "Required:" }}
           </span>
-          <span class="clinical-explanation__condition-text">{ cleanText(cond.description) }</span>
-          <div v-if="cond.evidence && cond.evidence.length > 0" class="clinical-explanation__evidence">
+          <span class="clinical-explanation__condition-text">{{
+            cleanText(cond.description)
+          }}</span>
+          <div
+            v-if="cond.evidence && cond.evidence.length > 0"
+            class="clinical-explanation__evidence"
+          >
             <EntityLink
               v-for="(ev, evIdx) in cond.evidence"
               :key="`${ev}-${evIdx}`"
@@ -55,7 +75,10 @@
       </li>
     </ul>
 
-    <div v-if="nextActionsList.length > 0" class="clinical-explanation__next-actions">
+    <div
+      v-if="nextActionsList.length > 0"
+      class="clinical-explanation__next-actions"
+    >
       <span class="clinical-explanation__caption">How to resolve:</span>
       <ul class="clinical-explanation__actions-list">
         <li
@@ -63,7 +86,9 @@
           :key="`next-${idx}`"
           class="clinical-explanation__action-item"
         >
-          <span class="clinical-explanation__action-text">{ cleanText(act.description) }</span>
+          <span class="clinical-explanation__action-text">{{
+            cleanText(act.description)
+          }}</span>
           <EntityLink
             v-if="act.target"
             :node-ref="String(act.target)"
@@ -74,15 +99,25 @@
       </ul>
     </div>
 
-    <details v-if="!compact && stepsList.length > 0" class="clinical-explanation__steps">
+    <details
+      v-if="!compact && stepsList.length > 0"
+      class="clinical-explanation__steps"
+    >
       <summary class="clinical-explanation__steps-summary">
         <Info :size="16" :stroke-width="1.75" aria-hidden="true" />
-        <span>Rule evaluation steps ({ stepsList.length })</span>
+        <span>Rule evaluation steps ({{ stepsList.length }})</span>
       </summary>
       <ol class="clinical-explanation__steps-list">
-        <li v-for="(step, idx) in stepsList" :key="`step-${idx}`" class="clinical-explanation__step-item">
-          <span>{ cleanText(step.statement) }</span>
-          <div v-if="step.evidence && step.evidence.length > 0" class="clinical-explanation__evidence">
+        <li
+          v-for="(step, idx) in stepsList"
+          :key="`step-${idx}`"
+          class="clinical-explanation__step-item"
+        >
+          <span>{{ cleanText(step.statement) }}</span>
+          <div
+            v-if="step.evidence && step.evidence.length > 0"
+            class="clinical-explanation__evidence"
+          >
             <EntityLink
               v-for="(ev, evIdx) in step.evidence"
               :key="`step-ev-${ev}-${evIdx}`"
@@ -136,7 +171,9 @@ const displayClaim = computed(() => {
 const subjectRef = computed(() => props.explanation?.subject || null);
 
 const conditionsList = computed(() =>
-  Array.isArray(props.explanation?.conditions) ? props.explanation.conditions : []
+  Array.isArray(props.explanation?.conditions)
+    ? props.explanation.conditions
+    : []
 );
 
 const stepsList = computed(() =>
@@ -153,7 +190,9 @@ const nextActionsList = computed(() => {
   return [];
 });
 
-const metaBadge = computed(() => props.code || props.explanation?.producer || "");
+const metaBadge = computed(
+  () => props.code || props.explanation?.producer || ""
+);
 
 const hasContent = computed(
   () =>
