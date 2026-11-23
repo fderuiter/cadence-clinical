@@ -21,7 +21,8 @@ public static class ContextualHelpScorer
         ContextualHelpMapping Mapping,
         KnowledgeArticle Article,
         int RouteSpecificityScore,
-        int PersonaSpecificityScore);
+        int PersonaSpecificityScore,
+        int ExactQueryMatchCount = 0);
 
     public sealed record ContextualResolution(
         ContextualHelpMapping? MatchedMapping,
@@ -131,17 +132,68 @@ public static class ContextualHelpScorer
 
     /// <summary>
     /// Computes the route specificity score for <paramref name="rawPattern"/> against <paramref name="route"/>,
+    /// including explicit query-string filter bonuses when present on <paramref name="rawPattern"/>,
     /// or returns <c>-1</c> when the pattern does not match.
     /// </summary>
-    public static int ScoreRoutePattern(string route, string? rawPattern)
+    public static int ScoreRoutePattern(string route, string? rawPattern) =>
+        ScoreRoutePatternDetailed(route, rawPattern).Score;
+
+    private static (int Score, int ExactQueryMatches) ScoreRoutePatternDetailed(string route, string? rawPattern)
     {
         if (string.IsNullOrWhiteSpace(rawPattern))
         {
-            return -1;
+            return (-1, 0);
         }
 
-        string normalizedRoute = NormalizeRoute(route);
-        string pattern = rawPattern.Trim();
+        string trimmedPattern = rawPattern.Trim();
+        int patternQueryIdx = trimmedPattern.IndexOfAny(['?', '#']);
+        string patternPath = patternQueryIdx >= 0 ? trimmedPattern[..patternQueryIdx] : trimmedPattern;
+
+        int basePathScore = ScorePathPattern(NormalizeRoute(route), patternPath);
+        if (basePathScore < 0)
+        {
+            return (-1, 0);
+        }
+
+        Dictionary<string, string> patternQuery = ExtractQueryParameters(trimmedPattern);
+        if (patternQuery.Count == 0)
+        {
+            return (basePathScore, 0);
+        }
+
+        Dictionary<string, string> routeQuery = ExtractQueryParameters(route);
+        int exactQueryMatches = 0;
+
+        foreach ((string key, string expectedValue) in patternQuery)
+        {
+            if (!routeQuery.TryGetValue(key, out string? actualValue) || string.IsNullOrWhiteSpace(actualValue))
+            {
+                return (-1, 0);
+            }
+
+            if (IsWildcardOrParameterQueryValue(expectedValue))
+            {
+                continue;
+            }
+
+            if (!string.Equals(actualValue, expectedValue, StringComparison.OrdinalIgnoreCase))
+            {
+                return (-1, 0);
+            }
+
+            exactQueryMatches++;
+        }
+
+        return (basePathScore + (patternQuery.Count * 300), exactQueryMatches);
+    }
+
+    private static int ScorePathPattern(string normalizedRoute, string rawPatternPath)
+    {
+        string pattern = rawPatternPath.Trim();
+        if (pattern.Length == 0)
+        {
+            pattern = "/";
+        }
 
         if (pattern is "*" or "/*")
         {
@@ -243,6 +295,64 @@ public static class ContextualHelpScorer
         return 3000 + (literalSegmentCount * 15) + routeSegments.Length;
     }
 
+    private static Dictionary<string, string> ExtractQueryParameters(string? rawRouteOrPattern)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(rawRouteOrPattern))
+        {
+            return result;
+        }
+
+        string trimmed = rawRouteOrPattern.Trim();
+        int hashIdx = trimmed.IndexOf('#', StringComparison.Ordinal);
+        if (hashIdx >= 0)
+        {
+            trimmed = trimmed[..hashIdx];
+        }
+
+        int queryIdx = trimmed.IndexOf('?', StringComparison.Ordinal);
+        if (queryIdx < 0 || queryIdx == trimmed.Length - 1)
+        {
+            return result;
+        }
+
+        string queryString = trimmed[(queryIdx + 1)..];
+        foreach (string pair in queryString.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            int eqIdx = pair.IndexOf('=', StringComparison.Ordinal);
+            string rawKey = eqIdx >= 0 ? pair[..eqIdx] : pair;
+            string rawValue = eqIdx >= 0 ? pair[(eqIdx + 1)..] : "*";
+
+            string key = SafeUnescapeQueryComponent(rawKey).Trim();
+            if (key.Length == 0)
+            {
+                continue;
+            }
+
+            string value = SafeUnescapeQueryComponent(rawValue).Trim();
+            result[key] = value;
+        }
+
+        return result;
+    }
+
+    private static string SafeUnescapeQueryComponent(string raw)
+    {
+        string plusNormalized = raw.Replace('+', ' ');
+        try
+        {
+            return Uri.UnescapeDataString(plusNormalized);
+        }
+        catch (UriFormatException)
+        {
+            return plusNormalized;
+        }
+    }
+
+    private static bool IsWildcardOrParameterQueryValue(string expectedValue) =>
+        string.Equals(expectedValue, "*", StringComparison.Ordinal)
+        || IsParameterSegment(expectedValue);
+
     /// <summary>
     /// Computes persona specificity: <c>1</c> for an exact normalized persona match, <c>0</c> for universal wildcard,
     /// and <c>-1</c> when the mapping targets a different persona.
@@ -270,7 +380,7 @@ public static class ContextualHelpScorer
         IReadOnlyDictionary<string, KnowledgeArticle> publishedArticlesById,
         IReadOnlyDictionary<string, KnowledgeArticleVersion> versionsById)
     {
-        string normalizedRoute = NormalizeRoute(route);
+        string rawRoute = string.IsNullOrWhiteSpace(route) ? "/" : route.Trim();
         string normalizedPersona = NormalizePersona(persona);
 
         var scored = new List<ScoredMapping>();
@@ -288,7 +398,7 @@ public static class ContextualHelpScorer
                 continue;
             }
 
-            int routeScore = ScoreRoutePattern(normalizedRoute, mapping.RoutePattern);
+            (int routeScore, int exactQueryMatches) = ScoreRoutePatternDetailed(rawRoute, mapping.RoutePattern);
             if (routeScore < 0)
             {
                 continue;
@@ -300,7 +410,7 @@ public static class ContextualHelpScorer
                 continue;
             }
 
-            scored.Add(new ScoredMapping(mapping, article, routeScore, personaScore));
+            scored.Add(new ScoredMapping(mapping, article, routeScore, personaScore, exactQueryMatches));
         }
 
         if (scored.Count == 0)
@@ -312,6 +422,7 @@ public static class ContextualHelpScorer
             .OrderByDescending(s => s.RouteSpecificityScore)
             .ThenByDescending(s => s.PersonaSpecificityScore)
             .ThenByDescending(s => s.Mapping.Priority)
+            .ThenByDescending(s => s.ExactQueryMatchCount)
             .ThenByDescending(s => s.Mapping.CreatedAt)
             .ThenByDescending(s => s.Mapping.Id, StringComparer.Ordinal)
             .ToList();

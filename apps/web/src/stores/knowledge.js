@@ -9,7 +9,107 @@ const loadKnowledgeService = () =>
     (module) => module.knowledgeService
   ));
 
+let ticketsApiPromise;
+const loadTicketsApi = () =>
+  (ticketsApiPromise ??= import("../api/ticketsApi").then(
+    (module) => module.ticketsApi
+  ));
+
 const DEMO_ESCALATED_TICKETS_STORAGE_KEY = "cadence_demo_escalated_tickets";
+
+/**
+ * Matches `TicketPiiValidator.PseudonymousSubjectCodeRegex` (`^[A-Za-z]{2,12}[-_][A-Za-z0-9][A-Za-z0-9_-]{0,24}$`).
+ * Raw `participant:<uuid>` NodeRefs and raw UUIDs are intentionally rejected so ticket pre-fill never violates PII/pseudonymity validation.
+ */
+export const PSEUDONYMOUS_SUBJECT_CODE_REGEX =
+  /^[A-Za-z]{2,12}[-_][A-Za-z0-9][A-Za-z0-9_-]{0,24}$/;
+
+export function isPseudonymousSubjectCode(value) {
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && PSEUDONYMOUS_SUBJECT_CODE_REGEX.test(trimmed);
+}
+
+function firstNonEmptyParam(searchParams, keys) {
+  for (const key of keys) {
+    const val = searchParams.get(key);
+    if (typeof val === "string" && val.trim().length > 0) {
+      return val.trim();
+    }
+  }
+  return "";
+}
+
+function safeDecodeSegment(segment) {
+  try {
+    return decodeURIComponent(segment).trim();
+  } catch {
+    return String(segment || "").trim();
+  }
+}
+
+/**
+ * Extracts `study_id`, `site_id`, and pseudonymous `subject_id` from active route path segments and query parameters.
+ */
+export function extractClinicalScopeFromRoute(rawRoute) {
+  const clean = String(rawRoute || "/").trim();
+  const withoutHash = clean.split("#")[0] || "/";
+  const queryIdx = withoutHash.indexOf("?");
+  const pathname = queryIdx >= 0 ? withoutHash.slice(0, queryIdx) : withoutHash;
+  const search = queryIdx >= 0 ? withoutHash.slice(queryIdx + 1) : "";
+  const searchParams = new URLSearchParams(search);
+
+  const studyPathMatch = pathname.match(/^\/studies\/([^/?#]+)/);
+  const pathStudyId = studyPathMatch
+    ? safeDecodeSegment(studyPathMatch[1])
+    : "";
+  const queryStudyId = firstNonEmptyParam(searchParams, [
+    "studyId",
+    "study_id",
+    "studyCode",
+    "study_code",
+    "study",
+  ]);
+  const study_id = pathStudyId || queryStudyId;
+
+  const sitePathMatch = pathname.match(/\/sites\/([^/?#]+)/);
+  const pathSiteId = sitePathMatch ? safeDecodeSegment(sitePathMatch[1]) : "";
+  const querySiteId = firstNonEmptyParam(searchParams, [
+    "siteId",
+    "site_id",
+    "siteCode",
+    "site_code",
+    "site",
+  ]);
+  const site_id = querySiteId || pathSiteId;
+
+  const subjectPathMatch = pathname.match(/\/subjects\/([^/?#]+)/);
+  const pathSubjectCandidate = subjectPathMatch
+    ? safeDecodeSegment(subjectPathMatch[1])
+    : "";
+  const querySubjectCandidate = firstNonEmptyParam(searchParams, [
+    "subjectId",
+    "subject_id",
+    "subjectCode",
+    "subject_code",
+    "subject",
+    "participant",
+  ]);
+
+  let subject_id = "";
+  if (isPseudonymousSubjectCode(querySubjectCandidate)) {
+    subject_id = querySubjectCandidate.trim();
+  } else if (isPseudonymousSubjectCode(pathSubjectCandidate)) {
+    subject_id = pathSubjectCandidate.trim();
+  }
+
+  return {
+    pathname: pathname || "/",
+    study_id,
+    site_id,
+    subject_id,
+  };
+}
 
 function loadSessionEscalatedTickets() {
   if (typeof sessionStorage === "undefined") return [];
@@ -38,6 +138,7 @@ function saveSessionEscalatedTickets(tickets) {
 export const useKnowledgeStore = defineStore("knowledge", {
   state: () => ({
     isOpen: false,
+    activeDrawerTab: "guidance",
     currentRoute: "/ecrf",
     hasLoadedContextualHelp: false,
     activePersona: "super_admin",
@@ -58,6 +159,14 @@ export const useKnowledgeStore = defineStore("knowledge", {
     escalationPayload: null,
     escalatedTickets: loadSessionEscalatedTickets(),
     lastEscalatedTicket: null,
+    drawerTickets: [],
+    hasLoadedDrawerTickets: false,
+    isTicketsLoading: false,
+    ticketsError: null,
+    selectedTicketId: null,
+    selectedTicket: null,
+    isTicketDetailLoading: false,
+    ticketDetailError: null,
   }),
 
   getters: {
@@ -71,6 +180,9 @@ export const useKnowledgeStore = defineStore("knowledge", {
       if (state.selectedArticle) return null;
       return state.sectionAnchor;
     },
+    activeRouteScope: (state) => {
+      return extractClinicalScopeFromRoute(state.currentRoute);
+    },
   },
 
   actions: {
@@ -83,12 +195,19 @@ export const useKnowledgeStore = defineStore("knowledge", {
       this.escalationPayload = null;
     },
 
-    openDrawer() {
+    openDrawer(tab) {
+      if (tab === "tickets" || tab === "guidance") {
+        this.activeDrawerTab = tab;
+      }
       this.isOpen = true;
     },
 
     closeDrawer() {
       this.isOpen = false;
+      this.activeDrawerTab = "guidance";
+      this.selectedTicketId = null;
+      this.selectedTicket = null;
+      this.ticketDetailError = null;
       this.invalidateContextualState();
     },
 
@@ -98,6 +217,10 @@ export const useKnowledgeStore = defineStore("knowledge", {
       } else {
         this.openDrawer();
       }
+    },
+
+    setActiveDrawerTab(tab) {
+      this.activeDrawerTab = tab === "tickets" ? "tickets" : "guidance";
     },
 
     toggleArticleBody() {
@@ -237,34 +360,37 @@ export const useKnowledgeStore = defineStore("knowledge", {
       return await this.fetchContextualHelp(targetRoute, targetPersona);
     },
 
-    prepareEscalation() {
+    prepareEscalation(routeOverride) {
       const activeArticle = this.displayedArticle;
       const articleTitle = activeArticle?.title || "None";
       const articleId = activeArticle?.id || "N/A";
-      const route = this.currentRoute || "/";
+      const route =
+        (typeof routeOverride === "string" && routeOverride.trim()) ||
+        this.currentRoute ||
+        "/";
       const persona = this.activePersona;
+      const { pathname, study_id, site_id, subject_id } =
+        extractClinicalScopeFromRoute(route);
 
       let defaultCategory = "SYSTEM_SUPPORT";
-      if (route.startsWith("/ecrf")) {
+      if (pathname.startsWith("/ecrf")) {
         defaultCategory = "PROTOCOL_DEVIATION";
       } else if (
-        route.startsWith("/mdr") ||
-        route.startsWith("/rules") ||
-        route.startsWith("/studies")
+        pathname.startsWith("/mdr") ||
+        pathname.startsWith("/rules") ||
+        pathname.startsWith("/studies")
       ) {
         defaultCategory = "DATA_QUERY";
-      } else if (route.startsWith("/ctms")) {
+      } else if (pathname.startsWith("/ctms")) {
         defaultCategory = "MONITORING_FINDING";
-      } else if (route.startsWith("/ssu")) {
+      } else if (pathname.startsWith("/ssu")) {
         defaultCategory = "SITE_OPERATIONS";
-      } else if (route.startsWith("/audit") || route.startsWith("/auditor")) {
+      } else if (
+        pathname.startsWith("/audit") ||
+        pathname.startsWith("/auditor")
+      ) {
         defaultCategory = "REGULATORY_QUERY";
       }
-
-      const studyMatch = route.match(/^\/studies\/([^/?#]+)/);
-      const inferredStudyId = studyMatch
-        ? decodeURIComponent(studyMatch[1])
-        : "";
 
       this.escalationPayload = {
         title: `[Help Escalation] Operational Assistance on ${route}`,
@@ -272,9 +398,11 @@ export const useKnowledgeStore = defineStore("knowledge", {
         category: defaultCategory,
         gxp_severity: "MINOR",
         priority: "MEDIUM",
-        study_id: inferredStudyId,
-        entity_type: "CRF_FORM",
-        entity_id: articleId !== "N/A" ? articleId : null,
+        study_id,
+        site_id,
+        subject_id,
+        entity_type: "",
+        entity_id: null,
         source_route: route,
         persona,
         reason_for_change: `Escalated to Support Ticket from Contextual Help on ${route}`,
@@ -282,6 +410,100 @@ export const useKnowledgeStore = defineStore("knowledge", {
 
       this.isEscalating = true;
       return this.escalationPayload;
+    },
+
+    async fetchDrawerTickets(filtersOverride) {
+      this.isTicketsLoading = true;
+      this.ticketsError = null;
+      try {
+        let filters = {};
+        if (filtersOverride && typeof filtersOverride === "object") {
+          filters = { ...filtersOverride };
+        } else {
+          const { study_id, site_id } = extractClinicalScopeFromRoute(
+            this.currentRoute
+          );
+          if (study_id) filters.study_id = study_id;
+          if (site_id) filters.site_id = site_id;
+        }
+        const ticketsApi = await loadTicketsApi();
+        const items = await ticketsApi.listTickets(filters);
+        this.drawerTickets = Array.isArray(items) ? items : [];
+        this.hasLoadedDrawerTickets = true;
+        return this.drawerTickets;
+      } catch (err) {
+        this.ticketsError =
+          describeApiError(err) ||
+          err?.message ||
+          "Unable to load scoped support tickets.";
+        return [];
+      } finally {
+        this.isTicketsLoading = false;
+      }
+    },
+
+    async selectDrawerTicket(ticketOrId) {
+      const summaryTicket =
+        ticketOrId && typeof ticketOrId === "object" ? ticketOrId : null;
+      const ticketId =
+        summaryTicket?.id ||
+        summaryTicket?.reference ||
+        (typeof ticketOrId === "string" ? ticketOrId.trim() : "");
+      if (!ticketId) return null;
+
+      this.selectedTicketId = ticketId;
+      if (summaryTicket) {
+        this.selectedTicket = summaryTicket;
+      }
+      this.isTicketDetailLoading = true;
+      this.ticketDetailError = null;
+
+      try {
+        const ticketsApi = await loadTicketsApi();
+        const detailed = await ticketsApi.getTicket(ticketId);
+        if (detailed) {
+          this.selectedTicket = detailed;
+          this.drawerTickets = this.drawerTickets.map((existing) =>
+            existing.id === detailed.id ||
+            existing.reference === detailed.reference
+              ? detailed
+              : existing
+          );
+        }
+        return this.selectedTicket;
+      } catch (err) {
+        this.ticketDetailError =
+          describeApiError(err) ||
+          err?.message ||
+          "Unable to load support ticket details.";
+        return this.selectedTicket;
+      } finally {
+        this.isTicketDetailLoading = false;
+      }
+    },
+
+    clearSelectedDrawerTicket() {
+      this.selectedTicketId = null;
+      this.selectedTicket = null;
+      this.ticketDetailError = null;
+    },
+
+    openCreatedTicketInDrawer(ticket) {
+      if (!ticket) return;
+      this.recordEscalatedTicket(ticket);
+      this.cancelEscalation();
+      const deduped = this.drawerTickets.filter(
+        (existing) =>
+          existing.id !== ticket.id && existing.reference !== ticket.reference
+      );
+      this.drawerTickets = [ticket, ...deduped];
+      this.hasLoadedDrawerTickets = true;
+      this.ticketsError = null;
+      this.ticketDetailError = null;
+      this.selectedTicketId = ticket.id || ticket.reference || null;
+      this.selectedTicket = ticket;
+      this.activeDrawerTab = "tickets";
+      this.isOpen = true;
     },
 
     recordEscalatedTicket(ticket) {
