@@ -19,7 +19,7 @@ Systematically resolves merge and rebase conflicts across code, schema models, g
 | **Marker Inspection**     | `view_file`            | Read conflicted files via `AbsolutePath`                                                                                                        | Inspect `<<<<<<<`, `=======`, `>>>>>>>` blocks                                      |
 | **Conflict Resolution**   | `replace_file_content` | Target: conflicted source files, surgical edit                                                                                                  | Resolve domain logic preserving GxP properties                                      |
 | **GxP Snapshot Recovery** | `run_command`          | `CommandLine="git checkout origin/main -- docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md docs/SDLC/runs"` | Take `main`'s copy of the generated GxP snapshot; never regenerate it on the branch |
-| **Quality Verification**  | `run_command`          | `CommandLine="dotnet cadence fix && dotnet cadence test --fast"`                                                                                | Format code and verify fast test suites                                             |
+| **Quality Verification**  | `run_command`          | `CommandLine="pnpm cadence fix && pnpm cadence test --fast"`                                                                                    | Format code and verify fast test suites                                             |
 
 ---
 
@@ -55,19 +55,19 @@ git status --short
 ### C. ADR Index (`docs/adr/index.md`)
 
 1. Keep both sides' entries, then validate:
-   `dotnet cadence fix`, which validates the index but does not rewrite it; place your entry in its domain section by hand
+   `pnpm cadence fix`, which validates the index but does not rewrite it; place your entry in its domain section by hand
 
 ### D. Source Code & Database Migrations
 
 1. Use `view_file` to inspect conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
 2. Use `replace_file_content` to resolve domain logic preserving type safety (nullable reference types, kernel IDs) and GxP audit fields.
-3. Verify with `dotnet cadence fix`.
+3. Verify with `pnpm cadence fix`.
 
 ---
 
 ## 3. Verify & Finalize
 
 1. Run full test suite:
-   `dotnet cadence test --fast`
+   `pnpm cadence test --fast`
 2. Complete merge/rebase:
    `git add . && git merge --continue` (or `git rebase --continue`)

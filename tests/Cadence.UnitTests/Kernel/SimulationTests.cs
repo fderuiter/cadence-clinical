@@ -249,6 +249,31 @@ public sealed class SimulationTests
         dayLater.ResultHash.Should().NotBe(result.ResultHash);
     }
 
+    /// <summary>
+    /// Normalized SDTM study days treat Day 0 and Day 1 as the same study day on <see cref="SimulationResult.ScheduleChanges"/>
+    /// while <see cref="ProtocolStructuralDiff"/> preserves raw JSON property changes.
+    /// </summary>
+    [Fact]
+    public async Task Simulate_NormalizesDayZeroAndDayOneOnScheduleChangesWhilePreservingStructuralDiff()
+    {
+        var inputs = new Inputs();
+        var parent = inputs.Add(Approved(Scheduled(Visit("act.baseline", "Baseline", "ep.treatment", 0, 0, 1))));
+        var dayOneCandidate = Scheduled(Visit("act.baseline", "Baseline", "ep.treatment", 1, 0, 1));
+        var addedDayZeroCandidate = Scheduled(
+            Visit("act.baseline", "Baseline", "ep.treatment", 0, 0, 1),
+            Visit("act.day0_extra", "Extra Day 0", "ep.treatment", 0, 0, 0));
+        var engine = Engine(inputs);
+
+        var normalized = await SimulateAsync(engine, SimulationCandidate.UnsavedProtocolVersion(parent.Id, dayOneCandidate));
+        var added = await SimulateAsync(engine, SimulationCandidate.UnsavedProtocolVersion(parent.Id, addedDayZeroCandidate));
+
+        normalized.ScheduleChanges.Should().BeEmpty("Day 0 and Day 1 resolve to the same SDTM study day");
+        normalized.StructuralDiff.Should().ContainSingle(c => c.ElementId == "act.baseline")
+            .Which.Properties.Should().Equal("/timing/day");
+        added.ScheduleChanges.Should().ContainSingle().Which.Should().Be(
+            new ScheduleChange("act.day0_extra", ElementChangeKind.Added, null, new PlannedVisit("act.day0_extra", "Extra Day 0", "ep.treatment", 2, 1, 0, 0)));
+    }
+
     [Fact]
     public async Task Simulate_NeedsSimulationRunAtTheStudy()
     {

@@ -13,6 +13,7 @@ import {
   ecrfFormsApi,
   formErrorCode,
   formFieldErrors,
+  NOT_READY_TO_SIGN,
   REVISION_STALE,
   SIGNATURE_MEANING_INVALID,
   TARGET_CONTENT_CHANGED,
@@ -87,6 +88,7 @@ export type EcrfSaveOutcome =
 /** What the screen tells the user after signing the form. */
 export type EcrfSignOutcome =
   | { kind: "signed"; meaning: EcrfSignatureMeaning }
+  | { kind: "not_ready"; message: string }
   | { kind: "changed"; message: string }
   | { kind: "denied"; message: string }
   | { kind: "invalid"; message: string }
@@ -316,6 +318,21 @@ export function useEcrfForm(
     return item?.unit ? `${text} ${item.unit}` : text;
   }
 
+  const initialTextByItemId = computed(() => {
+    const byId = new Map<string, string>();
+    for (const item of items.value) {
+      const current = item.value;
+      if (
+        !isUnrecordedValue(current) &&
+        current &&
+        current.type !== "missing"
+      ) {
+        byId.set(item.item_id, formatEntryText(current).trim());
+      }
+    }
+    return byId;
+  });
+
   function isEdited(item: EcrfFormItem): boolean {
     const entry = entries[item.item_id];
     if (!entry) return false;
@@ -329,7 +346,10 @@ export function useEcrfForm(
       );
     }
     if (current && current.type !== "missing") {
-      return entry.text.trim() !== formatEntryText(current).trim();
+      const initialText =
+        initialTextByItemId.value.get(item.item_id) ??
+        formatEntryText(current).trim();
+      return entry.text.trim() !== initialText;
     }
     return entry.text.trim().length > 0;
   }
@@ -685,11 +705,16 @@ export function useEcrfForm(
     }
   });
 
-  /** A form can be signed as read: the caller holds `collection.sign`, it has values (a content hash), and no unsaved entries. */
+  const hasReadinessBlockers = computed(
+    () => (form.value?.readiness_blockers?.length ?? 0) > 0
+  );
+
+  /** A form can be signed as read: the caller holds `collection.sign`, it has values (a content hash), no readiness blockers, and no unsaved entries. */
   const canSign = computed(
     () =>
       hasSignAuthority.value &&
       !!form.value?.content_hash &&
+      !hasReadinessBlockers.value &&
       !dirty.value &&
       !saving.value &&
       !signing.value
@@ -1010,7 +1035,19 @@ export function useEcrfForm(
           cause: error,
         });
       }
-      if (code === TARGET_NOT_SIGNABLE) {
+      if (code === NOT_READY_TO_SIGN) {
+        const fieldMessages = Object.values(formFieldErrors(error)).flat();
+        const detail = messageOf(error);
+        const blockerSummary =
+          fieldMessages.length > 0 &&
+          !fieldMessages.every((msg) => detail.includes(msg))
+            ? `${detail} (${fieldMessages.join("; ")})`
+            : detail;
+        signOutcome.value = {
+          kind: "not_ready",
+          message: blockerSummary,
+        };
+      } else if (code === TARGET_NOT_SIGNABLE) {
         signOutcome.value = {
           kind: "invalid",
           message: "This form has no values to sign; it was not signed.",

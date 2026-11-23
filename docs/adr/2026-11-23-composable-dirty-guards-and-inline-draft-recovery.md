@@ -1,4 +1,4 @@
-# ADR-2655: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens
+# ADR-2657: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
