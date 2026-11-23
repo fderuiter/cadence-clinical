@@ -27,10 +27,13 @@ import {
   CLINICAL_ICON_NAMES,
   CLINICAL_ICON_SIZES,
   CLINICAL_ICON_STROKE_WIDTH,
+  enableExtendedClinicalIcons,
+  enablePortalClinicalIcons,
   isClinicalIconName,
   normalizeClinicalIconSize,
   renderClinicalIconSvg,
 } from "./icons/clinicalIcons.js";
+import { ensureExtendedClinicalIconsLoaded } from "./icons/clinicalCoreIcons.js";
 import { useAsyncRetry } from "./composables/useAsyncRetry.js";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
 import {
@@ -76,6 +79,9 @@ export {
   ModalErrorAlert,
   PersonaSwitcher,
   SignOutConfirmModal,
+  enableExtendedClinicalIcons,
+  enablePortalClinicalIcons,
+  ensureExtendedClinicalIconsLoaded,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,

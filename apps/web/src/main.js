@@ -1,7 +1,11 @@
 // Cadence Clinical Vue SPA Bootstrap entrypoint
 import { createApp } from "vue";
 import { createPinia } from "pinia";
-import { initHoverDetection, sanitizeReturnUrl } from "ui";
+import {
+  enableExtendedClinicalIcons,
+  initHoverDetection,
+  sanitizeReturnUrl,
+} from "ui";
 import App from "./App.vue";
 import { installAuthorizedFetch } from "./api/authorization.js";
 import { initKeycloakAuth } from "./auth/bootstrap.js";
@@ -29,8 +33,9 @@ const authStore = useAuthStore(pinia);
 // Every gateway-bound fetch carries the Keycloak bearer token (ADR-2250).
 installAuthorizedFetch(window);
 
-// Dynamic Hover Pointer Capability Detection
+// Dynamic Hover Pointer Capability Detection & Staff Extended Icons
 initHoverDetection();
+enableExtendedClinicalIcons();
 
 async function bootstrapApp() {
   // The MSW mock gateway runs only in a demo build, or when explicitly enabled for local UI work; it must never

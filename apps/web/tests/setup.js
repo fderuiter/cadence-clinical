@@ -1,8 +1,15 @@
 import { vi, expect } from "vitest";
 import { config } from "@vue/test-utils";
+import {
+  enableExtendedClinicalIcons,
+  ensureExtendedClinicalIconsLoaded,
+} from "ui";
 import { toBeAccessible } from "ui/vitest";
 import * as usdmSchemas from "usdm-schemas";
 import { i18n } from "../src/i18n/index.js";
+
+enableExtendedClinicalIcons();
+await ensureExtendedClinicalIconsLoaded();
 
 globalThis.__CADENCE_USDM_SCHEMAS__ = usdmSchemas;
 

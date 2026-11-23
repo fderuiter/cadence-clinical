@@ -1,26 +1,14 @@
 <script setup>
-import { computed, shallowRef, watchEffect } from "vue";
+import { computed, watchEffect } from "vue";
 import {
   CLINICAL_ICON_STROKE_WIDTH,
   CORE_CLINICAL_ICON_MAP,
+  ensureExtendedClinicalIconsLoaded,
   normalizeClinicalIconName,
   normalizeClinicalIconSize,
+  registeredExtendedIconsRef,
   resolveCoreClinicalIconEntry,
 } from "../../icons/clinicalCoreIcons.js";
-
-let cachedExtendedMap = null;
-let extendedMapPromise = null;
-
-function loadExtendedIcons() {
-  if (!extendedMapPromise) {
-    extendedMapPromise =
-      import("../../icons/clinicalExtendedIconsLazy.js").then((mod) => {
-        cachedExtendedMap = mod.EXTENDED_CLINICAL_ICON_MAP;
-        return cachedExtendedMap;
-      });
-  }
-  return extendedMapPromise;
-}
 
 const props = defineProps({
   name: {
@@ -45,23 +33,19 @@ const props = defineProps({
   },
 });
 
-const extendedIcons = shallowRef(cachedExtendedMap);
-
 watchEffect(() => {
   const normalized = normalizeClinicalIconName(props.name);
   if (
     normalized &&
     !Object.prototype.hasOwnProperty.call(CORE_CLINICAL_ICON_MAP, normalized) &&
-    !extendedIcons.value
+    !registeredExtendedIconsRef.value
   ) {
-    loadExtendedIcons().then((map) => {
-      extendedIcons.value = map;
-    });
+    ensureExtendedClinicalIconsLoaded();
   }
 });
 
 const resolvedEntry = computed(() =>
-  resolveCoreClinicalIconEntry(props.name, extendedIcons.value)
+  resolveCoreClinicalIconEntry(props.name, registeredExtendedIconsRef.value)
 );
 const resolvedSize = computed(() => normalizeClinicalIconSize(props.size));
 const resolvedLabel = computed(() =>

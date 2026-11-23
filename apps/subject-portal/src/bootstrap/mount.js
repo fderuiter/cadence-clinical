@@ -1,9 +1,12 @@
 // Mounts the Vue shell with the portal's Pinia instance and router.
 import { createApp } from "vue";
+import { enablePortalClinicalIcons } from "ui";
 
 import App from "../App.vue";
 import { getPortalRouter, setPortalRouterMounted } from "../router/index.js";
 import { pinia } from "../stores/pinia.js";
+
+enablePortalClinicalIcons();
 
 let mountedApp = null;
 

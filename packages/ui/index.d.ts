@@ -161,6 +161,12 @@ export const CLINICAL_ICON_SIZES: readonly [16, 20];
 export const CLINICAL_ICON_NAMES: readonly string[];
 export const CLINICAL_ICON_MAP: Readonly<Record<string, any>>;
 
+export function enableExtendedClinicalIcons(): void;
+export function enablePortalClinicalIcons(): void;
+export function ensureExtendedClinicalIconsLoaded(): Promise<Record<
+  string,
+  any
+> | null> | null;
 export function isClinicalIconName(name: string | null | undefined): boolean;
 export function normalizeClinicalIconSize(
   size?: number | string | null
