@@ -433,13 +433,11 @@ const handleSubmit = async () => {
   font-size: 0.875rem;
   color: var(--semantic-color-text-dark);
   background: var(--semantic-color-surface);
-  outline: none;
   transition: border-color 0.15s;
 }
 
-.form-control:focus {
+.form-control:focus-visible {
   border-color: var(--semantic-color-interactive-primary);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .modal-footer {

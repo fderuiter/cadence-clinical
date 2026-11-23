@@ -871,6 +871,9 @@ onUnmounted(() => {
   margin: 0 auto;
   padding: 20px 24px;
   box-sizing: border-box;
+}
+
+.shell-main:focus:not(:focus-visible) {
   outline: none;
 }
 

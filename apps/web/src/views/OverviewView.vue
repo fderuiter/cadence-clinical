@@ -744,11 +744,14 @@ function startGuidedTour() {
 }
 
 .pref-toggle-checkbox {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   margin-top: 2px;
   cursor: pointer;
   accent-color: var(--semantic-color-accent-inverse);
+  flex-shrink: 0;
 }
 
 .toggle-text {
@@ -967,11 +970,14 @@ function startGuidedTour() {
 }
 
 .task-checkbox {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   margin-top: 2px;
   cursor: pointer;
   accent-color: var(--semantic-color-success);
+  flex-shrink: 0;
 }
 
 .task-content {

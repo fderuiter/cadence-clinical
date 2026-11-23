@@ -1027,6 +1027,9 @@ watch(aiEnabled, (on) => {
 }
 
 .inspector-ref-summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
   cursor: pointer;
   user-select: none;
 }
@@ -1040,13 +1043,19 @@ watch(aiEnabled, (on) => {
 }
 
 .btn-copy-ref {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 2px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   background: transparent;
   color: inherit;
   font-size: 0.72rem;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .verbs {
@@ -1056,6 +1065,11 @@ watch(aiEnabled, (on) => {
 }
 
 .verb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -1063,6 +1077,7 @@ watch(aiEnabled, (on) => {
   color: inherit;
   font-size: 0.85rem;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .verb[aria-disabled="true"] {
