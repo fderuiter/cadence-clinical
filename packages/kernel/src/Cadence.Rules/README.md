@@ -15,6 +15,13 @@ and release a pack: [docs/kernel/RULE_PACKS.md](../../../../docs/kernel/RULE_PAC
 - `Evaluation/`: the `IRuleEvaluator` port and `DotNetRuleEvaluator`, which compiles each pack once and streams
   records. A Rust runtime can replace it behind the same port (K-RULE-3). `ValidationRunner` evaluates a study's
   pinned packs and records the result as a kernel validation run (`RecordValidationRun`, ADR-2462).
+- `Validation/`: pre-validation static analyzers (`CircularDependencyAnalyzer` over target variables and
+  `ConflictingConditionAnalyzer` over overlapping applicability and interval domains) and `ParallelBatchRuleValidator`,
+  which evaluates packs in parallel while preserving canonical `LoadedRulePack.Key` finding identity (K-FIND-1) and
+  deterministic `(pack, record, rule)` detection ordering (K-RULE-4).
+- `Amendment/`: `AmendmentRegressionEngine`, which diffs rule versions across all rule metadata, validates AST variable
+  references against authoritative `StandardPackage` dataset schemas (even on empty record sets), and highlights newly
+  triggered or resolved findings.
 - `Indicators/`: Study Pulse metrics, attention rules, KRIs and QTLs as versioned indicators
   ([ADR-2488](../../../../docs/adr/2026-09-30-study-pulse-metrics-as-versioned-indicators.md),
   [docs/kernel/INDICATORS.md](../../../../docs/kernel/INDICATORS.md)). `IndicatorSetJson` reads and writes

@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
+using Cadence.Database.Tenancy;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -253,6 +256,98 @@ public class SubjectRepositoryTests
         sqlForA.GetArguments().Should().ContainSingle().Which.Should().Be(StudyA.Value);
         sqlForB.GetArguments().Should().ContainSingle().Which.Should().Be(StudyB.Value);
         sqlForA.GetArguments().Should().NotEqual(sqlForB.GetArguments());
+    }
+
+    [Fact]
+    public void AdvisoryLockSql_ForStudyWithTenant_ScopesLockKeyByTenantAndStudyCode()
+    {
+        var tenantOne = Guid.Parse("01960000-0000-7000-8000-000000000001");
+        var tenantTwo = Guid.Parse("01960000-0000-7000-8000-000000000002");
+
+        var lockOne = AdvisoryLockSql.ForStudy(tenantOne, StudyA);
+        var lockTwo = AdvisoryLockSql.ForStudy(tenantTwo, StudyA);
+
+        lockOne.Format.Should().Contain("pg_advisory_xact_lock").And.Contain("hashtext");
+        lockOne.GetArguments().Should().Equal(tenantOne.ToString("D"), StudyA.Value);
+        lockTwo.GetArguments().Should().Equal(tenantTwo.ToString("D"), StudyA.Value);
+        lockOne.GetArguments().Should().NotEqual(lockTwo.GetArguments());
+        AdvisoryLockSql.ForStudy(StudyA).Format.Should().Contain("cadence.tenant_id");
+    }
+
+    [Fact]
+    public async Task EnrollNextIndexAsync_AndGetByCodeAsync_IsolateCadence101AndSubj001AcrossTwoTenants()
+    {
+        string path = await CreateSchemaAsync();
+        try
+        {
+            var cadence101 = new StudyCode("CADENCE-101");
+            var tenantA = Guid.Parse("01960000-0000-7000-8000-000000000101");
+            var tenantB = Guid.Parse("01960000-0000-7000-8000-000000000102");
+            var accessorA = CreateTenantAccessor(tenantA);
+            var accessorB = CreateTenantAccessor(tenantB);
+
+            await using var contextA = new ExecutionDbContext(TenantFileOptions(path, accessorA));
+            await using var contextB = new ExecutionDbContext(TenantFileOptions(path, accessorB));
+            var repoA = new SubjectRepository(contextA);
+            var repoB = new SubjectRepository(contextB);
+
+            var subjectIdA = await repoA.ExecuteInTransactionAsync(async ct =>
+            {
+                int idx = await repoA.EnrollNextIndexAsync(cadence101, ct);
+                idx.Should().Be(0);
+                var created = ClinicalSubject.Create(new SubjectCode("SUBJ-001"), cadence101, new SiteCode("SITE-01"), idx, null, null);
+                await repoA.AddAsync(created, ct);
+                await repoA.SaveChangesAsync(ct);
+                return created.Id;
+            }, TestContext.Current.CancellationToken);
+
+            var subjectIdB = await repoB.ExecuteInTransactionAsync(async ct =>
+            {
+                int idx = await repoB.EnrollNextIndexAsync(cadence101, ct);
+                idx.Should().Be(0, "enrollment index starts independently at 0 in each tenant");
+                var created = ClinicalSubject.Create(new SubjectCode("SUBJ-001"), cadence101, new SiteCode("SITE-01"), idx, null, null);
+                await repoB.AddAsync(created, ct);
+                await repoB.SaveChangesAsync(ct);
+                return created.Id;
+            }, TestContext.Current.CancellationToken);
+
+            subjectIdA.Should().NotBe(subjectIdB);
+            (await repoA.GetByCodeAsync("SUBJ-001", TestContext.Current.CancellationToken))!.Id.Should().Be(subjectIdA);
+            (await repoB.GetByCodeAsync("SUBJ-001", TestContext.Current.CancellationToken))!.Id.Should().Be(subjectIdB);
+            (await repoA.ListAsync(new SubjectListCriteria(cadence101, null, null, 50, 0), TestContext.Current.CancellationToken)).Total.Should().Be(1);
+            (await repoB.ListAsync(new SubjectListCriteria(cadence101, null, null, 50, 0), TestContext.Current.CancellationToken)).Total.Should().Be(1);
+        }
+        finally
+        {
+            DeleteDbFileBestEffort(path);
+        }
+    }
+
+    private static DbContextOptions<ExecutionDbContext> TenantFileOptions(string path, ICurrentTenantAccessor accessor)
+    {
+        var builder = new DbContextOptionsBuilder<ExecutionDbContext>()
+            .UseSqlite($"Data Source={path}")
+            .AddInterceptors(StandaloneTenantSaveChangesInterceptor.Instance);
+        builder.UseCadenceStandaloneTenancy(accessor, isRelational: true);
+        return builder.Options;
+    }
+
+    private static CurrentTenantAccessor CreateTenantAccessor(Guid tenantId)
+    {
+        var accessor = new CurrentTenantAccessor(new FixedTenantCodeResolver(tenantId));
+        accessor.UseNonHttpSeedingFallbackTenant(tenantId.ToString("D"));
+        return accessor;
+    }
+
+    private sealed class FixedTenantCodeResolver(Guid tenantId) : ITenantCodeResolver
+    {
+        public ValueTask<Guid?> ResolveTenantIdAsync(string tenantCode, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<Guid?>(tenantId);
+
+        public Guid? ResolveTenantId(string tenantCode) => tenantId;
+
+        public Task<IReadOnlyList<Guid>> ListActiveTenantIdsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<Guid>>([tenantId]);
     }
 
     // ---- GetByIdAsync / GetByCodeAsync: dual-lookup method isolation -----------------------------------

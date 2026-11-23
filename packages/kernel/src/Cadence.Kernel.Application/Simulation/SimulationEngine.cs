@@ -164,6 +164,7 @@ public sealed class SimulationEngine(
             masked =
             [
                 new MaskedPart(DependentsPart, reason),
+                new MaskedPart(MatrixGapsPart, reason),
                 new MaskedPart(ScheduleChangesPart, reason),
                 new MaskedPart(StructuralDiffPart, reason),
             ];
@@ -181,10 +182,7 @@ public sealed class SimulationEngine(
             diff = compared.Value!;
             schedule = ScheduleChanges(baseVersion?.Content, candidate.Content);
             matrixGaps = EvaluateMatrixGaps(candidate.Content);
-            if (matrixGaps.Any(g => g.Kind != MatrixGapKind.IchM11Violation))
-            {
-                engines.Add(MatrixGapEngine);
-            }
+            engines.Add(MatrixGapEngine);
             masked = [];
             if (diff.Count > 0 && baseVersion is not null)
             {
@@ -227,8 +225,10 @@ public sealed class SimulationEngine(
             {
                 changes.Add(new ScheduleChange(id, ElementChangeKind.Removed, old, null));
             }
-            else if (old.EpochId != @new.EpochId || old.StudyDay != @new.StudyDay
-                || old.WindowBefore != @new.WindowBefore || old.WindowAfter != @new.WindowAfter)
+            else if (old.EpochId != @new.EpochId
+                || ExpectedSchedule.NormalizeStudyDay(old.StudyDay) != ExpectedSchedule.NormalizeStudyDay(@new.StudyDay)
+                || old.WindowBefore != @new.WindowBefore
+                || old.WindowAfter != @new.WindowAfter)
             {
                 changes.Add(new ScheduleChange(id, ElementChangeKind.Changed, old, @new));
             }
@@ -252,6 +252,12 @@ public sealed class SimulationEngine(
                 return SimulationErrors.VersionUnknown;
             }
 
+            if (request.Version is { } expectedVersion && stored.VersionIndex != expectedVersion)
+            {
+                return SimulationErrors.VersionStale.WithMessage(
+                    $"The protocol version is at version {stored.VersionIndex}, not {expectedVersion}; reload and simulate the current version.");
+            }
+
             ProtocolVersionSnapshot? parent = null;
             if (stored.ParentVersionId is { } parentId)
             {
@@ -272,6 +278,12 @@ public sealed class SimulationEngine(
         if (baseVersion is null)
         {
             return SimulationErrors.VersionUnknown;
+        }
+
+        if (request.BaseVersion is { } expectedBaseVersion && baseVersion.VersionIndex != expectedBaseVersion)
+        {
+            return SimulationErrors.VersionStale.WithMessage(
+                $"The base protocol version is at version {baseVersion.VersionIndex}, not {expectedBaseVersion}; reload and simulate against the current version.");
         }
 
         if (baseVersion.ContentHash is null)
@@ -370,7 +382,7 @@ public sealed class SimulationEngine(
     private static JsonObject? PlannedVisitNode(PlannedVisit? visit) => visit is null ? null : new JsonObject
     {
         ["epoch_id"] = visit.EpochId,
-        ["study_day"] = visit.StudyDay,
+        ["study_day"] = ExpectedSchedule.NormalizeStudyDay(visit.StudyDay),
         ["window_before"] = visit.WindowBefore,
         ["window_after"] = visit.WindowAfter,
     };

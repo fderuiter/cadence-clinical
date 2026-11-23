@@ -601,12 +601,31 @@ watch(
   }
 );
 
+const EMPTY_LIVE_QUERIES: FormQueryResponse[] = Object.freeze(
+  []
+) as unknown as FormQueryResponse[];
+
+const liveQueriesByItemId = computed(() => {
+  const byItem = new Map<string, FormQueryResponse[]>();
+  const currentForm = props.formState.form;
+  if (!currentForm) return byItem;
+  for (const item of props.formState.items) {
+    if (byItem.has(item.item_id)) continue;
+    const itemQueries = props.queries.forItem(
+      currentForm.form_id,
+      item.item_id
+    );
+    if (itemQueries.length === 0) continue;
+    const live = itemQueries.filter(isLiveQuery);
+    if (live.length > 0) {
+      byItem.set(item.item_id, live);
+    }
+  }
+  return byItem;
+});
+
 function liveOn(item: EcrfFormItem): FormQueryResponse[] {
-  return props.formState.form
-    ? props.queries
-        .forItem(props.formState.form.form_id, item.item_id)
-        .filter(isLiveQuery)
-    : [];
+  return liveQueriesByItemId.value.get(item.item_id) ?? EMPTY_LIVE_QUERIES;
 }
 
 function beginRaise(item: EcrfFormItem) {

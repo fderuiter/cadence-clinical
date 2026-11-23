@@ -171,6 +171,58 @@ public class RulePackTests
         total.Should().BeGreaterThan(500);
     }
 
+    [Fact(DisplayName = "Evaluator_AllocatesZeroPerRecordBytes_WhenNoRulesFire")]
+    [Trait("Category", "Unit")]
+    public void EvaluatorAllocatesZeroPerRecordBytesWhenNoRulesFire()
+    {
+        var pack = SampleRulePacks.Sample();
+        var evaluator = new DotNetRuleEvaluator();
+        var vitals = Record("VITALS", "v-1", ("SYS", 120m), ("DIA", 80m));
+        var labs = Record("LABS", "l-1", ("SYS", 120m), ("DIA", 80m));
+
+        var small = new RuleRecord[1_000];
+        for (var i = 0; i < small.Length; i++)
+        {
+            small[i] = (i & 3) == 0 ? labs : vitals;
+        }
+
+        var million = new RuleRecord[1_000_000];
+        for (var i = 0; i < million.Length; i++)
+        {
+            million[i] = (i & 3) == 0 ? labs : vitals;
+        }
+
+        // Warm up compilation and tiered JIT once before measuring thread-local heap allocations.
+        evaluator.Evaluate(pack, Standardization, small).Should().BeEmpty();
+
+        var beforeSmall = GC.GetAllocatedBytesForCurrentThread();
+        var smallViolations = evaluator.Evaluate(pack, Standardization, small);
+        var smallAllocated = GC.GetAllocatedBytesForCurrentThread() - beforeSmall;
+
+        var beforeMillion = GC.GetAllocatedBytesForCurrentThread();
+        var millionViolations = evaluator.Evaluate(pack, Standardization, million);
+        var millionAllocated = GC.GetAllocatedBytesForCurrentThread() - beforeMillion;
+
+        var beforeEnumerable = GC.GetAllocatedBytesForCurrentThread();
+        var enumerableViolations = evaluator.Evaluate(pack, Standardization, StreamRecords(small));
+        var enumerableAllocated = GC.GetAllocatedBytesForCurrentThread() - beforeEnumerable;
+
+        smallViolations.Should().BeEmpty();
+        millionViolations.Should().BeEmpty();
+        enumerableViolations.Should().BeEmpty();
+        millionAllocated.Should().Be(smallAllocated, "zero per-record heap objects may be allocated when no rules fire");
+        millionAllocated.Should().BeLessThan(4 * 1024);
+        enumerableAllocated.Should().BeLessThan(4 * 1024);
+    }
+
+    private static IEnumerable<RuleRecord> StreamRecords(RuleRecord[] records)
+    {
+        for (var i = 0; i < records.Length; i++)
+        {
+            yield return records[i];
+        }
+    }
+
     [Fact(DisplayName = "RulePackLoader_LoadForStudyAsync_BatchesPinnedLibraryItemsInOneLookup")]
     [Trait("Category", "Unit")]
     public async Task RulePackLoaderLoadForStudyAsyncBatchesPinnedLibraryItemsInOneLookup()
@@ -272,6 +324,31 @@ public class RulePackTests
 
     private static RuleRecord Record(string dataset, string key, params (string Name, decimal Value)[] values) =>
         new(dataset, key, values.ToDictionary(v => v.Name, v => RuleValue.FromNumber(v.Value), StringComparer.Ordinal));
+
+    [Fact(DisplayName = "RulePack_ApplicabilityVariable_RoundTripsAndOmittedWhenNull")]
+    [Trait("Category", "Unit")]
+    public void RulePackApplicabilityVariableRoundTripsAndOmittedWhenNull()
+    {
+        var basePack = SampleRulePacks.Sample();
+        var ruleWithVariable = basePack.Rules[0] with
+        {
+            Applicability = basePack.Rules[0].Applicability with { Variable = "SYS" },
+        };
+        var ruleWithoutVariable = basePack.Rules[1] with
+        {
+            Applicability = basePack.Rules[1].Applicability with { Variable = null },
+        };
+
+        var pack = basePack with { Rules = [ruleWithVariable, ruleWithoutVariable] };
+        var json = RulePackJson.ToJson(pack);
+
+        json.GetProperty("rules")[0].GetProperty("applicability").GetProperty("variable").GetString().Should().Be("SYS");
+        json.GetProperty("rules")[1].GetProperty("applicability").TryGetProperty("variable", out _).Should().BeFalse();
+
+        var parsed = RulePackJson.Parse(json);
+        parsed.Rules[0].Applicability.Variable.Should().Be("SYS");
+        parsed.Rules[1].Applicability.Variable.Should().BeNull();
+    }
 }
 
 /// <summary>Generates random, valid rule packs and records from a seed, for property tests and the benchmark.</summary>

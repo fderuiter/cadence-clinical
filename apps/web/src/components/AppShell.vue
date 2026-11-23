@@ -203,6 +203,11 @@
                 <span class="user-badge">
                   {{ authStore.identity?.username || "Signed in" }}
                 </span>
+                <component
+                  :is="DemoResetBtn"
+                  v-if="DemoResetBtn"
+                  @reset="handleDemoReset"
+                />
                 <button
                   id="btn-logout"
                   type="button"
@@ -386,6 +391,7 @@
 <script setup>
 import {
   computed,
+  defineAsyncComponent,
   nextTick,
   onMounted,
   onUnmounted,
@@ -409,6 +415,7 @@ import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { isScreenAvailable } from "../router/availability";
+import { isRouteAuthorizedForRoles } from "../router";
 import { isDemoBuild } from "../utils/demoMode.js";
 import {
   buildDataCollectionPath,
@@ -423,6 +430,10 @@ import {
 import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
+
+const DemoResetBtn = isDemoBuild()
+  ? defineAsyncComponent(() => import("../views/demo/DemoResetButton.vue"))
+  : null;
 
 provide("inAppShell", true);
 
@@ -703,12 +714,21 @@ const showOnboardingTour = computed(
     route?.path !== "/unavailable"
 );
 
-function handlePersonaChange(event) {
+const checkActiveRouteAuth = () =>
+  authStore.isAuthenticated &&
+  route?.path !== "/forbidden" &&
+  route?.path !== "/login" &&
+  !isRouteAuthorizedForRoles(route, normalizedRoles.value) &&
+  router?.replace?.("/forbidden");
+
+async function handlePersonaChange(event) {
   const nextPersona = event?.target?.value;
   if (nextPersona) {
     authStore.switchPersona(nextPersona);
+    onboardingStore.loadPersonaState(authStore.currentPersona || nextPersona);
     const matched = availablePersonas.value.find((p) => p.key === nextPersona);
     statusAnnouncement.value = `Switched workspace view to ${matched?.label || nextPersona}`;
+    await checkActiveRouteAuth();
   }
 }
 
@@ -740,6 +760,9 @@ const {
   hasExternalDrafts: () => hasUserScopedDrafts(),
   onConfirmSignOut: async () => {
     await authStore.logout();
+    if (route?.path !== "/login") {
+      await router?.replace?.("/login");
+    }
   },
 });
 
@@ -786,6 +809,11 @@ function handleLogoutClick() {
   handleLogout();
 }
 
+function handleDemoReset(message) {
+  isSecondaryMenuOpen.value = false;
+  statusAnnouncement.value = message;
+}
+
 function handleDocumentPointerDown(event) {
   if (!isSecondaryMenuOpen.value) return;
   const wrapperEl = secondaryMenuWrapperRef.value;
@@ -815,9 +843,16 @@ function handleGlobalKeydown(event) {
 
 watch(
   () => [authStore.isAuthenticated, authStore.identity?.tenantId],
-  ([authenticated]) => {
+  ([authenticated], [wasAuthenticated] = []) => {
     if (authenticated && typeof authStore.loadEntitlements === "function") {
       authStore.loadEntitlements();
+    } else if (
+      !authenticated &&
+      wasAuthenticated &&
+      (route?.meta?.requiresAuth ||
+        route?.matched?.some((r) => r.meta?.requiresAuth))
+    ) {
+      router?.replace?.("/login");
     }
   }
 );
@@ -827,6 +862,13 @@ watch(
   () => {
     isSecondaryMenuOpen.value = false;
     isMobileMenuOpen.value = false;
+  }
+);
+
+watch(
+  () => [authStore.currentPersona, normalizedRoles.value],
+  () => {
+    void checkActiveRouteAuth();
   }
 );
 
@@ -1322,8 +1364,80 @@ onUnmounted(() => {
     flex-wrap: nowrap;
   }
 
+  .user-session-controls :deep(.btn) {
+    white-space: nowrap;
+    padding: 5px 8px;
+    font-size: 0.78rem;
+  }
+
   .user-badge {
     max-width: 88px;
+  }
+}
+
+@media (min-width: 1281px) and (max-width: 1520px) {
+  .app-header {
+    padding: 6px 12px;
+    gap: 6px;
+  }
+
+  .header-left {
+    gap: 8px;
+  }
+
+  .header-title-area h1 {
+    font-size: 0.92rem;
+  }
+
+  .primary-nav {
+    gap: 2px;
+  }
+
+  .primary-nav-link {
+    padding: 4px 6px;
+    font-size: 0.78rem;
+  }
+
+  .header-controls {
+    gap: 5px;
+  }
+
+  .plan-status-badge {
+    max-width: 108px;
+    padding: 4px 7px;
+    font-size: 0.75rem;
+  }
+
+  .shell-control-btn,
+  .command-palette-trigger {
+    padding: 4px 7px;
+    font-size: 0.78rem;
+    gap: 5px;
+  }
+
+  .persona-select {
+    max-width: 96px;
+    padding: 4px 5px;
+    font-size: 0.78rem;
+  }
+
+  .header-secondary-actions {
+    gap: 5px;
+  }
+
+  .user-session-controls {
+    gap: 5px;
+    padding-left: 5px;
+  }
+
+  .user-session-controls :deep(.btn) {
+    padding: 4px 7px;
+    font-size: 0.78rem;
+  }
+
+  .user-badge {
+    max-width: 72px;
+    font-size: 0.78rem;
   }
 }
 

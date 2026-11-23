@@ -5,13 +5,20 @@ import {
   DEMO_SPONSOR,
   DEMO_STUDY,
 } from "demo-fixtures";
-import { createOidcSessionCoordinator, resolveOidcRedirectUri } from "ui";
+import {
+  createOidcSessionCoordinator,
+  extractPrimarySiteId,
+  extractPrimaryStudyId,
+  resolveOidcRedirectUri,
+} from "ui";
 import { watch } from "vue";
 
 import { state } from "../stores/state.js";
 import {
   clearInMemoryKey,
   clearSessionKeyFromDB,
+  closeDatabase,
+  getActiveUserId,
   getInMemorySessionKey,
   getWrappedMasterKeyConfig,
   initSessionKey,
@@ -20,10 +27,22 @@ import {
 import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
 import { renderCompliance } from "./compliance.js";
 import { renderInbox } from "./inbox.js";
-import { checkPINWrapper } from "./pin.js";
+import { checkPINWrapper, clearPendingResetMasterKey } from "./pin.js";
 import { showView } from "./navigation.js";
-import { checkOnline } from "./sync-status.js";
+import { checkOnline, renderSyncQueueList } from "./sync-status.js";
 import { renderTasks } from "./tasks.js";
+
+function transitionParticipantScope(nextUserId) {
+  const normalizedNext = nextUserId || null;
+  const prevUserId = getActiveUserId();
+  if (prevUserId !== normalizedNext) {
+    clearPendingResetMasterKey();
+    clearInMemoryKey();
+    state.submissions = [];
+    void renderSyncQueueList([]);
+  }
+  setActiveUserId(normalizedNext);
+}
 
 function getPortalCurrentReturnUrl() {
   if (typeof window === "undefined" || !window.location) {
@@ -58,16 +77,101 @@ function applyRestoredReturnUrl(savedReturnUrl) {
   }
 }
 
+function readScopeFromCurrentUrl() {
+  if (typeof window === "undefined" || !window.location) {
+    return { studyId: null, siteId: null };
+  }
+  const searchParams = new URLSearchParams(window.location.search || "");
+  let studyId = searchParams.get("studyId")?.trim() || null;
+  let siteId = searchParams.get("siteId")?.trim() || null;
+
+  if ((!studyId || !siteId) && window.location.hash?.includes("?")) {
+    const hashQuery = window.location.hash.slice(
+      window.location.hash.indexOf("?") + 1
+    );
+    const hashParams = new URLSearchParams(hashQuery);
+    studyId = studyId || hashParams.get("studyId")?.trim() || null;
+    siteId = siteId || hashParams.get("siteId")?.trim() || null;
+  }
+
+  return { studyId, siteId };
+}
+
+export function hydrateSessionScopeFromClaims(
+  claimsSource = null,
+  fallbackToken = null
+) {
+  const claimStudyId =
+    extractPrimaryStudyId(claimsSource) || extractPrimaryStudyId(fallbackToken);
+  const claimSiteId =
+    extractPrimarySiteId(claimsSource) || extractPrimarySiteId(fallbackToken);
+  const urlScope = readScopeFromCurrentUrl();
+
+  let storedStudyId;
+  let storedSiteId;
+  try {
+    storedStudyId =
+      (typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("mock_study_id")) ||
+      (typeof localStorage !== "undefined" &&
+        (localStorage.getItem("mock_study_id") ||
+          localStorage.getItem("oidc_study_id"))) ||
+      null;
+    storedSiteId =
+      (typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("mock_site_id")) ||
+      (typeof localStorage !== "undefined" &&
+        (localStorage.getItem("mock_site_id") ||
+          localStorage.getItem("oidc_site_id"))) ||
+      null;
+  } catch {
+    storedStudyId = null;
+    storedSiteId = null;
+  }
+
+  const nextStudyId =
+    claimStudyId ||
+    urlScope.studyId ||
+    storedStudyId ||
+    state.session.studyId ||
+    null;
+  const nextSiteId =
+    claimSiteId ||
+    urlScope.siteId ||
+    storedSiteId ||
+    state.session.siteId ||
+    null;
+
+  state.session.studyId = nextStudyId;
+  state.session.siteId = nextSiteId;
+
+  try {
+    if (typeof localStorage !== "undefined") {
+      if (claimStudyId) {
+        localStorage.setItem("oidc_study_id", claimStudyId);
+      }
+      if (claimSiteId) {
+        localStorage.setItem("oidc_site_id", claimSiteId);
+      }
+    }
+  } catch {
+    // Ignore storage write errors in restricted environments.
+  }
+
+  return { studyId: nextStudyId, siteId: nextSiteId };
+}
+
 export const portalSessionCoordinator = createOidcSessionCoordinator({
   minValiditySeconds: 30,
   getKeycloak: () =>
     typeof window !== "undefined" ? window.keycloakInstance || null : null,
   getCurrentReturnUrl: getPortalCurrentReturnUrl,
-  onTokenRefreshed: (nextToken) => {
+  onTokenRefreshed: (nextToken, kc) => {
     if (nextToken) {
       state.session.token = nextToken;
       state.session.sessionExpired = false;
       state.authError = "";
+      hydrateSessionScopeFromClaims(kc?.tokenParsed || null, nextToken);
     }
   },
   onSessionExpired: ({ returnUrl }) => {
@@ -154,7 +258,8 @@ export async function restoreSession() {
   if (cachedUserId) {
     state.session.userId = cachedUserId;
   }
-  setActiveUserId(state.session.userId);
+  hydrateSessionScopeFromClaims();
+  transitionParticipantScope(state.session.userId);
   await clearSessionKeyFromDB(state.session.userId);
 
   // Only explicit demo sessions with no PIN wrapper initialize an ephemeral in-memory demo key.
@@ -196,8 +301,9 @@ export async function signIn() {
       state.session.isOfflineMode = false;
       state.session.isDemoMode = false;
       state.session.sessionExpired = false;
+      hydrateSessionScopeFromClaims(null, storageToken);
       portalSessionCoordinator.markAuthenticated(storageToken);
-      setActiveUserId(storageUser);
+      transitionParticipantScope(storageUser);
       applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
       return;
     }
@@ -214,7 +320,7 @@ export async function signIn() {
       state.session.isOfflineMode = true;
       state.session.isDemoMode = true;
       state.session.sessionExpired = false;
-      setActiveUserId(state.session.userId);
+      transitionParticipantScope(state.session.userId);
       return;
     } else {
       try {
@@ -252,8 +358,12 @@ export async function signIn() {
             state.session.isOfflineMode = false;
             state.session.isDemoMode = false;
             state.session.sessionExpired = false;
+            hydrateSessionScopeFromClaims(
+              keycloak.tokenParsed || null,
+              keycloak.token
+            );
             portalSessionCoordinator.markAuthenticated(keycloak.token);
-            setActiveUserId(authenticatedUserId);
+            transitionParticipantScope(authenticatedUserId);
 
             if (authenticatedUserId) {
               try {
@@ -277,6 +387,7 @@ export async function signIn() {
       state.session.isDemoMode = false;
       state.session.token = null;
       if (!checkOnline() && state.session.userId) {
+        transitionParticipantScope(state.session.userId);
         const config = await getWrappedMasterKeyConfig();
         if (config.wrappedKey) {
           state.session.isOfflineMode = true;
@@ -286,7 +397,7 @@ export async function signIn() {
 
       state.session.userId = null;
       state.session.isOfflineMode = false;
-      setActiveUserId(null);
+      transitionParticipantScope(null);
     }
   } else {
     // Under Vitest (__MOCK_TEST_ENV__), preserve explicit test configuration without forcing demo mode.
@@ -309,7 +420,7 @@ export async function signIn() {
     } else if (state.session.token) {
       state.session.isOfflineMode = false;
     }
-    setActiveUserId(state.session.userId);
+    transitionParticipantScope(state.session.userId);
   }
 }
 
@@ -350,8 +461,9 @@ export async function login(options = {}) {
       state.session.isOfflineMode = false;
       state.session.isDemoMode = false;
       state.session.sessionExpired = false;
+      hydrateSessionScopeFromClaims(null, storageToken);
       portalSessionCoordinator.markAuthenticated(storageToken);
-      setActiveUserId(resolvedUser);
+      transitionParticipantScope(resolvedUser);
       applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
       return;
     }
@@ -369,7 +481,7 @@ export async function login(options = {}) {
       state.session.isOfflineMode = true;
       state.session.isDemoMode = true;
       state.session.sessionExpired = false;
-      setActiveUserId(demoUserId);
+      transitionParticipantScope(demoUserId);
       return;
     } else {
       let keycloak =
@@ -426,7 +538,10 @@ export function watchUserIdentity() {
     () => state.session.userId,
     async (newUid, oldUid) => {
       if (newUid !== oldUid) {
+        clearPendingResetMasterKey();
         clearInMemoryKey();
+        state.submissions = [];
+        void renderSyncQueueList([]);
         setActiveUserId(newUid);
         if (isDemoModeActive()) {
           const config = await getWrappedMasterKeyConfig();
@@ -457,11 +572,17 @@ export async function logout() {
 
   try {
     localStorage.removeItem("oidc_user_id");
+    localStorage.removeItem("oidc_study_id");
+    localStorage.removeItem("oidc_site_id");
     localStorage.removeItem("mock_user_id");
     localStorage.removeItem("mock_token");
+    localStorage.removeItem("mock_study_id");
+    localStorage.removeItem("mock_site_id");
     if (typeof sessionStorage !== "undefined") {
       sessionStorage.removeItem("mock_user_id");
       sessionStorage.removeItem("mock_token");
+      sessionStorage.removeItem("mock_study_id");
+      sessionStorage.removeItem("mock_site_id");
       sessionStorage.removeItem("oidc_pending_pin_reset");
     }
   } catch (err) {
@@ -469,6 +590,7 @@ export async function logout() {
   }
 
   const prevUserId = state.session.userId;
+  clearPendingResetMasterKey();
   clearInMemoryKey();
 
   state.pinSetup.isOpen = false;
@@ -509,6 +631,7 @@ export async function logout() {
     state.notifications = [];
     state.compliance = null;
     state.submissions = [];
+    void renderSyncQueueList([]);
     setActiveUserId(null);
     renderTasks();
     renderCompliance();
@@ -516,6 +639,9 @@ export async function logout() {
   }
 
   await clearSessionKeyFromDB(prevUserId);
+  if ((prevUserId || null) !== (state.session.userId || null)) {
+    closeDatabase(prevUserId);
+  }
 
   if (
     typeof window !== "undefined" &&
