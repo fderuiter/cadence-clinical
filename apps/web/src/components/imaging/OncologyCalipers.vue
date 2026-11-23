@@ -558,9 +558,9 @@ function getTimepointClass(tp) {
 }
 
 .badge-gxp {
-  background-color: rgba(56, 189, 248, 0.15);
+  background-color: var(--semantic-color-cyan-tint);
   color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  border: 1px solid var(--semantic-color-cyan-border-tint);
   font-size: 0.7rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -606,7 +606,7 @@ function getTimepointClass(tp) {
   background-color: var(--semantic-color-primary);
   border-color: var(--semantic-color-accent-inverse);
   color: var(--semantic-color-text-inverse);
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+  box-shadow: var(--semantic-shadow-focus-accent);
 }
 
 .form-row {
@@ -712,17 +712,17 @@ function getTimepointClass(tp) {
 }
 
 .tp-baseline {
-  background-color: rgba(56, 189, 248, 0.15);
+  background-color: var(--semantic-color-cyan-tint);
   color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  border: 1px solid var(--semantic-color-cyan-border-tint);
 }
 
 .tp-c2d1,
 .tp-c4d1,
 .tp-followup {
-  background-color: rgba(168, 85, 247, 0.15);
+  background-color: var(--semantic-color-purple-tint);
   color: var(--semantic-color-ai);
-  border: 1px solid rgba(168, 85, 247, 0.3);
+  border: 1px solid var(--semantic-color-purple-border-tint);
 }
 
 .type-pill {
@@ -733,17 +733,17 @@ function getTimepointClass(tp) {
 }
 
 .type-pill.target {
-  background-color: rgba(52, 211, 153, 0.15);
+  background-color: var(--semantic-color-success-tint);
   color: var(--semantic-color-emerald-inverse-text);
 }
 
 .type-pill.non_target {
-  background-color: rgba(148, 163, 184, 0.15);
+  background-color: var(--semantic-color-neutral-tint);
   color: var(--semantic-color-text-inverse-muted);
 }
 
 .type-pill.new_lesion {
-  background-color: rgba(239, 68, 68, 0.2);
+  background-color: var(--semantic-color-error-tint);
   color: var(--semantic-color-error);
 }
 
@@ -867,7 +867,7 @@ function getTimepointClass(tp) {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.4);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .modal-overlay {
@@ -876,7 +876,7 @@ function getTimepointClass(tp) {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: var(--semantic-color-scrim-strong);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -937,19 +937,19 @@ function getTimepointClass(tp) {
 
 .tool-select-btn.btn-ai-segment {
   border-color: var(--semantic-color-accent-inverse);
-  background-color: rgba(56, 189, 248, 0.1);
+  background-color: var(--semantic-color-cyan-tint);
   color: var(--semantic-color-accent-inverse);
 }
 
 .tool-select-btn.btn-ai-segment:hover {
-  background-color: rgba(56, 189, 248, 0.25);
+  background-color: var(--semantic-color-cyan-border-tint);
   color: var(--semantic-color-text-inverse);
 }
 
 .ai-badge {
-  background-color: rgba(56, 189, 248, 0.2);
+  background-color: var(--semantic-color-cyan-tint);
   color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  border: 1px solid var(--semantic-color-cyan-border-tint);
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -957,9 +957,9 @@ function getTimepointClass(tp) {
 }
 
 .ai-edited-badge {
-  background-color: rgba(251, 191, 36, 0.2);
+  background-color: var(--semantic-color-warning-tint);
   color: var(--semantic-color-warning);
-  border: 1px solid rgba(251, 191, 36, 0.4);
+  border: 1px solid var(--semantic-color-warning-border-tint);
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -967,7 +967,7 @@ function getTimepointClass(tp) {
 }
 
 .manual-badge {
-  background-color: rgba(148, 163, 184, 0.15);
+  background-color: var(--semantic-color-neutral-tint);
   color: var(--semantic-color-text-inverse-muted);
   font-size: 0.68rem;
   padding: 2px 6px;
@@ -999,9 +999,9 @@ function getTimepointClass(tp) {
   justify-content: center;
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
-  background-color: rgba(251, 191, 36, 0.15);
+  background-color: var(--semantic-color-warning-tint);
   color: var(--semantic-color-warning);
-  border: 1px solid rgba(251, 191, 36, 0.3);
+  border: 1px solid var(--semantic-color-warning-border-tint);
   font-size: 0.68rem;
   font-weight: 600;
   padding: 2px 6px;
@@ -1011,7 +1011,7 @@ function getTimepointClass(tp) {
 }
 
 .btn-convert-manual:hover {
-  background-color: rgba(251, 191, 36, 0.3);
+  background-color: var(--semantic-color-warning-border-tint);
 }
 
 .btn-secondary {

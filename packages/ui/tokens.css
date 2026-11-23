@@ -32,6 +32,21 @@
     0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   --shadow-xl:
     0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-drawer-left: -8px 0 24px -4px rgba(15, 23, 42, 0.12);
+  --shadow-drawer-right: 8px 0 24px -4px rgba(15, 23, 42, 0.12);
+  --shadow-focus: 0 0 0 3px rgba(2, 101, 151, 0.2);
+  --shadow-focus-accent: 0 0 0 3px rgba(67, 56, 202, 0.22);
+  --shadow-focus-error: 0 0 0 3px rgba(185, 28, 28, 0.2);
+  --shadow-focus-warning: 0 0 0 3px rgba(133, 77, 14, 0.2);
+  --shadow-focus-success: 0 0 0 3px rgba(21, 128, 61, 0.2);
+  --shadow-focus-ring-offset:
+    0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary);
+  --shadow-pulse-warning-start: 0 0 0 0 rgba(245, 158, 11, 0.4);
+  --shadow-pulse-warning-expand: 0 0 0 8px rgba(245, 158, 11, 0);
+  --shadow-pulse-warning-end: 0 0 0 0 rgba(245, 158, 11, 0);
+  --shadow-pulse-error-start: 0 0 0 0 rgba(185, 28, 28, 0.4);
+  --shadow-pulse-error-expand: 0 0 0 8px rgba(185, 28, 28, 0);
+  --shadow-pulse-error-end: 0 0 0 0 rgba(185, 28, 28, 0);
 
   /* Spacing Scale */
   --spacing-2xs: 4px;
@@ -201,6 +216,53 @@
   --semantic-color-wallet-start: #0369a1;
   --semantic-color-wallet-end: #075985;
 
+  /* Scrims, Surface Tints & Translucent Overlays (ADR-2652) */
+  --semantic-color-scrim-soft: rgba(15, 23, 42, 0.45);
+  --semantic-color-scrim: rgba(15, 23, 42, 0.6);
+  --semantic-color-scrim-strong: rgba(15, 23, 42, 0.78);
+  --semantic-color-surface-tint: rgba(15, 23, 42, 0.04);
+  --semantic-color-surface-tint-strong: rgba(15, 23, 42, 0.08);
+  --semantic-color-surface-overlay: rgba(255, 255, 255, 0.85);
+  --semantic-color-inverse-surface-tint: rgba(255, 255, 255, 0.1);
+  --semantic-color-inverse-surface-tint-strong: rgba(255, 255, 255, 0.18);
+  --semantic-color-inverse-border-subtle: rgba(255, 255, 255, 0.2);
+  --semantic-color-inverse-scrim: rgba(15, 23, 42, 0.92);
+
+  /* Translucent Brand, Status & Categorical Tints (ADR-2652) */
+  --semantic-color-primary-tint: rgba(2, 101, 151, 0.06);
+  --semantic-color-primary-border-tint: rgba(2, 101, 151, 0.28);
+  --semantic-color-accent-tint: rgba(67, 56, 202, 0.06);
+  --semantic-color-accent-border-tint: rgba(67, 56, 202, 0.28);
+  --semantic-color-info-tint: rgba(30, 64, 175, 0.06);
+  --semantic-color-info-border-tint: rgba(30, 64, 175, 0.28);
+  --semantic-color-success-tint: rgba(21, 128, 61, 0.04);
+  --semantic-color-success-border-tint: rgba(21, 128, 61, 0.3);
+  --semantic-color-warning-tint: rgba(180, 83, 9, 0.04);
+  --semantic-color-warning-border-tint: rgba(180, 83, 9, 0.32);
+  --semantic-color-error-tint: rgba(185, 28, 28, 0.06);
+  --semantic-color-error-border-tint: rgba(185, 28, 28, 0.3);
+  --semantic-color-purple-tint: rgba(107, 33, 168, 0.06);
+  --semantic-color-purple-border-tint: rgba(107, 33, 168, 0.3);
+  --semantic-color-orange-tint: rgba(154, 52, 18, 0.06);
+  --semantic-color-orange-border-tint: rgba(154, 52, 18, 0.3);
+  --semantic-color-neutral-tint: rgba(71, 85, 105, 0.06);
+  --semantic-color-neutral-border-tint: rgba(71, 85, 105, 0.28);
+  --semantic-color-cyan-tint: rgba(56, 189, 248, 0.12);
+  --semantic-color-cyan-border-tint: rgba(56, 189, 248, 0.35);
+
+  /* Medical Imaging & HTML5 Canvas Viewport Tokens (non-theme dark viewport palette) */
+  --semantic-color-imaging-canvas: #0a0f1d;
+  --semantic-color-imaging-stop-light: #f8fafc;
+  --semantic-color-imaging-stop-mid: #64748b;
+  --semantic-color-imaging-stop-muted: #94a3b8;
+  --semantic-color-imaging-crosshair: rgba(56, 189, 248, 0.65);
+  --semantic-color-imaging-roi-primary: #38bdf8;
+  --semantic-color-imaging-roi-primary-fill: rgba(56, 189, 248, 0.22);
+  --semantic-color-imaging-roi-secondary: #10b981;
+  --semantic-color-imaging-roi-secondary-fill: rgba(16, 185, 129, 0.15);
+  --semantic-color-imaging-caliper-selected: #f59e0b;
+  --semantic-color-imaging-fiducial-error: #ef4444;
+
   /* Semantic Border Radius & Elevation */
   --semantic-radius-sm: var(--radius-sm);
   --semantic-radius-md: var(--radius-md);
@@ -209,7 +271,23 @@
   --semantic-border-radius-md: var(--radius-md);
   --semantic-border-radius-lg: var(--radius-lg);
   --semantic-shadow-sm: var(--shadow-sm);
+  --semantic-shadow-md: var(--shadow-md);
+  --semantic-shadow-lg: var(--shadow-lg);
   --semantic-shadow-xl: var(--shadow-xl);
+  --semantic-shadow-drawer-left: var(--shadow-drawer-left);
+  --semantic-shadow-drawer-right: var(--shadow-drawer-right);
+  --semantic-shadow-focus: var(--shadow-focus);
+  --semantic-shadow-focus-accent: var(--shadow-focus-accent);
+  --semantic-shadow-focus-error: var(--shadow-focus-error);
+  --semantic-shadow-focus-warning: var(--shadow-focus-warning);
+  --semantic-shadow-focus-success: var(--shadow-focus-success);
+  --semantic-shadow-focus-ring: var(--shadow-focus-ring-offset);
+  --semantic-shadow-pulse-warning-start: var(--shadow-pulse-warning-start);
+  --semantic-shadow-pulse-warning-expand: var(--shadow-pulse-warning-expand);
+  --semantic-shadow-pulse-warning-end: var(--shadow-pulse-warning-end);
+  --semantic-shadow-pulse-error-start: var(--shadow-pulse-error-start);
+  --semantic-shadow-pulse-error-expand: var(--shadow-pulse-error-expand);
+  --semantic-shadow-pulse-error-end: var(--shadow-pulse-error-end);
 
   /* Semantic Typography */
   --semantic-font-family: var(--font-sans);
@@ -354,8 +432,49 @@
   --semantic-color-wallet-start: #0369a1;
   --semantic-color-wallet-end: #075985;
 
+  --semantic-color-scrim-soft: rgba(2, 6, 23, 0.6);
+  --semantic-color-scrim: rgba(2, 6, 23, 0.75);
+  --semantic-color-scrim-strong: rgba(2, 6, 23, 0.88);
+  --semantic-color-surface-tint: rgba(248, 250, 252, 0.06);
+  --semantic-color-surface-tint-strong: rgba(248, 250, 252, 0.12);
+  --semantic-color-surface-overlay: rgba(15, 23, 42, 0.85);
+
+  --semantic-color-primary-tint: rgba(56, 189, 248, 0.12);
+  --semantic-color-primary-border-tint: rgba(56, 189, 248, 0.36);
+  --semantic-color-accent-tint: rgba(165, 180, 252, 0.12);
+  --semantic-color-accent-border-tint: rgba(165, 180, 252, 0.36);
+  --semantic-color-info-tint: rgba(147, 197, 253, 0.12);
+  --semantic-color-info-border-tint: rgba(147, 197, 253, 0.36);
+  --semantic-color-success-tint: rgba(74, 222, 128, 0.12);
+  --semantic-color-success-border-tint: rgba(74, 222, 128, 0.36);
+  --semantic-color-warning-tint: rgba(250, 204, 21, 0.12);
+  --semantic-color-warning-border-tint: rgba(250, 204, 21, 0.36);
+  --semantic-color-error-tint: rgba(248, 113, 113, 0.1);
+  --semantic-color-error-border-tint: rgba(248, 113, 113, 0.36);
+  --semantic-color-purple-tint: rgba(196, 181, 253, 0.12);
+  --semantic-color-purple-border-tint: rgba(196, 181, 253, 0.36);
+  --semantic-color-orange-tint: rgba(251, 146, 60, 0.12);
+  --semantic-color-orange-border-tint: rgba(251, 146, 60, 0.36);
+  --semantic-color-neutral-tint: rgba(148, 163, 184, 0.12);
+  --semantic-color-neutral-border-tint: rgba(148, 163, 184, 0.34);
+  --semantic-color-cyan-tint: rgba(56, 189, 248, 0.12);
+  --semantic-color-cyan-border-tint: rgba(56, 189, 248, 0.36);
+
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.35);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.45), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  --shadow-drawer-left: -8px 0 24px -4px rgba(0, 0, 0, 0.45);
+  --shadow-drawer-right: 8px 0 24px -4px rgba(0, 0, 0, 0.45);
+  --shadow-focus: 0 0 0 3px rgba(56, 189, 248, 0.32);
+  --shadow-focus-accent: 0 0 0 3px rgba(165, 180, 252, 0.32);
+  --shadow-focus-error: 0 0 0 3px rgba(248, 113, 113, 0.32);
+  --shadow-focus-warning: 0 0 0 3px rgba(250, 204, 21, 0.3);
+  --shadow-focus-success: 0 0 0 3px rgba(74, 222, 128, 0.3);
+  --shadow-focus-ring-offset:
+    0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary);
 
   /* Paired Dark Theme Application Semantic Color Aliases */
   --primary: var(--semantic-color-primary);
@@ -420,6 +539,8 @@
     --semantic-color-warning-action-border: #facc15;
     --semantic-color-success-dark: #86efac;
     --semantic-color-success-border: #15803d;
+    --semantic-color-success-interactive: #15803d;
+    --semantic-color-success-accent: #047857;
     --semantic-color-error-border: #b91c1c;
     --semantic-color-error-dark: #fca5a5;
     --semantic-color-interactive-primary: #60a5fa;
@@ -435,6 +556,47 @@
     --semantic-color-surface-subtle: #172033;
     --semantic-color-surface-sunken: #0b1120;
     --semantic-color-divider-accent: #38bdf8;
+    --semantic-color-scrim-soft: rgba(2, 6, 23, 0.6);
+    --semantic-color-scrim: rgba(2, 6, 23, 0.75);
+    --semantic-color-scrim-strong: rgba(2, 6, 23, 0.88);
+    --semantic-color-surface-tint: rgba(248, 250, 252, 0.06);
+    --semantic-color-surface-tint-strong: rgba(248, 250, 252, 0.12);
+    --semantic-color-surface-overlay: rgba(15, 23, 42, 0.85);
+    --semantic-color-primary-tint: rgba(56, 189, 248, 0.12);
+    --semantic-color-primary-border-tint: rgba(56, 189, 248, 0.36);
+    --semantic-color-accent-tint: rgba(165, 180, 252, 0.12);
+    --semantic-color-accent-border-tint: rgba(165, 180, 252, 0.36);
+    --semantic-color-info-tint: rgba(147, 197, 253, 0.12);
+    --semantic-color-info-border-tint: rgba(147, 197, 253, 0.36);
+    --semantic-color-success-tint: rgba(74, 222, 128, 0.12);
+    --semantic-color-success-border-tint: rgba(74, 222, 128, 0.36);
+    --semantic-color-warning-tint: rgba(250, 204, 21, 0.12);
+    --semantic-color-warning-border-tint: rgba(250, 204, 21, 0.36);
+    --semantic-color-error-tint: rgba(248, 113, 113, 0.1);
+    --semantic-color-error-border-tint: rgba(248, 113, 113, 0.36);
+    --semantic-color-purple-tint: rgba(196, 181, 253, 0.12);
+    --semantic-color-purple-border-tint: rgba(196, 181, 253, 0.36);
+    --semantic-color-orange-tint: rgba(251, 146, 60, 0.12);
+    --semantic-color-orange-border-tint: rgba(251, 146, 60, 0.36);
+    --semantic-color-neutral-tint: rgba(148, 163, 184, 0.12);
+    --semantic-color-neutral-border-tint: rgba(148, 163, 184, 0.34);
+    --semantic-color-cyan-tint: rgba(56, 189, 248, 0.12);
+    --semantic-color-cyan-border-tint: rgba(56, 189, 248, 0.36);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+    --shadow-md:
+      0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.35);
+    --shadow-lg:
+      0 10px 15px -3px rgba(0, 0, 0, 0.45), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    --shadow-drawer-left: -8px 0 24px -4px rgba(0, 0, 0, 0.45);
+    --shadow-drawer-right: 8px 0 24px -4px rgba(0, 0, 0, 0.45);
+    --shadow-focus: 0 0 0 3px rgba(56, 189, 248, 0.32);
+    --shadow-focus-accent: 0 0 0 3px rgba(165, 180, 252, 0.32);
+    --shadow-focus-error: 0 0 0 3px rgba(248, 113, 113, 0.32);
+    --shadow-focus-warning: 0 0 0 3px rgba(250, 204, 21, 0.3);
+    --shadow-focus-success: 0 0 0 3px rgba(74, 222, 128, 0.3);
+    --shadow-focus-ring-offset:
+      0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary);
     --primary: var(--semantic-color-primary);
     --primary-dark: var(--semantic-color-primary-dark);
     --primary-light: var(--semantic-color-primary-light);
@@ -505,6 +667,19 @@ summary:focus-visible,
   background-color: var(--primary-dark);
   border-color: var(--primary-dark);
   color: var(--semantic-color-text-on-primary);
+}
+
+.btn-secondary,
+.btn.btn-secondary {
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
+  border-color: var(--semantic-color-border-control);
+}
+
+.can-hover .btn-secondary:hover,
+.can-hover .btn.btn-secondary:hover {
+  background-color: var(--semantic-color-border);
+  color: var(--semantic-color-text);
 }
 
 /* Tabular Numerals Everywhere Numbers Align (CLINICAL_CANVAS.md §2.13) */

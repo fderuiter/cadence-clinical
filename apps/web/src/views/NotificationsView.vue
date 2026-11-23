@@ -527,26 +527,26 @@ const resetFilters = async () => {
 const getPriorityStyle = (priority) => {
   switch (priority) {
     case "CRITICAL":
-      return "background-color: #fee2e2; border-color: #fca5a5; color: #b91c1c;";
+      return "background-color: var(--semantic-color-error-bg); border-color: var(--semantic-color-error-border); color: var(--semantic-color-error);";
     case "HIGH":
-      return "background-color: #ffedd5; border-color: #fed7aa; color: #c2410c;";
+      return "background-color: var(--semantic-color-orange-bg); border-color: var(--semantic-color-orange-border); color: var(--semantic-color-orange-text);";
     case "MEDIUM":
-      return "background-color: #fef9c3; border-color: #fde047; color: #a16207;";
+      return "background-color: var(--semantic-color-warning-bg); border-color: var(--semantic-color-warning-border); color: var(--semantic-color-warning);";
     case "LOW":
     default:
-      return "background-color: #f1f5f9; border-color: #cbd5e1; color: #475569;";
+      return "background-color: var(--semantic-color-surface-header); border-color: var(--semantic-color-border-muted); color: var(--semantic-color-text-secondary);";
   }
 };
 
 const getStatusStyle = (status) => {
   switch (status) {
     case "RESOLVED":
-      return "background-color: #e2e8f0; border-color: #cbd5e1; color: #475569;";
+      return "background-color: var(--semantic-color-border); border-color: var(--semantic-color-border-muted); color: var(--semantic-color-text-secondary);";
     case "ACKNOWLEDGED":
-      return "background-color: #dcfce7; border-color: #86efac; color: #166534;";
+      return "background-color: var(--semantic-color-success-bg); border-color: var(--semantic-color-success-border); color: var(--semantic-color-success-dark);";
     case "OPEN":
     default:
-      return "background-color: #dbeafe; border-color: #93c5fd; color: #1e40af;";
+      return "background-color: var(--semantic-color-info-light); border-color: var(--semantic-color-divider-accent); color: var(--semantic-color-info);";
   }
 };
 
@@ -618,7 +618,7 @@ onMounted(async () => {
   transition: all 0.2s;
 }
 .notification-card:hover {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  box-shadow: var(--semantic-shadow-md);
   border-color: var(--accent-light) !important;
 }
 </style>

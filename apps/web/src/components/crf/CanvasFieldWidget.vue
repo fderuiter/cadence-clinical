@@ -260,7 +260,7 @@
         padding: 2px 6px;
         z-index: 10;
         font-size: 0.72rem;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        box-shadow: var(--semantic-shadow-sm);
       "
     >
       <button

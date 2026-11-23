@@ -985,21 +985,21 @@ function executeChairSignoff() {
 
 .role-tab-btn:hover {
   color: var(--semantic-color-text-inverse);
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--semantic-color-inverse-surface-tint);
 }
 
 .role-tab-btn.active {
   background-color: var(--semantic-color-primary);
   color: var(--semantic-color-text-inverse);
-  box-shadow: 0 1px 4px rgba(2, 132, 199, 0.4);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .blinding-alert-box {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  background-color: rgba(14, 165, 233, 0.1);
-  border: 1px solid rgba(14, 165, 233, 0.35);
+  background-color: var(--semantic-color-cyan-tint);
+  border: 1px solid var(--semantic-color-cyan-border-tint);
   border-radius: 6px;
   padding: 10px 14px;
 }
@@ -1054,15 +1054,15 @@ function executeChairSignoff() {
 }
 
 .status-submitted {
-  background-color: rgba(16, 185, 129, 0.2);
+  background-color: var(--semantic-color-success-tint);
   color: var(--semantic-color-emerald-inverse-text);
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  border: 1px solid var(--semantic-color-success-border-tint);
 }
 
 .status-pending {
-  background-color: rgba(245, 158, 11, 0.2);
+  background-color: var(--semantic-color-warning-tint);
   color: var(--semantic-color-warning);
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  border: 1px solid var(--semantic-color-warning-border-tint);
 }
 
 .metrics-preview-row {
@@ -1214,7 +1214,7 @@ function executeChairSignoff() {
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.4);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .btn-retract-read {
@@ -1238,18 +1238,18 @@ function executeChairSignoff() {
 }
 
 .banner-discordant {
-  background-color: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background-color: var(--semantic-color-error-tint);
+  border: 1px solid var(--semantic-color-error-border-tint);
 }
 
 .banner-concordant {
-  background-color: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  background-color: var(--semantic-color-success-tint);
+  border: 1px solid var(--semantic-color-success-border-tint);
 }
 
 .banner-adjudicated {
-  background-color: rgba(14, 165, 233, 0.15);
-  border: 1px solid rgba(14, 165, 233, 0.4);
+  background-color: var(--semantic-color-cyan-tint);
+  border: 1px solid var(--semantic-color-cyan-border-tint);
 }
 
 .banner-icon {
@@ -1290,7 +1290,7 @@ function executeChairSignoff() {
 
 .reader-compare-card.card-highlight {
   border-color: var(--semantic-color-accent-inverse);
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+  box-shadow: var(--semantic-shadow-focus-accent);
 }
 
 .compare-header {
@@ -1365,7 +1365,7 @@ function executeChairSignoff() {
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.4);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .btn-chair-signoff:disabled {
@@ -1406,7 +1406,7 @@ function executeChairSignoff() {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.75);
+  background-color: var(--semantic-color-scrim-strong);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1448,8 +1448,8 @@ function executeChairSignoff() {
 }
 
 .modal-warning-box {
-  background-color: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background-color: var(--semantic-color-warning-tint);
+  border: 1px solid var(--semantic-color-warning-border-tint);
   color: var(--semantic-color-warning-border);
   padding: 10px;
   border-radius: 6px;
@@ -1506,7 +1506,7 @@ function executeChairSignoff() {
 }
 
 .badge-target {
-  background-color: rgba(52, 211, 153, 0.15);
+  background-color: var(--semantic-color-success-tint);
   color: var(--semantic-color-emerald-inverse-text);
   font-size: 0.65rem;
   font-weight: 700;

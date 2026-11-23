@@ -506,6 +506,17 @@ function stopPanOrMeasure(event) {
   renderAllViewports();
 }
 
+function resolveTokenColor(tokenName) {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return "transparent";
+  }
+  const value = window
+    .getComputedStyle(document.documentElement)
+    .getPropertyValue(tokenName)
+    .trim();
+  return value || "transparent";
+}
+
 function renderViewport(canvas, plane, sliceVal) {
   if (!canvas || !canvas.getContext) return;
   const ctx = canvas.getContext("2d");
@@ -513,8 +524,51 @@ function renderViewport(canvas, plane, sliceVal) {
   const w = canvas.width;
   const h = canvas.height;
 
+  const colorTextInverse = resolveTokenColor("--semantic-color-text-inverse");
+  const colorCanvasBg = resolveTokenColor("--semantic-color-imaging-canvas");
+  const colorSurfaceElevated = resolveTokenColor(
+    "--semantic-color-surface-elevated"
+  );
+  const colorStopMid = resolveTokenColor("--semantic-color-imaging-stop-mid");
+  const colorTextInverseMuted = resolveTokenColor(
+    "--semantic-color-text-inverse-muted"
+  );
+  const colorStopLight = resolveTokenColor(
+    "--semantic-color-imaging-stop-light"
+  );
+  const colorStopMuted = resolveTokenColor(
+    "--semantic-color-imaging-stop-muted"
+  );
+  const colorBorderInverse = resolveTokenColor(
+    "--semantic-color-border-inverse"
+  );
+  const colorSurfaceInverse = resolveTokenColor(
+    "--semantic-color-surface-inverse"
+  );
+  const colorCrosshair = resolveTokenColor(
+    "--semantic-color-imaging-crosshair"
+  );
+  const colorRoiPrimary = resolveTokenColor(
+    "--semantic-color-imaging-roi-primary"
+  );
+  const colorRoiPrimaryFill = resolveTokenColor(
+    "--semantic-color-imaging-roi-primary-fill"
+  );
+  const colorRoiSecondary = resolveTokenColor(
+    "--semantic-color-imaging-roi-secondary"
+  );
+  const colorRoiSecondaryFill = resolveTokenColor(
+    "--semantic-color-imaging-roi-secondary-fill"
+  );
+  const colorCaliperSelected = resolveTokenColor(
+    "--semantic-color-imaging-caliper-selected"
+  );
+  const colorFiducialError = resolveTokenColor(
+    "--semantic-color-imaging-fiducial-error"
+  );
+
   // Background
-  ctx.fillStyle = isInverted.value ? "#ffffff" : "#0a0f1d";
+  ctx.fillStyle = isInverted.value ? colorTextInverse : colorCanvasBg;
   ctx.fillRect(0, 0, w, h);
 
   // Draw simulated anatomical structure (e.g. Thorax / Liver / Lesion)
@@ -530,15 +584,15 @@ function renderViewport(canvas, plane, sliceVal) {
   );
 
   if (isInverted.value) {
-    grad.addColorStop(0, "#1e293b");
-    grad.addColorStop(0.4, "#64748b");
-    grad.addColorStop(0.8, "#cbd5e1");
-    grad.addColorStop(1, "#f8fafc");
+    grad.addColorStop(0, colorSurfaceElevated);
+    grad.addColorStop(0.4, colorStopMid);
+    grad.addColorStop(0.8, colorTextInverseMuted);
+    grad.addColorStop(1, colorStopLight);
   } else {
-    grad.addColorStop(0, "#f8fafc");
-    grad.addColorStop(0.3, "#94a3b8");
-    grad.addColorStop(0.7, "#334155");
-    grad.addColorStop(1, "#0f172a");
+    grad.addColorStop(0, colorStopLight);
+    grad.addColorStop(0.3, colorStopMuted);
+    grad.addColorStop(0.7, colorBorderInverse);
+    grad.addColorStop(1, colorSurfaceInverse);
   }
 
   ctx.fillStyle = grad;
@@ -553,7 +607,7 @@ function renderViewport(canvas, plane, sliceVal) {
   ctx.fill();
 
   // Draw simulated target tumor lesion in center-right quadrant
-  ctx.fillStyle = isInverted.value ? "#0f172a" : "#ffffff";
+  ctx.fillStyle = isInverted.value ? colorSurfaceInverse : colorTextInverse;
   ctx.beginPath();
   const tumorX = centerX + 40;
   const tumorY = centerY - 20;
@@ -564,7 +618,7 @@ function renderViewport(canvas, plane, sliceVal) {
   // Render crosshairs
   if (isCrosshairEnabled.value) {
     ctx.lineWidth = 1;
-    ctx.strokeStyle = "rgba(56, 189, 248, 0.65)"; // Sky blue crosshairs
+    ctx.strokeStyle = colorCrosshair; // Sky blue crosshairs
     ctx.setLineDash([4, 4]);
 
     const crossX = (sagittalSlice.value / 512) * w;
@@ -586,12 +640,12 @@ function renderViewport(canvas, plane, sliceVal) {
       ctx.lineWidth = 2;
       ctx.strokeStyle =
         annot.measurement_type === "AI_AUTO_CONTOUR" || annot.is_ai_assisted
-          ? "#38bdf8"
-          : "#10b981";
+          ? colorRoiPrimary
+          : colorRoiSecondary;
       ctx.fillStyle =
         annot.measurement_type === "AI_AUTO_CONTOUR" || annot.is_ai_assisted
-          ? "rgba(56, 189, 248, 0.22)"
-          : "rgba(16, 185, 129, 0.15)";
+          ? colorRoiPrimaryFill
+          : colorRoiSecondaryFill;
 
       ctx.beginPath();
       ctx.moveTo(annot.points[0].x, annot.points[0].y);
@@ -611,7 +665,9 @@ function renderViewport(canvas, plane, sliceVal) {
           if (sp && ep) {
             ctx.lineWidth = 2;
             ctx.strokeStyle =
-              type === "PERPENDICULAR_DIAMETER" ? "#f59e0b" : "#38bdf8";
+              type === "PERPENDICULAR_DIAMETER"
+                ? colorCaliperSelected
+                : colorRoiPrimary;
             if (type === "PERPENDICULAR_DIAMETER") {
               ctx.setLineDash([4, 3]);
             }
@@ -625,7 +681,7 @@ function renderViewport(canvas, plane, sliceVal) {
       } else if (annot.points.length >= 2) {
         const midIdx = Math.floor(annot.points.length / 2);
         ctx.lineWidth = 2;
-        ctx.strokeStyle = "#38bdf8";
+        ctx.strokeStyle = colorRoiPrimary;
         ctx.beginPath();
         ctx.moveTo(annot.points[0].x, annot.points[0].y);
         ctx.lineTo(annot.points[midIdx].x, annot.points[midIdx].y);
@@ -633,28 +689,30 @@ function renderViewport(canvas, plane, sliceVal) {
       }
 
       // Contour overlay label
-      ctx.fillStyle = "#38bdf8";
+      ctx.fillStyle = colorRoiPrimary;
       ctx.font = "bold 11px sans-serif";
       const labelText = `🤖 ${annot.lesion_id || "TL" + (idx + 1)}: ${annot.longest_diameter_mm}mm (AI)`;
       ctx.fillText(labelText, annot.points[0].x, annot.points[0].y - 8);
     } else if (annot.points && annot.points.length === 2) {
       ctx.lineWidth = 2;
       ctx.strokeStyle =
-        annot.lesion_type === "NEW_LESION" ? "#ef4444" : "#10b981";
+        annot.lesion_type === "NEW_LESION"
+          ? colorFiducialError
+          : colorRoiSecondary;
       ctx.beginPath();
       ctx.moveTo(annot.points[0].x, annot.points[0].y);
       ctx.lineTo(annot.points[1].x, annot.points[1].y);
       ctx.stroke();
 
       // Caliper end ticks
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = colorTextInverse;
       ctx.beginPath();
       ctx.arc(annot.points[0].x, annot.points[0].y, 3, 0, Math.PI * 2);
       ctx.arc(annot.points[1].x, annot.points[1].y, 3, 0, Math.PI * 2);
       ctx.fill();
 
       // Label
-      ctx.fillStyle = "#38bdf8";
+      ctx.fillStyle = colorRoiPrimary;
       ctx.font = "bold 11px sans-serif";
       const midX = (annot.points[0].x + annot.points[1].x) / 2;
       const midY = (annot.points[0].y + annot.points[1].y) / 2 - 8;
@@ -733,9 +791,9 @@ onUnmounted(() => {
 .timepoint-tag {
   font-size: 0.72rem;
   font-weight: 600;
-  background-color: rgba(56, 189, 248, 0.15);
+  background-color: var(--semantic-color-imaging-roi-primary-fill);
   color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  border: 1px solid var(--semantic-color-imaging-crosshair);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -751,15 +809,15 @@ onUnmounted(() => {
 }
 
 .sync-status-badge.synced {
-  background-color: rgba(52, 211, 153, 0.15);
+  background-color: var(--semantic-color-imaging-roi-secondary-fill);
   color: var(--semantic-color-emerald-inverse-text);
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  border: 1px solid var(--semantic-color-emerald-inverse-border);
 }
 
 .sync-status-badge.unlinked {
-  background-color: rgba(251, 146, 60, 0.15);
+  background-color: var(--semantic-color-orange-tint);
   color: var(--semantic-color-orange-text);
-  border: 1px solid rgba(251, 146, 60, 0.3);
+  border: 1px solid var(--semantic-color-orange-border-tint);
 }
 
 .mpr-toolbar {
@@ -876,21 +934,21 @@ onUnmounted(() => {
 }
 
 .axial-badge {
-  background-color: rgba(56, 189, 248, 0.2);
+  background-color: var(--semantic-color-imaging-roi-primary-fill);
   color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  border: 1px solid var(--semantic-color-imaging-crosshair);
 }
 
 .sagittal-badge {
-  background-color: rgba(52, 211, 153, 0.2);
+  background-color: var(--semantic-color-imaging-roi-secondary-fill);
   color: var(--semantic-color-emerald-inverse-text);
-  border: 1px solid rgba(52, 211, 153, 0.4);
+  border: 1px solid var(--semantic-color-emerald-inverse-border);
 }
 
 .coronal-badge {
-  background-color: rgba(251, 191, 36, 0.2);
+  background-color: var(--semantic-color-warning-tint);
   color: var(--semantic-color-warning);
-  border: 1px solid rgba(251, 191, 36, 0.4);
+  border: 1px solid var(--semantic-color-warning-border-tint);
 }
 
 .slice-loc-label {

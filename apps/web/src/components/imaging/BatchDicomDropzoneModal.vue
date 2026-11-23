@@ -576,7 +576,7 @@ function completeAndClose() {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.75);
+  background-color: var(--semantic-color-scrim-strong);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -588,9 +588,7 @@ function completeAndClose() {
 .modal-card {
   background-color: var(--semantic-color-surface);
   border-radius: 12px;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.2),
-    0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-lg);
   width: 100%;
   max-width: 680px;
   max-height: 90vh;
@@ -624,9 +622,9 @@ function completeAndClose() {
 }
 
 .badge-gxp {
-  background-color: rgba(56, 189, 248, 0.2);
+  background-color: var(--semantic-color-cyan-tint);
   color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  border: 1px solid var(--semantic-color-cyan-border-tint);
 }
 
 .badge-info {

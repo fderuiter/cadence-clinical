@@ -1104,7 +1104,7 @@ async function submitUpload() {
   background-color: var(--semantic-color-surface);
   padding: 24px;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
   height: 100%;
 }
 
@@ -1260,7 +1260,7 @@ async function submitUpload() {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-scrim);
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
@@ -1271,9 +1271,7 @@ async function submitUpload() {
 .modal-card {
   background-color: var(--semantic-color-surface);
   border-radius: 12px;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--semantic-shadow-lg);
   max-width: 600px;
   width: 90%;
   display: flex;

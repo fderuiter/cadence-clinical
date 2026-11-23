@@ -341,7 +341,7 @@ onMounted(() => {
   max-width: 100vw;
   background-color: var(--semantic-color-surface);
   border-left: 1px solid var(--border);
-  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--semantic-shadow-drawer-left);
   z-index: 1000;
   display: flex;
   flex-direction: column;

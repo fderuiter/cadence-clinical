@@ -1238,7 +1238,7 @@ function formatResolutionAction(act?: string): string {
   position: fixed;
   inset: 0;
   max-width: 100vw;
-  background-color: rgba(15, 23, 42, 0.65);
+  background-color: var(--semantic-color-scrim-strong);
   backdrop-filter: blur(3px);
   display: flex;
   justify-content: flex-end;
@@ -1256,7 +1256,7 @@ function formatResolutionAction(act?: string): string {
   max-width: 100vw;
   height: 100vh;
   background-color: var(--semantic-color-surface);
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--semantic-shadow-drawer-left);
   display: flex;
   flex-direction: column;
   animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1563,7 +1563,7 @@ function formatResolutionAction(act?: string): string {
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1573,7 +1573,7 @@ function formatResolutionAction(act?: string): string {
 }
 
 .reconciliation-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--semantic-shadow-md);
 }
 
 .reconciliation-card.status-accepted {
@@ -1835,7 +1835,7 @@ function formatResolutionAction(act?: string): string {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--semantic-color-surface-overlay);
   border: 1px solid currentColor;
 }
 
@@ -1937,7 +1937,7 @@ function formatResolutionAction(act?: string): string {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1950,7 +1950,7 @@ function formatResolutionAction(act?: string): string {
   border-radius: 8px;
   width: 520px;
   max-width: 90vw;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--semantic-shadow-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2249,7 +2249,7 @@ function formatResolutionAction(act?: string): string {
   background-color: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-text-inverse);
   border-bottom: 2px solid var(--semantic-color-text-dark);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--semantic-shadow-md);
   animation: slideDown 0.2s ease-out;
 }
 
@@ -2317,7 +2317,7 @@ function formatResolutionAction(act?: string): string {
 }
 
 .btn-ghost:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--semantic-color-inverse-surface-tint);
   color: var(--semantic-color-surface);
 }
 

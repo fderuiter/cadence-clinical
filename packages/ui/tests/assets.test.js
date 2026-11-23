@@ -411,15 +411,85 @@ describe("CSS Assets and Package Exports", () => {
         ).toBeGreaterThanOrEqual(3);
       }
     });
+
+    it("defines paired light and dark scrim, tint, focus-ring, imaging, and --semantic-shadow-* tokens while preserving dark-theme >= 4.5:1 contrast", () => {
+      const rawCss = fs.readFileSync(tokensPath, "utf-8");
+      const darkMatch = rawCss.match(/\.dark\s*\{([\s\S]*?)\}/);
+      expect(darkMatch).not.toBeNull();
+      const darkRaw = new Map();
+      for (const [k, v] of tokens.entries()) {
+        darkRaw.set(k, v);
+      }
+      for (const m of darkMatch[1]
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .matchAll(/(--[a-zA-Z0-9_-]+)\s*:\s*([^;]+);/g)) {
+        darkRaw.set(m[1], m[2].trim());
+      }
+      const resolveDark = (name) => {
+        const val = darkRaw.get(name);
+        const vm = val?.match(/^var\(\s*(--[a-zA-Z0-9_-]+)\s*\)$/);
+        return vm ? resolveDark(vm[1]) : val;
+      };
+
+      for (const requiredToken of [
+        "--semantic-color-scrim-soft",
+        "--semantic-color-scrim",
+        "--semantic-color-scrim-strong",
+        "--semantic-color-surface-tint",
+        "--semantic-color-primary-tint",
+        "--semantic-color-success-tint",
+        "--semantic-color-warning-tint",
+        "--semantic-color-error-tint",
+        "--semantic-color-imaging-canvas",
+        "--semantic-shadow-sm",
+        "--semantic-shadow-md",
+        "--semantic-shadow-lg",
+        "--semantic-shadow-xl",
+        "--semantic-shadow-drawer-left",
+        "--semantic-shadow-drawer-right",
+        "--semantic-shadow-focus",
+      ]) {
+        expect(
+          tokens.get(requiredToken),
+          `${requiredToken} in :root`
+        ).toBeDefined();
+        expect(
+          resolveDark(requiredToken),
+          `${requiredToken} in .dark`
+        ).toBeDefined();
+      }
+
+      const darkSurface = resolveDark("--semantic-color-surface");
+      const darkSurfaceMuted = resolveDark("--semantic-color-surface-muted");
+      for (const darkTextToken of [
+        "--semantic-color-text",
+        "--semantic-color-text-muted",
+        "--semantic-color-primary",
+        "--semantic-color-accent",
+        "--semantic-color-success",
+        "--semantic-color-warning",
+        "--semantic-color-error",
+      ]) {
+        const fg = resolveDark(darkTextToken);
+        expect(contrastRatio(fg, darkSurface)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(fg, darkSurfaceMuted)).toBeGreaterThanOrEqual(4.5);
+      }
+      expect(
+        contrastRatio(
+          resolveDark("--semantic-color-border-control"),
+          darkSurface
+        )
+      ).toBeGreaterThanOrEqual(3);
+    });
   });
 
   describe("ESLint Static Token Enforcement Gates", () => {
-    it("rejects hardcoded hex colors and undefined CSS variables across Vue templates, Vue <style> blocks, and .css stylesheets", async () => {
-      const eslint = new ESLint({
-        cwd: repoRoot,
-        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
-      });
+    const eslint = new ESLint({
+      cwd: repoRoot,
+      overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+    });
 
+    it("rejects hardcoded hex colors and undefined CSS variables across Vue templates, Vue <style> blocks, and .css stylesheets", async () => {
       const [vueResult] = await eslint.lintText(
         `<template>\n  <div style="color: #ff00aa; background: var(--nonexistent-token)">Test</div>\n</template>\n<style scoped>\n.box {\n  border-color: #123456;\n  color: var(--missing-style-var);\n}\n</style>\n`,
         {
@@ -455,11 +525,6 @@ describe("CSS Assets and Package Exports", () => {
     });
 
     it("rejects synthetic Vue and CSS fixtures with bare outline: none / outline: 0 without :focus-visible while permitting :focus:not(:focus-visible)", async () => {
-      const eslint = new ESLint({
-        cwd: repoRoot,
-        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
-      });
-
       const [badVueResult] = await eslint.lintText(
         `<template>\n  <button type="button" style="outline: none">Action</button>\n</template>\n<style scoped>\n.suppressed-btn {\n  outline: none;\n}\n.suppressed-input:focus {\n  outline: 0;\n}\n</style>\n`,
         {
@@ -499,6 +564,90 @@ describe("CSS Assets and Package Exports", () => {
           (m) => m.ruleId === "custom-vue/no-suppressed-focus-outline"
         )
       ).toHaveLength(0);
+    });
+
+    it("rejects rgb()/rgba(), hsl()/hsla(), named colors (white), and untokenized box-shadow across .css and Vue <template>/<style> while allowing transparent, currentColor, inherit, none, and --shadow-* tokens", async () => {
+      const [badCss] = await eslint.lintText(
+        `.card {\n  background: rgba(15, 23, 42, 0.5);\n  border-color: hsl(210, 40%, 50%);\n  color: white;\n  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);\n}\n`,
+        { filePath: path.join(repoRoot, "apps/web/src/bad-tokens.css") }
+      );
+      const badCssMessages = badCss.messages.filter(
+        (m) => m.ruleId === "custom-vue/no-inline-hex"
+      );
+      expect(badCssMessages.length).toBeGreaterThanOrEqual(4);
+
+      const [goodCss] = await eslint.lintText(
+        `.card {\n  background: transparent;\n  border: 1px solid currentColor;\n  color: inherit;\n  white-space: nowrap;\n  box-shadow: var(--semantic-shadow-sm);\n}\n.card-flat {\n  box-shadow: none;\n}\n`,
+        { filePath: path.join(repoRoot, "apps/web/src/good-tokens.css") }
+      );
+      expect(goodCss.messages).toHaveLength(0);
+
+      const [badVue] = await eslint.lintText(
+        `<template>\n  <div\n    style="background-color: rgb(240, 249, 255); color: white; box-shadow: 0 2px 6px hsla(0, 0%, 0%, 0.2)"\n  >\n    <span :style="{ color: 'white', boxShadow: '0 4px 10px var(--border)' }">Badge</span>\n  </div>\n</template>\n`,
+        {
+          filePath: path.join(
+            repoRoot,
+            "apps/web/src/components/TemplateColorProbe.vue"
+          ),
+        }
+      );
+      expect(
+        badVue.messages.filter((m) => m.ruleId === "custom-vue/no-inline-hex")
+          .length
+      ).toBeGreaterThanOrEqual(5);
+    });
+
+    it("rejects hardcoded colors in Vue <script> and TS modules while allowing getComputedStyle token lookups, tokens.css theme blocks, and VitePress --vp-* variables", async () => {
+      const [badScriptVue] = await eslint.lintText(
+        `<template>\n  <canvas ref="canvasEl"></canvas>\n</template>\n<script setup lang="ts">\nimport { ref } from "vue";\nconst canvasEl = ref<HTMLCanvasElement | null>(null);\nfunction draw(ctx: CanvasRenderingContext2D) {\n  ctx.fillStyle = "#0a0f1d";\n  ctx.strokeStyle = "rgba(56, 189, 248, 0.65)";\n  ctx.shadowColor = "white";\n}\ndraw;\n</script>\n`,
+        {
+          filePath: path.join(
+            repoRoot,
+            "apps/web/src/components/CanvasProbe.vue"
+          ),
+        }
+      );
+      expect(
+        badScriptVue.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-inline-hex"
+        )
+      ).toHaveLength(3);
+
+      const [goodScriptVue] = await eslint.lintText(
+        `<template>\n  <canvas ref="canvasEl"></canvas>\n</template>\n<script setup lang="ts">\nimport { ref } from "vue";\nconst canvasEl = ref<HTMLCanvasElement | null>(null);\nfunction token(name: string): string {\n  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();\n}\nfunction paint(ctx: CanvasRenderingContext2D) {\n  ctx.fillStyle = token("--semantic-color-imaging-canvas");\n  ctx.strokeStyle = token("--semantic-color-imaging-crosshair");\n}\ndefineExpose({ paint });\n</script>\n`,
+        {
+          filePath: path.join(
+            repoRoot,
+            "apps/web/src/components/CleanCanvasProbe.vue"
+          ),
+        }
+      );
+      expect(goodScriptVue.messages).toHaveLength(0);
+
+      const [tokensCssResult] = await eslint.lintFiles([
+        path.join(repoRoot, "packages/ui/tokens.css"),
+      ]);
+      expect(tokensCssResult.messages).toHaveLength(0);
+
+      const [vitepressGood] = await eslint.lintText(
+        `.toolbar {\n  border: 1px solid var(--vp-c-divider);\n  background-color: var(--vp-c-bg-soft);\n  box-shadow: var(--vp-shadow-1);\n}\n`,
+        {
+          filePath: path.join(repoRoot, "docs/.vitepress/theme/custom.css"),
+        }
+      );
+      expect(vitepressGood.messages).toHaveLength(0);
+
+      const [vitepressBad] = await eslint.lintText(
+        `.toolbar {\n  background-color: white;\n  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);\n}\n`,
+        {
+          filePath: path.join(repoRoot, "docs/.vitepress/theme/custom.css"),
+        }
+      );
+      expect(
+        vitepressBad.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-inline-hex"
+        ).length
+      ).toBeGreaterThanOrEqual(2);
     });
   });
 });

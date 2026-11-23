@@ -2128,7 +2128,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
   gap: 20px;
   flex-wrap: wrap;
 }
@@ -2340,7 +2340,7 @@ onMounted(() => {
 
 .kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--semantic-shadow-md);
 }
 
 .kpi-card-alert {
@@ -2405,7 +2405,7 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .pane-header-row {
@@ -2941,7 +2941,7 @@ onMounted(() => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2954,7 +2954,7 @@ onMounted(() => {
   border-radius: 12px;
   max-width: 600px;
   width: 100%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--semantic-shadow-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -3071,7 +3071,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .finding-card-critical,

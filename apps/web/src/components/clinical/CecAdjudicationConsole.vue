@@ -2118,7 +2118,7 @@ onMounted(() => {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1.5rem;
-  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .header-main {
@@ -2421,7 +2421,7 @@ onMounted(() => {
 
 .dossier-card:hover {
   border-color: var(--color-primary);
-  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .dossier-card.active {
@@ -3213,7 +3213,7 @@ onMounted(() => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--semantic-color-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3223,10 +3223,11 @@ onMounted(() => {
 
 .modal-dialog {
   background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   width: 100%;
   max-width: 560px;
-  box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.1));
+  box-shadow: var(--semantic-shadow-xl);
   display: flex;
   flex-direction: column;
   max-height: 90vh;

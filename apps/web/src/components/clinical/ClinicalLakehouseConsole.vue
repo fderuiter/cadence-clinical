@@ -1572,7 +1572,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.5);
+  background-color: var(--semantic-color-scrim-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1582,10 +1582,11 @@ onMounted(() => {
 
 .modal-card {
   background-color: var(--semantic-color-surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   width: 100%;
   max-width: 540px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-xl);
   display: flex;
   flex-direction: column;
 }

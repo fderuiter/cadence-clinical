@@ -603,6 +603,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2646: Standardize 24px Target Tokens and Dual Focus Rings](adr/2026-11-22-standardize-24px-target-tokens-and-dual-focus-rings.md) | Current | - Status: Accepted |
 | [ADR-2536: Unify 18-Module Migration Tooling, Fail-Closed Metadata Verification, and Count-Free Schema Docs](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md) | Current | - Status: Accepted |
 | [ADR-2537: Split UI Vitest Accessibility Matcher and Enforce Staged Demo Bundle Budgets](adr/2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md) | Current | - Status: Accepted |
+| [ADR-2652: Enforce Shared Color and Shadow Tokens Across Stylesheets, Scripts, VitePress, and CLI Gates](adr/2026-11-23-enforce-color-and-shadow-tokens-across-stylesheets.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

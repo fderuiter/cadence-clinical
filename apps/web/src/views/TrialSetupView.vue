@@ -225,7 +225,7 @@ async function submitOnboarding() {
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 12px;
   padding: 28px;
-  box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
+  box-shadow: var(--semantic-shadow-md);
 }
 
 .setup-eyebrow {

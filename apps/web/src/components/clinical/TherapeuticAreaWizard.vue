@@ -880,7 +880,7 @@ function synthesizeProtocol() {
 .ta-card.selected {
   border-color: var(--semantic-color-interactive-primary);
   background-color: var(--semantic-color-info-bg);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .ta-card-header {

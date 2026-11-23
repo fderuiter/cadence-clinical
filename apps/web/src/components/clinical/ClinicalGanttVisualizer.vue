@@ -232,10 +232,7 @@
                     fill="var(--semantic-color-interactive-primary)"
                     stroke="var(--semantic-color-surface)"
                     stroke-width="2.5"
-                    style="
-                      cursor: pointer;
-                      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
-                    "
+                    style="cursor: pointer"
                     @click="openEditModal(visit)"
                   />
 
@@ -973,7 +970,7 @@ function truncate(str, len) {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-scrim);
   backdrop-filter: blur(2px);
   z-index: 9999;
   display: flex;

@@ -151,7 +151,7 @@ const clearPins = () => {
   justify-content: center;
   font-size: 0.6875rem;
   font-weight: 700;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--semantic-shadow-sm);
   pointer-events: none;
 }
 

@@ -467,7 +467,7 @@ const confirmAndApply = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-scrim);
   z-index: 1050;
   display: flex;
   justify-content: flex-end;
@@ -483,7 +483,7 @@ const confirmAndApply = () => {
   flex-direction: column;
   padding: 24px;
   overflow-y: auto;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--semantic-shadow-drawer-left);
 }
 
 .drawer-header {

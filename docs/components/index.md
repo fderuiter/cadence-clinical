@@ -58,9 +58,12 @@ Tokens are imported from [tokens.css](../../packages/ui/tokens.css):
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: var(--semantic-radius-md);
+  box-shadow: var(--semantic-shadow-sm);
   color: var(--semantic-color-text);
 }
 ```
+
+Paired light and dark scrim (`--semantic-color-scrim*`), translucent status/surface tint (`--semantic-color-*-tint`, `--semantic-color-*-border-tint`), imaging `<canvas>` (`--semantic-color-imaging-*`), and elevation/focus-ring (`--shadow-*`, `--semantic-shadow-*`) tokens are enforced across `.css`, `.vue` (`<template>`, `<script>`, `<style>`), and `.js`/`.ts` modules via ESLint and `pnpm cadence check --pre-commit` ([ADR-2652](../adr/2026-11-23-enforce-color-and-shadow-tokens-across-stylesheets.md)).
 
 ### Side-Over Drawer Width Tokens
 

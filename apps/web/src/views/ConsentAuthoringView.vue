@@ -140,7 +140,7 @@
                       cursor: pointer;
                       border: 1px solid var(--border);
                       border-radius: 4px;
-                      background: white;
+                      background: var(--semantic-color-surface);
                     "
                     @click="openEditor(tpl)"
                   >
@@ -153,7 +153,7 @@
                       padding: 4px 10px;
                       font-size: 0.75rem;
                       background-color: var(--success);
-                      color: white;
+                      color: var(--semantic-color-surface);
                       border: none;
                       border-radius: 4px;
                       cursor: pointer;
@@ -167,7 +167,7 @@
                     class="badge status-badge"
                     style="
                       background-color: var(--success);
-                      color: white;
+                      color: var(--semantic-color-surface);
                       font-size: 0.7rem;
                       padding: 4px 8px;
                       border-radius: 4px;
@@ -490,7 +490,7 @@
                   style="
                     font-size: 0.75rem;
                     background-color: var(--error);
-                    color: white;
+                    color: var(--semantic-color-surface);
                     border: none;
                     border-radius: 4px;
                   "
@@ -572,7 +572,7 @@
                       padding: 2px 6px;
                       font-size: 0.7rem;
                       background-color: var(--error);
-                      color: white;
+                      color: var(--semantic-color-surface);
                       border: none;
                       border-radius: 4px;
                     "
@@ -1059,6 +1059,6 @@ onMounted(() => {
 <style scoped>
 .template-card:hover {
   border-color: var(--accent) !important;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 </style>

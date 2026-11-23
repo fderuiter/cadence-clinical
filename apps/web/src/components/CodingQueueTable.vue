@@ -1535,7 +1535,7 @@ async function acceptAllSuggestions() {
 .btn-batch-approve {
   background-color: var(--semantic-color-success);
   border-color: var(--semantic-color-success);
-  color: white;
+  color: var(--semantic-color-surface);
 }
 
 .btn-batch-approve:hover {
@@ -1592,7 +1592,7 @@ async function acceptAllSuggestions() {
 }
 
 .instances-drawer-container {
-  background: white;
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 14px;

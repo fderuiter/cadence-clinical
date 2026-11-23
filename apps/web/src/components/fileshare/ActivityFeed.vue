@@ -616,7 +616,7 @@ function formatRelativeTime(isoString) {
 .activity-feed-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.65);
+  background-color: var(--semantic-color-scrim-strong);
   backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
@@ -629,7 +629,7 @@ function formatRelativeTime(isoString) {
   max-width: 580px;
   height: 100%;
   background: var(--semantic-color-surface);
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--semantic-shadow-drawer-left);
   display: flex;
   flex-direction: column;
   animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -889,7 +889,7 @@ function formatRelativeTime(isoString) {
   align-items: center;
   justify-content: center;
   font-size: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--semantic-shadow-sm);
   z-index: 2;
 }
 
@@ -907,7 +907,7 @@ function formatRelativeTime(isoString) {
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   padding: 0.875rem 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .card-header {
@@ -1068,7 +1068,7 @@ function formatRelativeTime(isoString) {
   align-items: center;
   gap: 0.5rem;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .load-more-btn:hover:not(:disabled) {

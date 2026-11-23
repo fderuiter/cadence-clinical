@@ -123,7 +123,7 @@
               class="badge"
               style="
                 background-color: var(--success);
-                color: white;
+                color: var(--semantic-color-surface);
                 font-weight: 600;
               "
             >
@@ -687,14 +687,14 @@
                   class="autocomplete-dropdown"
                   style="
                     position: absolute;
-                    background: white;
+                    background: var(--semantic-color-surface);
                     border: 1px solid var(--border);
                     border-radius: 4px;
                     width: 100%;
                     z-index: 100;
                     max-height: 150px;
                     overflow-y: auto;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    box-shadow: var(--semantic-shadow-md);
                   "
                 >
                   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
@@ -705,7 +705,8 @@
                     style="
                       padding: 6px;
                       cursor: pointer;
-                      border-bottom: 1px solid rgba(241, 245, 249, 1);
+                      border-bottom: 1px solid
+                        var(--semantic-color-surface-header);
                     "
                     @click="selectArmConcept(sug)"
                   >
@@ -849,14 +850,14 @@
                   class="autocomplete-dropdown"
                   style="
                     position: absolute;
-                    background: white;
+                    background: var(--semantic-color-surface);
                     border: 1px solid var(--border);
                     border-radius: 4px;
                     width: 100%;
                     z-index: 100;
                     max-height: 150px;
                     overflow-y: auto;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    box-shadow: var(--semantic-shadow-md);
                   "
                 >
                   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
@@ -867,7 +868,8 @@
                     style="
                       padding: 6px;
                       cursor: pointer;
-                      border-bottom: 1px solid rgba(241, 245, 249, 1);
+                      border-bottom: 1px solid
+                        var(--semantic-color-surface-header);
                     "
                     @click="selectEncConcept(sug)"
                   >
@@ -1014,7 +1016,10 @@
             >
               <button
                 class="btn"
-                style="background-color: var(--error); color: white"
+                style="
+                  background-color: var(--error);
+                  color: var(--semantic-color-surface);
+                "
                 @click="handleToggleApplicability(false)"
               >
                 Remove Applicability
@@ -1148,7 +1153,7 @@
             style="
               cursor: pointer;
               background-color: var(--accent);
-              color: white;
+              color: var(--semantic-color-surface);
               border: none;
               padding: 4px 8px;
             "
@@ -1584,7 +1589,7 @@
             padding: 12px;
             border: 1px solid var(--border);
             border-radius: 8px;
-            background-color: white;
+            background-color: var(--semantic-color-surface);
           "
         >
           <div>
@@ -3430,9 +3435,7 @@ function navigateToSoa() {
 
 <style scoped>
 .synthesis-metrics-card {
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--semantic-shadow-md);
 }
 
 .dropzone-area:hover,
@@ -3454,6 +3457,6 @@ function navigateToSoa() {
 
 .metric-panel:hover {
   transform: translateY(-2px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 </style>

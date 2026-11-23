@@ -21,7 +21,7 @@
           class="badge"
           style="
             background-color: var(--accent);
-            color: white;
+            color: var(--semantic-color-surface);
             padding: 4px 8px;
             border-radius: 4px;
             font-weight: bold;

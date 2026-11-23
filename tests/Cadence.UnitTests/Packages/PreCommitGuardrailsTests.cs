@@ -1430,6 +1430,80 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
+    public void FrontendEslintGate_ValidatesStagedCssBlobsOverStdin()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string realRepoRoot = QualityGateOrchestrator.FindRepoRoot();
+        Write("eslint.config.mjs", File.ReadAllText(Path.Combine(realRepoRoot, "eslint.config.mjs")));
+        Write("packages/ui/tokens.css", File.ReadAllText(Path.Combine(realRepoRoot, "packages", "ui", "tokens.css")));
+        string symlinkNodeModules = Path.Combine(_tempDir, "node_modules");
+        Directory.CreateSymbolicLink(symlinkNodeModules, Path.Combine(realRepoRoot, "node_modules"));
+
+        string eslintBin = Path.Combine(realRepoRoot, "node_modules", "eslint", "bin", "eslint.js");
+        string stubBin = Path.Combine(_tempDir, "pnpm-eslint-bin");
+        Directory.CreateDirectory(stubBin);
+        string pnpmShim = Path.Combine(stubBin, "pnpm");
+        File.WriteAllText(
+            pnpmShim,
+            "#!/bin/sh\n" +
+            "if [ \"${1:-}\" = \"--version\" ]; then echo '10.34.6'; exit 0; fi\n" +
+            "if [ \"${1:-}\" = \"exec\" ] && [ \"${2:-}\" = \"eslint\" ]; then\n" +
+            "  shift 2\n" +
+            $"  exec node \"{eslintBin}\" \"$@\"\n" +
+            "fi\n" +
+            "exit 1\n");
+        File.SetUnixFileMode(pnpmShim, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        InitGitRepo();
+        const string cssRelPath = "apps/web/src/probe.css";
+        const string cleanCss =
+            """
+            .clinical-probe {
+              background-color: var(--semantic-color-surface);
+              border: 1px solid var(--semantic-color-border);
+              box-shadow: var(--semantic-shadow-sm);
+              color: var(--semantic-color-text);
+            }
+            """;
+        const string untokenizedCss =
+            """
+            .clinical-probe {
+              background-color: rgba(15, 23, 42, 0.5);
+              color: white;
+              box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+            }
+            """;
+
+        string? originalPath = Environment.GetEnvironmentVariable("PATH");
+        try
+        {
+            Environment.SetEnvironmentVariable("PATH", $"{stubBin}{Path.PathSeparator}/tmp/bin{Path.PathSeparator}{originalPath}");
+
+            Write(cssRelPath, cleanCss + "\n");
+            RunGit("add", cssRelPath);
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true).Should().Be(0);
+
+            Write(cssRelPath, untokenizedCss + "\n");
+            RunGit("add", cssRelPath);
+            // Overwrite working tree with clean CSS; pre-commit must still fail closed on the staged .css blob.
+            Write(cssRelPath, cleanCss + "\n");
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true).Should().Be(1);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", originalPath);
+            if (Directory.Exists(symlinkNodeModules))
+            {
+                Directory.Delete(symlinkNodeModules, recursive: false);
+            }
+        }
+    }
+
+    [Fact]
     public void FindRepoRoot_ResolvesRepositoryFromNestedSubdirectory()
     {
         Write("Cadence.sln", "\n");

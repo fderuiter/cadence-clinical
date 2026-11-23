@@ -2088,11 +2088,11 @@ onMounted(() => {
 
 .metric-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-md);
 }
 
 .metric-alert-danger {
-  border-color: rgba(239, 68, 68, 0.4);
+  border-color: var(--semantic-color-error-border-tint);
   background-color: var(--semantic-color-error-bg-soft);
 }
 
@@ -2165,7 +2165,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border);
   border-radius: 10px;
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .panel-header {
@@ -2524,7 +2524,7 @@ onMounted(() => {
   flex-direction: column;
   justify-content: space-between;
   gap: 14px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .card-sade-critical {
@@ -2828,7 +2828,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-scrim);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -2839,11 +2839,12 @@ onMounted(() => {
 
 .modal-card {
   background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 10px;
   padding: 24px;
   max-width: 560px;
   width: 100%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--semantic-shadow-xl);
   display: flex;
   flex-direction: column;
   gap: 14px;

@@ -98,12 +98,12 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "streams staged JS, TS, Vue, CSS, JSON, Markdown and YAML blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
         },
-        new("eslint", [], "ESLint and duplicate store identifier checks across JS, TS and Vue files",
+        new("eslint", [], "ESLint and duplicate store identifier checks across JS, TS, Vue and CSS files",
             ctx => FrontendQualityGateService.CheckEslint(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "lints staged JS, TS and Vue blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
+            PreCommitNote = "lints staged JS, TS, Vue and CSS blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
         },
         new("actionlint", ["validate-workflows"],
             "GitHub Actions workflow and composite-action static analysis via `actionlint` from `.cadence/bin` or `PATH` (fails closed when missing)",

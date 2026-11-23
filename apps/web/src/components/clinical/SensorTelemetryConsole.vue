@@ -1678,7 +1678,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--semantic-color-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1691,7 +1691,7 @@ onMounted(() => {
   border-radius: var(--radius-lg, 8px);
   width: 100%;
   max-width: 580px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--semantic-shadow-lg);
 }
 
 .modal-header {

@@ -580,7 +580,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.45);
+  background-color: var(--semantic-color-scrim-soft);
   display: flex;
   justify-content: flex-end;
   z-index: 1050;
@@ -588,14 +588,15 @@ onUnmounted(() => {
 }
 
 :deep(.drawer-panel) {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   width: var(
     --semantic-drawer-width-sm,
     var(--drawer-width-sm, min(100vw, 440px))
   );
   max-width: 100vw;
   height: 100vh;
-  box-shadow: -6px 0 28px rgba(0, 0, 0, 0.18);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--semantic-shadow-drawer-left);
   display: flex;
   flex-direction: column;
   animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1);
@@ -726,7 +727,7 @@ onUnmounted(() => {
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.85rem;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   color: var(--primary);
   box-sizing: border-box;
 }
@@ -844,7 +845,7 @@ onUnmounted(() => {
   border-radius: 8px;
   padding: 16px;
   background-color: var(--semantic-color-surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -930,7 +931,7 @@ onUnmounted(() => {
 }
 
 .anchor-text code {
-  background-color: rgba(255, 255, 255, 0.6);
+  background-color: var(--semantic-color-surface-overlay);
   padding: 2px 4px;
   border-radius: 3px;
   font-family: monospace;
@@ -1054,7 +1055,7 @@ onUnmounted(() => {
 .related-card:focus-visible {
   background-color: var(--semantic-color-surface);
   border-color: var(--accent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .related-card:focus-visible,
@@ -1122,7 +1123,7 @@ onUnmounted(() => {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px 12px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   cursor: pointer;
   transition: all 0.15s;
   display: flex;

@@ -1598,7 +1598,7 @@ onMounted(() => {
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
   border: 1px solid var(--semantic-color-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .view-mode-bar {
@@ -1624,7 +1624,7 @@ onMounted(() => {
   background: var(--semantic-color-interactive-primary);
   color: var(--semantic-color-surface);
   border-color: var(--semantic-color-interactive-primary);
-  box-shadow: 0 2px 4px rgba(29, 78, 216, 0.2);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .console-header {
@@ -2064,7 +2064,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--semantic-color-scrim);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -2080,7 +2080,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-lg);
 }
 
 .modal-lg {

@@ -56,8 +56,8 @@
           class="btn tab-btn-rules"
           :style="
             activeTab === 'rules'
-              ? 'background-color: var(--primary); color: white;'
-              : 'background-color: rgba(226, 232, 240, 1); color: var(--semantic-color-text-secondary);'
+              ? 'background-color: var(--primary); color: var(--semantic-color-text-on-primary);'
+              : 'background-color: var(--semantic-color-border); color: var(--semantic-color-text-secondary);'
           "
           @click="activeTab = 'rules'"
         >
@@ -67,8 +67,8 @@
           class="btn tab-btn-queries"
           :style="
             activeTab === 'queries'
-              ? 'background-color: var(--primary); color: white;'
-              : 'background-color: rgba(226, 232, 240, 1); color: var(--semantic-color-text-secondary);'
+              ? 'background-color: var(--primary); color: var(--semantic-color-text-on-primary);'
+              : 'background-color: var(--semantic-color-border); color: var(--semantic-color-text-secondary);'
           "
           @click="activeTab = 'queries'"
         >
@@ -166,7 +166,8 @@
                         cursor: pointer;
                         border: 1px solid var(--border);
                         border-radius: 4px;
-                        background: white;
+                        background: var(--semantic-color-surface);
+                        color: var(--semantic-color-text);
                       "
                       @click="openRuleEditor(rule)"
                     >
@@ -178,7 +179,7 @@
                         padding: 4px 10px;
                         font-size: 0.75rem;
                         background-color: var(--error);
-                        color: white;
+                        color: var(--semantic-color-surface);
                         border: none;
                         border-radius: 4px;
                         cursor: pointer;
@@ -234,10 +235,10 @@
                     font-family: monospace;
                     font-size: 0.75rem;
                     color: var(--semantic-color-primary);
-                    background-color: rgb(240, 249, 255);
+                    background-color: var(--semantic-color-info-bg-soft);
                     padding: 6px 10px;
                     border-radius: 4px;
-                    border: 1px solid rgb(224, 242, 254);
+                    border: 1px solid var(--semantic-color-info-border);
                     word-break: break-all;
                   "
                 >
@@ -311,7 +312,7 @@
               </legend>
               <div
                 style="
-                  background-color: rgb(241, 245, 249);
+                  background-color: var(--semantic-color-surface-header);
                   padding: 12px;
                   border-radius: 8px;
                   font-family: monospace;
@@ -524,7 +525,7 @@
             style="
               max-height: 150px;
               overflow-y: auto;
-              background: white;
+              background: var(--semantic-color-surface);
               border: 1px solid var(--border);
               border-radius: 4px;
               padding: 8px;
@@ -535,7 +536,7 @@
               :key="r.code"
               style="
                 padding: 4px 0;
-                border-bottom: 1px solid rgba(241, 245, 249, 1);
+                border-bottom: 1px solid var(--semantic-color-surface-header);
                 font-size: 0.8rem;
               "
             >
@@ -1545,7 +1546,7 @@ onMounted(async () => {
 <style scoped>
 .rule-card:hover {
   border-color: var(--accent) !important;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+  box-shadow: var(--semantic-shadow-md);
 }
 
 .rules-gating-banner {

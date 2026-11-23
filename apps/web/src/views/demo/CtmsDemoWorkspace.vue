@@ -4627,10 +4627,11 @@ defineExpose({
 <style scoped>
 .modal {
   background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+  box-shadow: var(--semantic-shadow-lg);
   overflow: hidden;
   color: var(--semantic-color-text-dark);
 }
@@ -4641,7 +4642,7 @@ defineExpose({
   font-weight: 600;
   font-size: 16px;
   background: var(--semantic-color-primary-dark);
-  color: white;
+  color: var(--semantic-color-surface);
 }
 
 .modal-body {
@@ -4670,7 +4671,8 @@ textarea {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 13px;
-  background: white;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   box-sizing: border-box;
 }
 
@@ -4710,17 +4712,19 @@ textarea {
 
 .btn-cancel {
   border: 1px solid var(--semantic-color-border-control);
-  background: white;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
 }
 
 .btn-secondary {
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text);
 }
 
 .btn-primary {
   background: var(--semantic-color-primary-dark);
-  color: white;
+  color: var(--semantic-color-surface);
   border: none;
 }
 

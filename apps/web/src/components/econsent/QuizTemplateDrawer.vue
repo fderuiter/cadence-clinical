@@ -363,7 +363,7 @@ defineExpose({
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(15, 23, 42, 0.4);
+  background-color: var(--semantic-color-scrim-soft);
   z-index: 1000;
   display: flex;
   justify-content: flex-end;
@@ -373,10 +373,10 @@ defineExpose({
   width: 580px;
   max-width: 90vw;
   height: 100%;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--semantic-shadow-drawer-left);
   animation: slideIn 0.25s ease-out;
 }
 
@@ -440,7 +440,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
 }
 
 .filter-group,
@@ -512,7 +512,7 @@ defineExpose({
 
 .domain-pill.active {
   background-color: var(--primary);
-  color: white;
+  color: var(--semantic-color-surface);
   border-color: var(--primary);
 }
 
@@ -574,7 +574,7 @@ defineExpose({
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 14px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -584,7 +584,7 @@ defineExpose({
 
 .template-card:hover {
   border-color: var(--primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .template-card.selected {

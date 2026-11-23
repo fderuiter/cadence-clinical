@@ -2853,7 +2853,7 @@ onMounted(() => {
   padding: 1.25rem 1.5rem;
   border-radius: 8px;
   border: 1px solid var(--semantic-color-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .title-group {
@@ -3162,7 +3162,7 @@ onMounted(() => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--semantic-color-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3174,7 +3174,7 @@ onMounted(() => {
   border-radius: 8px;
   width: 540px;
   max-width: 90vw;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--semantic-shadow-lg);
   display: flex;
   flex-direction: column;
 }

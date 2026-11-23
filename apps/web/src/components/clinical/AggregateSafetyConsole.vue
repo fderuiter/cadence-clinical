@@ -2072,7 +2072,7 @@ onMounted(() => {
   border-radius: var(--radius-lg, 8px);
   border: 1px solid var(--border);
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 /* Header Architecture */
@@ -2194,7 +2194,7 @@ onMounted(() => {
 .btn-qppv {
   background-color: var(--semantic-color-success);
   color: var(--semantic-color-surface);
-  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25);
+  box-shadow: var(--semantic-shadow-sm);
 }
 .btn-qppv:hover:not(:disabled) {
   background-color: var(--semantic-color-success);
@@ -2342,7 +2342,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border);
   border-radius: var(--radius-md, 6px);
   padding: 14px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .metric-card.highlight {
@@ -2647,7 +2647,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.65);
+  background-color: var(--semantic-color-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2656,10 +2656,11 @@ onMounted(() => {
 
 .modal-dialog {
   background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: var(--radius-lg, 8px);
   width: 100%;
   max-width: 560px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--semantic-shadow-xl);
   overflow: hidden;
 }
 
@@ -2763,7 +2764,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
@@ -2771,7 +2772,7 @@ onMounted(() => {
 
 .clock-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-md);
 }
 
 .clock-card.alert-warning {
@@ -2956,7 +2957,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-info-border-accent);
   border-radius: var(--radius-md, 6px);
   padding: 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .sim-results-header {

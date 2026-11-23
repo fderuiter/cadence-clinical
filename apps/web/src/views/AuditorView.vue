@@ -4,7 +4,7 @@
     <div
       class="inspection-banner"
       style="
-        background: rgba(0, 123, 255, 0.08);
+        background: var(--semantic-color-primary-tint);
         padding: 12px 16px;
         border-left: 4px solid var(--accent);
         border-radius: 4px;
@@ -20,7 +20,7 @@
         style="
           font-weight: bold;
           background: var(--accent);
-          color: white;
+          color: var(--semantic-color-surface);
           padding: 4px 8px;
           border-radius: 4px;
         "

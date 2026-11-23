@@ -41,7 +41,7 @@
       style="
         border: 1px solid var(--semantic-color-border);
         border-radius: 8px;
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        box-shadow: var(--semantic-shadow-md);
         background: var(--semantic-color-surface);
         overflow: hidden;
       "

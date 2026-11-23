@@ -1248,7 +1248,7 @@ const onTicketSigned = (sigPayload) => {
   width: 100vw;
   height: 100vh;
   max-width: 100vw;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--semantic-color-scrim);
   backdrop-filter: blur(3px);
   display: flex;
   justify-content: flex-end;
@@ -1267,7 +1267,7 @@ const onTicketSigned = (sigPayload) => {
   background: var(--semantic-color-surface);
   display: flex;
   flex-direction: column;
-  box-shadow: -10px 0 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--semantic-shadow-drawer-left);
   border-left: 1px solid var(--semantic-color-border-control);
   animation: slideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overscroll-behavior: contain;
@@ -1302,7 +1302,7 @@ const onTicketSigned = (sigPayload) => {
   font-family: monospace;
   font-size: 0.85rem;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--semantic-color-inverse-surface-tint-strong);
   padding: 3px 8px;
   border-radius: 4px;
   color: var(--semantic-color-primary);
@@ -1388,7 +1388,7 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .drawer-close:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--semantic-color-inverse-surface-tint);
   color: var(--semantic-color-surface);
 }
 
@@ -1401,23 +1401,23 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .sla-banner.sla-normal {
-  background: rgba(37, 99, 235, 0.2);
-  border: 1px solid rgba(37, 99, 235, 0.4);
+  background: var(--semantic-color-info-tint);
+  border: 1px solid var(--semantic-color-info-border-tint);
 }
 
 .sla-banner.sla-warning {
-  background: rgba(245, 158, 11, 0.25);
-  border: 1px solid rgba(245, 158, 11, 0.5);
+  background: var(--semantic-color-warning-tint);
+  border: 1px solid var(--semantic-color-warning-border-tint);
 }
 
 .sla-banner.sla-breached {
-  background: rgba(220, 38, 38, 0.3);
-  border: 1px solid rgba(220, 38, 38, 0.6);
+  background: var(--semantic-color-error-tint);
+  border: 1px solid var(--semantic-color-error-border-tint);
 }
 
 .sla-banner.sla-paused {
-  background: rgba(148, 163, 184, 0.25);
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: var(--semantic-color-neutral-tint);
+  border: 1px solid var(--semantic-color-neutral-border-tint);
 }
 
 .sla-banner-left {
@@ -1430,7 +1430,7 @@ const onTicketSigned = (sigPayload) => {
 
 .sla-progress-track {
   height: 4px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--semantic-color-inverse-surface-tint-strong);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -1893,7 +1893,7 @@ const onTicketSigned = (sigPayload) => {
   border-radius: 50%;
   background: var(--semantic-color-interactive-primary);
   border: 2px solid var(--semantic-color-surface);
-  box-shadow: 0 0 0 1px var(--semantic-color-border-control);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .audit-content {
@@ -2143,7 +2143,7 @@ const onTicketSigned = (sigPayload) => {
 .citation-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.65);
+  background: var(--semantic-color-scrim-strong);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2159,7 +2159,7 @@ const onTicketSigned = (sigPayload) => {
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--semantic-shadow-lg);
   border: 1px solid var(--semantic-color-border-control);
   overflow: hidden;
 }

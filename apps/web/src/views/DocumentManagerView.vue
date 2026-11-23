@@ -1006,7 +1006,7 @@ defineExpose({
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .document-content-area {
@@ -1014,7 +1014,7 @@ defineExpose({
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
   display: flex;
   flex-direction: column;
 }
@@ -1150,7 +1150,7 @@ defineExpose({
   right: 0;
   bottom: 0;
   max-width: 100vw;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--semantic-color-scrim-soft);
   z-index: 1000;
   display: flex;
   justify-content: flex-end;
@@ -1168,7 +1168,7 @@ defineExpose({
   height: 100%;
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-drawer-left);
   overscroll-behavior: contain;
   touch-action: pan-y;
 }

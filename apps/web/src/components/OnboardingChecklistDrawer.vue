@@ -247,7 +247,7 @@ function startGuidedTour() {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.4);
+  background-color: var(--semantic-color-scrim-soft);
   backdrop-filter: blur(2px);
   z-index: 1050;
   display: flex;
@@ -259,7 +259,8 @@ function startGuidedTour() {
   max-width: 100vw;
   height: 100%;
   background-color: var(--semantic-color-surface);
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
+  border-left: 1px solid var(--semantic-color-border);
+  box-shadow: var(--semantic-shadow-drawer-left);
   display: flex;
   flex-direction: column;
   z-index: 1051;
@@ -405,7 +406,7 @@ function startGuidedTour() {
 
 .task-card:hover {
   border-color: var(--semantic-color-border-muted);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .task-card.completed {

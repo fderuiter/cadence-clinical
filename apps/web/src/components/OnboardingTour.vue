@@ -489,7 +489,7 @@ onUnmounted(() => {
 .onboarding-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: var(--semantic-color-scrim-soft);
   z-index: 998;
 }
 
@@ -498,9 +498,7 @@ onUnmounted(() => {
   color: var(--semantic-color-text);
   border: 2px solid var(--semantic-color-interactive-primary);
   border-radius: 12px;
-  box-shadow:
-    0 10px 25px -5px rgba(0, 0, 0, 0.15),
-    0 8px 10px -6px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--semantic-shadow-lg);
   padding: 20px;
   width: 320px;
   font-family: var(--semantic-font-family);

@@ -1395,7 +1395,7 @@ async function handleExecuteBulkSignOff() {
   border: 2px solid var(--semantic-color-border-control);
   padding: 32px;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .cert-header {
@@ -1484,7 +1484,7 @@ async function handleExecuteBulkSignOff() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--semantic-color-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1497,7 +1497,7 @@ async function handleExecuteBulkSignOff() {
   max-width: 90vw;
   border-radius: 8px;
   padding: 24px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--semantic-shadow-lg);
 }
 
 .modal-header {

@@ -2274,7 +2274,7 @@ onMounted(() => {
   background: var(--primary);
   color: var(--semantic-color-surface);
   border-color: var(--primary);
-  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .nav-pill-badge {
@@ -2653,7 +2653,7 @@ onMounted(() => {
   color: var(--semantic-color-text-inverse);
   border-radius: var(--radius-md, 8px);
   padding: 0.85rem 1.5rem;
-  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--semantic-shadow-lg);
   z-index: 900;
 }
 
@@ -2866,7 +2866,7 @@ onMounted(() => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--semantic-color-scrim);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -2878,7 +2878,7 @@ onMounted(() => {
   border-radius: var(--radius-md, 8px);
   width: 580px;
   max-width: 90vw;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-lg);
   overflow: hidden;
 }
 
@@ -3215,7 +3215,7 @@ onMounted(() => {
   border-radius: var(--radius-md, 8px);
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .summary-top-row {

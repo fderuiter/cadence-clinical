@@ -504,7 +504,7 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
   font-family: inherit;
   width: 100%;
 }
@@ -791,7 +791,7 @@ onUnmounted(() => {
 
 .video-controls-bar {
   padding: 10px 16px;
-  background: rgba(15, 23, 42, 0.95);
+  background: var(--semantic-color-inverse-scrim);
 }
 
 .speed-selector {

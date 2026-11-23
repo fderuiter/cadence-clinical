@@ -1828,7 +1828,7 @@ function downloadDossierJson() {
   padding: 6px 12px;
   border-radius: 6px;
   border: 1px solid var(--border);
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--primary);
@@ -1842,14 +1842,14 @@ function downloadDossierJson() {
 }
 
 .kri-card {
-  background: white;
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .kri-header {
@@ -1951,7 +1951,7 @@ function downloadDossierJson() {
 }
 
 .qtl-item-card {
-  background: white;
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
@@ -2013,7 +2013,7 @@ function downloadDossierJson() {
 }
 
 .stage-count {
-  background: white;
+  background: var(--semantic-color-surface);
   padding: 2px 6px;
   border-radius: 10px;
   font-size: 0.75rem;
@@ -2029,14 +2029,14 @@ function downloadDossierJson() {
 }
 
 .kanban-card {
-  background: white;
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .kanban-card-header {
@@ -2094,11 +2094,11 @@ function downloadDossierJson() {
 }
 
 .breach-item-card {
-  background: white;
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .breach-header {
@@ -2192,7 +2192,7 @@ function downloadDossierJson() {
 
 .why-badge {
   background: var(--accent);
-  color: white;
+  color: var(--semantic-color-surface);
   font-weight: 700;
   font-size: 0.75rem;
   padding: 6px 10px;
@@ -2239,7 +2239,7 @@ function downloadDossierJson() {
   display: block;
   font-size: 0.75rem;
   word-break: break-all;
-  background: white;
+  background: var(--semantic-color-surface);
   padding: 4px 8px;
   border-radius: 4px;
   border: 1px solid var(--semantic-color-border-control);

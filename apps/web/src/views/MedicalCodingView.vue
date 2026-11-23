@@ -458,9 +458,9 @@ onMounted(() => {
 }
 
 .mode-btn.active {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   color: var(--primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .alert-banner {
@@ -560,14 +560,14 @@ onMounted(() => {
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
   border-color: var(--accent);
 }
 
 .stat-active {
   border-color: var(--accent) !important;
   background-color: var(--semantic-color-info-bg-soft) !important;
-  box-shadow: 0 0 0 2px var(--accent-bg);
+  box-shadow: var(--semantic-shadow-focus);
 }
 
 .stat-number {
@@ -647,9 +647,9 @@ onMounted(() => {
 }
 
 .tab-btn.active {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   color: var(--primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .dict-select-box select,
@@ -658,7 +658,7 @@ onMounted(() => {
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
 }
 
 .confidence-select {

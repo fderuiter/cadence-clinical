@@ -503,7 +503,7 @@ const formatTime = (isoString) => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
@@ -563,7 +563,7 @@ const formatTime = (isoString) => {
 }
 
 .btn-clause-ctrl {
-  background: white;
+  background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 3px;
   font-size: 0.65rem;
@@ -657,7 +657,7 @@ const formatTime = (isoString) => {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: var(--semantic-color-scrim-soft);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -667,9 +667,9 @@ const formatTime = (isoString) => {
 .publish-modal {
   width: 90%;
   max-width: 550px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   border-radius: 8px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-lg);
   display: flex;
   flex-direction: column;
 }

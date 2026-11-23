@@ -673,7 +673,7 @@ function startGuidedTour() {
   justify-content: space-between;
   align-items: flex-start;
   gap: 24px;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);
+  box-shadow: var(--semantic-shadow-md);
 }
 
 .welcome-main {
@@ -685,7 +685,7 @@ function startGuidedTour() {
 
 .persona-icon-badge {
   font-size: 3rem;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--semantic-color-inverse-surface-tint);
   padding: 12px;
   border-radius: 12px;
   line-height: 1;
@@ -716,8 +716,8 @@ function startGuidedTour() {
 }
 
 .landing-preference-card {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--semantic-color-inverse-surface-tint);
+  border: 1px solid var(--semantic-color-inverse-surface-tint-strong);
   border-radius: 10px;
   padding: 16px;
   width: 320px;
@@ -766,15 +766,15 @@ function startGuidedTour() {
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: rgba(56, 189, 248, 0.15);
+  background: var(--semantic-color-cyan-tint);
   color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  border: 1px solid var(--semantic-color-cyan-border-tint);
 }
 
 .pref-status-badge.is-bypassed {
-  background: rgba(245, 158, 11, 0.15);
+  background: var(--semantic-color-warning-tint);
   color: var(--semantic-color-warning-border);
-  border-color: rgba(245, 158, 11, 0.3);
+  border-color: var(--semantic-color-warning-border-tint);
 }
 
 .overview-plan-banner {
@@ -788,7 +788,7 @@ function startGuidedTour() {
   align-items: center;
   flex-wrap: wrap;
   gap: 14px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .overview-plan-main {
@@ -872,7 +872,7 @@ function startGuidedTour() {
   border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .section-header {
@@ -1066,7 +1066,7 @@ function startGuidedTour() {
 
 .launcher-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--semantic-shadow-md);
   border-color: var(--semantic-color-interactive-primary);
 }
 

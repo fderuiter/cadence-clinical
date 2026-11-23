@@ -21,7 +21,7 @@ public static class FrontendQualityGateService
 
     private static readonly HashSet<string> EslintExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue",
+        ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".css",
     };
 
     public static int CheckPrettier(

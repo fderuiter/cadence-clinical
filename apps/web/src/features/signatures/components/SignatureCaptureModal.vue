@@ -454,7 +454,7 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.5);
+  background: var(--semantic-color-scrim);
   z-index: 1000;
 }
 
@@ -463,7 +463,7 @@ defineExpose({
   border-radius: var(--radius-md, 8px);
   width: 100%;
   max-width: 450px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--semantic-shadow-md);
   overflow: hidden;
   color: var(--semantic-color-text-dark);
 }
@@ -473,7 +473,7 @@ defineExpose({
   border-bottom: 1px solid var(--semantic-color-border);
   font-weight: 600;
   font-size: 16px;
-  color: white;
+  color: var(--semantic-color-surface);
 }
 
 .modal-body {
@@ -533,11 +533,12 @@ select {
 .btn-cancel {
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
 }
 
 .btn-primary {
   background: var(--accent);
-  color: white;
+  color: var(--semantic-color-surface);
   border: none;
 }
 

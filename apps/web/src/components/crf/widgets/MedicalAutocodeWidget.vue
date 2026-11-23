@@ -170,7 +170,7 @@ const selectTerm = (term) => {
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-md);
   max-height: 200px;
   overflow-y: auto;
   list-style: none;

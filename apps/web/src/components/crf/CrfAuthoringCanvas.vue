@@ -947,7 +947,7 @@ function onResetSimulation() {
 
 <style scoped>
 .authoring-canvas-stage {
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  box-shadow: none;
 }
 .text-xxs {
   font-size: 0.65rem;

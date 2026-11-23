@@ -1901,6 +1901,6 @@ const commitAndActivateEDC = async () => {
   background-color: var(--semantic-color-surface-inverse);
   border-color: var(--semantic-color-text);
   color: var(--semantic-color-text-inverse);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  box-shadow: var(--semantic-shadow-md);
 }
 </style>

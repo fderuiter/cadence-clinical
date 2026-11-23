@@ -82,7 +82,7 @@ function handleAction(toast) {
   background: var(--neutral-light);
   color: var(--primary);
   font-family: var(--font);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+  box-shadow: var(--semantic-shadow-md);
 }
 .toast-error {
   border-color: var(--error);

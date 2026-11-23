@@ -349,7 +349,7 @@
             Candidate ID:
             <code
               style="
-                background-color: rgb(241 245 249);
+                background-color: var(--semantic-color-surface-header);
                 padding: 2px 4px;
                 border-radius: 4px;
               "
@@ -410,7 +410,7 @@
                 <span
                   class="badge"
                   style="
-                    background-color: rgb(226 232 240);
+                    background-color: var(--semantic-color-surface-header);
                     color: var(--semantic-color-text-secondary);
                     font-size: 0.75rem;
                     text-transform: uppercase;

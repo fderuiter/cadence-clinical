@@ -757,7 +757,7 @@ function submitCohortTransition(): void {
 .rec-dose-pill {
   font-size: 0.75rem;
   font-weight: 600;
-  background-color: rgba(0, 0, 0, 0.08);
+  background-color: var(--semantic-color-surface-tint-strong);
   padding: 2px 8px;
   border-radius: 12px;
 }
@@ -1051,7 +1051,7 @@ function submitCohortTransition(): void {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1060,13 +1060,12 @@ function submitCohortTransition(): void {
 
 .modal-card {
   background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   width: 100%;
   max-width: 520px;
   padding: 24px;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-xl);
 }
 
 .modal-header {
@@ -1161,6 +1160,7 @@ function submitCohortTransition(): void {
   padding: 8px 14px;
   border: 1px solid var(--semantic-color-border-control);
   background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 600;

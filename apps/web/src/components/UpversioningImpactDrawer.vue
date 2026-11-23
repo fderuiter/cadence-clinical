@@ -316,21 +316,22 @@ useFocusTrap(drawerRef, {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-scrim);
   display: flex;
   justify-content: flex-end;
   z-index: 1060;
 }
 
 .drawer-panel {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   width: var(
     --semantic-drawer-width-lg,
     var(--drawer-width-lg, min(100vw, 640px))
   );
   max-width: 100vw;
   height: 100vh;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--semantic-shadow-drawer-left);
   display: flex;
   flex-direction: column;
   animation: slideInRight 0.25s ease-out;
@@ -453,7 +454,7 @@ useFocusTrap(drawerRef, {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
 }
 
 .metric-unchanged {
@@ -492,7 +493,7 @@ useFocusTrap(drawerRef, {
 
 .delta-bar-card,
 .recommendations-card {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
@@ -617,7 +618,7 @@ useFocusTrap(drawerRef, {
   border-radius: 6px;
   font-size: 0.9rem;
   font-family: inherit;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   color: var(--primary);
   transition: border-color 0.15s ease-in-out;
 }

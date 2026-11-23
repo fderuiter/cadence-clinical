@@ -215,7 +215,7 @@ useFocusTrap(dialogRef, {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--semantic-color-scrim);
   backdrop-filter: blur(2px);
   display: flex;
   justify-content: center;

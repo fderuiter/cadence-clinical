@@ -30,7 +30,7 @@ body {
   justify-content: space-between;
   align-items: center;
   border-bottom: 2px solid var(--semantic-color-surface-elevated);
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--semantic-shadow-md);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -136,7 +136,7 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 1.1rem;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.4);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .header-title-area {
@@ -267,7 +267,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  background-color: rgba(30, 41, 59, 0.6);
+  background-color: var(--semantic-color-surface-elevated);
   border: 1px solid var(--semantic-color-border-inverse);
   padding: 4px 10px;
   border-radius: 8px;
@@ -459,7 +459,7 @@ body {
   height: 8px;
   border-radius: 50%;
   background-color: var(--semantic-color-success);
-  box-shadow: 0 0 6px var(--semantic-color-success);
+  box-shadow: none;
   animation: pulse-dot 2s infinite;
 }
 
@@ -543,7 +543,7 @@ main {
   background: var(--semantic-color-surface);
   border-radius: 12px;
   border: 1px solid var(--border);
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  box-shadow: var(--semantic-shadow-sm);
   padding: 24px;
 }
 
@@ -660,7 +660,7 @@ main {
   background-color: var(--semantic-color-primary);
   color: var(--semantic-color-text-on-primary);
   font-weight: 800;
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
 .clinical-soa-matrix th.epoch-header {
@@ -743,7 +743,7 @@ main {
   border: 1px solid var(--border);
   border-radius: 8px;
   background-color: var(--semantic-color-surface);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .query-panel-header {
@@ -896,7 +896,7 @@ main {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-scrim);
   backdrop-filter: blur(4px);
   display: none;
   justify-content: center;
@@ -909,9 +909,8 @@ main {
   border-radius: 12px;
   width: 100%;
   max-width: 450px;
-  box-shadow:
-    0 20px 25px -5px rgb(0 0 0 / 0.1),
-    0 8px 10px -6px rgb(0 0 0 / 0.1);
+  border: 1px solid var(--border);
+  box-shadow: var(--semantic-shadow-lg);
   overflow: hidden;
 }
 
@@ -969,7 +968,7 @@ main {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(15, 23, 42, 0.75);
+  background: var(--semantic-color-scrim-strong);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -982,9 +981,7 @@ main {
   border-radius: 12px;
   width: 90%;
   max-width: 680px;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.2),
-    0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-lg);
   overflow: hidden;
   border: 1px solid var(--semantic-color-border-muted);
   max-height: 90vh;
@@ -1049,7 +1046,7 @@ main {
   padding: 16px;
   position: relative;
   transition: all 0.2s;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .ledger-block.signed {
@@ -1188,19 +1185,19 @@ main {
 .lookup-status-indicator.lookup-valid {
   color: var(--success);
   background-color: var(--success-bg);
-  border: 1px solid rgba(22, 163, 74, 0.2);
+  border: 1px solid var(--semantic-color-success-border-tint);
 }
 
 .lookup-status-indicator.lookup-invalid {
   color: var(--error);
   background-color: var(--error-bg);
-  border: 1px solid rgba(220, 38, 38, 0.2);
+  border: 1px solid var(--semantic-color-error-border-tint);
 }
 
 .lookup-status-indicator.lookup-degraded {
   color: var(--warning);
   background-color: var(--warning-bg);
-  border: 1px solid rgba(234, 88, 12, 0.2);
+  border: 1px solid var(--semantic-color-orange-border-tint);
 }
 
 .lookup-status-indicator.lookup-candidate,
@@ -1273,8 +1270,7 @@ main {
   text-decoration: none !important;
   box-shadow:
     0 0 0 2px var(--semantic-color-text-on-solid),
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    var(--semantic-shadow-lg) !important;
   outline: 3px solid var(--semantic-color-accent) !important;
   outline-offset: 2px !important;
 }
@@ -1322,7 +1318,7 @@ main {
   padding: 16px 20px;
   border-radius: 12px;
   border: 1px solid var(--semantic-color-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .canvas-header-info h2 {
@@ -1376,7 +1372,7 @@ main {
 .btn-viewport.active {
   background-color: var(--semantic-color-primary);
   color: var(--semantic-color-surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .form-schema-badge {
@@ -1403,7 +1399,7 @@ main {
   border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
   transition: max-width 0.3s ease;
   margin: 0 auto;
   min-height: 400px;
@@ -1420,14 +1416,14 @@ main {
   background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border);
   border-radius: 10px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--semantic-shadow-sm);
   overflow: hidden;
   transition: all 0.15s;
 }
 
 .form-section-container.is-active-section {
   border-color: var(--semantic-color-divider-accent);
-  box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.3);
+  box-shadow: var(--semantic-shadow-focus);
 }
 
 .section-header-card {
@@ -1578,12 +1574,12 @@ main {
 
 .canvas-field-widget:hover {
   border-color: var(--semantic-color-divider-accent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .canvas-field-widget.is-selected {
   border-color: var(--semantic-color-primary);
-  box-shadow: 0 0 0 3px rgba(2, 101, 151, 0.15);
+  box-shadow: var(--semantic-shadow-focus);
 }
 
 .field-widget-top {
@@ -1652,7 +1648,7 @@ main {
   border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -1760,7 +1756,7 @@ main {
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .stat-icon {

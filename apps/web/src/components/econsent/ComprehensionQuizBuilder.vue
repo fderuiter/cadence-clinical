@@ -475,7 +475,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   padding: 20px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -532,9 +532,9 @@ defineExpose({
 }
 
 .mode-tab-btn.active {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   color: var(--primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .threshold-control {
@@ -808,7 +808,7 @@ defineExpose({
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
@@ -888,7 +888,7 @@ defineExpose({
 
 .btn-success {
   background-color: var(--semantic-color-success);
-  color: white;
+  color: var(--semantic-color-surface);
   border: none;
 }
 

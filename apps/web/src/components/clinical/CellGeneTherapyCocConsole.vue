@@ -1860,7 +1860,7 @@ onMounted(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
   padding: var(--semantic-spacing-md, 1.5rem);
-  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .filter-panel {
@@ -1974,7 +1974,7 @@ onMounted(() => {
 .stage-current .node-circle {
   background: var(--color-primary);
   color: var(--semantic-color-surface);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  box-shadow: var(--semantic-shadow-focus);
 }
 
 .node-label {
@@ -2169,7 +2169,7 @@ onMounted(() => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--semantic-color-scrim-soft);
   display: flex;
   align-items: center;
   justify-content: center;

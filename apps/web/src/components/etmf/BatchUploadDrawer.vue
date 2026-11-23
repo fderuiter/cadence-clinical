@@ -738,7 +738,7 @@ useFocusTrap(inspectionCardRef, {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--semantic-color-scrim-soft);
   z-index: 1100;
   display: flex;
   justify-content: flex-end;
@@ -750,7 +750,7 @@ useFocusTrap(inspectionCardRef, {
   background: var(--semantic-color-surface);
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--semantic-shadow-drawer-left);
   animation: slideIn 0.2s ease-out;
 }
 
@@ -793,7 +793,7 @@ useFocusTrap(inspectionCardRef, {
 .dropzone:hover,
 .dropzone.is-dragging {
   border-color: var(--semantic-color-interactive-primary);
-  background: rgba(0, 123, 255, 0.04);
+  background: var(--semantic-color-primary-tint);
 }
 
 .dropzone-icon {
@@ -899,7 +899,7 @@ useFocusTrap(inspectionCardRef, {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--semantic-color-scrim-soft);
   z-index: 1200;
   display: flex;
   align-items: center;
@@ -912,6 +912,6 @@ useFocusTrap(inspectionCardRef, {
   background: var(--semantic-color-surface);
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--semantic-shadow-md);
 }
 </style>

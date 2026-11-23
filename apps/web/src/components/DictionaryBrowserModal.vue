@@ -514,7 +514,7 @@ useFocusTrap(modalRef, {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.65);
+  background-color: var(--semantic-color-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -522,12 +522,13 @@ useFocusTrap(modalRef, {
 }
 
 .dictionary-browser-modal {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   width: 95%;
   max-width: 1080px;
   max-height: 90vh;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  box-shadow: 0 20px 35px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--semantic-shadow-xl);
   display: flex;
   flex-direction: column;
 }
@@ -604,7 +605,7 @@ useFocusTrap(modalRef, {
 }
 
 .card {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 16px;
@@ -647,7 +648,7 @@ useFocusTrap(modalRef, {
 .result-item-card:hover,
 .result-item-card:focus-visible {
   border-color: var(--accent);
-  background-color: rgba(2, 101, 151, 0.03);
+  background-color: var(--semantic-color-primary-tint);
 }
 
 .result-item-card:focus-visible {
@@ -658,7 +659,7 @@ useFocusTrap(modalRef, {
 .active-result {
   border-color: var(--accent) !important;
   background-color: var(--semantic-color-info-bg) !important;
-  box-shadow: 0 0 0 2px var(--accent-bg);
+  box-shadow: var(--semantic-shadow-focus-accent);
 }
 
 .result-card-header {
@@ -678,7 +679,7 @@ useFocusTrap(modalRef, {
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--accent);
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   padding: 2px 6px;
   border-radius: 4px;
   border: 1px solid var(--semantic-color-info-border);
@@ -773,7 +774,7 @@ useFocusTrap(modalRef, {
   padding: 2px 6px;
   border-radius: 4px;
   background-color: var(--primary);
-  color: white;
+  color: var(--semantic-color-text-on-primary);
 }
 
 .node-info {

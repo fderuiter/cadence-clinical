@@ -766,7 +766,7 @@ onMounted(() => {
   flex-direction: column;
   background: var(--semantic-color-surface);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
   overflow: hidden;
 }
 
@@ -829,7 +829,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--semantic-color-scrim-soft);
   z-index: 1200;
   display: flex;
   align-items: center;
@@ -842,7 +842,7 @@ onMounted(() => {
   background: var(--semantic-color-surface);
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--semantic-shadow-md);
 }
 
 .qc-modal-lg {

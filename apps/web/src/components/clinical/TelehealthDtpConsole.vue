@@ -1411,7 +1411,7 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg, 8px);
   padding: 20px 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .badge-row {
@@ -1547,7 +1547,7 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
   padding: 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .metric-icon-box {
@@ -1623,7 +1623,7 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .panel-header {
@@ -1881,7 +1881,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--semantic-color-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1894,7 +1894,7 @@ onMounted(() => {
   width: 90%;
   max-width: 580px;
   overflow: hidden;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--semantic-shadow-lg);
 }
 
 .modal-header {

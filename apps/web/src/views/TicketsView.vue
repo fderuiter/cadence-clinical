@@ -1539,7 +1539,7 @@ const exportAuditTrail = (format) => {
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--semantic-shadow-md);
 }
 
 .stat-icon {
@@ -1677,7 +1677,7 @@ const exportAuditTrail = (format) => {
 .view-toggle-btn.active {
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 /* KANBAN BOARD VIEW */
@@ -1763,7 +1763,7 @@ const exportAuditTrail = (format) => {
   border-radius: 8px;
   padding: 12px 14px;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
   transition:
     transform 0.12s ease,
     border-color 0.12s ease;
@@ -1775,7 +1775,7 @@ const exportAuditTrail = (format) => {
 .ticket-card:hover {
   transform: translateY(-2px);
   border-color: var(--semantic-color-interactive-primary);
-  box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--semantic-shadow-md);
 }
 
 .card-meta {

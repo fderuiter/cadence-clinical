@@ -2001,13 +2001,13 @@ export default {
 .stat-card:hover {
   transform: translateY(-2px);
   border-color: var(--accent);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-md);
 }
 
 .stat-card-active {
   border-color: var(--accent);
   background-color: var(--semantic-color-info-bg-soft);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+  box-shadow: var(--semantic-shadow-focus);
 }
 
 .stat-icon {
@@ -2018,7 +2018,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: var(--semantic-color-surface-overlay);
   border: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -2324,13 +2324,13 @@ export default {
 
 .article-card:hover {
   border-color: var(--accent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .article-card-selected {
   border-color: var(--accent);
   background-color: var(--semantic-color-surface-muted);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+  box-shadow: var(--semantic-shadow-focus);
 }
 
 .article-card-header {
@@ -2397,7 +2397,7 @@ export default {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .reader-content-wrap {
@@ -2765,7 +2765,7 @@ export default {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-scrim);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -2777,7 +2777,7 @@ export default {
 .modal-card {
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--semantic-shadow-lg);
   width: 100%;
   max-width: 580px;
   display: flex;

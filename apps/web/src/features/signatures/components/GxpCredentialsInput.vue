@@ -193,7 +193,8 @@ input {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 13px;
-  background: white;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   box-sizing: border-box;
 }
 
