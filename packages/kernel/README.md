@@ -522,8 +522,9 @@ Every event envelope carries `Subject`, the NodeRef of the aggregate the command
 to a `NodeSummary`, computes its zoom path (`tenant → study → country → study_site → enrollment`, or
 `tenant → organization → site`) and lists its children with counts. A participant appears in a study as its
 enrollment, titled by its subject code; an enrollment with no responsible study site sits directly under its study
-(`ZoomRules.EnrollmentParent`). Protocol versions, study standards, validation runs and findings sit under their
-study, a protocol element under the version that last governed it, and an attestation under the object it signs. When a slice maps a new kind, add its case to `KernelScopeGraph` with the kind's zoom parent.
+(`ZoomRules.EnrollmentParent`). Collection instances and standalone observations sit under their enrollment, form-bound
+observations under their collection instance, concepts under their tenant, protocol versions, study standards,
+validation runs and findings under their study, a protocol element under the version that last governed it, and an attestation under the object it signs. When a slice maps a new kind, add its case to `KernelScopeGraph` with the kind's zoom parent.
 
 ## Standards Registry and MDR (ADR-2460)
 

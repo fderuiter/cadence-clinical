@@ -5,7 +5,7 @@ import {
 } from "../auth/sessionCoordinator.js";
 import { kernelApi, type KernelNode } from "../api/kernelApi";
 import * as kernelStudy from "./kernelStudy";
-import { formatNodeRef, parseNodeRef } from "./nodeRef";
+import { formatNodeRef, parseNodeRef, type NodeRef } from "./nodeRef";
 
 /**
  * Browser-side study object summary resolver (ADR-2481, CLINICAL_CANVAS.md §4.1).
@@ -140,6 +140,39 @@ export function resetNodeResolutionSession(studyCode = ""): void {
   }
 }
 
+const BARE_CONCEPT_REF_PATTERN =
+  /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})@([1-9][0-9]*)$/i;
+const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
+
+/**
+ * Parses either a canonical `NodeRef` (`kind:uuid[@version]`) or a bare `<uuid>@<version>`
+ * `ConceptRef` (`concept:<uuid>@<version>`). Non-UUID strings return `null`.
+ */
+export function parseLookupNodeRef(
+  nodeRefText: string | null | undefined
+): NodeRef | null {
+  const trimmed = String(nodeRefText ?? "").trim();
+  if (!trimmed) return null;
+  const direct = parseNodeRef(trimmed);
+  if (direct) return direct;
+  const bareMatch = BARE_CONCEPT_REF_PATTERN.exec(trimmed);
+  if (!bareMatch) return null;
+  const uuid = bareMatch[1].toLowerCase();
+  if (uuid === ZERO_UUID) return null;
+  return parseNodeRef(`concept:${uuid}@${bareMatch[2]}`);
+}
+
+/**
+ * Returns the canonical `NodeRef` string for a `NodeRef` or `<uuid>@<version>` concept
+ * reference, or `null` when the string is not a valid UUID-based reference.
+ */
+export function normalizeLookupNodeRef(
+  nodeRefText: string | null | undefined
+): string | null {
+  const parsed = parseLookupNodeRef(nodeRefText);
+  return parsed ? formatNodeRef(parsed) : null;
+}
+
 /**
  * Seeds a human code/title already loaded in the workspace (e.g. participants list or study search)
  * so references render immediately without waiting on an extra network round-trip.
@@ -148,7 +181,7 @@ export function seedNodeSummary(
   nodeRefText: string,
   hint: NodeLocalHint
 ): void {
-  const parsed = parseNodeRef(nodeRefText);
+  const parsed = parseLookupNodeRef(nodeRefText);
   if (!parsed) return;
   const fullKey = formatNodeRef(parsed);
   const baseKey = `${parsed.kind}:${parsed.id}`;
@@ -177,7 +210,7 @@ export function canResolveNodesRemotely(): boolean {
  * key and capping in-flight lookups at `MAX_CONCURRENT_NODE_LOOKUPS`.
  */
 export function resolveNode(nodeRefText: string): Promise<KernelNode | null> {
-  const parsed = parseNodeRef(nodeRefText);
+  const parsed = parseLookupNodeRef(nodeRefText);
   if (!parsed) return Promise.resolve(null);
 
   const key = formatNodeRef(parsed);
@@ -255,7 +288,7 @@ export function ensureNodesResolved(
   if (!canResolveNodesRemotely()) return;
   for (const raw of refs) {
     if (!raw) continue;
-    const parsed = parseNodeRef(raw);
+    const parsed = parseLookupNodeRef(raw);
     if (!parsed) continue;
     const key = formatNodeRef(parsed);
     if (!resolvedEntries[key] && !inFlight.has(key)) {
@@ -269,6 +302,8 @@ const KIND_LABELS: Record<string, string> = {
   study_site: "Study site",
   participant: "Participant",
   enrollment: "Enrollment",
+  person: "Staff member",
+  concept: "Concept",
   protocol_version: "Protocol version",
   collection_instance: "Form",
   collection_spec: "Form definition",
@@ -291,7 +326,7 @@ const KIND_LABELS: Record<string, string> = {
 /** Human-readable singular noun phrase for a `NodeRef` kind (`study_site` -> `"Study site"`). */
 export function formatKindTitle(kindOrRef: string | null | undefined): string {
   const safe = String(kindOrRef ?? "");
-  const parsed = parseNodeRef(safe);
+  const parsed = parseLookupNodeRef(safe);
   const rawKind = (parsed?.kind ?? safe.split(":", 1)[0] ?? "")
     .trim()
     .toLowerCase();
@@ -307,7 +342,7 @@ export function formatKindTitle(kindOrRef: string | null | undefined): string {
 /** Lowercase kind phrase for inline sentences (`protocol_version` -> `"protocol version"`). */
 export function formatKindInline(kindOrRef: string | null | undefined): string {
   const safe = String(kindOrRef ?? "");
-  const parsed = parseNodeRef(safe);
+  const parsed = parseLookupNodeRef(safe);
   const rawKind = (parsed?.kind ?? safe.split(":", 1)[0] ?? "")
     .trim()
     .toLowerCase();
@@ -366,7 +401,7 @@ export function getNodeDisplay(
   nodeRefText: string,
   fallbackTitle?: string | null
 ): NodeDisplaySummary {
-  const parsed = parseNodeRef(nodeRefText);
+  const parsed = parseLookupNodeRef(nodeRefText);
   if (!parsed) {
     const label = fallbackTitle?.trim() || nodeRefText.trim() || "Record";
     return {
@@ -445,7 +480,7 @@ export function useNodeDisplay(
 export function getCachedNodeEntry(
   nodeRefText: string
 ): ResolvedNodeEntry | null {
-  const parsed = parseNodeRef(nodeRefText);
+  const parsed = parseLookupNodeRef(nodeRefText);
   if (!parsed) return null;
   const key = formatNodeRef(parsed);
   return (

@@ -449,8 +449,10 @@
               <template v-if="entry.masked"> masked </template>
               <template v-else>
                 <NodeRefChip
-                  v-if="entry.locked_by && parseNodeRef(entry.locked_by)"
-                  :node-ref="entry.locked_by"
+                  v-if="
+                    entry.locked_by && normalizeLookupNodeRef(entry.locked_by)
+                  "
+                  :node-ref="normalizeLookupNodeRef(entry.locked_by)!"
                 />
                 <template v-else>{{ entry.locked_by ?? "—" }}</template>
                 <span v-if="entry.attestation_meaning" class="meaning-note">
@@ -574,8 +576,11 @@ import {
   type KernelLockKind,
 } from "../../api/kernelApi";
 import { fetchStudyLocks } from "../../canvas/kernelLocks";
-import { parseNodeRef } from "../../canvas/nodeRef";
-import { getNodeDisplay, seedNodeSummary } from "../../canvas/nodeResolver";
+import {
+  getNodeDisplay,
+  normalizeLookupNodeRef,
+  seedNodeSummary,
+} from "../../canvas/nodeResolver";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
