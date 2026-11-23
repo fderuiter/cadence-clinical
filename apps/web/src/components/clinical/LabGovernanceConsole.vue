@@ -1616,6 +1616,13 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { useFocusTrap } from "ui";
+import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
+import { useErrorPresenter } from "../../composables/useErrorPresenter";
+import { useToastStore } from "../../stores/toasts.js";
+
+const toastStore = useToastStore();
+const { confirmDialog, promptDialog } = useConfirmDialog();
+const { presentError, sanitizeError } = useErrorPresenter();
 
 // Active Tab State
 const activeTab = ref("ranges");
@@ -2401,7 +2408,11 @@ async function executeDryRun() {
     } else {
       let rawContent = bulkImportForm.value.raw_content;
       if (!rawContent) {
-        alert("Please select a file or paste CSV/TSV content to dry run.");
+        toastStore.push({
+          tone: "warning",
+          title: "Missing Import Input",
+          message: "Please select a file or paste CSV/TSV content to dry run.",
+        });
         isDryRunning.value = false;
         return;
       }
@@ -2423,10 +2434,18 @@ async function executeDryRun() {
       dryRunResult.value = await res.json();
     } else {
       const err = await res.json();
-      alert(`Dry Run Validation Error: ${err.detail || "Validation failed"}`);
+      toastStore.push({
+        tone: "error",
+        title: "Dry Run Validation Error",
+        message: sanitizeError(err?.detail || "", "Validation failed"),
+      });
     }
   } catch (err) {
-    alert(`Dry Run Request Failed: ${err}`);
+    toastStore.push({
+      tone: "error",
+      title: "Dry Run Request Failed",
+      message: presentError(err, "Dry run request failed."),
+    });
   } finally {
     isDryRunning.value = false;
   }
@@ -2434,7 +2453,11 @@ async function executeDryRun() {
 
 async function executeCommitImport() {
   if (!bulkImportForm.value.reason_for_change) {
-    alert("GxP Reason for Change is required for Part 11 compliance.");
+    toastStore.push({
+      tone: "warning",
+      title: "Reason for Change Required",
+      message: "GxP Reason for Change is required for Part 11 compliance.",
+    });
     return;
   }
 
@@ -2484,34 +2507,52 @@ async function executeCommitImport() {
 
     if (res.ok) {
       const result = await res.json();
-      alert(
-        `Bulk Reference Range Import Committed! Imported: ${result.imported_count}, Total Rows: ${result.total_rows}, Status: ${result.status}`
-      );
+      toastStore.push({
+        tone: "success",
+        title: "Bulk Reference Range Import Committed",
+        message: `Imported: ${result.imported_count}, Total Rows: ${result.total_rows}, Status: ${result.status}`,
+      });
       closeBulkImportModal();
       await fetchRanges();
       await fetchBatchStatuses();
     } else {
       const err = await res.json();
-      alert(`Commit Import Error: ${err.detail || "Import failed"}`);
+      toastStore.push({
+        tone: "error",
+        title: "Commit Import Error",
+        message: sanitizeError(err?.detail || "", "Import failed"),
+      });
     }
   } catch (err) {
-    alert(`Commit Import Request Failed: ${err}`);
+    toastStore.push({
+      tone: "error",
+      title: "Commit Import Request Failed",
+      message: presentError(err, "Commit import request failed."),
+    });
   } finally {
     isCommitting.value = false;
   }
 }
 
 async function deactivateRange(range) {
-  if (
-    !confirm(
-      `Are you sure you want to deactivate reference range for ${range.test_code}?`
-    )
-  )
-    return;
-  const reason = prompt(
-    "Enter 21 CFR Part 11 Reason for Deactivation:",
-    "Routine reference range retirement"
-  );
+  const confirmed = await confirmDialog({
+    title: "Deactivate Reference Range",
+    message: `Are you sure you want to deactivate reference range for ${range.test_code}?`,
+    confirmLabel: "Continue",
+    cancelLabel: "Cancel",
+    variant: "danger",
+  });
+  if (!confirmed) return;
+
+  const reason = await promptDialog({
+    title: "21 CFR Part 11 Deactivation Reason",
+    message: `Provide a 21 CFR Part 11 reason for deactivating ${range.test_code}.`,
+    inputLabel: "Enter 21 CFR Part 11 Reason for Deactivation",
+    defaultValue: "Routine reference range retirement",
+    confirmLabel: "Deactivate Range",
+    cancelLabel: "Cancel",
+    variant: "danger",
+  });
   if (!reason) return;
 
   try {
@@ -2522,41 +2563,77 @@ async function deactivateRange(range) {
       },
     });
     if (res.ok) {
-      alert(`Reference range for ${range.test_code} deactivated.`);
+      toastStore.push({
+        tone: "success",
+        title: "Reference Range Deactivated",
+        message: `Reference range for ${range.test_code} deactivated.`,
+      });
       await fetchRanges();
     } else {
       const err = await res.json();
-      alert(`Deactivation failed: ${err.detail || "Error"}`);
+      toastStore.push({
+        tone: "error",
+        title: "Deactivation Failed",
+        message: sanitizeError(err?.detail || "", "Error"),
+      });
     }
   } catch (err) {
-    alert(`Deactivation request failed: ${err}`);
+    toastStore.push({
+      tone: "error",
+      title: "Deactivation Request Failed",
+      message: presentError(err, "Deactivation request failed."),
+    });
   }
 }
 
 function editRange(range) {
-  alert(
-    `Editing range ${range.test_code}. Use Bulk Import or New Reference Range for updates.`
-  );
+  toastStore.push({
+    tone: "info",
+    title: `Edit Range ${range.test_code}`,
+    message: `Editing range ${range.test_code}. Use Bulk Import or New Reference Range for updates.`,
+  });
 }
 
 function openIngestModal() {
   showIngestModal.value = true;
 }
 
-function openCreateRangeModal() {
-  // Placeholder or prompt for range creation
-  const testCode = prompt("Enter Test Code (e.g. ALT, CREAT, WBC):");
+async function openCreateRangeModal() {
+  const testCode = await promptDialog({
+    title: "Register Reference Range",
+    message: "Specify the laboratory test code to configure reference bounds.",
+    inputLabel: "Enter Test Code (e.g. ALT, CREAT, WBC)",
+    placeholder: "ALT",
+    confirmLabel: "Continue",
+    cancelLabel: "Cancel",
+    variant: "info",
+  });
   if (testCode) {
-    alert(
-      `To register new range for ${testCode}, use the Reference Range Authoring Dialog.`
-    );
+    toastStore.push({
+      tone: "info",
+      title: `Register Range: ${testCode}`,
+      message: `To register new range for ${testCode}, use the Reference Range Authoring Dialog.`,
+    });
   }
 }
 
-function openCreateCertModal() {
-  const siteId = prompt("Enter Site ID (e.g. SITE-001):");
+async function openCreateCertModal() {
+  const siteId = await promptDialog({
+    title: "Register Local Laboratory",
+    message:
+      "Specify the clinical site identifier for local laboratory certification.",
+    inputLabel: "Enter Site ID (e.g. SITE-001)",
+    placeholder: "SITE-001",
+    confirmLabel: "Register Lab",
+    cancelLabel: "Cancel",
+    variant: "info",
+  });
   if (siteId) {
-    alert(`Registering Local Lab for Site ${siteId}.`);
+    toastStore.push({
+      tone: "info",
+      title: "Local Laboratory Registration",
+      message: `Registering Local Lab for Site ${siteId}.`,
+    });
   }
 }
 
@@ -2576,18 +2653,28 @@ async function executeBatchIngest() {
     });
     if (res.ok) {
       const result = await res.json();
-      alert(
-        `Batch Ingest Completed! Ingested: ${result.ingested_count}, Staged AEs: ${result.staged_aes_count}, Queries: ${result.queries_raised}`
-      );
+      toastStore.push({
+        tone: "success",
+        title: "Batch Ingest Completed",
+        message: `Ingested: ${result.ingested_count}, Staged AEs: ${result.staged_aes_count}, Queries: ${result.queries_raised}`,
+      });
       showIngestModal.value = false;
       await fetchStagedReviews();
       await fetchBatchStatuses();
     } else {
       const err = await res.json();
-      alert(`Batch Ingest Error: ${err.detail || "Ingestion failed"}`);
+      toastStore.push({
+        tone: "error",
+        title: "Batch Ingest Error",
+        message: sanitizeError(err?.detail || "", "Ingestion failed"),
+      });
     }
   } catch (err) {
-    alert(`Ingest Request Failed: ${err}`);
+    toastStore.push({
+      tone: "error",
+      title: "Ingest Request Failed",
+      message: presentError(err, "Ingest request failed."),
+    });
   } finally {
     isIngesting.value = false;
   }
@@ -2604,17 +2691,31 @@ async function executeReviewAction() {
       body: JSON.stringify(actionForm.value),
     });
     if (res.ok) {
-      alert(
-        "Investigator action successfully recorded with 21 CFR Part 11 audit trail."
-      );
+      toastStore.push({
+        tone: "success",
+        title: "Investigator Action Recorded",
+        message:
+          "Investigator action successfully recorded with 21 CFR Part 11 audit trail.",
+      });
       showActionModal.value = false;
       await fetchStagedReviews();
     } else {
       const err = await res.json();
-      alert(`Action error: ${err.detail || "Failed to submit determination"}`);
+      toastStore.push({
+        tone: "error",
+        title: "Action Error",
+        message: sanitizeError(
+          err?.detail || "",
+          "Failed to submit determination"
+        ),
+      });
     }
   } catch (err) {
-    alert(`Action Request Failed: ${err}`);
+    toastStore.push({
+      tone: "error",
+      title: "Action Request Failed",
+      message: presentError(err, "Action request failed."),
+    });
   } finally {
     isActioning.value = false;
   }

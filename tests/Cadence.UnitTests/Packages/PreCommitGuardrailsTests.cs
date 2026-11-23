@@ -1080,6 +1080,40 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
+    public void FrontendEslintGate_BuildsZeroMaxWarningsArguments_ForStdinBatchAndWorkspaceModes()
+    {
+        var stdinArgs = FrontendQualityGateService.BuildEslintArgs(["--stdin", "--stdin-filename", "apps/web/src/App.vue"]);
+        stdinArgs.Should().Equal(
+            "exec",
+            "eslint",
+            "--no-warn-ignored",
+            "--max-warnings",
+            "0",
+            "--stdin",
+            "--stdin-filename",
+            "apps/web/src/App.vue");
+
+        var batchArgs = FrontendQualityGateService.BuildEslintArgs(["--", "apps/web/src/App.vue"]);
+        batchArgs.Should().Equal(
+            "exec",
+            "eslint",
+            "--no-warn-ignored",
+            "--max-warnings",
+            "0",
+            "--",
+            "apps/web/src/App.vue");
+
+        var workspaceArgs = FrontendQualityGateService.BuildEslintArgs(["."]);
+        workspaceArgs.Should().Equal(
+            "exec",
+            "eslint",
+            "--no-warn-ignored",
+            "--max-warnings",
+            "0",
+            ".");
+    }
+
+    [Fact]
     public void SetupWizard_LintersOnly_FailsClosedWhenXzIsMissing()
     {
         if (OperatingSystem.IsWindows() || !File.Exists("/bin/bash"))

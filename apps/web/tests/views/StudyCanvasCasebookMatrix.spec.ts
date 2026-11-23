@@ -9,6 +9,7 @@ import { kernelApi } from "../../src/api/kernelApi";
 import { findStudyScheduleOptions } from "../../src/canvas/kernelStudy";
 import { canCorrectObservations } from "../../src/canvas/authority";
 import { useAuthStore } from "../../src/stores/auth";
+import ConfirmationDialogHost from "../../src/components/ConfirmationDialogHost.vue";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 import ObservationView from "../../src/views/ObservationView.vue";
 
@@ -455,7 +456,10 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
     await router.push("/studies/CADENCE-101?section=participants");
     await router.isReady();
     const wrapper = mount(
-      { template: "<router-view />" },
+      {
+        components: { ConfirmationDialogHost },
+        template: "<router-view /><ConfirmationDialogHost />",
+      },
       { global: { plugins: [pinia, router] }, attachTo: document.body }
     );
     await flushPromises();
@@ -582,9 +586,23 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
     await flushPromises();
 
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValueOnce(false);
+    const backBtn = wrapper.find("#canvas-form-back").element as HTMLElement;
+    backBtn.focus();
+    expect(document.activeElement).toBe(backBtn);
+
     await wrapper.find("#canvas-form-back").trigger("click");
     await flushPromises();
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    const alertDialog = document.querySelector(
+      '.clinical-modal-dialog[role="alertdialog"]'
+    );
+    expect(alertDialog).not.toBeNull();
+    await expect(document.body).toBeAccessible();
+    (alertDialog?.querySelector(".btn-cancel") as HTMLElement).click();
+    await flushPromises();
+
+    expect(document.activeElement).toBe(backBtn);
     expect(router.currentRoute.value.query.form).toBe(
       `collection_instance:${FORM_REPEAT_1_ID}`
     );
@@ -593,8 +611,14 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
     window.dispatchEvent(unloadEvent);
     expect(unloadEvent.defaultPrevented).toBe(true);
 
-    confirmSpy.mockReturnValueOnce(true);
     await wrapper.find("#canvas-form-back").trigger("click");
+    await flushPromises();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    (
+      document.querySelector(
+        '.clinical-modal-dialog[role="alertdialog"] .btn-confirm'
+      ) as HTMLElement
+    ).click();
     await flushPromises();
     expect(router.currentRoute.value.query.form).toBeUndefined();
     expect(kernelApi.getScheduleOfActivities).toHaveBeenCalledTimes(1);

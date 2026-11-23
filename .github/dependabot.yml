@@ -60,6 +60,9 @@ updates:
       # AWSSDK.Core >= 4.1.0 pulls System.IO.Hashing 11.0.0; stay on 4.0.x while targeting net10.0.
       - dependency-name: "AWSSDK.*"
         versions: [">= 4.1.0"]
+      # NetAnalyzers 11.x targets .NET 11 rules; stay pre-11.0.0 while locked to net10.0 (ADR-2233, ADR-2527).
+      - dependency-name: "Microsoft.CodeAnalysis.NetAnalyzers"
+        versions: [">= 11.0.0"]
 
   # Node.js workspace dependency updates (pnpm / package.json / pnpm-workspace.yaml catalog)
   - package-ecosystem: "npm"
