@@ -315,8 +315,12 @@ not see stay in place with their mask (ADR-2471).
 
 Also `GET /healthz`, `/healthz/live`, `/healthz/ready` and
 `GET /api/v1/kernel/status` (anonymous). OpenAPI and the Scalar reference are
-mapped in Development only; the exported document is
-[docs/openapi/kernel_openapi.json](../../docs/openapi/kernel_openapi.json).
+mapped in Development only as named per-module documents
+(`/openapi/{document}.json`); the exported contracts are
+[docs/openapi/kernel_openapi.json](../../docs/openapi/kernel_openapi.json),
+[docs/openapi/intelligence_openapi.json](../../docs/openapi/intelligence_openapi.json),
+and
+[docs/openapi/execution_forms_openapi.json](../../docs/openapi/execution_forms_openapi.json).
 
 The gateway forwards `/api/v1/kernel/**`, `/api/v1/ai/**` and
 `/api/v1/execution/forms/**` here. Compose publishes host port 8018 (container

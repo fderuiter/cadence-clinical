@@ -12,24 +12,26 @@ only to the API gateway, which forwards requests to the backend services.
   session coordinator and return-URL helpers (`sessionCoordinator.js`, backed by
   `createOidcSessionCoordinator` from `ui`), and session bootstrap
   (`bootstrap.js`).
-- `src/api/`: the `apiClient.js` fetch wrapper and per-service clients
-  (`client.ts` for `openapi-fetch`, `executionApi.ts` and `kernelApi.ts` typed
-  from the .NET Execution and kernel API host specs through
-  `src/api/generated/execution.ts` and `src/api/generated/kernel.ts`; the others
-  (`designer.ts`, `etmf.ts`, `interop.ts`, `econsent.ts`, `fileshare.ts`, and
-  more) are Python-era clients). Both `apiClient.js` and `client.ts` execute one
-  single-flight token refresh and retry on HTTP `401` before ending an expired
-  session
+- `src/api/`: the `apiClient.js` fetch wrapper and per-contract clients
+  (`client.ts` for `openapi-fetch`, `executionApi.ts` against
+  `src/api/generated/execution.ts`, `ecrfFormsApi.ts` and `ecrfQueriesApi.ts`
+  against `src/api/generated/execution_forms.ts`, and domain-sliced kernel
+  clients under `src/api/kernel/*.ts` re-exported through `src/api/kernelApi.ts`
+  against `src/api/generated/kernel.ts`; the others (`designer.ts`, `etmf.ts`,
+  `interop.ts`, `econsent.ts`, `fileshare.ts`, and more) are Python-era
+  clients). Both `apiClient.js` and `client.ts` execute one single-flight token
+  refresh and retry on HTTP `401` before ending an expired session
   ([ADR-2551](../../docs/adr/2026-11-20-share-session-logout-and-signature-primitives.md)).
 - `scripts/generate-api-types.js` and `scripts/generate-canvas-contracts.js`:
-  generate `src/api/generated/<service>.ts` from
-  `docs/openapi/<service>_openapi.json` and `src/canvas/generated/*.ts` from the
-  canonical `.NET` kernel (`NodeKinds.cs`), RBAC (`RoleNormalization.cs`,
-  `PermissionMatrix*.cs`), and Execution (`SubjectStateCodec.cs`,
-  `SubjectTransitionGraph.cs`, `SubjectAuthority.cs`) sources
-  (`pnpm --filter web generate:api`); the `api-clients` quality gate,
-  `tests/api/generated_types.test.js`, and `tests/canvas/contracts.spec.ts` fail
-  when they drift.
+  auto-discover `docs/openapi/<contract>_openapi.json` specs (excluding
+  `cdisc_openapi.json`) to generate `src/api/generated/<contract>.ts`, and
+  generate `src/canvas/generated/*.ts` from the canonical `.NET` kernel
+  (`NodeKinds.cs`), RBAC (`RoleNormalization.cs`, `PermissionMatrix*.cs`), and
+  Execution (`SubjectStateCodec.cs`, `SubjectTransitionGraph.cs`,
+  `SubjectAuthority.cs`) sources (`pnpm --filter web generate:api`); the
+  `api-clients` quality gate, `tests/api/generated_types.test.js`, and
+  `tests/canvas/contracts.spec.ts` fail when they drift or leave orphan files
+  behind.
 - `src/stores/`: Pinia stores; `auth.js` holds the Keycloak session and role
   normalisation, `clinicalScope.ts` (`useClinicalScopeStore`) holds live
   study/site/participant scope, and `src/stores/demo/*` isolates synthetic USDM,
@@ -128,7 +130,13 @@ In a demo build:
   starting router navigation or mounting `App.vue`, resolving
   `${BASE_URL}mockServiceWorker.js` with matching `{ scope: BASE_URL }` so
   subpath static hosts such as `/cadence-clinical/demo/` intercept initial
-  queries cleanly.
+  queries cleanly. Zero-argument `isDemoBuild()` calls are constant-folded at
+  Rollup build time (`createConstantFoldDemoModePlugin` in
+  `scripts/vite-strip-demo-fixtures.mjs`) so `keycloak-js` (`vendor-auth`) is
+  omitted from demo bundles
+  ([ADR-2537](../../docs/adr/2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md)),
+  while `DocumentsHubView.vue` and `MediaPreviewModal.vue` defer `hls.js`
+  (`vendor-media`) until a non-demo `.m3u8` stream is opened.
 - `src/router/index.js` switches to `createWebHashHistory(BASE_URL)` in demo
   builds (`createAppHistory`) so deep links survive refreshes on static hosts
   without server rewrites, while keeping `createWebHistory(BASE_URL)` in
@@ -282,13 +290,14 @@ Run from the repository root with pnpm (the workspace is defined in
   does both. The docs site is a separate build (`pnpm docs:build`).
 - `pnpm --filter web build:demo`: Build in `demo` mode (MSW enabled).
 - `pnpm --filter web test`: Vitest with coverage.
-- `pnpm --filter web test:e2e`: Playwright accessibility suite against the
-  isolated demo preview server on `127.0.0.1:3001` (`--project=accessibility`).
+- `pnpm --filter web test:e2e`: Playwright accessibility (`127.0.0.1:3001`) and
+  staged subpath (`127.0.0.1:3002/cadence-clinical/demo/`, MSW + Rollup chunking
+  active) suites (`--project=accessibility --project=staged-demo-subpath`).
 - `pnpm --filter web test:e2e:stack`: Full Playwright suite across all
-  registered projects (`setup`, `chromium`, and `accessibility`), starting the
-  demo preview (`127.0.0.1:3001`) and `subject-portal` (`127.0.0.1:5174`)
-  servers (plus `pnpm --filter web dev` on `localhost:3000` when
-  `E2E_KEYCLOAK=true`).
+  registered projects (`setup`, `chromium`, `accessibility`, and
+  `staged-demo-subpath`), starting the demo preview (`127.0.0.1:3001`), staged
+  demo (`127.0.0.1:3002`), and `subject-portal` (`127.0.0.1:5174`) servers (plus
+  `localhost:3000` when `E2E_KEYCLOAK=true`).
 - `pnpm --filter web test:e2e:workflows`: Playwright end-to-end clinical
   workflow suite (`--project=setup --project=chromium`) against the demo preview
   (`127.0.0.1:3001`) and `subject-portal` (`127.0.0.1:5174`) servers

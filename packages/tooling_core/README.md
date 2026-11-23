@@ -34,9 +34,9 @@ schema docs).
     `ArchitectureDriftValidatorService`, `ImportValidatorService`,
     `DependencyValidatorService` (fail-closed JSON validation across workspace
     `package.json` and `.config/dotnet-tools.json` manifests plus forbidden
-    client-side crypto checks), `VulnerabilityAuditorService` (fail-closed
-    `.NET`, `pnpm` and `pip-audit` CVE auditing against
-    `docs/SDLC/vulnerability_exclusions_ledger.json`),
+    client-side crypto and runtime test-harness package checks),
+    `VulnerabilityAuditorService` (fail-closed `.NET`, `pnpm` and `pip-audit`
+    CVE auditing against `docs/SDLC/vulnerability_exclusions_ledger.json`),
     `DemoManifestGeneratorService` (exports and verifies
     `packages/demo-fixtures` from `packages/demo-fixtures/demo-seed.json`,
     `ExecutionDbSeeder.cs`, and `docker/cadence-realm.json` via source-generated
@@ -48,9 +48,10 @@ schema docs).
     `cadence migrations add|script|list|verify` workflow writing SQL scripts to
     `TestResults/migrations/`), `SchemaDocGeneratorService`,
     `PublicBundleValidatorService` (the zero-exemption `public-bundle` gate over
-    compiled static portal and demo bundles), and `DeidComplianceService` (the
-    `deid` gate: the full `DeidDetector` over changed or tracked candidate
-    files, ratcheted by `.deid-baseline.txt`).
+    compiled static portal and demo bundles, enforcing `axe-core`/`keycloak-js`
+    absence, preload hygiene, and staged demo byte budgets), and
+    `DeidComplianceService` (the `deid` gate: the full `DeidDetector` over
+    changed or tracked candidate files, ratcheted by `.deid-baseline.txt`).
   - `Cadence.ToolingCore.Markdown`: `MarkdownParser` (workspace link and
     `#anchor` heading fragment checking, and paths into .NET test project
     folders that no longer exist; `docs/migration/` and the generated RTM and
@@ -103,10 +104,10 @@ schema docs).
 ## Tests
 
 Covered by `tests/Cadence.UnitTests/Packages/PortedPackagesUnitTests.cs`,
-`GitRevisionScopeServiceTests.cs`, `AdrValidatorServiceTests.cs`,
-`PreCommitGuardrailsTests.cs`, `VulnerabilityAuditorServiceTests.cs`,
-`DemoManifestGeneratorTests.cs`, `DeidEngineUnitTests.cs` and
-`DeidComplianceServiceTests.cs`:
+`PublicBundleValidatorServiceTests.cs`, `GitRevisionScopeServiceTests.cs`,
+`AdrValidatorServiceTests.cs`, `PreCommitGuardrailsTests.cs`,
+`VulnerabilityAuditorServiceTests.cs`, `DemoManifestGeneratorTests.cs`,
+`DeidEngineUnitTests.cs` and `DeidComplianceServiceTests.cs`:
 
 ```bash
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests|FullyQualifiedName~GitRevisionScopeServiceTests|FullyQualifiedName~AdrValidatorServiceTests|FullyQualifiedName~Cadence.UnitTests.Packages.PreCommitGuardrailsTests|FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests|FullyQualifiedName~DeidComplianceServiceTests"

@@ -337,13 +337,13 @@ not get in.
 | `path-patterns`       | No `tmp`, `temp`, `scratch` or `old_src` directories, `.vue` files only under `apps/`, `packages/` and `docs/.vitepress/`, `.sh` files only under `scripts/`        |
 | `query-linter`        | No interpolated SQL string passed to `FromSqlRaw` or `ExecuteSqlRaw`, and no comparison with a boolean literal                                                      |
 | `vulnerabilities`     | NuGet, pnpm and Python vulnerabilities not exempted in `docs/SDLC/vulnerability_exclusions_ledger.json` (fails closed on missing scanners)                          |
-| `dependencies`        | Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, and no client-side crypto package (`node-forge`, `elliptic`, `jose`)          |
+| `dependencies`        | Valid JSON in workspace `package.json` and `.config/dotnet-tools.json` manifests, and no client-side crypto or test-harness packages in runtime `dependencies`      |
 | `doc-index`           | Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`                                                                                    |
 | `demo-manifest`       | `packages/demo-fixtures` matches the canonical demo seed in `packages/demo-fixtures/demo-seed.json`, `ExecutionDbSeeder.cs` and `docker/cadence-realm.json`         |
 | `rtm`                 | Requirement tags name known requirements and sit on test methods, and the generated documents match their integrity stamps and are not drafts                       |
 | `gxp-snapshot`        | The branch or push range does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` unless `CADENCE_GXP_SNAPSHOT=1` (ADR-2532)                         |
 | `baseline-ratchet`    | No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) grew without a `Baseline-Growth: <path> - <reason>` commit trailer                |
-| `public-bundle`       | Zero-exemption post-build scan of VitePress, staff, and participant `dist/` bundles (skipped in unscoped `check` only when all three `dist/` are absent)            |
+| `public-bundle`       | Zero-exemption scan of VitePress, staff, and participant `dist/` bundles for PII, secrets, local URLs, CSP, `axe-core`/`keycloak-js`, preloads, and byte budgets    |
 | `branch-freshness`    | Branch `HEAD` includes `origin/main` (or `--base <ref>`) so local and PR runs enforce strict branch-freshness policy                                                |
 | `architecture-tests`  | Hexagonal layering and kernel boundary invariants (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`)                                              |
 | `unit-tests`          | .NET unit test suite (`tests/Cadence.UnitTests/Cadence.UnitTests.csproj`)                                                                                           |

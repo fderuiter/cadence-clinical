@@ -230,7 +230,7 @@ public static class QualityGates
             "NuGet, pnpm and Python vulnerabilities not exempted in `docs/SDLC/vulnerability_exclusions_ledger.json` (fails closed on missing scanners)",
             ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot) == 0),
         new("dependencies", ["validate-dependencies"],
-            "Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, and no client-side crypto package (`node-forge`, `elliptic`, `jose`)",
+            "Valid JSON in workspace `package.json` and `.config/dotnet-tools.json` manifests, and no client-side crypto or test-harness packages in runtime `dependencies`",
             ctx => DependencyValidatorService.ValidateDependencies(ctx.RepoRoot) == 0),
         new("doc-index", ["validate-doc-index"], "Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`",
             ctx => DocIndexSyncService.SyncDocIndex(check: true, repoRoot: ctx.RepoRoot) == 0),
@@ -260,7 +260,7 @@ public static class QualityGates
             PreCommitNote = "checks staged files vs `HEAD` (`CADENCE_BASELINE_GROWTH` admits growth)",
         },
         new("public-bundle", ["validate-public-bundle"],
-            "Zero-exemption post-build scan of VitePress, staff, and participant `dist/` bundles (skipped in unscoped `check` only when all three `dist/` are absent)",
+            "Zero-exemption scan of VitePress, staff, and participant `dist/` bundles for PII, secrets, local URLs, CSP, `axe-core`/`keycloak-js`, preloads, and byte budgets",
             ctx => PublicBundleValidatorService.ValidatePublicBundles(ctx.RepoRoot) == 0)
         {
             PreCommit = PreCommitMode.Skipped,

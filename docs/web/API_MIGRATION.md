@@ -450,15 +450,25 @@ sample subjects only in a demo build.
    `apps/execution/src/Infrastructure/OpenApi/ExecutionWireTypesOpenApiTransformer.cs`,
    so its IDs and codes are strings and its statuses are string enums.
 2. Call it through the typed client generated from those specs, and delete the
-   screen's Python-era client functions and their types. The types come from
-   `apps/web/scripts/generate-api-types.js`: add the service to
-   `GENERATED_SERVICES` and run `pnpm --filter web generate:api`, which writes
-   `apps/web/src/api/generated/<service>.ts`. Put the calls in
-   `apps/web/src/api/<service>Api.ts` (see `executionApi.ts`). When a checked-in
-   file no longer matches its spec, the `api-clients` quality gate (run by
-   pre-commit and `pnpm cadence check`) and `tests/api/generated_types.test.js`
-   fail, so regenerate after `pnpm cadence sync-openapi-spec` changes a listed
-   service's spec.
+   screen's Python-era client functions and their types.
+   `apps/web/scripts/generate-api-types.js` discovers every
+   `docs/openapi/*_openapi.json` contract automatically (except the bundled
+   `cdisc_openapi.json` snapshot): running `pnpm --filter web generate:api`
+   writes `apps/web/src/api/generated/<contract>.ts` for each standalone service
+   and consolidated kernel-host module (`kernel`, `intelligence`,
+   `execution_forms`, and future modules) without maintaining a manual
+   `GENERATED_SERVICES` list, and prunes stale `.ts` files when a spec is
+   retired. Author domain-sliced clients against the narrowest contract—place
+   kernel capability slices in `apps/web/src/api/kernel/<slice>.ts` (re-exported
+   through `apps/web/src/api/kernelApi.ts` for backward compatibility), module
+   clients against their module contract (for example `ecrfFormsApi.ts` and
+   `ecrfQueriesApi.ts` against `generated/execution_forms.ts`), and standalone
+   service clients in `apps/web/src/api/<service>Api.ts` (see
+   `executionApi.ts`). Keep schema imports strictly `import type` so generated
+   contracts add zero runtime bundle bytes. When a checked-in file no longer
+   matches its spec, the `api-clients` quality gate (run by pre-commit and
+   `pnpm cadence check`) and `tests/api/generated_types.test.js` fail, so
+   regenerate after `pnpm cadence sync-openapi-spec` changes any OpenAPI spec.
 3. Give the screen a view test in `apps/web/tests/` that mounts it and covers
    its main flow against a mocked client. `tests/available_screen_tests.test.js`
    fails when a route in `AVAILABLE_SCREENS` has no test file that imports its

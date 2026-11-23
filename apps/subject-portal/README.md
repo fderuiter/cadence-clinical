@@ -146,9 +146,13 @@ port 5174.
   without evicting each other or deleting `msw:` client caches. `login()`
   (`src/features/auth.js`) activates the synthetic demo participant
   (`subject_001`) locally without contacting Keycloak
-  (`http://localhost:8080/`), and `buildPortalGatewayHandlers()`
-  (`src/mocks/handlers.js`, `src/mocks/demoHandlers.js`) fails closed on
-  unmocked API routes (`501 DEMO_UNMOCKED_ENDPOINT`) and off-origin requests
+  (`http://localhost:8080/`), zero-argument `isDemoBuild()` calls are
+  constant-folded at Rollup build time (`createConstantFoldDemoModePlugin`) so
+  `keycloak-js` is omitted from demo bundles
+  ([ADR-2537](../../docs/adr/2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md)),
+  and `buildPortalGatewayHandlers()` (`src/mocks/handlers.js`,
+  `src/mocks/demoHandlers.js`) fails closed on unmocked API routes
+  (`501 DEMO_UNMOCKED_ENDPOINT`) and off-origin requests
   (`503 DEMO_OFF_ORIGIN_BLOCKED`) while keeping in-memory session state across
   ePRO submissions, notification acknowledgements, and re-consent signatures.
   Production builds (`pnpm --filter subject-portal build`) tree-shake demo
@@ -164,15 +168,15 @@ port 5174.
 
 Run from the repository root with pnpm:
 
-| Command                                   | Purpose                                                            |
-| ----------------------------------------- | ------------------------------------------------------------------ |
-| `pnpm --filter subject-portal dev`        | Vite dev server on `http://localhost:5174/subject-portal/`.        |
-| `pnpm --filter subject-portal dev:demo`   | Vite dev server in explicit `demo` mode with synthetic study data. |
-| `pnpm --filter subject-portal build`      | Production build. Build `ui` first (`pnpm --filter ui build`).     |
-| `pnpm --filter subject-portal build:demo` | Demo build (`--mode demo`) with explicit synthetic data banner.    |
-| `pnpm --filter subject-portal test`       | Vitest with coverage (80% thresholds on `src/sync-queue.js`).      |
-| `pnpm --filter subject-portal test:e2e`   | Playwright.                                                        |
-| `pnpm --filter subject-portal lint`       | ESLint.                                                            |
+| Command                                   | Purpose                                                                                                                    |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter subject-portal dev`        | Vite dev server on `http://localhost:5174/subject-portal/`.                                                                |
+| `pnpm --filter subject-portal dev:demo`   | Vite dev server in explicit `demo` mode with synthetic study data.                                                         |
+| `pnpm --filter subject-portal build`      | Production build. Build `ui` first (`pnpm --filter ui build`).                                                             |
+| `pnpm --filter subject-portal build:demo` | Demo build (`--mode demo`) with explicit synthetic data banner.                                                            |
+| `pnpm --filter subject-portal test`       | Vitest with coverage (80% thresholds on `src/sync-queue.js`).                                                              |
+| `pnpm --filter subject-portal test:e2e`   | Playwright (accessibility, PIN recovery, and `/cadence-clinical/subject-portal/` staged subpath worker + chunking checks). |
+| `pnpm --filter subject-portal lint`       | ESLint.                                                                                                                    |
 
 `docker/docker-compose.yml` also runs the dev server as the `subject-portal`
 service on port 5174.

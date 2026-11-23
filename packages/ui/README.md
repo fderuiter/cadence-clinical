@@ -29,8 +29,12 @@ by the web client and the subject portal.
   passes as `options.secret`, and rejects one it cannot check. Real
   authentication happens in [apps/gateway](../../apps/gateway/README.md).
 - `econsent.js`: consent normalisation and comprehension-check helpers.
-- `accessibility-matcher.js`: `toBeAccessible` Vitest matcher built on
-  `axe-core`.
+- `accessibility-matcher.js`, exported only as `ui/vitest` (typed via
+  `accessibility-matcher.d.ts`): `toBeAccessible` Vitest matcher built on
+  `axe-core`
+  ([ADR-2537](../../docs/adr/2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md)).
+  It is excluded from the root `ui` runtime bundle so `axe-core` never ships in
+  production or demo builds.
 - `src/components/`: 22 shared Vue components re-exported from the root `ui`
   entry (`FileUploadModal`, `MediaPlayer`, `ModalErrorAlert`,
   `common/EmptyState`, and `clinical/` components `AiActionButton`,
@@ -98,8 +102,9 @@ gate of their own.
 
 ## Dependencies
 
-- Runtime: `axe-core`; peer dependency `vue`.
-- Development: Vite, Vitest with `@vitest/coverage-v8`, TypeScript, `pinia`.
+- Runtime: peer dependency `vue` (no runtime npm packages bundled into `dist/`).
+- Development: Vite, Vitest with `@vitest/coverage-v8`, `axe-core` (backing
+  `ui/vitest`), TypeScript, `pinia`.
 
 ## Used by
 
