@@ -949,6 +949,34 @@ export function createWebDemoHandlers(store = webDemoStore) {
 
     // Execution — Stateful eCRF Forms, Values, Signatures, and Queries
     // Note: Register specific `/queries` routes BEFORE `:formId` catch-alls!
+    http.get("*/api/v1/execution/forms/queries/digests", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.listQueryDigests({
+          studyId: url.searchParams.get("study_id"),
+          site: url.searchParams.get("site"),
+          recipientRole: url.searchParams.get("recipient_role"),
+        })
+      );
+    }),
+    http.post("*/api/v1/execution/forms/queries/escalate", ({ request }) => {
+      const url = new URL(request.url);
+      const reason = decodeReasonHeader(request);
+      if (!reason) {
+        return HttpResponse.json(
+          {
+            title: "Reason for change required",
+            status: 422,
+            code: "K.Command.ReasonForChangeRequired",
+            detail: "X-Change-Reason header is required.",
+          },
+          { status: 422 }
+        );
+      }
+      return HttpResponse.json(
+        store.escalateStudyQueries(url.searchParams.get("study_id"), reason)
+      );
+    }),
     http.get("*/api/v1/execution/forms/queries", ({ request }) => {
       const url = new URL(request.url);
       return HttpResponse.json(
@@ -960,6 +988,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
           origin: url.searchParams.get("origin"),
           priority: url.searchParams.get("priority"),
           escalated: url.searchParams.get("escalated"),
+          assignee: url.searchParams.get("assignee"),
           site: url.searchParams.get("site"),
           participant: url.searchParams.get("participant"),
           valueChanged: url.searchParams.get("value_changed"),

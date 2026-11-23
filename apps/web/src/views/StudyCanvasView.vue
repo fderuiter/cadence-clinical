@@ -461,6 +461,8 @@
             :owner="queryOwnerFilter"
             :origin="queryOriginFilter"
             :priority="queryPriorityFilter"
+            :escalated="queryEscalatedFilter"
+            :assignee="queryAssigneeFilter"
             :site="siteFilter"
             :participant="queryParticipantFilter"
             :changed="queryChangedFilter"
@@ -1060,6 +1062,8 @@ interface StudyQuery {
   owner?: string;
   origin?: string;
   priority?: string;
+  escalated?: string;
+  assignee?: string;
   site?: string;
   q?: string;
   subject?: string;
@@ -1517,6 +1521,11 @@ const queryPriorityFilter = computed(() => {
   const priority = single(route.query.priority).toLowerCase();
   return ["low", "normal", "high"].includes(priority) ? priority : "";
 });
+const queryEscalatedFilter = computed(() => {
+  const escalated = single(route.query.escalated).toLowerCase();
+  return escalated === "true" || escalated === "false" ? escalated : "";
+});
+const queryAssigneeFilter = computed(() => single(route.query.assignee).trim());
 const siteFilter = computed(() =>
   (single(route.query.site) || single(route.query.siteId)).trim()
 );
@@ -2330,6 +2339,8 @@ function applyStudyQueryFilter(filter: StudyQueriesFilterState) {
       owner: filter.owner,
       origin: filter.origin,
       priority: filter.priority,
+      escalated: filter.escalated,
+      assignee: filter.assignee,
       site: filter.site,
       subject: filter.participant,
       changed: filter.changed,

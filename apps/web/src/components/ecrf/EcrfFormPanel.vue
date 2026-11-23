@@ -59,6 +59,7 @@
         :can-answer-queries="effectiveCanAnswerQueries"
         :assertions-locked="formState.assertionsLocked"
         :act-query="queries.act"
+        :reassign-query="queries.reassign"
         :act-many-queries="queries.actMany"
         :current-form-titles="currentFormTitles"
         :query-form-link="queryFormLink"

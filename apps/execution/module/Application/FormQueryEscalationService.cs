@@ -149,11 +149,14 @@ internal sealed class FormQueryEscalationService(
             return CommandResult<FormQueryEscalationPassResult>.Success(new FormQueryEscalationPassResult(newlyEscalated, []));
         }
 
-        // Ensure site/subject codes are resolved via form records if any enrollment lacked a site header.
-        foreach (var formId in escalatedOpenQueries.Select(q => q.FormId).Distinct())
+        // Ensure site/subject codes are resolved via batch-loaded form records if any enrollment lacked a site header.
+        var distinctFormIds = escalatedOpenQueries.Select(q => q.FormId).Distinct().ToList();
+        var recordsById = distinctFormIds.Count > 0
+            ? await forms.FindManyAsync(tenantId, distinctFormIds, cancellationToken).ConfigureAwait(false)
+            : new Dictionary<CollectionInstanceId, CollectionInstanceRecord>();
+        foreach (var record in recordsById.Values)
         {
-            if (await forms.FindAsync(tenantId, formId, cancellationToken).ConfigureAwait(false) is { } record
-                && (!enrollmentMeta.TryGetValue(record.EnrollmentId, out var existing) || existing.SiteId is null))
+            if (!enrollmentMeta.TryGetValue(record.EnrollmentId, out var existing) || existing.SiteId is null)
             {
                 var siteSummary = await navigator.ResolveAsync(tenantId, NodeRef.For(record.StudySiteId), cancellationToken).ConfigureAwait(false);
                 var enrSummary = await navigator.ResolveAsync(tenantId, NodeRef.For(record.EnrollmentId), cancellationToken).ConfigureAwait(false);
@@ -264,5 +267,110 @@ internal sealed class FormQueryEscalationService(
         bytes[6] = (byte)((bytes[6] & 0x0F) | 0x80);
         bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
         return new Guid(bytes, bigEndian: true);
+    }
+}
+
+/// <summary>
+/// Evaluates treatment-blinding classification (<c>K-AUTH-4</c>) across <see cref="FormQueryAgingDigestEntry"/> sets,
+/// redacting blinded entries either unconditionally (for outbox lead alerts) or unless the reader holds explicit
+/// <c>enrollment.unblind</c> authority on the entry's enrollment.
+/// </summary>
+internal static class FormQueryDigestBlinding
+{
+    public static async Task<IReadOnlyList<IReadOnlyList<FormQueryAgingDigestEntry>>> RedactBatchAsync(
+        TenantId tenant,
+        IReadOnlyList<IReadOnlyList<FormQueryAgingDigestEntry>> entryLists,
+        ICollectionInstanceRecords forms,
+        IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
+        IKernelReadAccess? access,
+        bool alwaysMaskBlinded,
+        CancellationToken cancellationToken)
+    {
+        if (entryLists.Count == 0)
+        {
+            return [];
+        }
+
+        var allEntries = entryLists.SelectMany(static list => list).ToList();
+        if (allEntries.Count == 0)
+        {
+            return entryLists;
+        }
+
+        var distinctFormIds = allEntries
+            .Where(static e => e.FormId != Guid.Empty)
+            .Select(static e => CollectionInstanceId.FromGuid(e.FormId))
+            .Distinct()
+            .ToList();
+        var recordsByFormId = distinctFormIds.Count > 0
+            ? await forms.FindManyAsync(tenant, distinctFormIds, cancellationToken).ConfigureAwait(false)
+            : new Dictionary<CollectionInstanceId, CollectionInstanceRecord>();
+
+        var distinctQueryIds = allEntries
+            .Where(static e => e.QueryId != Guid.Empty)
+            .Select(static e => FormQueryId.FromGuid(e.QueryId))
+            .Distinct()
+            .ToList();
+        Dictionary<Guid, ObservationId> observationByQueryId;
+        if (distinctQueryIds.Count > 0)
+        {
+            await using var db = contexts.Create(tenant);
+            observationByQueryId = await db.FormQueries
+                .AsNoTracking()
+                .Where(q => distinctQueryIds.Contains(q.Id))
+                .Select(q => new { q.Id, q.ObservationId })
+                .ToDictionaryAsync(x => x.Id.Value, x => x.ObservationId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            observationByQueryId = [];
+        }
+
+        var canUnblindByEnrollment = new Dictionary<EnrollmentId, bool>();
+        if (!alwaysMaskBlinded && access is not null)
+        {
+            foreach (var enrollmentId in recordsByFormId.Values.Select(static r => r.EnrollmentId).Distinct())
+            {
+                canUnblindByEnrollment[enrollmentId] = await access
+                    .CanUnblindAsync(tenant, enrollmentId, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        var result = new List<IReadOnlyList<FormQueryAgingDigestEntry>>(entryLists.Count);
+        foreach (var entries in entryLists)
+        {
+            var shaped = new List<FormQueryAgingDigestEntry>(entries.Count);
+            foreach (var entry in entries)
+            {
+                if (string.Equals(entry.ItemId, FormQueryAgingDigestEntry.MaskedLiteral, StringComparison.Ordinal))
+                {
+                    shaped.Add(entry.MaskBlinded());
+                    continue;
+                }
+
+                if (!recordsByFormId.TryGetValue(CollectionInstanceId.FromGuid(entry.FormId), out var record))
+                {
+                    shaped.Add(entry);
+                    continue;
+                }
+
+                if (!observationByQueryId.TryGetValue(entry.QueryId, out var observationId))
+                {
+                    observationId = record.Values
+                        .FirstOrDefault(v => string.Equals(v.ItemId, entry.ItemId, StringComparison.Ordinal))?.ObservationId
+                        ?? default;
+                }
+
+                var isBlinded = record.IsQueryBlinded(entry.ItemId, observationId);
+                var canUnblind = !alwaysMaskBlinded && canUnblindByEnrollment.GetValueOrDefault(record.EnrollmentId);
+                shaped.Add(isBlinded && !canUnblind ? entry.MaskBlinded() : entry);
+            }
+
+            result.Add(shaped);
+        }
+
+        return result;
     }
 }

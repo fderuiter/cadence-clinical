@@ -76,6 +76,14 @@ public interface IKernelReadAccess
     }
 
     /// <summary>
+    /// True when the current caller holds an active grant whose scope directly covers <paramref name="scope"/>'s
+    /// downward scope path (for example, study-wide, organization-wide, or tenant-wide visibility on a study node,
+    /// excluding site-only ancestor visibility).
+    /// </summary>
+    ValueTask<bool> CoversScopeAsync(TenantId tenant, NodeRef scope, CancellationToken cancellationToken) =>
+        CanSeeAsync(tenant, scope, cancellationToken);
+
+    /// <summary>
     /// True when the current caller holds a grant permitting <paramref name="capability"/> on <paramref name="resource"/>
     /// in <paramref name="tenant"/> (ADR-2482).
     /// </summary>

@@ -289,4 +289,90 @@ describe("ecrfQueriesApi (#5461, ADR-2625)", () => {
       "Gateway timeout"
     );
   });
+
+  it("reassigns a query, lists scoped aging digests, runs manual SLA escalation, and forwards assignee filters", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(
+        jsonResponse(200, { ...QUERY, assignee: "crc.bob" })
+      )
+      .mockResolvedValueOnce(jsonResponse(200, []))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { escalated_queries: 1, digests: [] })
+      )
+      .mockResolvedValueOnce(jsonResponse(200, [QUERY]))
+      .mockResolvedValueOnce(jsonResponse(200, QUERY));
+
+    await ecrfQueriesApi.reassign({
+      formId: "form-a",
+      queryId: "query-a",
+      assignee: "crc.bob",
+      ownerRole: "site",
+      note: "Handed off to evening shift",
+      reason: "Coordinator shift handoff",
+      idempotencyKey: "reassign-1",
+    });
+    const reassignReq = lastRequest();
+    expect(new URL(reassignReq.url).pathname).toBe(
+      "/api/v1/execution/forms/form-a/queries/query-a/reassign"
+    );
+    expect(reassignReq.headers.get("Idempotency-Key")).toBe("reassign-1");
+    expect(reassignReq.headers.get("X-Change-Reason")).toBe(
+      "Coordinator shift handoff"
+    );
+    expect(await reassignReq.json()).toEqual({
+      assignee: "crc.bob",
+      owner_role: "site",
+      text: "Handed off to evening shift",
+    });
+
+    await ecrfQueriesApi.listDigests("study-1", {
+      site: "017",
+      recipientRole: "site_investigator",
+    });
+    const digestsUrl = new URL(lastRequest().url);
+    expect(digestsUrl.pathname).toBe("/api/v1/execution/forms/queries/digests");
+    expect(Object.fromEntries(digestsUrl.searchParams)).toEqual({
+      study_id: "study-1",
+      site: "017",
+      recipient_role: "site_investigator",
+    });
+
+    await ecrfQueriesApi.escalate({
+      studyId: "study-1",
+      reason: "Daily 14-day SLA check",
+      idempotencyKey: "esc-1",
+    });
+    const escReq = lastRequest();
+    const escUrl = new URL(escReq.url);
+    expect(escUrl.pathname).toBe("/api/v1/execution/forms/queries/escalate");
+    expect(escUrl.searchParams.get("study_id")).toBe("study-1");
+    expect(escReq.headers.get("Idempotency-Key")).toBe("esc-1");
+    expect(escReq.headers.get("X-Change-Reason")).toBe(
+      "Daily 14-day SLA check"
+    );
+
+    await ecrfQueriesApi.listForStudy("study-1", { assignee: "crc.bob" });
+    expect(new URL(lastRequest().url).searchParams.get("assignee")).toBe(
+      "crc.bob"
+    );
+
+    await ecrfQueriesApi.transition("answer", {
+      formId: "form-a",
+      queryId: "query-a",
+      text: "Confirmed",
+      assignee: "cra.lead",
+      reason: "Site review",
+      idempotencyKey: "ans-assign-1",
+    });
+    expect(await lastRequest().json()).toEqual({
+      text: "Confirmed",
+      assignee: "cra.lead",
+    });
+
+    expect(
+      describeQueryError(
+        new ApiError("Expired", 403, null, { code: "K.Subscription.Expired" })
+      )
+    ).toContain("Capture subscription");
+  });
 });

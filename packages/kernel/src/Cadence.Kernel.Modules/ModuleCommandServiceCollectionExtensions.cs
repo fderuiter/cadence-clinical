@@ -33,6 +33,7 @@ public static partial class ModuleCommandServiceCollectionExtensions
             throw new InvalidOperationException($"{typeof(TCommand).Name} already has a handler; a command has exactly one.");
         }
 
+        services.TryAddScoped<ModuleServiceActor>();
         services.TryAddTransient<ICommandHandler<TCommand, TResult>, THandler>();
         return services;
     }

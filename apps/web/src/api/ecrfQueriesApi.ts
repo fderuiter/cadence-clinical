@@ -21,7 +21,13 @@ export type FormQueryOrigin = "manual" | "system";
 export type FormQueryOwnerRole = "site" | "monitor" | "data_manager";
 export type FormQueryPriority = "low" | "normal" | "high";
 export type FormQueryMessageKind =
-  "raised" | "answered" | "reopened" | "closed" | "cancelled" | "escalated";
+  | "raised"
+  | "answered"
+  | "reopened"
+  | "reassigned"
+  | "closed"
+  | "cancelled"
+  | "escalated";
 
 export type FormQueryMessage = Omit<
   RawFormQueryMessage,
@@ -45,8 +51,10 @@ export type FormQueryAgingDigestEntry =
   Schemas["ExecutionForms_FormQueryAgingDigestEntry"];
 export type FormQueryAgingDigestResponse =
   Schemas["ExecutionForms_FormQueryAgingDigestResponse"];
+export type FormQueryAgingDigest = FormQueryAgingDigestResponse;
 export type FormQueryEscalationPassResponse =
   Schemas["ExecutionForms_FormQueryEscalationPassResponse"];
+export type FormQueryEscalationPassResult = FormQueryEscalationPassResponse;
 
 /** Optional bitemporal coordinates for reading historical query state. */
 export interface FormQueryTemporalFilters {
@@ -62,11 +70,18 @@ export interface StudyQueryFilters extends FormQueryTemporalFilters {
   origin?: FormQueryOrigin | "";
   priority?: FormQueryPriority | "";
   escalated?: boolean | null;
+  assignee?: string;
   site?: string;
   participant?: string;
   valueChanged?: boolean | null;
   limit?: number;
   offset?: number;
+}
+
+/** Optional filters on daily query aging digest reads (`GET /api/v1/execution/forms/queries/digests?study_id=…`). */
+export interface StudyQueryDigestFilters {
+  site?: string;
+  recipientRole?: string;
 }
 
 /** Optional per-request options for cancellable query reads. */
@@ -87,6 +102,7 @@ export const QUERY_SEPARATION_OF_DUTIES =
 export const QUERY_REVISION_STALE = "M.Execution.Query.RevisionStale";
 export const QUERY_OBSERVATION_UNKNOWN = "M.Execution.Query.ObservationUnknown";
 export const AUTHORIZATION_DENIED = "K.Authorization.Denied";
+export const SUBSCRIPTION_EXPIRED = "K.Subscription.Expired";
 export const ASSERTION_LOCKED = "K.Assertion.Locked";
 
 /** The transitions on an existing query. */
@@ -115,6 +131,25 @@ export interface FormQueryTransition {
   queryId: string;
   /** Conversational answer, reopening note, or optional closing/cancellation note distinct from `reason`. */
   text?: string;
+  /** Optional replacement assignee when answering or reopening flips the responsible role. */
+  assignee?: string | null;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface ReassignFormQuery {
+  formId: string;
+  queryId: string;
+  assignee?: string | null;
+  ownerRole?: FormQueryOwnerRole | null;
+  text?: string | null;
+  note?: string | null;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface EscalateStudyQueries {
+  studyId: string;
   reason: string;
   idempotencyKey: string;
 }
@@ -169,6 +204,9 @@ export function describeQueryError(error: unknown): string {
   }
   if (code === ASSERTION_LOCKED || status === 423) {
     return "The value is locked (Locked), so its queries cannot change until the lock is released.";
+  }
+  if (code === SUBSCRIPTION_EXPIRED) {
+    return "Your Capture subscription is inactive or expired, so query updates are currently read-only.";
   }
   if (code === AUTHORIZATION_DENIED || status === 403) {
     return "You are not allowed to do this on this participant's queries.";
@@ -268,6 +306,7 @@ export const ecrfQueriesApi = {
               typeof filters.escalated === "boolean"
                 ? filters.escalated
                 : undefined,
+            assignee: filters.assignee?.trim() || undefined,
             site: filters.site?.trim() || undefined,
             participant: filters.participant?.trim() || undefined,
             value_changed:
@@ -290,7 +329,14 @@ export const ecrfQueriesApi = {
    */
   transition(
     action: FormQueryAction,
-    { formId, queryId, text, reason, idempotencyKey }: FormQueryTransition
+    {
+      formId,
+      queryId,
+      text,
+      assignee,
+      reason,
+      idempotencyKey,
+    }: FormQueryTransition
   ): Promise<FormQueryResponse> {
     const headers = writeHeaders(reason, idempotencyKey);
     if (action === "answer" || action === "reopen") {
@@ -298,10 +344,14 @@ export const ecrfQueriesApi = {
         action === "answer"
           ? "/api/v1/execution/forms/{formId}/queries/{queryId}/answer"
           : "/api/v1/execution/forms/{formId}/queries/{queryId}/reopen";
+      const trimmedAssignee = assignee?.trim() || undefined;
       return unwrapResponse(
         client.POST(path, {
           params: { path: { formId, queryId } },
-          body: { text: text ?? "" },
+          body: {
+            text: text ?? "",
+            ...(trimmedAssignee ? { assignee: trimmedAssignee } : {}),
+          },
           headers,
         })
       );
@@ -321,6 +371,73 @@ export const ecrfQueriesApi = {
         params: { path: { formId, queryId } },
         ...(body ? { body } : {}),
         headers,
+      })
+    );
+  },
+
+  /** Reassigns or unassigns an open or answered query with audited bitemporal history (POST …/queries/{queryId}/reassign). */
+  reassign({
+    formId,
+    queryId,
+    assignee,
+    ownerRole,
+    text,
+    note,
+    reason,
+    idempotencyKey,
+  }: ReassignFormQuery): Promise<FormQueryResponse> {
+    const trimmedAssignee = assignee?.trim() ?? "";
+    const trimmedNote = (text ?? note)?.trim() ?? "";
+    return unwrapResponse(
+      client.POST(
+        "/api/v1/execution/forms/{formId}/queries/{queryId}/reassign",
+        {
+          params: { path: { formId, queryId } },
+          body: {
+            assignee: trimmedAssignee || null,
+            ...(ownerRole ? { owner_role: ownerRole } : {}),
+            ...(trimmedNote ? { text: trimmedNote } : {}),
+          },
+          headers: writeHeaders(reason, idempotencyKey),
+        }
+      )
+    );
+  },
+
+  /** Lists daily de-identified query aging digests for visible scopes of a study (GET /api/v1/execution/forms/queries/digests). */
+  listDigests(
+    studyId: string,
+    filters: StudyQueryDigestFilters = {},
+    options?: QueryReadOptions
+  ): Promise<FormQueryAgingDigestResponse[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/forms/queries/digests", {
+        params: {
+          query: {
+            study_id: studyId,
+            site: filters.site?.trim() || undefined,
+            recipient_role: filters.recipientRole?.trim() || undefined,
+          },
+        },
+        ...(options?.signal ? { signal: options.signal } : {}),
+      })
+    );
+  },
+
+  /** Evaluates overdue open queries against the 14-day SLA and records daily aging digests (POST /api/v1/execution/forms/queries/escalate). */
+  escalate({
+    studyId,
+    reason,
+    idempotencyKey,
+  }: EscalateStudyQueries): Promise<FormQueryEscalationPassResponse> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/forms/queries/escalate", {
+        params: {
+          query: {
+            study_id: studyId,
+          },
+        },
+        headers: writeHeaders(reason, idempotencyKey),
       })
     );
   },

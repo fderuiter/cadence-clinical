@@ -29,6 +29,7 @@
       :busy="queriesBusy"
       :assertions-locked="assertionsLocked"
       :act="actQuery"
+      :reassign="reassignQuery"
       :act-many="actManyQueries"
       :form-titles="currentFormTitles"
       :form-to="queryFormLink"
@@ -106,6 +107,8 @@ import type {
 import type {
   FormQueryBatchItemResult,
   FormQueryOutcome,
+  ReassignQueryOptions,
+  TransitionQueryOptions,
 } from "../../composables/useFormQueries";
 import { observationNodeRef } from "../../canvas/nodeRef";
 import FormQueryList from "./FormQueryList.vue";
@@ -123,7 +126,14 @@ const props = defineProps<{
     query: FormQueryResponse,
     action: FormQueryAction,
     text: string,
-    reason: string
+    reason: string,
+    options?: TransitionQueryOptions
+  ) => Promise<boolean>;
+  reassignQuery?: (
+    query: FormQueryResponse,
+    assignee: string | null,
+    reason: string,
+    options?: ReassignQueryOptions
   ) => Promise<boolean>;
   actManyQueries: (
     targets: FormQueryResponse[],

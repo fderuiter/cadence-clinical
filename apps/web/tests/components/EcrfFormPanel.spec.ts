@@ -42,6 +42,7 @@ vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
       listForEnrollment: vi.fn(),
       listForStudy: vi.fn(),
       transition: vi.fn(),
+      reassign: vi.fn(),
     },
   };
 });
@@ -1026,6 +1027,70 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
       (view.find("#ecrf-item-DIABP").element as HTMLInputElement).value
     ).toBe("84");
     expect(view.find("#ecrf-form-save").text()).toBe("Save page (1)");
+  });
+
+  it("raises a query with an optional assignee and performs audited inline reassignment", async () => {
+    vi.mocked(ecrfQueriesApi.raise).mockResolvedValueOnce(
+      formQuery({ assignee: "crc.alice" }) as never
+    );
+    vi.mocked(ecrfQueriesApi.reassign).mockResolvedValueOnce(
+      formQuery({
+        assignee: "crc.bob",
+        version: 2,
+        messages: [
+          ...formQuery().messages,
+          {
+            kind: "reassigned",
+            text: "Handed off to Bob",
+            reason_for_change: "Coordinator shift handoff",
+            by: "monitor",
+            at: "2027-03-14T11:00:00Z",
+          },
+        ],
+      }) as never
+    );
+
+    const view = await mountWith({ canManageQueries: true });
+    await view.find("#ecrf-raise-SYSBP").trigger("click");
+    await view.find("#ecrf-raise-text").setValue("Verify cuff calibration");
+    await view.find("#ecrf-raise-assignee").setValue(" crc.alice ");
+    await view.find("#ecrf-raise-reason").setValue("Baseline SDV");
+    await view.find("#ecrf-raise-confirm").trigger("click");
+    await flushPromises();
+
+    expect(vi.mocked(ecrfQueriesApi.raise).mock.calls[0][0]).toMatchObject({
+      assignee: "crc.alice",
+      reason: "Baseline SDV",
+    });
+    expect(
+      view.find('[data-testid="query-assignee-query-a"]').text()
+    ).toContain("crc.alice");
+
+    await view.find("#btn-reassign-query-a").trigger("click");
+    await view.find("#reassign-assignee-query-a").setValue("crc.bob");
+    await view.find("#reassign-note-query-a").setValue("Handed off to Bob");
+    await view
+      .find("#reassign-reason-query-a")
+      .setValue("Coordinator shift handoff");
+    expect(
+      view.find("#btn-confirm-reassign-query-a").attributes("disabled")
+    ).toBeUndefined();
+    await view.find("#query-query-a form").trigger("submit");
+    await flushPromises();
+
+    expect(ecrfQueriesApi.reassign).toHaveBeenCalledWith(
+      expect.objectContaining({
+        formId: FORM_ID,
+        queryId: "query-a",
+        assignee: "crc.bob",
+        text: "Handed off to Bob",
+        reason: "Coordinator shift handoff",
+      })
+    );
+    expect(
+      view.find('[data-testid="query-assignee-query-a"]').text()
+    ).toContain("crc.bob");
+    expect(view.find("#query-query-a").text()).toContain("Reassigned");
   });
 });
 

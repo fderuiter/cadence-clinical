@@ -44,6 +44,7 @@
       :study-code="studyCode"
       :subject-code="subjectCode"
       :act="queries.act"
+      :reassign="queries.reassign"
       :act-many="queries.actMany"
       :form-to="formTo"
       :observation-to="observationTo"

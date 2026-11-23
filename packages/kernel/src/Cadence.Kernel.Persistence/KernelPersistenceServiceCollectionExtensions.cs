@@ -5,6 +5,8 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.WorkQueues;
+using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Background;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Indicators;
@@ -80,6 +82,9 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<IStudyDirectory, KernelStudyDirectory>();
         services.TryAddSingleton<IBlindedTreatmentClassifier>(BlindedTreatmentClassifier.Instance);
         services.TryAddSingleton<IAuthorityStore, KernelAuthorityStore>();
+        services.TryAddSingleton<ILeadAlertRecipientDirectory, KernelLeadAlertRecipientDirectory>();
+        services.TryAddSingleton<KernelLeaderLock>();
+        services.TryAddSingleton<IKernelLeaderLock>(sp => sp.GetRequiredService<KernelLeaderLock>());
         services.TryAddSingleton<IProtocolVersionReader, KernelProtocolVersionReader>();
         services.TryAddSingleton<IProposalReader, KernelProposalReader>();
         services.TryAddSingleton<IEffectivityReader, KernelEffectivityReader>();
@@ -140,6 +145,7 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.RemoveAll<KernelBackgroundOptions>();
         services.AddSingleton(options);
         services.TryAddSingleton<KernelLeaderLock>();
+        services.TryAddSingleton<IKernelLeaderLock>(sp => sp.GetRequiredService<KernelLeaderLock>());
         services.TryAddSingleton<KernelOutboxRelay>();
         services.AddHostedService<KernelOutboxRelayService>();
         services.AddHostedService<KernelAuditSealingService>();
