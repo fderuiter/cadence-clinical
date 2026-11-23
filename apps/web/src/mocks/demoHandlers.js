@@ -956,10 +956,30 @@ export function createWebDemoHandlers(store = webDemoStore) {
     }),
 
     // Kernel Observations & Stateful Corrections
-    http.get("*/api/v1/kernel/observations/:observationRef", ({ params }) =>
-      HttpResponse.json(
-        store.getObservation(decodeURIComponent(String(params.observationRef)))
-      )
+    http.get(
+      "*/api/v1/kernel/observations/:observationRef",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        return HttpResponse.json(
+          store.getObservation(
+            decodeURIComponent(String(params.observationRef)),
+            {
+              studyCode:
+                url.searchParams.get("studyId") ||
+                url.searchParams.get("study_code") ||
+                "",
+              siteCode:
+                url.searchParams.get("siteId") ||
+                url.searchParams.get("site_code") ||
+                "",
+              subjectCode:
+                url.searchParams.get("subjectId") ||
+                url.searchParams.get("subject_code") ||
+                "",
+            }
+          )
+        );
+      }
     ),
     http.post(
       "*/api/v1/kernel/observations/:observationRef/corrections",
