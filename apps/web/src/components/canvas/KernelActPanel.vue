@@ -4,10 +4,14 @@
     <p v-if="loading" id="kernel-act-status" class="act-note" role="status">
       Checking available actions…
     </p>
-    <div v-else-if="error" id="kernel-act-status" class="act-note" role="alert">
-      <p class="act-note">Available actions couldn't be loaded right now.</p>
-      <SupportDetails :detail="error" />
-    </div>
+    <CanvasErrorAlert
+      v-else-if="error"
+      id="kernel-act-status"
+      message="Available actions couldn't be loaded right now."
+      :detail="error"
+      @retry="load(props.nodeRef)"
+      @explain="emit('openExplain')"
+    />
     <p
       v-else-if="!commands.length"
       id="kernel-act-status"
@@ -59,7 +63,7 @@
 import { ref, watch } from "vue";
 import { kernelApi, type KernelCommand } from "../../api/kernelApi";
 import { formatCommandTitle } from "../../canvas/nodeResolver";
-import SupportDetails from "./SupportDetails.vue";
+import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 
 /**
  * The Act verb (docs/ux/CLINICAL_CANVAS.md §2.4, ADR-2483): the kernel commands offered on the selected object,
@@ -67,7 +71,10 @@ import SupportDetails from "./SupportDetails.vue";
  * unreachable kernel is reported as it is, never replaced with a guess.
  */
 const props = defineProps<{ nodeRef: string }>();
-const emit = defineEmits<{ explain: [command: KernelCommand] }>();
+const emit = defineEmits<{
+  explain: [command: KernelCommand];
+  openExplain: [];
+}>();
 
 const commands = ref<KernelCommand[]>([]);
 const loading = ref(false);

@@ -1,0 +1,153 @@
+import { getCurrentInstance } from "vue";
+import * as VueRouter from "vue-router";
+import type {
+  LocationQuery,
+  RouteLocationNormalizedLoaded,
+  Router,
+} from "vue-router";
+
+export interface RouteScopeQuery {
+  studyId: string;
+  siteId: string;
+  subjectId: string;
+  visitId: string;
+}
+
+function readSingleQueryString(
+  query: LocationQuery | Record<string, unknown> | undefined | null,
+  keys: readonly string[]
+): string {
+  if (!query) return "";
+  for (const key of keys) {
+    const raw = query[key];
+    const candidate = Array.isArray(raw) ? raw[0] : raw;
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+  return "";
+}
+
+export function resolveRouteAndRouter(): {
+  route: RouteLocationNormalizedLoaded | null;
+  router: Router | null;
+} {
+  const instance = getCurrentInstance();
+  let route: RouteLocationNormalizedLoaded | null = null;
+  let router: Router | null = null;
+
+  if (typeof VueRouter.useRoute === "function") {
+    try {
+      route = VueRouter.useRoute() ?? null;
+    } catch {
+      route = null;
+    }
+  }
+  if (!route) {
+    route =
+      (instance?.proxy?.$route as RouteLocationNormalizedLoaded | undefined) ??
+      null;
+  }
+
+  if (typeof VueRouter.useRouter === "function") {
+    try {
+      router = VueRouter.useRouter() ?? null;
+    } catch {
+      router = null;
+    }
+  }
+  if (!router) {
+    router = (instance?.proxy?.$router as Router | undefined) ?? null;
+  }
+
+  return { route, router };
+}
+
+export function readRouteScopeQuery(
+  targetRoute: Pick<RouteLocationNormalizedLoaded, "query"> | null | undefined
+): RouteScopeQuery {
+  const query = targetRoute?.query;
+  return {
+    studyId: readSingleQueryString(query, ["studyId", "study_id", "study"]),
+    siteId: readSingleQueryString(query, ["siteId", "site_id", "site"]),
+    subjectId: readSingleQueryString(query, [
+      "subjectId",
+      "subject_id",
+      "subject",
+      "participant",
+    ]),
+    visitId: readSingleQueryString(query, ["visitId", "visit_id"]),
+  };
+}
+
+const ALIAS_KEYS_BY_CANONICAL: Record<string, readonly string[]> = {
+  studyId: ["study_id", "study"],
+  siteId: ["site_id", "site"],
+  subjectId: ["subject_id", "subject", "participant"],
+  visitId: ["visit_id"],
+};
+
+function shallowEqualQuery(
+  left: Record<string, unknown>,
+  right: Record<string, unknown>
+): boolean {
+  const leftKeys = Object.keys(left).filter(
+    (k) => left[k] !== undefined && left[k] !== null && left[k] !== ""
+  );
+  const rightKeys = Object.keys(right).filter(
+    (k) => right[k] !== undefined && right[k] !== null && right[k] !== ""
+  );
+  if (leftKeys.length !== rightKeys.length) return false;
+  for (const key of leftKeys) {
+    const lVal = Array.isArray(left[key]) ? left[key][0] : left[key];
+    const rVal = Array.isArray(right[key]) ? right[key][0] : right[key];
+    if (String(lVal ?? "") !== String(rVal ?? "")) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export async function replaceRouteQueryParams(
+  router: Pick<Router, "replace"> | null | undefined,
+  route: Pick<RouteLocationNormalizedLoaded, "query"> | null | undefined,
+  updates: Record<string, string | null | undefined>
+): Promise<boolean> {
+  if (!route || typeof router?.replace !== "function") {
+    return false;
+  }
+
+  const currentQuery = (route.query || {}) as Record<string, unknown>;
+  const nextQuery: Record<string, string> = {};
+
+  for (const [key, raw] of Object.entries(currentQuery)) {
+    const val = Array.isArray(raw) ? raw[0] : raw;
+    if (typeof val === "string" && val.length > 0) {
+      nextQuery[key] = val;
+    }
+  }
+
+  for (const [key, raw] of Object.entries(updates)) {
+    const aliases = ALIAS_KEYS_BY_CANONICAL[key] || [];
+    for (const alias of aliases) {
+      delete nextQuery[alias];
+    }
+    const trimmed = typeof raw === "string" ? raw.trim() : "";
+    if (trimmed) {
+      nextQuery[key] = trimmed;
+    } else {
+      delete nextQuery[key];
+    }
+  }
+
+  if (shallowEqualQuery(currentQuery, nextQuery)) {
+    return false;
+  }
+
+  try {
+    await router.replace({ query: nextQuery });
+    return true;
+  } catch {
+    return false;
+  }
+}

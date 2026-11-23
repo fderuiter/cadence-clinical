@@ -21,6 +21,8 @@ async function completeInitialPinSetupIfOpen(page, pin = "246810") {
   }
 }
 
+const DEMO_PORTAL_URL = "http://127.0.0.1:5175/subject-portal/";
+
 const PAIN_MOBILITY_INSTRUMENT = {
   id: "inst_pain_mobility",
   version_index: 1,
@@ -54,7 +56,7 @@ async function setupBasePortalRoutes(page, options = {}) {
     });
   });
 
-  await page.route("**/assignments/subject/*", async (route) => {
+  await page.route("**/api/v1/**/assignments/subject/*", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -93,7 +95,7 @@ async function setupBasePortalRoutes(page, options = {}) {
     });
   });
 
-  await page.route("**/compliance", async (route) => {
+  await page.route("**/api/v1/**/compliance", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -108,7 +110,7 @@ async function setupBasePortalRoutes(page, options = {}) {
     });
   });
 
-  await page.route("**/notifications", async (route) => {
+  await page.route("**/api/v1/**/notifications", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -166,20 +168,9 @@ test.describe("Idempotent Wallet Recovery, Payout Confirmation, and 48px Touch T
       releaseWalletResponse = resolve;
     });
 
-    let walletFetchCount = 0;
     await page.route(
       "**/api/v1/payments/participant/me/wallet",
       async (route) => {
-        walletFetchCount += 1;
-        if (walletFetchCount === 1) {
-          // Initial boot pre-fetch fails transiently so opening the Wallet tab hydrates with skeleton
-          await route.fulfill({
-            status: 503,
-            contentType: "application/json",
-            body: JSON.stringify({ detail: "Temporary gateway warmup" }),
-          });
-          return;
-        }
         await walletGate;
         await route.fulfill({
           status: 200,
@@ -238,15 +229,14 @@ test.describe("Idempotent Wallet Recovery, Payout Confirmation, and 48px Touch T
     );
 
     await page.goto("");
-    await completeInitialPinSetupIfOpen(page);
-    await page.click("#btn-tab-btn-wallet");
 
-    // While wallet response is in flight, skeleton renders instead of "$0.00 USD"
+    // Production landing opens /wallet directly; while wallet response is in flight, skeleton renders instead of "$0.00 USD"
     const skeleton = page.locator("#wallet-loading-skeleton");
     await expect(skeleton).toBeVisible();
     await expect(page.locator("#view-wallet")).not.toContainText("$0.00 USD");
 
     releaseWalletResponse();
+    await completeInitialPinSetupIfOpen(page);
 
     await expect(skeleton).toBeHidden();
     await expect(page.locator("#wallet-balance-amount")).toHaveText("€145.50");
@@ -647,7 +637,7 @@ test.describe("Idempotent Wallet Recovery, Payout Confirmation, and 48px Touch T
       }
     );
 
-    await page.goto("");
+    await page.goto(DEMO_PORTAL_URL);
     await completeInitialPinSetupIfOpen(page);
 
     // Control 1: .btn-sync-status >= 48px

@@ -570,6 +570,9 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
                 services.RemoveAll<IValidationFindings>();
                 services.AddSingleton<IValidationFindings>(state);
 
+                services.RemoveAll<IKernelCommandSender>();
+                services.AddSingleton<IKernelCommandSender>(state);
+
                 services.RemoveAll<IModuleTenantContextFactory<ExecutionModuleDbContext>>();
                 services.AddSingleton<IModuleTenantContextFactory<ExecutionModuleDbContext>>(state);
             });
@@ -590,6 +593,7 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         IKernelExportReader,
         IStandardsRegistry,
         IValidationFindings,
+        IKernelCommandSender,
         IModuleTenantContextFactory<ExecutionModuleDbContext>
     {
         private readonly string _inMemoryDbName;
@@ -668,13 +672,31 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
                     GrantId.New(), Tenant, BlindedPerson, "observation.record", null,
                     new AuthorityScope(ScopeLevel.Tenant, null, null), T0, null, false, null, Issuer, T0).Value!,
                 Grant.Issue(
+                    GrantId.New(), Tenant, BlindedPerson, "study.export", null,
+                    AuthorityScope.Tenant(), T0, null, false, null, Issuer, T0).Value!,
+                Grant.Issue(
+                    GrantId.New(), Tenant, BlindedPerson, "enrollment.export", null,
+                    AuthorityScope.Tenant(), T0, null, false, null, Issuer, T0).Value!,
+                Grant.Issue(
                     GrantId.New(), Tenant, PharmacistPerson, "observation.record", null,
+                    AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
+                Grant.Issue(
+                    GrantId.New(), Tenant, PharmacistPerson, "study.export", null,
+                    AuthorityScope.Study(StudyId), T0, null, false, null, Issuer, T0).Value!,
+                Grant.Issue(
+                    GrantId.New(), Tenant, PharmacistPerson, "enrollment.export", null,
                     AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
                 Grant.Issue(
                     GrantId.New(), Tenant, PharmacistPerson, "enrollment.unblind", null,
                     AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
                 Grant.Issue(
                     GrantId.New(), Tenant, UnqualifiedPharmacistPerson, "observation.record", null,
+                    AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
+                Grant.Issue(
+                    GrantId.New(), Tenant, UnqualifiedPharmacistPerson, "study.export", null,
+                    AuthorityScope.Study(StudyId), T0, null, false, null, Issuer, T0).Value!,
+                Grant.Issue(
+                    GrantId.New(), Tenant, UnqualifiedPharmacistPerson, "enrollment.export", null,
                     AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
                 Grant.Issue(
                     GrantId.New(), Tenant, UnqualifiedPharmacistPerson, "enrollment.unblind", null,
@@ -1532,6 +1554,35 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
                 .UseInMemoryDatabase($"{_inMemoryDbName}-{tenant.Value.ToString("N", CultureInfo.InvariantCulture)}")
                 .Options;
             return new ExecutionModuleDbContext(options);
+        }
+
+        Task<CommandResult<TResult>> IKernelCommandSender.SendAsync<TResult>(
+            ICommand<TResult> command,
+            CommandMetadata? metadata,
+            CancellationToken cancellationToken)
+        {
+            return command switch
+            {
+                ExportStudySnapshot exportStudy => Task.FromResult(
+                    CommandResult<TResult>.Success((TResult)(object)new ArtifactState(
+                        exportStudy.ArtifactId,
+                        ArtifactKind.Dataset,
+                        exportStudy.StudyId,
+                        exportStudy.Title,
+                        exportStudy.ArtifactVersionId,
+                        1,
+                        exportStudy.Content.ContentHash))),
+                ExportEnrollmentCasebook exportCasebook => Task.FromResult(
+                    CommandResult<TResult>.Success((TResult)(object)new ArtifactState(
+                        exportCasebook.ArtifactId,
+                        ArtifactKind.Dataset,
+                        exportCasebook.StudyId,
+                        exportCasebook.Title,
+                        exportCasebook.ArtifactVersionId,
+                        1,
+                        exportCasebook.Content.ContentHash))),
+                _ => throw new NotSupportedException($"Unexpected in-memory command {command.GetType().Name}."),
+            };
         }
     }
 }

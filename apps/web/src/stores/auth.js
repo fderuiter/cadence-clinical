@@ -26,6 +26,7 @@ import { kernelApi } from "../api/kernelApi";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { demoNowMs, isDemoBuild } from "../utils/demoMode.js";
 import { useNotificationsStore } from "./notifications.js";
+import { clearActiveStudyScope } from "./studyScopeBridge";
 import { useOnboardingStore } from "./onboarding.js";
 import {
   purgeUserScopedStorage,
@@ -799,6 +800,7 @@ export const useAuthStore = defineStore("auth", {
       this.isLoggingOut = true;
       purgeLegacyAuthStorage();
       purgeUserScopedStorage(null);
+      clearActiveStudyScope();
       runLogoutCleanups();
       try {
         resetClinicalSession(this._p);

@@ -71,6 +71,54 @@ public sealed class OpenApiDriftTests : IDisposable
     }
 
     [Fact]
+    public void RenderAll_RendersSeparatePagesForKernelAndConsolidatedModules()
+    {
+        File.WriteAllText(
+            Path.Combine(_committed, "kernel_openapi.json"),
+            """
+            {
+              "openapi": "3.1.1",
+              "info": { "title": "Cadence.Kernel.Host | kernel", "version": "1.0.0" },
+              "paths": {
+                "/api/v1/kernel/status": { "get": { "operationId": "KernelStatus", "summary": "Returns kernel status." } }
+              }
+            }
+            """);
+        File.WriteAllText(
+            Path.Combine(_committed, "intelligence_openapi.json"),
+            """
+            {
+              "openapi": "3.1.1",
+              "info": { "title": "Cadence.Kernel.Host | intelligence", "version": "1.0.0" },
+              "paths": {
+                "/api/v1/ai/status": { "get": { "operationId": "AiStatus", "summary": "Returns AI status." } }
+              }
+            }
+            """);
+        File.WriteAllText(
+            Path.Combine(_committed, "execution_forms_openapi.json"),
+            """
+            {
+              "openapi": "3.1.1",
+              "info": { "title": "Cadence.Kernel.Host | execution_forms", "version": "1.0.0" },
+              "paths": {
+                "/api/v1/execution/forms": { "post": { "operationId": "ExecutionOpenForm", "summary": "Opens an eCRF form." } }
+              }
+            }
+            """);
+
+        var pages = ApiDocsGeneratorService.RenderAll(_committed);
+
+        pages.Keys.Should().Equal("execution_forms.md", "index.md", "intelligence.md", "kernel.md");
+        pages["kernel.md"].Should().Contain("# kernel API").And.Contain("`/api/v1/kernel/status`");
+        pages["intelligence.md"].Should().Contain("# intelligence API").And.Contain("`/api/v1/ai/status`");
+        pages["execution_forms.md"].Should().Contain("# execution_forms API").And.Contain("`/api/v1/execution/forms`");
+        pages["index.md"].Should().Contain("| [execution_forms](execution_forms.md) | 1 |")
+            .And.Contain("| [intelligence](intelligence.md) | 1 |")
+            .And.Contain("| [kernel](kernel.md) | 1 |");
+    }
+
+    [Fact]
     public void FindDrift_WhenTargetedExport_DoesNotReportStaleSpecsForUntargetedServices()
     {
         File.WriteAllText(Path.Combine(_exported, "ctms_openapi.json"), Spec);
@@ -82,14 +130,42 @@ public sealed class OpenApiDriftTests : IDisposable
 
     [Theory]
     [InlineData("apps/execution/src/Endpoints/SubjectEndpoints.cs", "execution")]
+    [InlineData("apps/execution/module/ExecutionModule.cs", "execution_forms")]
     [InlineData("apps/kernel-api/src/Host/Program.cs", "kernel")]
+    [InlineData("apps/kernel/src/Sample.cs", "kernel")]
     [InlineData("apps/ctms/src/Endpoints/CtmsEndpoints.cs", "ctms")]
-    [InlineData("apps/intelligence/src/IntelligenceModule.cs", "kernel")]
+    [InlineData("apps/intelligence/src/IntelligenceModule.cs", "intelligence")]
     [InlineData("packages/contracts/src/Dto/SubjectDto.cs", null)]
     [InlineData("apps/web/src/components/Footer.vue", null)]
     public void ResolveServiceFromPath_MapsMicroservicePathsCorrectly(string path, string? expectedService)
     {
         PreCommitOpenApiService.ResolveServiceFromPath(path).Should().Be(expectedService);
+    }
+
+    [Fact]
+    public void ResolveTargetClosureProjects_IncludesModuleAndKernelHostForConsolidatedModules()
+    {
+        string repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+
+        var executionClosure = PreCommitOpenApiService.ResolveTargetClosureProjects(
+            repoRoot,
+            ["apps/execution/module/ExecutionModule.cs"],
+            ["execution_forms"],
+            out bool requireRepoWideExecution);
+        requireRepoWideExecution.Should().BeFalse();
+        executionClosure.Should().BeEquivalentTo(
+            "apps/execution/module/Cadence.Modules.Execution.csproj",
+            "apps/kernel-api/src/Cadence.Kernel.Host.csproj");
+
+        var intelligenceClosure = PreCommitOpenApiService.ResolveTargetClosureProjects(
+            repoRoot,
+            ["apps/intelligence/src/IntelligenceModule.cs"],
+            ["intelligence"],
+            out bool requireRepoWideIntelligence);
+        requireRepoWideIntelligence.Should().BeFalse();
+        intelligenceClosure.Should().BeEquivalentTo(
+            "apps/intelligence/src/Cadence.Modules.Intelligence.csproj",
+            "apps/kernel-api/src/Cadence.Kernel.Host.csproj");
     }
 
     [Fact]

@@ -7,6 +7,7 @@ import {
   clearKernelStudyCache,
   findKernelEnrollmentRef,
   findKernelStudyRef,
+  findKernelStudySiteRef,
   findStudySites,
   invalidateStudySitesCache,
   resetKernelStudySession,
@@ -688,5 +689,42 @@ describe("kernelStudy session cache", () => {
     expect(kernelApi.listStudySites).toHaveBeenCalledTimes(2);
     // Study ref itself remains warm across site cache invalidation.
     expect(kernelApi.search).toHaveBeenCalledTimes(1);
+  });
+
+  it("reuses concurrent findStudySites lookups in findKernelStudySiteRef without duplicate getChildren calls", async () => {
+    vi.mocked(kernelApi.search).mockResolvedValueOnce([
+      {
+        ref: STUDY_REF,
+        kind: "study",
+        code: "CAD-101",
+        title: "Cadence 101",
+        exact_code: true,
+      },
+    ]);
+    vi.mocked(kernelApi.getChildren).mockResolvedValueOnce([
+      {
+        node: {
+          ref: SITE_A,
+          kind: "study_site",
+          code: "SITE-01",
+          title: "Metro Clinical Site",
+          status: "PENDING",
+          mask: null,
+        },
+        child_count: 0,
+      },
+    ]);
+
+    resetKernelStudySession("CAD-101");
+    const [sites, siteRef] = await Promise.all([
+      findStudySites("CAD-101"),
+      findKernelStudySiteRef("CAD-101", "site-01"),
+    ]);
+
+    expect(sites).toEqual([
+      { code: "SITE-01", label: "SITE-01 — Metro Clinical Site" },
+    ]);
+    expect(siteRef).toBe("study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002");
+    expect(kernelApi.getChildren).toHaveBeenCalledTimes(1);
   });
 });

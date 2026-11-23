@@ -228,7 +228,7 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       mainEl.parentNode.replaceChild(divEl, mainEl);
     }
 
-    const { toBeAccessible: auditFn } = await import("ui");
+    const { toBeAccessible: auditFn } = await import("ui/vitest");
     const result = await auditFn(clonedEl, {
       rules: {
         "landmark-one-main": { enabled: true },
@@ -357,6 +357,81 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     await router.push("/");
   });
 
+  it("exposes a visible-on-focus skip link to #canvas-workspace on study routes and coordinates Cmd/Ctrl+E while ignoring editable inputs", async () => {
+    const { useStudyCanvasStore } =
+      await import("../../src/stores/studyCanvas");
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    await router.push("/studies/CAD-101");
+    await router.isReady();
+
+    const wrapper = mount(AppShell, {
+      attachTo: document.body,
+      global: { plugins: [router] },
+      slots: {
+        default:
+          '<div id="canvas-workspace" tabindex="-1"><input id="editable-field" type="text" /></div>',
+      },
+    });
+
+    const focusable = wrapper.element.querySelectorAll(
+      "a, button, input, select, textarea, [tabindex]"
+    );
+    expect(focusable[0].getAttribute("href")).toBe("#canvas-workspace");
+    expect(focusable[0].classList.contains("skip-link")).toBe(true);
+    expect(focusable[1].getAttribute("href")).toBe("#main-content");
+
+    await wrapper.find("#skip-to-workspace").trigger("click");
+    expect(document.activeElement?.id).toBe("canvas-workspace");
+    expect(router.currentRoute.value.fullPath).toBe("/studies/CAD-101");
+
+    const canvasStore = useStudyCanvasStore();
+
+    // Without an explain coordinator / selection, Cmd+E does not preventDefault
+    const emptyEvent = new KeyboardEvent("keydown", {
+      key: "e",
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(emptyEvent);
+    expect(emptyEvent.defaultPrevented).toBe(false);
+
+    const coordinator = vi.fn(() => true);
+    const unregister = canvasStore.registerExplainCoordinator(coordinator);
+
+    // Inside editable input, Cmd+E / Ctrl+E is ignored
+    const inputEl = wrapper.find("#editable-field").element;
+    inputEl.focus();
+    const inputEvent = new KeyboardEvent("keydown", {
+      key: "e",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    inputEl.dispatchEvent(inputEvent);
+    expect(coordinator).not.toHaveBeenCalled();
+    expect(inputEvent.defaultPrevented).toBe(false);
+
+    // Outside editable inputs, Cmd+E / Ctrl+E triggers coordinator and prevents default
+    wrapper.find("#canvas-workspace").element.focus();
+    const activeEvent = new KeyboardEvent("keydown", {
+      key: "e",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(activeEvent);
+    expect(coordinator).toHaveBeenCalledWith({ fromShortcut: true });
+    expect(activeEvent.defaultPrevented).toBe(true);
+
+    unregister();
+    wrapper.unmount();
+    await router.push("/");
+  });
+
   it("carries studyId and siteId to Site readiness (/ctms and /ssu) and preserves CADENCE-101 on Studies and Data collection links", async () => {
     const { useStudyCanvasStore } =
       await import("../../src/stores/studyCanvas");
@@ -383,11 +458,12 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       "/ctms?studyId=CADENCE-101&siteId=SITE-101"
     );
     expect(craWrapper.find("#nav-studies").attributes("href")).toBe(
-      "/studies/CADENCE-101"
+      "/studies/CADENCE-101?site=SITE-101"
     );
     expect(craWrapper.find("#nav-data-collection").attributes("href")).toBe(
       "/ecrf?studyId=CADENCE-101&siteId=SITE-101"
     );
+    expect(craWrapper.find("#shell-context-bar").exists()).toBe(false);
     craWrapper.unmount();
 
     // 2. Site coordinator/investigator at /studies/CADENCE-101?site=SITE-101 -> /ssu?studyId=CADENCE-101&siteId=SITE-101
@@ -427,7 +503,32 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     expect(fromCtms.find("#nav-data-collection").attributes("href")).toBe(
       "/ecrf?studyId=CADENCE-101"
     );
+    expect(fromCtms.find("#shell-context-bar").exists()).toBe(true);
     fromCtms.unmount();
+
+    await router.push(
+      "/ecrf?studyId=CADENCE-101&siteId=SITE-101&subjectId=SUBJ-042"
+    );
+    const fullScopeWrapper = mount(AppShell, {
+      global: { plugins: [router] },
+    });
+    const contextBar = fullScopeWrapper.find("#shell-context-bar");
+    expect(contextBar.exists()).toBe(true);
+    expect(contextBar.attributes("aria-label")).toBe("Clinical context");
+    expect(contextBar.text()).toContain("Studies");
+    expect(contextBar.text()).toContain("CADENCE-101");
+    expect(contextBar.text()).toContain("SITE-101");
+    expect(contextBar.text()).toContain("SUBJ-042");
+    expect(fullScopeWrapper.find("#nav-studies").attributes("href")).toBe(
+      "/studies/CADENCE-101?site=SITE-101&participant=SUBJ-042"
+    );
+    expect(fullScopeWrapper.find("#nav-support").attributes("href")).toBe(
+      "/tickets?studyId=CADENCE-101&siteId=SITE-101&subjectId=SUBJ-042"
+    );
+    expect(fullScopeWrapper.find("#nav-knowledge").attributes("href")).toBe(
+      "/knowledge?studyId=CADENCE-101&siteId=SITE-101&subjectId=SUBJ-042"
+    );
+    fullScopeWrapper.unmount();
 
     await router.push("/");
   });
