@@ -699,6 +699,10 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 </script>
 
 <style scoped>
+#ecrf-form-page {
+  min-width: 0;
+  max-width: 100%;
+}
 .ecrf-form-row {
   display: flex;
   flex-wrap: wrap;
@@ -707,8 +711,10 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   margin: 8px 0;
 }
 .ecrf-table-scroll {
+  position: relative;
   overflow-x: auto;
   max-width: 100%;
+  min-width: 0;
   padding: 4px;
 }
 .ecrf-table-scroll:focus-visible {
