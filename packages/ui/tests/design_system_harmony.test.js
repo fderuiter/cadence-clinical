@@ -15,8 +15,10 @@ const EXPECTED_SHARED_COMPONENTS = [
   "AuditLogViewer",
   "ClinicalDataTable",
   "ClinicalDrawer",
+  "ClinicalDropzone",
   "ClinicalFieldLayout",
   "ClinicalFormField",
+  "ClinicalIconButton",
   "ClinicalInput",
   "ClinicalLookupInput",
   "ClinicalModal",
@@ -189,7 +191,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 20 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 22 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -199,16 +201,17 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(20);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(22);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
     });
 
-    it("exposes all 3 keyboard interaction helpers and useAsyncRetry from root index.js", () => {
+    it("exposes all 3 keyboard interaction helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
       expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(3);
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
+        "createSrOnlyActionButton",
         "useAsyncRetry",
       ]) {
         expect(
@@ -218,7 +221,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 20 components and 3 keyboard helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 22 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -227,6 +230,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
+        "createSrOnlyActionButton",
         "useAsyncRetry",
       ]) {
         expect(dts).toMatch(
@@ -989,6 +993,122 @@ const open = ref(true);
           `Expected no-alert error (severity 2) on ${path.relative(repoRoot, probe.filePath)}`
         ).toBe(1);
       }
+    });
+  });
+
+  describe("Requirement 8: Shared Accessibility Primitives & Label-in-Name AST Gates (ADR-2822)", () => {
+    it("defines global .sr-only utility in packages/ui/tokens.css and migrates all 6 upload dropzones onto ClinicalDropzone without role=button containers", () => {
+      const tokensCss = fs.readFileSync(
+        path.join(uiDir, "tokens.css"),
+        "utf-8"
+      );
+      const srOnlyProps = parseRuleProps(tokensCss, /\.sr-only\s*\{/);
+      expect(srOnlyProps).not.toBeNull();
+      expect(srOnlyProps.position).toBe("absolute");
+      expect(srOnlyProps.width).toBe("1px");
+      expect(srOnlyProps.height).toBe("1px");
+      expect(srOnlyProps.overflow).toBe("hidden");
+
+      const dropzoneFiles = [
+        path.join(uiDir, "src/components/FileUploadModal.vue"),
+        path.join(webSrcDir, "components/etmf/BatchUploadDrawer.vue"),
+        path.join(webSrcDir, "components/etmf/DocumentGrid.vue"),
+        path.join(webSrcDir, "components/SynonymImportDrawer.vue"),
+        path.join(
+          webSrcDir,
+          "components/clinical/CellGeneTherapyCocConsole.vue"
+        ),
+        path.join(portalSrcDir, "views/WalletView.vue"),
+      ];
+
+      for (const filePath of dropzoneFiles) {
+        const content = fs.readFileSync(filePath, "utf-8");
+        expect(
+          content,
+          `${path.relative(repoRoot, filePath)} must adopt ClinicalDropzone`
+        ).toContain("ClinicalDropzone");
+      }
+
+      const dropzonePrimitive = fs.readFileSync(
+        path.join(uiDir, "src/components/clinical/ClinicalDropzone.vue"),
+        "utf-8"
+      );
+      expect(dropzonePrimitive).not.toContain('role="button"');
+    });
+
+    it("rejects unlabeled glyph buttons (Vue & VitePress JS) and mismatched static aria-labels via custom-vue AST rules", async () => {
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const unlabeledVueResults = await eslint.lintText(
+        `<template>
+  <div>
+    <button type="button" title="Delete row">✕</button>
+    <button type="button">{{ isOpen ? "▼" : "▶" }}</button>
+    <button type="button" aria-label="Open Batch Document Upload Drawer">📑 Batch Upload</button>
+    <button type="button" aria-label="Switch User Persona / Role"><span>{{ activeLabel }}</span></button>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+const isOpen = ref(false);
+const activeLabel = ref("CRA Monitor");
+</script>
+`,
+        {
+          filePath: path.join(webSrcDir, "views/__SyntheticA11yViolations.vue"),
+        }
+      );
+
+      const vueRuleIds = unlabeledVueResults[0].messages.map((m) => m.ruleId);
+      expect(
+        vueRuleIds.filter((id) => id === "custom-vue/no-unlabeled-glyph-button")
+      ).toHaveLength(2);
+      expect(
+        vueRuleIds.filter((id) => id === "custom-vue/no-aria-label-mismatch")
+      ).toHaveLength(2);
+
+      const vitepressJsResults = await eslint.lintText(
+        `export function mountToolbar() {
+  const btnZoom = document.createElement("button");
+  btnZoom.innerText = "+";
+  return btnZoom;
+}
+`,
+        {
+          filePath: path.join(
+            repoRoot,
+            "docs/.vitepress/theme/__SyntheticToolbar.js"
+          ),
+        }
+      );
+      expect(vitepressJsResults[0].messages.map((m) => m.ruleId)).toContain(
+        "custom-vue/no-unlabeled-glyph-button"
+      );
+
+      const compliantVueResults = await eslint.lintText(
+        `<template>
+  <div>
+    <ClinicalIconButton label="Delete row 1">✕</ClinicalIconButton>
+    <button type="button">Verify <span class="sr-only">Vital Signs</span></button>
+    <button type="button" aria-label="Batch Upload — Open Batch Document Upload Drawer">📑 Batch Upload</button>
+  </div>
+</template>
+<script setup>
+import { ClinicalIconButton } from "ui";
+</script>
+`,
+        { filePath: path.join(webSrcDir, "views/__SyntheticA11yCompliant.vue") }
+      );
+      const a11yErrors = compliantVueResults[0].messages.filter(
+        (m) =>
+          m.ruleId === "custom-vue/no-unlabeled-glyph-button" ||
+          m.ruleId === "custom-vue/no-aria-label-mismatch"
+      );
+      expect(a11yErrors).toEqual([]);
     });
   });
 });

@@ -91,7 +91,6 @@
     <!-- KPI Summary Grid -->
     <div class="kpi-grid">
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="kpi-card"
         :class="{ 'kpi-card-alert': anomalousSitesCount > 0 }"
@@ -107,7 +106,6 @@
       </div>
 
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="kpi-card" @click="activeSubTab = 'benford'">
         <div class="kpi-icon">📊</div>
         <div class="kpi-content">
@@ -118,7 +116,6 @@
         </div>
       </div>
 
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="kpi-card" @click="activeSubTab = 'rounding'">
         <div class="kpi-icon">🎯</div>
@@ -131,7 +128,6 @@
       </div>
 
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="kpi-card" @click="activeSubTab = 'variance'">
         <div class="kpi-icon">🔬</div>
         <div class="kpi-content">
@@ -142,7 +138,6 @@
         </div>
       </div>
 
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="kpi-card" @click="activeSubTab = 'mahalanobis'">
         <div class="kpi-icon">🌐</div>
@@ -1318,9 +1313,13 @@
           <h3 id="dossier-modal-title">
             21 CFR Part 11 Centralized Monitoring Inspection Snapshot
           </h3>
-          <button class="close-btn" @click="showDossierModal = false">
+          <ClinicalIconButton
+            class="close-btn"
+            label="Close centralized monitoring inspection snapshot dialog"
+            @click="showDossierModal = false"
+          >
             &times;
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="seal-badge">
@@ -1375,7 +1374,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 import { useToastStore } from "../../stores/toasts";
 
 const toasts = useToastStore();
