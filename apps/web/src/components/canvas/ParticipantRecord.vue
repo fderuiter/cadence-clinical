@@ -182,7 +182,7 @@ import ScopeLockControls, {
  * One participant's data inside Clinical Canvas: opened case report forms, locks, casebooks, and queries on the
  * participant's enrollment (ADR-2622), linking directly to forms and observations in the zoom path.
  */
-defineProps<{
+const props = defineProps<{
   participant: SubjectSummary;
   canManage: boolean;
   formLocation: (formId: string) => RouteLocationRaw;
@@ -302,39 +302,67 @@ async function refreshEnrollmentLocks() {
 let lookupSeq = 0;
 
 watch(
-  [() => canvas.studyCode, () => record.value.enrollmentId],
-  async ([code, enrollmentId]) => {
+  () => record.value.enrollmentId,
+  () => {
+    casebookOutcome.value = null;
+  }
+);
+
+watch(
+  [
+    () => canvas.studyCode,
+    () => record.value.enrollmentId,
+    () => Boolean(props.newFormCellLocation),
+  ],
+  async ([code, enrollmentId, needsSchedule]) => {
     const seq = ++lookupSeq;
     casebookOutcome.value = null;
     zoomStudySiteRef.value = null;
-    if (!code || !enrollmentId) {
+    if (!code) {
       studyRef.value = null;
       activeStudyLocks.value = [];
       return;
     }
-    try {
-      const zoomTask =
-        typeof kernelApi.getZoomPath === "function"
-          ? Promise.resolve()
-              .then(() => kernelApi.getZoomPath(`enrollment:${enrollmentId}`))
-              .catch(() => [])
-          : Promise.resolve([]);
-      const [resolved, zoomSteps] = await Promise.all([
-        findKernelStudyRef(code),
-        zoomTask,
-      ]);
-      if (seq !== lookupSeq) return;
-      const siteStep = (zoomSteps ?? []).find(
-        (step) => step.level === "study_site" && !step.mask && step.node
-      );
-      zoomStudySiteRef.value = stripNodeVersion(siteStep?.node ?? null);
-      studyRef.value = resolved;
-      if (resolved) {
-        await refreshEnrollmentLocks();
+    const scheduleTask = needsSchedule
+      ? canvas.loadScheduleOptions(code).catch(() => null)
+      : Promise.resolve(null);
+    const locksTask = (async () => {
+      if (!enrollmentId) {
+        studyRef.value = null;
+        activeStudyLocks.value = [];
+        return;
       }
-    } catch {
-      if (seq === lookupSeq) studyRef.value = null;
-    }
+      try {
+        const zoomTask =
+          typeof kernelApi.getZoomPath === "function"
+            ? Promise.resolve()
+                .then(() => kernelApi.getZoomPath(`enrollment:${enrollmentId}`))
+                .catch(() => [])
+            : Promise.resolve([]);
+        const [resolved, zoomSteps] = await Promise.all([
+          findKernelStudyRef(code),
+          zoomTask,
+        ]);
+        if (seq !== lookupSeq) return;
+        const siteStep = (zoomSteps ?? []).find(
+          (step) => step.level === "study_site" && !step.mask && step.node
+        );
+        zoomStudySiteRef.value = stripNodeVersion(siteStep?.node ?? null);
+        studyRef.value = resolved;
+        if (resolved) {
+          await refreshEnrollmentLocks();
+        } else {
+          activeStudyLocks.value = [];
+        }
+      } catch {
+        if (seq === lookupSeq) {
+          zoomStudySiteRef.value = null;
+          studyRef.value = null;
+          activeStudyLocks.value = [];
+        }
+      }
+    })();
+    await Promise.all([locksTask, scheduleTask]);
   },
   { immediate: true }
 );

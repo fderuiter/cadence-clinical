@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,6 +32,17 @@ public sealed record ZoomStep(string Level, string Label, NodeRef? Ref);
 /// <param name="Group">The grouping level the child sits under (for example its country), or null.</param>
 public sealed record ScopeChild(NodeSummary Node, int? ChildCount, string? Group = null);
 
+/// <summary>An enrollment in a study, with its subject code and responsible study site when assigned.</summary>
+/// <param name="EnrollmentId">The enrollment.</param>
+/// <param name="SubjectCode">The participant's human-facing subject code in the study.</param>
+/// <param name="StudySiteId">The responsible study site, or null when the enrollment sits directly under the study.</param>
+/// <param name="SiteCode">The human-facing code of the responsible site, when assigned.</param>
+public sealed record StudyEnrollmentNode(
+    EnrollmentId EnrollmentId,
+    string SubjectCode,
+    StudySiteId? StudySiteId = null,
+    string? SiteCode = null);
+
 /// <summary>Names of zoom levels that group objects without being objects themselves.</summary>
 public static class ZoomLevels
 {
@@ -48,6 +60,33 @@ public interface IKernelNavigator
 {
     /// <summary>The object's summary, or null when it does not exist in <paramref name="tenant"/>.</summary>
     Task<NodeSummary?> ResolveAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resolves <paramref name="nodes"/> in one batch, keyed by unversioned <see cref="NodeRef"/>; unknown objects are omitted.
+    /// </summary>
+    async Task<IReadOnlyDictionary<NodeRef, NodeSummary>> ResolveManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        var resolved = new Dictionary<NodeRef, NodeSummary>();
+        foreach (var node in nodes)
+        {
+            var key = node.Unversioned();
+            if (resolved.ContainsKey(key))
+            {
+                continue;
+            }
+
+            if (await ResolveAsync(tenant, node, cancellationToken).ConfigureAwait(false) is { } summary)
+            {
+                resolved[key] = summary;
+            }
+        }
+
+        return resolved;
+    }
 
     /// <summary>
     /// The path from the tenant's portfolio down to the object (for a participant: tenant, study, country, study site,
@@ -77,4 +116,48 @@ public interface IKernelNavigator
         IReadOnlyCollection<NodeRef> nodes,
         CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyDictionary<NodeRef, EnrollmentId>>(new Dictionary<NodeRef, EnrollmentId>());
+
+    /// <summary>
+    /// Every enrollment in <paramref name="study"/> with its site code and subject code, or null when the study does not
+    /// exist in <paramref name="tenant"/>.
+    /// </summary>
+    async Task<IReadOnlyList<StudyEnrollmentNode>?> GetStudyEnrollmentsAsync(
+        TenantId tenant,
+        StudyId study,
+        CancellationToken cancellationToken = default)
+    {
+        var studyNode = NodeRef.For(study);
+        if (await ResolveAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false) is null)
+        {
+            return null;
+        }
+
+        var enrollments = new List<StudyEnrollmentNode>();
+        var studyChildren = await GetChildrenAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false) ?? [];
+        foreach (var node in studyChildren.Select(child => child.Node))
+        {
+            if (node.Ref.Kind == NodeKinds.StudySite)
+            {
+                var siteId = StudySiteId.FromGuid(node.Ref.Id);
+                var siteCode = node.Code ?? node.Title;
+                var siteChildren = await GetChildrenAsync(tenant, node.Ref, cancellationToken).ConfigureAwait(false) ?? [];
+                foreach (var memberNode in siteChildren.Select(member => member.Node).Where(m => m.Ref.Kind == NodeKinds.Enrollment))
+                {
+                    enrollments.Add(new StudyEnrollmentNode(
+                        EnrollmentId.FromGuid(memberNode.Ref.Id),
+                        memberNode.Code ?? memberNode.Title,
+                        siteId,
+                        siteCode));
+                }
+            }
+            else if (node.Ref.Kind == NodeKinds.Enrollment)
+            {
+                enrollments.Add(new StudyEnrollmentNode(
+                    EnrollmentId.FromGuid(node.Ref.Id),
+                    node.Code ?? node.Title));
+            }
+        }
+
+        return enrollments;
+    }
 }

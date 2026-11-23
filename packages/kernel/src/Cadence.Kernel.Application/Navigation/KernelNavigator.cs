@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -25,6 +26,33 @@ public interface IKernelScopeGraph
     /// <summary>The object, or null when it does not exist in <paramref name="tenant"/>.</summary>
     Task<ScopeNode?> FindAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Resolves <paramref name="nodes"/> in one batch, keyed by unversioned <see cref="NodeRef"/>; unknown objects are omitted.
+    /// </summary>
+    async Task<IReadOnlyDictionary<NodeRef, ScopeNode>> FindManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        var found = new Dictionary<NodeRef, ScopeNode>();
+        foreach (var node in nodes)
+        {
+            var key = node.Unversioned();
+            if (found.ContainsKey(key))
+            {
+                continue;
+            }
+
+            if (await FindAsync(tenant, node, cancellationToken).ConfigureAwait(false) is { } scopeNode)
+            {
+                found[key] = scopeNode;
+            }
+        }
+
+        return found;
+    }
+
     /// <summary>The object's zoom children with their own child counts. Empty for a leaf kind.</summary>
     Task<IReadOnlyList<ScopeChild>> ChildrenAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken);
 
@@ -47,6 +75,50 @@ public interface IKernelScopeGraph
         IReadOnlyCollection<NodeRef> nodes,
         CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyDictionary<NodeRef, EnrollmentId>>(new Dictionary<NodeRef, EnrollmentId>());
+
+    /// <summary>
+    /// Every enrollment in <paramref name="study"/> with its site code and subject code, or null when the study does not
+    /// exist in <paramref name="tenant"/>.
+    /// </summary>
+    async Task<IReadOnlyList<StudyEnrollmentNode>?> StudyEnrollmentsAsync(
+        TenantId tenant,
+        StudyId study,
+        CancellationToken cancellationToken)
+    {
+        var studyNode = NodeRef.For(study);
+        if (await FindAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false) is null)
+        {
+            return null;
+        }
+
+        var enrollments = new List<StudyEnrollmentNode>();
+        var studyChildren = await ChildrenAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false);
+        foreach (var node in studyChildren.Select(child => child.Node))
+        {
+            if (node.Ref.Kind == NodeKinds.StudySite)
+            {
+                var siteId = StudySiteId.FromGuid(node.Ref.Id);
+                var siteCode = node.Code ?? node.Title;
+                var siteChildren = await ChildrenAsync(tenant, node.Ref.Unversioned(), cancellationToken).ConfigureAwait(false);
+                foreach (var memberNode in siteChildren.Select(member => member.Node).Where(m => m.Ref.Kind == NodeKinds.Enrollment))
+                {
+                    enrollments.Add(new StudyEnrollmentNode(
+                        EnrollmentId.FromGuid(memberNode.Ref.Id),
+                        memberNode.Code ?? memberNode.Title,
+                        siteId,
+                        siteCode));
+                }
+            }
+            else if (node.Ref.Kind == NodeKinds.Enrollment)
+            {
+                enrollments.Add(new StudyEnrollmentNode(
+                    EnrollmentId.FromGuid(node.Ref.Id),
+                    node.Code ?? node.Title));
+            }
+        }
+
+        return enrollments;
+    }
 }
 
 /// <summary>
@@ -75,12 +147,25 @@ public sealed class KernelNavigator(IKernelScopeGraph graph) : IKernelNavigator
     /// <summary>Deeper than any hierarchy the kernel defines; reaching it means the hierarchy has a cycle.</summary>
     internal const int MaxDepth = 16;
 
+    /// <inheritdoc />
     public async Task<NodeSummary?> ResolveAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(node);
         return (await graph.FindAsync(tenant, node, cancellationToken).ConfigureAwait(false))?.Summary;
     }
 
+    /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<NodeRef, NodeSummary>> ResolveManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        var found = await graph.FindManyAsync(tenant, nodes, cancellationToken).ConfigureAwait(false);
+        return found.ToDictionary(pair => pair.Key, pair => pair.Value.Summary);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<ZoomStep>?> GetZoomPathAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -116,6 +201,7 @@ public sealed class KernelNavigator(IKernelScopeGraph graph) : IKernelNavigator
         }
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<ScopeChild>?> GetChildrenAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -127,6 +213,7 @@ public sealed class KernelNavigator(IKernelScopeGraph graph) : IKernelNavigator
         return await graph.ChildrenAsync(tenant, node.Unversioned(), cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyDictionary<NodeRef, EnrollmentId>> EnrollmentsOfAsync(
         TenantId tenant,
         IReadOnlyCollection<NodeRef> nodes,
@@ -136,6 +223,7 @@ public sealed class KernelNavigator(IKernelScopeGraph graph) : IKernelNavigator
         return graph.EnrollmentsOfAsync(tenant, nodes, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyDictionary<NodeRef, EnrollmentId>> BlindedObservationsAsync(
         TenantId tenant,
         IReadOnlyCollection<NodeRef> nodes,
@@ -144,6 +232,13 @@ public sealed class KernelNavigator(IKernelScopeGraph graph) : IKernelNavigator
         ArgumentNullException.ThrowIfNull(nodes);
         return graph.BlindedObservationsAsync(tenant, nodes, cancellationToken);
     }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<StudyEnrollmentNode>?> GetStudyEnrollmentsAsync(
+        TenantId tenant,
+        StudyId study,
+        CancellationToken cancellationToken = default) =>
+        graph.StudyEnrollmentsAsync(tenant, study, cancellationToken);
 }
 
 /// <summary>Registers kernel navigation.</summary>

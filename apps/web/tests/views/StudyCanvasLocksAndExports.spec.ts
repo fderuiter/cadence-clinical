@@ -5,6 +5,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import axe from "axe-core";
 import { findSection, STAGES } from "../../src/canvas/lifecycle";
+import { clearKernelStudyCache } from "../../src/canvas/kernelStudy";
 import { AVAILABLE_SCREENS } from "../../src/router/availability.js";
 
 const STUDY_ID = "01960000-0000-7000-8000-000000000001";
@@ -116,6 +117,7 @@ async function expectNoAxeViolations(element: Element) {
 describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, #5592, #5042)", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    clearKernelStudyCache();
     vi.clearAllMocks();
     mockSearch.mockResolvedValue([
       {
@@ -733,6 +735,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     locksWrapper.unmount();
 
     // 2. Study lookup failure + retry in ExportsSection
+    clearKernelStudyCache();
     mockSearch.mockRejectedValueOnce(new Error("Search service unavailable"));
     const exportsWrapper = mount(ExportsSection, {
       props: { studyCode: "CAD-101" },
