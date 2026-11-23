@@ -252,7 +252,7 @@ internal static class FormEndpoints
         }
 
         var asOf = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
-        var warnings = await validation.PreviewFormAsync(tenant, id, overlay, asOf, cancellationToken).ConfigureAwait(false);
+        var warnings = await validation.PreviewFormAsync(tenant, record, overlay, asOf, cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok(new FormPreviewResponse(
             formId,
             [.. warnings.Select(FormPreviewWarningResponse.From)]));
@@ -265,7 +265,9 @@ internal static class FormEndpoints
         ICollectionInstanceRecords forms,
         IKernelCommandSender sender,
         IKernelChangeReason changeReason,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromServices] IModuleTenantContextFactory<ExecutionModuleDbContext>? contexts = null,
+        [FromServices] IKernelReadAccess? access = null)
     {
         if (request?.Values is not { Count: > 0 } values
             || values.Any(v => v is null || string.IsNullOrWhiteSpace(v.ItemId) || v.Value is null || v.ExpectedRevision < 0))
@@ -296,7 +298,34 @@ internal static class FormEndpoints
                 IdempotencyKey(context),
                 changeReason.Read(context) ?? string.Empty),
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        return result.Value is { } state ? TypedResults.Ok(FormSavedResponse.From(state)) : KernelErrorEndpoints.Problem(result.Error!);
+        if (result.Value is not { } state)
+        {
+            return KernelErrorEndpoints.Problem(result.Error!);
+        }
+
+        FormResponse? hydrated = null;
+        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is { } updated)
+        {
+            string[]? layout = null;
+            if (contexts is not null)
+            {
+                await using var db = contexts.Create(tenant);
+                layout = await db.FormInstances
+                    .Where(f => f.Id == formId)
+                    .Select(f => EF.Property<string[]>(f, ExecutionModuleDbContext.ItemOrderField))
+                    .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            var canSign = access is not null
+                && await access.CanExerciseAsync(
+                    tenant,
+                    SignFormCapability,
+                    NodeRef.For(updated.EnrollmentId),
+                    cancellationToken).ConfigureAwait(false);
+            hydrated = FormResponse.From(updated, layout, canSign);
+        }
+
+        return TypedResults.Ok(FormSavedResponse.From(state, hydrated));
     }
 
     internal static string IdempotencyKey(HttpContext context) => context.Request.Headers[IdempotencyKeyHeader].ToString().Trim();

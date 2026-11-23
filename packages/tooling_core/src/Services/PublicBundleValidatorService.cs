@@ -62,6 +62,17 @@ public static partial class PublicBundleValidatorService
         "fonts.gstatic.com",
     ];
 
+    /// <summary>Default build output directories inspected by <c>check public-bundle</c>, relative to the repository root.</summary>
+    public static IReadOnlyList<string> DefaultBundleDirectories => DefaultBundles;
+
+    /// <summary>
+    /// Returns <c>true</c> when at least one default <c>dist/</c> bundle directory exists under <paramref name="repoRoot"/>.
+    /// Used by unscoped <c>cadence check</c> so <c>public-bundle</c> is skipped only when none of the three build output
+    /// directories exist, while partial <c>dist/</c> output still runs and fails closed.
+    /// </summary>
+    public static bool AnyDefaultBundleExists(string repoRoot) =>
+        DefaultBundles.Any(bundle => Directory.Exists(Path.Combine(repoRoot, bundle)));
+
     /// <summary>
     /// Validates all built public bundles (<c>docs/.vitepress/dist</c>, <c>apps/web/dist</c>, and
     /// <c>apps/subject-portal/dist</c>, or explicit <paramref name="bundleDirectories"/>) and returns <c>0</c> only when
