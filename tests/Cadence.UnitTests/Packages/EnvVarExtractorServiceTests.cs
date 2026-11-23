@@ -87,6 +87,70 @@ public class EnvVarExtractorServiceTests
         }
     }
 
+    [Fact]
+    public void ExtractAndValidateEnvVars_ReturnsExitCode1_WhenDocConcreteVarIsMissingFromEnvExample()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(tempDir, "apps", "test"));
+            Directory.CreateDirectory(Path.Combine(tempDir, "docs"));
+
+            File.WriteAllText(
+                Path.Combine(tempDir, "apps", "test", "Service.cs"),
+                "var x = Environment.GetEnvironmentVariable(\"VAR_ONE\");");
+
+            File.WriteAllText(
+                Path.Combine(tempDir, ".env.example"),
+                "VAR_ONE=value1\n");
+
+            File.WriteAllText(
+                Path.Combine(tempDir, "docs", "ENVIRONMENT_VARIABLES.md"),
+                "| Key | Read by | Default |\n| --- | --- | --- |\n| `VAR_ONE` | `apps/test/Service.cs` | value1 |\n| `RANDOMIZATION_ALLOCATION_KEY` | `apps/test/Service.cs` | none |\n");
+
+            EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true, repoRoot: tempDir).Should().Be(1);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void ExtractAndValidateEnvVars_ReturnsExitCode1_WhenDocCitesDeletedRepositoryPath()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(tempDir, "apps", "test"));
+            Directory.CreateDirectory(Path.Combine(tempDir, "docs"));
+
+            File.WriteAllText(
+                Path.Combine(tempDir, "apps", "test", "Service.cs"),
+                "var x = Environment.GetEnvironmentVariable(\"GH_TOKEN\");");
+
+            File.WriteAllText(
+                Path.Combine(tempDir, ".env.example"),
+                "GH_TOKEN=\n");
+
+            File.WriteAllText(
+                Path.Combine(tempDir, "docs", "ENVIRONMENT_VARIABLES.md"),
+                "| Key | Read by | Default |\n| --- | --- | --- |\n| `GH_TOKEN` | `packages/tooling_core/src/Services/SyncGithubProjectService.cs:10` | none |\n");
+
+            EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true, repoRoot: tempDir).Should().Be(1);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
+
     private static string QualityGateOrchestratorFindRepoRoot()
     {
         string current = AppContext.BaseDirectory;
