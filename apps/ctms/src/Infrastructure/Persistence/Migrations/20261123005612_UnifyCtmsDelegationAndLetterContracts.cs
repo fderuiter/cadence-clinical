@@ -55,22 +55,6 @@ public partial class UnifyCtmsDelegationAndLetterContracts : Migration
             defaultValue: "");
 
         migrationBuilder.AddColumn<string>(
-            name: "site_code",
-            table: "ctms_generated_letters",
-            type: "character varying(255)",
-            maxLength: 255,
-            nullable: false,
-            defaultValue: "");
-
-        migrationBuilder.AddColumn<string>(
-            name: "study_code",
-            table: "ctms_generated_letters",
-            type: "character varying(255)",
-            maxLength: 255,
-            nullable: false,
-            defaultValue: "");
-
-        migrationBuilder.AddColumn<string>(
             name: "Role",
             table: "ctms_delegations",
             type: "character varying(255)",
@@ -98,16 +82,6 @@ public partial class UnifyCtmsDelegationAndLetterContracts : Migration
             });
 
         migrationBuilder.CreateIndex(
-            name: "IX_ctms_generated_letters_site_code",
-            table: "ctms_generated_letters",
-            column: "site_code");
-
-        migrationBuilder.CreateIndex(
-            name: "IX_ctms_generated_letters_study_code",
-            table: "ctms_generated_letters",
-            column: "study_code");
-
-        migrationBuilder.CreateIndex(
             name: "IX_consumed_signature_tokens_RetainUntil",
             table: "consumed_signature_tokens",
             column: "RetainUntil");
@@ -118,14 +92,6 @@ public partial class UnifyCtmsDelegationAndLetterContracts : Migration
     {
         migrationBuilder.DropTable(
             name: "consumed_signature_tokens");
-
-        migrationBuilder.DropIndex(
-            name: "IX_ctms_generated_letters_site_code",
-            table: "ctms_generated_letters");
-
-        migrationBuilder.DropIndex(
-            name: "IX_ctms_generated_letters_study_code",
-            table: "ctms_generated_letters");
 
         migrationBuilder.DropColumn(
             name: "ActualDate",
@@ -149,14 +115,6 @@ public partial class UnifyCtmsDelegationAndLetterContracts : Migration
 
         migrationBuilder.DropColumn(
             name: "VisitType",
-            table: "ctms_generated_letters");
-
-        migrationBuilder.DropColumn(
-            name: "site_code",
-            table: "ctms_generated_letters");
-
-        migrationBuilder.DropColumn(
-            name: "study_code",
             table: "ctms_generated_letters");
 
         migrationBuilder.DropColumn(

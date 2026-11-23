@@ -121,6 +121,8 @@ public sealed class CtmsAuditLog : AggregateRoot<string>
     public string UserRole { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty;
     public string Details { get; set; } = string.Empty;
+    public string? StudyId { get; set; }
+    public string? SiteId { get; set; }
 
     public CtmsAuditLog() : base(Guid.NewGuid().ToString()) { }
     public CtmsAuditLog(string id) : base(id) { }
@@ -178,6 +180,7 @@ public sealed class CtmsDefeatedMonitoringVisit : AggregateRoot<string>
 
 public sealed class CtmsDelegation : AggregateRoot<string>
 {
+    public string StudyId { get; set; } = string.Empty;
     public string SiteId { get; set; } = string.Empty;
     public string StaffUserId { get; set; } = string.Empty;
     public string? StaffName { get; set; }
@@ -194,9 +197,9 @@ public sealed class CtmsDelegation : AggregateRoot<string>
 
 public sealed class CtmsGeneratedLetter : AggregateRoot<string>
 {
+    public string StudyId { get; set; } = string.Empty;
+    public string SiteId { get; set; } = string.Empty;
     public string VisitId { get; set; } = string.Empty;
-    public string StudyCode { get; set; } = string.Empty;
-    public string SiteCode { get; set; } = string.Empty;
     public string VisitType { get; set; } = "Monitoring";
     public string? ScheduledDate { get; set; }
     public string? ActualDate { get; set; }

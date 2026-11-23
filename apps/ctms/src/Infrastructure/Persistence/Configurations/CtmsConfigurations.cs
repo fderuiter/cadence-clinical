@@ -17,9 +17,13 @@ public sealed class CtmsAuditLogConfiguration : IEntityTypeConfiguration<CtmsAud
         builder.Property(x => x.UserRole).HasMaxLength(255).IsRequired();
         builder.Property(x => x.Action).HasMaxLength(50).IsRequired();
         builder.Property(x => x.Details).HasMaxLength(1000).IsRequired();
+        builder.Property(x => x.StudyId).HasMaxLength(255);
+        builder.Property(x => x.SiteId).HasMaxLength(255);
 
         builder.HasIndex(x => x.Timestamp);
         builder.HasIndex(x => x.UserId);
+        builder.HasIndex(x => x.StudyId);
+        builder.HasIndex(x => x.SiteId);
     }
 }
 
@@ -96,6 +100,7 @@ public sealed class CtmsDelegationConfiguration : IEntityTypeConfiguration<CtmsD
         builder.ToTable("ctms_delegations");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.StaffUserId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.StaffName).HasMaxLength(255);
@@ -110,6 +115,7 @@ public sealed class CtmsDelegationConfiguration : IEntityTypeConfiguration<CtmsD
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
         builder.Property(x => x.VersionIndex).IsRequired();
 
+        builder.HasIndex(x => x.StudyId);
         builder.HasIndex(x => x.SiteId);
         builder.HasIndex(x => x.StaffUserId);
     }
@@ -122,9 +128,9 @@ public sealed class CtmsGeneratedLetterConfiguration : IEntityTypeConfiguration<
         builder.ToTable("ctms_generated_letters");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.VisitId).HasMaxLength(36).IsRequired();
-        builder.Property(x => x.StudyCode).HasColumnName("study_code").HasMaxLength(255).IsRequired();
-        builder.Property(x => x.SiteCode).HasColumnName("site_code").HasMaxLength(255).IsRequired();
         builder.Property(x => x.VisitType).HasMaxLength(50).IsRequired();
         builder.Property(x => x.ScheduledDate).HasMaxLength(50);
         builder.Property(x => x.ActualDate).HasMaxLength(50);
@@ -145,9 +151,9 @@ public sealed class CtmsGeneratedLetterConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
         builder.Property(x => x.VersionIndex).IsRequired();
 
+        builder.HasIndex(x => x.StudyId);
+        builder.HasIndex(x => x.SiteId);
         builder.HasIndex(x => x.VisitId);
-        builder.HasIndex(x => x.StudyCode);
-        builder.HasIndex(x => x.SiteCode);
     }
 }
 

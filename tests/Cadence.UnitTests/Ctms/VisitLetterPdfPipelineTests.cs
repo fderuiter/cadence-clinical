@@ -217,8 +217,8 @@ public sealed class VisitLetterPdfPipelineTests
             var letterInDb = await _ctmsDb.CtmsGeneratedLetters.FirstOrDefaultAsync(l => l.Id == dto.LetterId, ct);
             letterInDb.Should().NotBeNull();
             letterInDb!.Status.Should().Be(CtmsGeneratedLetterStatus.Finalized);
-            letterInDb.StudyCode.Should().Be("STUDY-101");
-            letterInDb.SiteCode.Should().Be("SITE-017");
+            letterInDb.StudyId.Should().Be("STUDY-101");
+            letterInDb.SiteId.Should().Be("SITE-017");
             letterInDb.PdfSha256Hash.Should().Be(dto.PdfSha256Hash);
 
             // Verify GetLetterPdfAsync renders persisted Study/Site rather than placeholder STUDY/SITE

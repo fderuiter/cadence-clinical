@@ -304,6 +304,9 @@ const {
 
 const canManage = computed(() => canManageDoa(authStore));
 const canSignOff = computed(() => canSignOffDoa(authStore));
+const activeStudyCode = computed(() =>
+  (props.studyCode || clinicalStore.activeStudyId || "").trim()
+);
 const exporting = ref(false);
 const doaLog = ref<DoaLog | null>(null);
 
@@ -357,6 +360,7 @@ async function submitDelegation() {
   try {
     await ctmsApi.delegateSiteTasks(
       {
+        ...(activeStudyCode.value ? { study_id: activeStudyCode.value } : {}),
         site_id: site,
         staff_user_id: staff,
         staff_name: newStaffName.value.trim() || null,

@@ -239,6 +239,8 @@ public static class StartupGreenlightEndpoints
             UserRole = CallerScope.Roles(httpContext),
             Action = "GREENLIGHT_INITIALIZED",
             Details = $"Initialized 6-facet startup greenlight gate for site {gate.SiteId} in study {gate.StudyId} ({gate.CountryCode}) at {gate.ReadinessPercentage}% readiness.",
+            StudyId = gate.StudyId,
+            SiteId = gate.SiteId,
             ReasonForChange = reason,
             CreatedAt = now.UtcDateTime,
             CreatedBy = actor,
@@ -317,6 +319,8 @@ public static class StartupGreenlightEndpoints
             UserRole = CallerScope.Roles(httpContext),
             Action = "GREENLIGHT_UPDATED",
             Details = $"Updated 6-facet startup greenlight gate for site {gate.SiteId} in study {gate.StudyId} ({gate.CountryCode}) to {gate.ReadinessPercentage}% readiness.",
+            StudyId = gate.StudyId,
+            SiteId = gate.SiteId,
             ReasonForChange = reason,
             CreatedAt = now.UtcDateTime,
             CreatedBy = actor,
@@ -402,7 +406,12 @@ public static class StartupGreenlightEndpoints
             UserRole = CallerScope.Roles(httpContext),
             Action = "GREENLIGHT_CERTIFIED",
             Details = $"Greenlight activation certified for site {gate.SiteId} in study {gate.StudyId} ({gate.CountryCode})",
+            StudyId = gate.StudyId,
+            SiteId = gate.SiteId,
             ReasonForChange = reason,
+            CreatedAt = now.UtcDateTime,
+            CreatedBy = signer,
+            VersionIndex = 1,
         };
         db.CtmsAuditLogs.Add(auditEntry);
 
@@ -546,7 +555,12 @@ public static class StartupGreenlightEndpoints
                 UserRole = role,
                 Action = "BATCH_GREENLIGHT_CERTIFIED",
                 Details = $"21 CFR Part 11 Batch Greenlight Certified for site {gate.SiteId} ({gate.SiteName}) in {gate.CountryCode} for study {gate.StudyId}.",
+                StudyId = gate.StudyId,
+                SiteId = gate.SiteId,
                 ReasonForChange = reason,
+                CreatedAt = now.UtcDateTime,
+                CreatedBy = signer,
+                VersionIndex = 1,
             };
             db.CtmsAuditLogs.Add(auditEntry);
 

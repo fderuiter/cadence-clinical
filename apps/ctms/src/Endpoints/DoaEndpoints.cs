@@ -95,7 +95,8 @@ public static class DoaEndpoints
         CtmsDbContext db,
         HttpContext httpContext,
         [FromServices] IClock clock,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery(Name = "study_id")] string? studyId = null)
     {
         if (request is null)
         {
@@ -105,12 +106,41 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
+        {
+            return missingScope;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Study)
+            && !string.IsNullOrWhiteSpace(studyId)
+            && !string.Equals(request.Study.Trim(), studyId.Trim(), StringComparison.Ordinal))
+        {
+            return TypedResults.Problem(
+                title: "Conflicting study ID",
+                detail: "Study ID in request body conflicts with study_id query parameter.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string? requestedStudyId = !string.IsNullOrWhiteSpace(request.Study) ? request.Study.Trim() : studyId?.Trim();
+
         if (string.IsNullOrWhiteSpace(request.Site))
         {
             return TypedResults.Problem(
                 title: "Site ID required",
                 detail: "Site ID is required.",
                 statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var scope = await CtmsScopeGuard.ResolveDoaSiteScopeAsync(
+            httpContext,
+            db,
+            request.Site,
+            requestedStudyId,
+            ct,
+            allowProvisioning: true);
+        if (scope.Error is not null)
+        {
+            return scope.Error;
         }
 
         if (string.IsNullOrWhiteSpace(request.StaffUserId))
@@ -137,22 +167,28 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, request.Site, ct) is { } scopeDenied)
-        {
-            return scopeDenied;
-        }
-
         if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
         {
             return problem!;
         }
 
+        if (scope.AuthorizedStudies.Count != 1)
+        {
+            return TypedResults.Problem(
+                title: "Study ID required",
+                detail: $"Site '{request.Site.Trim()}' belongs to multiple authorized studies; specify 'study_id'.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string resolvedStudyId = scope.AuthorizedStudies.First();
+        string trimmedSite = request.Site.Trim();
         var now = clock.UtcNow;
         var (user, role) = ResolveCaller(httpContext, "site_coordinator");
 
         var delegation = new CtmsDelegation
         {
-            SiteId = request.Site.Trim(),
+            StudyId = resolvedStudyId,
+            SiteId = trimmedSite,
             StaffUserId = request.StaffUserId.Trim(),
             StaffName = string.IsNullOrWhiteSpace(request.StaffName) ? null : request.StaffName.Trim(),
             Role = string.IsNullOrWhiteSpace(request.Role) ? null : request.Role.Trim(),
@@ -175,7 +211,9 @@ public static class DoaEndpoints
             UserId = user,
             UserRole = role,
             Action = "DOA_DELEGATE",
-            Details = $"Delegated tasks [{string.Join(", ", request.TaskCodes)}] to staff {delegation.StaffUserId} at site {delegation.SiteId}.",
+            Details = $"Delegated tasks [{string.Join(", ", request.TaskCodes)}] to staff {delegation.StaffUserId} at site {delegation.SiteId} in study {delegation.StudyId}.",
+            StudyId = delegation.StudyId,
+            SiteId = delegation.SiteId,
             ReasonForChange = reason,
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
@@ -193,7 +231,8 @@ public static class DoaEndpoints
         CtmsDbContext db,
         HttpContext httpContext,
         [FromServices] IClock clock,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery(Name = "study_id")] string? studyId = null)
     {
         if (request is null || string.IsNullOrWhiteSpace(request.RecordId))
         {
@@ -208,7 +247,25 @@ public static class DoaEndpoints
             return missingScope;
         }
 
-        var delegation = await db.CtmsDelegations.FirstOrDefaultAsync(d => d.Id == request.RecordId, ct);
+        if (!string.IsNullOrWhiteSpace(request.Study)
+            && !string.IsNullOrWhiteSpace(studyId)
+            && !string.Equals(request.Study.Trim(), studyId.Trim(), StringComparison.Ordinal))
+        {
+            return TypedResults.Problem(
+                title: "Conflicting study ID",
+                detail: "Study ID in request body conflicts with study_id query parameter.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string? requestedStudyId = !string.IsNullOrWhiteSpace(request.Study) ? request.Study.Trim() : studyId?.Trim();
+        if (!string.IsNullOrWhiteSpace(requestedStudyId)
+            && CtmsScopeGuard.RequireStudy(httpContext, requestedStudyId) is { } requestedStudyDenied)
+        {
+            return requestedStudyDenied;
+        }
+
+        string trimmedRecordId = request.RecordId.Trim();
+        var delegation = await db.CtmsDelegations.FirstOrDefaultAsync(d => d.Id == trimmedRecordId, ct);
         if (delegation is null)
         {
             return TypedResults.Problem(
@@ -217,9 +274,18 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, delegation.SiteId, ct) is { } scopeDenied)
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, delegation.StudyId, delegation.SiteId) is { } scopeDenied)
         {
             return scopeDenied;
+        }
+
+        if (!string.IsNullOrWhiteSpace(requestedStudyId)
+            && !string.Equals(delegation.StudyId, requestedStudyId, StringComparison.Ordinal))
+        {
+            return TypedResults.Problem(
+                title: "Delegation record not found",
+                detail: $"Delegation record '{request.RecordId}' does not exist in study '{requestedStudyId}'.",
+                statusCode: StatusCodes.Status404NotFound);
         }
 
         if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
@@ -249,7 +315,9 @@ public static class DoaEndpoints
             UserId = user,
             UserRole = role,
             Action = "DOA_REVOKE",
-            Details = $"Revoked delegation assignment {delegation.Id} for staff {delegation.StaffUserId} at site {delegation.SiteId}.",
+            Details = $"Revoked delegation assignment {delegation.Id} for staff {delegation.StaffUserId} at site {delegation.SiteId} in study {delegation.StudyId}.",
+            StudyId = delegation.StudyId,
+            SiteId = delegation.SiteId,
             ReasonForChange = reason,
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
@@ -267,7 +335,8 @@ public static class DoaEndpoints
         CtmsDbContext db,
         HttpContext httpContext,
         [FromServices] IClock clock,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery(Name = "study_id")] string? studyId = null)
     {
         if (request is null || string.IsNullOrWhiteSpace(request.RecordId))
         {
@@ -282,7 +351,25 @@ public static class DoaEndpoints
             return missingScope;
         }
 
-        var delegation = await db.CtmsDelegations.FirstOrDefaultAsync(d => d.Id == request.RecordId, ct);
+        if (!string.IsNullOrWhiteSpace(request.Study)
+            && !string.IsNullOrWhiteSpace(studyId)
+            && !string.Equals(request.Study.Trim(), studyId.Trim(), StringComparison.Ordinal))
+        {
+            return TypedResults.Problem(
+                title: "Conflicting study ID",
+                detail: "Study ID in request body conflicts with study_id query parameter.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string? requestedStudyId = !string.IsNullOrWhiteSpace(request.Study) ? request.Study.Trim() : studyId?.Trim();
+        if (!string.IsNullOrWhiteSpace(requestedStudyId)
+            && CtmsScopeGuard.RequireStudy(httpContext, requestedStudyId) is { } requestedStudyDenied)
+        {
+            return requestedStudyDenied;
+        }
+
+        string trimmedRecordId = request.RecordId.Trim();
+        var delegation = await db.CtmsDelegations.FirstOrDefaultAsync(d => d.Id == trimmedRecordId, ct);
         if (delegation is null)
         {
             return TypedResults.Problem(
@@ -291,9 +378,18 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, delegation.SiteId, ct) is { } scopeDenied)
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, delegation.StudyId, delegation.SiteId) is { } scopeDenied)
         {
             return scopeDenied;
+        }
+
+        if (!string.IsNullOrWhiteSpace(requestedStudyId)
+            && !string.Equals(delegation.StudyId, requestedStudyId, StringComparison.Ordinal))
+        {
+            return TypedResults.Problem(
+                title: "Delegation record not found",
+                detail: $"Delegation record '{request.RecordId}' does not exist in study '{requestedStudyId}'.",
+                statusCode: StatusCodes.Status404NotFound);
         }
 
         if (!TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
@@ -360,7 +456,9 @@ public static class DoaEndpoints
             UserId = user,
             UserRole = role,
             Action = "DOA_PI_SIGN_OFF",
-            Details = $"Principal Investigator sign-off endorsed for delegation {delegation.Id} (staff {delegation.StaffUserId}) at site {delegation.SiteId}.",
+            Details = $"Principal Investigator sign-off endorsed for delegation {delegation.Id} (staff {delegation.StaffUserId}) at site {delegation.SiteId} in study {delegation.StudyId}.",
+            StudyId = delegation.StudyId,
+            SiteId = delegation.SiteId,
             ReasonForChange = reason,
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
@@ -377,40 +475,42 @@ public static class DoaEndpoints
         [FromRoute(Name = "site_id")] string siteId,
         CtmsDbContext db,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery(Name = "study_id")] string? studyId = null)
     {
-        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, siteId, ct) is { } scopeDenied)
+        var scope = await CtmsScopeGuard.ResolveDoaSiteScopeAsync(httpContext, db, siteId, studyId, ct);
+        if (scope.Error is not null)
         {
-            return scopeDenied;
+            return scope.Error;
         }
 
-        if (string.IsNullOrWhiteSpace(siteId))
-        {
-            return TypedResults.Problem(
-                title: "Site not found",
-                detail: $"Site '{siteId}' does not exist.",
-                statusCode: StatusCodes.Status404NotFound);
-        }
+        string trimmedSite = siteId.Trim();
+        var authorizedStudies = scope.AuthorizedStudies;
 
         var delegations = await db.CtmsDelegations.AsNoTracking()
-            .Where(d => d.SiteId == siteId)
+            .Where(d => d.SiteId == trimmedSite && authorizedStudies.Contains(d.StudyId))
             .OrderBy(d => d.StartDate)
             .ToListAsync(ct);
 
         var audits = await db.CtmsAuditLogs.AsNoTracking()
-            .Where(a => a.Details.Contains(siteId) && (a.Action.StartsWith("DOA_") || a.Action.Contains("DELEGAT")))
+            .Where(a => a.SiteId == trimmedSite
+                && a.StudyId != null
+                && authorizedStudies.Contains(a.StudyId)
+                && (a.Action.StartsWith("DOA_") || a.Action.Contains("DELEGAT")))
             .OrderBy(a => a.Timestamp)
             .ToListAsync(ct);
 
         var gate = await db.CtmsSiteGreenlightGates.AsNoTracking()
-            .FirstOrDefaultAsync(g => g.SiteId == siteId, ct);
+            .Where(g => g.SiteId == trimmedSite && authorizedStudies.Contains(g.StudyId))
+            .OrderBy(g => g.StudyId)
+            .FirstOrDefaultAsync(ct);
 
         string piName = !string.IsNullOrWhiteSpace(gate?.GreenlightCertifiedBy)
             ? gate.GreenlightCertifiedBy
             : "Principal Investigator";
 
         var response = new DoaLogResponseDto(
-            Site: siteId,
+            Site: trimmedSite,
             PiName: piName,
             DelegatedStaff: delegations.Select(ToResponseDto).ToList(),
             AuditHistory: audits.Select(ToAuditDto).ToList());
@@ -423,33 +523,35 @@ public static class DoaEndpoints
         CtmsDbContext db,
         HttpContext httpContext,
         [FromServices] IClock clock,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery(Name = "study_id")] string? studyId = null)
     {
-        if (await CtmsScopeGuard.RequireDoaSiteScopeAsync(httpContext, db, siteId, ct) is { } scopeDenied)
+        var scope = await CtmsScopeGuard.ResolveDoaSiteScopeAsync(httpContext, db, siteId, studyId, ct);
+        if (scope.Error is not null)
         {
-            return scopeDenied;
+            return scope.Error;
         }
 
-        if (string.IsNullOrWhiteSpace(siteId))
-        {
-            return TypedResults.Problem(
-                title: "Site not found",
-                detail: $"Site '{siteId}' does not exist.",
-                statusCode: StatusCodes.Status404NotFound);
-        }
+        string trimmedSite = siteId.Trim();
+        var authorizedStudies = scope.AuthorizedStudies;
 
         var delegations = await db.CtmsDelegations.AsNoTracking()
-            .Where(d => d.SiteId == siteId)
+            .Where(d => d.SiteId == trimmedSite && authorizedStudies.Contains(d.StudyId))
             .OrderBy(d => d.StartDate)
             .ToListAsync(ct);
 
         var audits = await db.CtmsAuditLogs.AsNoTracking()
-            .Where(a => a.Details.Contains(siteId) && (a.Action.StartsWith("DOA_") || a.Action.Contains("DELEGAT")))
+            .Where(a => a.SiteId == trimmedSite
+                && a.StudyId != null
+                && authorizedStudies.Contains(a.StudyId)
+                && (a.Action.StartsWith("DOA_") || a.Action.Contains("DELEGAT")))
             .OrderBy(a => a.Timestamp)
             .ToListAsync(ct);
 
         var gate = await db.CtmsSiteGreenlightGates.AsNoTracking()
-            .FirstOrDefaultAsync(g => g.SiteId == siteId, ct);
+            .Where(g => g.SiteId == trimmedSite && authorizedStudies.Contains(g.StudyId))
+            .OrderBy(g => g.StudyId)
+            .FirstOrDefaultAsync(ct);
 
         string piName = !string.IsNullOrWhiteSpace(gate?.GreenlightCertifiedBy)
             ? gate.GreenlightCertifiedBy
@@ -504,13 +606,25 @@ public static class DoaEndpoints
 
         string hash = Convert.ToHexStringLower(SHA256.HashData(signedPdfBytes));
 
+        string? resolvedExportStudyId = null;
+        if (authorizedStudies.Count == 1)
+        {
+            resolvedExportStudyId = authorizedStudies.First();
+        }
+        else if (!string.IsNullOrWhiteSpace(studyId))
+        {
+            resolvedExportStudyId = studyId.Trim();
+        }
+
         var auditEntry = new CtmsAuditLog
         {
             Timestamp = now,
             UserId = user,
             UserRole = role,
             Action = "DOA_EXPORT_PDF",
-            Details = $"Exported GxP Delegation of Authority PDF for site {siteId} with {delegations.Count} records. SHA-256: {hash}",
+            Details = $"Exported GxP Delegation of Authority PDF for site {trimmedSite} with {delegations.Count} records. SHA-256: {hash}",
+            StudyId = resolvedExportStudyId,
+            SiteId = trimmedSite,
             ReasonForChange = "Export GxP Delegation of Authority PDF",
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
@@ -519,9 +633,29 @@ public static class DoaEndpoints
         db.CtmsAuditLogs.Add(auditEntry);
         await db.SaveChangesAsync(ct);
 
-        return Results.File(signedPdfBytes, "application/pdf", $"DOA_Log_{siteId}.pdf");
+        return Results.File(signedPdfBytes, "application/pdf", $"DOA_Log_{trimmedSite}.pdf");
     }
 
+    public static async Task<bool> SiteExistsAsync(CtmsDbContext db, string siteId, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(siteId))
+        {
+            return false;
+        }
+
+        string trimmedSite = siteId.Trim();
+        return await db.CtmsSiteGreenlightGates.AnyAsync(g => g.SiteId == trimmedSite, ct)
+            || await db.CtmsDelegations.AnyAsync(d => d.SiteId == trimmedSite, ct)
+            || await db.CtmsSiteMilestones.AnyAsync(m => m.SiteId == trimmedSite, ct)
+            || await db.CtmsMonitoringVisits.AnyAsync(v => v.SiteId == trimmedSite, ct)
+            || await db.CtmsCraAllocations.AnyAsync(a => a.SiteId == trimmedSite, ct)
+            || await db.CtmsClinicalQueries.AnyAsync(q => q.SiteId == trimmedSite, ct)
+            || await db.CtmsInvestigatorGrants.AnyAsync(g => g.SiteId == trimmedSite, ct)
+            || await db.CtmsRecruitmentRecords.AnyAsync(r => r.SiteId == trimmedSite, ct)
+            || await db.CtmsRegulatoryForms.AnyAsync(f => f.SiteId == trimmedSite, ct)
+            || await db.CtmsGeneratedLetters.AnyAsync(l => l.SiteId == trimmedSite, ct)
+            || await db.DoaDelegationRecords.AnyAsync(r => r.SiteId == trimmedSite, ct);
+    }
     public static bool TryExtractReasonForChange(
         HttpContext httpContext,
         string? bodyReason,
@@ -601,17 +735,20 @@ public record DelegationTaskRequest(
     [property: JsonPropertyName("start_date")] string StartDate,
     [property: JsonPropertyName("reason_for_change")] string? ReasonForChange,
     [property: JsonPropertyName("staff_name")] string? StaffName = null,
-    [property: JsonPropertyName("role")] string? Role = null
+    [property: JsonPropertyName("role")] string? Role = null,
+    [property: JsonPropertyName("study_id")] string? Study = null
 );
 
 public record RevokeDelegationRequest(
     [property: JsonPropertyName("record_id")] string RecordId,
-    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange
+    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange,
+    [property: JsonPropertyName("study_id")] string? Study = null
 );
 
 public record DoaSignOffRequest(
     [property: JsonPropertyName("record_id")] string RecordId,
-    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange
+    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange,
+    [property: JsonPropertyName("study_id")] string? Study = null
 );
 
 public record DelegationResponseDto(

@@ -217,6 +217,8 @@ public static class MonitoringVisitEndpoints
             UserRole = role,
             Action = "SCHEDULE_MONITORING_VISIT",
             Details = $"Scheduled {visit.VisitType} monitoring visit {visit.Id} for site {visit.SiteId} in study {visit.StudyId} on {visit.ScheduledDate:yyyy-MM-dd}.",
+            StudyId = visit.StudyId,
+            SiteId = visit.SiteId,
             ReasonForChange = reason,
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
@@ -310,6 +312,8 @@ public static class MonitoringVisitEndpoints
             UserRole = role,
             Action = "COMPLETE_MONITORING_VISIT",
             Details = $"Completed monitoring visit {visit.Id} for site {visit.SiteId} in study {visit.StudyId} with {findingsCount} findings.",
+            StudyId = visit.StudyId,
+            SiteId = visit.SiteId,
             ReasonForChange = reason,
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
@@ -389,6 +393,8 @@ public static class MonitoringVisitEndpoints
             UserRole = role,
             Action = "SIGN_OFF_MONITORING_VISIT",
             Details = $"Supervisory sign-off completed for monitoring visit {visit.Id} at site {visit.SiteId} in study {visit.StudyId}.",
+            StudyId = visit.StudyId,
+            SiteId = visit.SiteId,
             ReasonForChange = reason,
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
@@ -595,8 +601,8 @@ public static class MonitoringVisitEndpoints
             "follow_up_letter" => "Clinical Monitoring Visit Follow-Up Letter",
             _ => letter.LetterType.Replace('_', ' '),
         };
-        string studyId = !string.IsNullOrWhiteSpace(letter.StudyCode) ? letter.StudyCode : (visit?.StudyId ?? string.Empty);
-        string siteId = !string.IsNullOrWhiteSpace(letter.SiteCode) ? letter.SiteCode : (visit?.SiteId ?? string.Empty);
+        string studyId = !string.IsNullOrWhiteSpace(letter.StudyId) ? letter.StudyId : (visit?.StudyId ?? string.Empty);
+        string siteId = !string.IsNullOrWhiteSpace(letter.SiteId) ? letter.SiteId : (visit?.SiteId ?? string.Empty);
         if (!string.IsNullOrWhiteSpace(studyId) && !string.IsNullOrWhiteSpace(siteId))
         {
             return $"{typeTitle} — {studyId} / {siteId}";
@@ -613,8 +619,8 @@ public static class MonitoringVisitEndpoints
             Subject: FormatLetterSubject(letter, visit),
             BodyMarkdown: letter.RenderedContent,
             RenderedContent: letter.RenderedContent,
-            StudyCode: !string.IsNullOrWhiteSpace(letter.StudyCode) ? letter.StudyCode : (visit?.StudyId ?? string.Empty),
-            SiteCode: !string.IsNullOrWhiteSpace(letter.SiteCode) ? letter.SiteCode : (visit?.SiteId ?? string.Empty),
+            StudyCode: !string.IsNullOrWhiteSpace(letter.StudyId) ? letter.StudyId : (visit?.StudyId ?? string.Empty),
+            SiteCode: !string.IsNullOrWhiteSpace(letter.SiteId) ? letter.SiteId : (visit?.SiteId ?? string.Empty),
             Status: letter.Status.ToString().ToUpperInvariant(),
             IsSigned: letter.IsSigned,
             EtmfDocumentId: letter.EtmfDocumentId,

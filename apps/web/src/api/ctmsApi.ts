@@ -446,10 +446,13 @@ export const ctmsApi = {
   },
 
   /** Fetches the active and historical Delegation of Authority (DoA) log for a site. */
-  getSiteDoaLog(siteId: string): Promise<DoaLog> {
+  getSiteDoaLog(siteId: string, studyId?: string): Promise<DoaLog> {
     return unwrapResponse(
       client.GET("/api/v1/ctms/doa/sites/{site_id}/log", {
-        params: { path: { site_id: siteId } },
+        params: {
+          path: { site_id: siteId },
+          query: studyId ? { study_id: studyId } : undefined,
+        },
       })
     );
   },
@@ -510,9 +513,10 @@ export const ctmsApi = {
   },
 
   /** Exports the 21 CFR Part 11 signed Delegation of Authority PDF log for a site. */
-  exportSiteDoaPdf(siteId: string): Promise<Blob> {
+  exportSiteDoaPdf(siteId: string, studyId?: string): Promise<Blob> {
+    const query = studyId ? `?study_id=${encodeURIComponent(studyId)}` : "";
     return fetchAuthenticatedPdf(
-      `/api/v1/ctms/doa/sites/${encodeURIComponent(siteId)}/export-pdf`
+      `/api/v1/ctms/doa/sites/${encodeURIComponent(siteId)}/export-pdf${query}`
     );
   },
 };
