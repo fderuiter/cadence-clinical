@@ -1779,7 +1779,7 @@ const exportAuditTrail = (format) => {
   background: var(--semantic-color-interactive-primary);
 }
 .col-progress {
-  background: var(--semantic-color-ai);
+  background: var(--semantic-color-info);
 }
 .col-paused {
   background: var(--semantic-color-warning-action);

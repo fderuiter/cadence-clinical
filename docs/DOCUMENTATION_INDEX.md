@@ -608,6 +608,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2647: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions](adr/2026-11-22-standalone-concurrency-wallet-locks-and-bitemporal-revisions.md) | Current | - Status: Accepted |
 | [ADR-2652: Shared `ClinicalTabs`, Stack-Aware Focus Fallbacks, and Hub Accessibility AST Gates](adr/2026-11-23-clinical-tabs-focus-fallbacks-and-hub-a11y-gates.md) | Current | - Status: Accepted |
 | [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](adr/2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) | Current | - Status: Accepted |
+| [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](adr/2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
