@@ -272,6 +272,7 @@ public static class EtmfIntelligenceEndpoints
         );
 
         dbContext.TmfDocuments.Add(doc);
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
         foreach (var tr in doc.Transitions)
         {
             dbContext.TmfDocumentQcTransitions.Add(tr);
@@ -476,7 +477,10 @@ public static class EtmfIntelligenceEndpoints
             return TypedResults.BadRequest(new { error = ex.Message });
         }
 
+        long baselineVersion = dbContext.Entry(doc).Property(x => x.VersionIndex).OriginalValue;
+        doc.VersionIndex = baselineVersion + 1;
         dbContext.TmfDocumentQcTransitions.Add(transition);
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
 
         var audit = new TmfAuditLog
         {
@@ -687,6 +691,7 @@ public static class EtmfIntelligenceEndpoints
             .Where(t => t.DocumentId == document_id)
             .MaxAsync(t => (int?)t.TransitionSequence, ct) ?? 0;
 
+        long baselineVersion = dbContext.Entry(doc).Property(x => x.VersionIndex).OriginalValue;
         var transition = doc.StageForQc(user, roles, reason, now, currentSeq + 1);
         dbContext.TmfDocumentQcTransitions.Add(transition);
 
@@ -703,6 +708,8 @@ public static class EtmfIntelligenceEndpoints
             document_intelligence = report,
             assigned_cra = request.AssignedCra
         });
+        doc.VersionIndex = baselineVersion + 1;
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
 
         dbContext.TmfAuditLogs.Add(new TmfAuditLog
         {
@@ -782,13 +789,16 @@ public static class EtmfIntelligenceEndpoints
             return TypedResults.BadRequest(new { error = "Valid zone, section, and artifact_type are required for taxonomy updates." });
         }
 
+        long baselineVersion = dbContext.Entry(doc).Property(x => x.VersionIndex).OriginalValue;
         var previous = $"Z{doc.Zone}/{doc.Section}/{doc.ArtifactCode} ({doc.ArtifactType})";
         doc.OverrideTaxonomy(targetZone, targetSection, targetArtifactType, targetArtifactCode);
         doc.ReasonForChange = reason;
+        doc.VersionIndex = baselineVersion + 1;
 
         var now = clock.UtcNow;
         var user = CallerScope.RequiredUserId(httpContext, "An admitted eTMF request has no signed caller.");
         var roles = CallerScope.Roles(httpContext);
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
 
         dbContext.TmfAuditLogs.Add(new TmfAuditLog
         {
@@ -881,6 +891,7 @@ public static class EtmfIntelligenceEndpoints
         );
 
         dbContext.TmfDocuments.Add(doc);
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
         dbContext.TmfAuditLogs.Add(new TmfAuditLog
         {
             Timestamp = now,

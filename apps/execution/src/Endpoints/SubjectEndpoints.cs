@@ -478,7 +478,8 @@ public static partial class SubjectEndpoints
     /// <summary>
     /// <c>GET /api/v1/execution/subjects/{subjectId}</c>. Blinded by default: the treatment group and kit are revealed
     /// from the randomisation allocation only to a caller whose signed identity carries
-    /// <see cref="CadenceClaimTypes.UnblindedAccess"/>, which the gateway sets from the identity provider (#4943, #5607).
+    /// <see cref="CadenceClaimTypes.UnblindedAccess"/>, or to an unblinding authority
+    /// (<see cref="SubjectAuthority.CanUnblind"/>) inspecting an emergency-<c>UNBLINDED</c> subject (#4943, #5607).
     /// Study and site scope on the loaded <see cref="ClinicalSubject"/> are verified before <c>RevealAsync</c> runs.
     /// </summary>
     public static async Task<IResult> GetSubjectDetailAsync(
@@ -492,7 +493,8 @@ public static partial class SubjectEndpoints
             return tenantDenied;
         }
 
-        bool isBlindedCaller = ClinicalScopeGuard.ResolvePrincipal(http)?.UnblindedAccess != true;
+        bool hasUnblindedAccess = ClinicalScopeGuard.ResolvePrincipal(http)?.UnblindedAccess is true;
+        bool isBlindedCaller = !hasUnblindedAccess;
 
         if (logger != null)
         {
@@ -517,7 +519,11 @@ public static partial class SubjectEndpoints
             return scopeDenied;
         }
 
-        if (isBlindedCaller)
+        bool canRevealEmergencyUnblinded =
+            string.Equals(detail.Status, SubjectStateCodec.ToCode(SubjectState.Unblinded), StringComparison.Ordinal)
+            && ResolveCaller(http)?.FirstRoleMatching(SubjectAuthority.CanUnblind) is not null;
+
+        if (!hasUnblindedAccess && !canRevealEmergencyUnblinded)
         {
             return Results.Ok(detail);
         }

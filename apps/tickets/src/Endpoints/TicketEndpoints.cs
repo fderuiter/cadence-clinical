@@ -12,6 +12,7 @@ using Cadence.Apps.Tickets.Domain;
 using Cadence.Apps.Tickets.Endpoints.Filters;
 using Cadence.Apps.Tickets.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Concurrency;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
@@ -43,6 +44,17 @@ public sealed record CreateTicketRequestDto(
     [property: JsonPropertyName("entity_id")] string? EntityId = null,
     [property: JsonPropertyName("source_route")] string? SourceRoute = null,
     [property: JsonPropertyName("persona")] string? Persona = null);
+
+public sealed record UpdateTicketRequestDto(
+    [property: JsonPropertyName("title")] string? Title = null,
+    [property: JsonPropertyName("description")] string? Description = null,
+    [property: JsonPropertyName("priority")] string? Priority = null,
+    [property: JsonPropertyName("status")] string? Status = null,
+    [property: JsonPropertyName("assignee_user")] string? AssigneeUser = null,
+    [property: JsonPropertyName("resolution_code")] string? ResolutionCode = null,
+    [property: JsonPropertyName("root_cause_summary")] string? RootCauseSummary = null,
+    [property: JsonPropertyName("root_cause_category")] string? RootCauseCategory = null,
+    [property: JsonPropertyName("expected_version_index")] int? ExpectedVersionIndex = null);
 
 public sealed record TicketResponseDto(
     [property: JsonPropertyName("id")] string Id,
@@ -234,6 +246,17 @@ public static partial class TicketEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission("tickets:read");
 
+        group.MapPatch("/{ticket_id}", UpdateTicketAsync)
+            .WithName("UpdateTicket")
+            .Produces<TicketResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .RequirePermission("tickets:create")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+
         group.MapGet("/{ticket_id}/comments", ListTicketCommentsAsync)
             .WithName("ListTicketComments")
             .Produces<IReadOnlyList<TicketCommentResponseDto>>(StatusCodes.Status200OK)
@@ -283,7 +306,6 @@ public static partial class TicketEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission("tickets:read");
-
         return app;
     }
 
@@ -466,6 +488,7 @@ public static partial class TicketEndpoints
         };
 
         db.Tickets.Add(ticket);
+        db.TicketRevisions.Add(TicketRevision.FromTicket(ticket, now, principal.UserId));
         AuditActions.Record(db, new AuditAction(
             EntityName: nameof(Ticket),
             EntityId: ticket.Id,
@@ -602,7 +625,9 @@ public static partial class TicketEndpoints
         string ticket_id,
         HttpContext httpContext,
         TicketsDbContext db,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery(Name = "revision")] int? revision = null,
+        [FromQuery(Name = "as_of")] DateTimeOffset? asOf = null)
     {
         var (_, ticket, errorResult) = await LoadAuthorizedTicketAsync(
             ticket_id,
@@ -614,6 +639,158 @@ public static partial class TicketEndpoints
         {
             return errorResult!;
         }
+
+        if (revision.HasValue || asOf.HasValue)
+        {
+            IQueryable<TicketRevision> revQuery = db.TicketRevisions
+                .AsNoTracking()
+                .Where(r => r.TicketId == ticket.Id);
+
+            TicketRevision? matchedRevision = revision.HasValue
+                ? await revQuery.FirstOrDefaultAsync(r => r.RevisionNumber == revision.Value, ct).ConfigureAwait(false)
+                : await revQuery
+                    .Where(r => r.RecordedAt <= asOf!.Value)
+                    .OrderByDescending(r => r.RevisionNumber)
+                    .FirstOrDefaultAsync(ct)
+                    .ConfigureAwait(false);
+
+            if (matchedRevision is null)
+            {
+                return Results.Problem(
+                    title: "Ticket revision not found",
+                    detail: $"No historical revision matched for ticket '{ticket_id.Trim()}'.",
+                    statusCode: StatusCodes.Status404NotFound);
+            }
+
+            return TypedResults.Ok(ToResponseDto(Ticket.ReconstructFromRevision(ticket, matchedRevision)));
+        }
+
+        return TypedResults.Ok(ToResponseDto(ticket));
+    }
+
+    private static async Task<IResult> UpdateTicketAsync(
+        string ticket_id,
+        UpdateTicketRequestDto request,
+        HttpContext httpContext,
+        TicketsDbContext db,
+        IClock clock,
+        CancellationToken ct)
+    {
+        var (principal, ticket, errorResult) = await LoadAuthorizedTicketAsync(
+            ticket_id,
+            httpContext,
+            db,
+            asNoTracking: false,
+            ct).ConfigureAwait(false);
+        if (errorResult is not null || principal is null || ticket is null)
+        {
+            return errorResult!;
+        }
+
+        string changeReason = ChangeReasonHeader.Read(httpContext.Request)
+            ?? throw new InvalidOperationException("ChangeReasonHeaderFilter must guarantee a non-empty X-Change-Reason.");
+
+        if (ticket.SignatureTimestamp is not null)
+        {
+            return Results.Problem(
+                title: "Ticket locked by 21 CFR Part 11 signature",
+                detail: "This support ticket has been electronically signed and locked against further amendments.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
+        string nextTitle = request.Title is null ? ticket.Title : request.Title.Trim();
+        string nextDescription = request.Description is null ? ticket.Description : request.Description.Trim();
+        if (nextTitle.Length == 0 || nextDescription.Length == 0)
+        {
+            return Results.Problem(
+                title: "Invalid ticket payload",
+                detail: "Both 'title' and 'description' must remain non-empty.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+        if (nextTitle.Length > 255)
+        {
+            return Results.Problem(
+                title: "Invalid ticket title",
+                detail: "Ticket 'title' must not exceed 255 characters.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string nextPriority = string.IsNullOrWhiteSpace(request.Priority)
+            ? ticket.Priority
+            : request.Priority.Trim().ToUpperInvariant();
+        if (!TicketRoutingAndSlaEngine.ValidPriorities.Contains(nextPriority))
+        {
+            return Results.Problem(
+                title: "Invalid ticket priority",
+                detail: $"Unsupported priority '{nextPriority}'. Expected LOW, MEDIUM, HIGH, or CRITICAL.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string? piiViolation = TicketPiiValidator.ValidateNoDirectParticipantPii(
+            nextTitle,
+            nextDescription,
+            null,
+            ticket.RelatedEntityType,
+            ticket.RelatedEntityId,
+            changeReason);
+        if (piiViolation is not null)
+        {
+            return Results.Problem(
+                title: "Direct participant PII rejected",
+                detail: piiViolation,
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Status))
+        {
+            var transitionResult = ticket.TransitionTo(
+                request.Status.Trim(),
+                NormalizeOptional(request.ResolutionCode),
+                NormalizeOptional(request.RootCauseSummary),
+                NormalizeOptional(request.RootCauseCategory));
+            if (transitionResult.IsFailure)
+            {
+                return Results.Problem(
+                    title: "Invalid ticket transition",
+                    detail: transitionResult.Error?.Description,
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+        }
+
+        StandaloneConcurrencyTokenInterceptor.EnforceExpectedVersion(
+            db,
+            ticket,
+            request.ExpectedVersionIndex,
+            httpContext);
+
+        int baselineVersion = db.Entry(ticket).Property(x => x.VersionIndex).OriginalValue;
+        DateTimeOffset now = clock.UtcNow;
+
+        ticket.Title = nextTitle;
+        ticket.Description = nextDescription;
+        ticket.Priority = nextPriority;
+        if (request.AssigneeUser is not null)
+        {
+            ticket.AssigneeUser = NormalizeOptional(request.AssigneeUser);
+        }
+        ticket.ReasonForChange = changeReason;
+        ticket.VersionIndex = baselineVersion + 1;
+
+        db.TicketRevisions.Add(TicketRevision.FromTicket(ticket, now, principal.UserId));
+        AuditActions.Record(db, new AuditAction(
+            EntityName: nameof(Ticket),
+            EntityId: ticket.Id,
+            Action: "TICKET_UPDATED",
+            UserId: principal.UserId,
+            ReasonForChange: changeReason,
+            ChangesJson: JsonSerializer.Serialize(new
+            {
+                reference = ticket.Reference,
+                status = ticket.Status.ToString(),
+                priority = ticket.Priority,
+                revision = ticket.VersionIndex,
+            })));
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         return TypedResults.Ok(ToResponseDto(ticket));
     }
@@ -865,10 +1042,13 @@ public static partial class TicketEndpoints
             ticket.AssigneeUser = normalizedAssigneeUser;
         }
 
+        int baselineVersion = db.Entry(ticket).Property(x => x.VersionIndex).OriginalValue;
         DateTimeOffset now = clock.UtcNow;
         ApplySlaPauseAndResume(ticket, previousStatus, ticket.Status, now);
         ticket.ReasonForChange = changeReason;
-        ticket.VersionIndex += 1;
+        ticket.VersionIndex = baselineVersion + 1;
+
+        db.TicketRevisions.Add(TicketRevision.FromTicket(ticket, now, principal.UserId));
 
         AuditActions.Record(db, new AuditAction(
             EntityName: nameof(Ticket),
@@ -960,6 +1140,7 @@ public static partial class TicketEndpoints
                 statusCode: StatusCodes.Status409Conflict);
         }
 
+        int baselineVersion = db.Entry(ticket).Property(x => x.VersionIndex).OriginalValue;
         DateTimeOffset now = clock.UtcNow;
         string? verifiedTokenId = httpContext.VerifiedSigToken()?.Id;
         ticket.SignatureAction = signatureAction;
@@ -968,7 +1149,9 @@ public static partial class TicketEndpoints
         ticket.SignatureTimestamp = now;
         ticket.SignatureUser = principal.UserId;
         ticket.ReasonForChange = changeReason;
-        ticket.VersionIndex += 1;
+        ticket.VersionIndex = baselineVersion + 1;
+
+        db.TicketRevisions.Add(TicketRevision.FromTicket(ticket, now, principal.UserId));
 
         AuditActions.Record(db, new AuditAction(
             EntityName: nameof(Ticket),

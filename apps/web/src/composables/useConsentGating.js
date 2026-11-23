@@ -1,6 +1,9 @@
 import { ref, computed } from "vue";
+import { executionApi } from "../api/executionApi";
 import { useClinicalStore } from "../stores/clinical";
-import { allowUnbackedAction } from "../utils/unbackedActions.js";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useToastStore } from "../stores/toasts.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 
 export function useConsentGating(selectedSubjectId) {
   const store = useClinicalStore();
@@ -15,7 +18,7 @@ export function useConsentGating(selectedSubjectId) {
   const showEconsentModal = ref(false);
   const showPaperIcfModal = ref(false);
   const reconsentSubmitting = ref(false);
-  const econsentSignerName = ref("Jane Doe");
+  const econsentSignerName = ref("Participant");
   const paperIcfDate = ref(new Date().toISOString().split("T")[0]);
   const paperIcfNote = ref("Verified signed paper ICF in investigator binder.");
 
@@ -32,18 +35,79 @@ export function useConsentGating(selectedSubjectId) {
     storeInstance,
     payload = null
   ) {
-    // #4827: nothing sends this re-consent to a service yet, so outside demo builds the gate stays locked
-    // and nothing is logged.
-    if (!allowUnbackedAction("Recording re-consent")) return;
+    const subjectId = selectedSubjectId?.value;
+    if (!subjectId) return;
+
     reconsentSubmitting.value = true;
     try {
       const sigToken =
         typeof payload === "string" ? payload : payload?.sigToken || null;
+      const isPaperOverride = method === "PAPER_OVERRIDE";
+      const versionTag =
+        (typeof payload === "object" && payload?.versionTag) || "2.0.0";
+      const versionIndex =
+        typeof payload === "object" && Number(payload?.versionIndex) > 0
+          ? Number(payload.versionIndex)
+          : 2;
+      const reason =
+        (isPaperOverride
+          ? paperIcfNote.value
+          : typeof payload === "object"
+            ? payload?.signingReason
+            : "") ||
+        `Subject ${subjectId} re-consent recorded via ${method}. Gating unlocked.`;
+
+      if (!isDemoBuild()) {
+        const canvasStore = useStudyCanvasStore();
+        const studyId = String(
+          (typeof payload === "object" && payload?.studyId) ||
+            storeInstance?.activeStudyId ||
+            store?.activeStudyId ||
+            canvasStore.studyCode ||
+            ""
+        ).trim();
+        if (!studyId) {
+          useToastStore().push({
+            tone: "error",
+            title: "Re-consent could not be recorded",
+            message:
+              "Select an active study before recording informed consent.",
+          });
+          return;
+        }
+        const signedIso = isPaperOverride
+          ? paperIcfDate.value
+            ? `${paperIcfDate.value}T00:00:00Z`
+            : null
+          : (typeof payload === "object" && payload?.icfSignedDate) ||
+            new Date().toISOString();
+        try {
+          await executionApi.recordSubjectConsent(
+            subjectId,
+            {
+              protocol_version: {
+                study_id: studyId,
+                version_tag: String(versionTag),
+                version_index: versionIndex,
+              },
+              icf_signed: !isPaperOverride || Boolean(signedIso),
+              icf_signed_date: signedIso,
+              requires_reconsent: false,
+              is_paper_override: isPaperOverride,
+            },
+            reason
+          );
+        } catch (err) {
+          useToastStore().apiError("Re-consent could not be recorded", err);
+          return;
+        }
+      }
+
       if (store && typeof store.clearReconsentGate === "function") {
         await store.clearReconsentGate(
-          selectedSubjectId.value,
+          subjectId,
           method,
-          `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`,
+          `Subject ${subjectId} re-consent recorded via ${method}. Gating unlocked.`,
           sigToken
         );
       }
@@ -53,9 +117,9 @@ export function useConsentGating(selectedSubjectId) {
         typeof storeInstance.clearReconsentGate === "function"
       ) {
         await storeInstance.clearReconsentGate(
-          selectedSubjectId.value,
+          subjectId,
           method,
-          `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`,
+          `Subject ${subjectId} re-consent recorded via ${method}. Gating unlocked.`,
           sigToken
         );
       }
@@ -70,12 +134,12 @@ export function useConsentGating(selectedSubjectId) {
         await targetLedgerStore.addLedgerBlock(
           "RECONSENT_COMPLETED",
           {
-            subject_id: selectedSubjectId.value,
-            protocol_version: "2.0.0",
+            subject_id: subjectId,
+            protocol_version: String(versionTag),
             method: method,
             sig_token: sigToken,
           },
-          `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
+          `Subject ${subjectId} re-consent recorded via ${method}. Gating unlocked.`
         );
       }
       showEconsentModal.value = false;
