@@ -458,11 +458,12 @@ Entity: `ClinicalSubject`
 
 Indexes:
 
-- `IX_clinical_subjects_StudyCode_EnrollmentIndex`: unique (`StudyCode`, `EnrollmentIndex`)
 - `IX_clinical_subjects_StudyCode_SiteCode_Status_EnrollmentIndex`: (`StudyCode`, `SiteCode`, `Status`, `EnrollmentIndex`)
 - `IX_clinical_subjects_StudyCode_Status_EnrollmentIndex`: (`StudyCode`, `Status`, `EnrollmentIndex`)
-- `IX_clinical_subjects_SubjectCode`: unique (`SubjectCode`)
 - `IX_clinical_subjects_tenant_id`: (`tenant_id`)
+- `IX_clinical_subjects_tenant_id_StudyCode_EnrollmentIndex`: unique (`tenant_id`, `StudyCode`, `EnrollmentIndex`)
+- `IX_clinical_subjects_tenant_id_StudyCode_SiteCode_Status_EnrollmentIndex`: (`tenant_id`, `StudyCode`, `SiteCode`, `Status`, `EnrollmentIndex`)
+- `IX_clinical_subjects_tenant_id_SubjectCode`: unique (`tenant_id`, `SubjectCode`)
 
 ## edc.consumed_signature_tokens
 
@@ -851,6 +852,7 @@ Entity: `SiteComplianceCache`
 Indexes:
 
 - `IX_site_compliance_caches_tenant_id`: (`tenant_id`)
+- `IX_site_compliance_caches_tenant_id_StudyCode_SiteCode_Milestone`: unique (`tenant_id`, `StudyCode`, `SiteCode`, `Milestone`)
 
 ## edc.staged_adverse_event_reviews
 
@@ -918,6 +920,7 @@ Entity: `SubjectConsent`
 Indexes:
 
 - `IX_subject_consents_tenant_id`: (`tenant_id`)
+- `IX_subject_consents_tenant_id_SubjectCode`: (`tenant_id`, `SubjectCode`)
 
 ## edc.synonym_rules
 
