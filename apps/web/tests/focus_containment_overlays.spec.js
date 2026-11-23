@@ -203,8 +203,8 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
 
     // Keyboard activation (Enter) on related card
     const relatedCard = wrapper.find(".related-card");
-    expect(relatedCard.attributes("role")).toBe("button");
-    expect(relatedCard.attributes("tabindex")).toBe("0");
+    expect(relatedCard.element.tagName).toBe("BUTTON");
+    expect(relatedCard.attributes("type")).toBe("button");
     await relatedCard.trigger("keydown.enter");
     expect(knowledgeStore.displayedArticle.id).toBe("sop-rel-1");
 
@@ -224,7 +224,8 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
 
     const searchCard = wrapper.find(".search-result-card");
     expect(searchCard.exists()).toBe(true);
-    expect(searchCard.attributes("role")).toBe("button");
+    expect(searchCard.element.tagName).toBe("BUTTON");
+    expect(searchCard.attributes("type")).toBe("button");
     await searchCard.trigger("keydown.space");
     expect(knowledgeStore.displayedArticle.id).toBe("sop-search-1");
 

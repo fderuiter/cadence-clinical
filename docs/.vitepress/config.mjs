@@ -1,5 +1,4 @@
 import { defineConfig } from "vitepress";
-import { withMermaid } from "vitepress-plugin-mermaid";
 import crypto from "crypto";
 import path from "path";
 import process from "process";
@@ -12,11 +11,16 @@ import {
   writeRssFeed,
 } from "./blog.mjs";
 import {
+  EXCLUDED_PORTAL_DOCS,
   assertThemeLinksExist,
   dualHeadingAnchorsPlugin,
+  mermaidFencePlugin,
   repoLinksPlugin,
 } from "./repoLinks.mjs";
-import { synthesizeSidebarFromIndex } from "./sidebar.mjs";
+import {
+  buildPortalSearchCatalog,
+  synthesizeSidebarFromIndex,
+} from "./sidebar.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -71,15 +75,22 @@ function injectHashedPortalCsp(html) {
   return html.replace(/<head>/i, `<head>\n    ${cspTag}`);
 }
 
+const searchCatalog = buildPortalSearchCatalog(indexPath, {
+  docsDir,
+  repoRoot,
+});
+
 const config = defineConfig({
   title: "Cadence Clinical Portal",
   description:
     "Metadata-Driven Clinical Execution Platform Documentation Portal",
   base: siteBase,
+  metaChunk: true,
   outDir: path.resolve(__dirname, "dist"),
   srcExclude: [
     "**/SDLC/runs/**",
     "**/runs/**",
+    ...EXCLUDED_PORTAL_DOCS,
     ...(isDevServer ? [] : getDraftBlogPostExcludes(docsDir)),
   ],
   head: [
@@ -108,6 +119,7 @@ const config = defineConfig({
   ignoreDeadLinks: [/^\/(demo|subject-portal)(\/|$)/],
   markdown: {
     config(md) {
+      md.use(mermaidFencePlugin);
       md.use(dualHeadingAnchorsPlugin);
       md.use(repoLinksPlugin, {
         docsDir,
@@ -118,7 +130,7 @@ const config = defineConfig({
   },
   vite: {
     build: {
-      chunkSizeWarningLimit: 2000,
+      chunkSizeWarningLimit: 2500,
     },
   },
   async buildEnd(siteConfig) {
@@ -128,14 +140,36 @@ const config = defineConfig({
     search: {
       provider: "local",
       options: {
+        miniSearch: {
+          searchOptions: {
+            fuzzy: 0.2,
+            prefix: true,
+            boost: {
+              title: 5,
+              titles: 3,
+              text: 1,
+            },
+          },
+        },
         _render(src, env, md) {
+          const relPath = env.relativePath ?? "";
           if (
             env.frontmatter?.draft === true ||
-            /^true$/i.test(String(env.frontmatter?.draft ?? "").trim())
+            /^true$/i.test(String(env.frontmatter?.draft ?? "").trim()) ||
+            !searchCatalog.shouldIndexPage(relPath, env.frontmatter, src)
           ) {
             return "";
           }
-          return md.render(src, env);
+          const preparedSrc = searchCatalog.prepareSearchMarkdown(relPath, src);
+          const html = md.render(preparedSrc, env);
+          if (
+            env.frontmatter?.draft === true ||
+            /^true$/i.test(String(env.frontmatter?.draft ?? "").trim()) ||
+            !searchCatalog.shouldIndexPage(relPath, env.frontmatter, src)
+          ) {
+            return "";
+          }
+          return searchCatalog.applyHeadingBoostHtml(relPath, html);
         },
       },
     },
@@ -163,4 +197,4 @@ const config = defineConfig({
 // VitePress checks links inside pages without fragments; assertThemeLinksExist validates nav and sidebar pages and anchors.
 assertThemeLinksExist(config.themeConfig, docsDir, { base: siteBase });
 
-export default withMermaid(config);
+export default config;

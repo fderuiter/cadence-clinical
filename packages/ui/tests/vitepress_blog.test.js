@@ -320,7 +320,12 @@ describe("VitePress Engineering Blog Engine", () => {
     const repoRoot = makeTempDocsDir();
     const docsDir = path.join(repoRoot, "docs");
     fs.mkdirSync(path.join(docsDir, "adr"), { recursive: true });
+    fs.mkdirSync(path.join(docsDir, "SDLC"), { recursive: true });
     fs.writeFileSync(path.join(docsDir, "blog", "index.md"), "# Blog\n");
+    fs.writeFileSync(
+      path.join(docsDir, "SDLC", "03_API_Integration_Specification.md"),
+      "# API Integration Spec\n\n## Endpoints\n"
+    );
     fs.writeFileSync(
       path.join(docsDir, "adr", "2026-10-01-sample.md"),
       "# ADR-1: Sample\n\n## Known Anchor\n"
@@ -387,11 +392,17 @@ describe("VitePress Engineering Blog Engine", () => {
     };
 
     const liveToken = makeLinkToken("blog/2026-10-01-live.md");
+    const excludedToken = makeLinkToken(
+      "SDLC/03_API_Integration_Specification.md#endpoints"
+    );
     rules[0].fn({
       env: { relativePath: "DOCUMENTATION_INDEX.md" },
-      tokens: [{ children: [liveToken] }],
+      tokens: [{ children: [liveToken, excludedToken] }],
     });
     expect(liveToken.getHref()).toBe("blog/2026-10-01-live.md");
+    expect(excludedToken.getHref()).toBe(
+      "https://github.com/fderuiter/cadence-clinical/blob/main/docs/SDLC/03_API_Integration_Specification.md#endpoints"
+    );
 
     const draftToken = makeLinkToken("blog/2026-10-02-draft.md");
     expect(() =>
@@ -489,6 +500,11 @@ describe("VitePress Engineering Blog Engine", () => {
     expect(normalizeSiteLink("../../LICENSE")).toBe("/LICENSE.html");
     expect(normalizeSiteLink("../adr/index.md")).toBe("/adr/");
     expect(normalizeSiteLink("../PROJECT_PLAN.md")).toBe("/PROJECT_PLAN.html");
+    expect(
+      normalizeSiteLink("../SDLC/03_API_Integration_Specification.md#endpoints")
+    ).toBe(
+      "https://github.com/fderuiter/cadence-clinical/blob/main/docs/SDLC/03_API_Integration_Specification.md#endpoints"
+    );
     expect(normalizeSiteLink("/demo/")).toBe("/demo/");
     expect(normalizeSiteLink("/subject-portal/")).toBe("/subject-portal/");
     expect(normalizeSiteLink("../../packages/kernel/README.md")).toBe(

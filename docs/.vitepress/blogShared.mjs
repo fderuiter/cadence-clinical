@@ -3,6 +3,10 @@ export const BLOG_FEED_PATH = "/feed.xml";
 export const REPO_URL = "https://github.com/fderuiter/cadence-clinical";
 export const REPO_BRANCH = "main";
 
+export const EXCLUDED_PORTAL_DOCS = Object.freeze([
+  "SDLC/03_API_Integration_Specification.md",
+]);
+
 export const STAGED_ROOT_DOCS_MAP = Object.freeze({
   "README.md": "/README.html",
   "ARCHITECTURE.md": "/ARCHITECTURE.html",
@@ -525,6 +529,16 @@ function formatPortalPath(portalRoute, suffix) {
 
   if (cleaned === BLOG_FEED_PATH || /\.xml$/i.test(cleaned)) {
     return `${cleaned}${suffix}`;
+  }
+
+  const candidateDocRel = `${cleaned
+    .replace(/^\/+/, "")
+    .replace(/\.(?:md|html)$/i, "")}.md`;
+  const matchedExcluded = EXCLUDED_PORTAL_DOCS.find(
+    (excluded) => excluded.toLowerCase() === candidateDocRel.toLowerCase()
+  );
+  if (matchedExcluded) {
+    return `${REPO_URL}/blob/${REPO_BRANCH}/docs/${matchedExcluded}${suffix}`;
   }
 
   if (/\/index(?:\.(?:md|html))?$/i.test(cleaned)) {

@@ -19,23 +19,64 @@
       autocomplete="off"
       required
     />
-    <label for="add-participant-site">
-      {{
-        restrictToOptions && siteOptions.length > 0 ? "Site" : "Site (optional)"
-      }}
-    </label>
+    <div class="site-label-row">
+      <label for="add-participant-site">
+        {{
+          restrictToOptions && availableSites.length > 0
+            ? "Site"
+            : "Site (optional)"
+        }}
+      </label>
+      <div class="site-shortcuts">
+        <button
+          v-if="!restrictToOptions && availableSites.length > 0"
+          id="btn-add-participant-toggle-site-mode"
+          type="button"
+          class="link-button"
+          @click="toggleSiteMode"
+        >
+          {{ manualSiteMode ? "Pick linked site" : "Enter custom code" }}
+        </button>
+        <button
+          v-if="canQuickCreateSite"
+          id="btn-add-participant-new-site"
+          type="button"
+          class="link-button"
+          @click="toggleInlineSiteForm"
+        >
+          {{
+            showInlineSiteForm ? "Cancel new site" : "+ Register & link site"
+          }}
+        </button>
+      </div>
+    </div>
+
     <select
-      v-if="restrictToOptions && siteOptions.length > 0"
+      v-if="
+        (restrictToOptions && availableSites.length > 0) ||
+        (availableSites.length > 0 && !manualSiteMode)
+      "
       id="add-participant-site"
       v-model="siteId"
-      required
+      :required="restrictToOptions && availableSites.length > 0"
     >
+      <option v-if="!restrictToOptions" value="">Not assigned</option>
       <option
-        v-for="option in siteOptions"
-        :key="option.code"
-        :value="option.code"
+        v-for="site in availableSites"
+        :key="site.code"
+        :value="site.code"
       >
-        {{ option.label }}
+        {{ site.label }}
+      </option>
+      <option
+        v-if="
+          !restrictToOptions &&
+          siteId &&
+          !availableSites.some((s) => s.code === siteId)
+        "
+        :value="siteId"
+      >
+        {{ siteId }}
       </option>
     </select>
     <template v-else>
@@ -45,11 +86,13 @@
         type="text"
         maxlength="255"
         autocomplete="off"
-        :list="siteOptions.length > 0 ? 'add-participant-site-list' : undefined"
+        :list="
+          availableSites.length > 0 ? 'add-participant-site-list' : undefined
+        "
       />
-      <datalist v-if="siteOptions.length > 0" id="add-participant-site-list">
+      <datalist v-if="availableSites.length > 0" id="add-participant-site-list">
         <option
-          v-for="option in siteOptions"
+          v-for="option in availableSites"
           :key="option.code"
           :value="option.code"
         >
@@ -57,6 +100,74 @@
         </option>
       </datalist>
     </template>
+
+    <fieldset
+      v-if="showInlineSiteForm"
+      id="add-participant-inline-site-panel"
+      class="inline-site-panel"
+      :disabled="creatingSite"
+    >
+      <legend>Register &amp; link site to {{ canvas.studyCode }}</legend>
+      <p v-if="inlineSiteError" class="inline-site-error" role="alert">
+        {{ inlineSiteError }}
+      </p>
+      <label for="inline-site-code">Site code</label>
+      <input
+        id="inline-site-code"
+        v-model="inlineSiteCode"
+        type="text"
+        maxlength="64"
+        autocomplete="off"
+        placeholder="e.g. SITE-01"
+      />
+      <label for="inline-site-name">Site name</label>
+      <input
+        id="inline-site-name"
+        v-model="inlineSiteName"
+        type="text"
+        maxlength="200"
+        autocomplete="off"
+        placeholder="e.g. Metro Cardiology Research Center"
+      />
+      <label for="inline-site-country">Country (2-letter ISO)</label>
+      <input
+        id="inline-site-country"
+        v-model="inlineSiteCountry"
+        type="text"
+        maxlength="2"
+        autocomplete="off"
+        placeholder="US"
+      />
+      <label for="inline-site-institution">Site institution</label>
+      <input
+        id="inline-site-institution"
+        v-model="inlineInstitutionName"
+        type="text"
+        maxlength="200"
+        autocomplete="off"
+        placeholder="e.g. Metro University Hospital"
+      />
+      <label for="inline-site-reason">Reason for site registration</label>
+      <input
+        id="inline-site-reason"
+        v-model="inlineSiteReason"
+        type="text"
+        maxlength="500"
+        autocomplete="off"
+        placeholder="e.g. Register clinical site for screening"
+      />
+      <div class="buttons">
+        <button
+          id="btn-confirm-inline-site"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="!canSubmitInlineSite"
+          @click="submitInlineSite"
+        >
+          {{ creatingSite ? "Registering…" : "Save & select site" }}
+        </button>
+      </div>
+    </fieldset>
     <label for="add-participant-reason">Reason</label>
     <textarea
       id="add-participant-reason"
@@ -87,12 +198,19 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { handoffFocus } from "ui";
 import type { SubjectSummary } from "../../api/executionApi";
-import type { StudySiteOption } from "../../canvas/kernelStudy";
+import { describeKernelError, kernelApi } from "../../api/kernelApi";
+import {
+  findStudySites,
+  invalidateStudySitesCache,
+  type StudySiteOption,
+} from "../../canvas/kernelStudy";
+import { useAuthStore } from "../../stores/auth";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import { addParticipantMutation } from "../../stores/studyCanvasParticipantMutations";
+import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
 /**
  * Adds a participant to the open study through Execution, which starts it in screening and audits the reason.
@@ -125,9 +243,164 @@ const siteId = ref(
 const reason = ref("");
 const busy = ref(false);
 
-onMounted(() => {
-  void handoffFocus("#add-participant-code", { scrollIfOffscreen: true });
+const authStore = useAuthStore();
+const linkedSites = ref<StudySiteOption[]>([]);
+const manualSiteMode = ref(false);
+const showInlineSiteForm = ref(false);
+const creatingSite = ref(false);
+const inlineSiteError = ref("");
+const inlineSiteCode = ref("");
+const inlineSiteName = ref("");
+const inlineSiteCountry = ref("US");
+const inlineInstitutionName = ref("");
+const inlineSiteReason = ref("");
+
+const availableSites = computed<StudySiteOption[]>(() => {
+  if (props.restrictToOptions) {
+    const allowedCodes = new Set(props.siteOptions.map((s) => s.code));
+    const byCode = new Map<string, StudySiteOption>();
+    for (const opt of props.siteOptions) {
+      byCode.set(opt.code, opt);
+    }
+    for (const linked of linkedSites.value) {
+      if (allowedCodes.has(linked.code) && !byCode.has(linked.code)) {
+        byCode.set(linked.code, linked);
+      }
+    }
+    return Array.from(byCode.values());
+  }
+  const byCode = new Map<string, StudySiteOption>();
+  for (const opt of props.siteOptions) {
+    byCode.set(opt.code, opt);
+  }
+  for (const linked of linkedSites.value) {
+    if (!byCode.has(linked.code)) {
+      byCode.set(linked.code, linked);
+    }
+  }
+  return Array.from(byCode.values()).sort((a, b) =>
+    a.code.localeCompare(b.code)
+  );
 });
+
+const canQuickCreateSite = computed(
+  () =>
+    Boolean(canvas.studyCode) &&
+    typeof kernelApi.createSite === "function" &&
+    typeof kernelApi.linkSiteToStudy === "function"
+);
+
+const canSubmitInlineSite = computed(
+  () =>
+    !creatingSite.value &&
+    Boolean(inlineSiteCode.value.trim()) &&
+    Boolean(inlineSiteName.value.trim()) &&
+    inlineSiteCountry.value.trim().length === 2 &&
+    Boolean(inlineInstitutionName.value.trim()) &&
+    Boolean(inlineSiteReason.value.trim())
+);
+
+function nextInlineKey(prefix: string): string {
+  if (isDemoBuild()) {
+    return `${prefix}-${demoRandomToken(12, 36, `${prefix}.idempotency`)}`;
+  }
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${prefix}-${demoRandomToken(12, 36, `${prefix}.idempotency`)}`;
+}
+
+async function loadSites() {
+  if (!canvas.studyCode) return;
+  try {
+    linkedSites.value = await findStudySites(canvas.studyCode);
+  } catch {
+    linkedSites.value = [];
+  }
+}
+
+function toggleSiteMode() {
+  manualSiteMode.value = !manualSiteMode.value;
+  void handoffFocus("#add-participant-site");
+}
+
+function toggleInlineSiteForm() {
+  const opening = !showInlineSiteForm.value;
+  showInlineSiteForm.value = opening;
+  inlineSiteError.value = "";
+  void handoffFocus(
+    opening ? "#inline-site-code" : "#btn-add-participant-new-site",
+    { scrollIfOffscreen: opening }
+  );
+}
+
+async function submitInlineSite() {
+  if (!canSubmitInlineSite.value || !canvas.studyCode) return;
+  inlineSiteError.value = "";
+  creatingSite.value = true;
+  try {
+    const created = await kernelApi.createSite({
+      siteCode: inlineSiteCode.value.trim(),
+      name: inlineSiteName.value.trim(),
+      country: inlineSiteCountry.value.trim().toUpperCase(),
+      institutionName: inlineInstitutionName.value.trim(),
+      reason: inlineSiteReason.value.trim(),
+      idempotencyKey: nextInlineKey("inline-site"),
+    });
+    await kernelApi.linkSiteToStudy({
+      studyRef: canvas.studyCode,
+      siteRef: created.ref,
+      siteCode: created.code,
+      reason: inlineSiteReason.value.trim(),
+      idempotencyKey: nextInlineKey("inline-study-site"),
+    });
+    invalidateStudySitesCache(canvas.studyCode);
+
+    if (
+      Array.isArray(authStore.siteIds) &&
+      authStore.siteIds.length > 0 &&
+      !authStore.siteIds.includes(created.code)
+    ) {
+      authStore.siteIds = [...authStore.siteIds, created.code];
+    }
+    if (
+      Array.isArray(authStore.assignedSites) &&
+      !authStore.assignedSites.includes("*") &&
+      authStore.assignedSites.length > 0 &&
+      !authStore.assignedSites.includes(created.code)
+    ) {
+      authStore.assignedSites = [...authStore.assignedSites, created.code];
+    }
+
+    const optionLabel =
+      created.name && created.name !== created.code
+        ? `${created.code} — ${created.name}`
+        : created.code;
+    const merged = new Map<string, StudySiteOption>(
+      linkedSites.value.map((s) => [s.code, s])
+    );
+    merged.set(created.code, { code: created.code, label: optionLabel });
+    linkedSites.value = Array.from(merged.values()).sort((a, b) =>
+      a.code.localeCompare(b.code)
+    );
+
+    siteId.value = created.code;
+    manualSiteMode.value = false;
+    showInlineSiteForm.value = false;
+    inlineSiteCode.value = "";
+    inlineSiteName.value = "";
+    inlineInstitutionName.value = "";
+    inlineSiteReason.value = "";
+    void handoffFocus([
+      "#add-participant-site",
+      "#btn-add-participant-new-site",
+    ]);
+  } catch (err) {
+    inlineSiteError.value = describeKernelError(err);
+  } finally {
+    creatingSite.value = false;
+  }
+}
 
 watch(
   () =>
@@ -138,13 +411,13 @@ watch(
     } else if (
       restricted &&
       options.length > 0 &&
-      !options.some((o) => o.code === siteId.value)
+      !options.some((o) => o.code === siteId.value) &&
+      !linkedSites.value.some((o) => o.code === siteId.value)
     ) {
       siteId.value = nextDefault || options[0].code;
     }
   }
 );
-
 async function submit() {
   const code = subjectCode.value.trim();
   const why = reason.value.trim();
@@ -163,6 +436,11 @@ async function submit() {
     busy.value = false;
   }
 }
+
+onMounted(() => {
+  void handoffFocus("#add-participant-code", { scrollIfOffscreen: true });
+  void loadSites();
+});
 </script>
 
 <style scoped>
@@ -170,7 +448,7 @@ async function submit() {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-width: 420px;
+  max-width: 460px;
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -187,12 +465,61 @@ async function submit() {
   font-size: 0.85rem;
 }
 
+.site-label-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.site-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.82rem;
+  color: var(--semantic-color-interactive-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .add-participant input,
 .add-participant select,
 .add-participant textarea {
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text, inherit);
+}
+
+.inline-site-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--semantic-color-surface-muted);
+}
+
+.inline-site-panel legend {
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0 4px;
+}
+
+.inline-site-error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--semantic-color-error);
 }
 
 .buttons {
